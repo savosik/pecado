@@ -30,16 +30,11 @@ class PriceService implements PriceServiceInterface
      */
     public function getUserPrice(Product $product, ?User $user = null): float
     {
-        $basePrice = $this->getBasePrice($product);
-        $discountedPrice = $basePrice;
+        $discountedPrice = $user 
+            ? $this->getDiscountedPrice($product, $user)
+            : $this->getBasePrice($product);
 
         if ($user) {
-            // Find the maximum active discount for this user and product
-            $maxDiscount = $this->getMaxDiscountPercentage($user, $product);
-            if ($maxDiscount > 0) {
-                $discountedPrice = $basePrice * (1 - $maxDiscount / 100);
-            }
-
             $currency = $this->currencyResolver->resolve($user);
             if ($currency) {
                 return $this->convertPrice($discountedPrice, $currency);
@@ -47,6 +42,21 @@ class PriceService implements PriceServiceInterface
         }
 
         return $discountedPrice;
+    }
+
+    /**
+     * Get the price of the product for a specific user in the base currency, applying discounts.
+     */
+    public function getDiscountedPrice(Product $product, User $user): float
+    {
+        $basePrice = $this->getBasePrice($product);
+        $maxDiscount = $this->getMaxDiscountPercentage($user, $product);
+        
+        if ($maxDiscount > 0) {
+            return $basePrice * (1 - $maxDiscount / 100);
+        }
+
+        return $basePrice;
     }
 
     /**

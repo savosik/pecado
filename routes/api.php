@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DeliveryAddressController;
 use App\Http\Controllers\Api\FavoriteController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WishlistItemController;
 use Illuminate\Http\Request;
@@ -27,5 +28,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('carts/{cart}/items', [CartController::class, 'addItem']);
     Route::put('carts/{cart}/items/{item}', [CartController::class, 'updateItem']);
     Route::delete('carts/{cart}/items/{item}', [CartController::class, 'removeItem']);
+
+    // Order routes
+    Route::get('orders', [OrderController::class, 'index']);
+    Route::get('orders/{order}', [OrderController::class, 'show']);
+    Route::post('orders/checkout', [OrderController::class, 'checkout']);
 });
 

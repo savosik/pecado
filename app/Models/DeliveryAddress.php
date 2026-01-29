@@ -37,4 +37,12 @@ class DeliveryAddress extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * Get the orders for the delivery address.
+     */
+    public function orders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
 }

@@ -33,13 +33,18 @@ class Cart extends Model
         return $this->hasMany(CartItem::class);
     }
 
-    /**
-     * Get the products in the cart.
-     */
     public function products(): BelongsToMany
     {
         return $this->belongsToMany(Product::class, 'cart_items')
             ->withPivot('quantity')
             ->withTimestamps();
+    }
+
+    /**
+     * Get the order associated with the cart.
+     */
+    public function order(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Order::class);
     }
 }

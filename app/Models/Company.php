@@ -79,4 +79,12 @@ class Company extends Model
     {
         return $this->hasMany(CompanyBankAccount::class)->where('is_primary', true);
     }
+
+    /**
+     * Get the orders for the company.
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class);
+    }
 }
