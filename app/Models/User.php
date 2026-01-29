@@ -3,7 +3,9 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\Country;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -58,6 +60,7 @@ class User extends Authenticatable
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
             'is_admin' => 'boolean',
+            'country' => Country::class,
         ];
     }
 
@@ -70,4 +73,12 @@ class User extends Authenticatable
         'created' => \App\Events\UserCreated::class,
         'updated' => \App\Events\UserUpdated::class,
     ];
+
+    /**
+     * Get the companies for the user.
+     */
+    public function companies(): HasMany
+    {
+        return $this->hasMany(Company::class);
+    }
 }

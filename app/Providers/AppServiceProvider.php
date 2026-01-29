@@ -28,5 +28,20 @@ class AppServiceProvider extends ServiceProvider
             \App\Events\UserUpdated::class,
             \App\Listeners\PublishUserToErp::class,
         );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\CompanyCreated::class,
+            \App\Listeners\PublishCompanyToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\CompanyUpdated::class,
+            \App\Listeners\PublishCompanyToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\CompanyDeleted::class,
+            \App\Listeners\PublishCompanyToErp::class,
+        );
     }
 }
