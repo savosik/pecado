@@ -40,6 +40,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\Order\CheckoutServiceInterface::class,
             \App\Services\Order\CheckoutService::class
         );
+
+        $this->app->bind(
+            \App\Contracts\Order\OrderRepositoryInterface::class,
+            \App\Repositories\OrderRepository::class
+        );
     }
 
     /**
@@ -70,6 +75,21 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\CompanyDeleted::class,
             \App\Listeners\PublishCompanyToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderCreated::class,
+            \App\Listeners\PublishOrderToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderUpdated::class,
+            \App\Listeners\PublishOrderToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderDeleted::class,
+            \App\Listeners\PublishOrderToErp::class,
         );
     }
 }

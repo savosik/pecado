@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Contracts\Order\CheckoutServiceInterface;
+use App\Contracts\Order\OrderRepositoryInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Company;
@@ -15,7 +16,8 @@ use Illuminate\Support\Facades\Gate;
 class OrderController extends Controller
 {
     public function __construct(
-        protected CheckoutServiceInterface $checkoutService
+        protected CheckoutServiceInterface $checkoutService,
+        protected OrderRepositoryInterface $orderRepository
     ) {}
 
     /**
@@ -25,13 +27,7 @@ class OrderController extends Controller
     {
         Gate::authorize('viewAny', Order::class);
 
-        $query = Order::with('items');
-
-        if (!$request->user()->is_admin) {
-            $query->where('user_id', $request->user()->id);
-        }
-
-        $orders = $query->latest()->paginate();
+        $orders = $this->orderRepository->getPaginatedForUser($request->user());
 
         return response()->json($orders);
     }
@@ -91,12 +87,18 @@ class OrderController extends Controller
     /**
      * Display the specified order.
      */
-    public function show(Request $request, Order $order): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        $order = $this->orderRepository->findWithRelations($id, ['items', 'company', 'deliveryAddress']);
+
+        if (!$order) {
+            abort(404);
+        }
+
         Gate::authorize('view', $order);
 
         return response()->json([
-            'order' => $order->load(['items', 'company', 'deliveryAddress']),
+            'order' => $order,
         ]);
     }
 }

@@ -13,6 +13,12 @@ class Order extends Model
 {
     use HasFactory;
 
+    protected $dispatchesEvents = [
+        'created' => \App\Events\OrderCreated::class,
+        'updated' => \App\Events\OrderUpdated::class,
+        'deleted' => \App\Events\OrderDeleted::class,
+    ];
+
     protected $fillable = [
         'uuid',
         'user_id',
