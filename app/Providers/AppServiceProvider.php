@@ -19,6 +19,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\UserCreated::class,
+            \App\Listeners\PublishUserToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\UserUpdated::class,
+            \App\Listeners\PublishUserToErp::class,
+        );
     }
 }

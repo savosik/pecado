@@ -28,6 +28,8 @@ return new class extends Migration
             $table->boolean('terms_accepted')->default(false);
             $table->text('comment')->nullable();
             $table->string('status')->default('processing');
+            $table->boolean('is_admin')->default(false);
+            $table->string('erp_id')->nullable()->unique();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

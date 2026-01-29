@@ -6,11 +6,12 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -30,6 +31,8 @@ class User extends Authenticatable
         'status',
         'email',
         'password',
+        'is_admin',
+        'erp_id',
     ];
 
     /**
@@ -54,6 +57,17 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
+            'is_admin' => 'boolean',
         ];
     }
+
+    /**
+     * The event map for the model.
+     *
+     * @var array<string, string>
+     */
+    protected $dispatchesEvents = [
+        'created' => \App\Events\UserCreated::class,
+        'updated' => \App\Events\UserUpdated::class,
+    ];
 }
