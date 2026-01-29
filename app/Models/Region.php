@@ -18,4 +18,24 @@ class Region extends Model
     {
         return $this->hasMany(User::class);
     }
+
+    /**
+     * Get the primary warehouses for the region.
+     */
+    public function primaryWarehouses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'region_warehouse')
+            ->wherePivot('type', 'primary')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the preorder warehouses for the region.
+     */
+    public function preorderWarehouses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'region_warehouse')
+            ->wherePivot('type', 'preorder')
+            ->withTimestamps();
+    }
 }

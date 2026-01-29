@@ -9,6 +9,7 @@ class Product extends Model
     protected $fillable = [
         'name',
         'base_price',
+        'external_id',
     ];
 
     protected $casts = [
@@ -20,5 +21,15 @@ class Product extends Model
     public function discounts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
         return $this->belongsToMany(Discount::class, 'discount_product');
+    }
+
+    /**
+     * Get the warehouses with stock for the product.
+     */
+    public function warehouses(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Warehouse::class, 'product_warehouse')
+            ->withPivot('quantity')
+            ->withTimestamps();
     }
 }

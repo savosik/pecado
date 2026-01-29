@@ -25,6 +25,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\Currency\UserCurrencyResolverInterface::class,
             \App\Services\Currency\UserCurrencyResolver::class
         );
+
+        $this->app->bind(
+            \App\Contracts\Stock\StockServiceInterface::class,
+            \App\Services\Stock\StockService::class
+        );
     }
 
     /**
