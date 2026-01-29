@@ -105,6 +105,52 @@ services:
     networks:
       - pecado-network
 
+  mailpit:
+    image: 'axllent/mailpit:latest'
+    container_name: pecado-mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025'
+      - '8025:8025'
+    networks:
+      - pecado-network
+
+  minio:
+    image: 'minio/minio:latest'
+    container_name: pecado-minio
+    restart: unless-stopped
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: 'sail'
+      MINIO_ROOT_PASSWORD: 'password'
+    volumes:
+      - minio-data:/data
+    networks:
+      - pecado-network
+    command: minio server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      retries: 3
+      timeout: 5s
+
+  createbuckets:
+    image: minio/mc
+    container_name: pecado-createbuckets
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add myminio http://minio:9000 sail password;
+      /usr/bin/mc mb myminio/pecado;
+      /usr/bin/mc anonymous set public myminio/pecado;
+      exit 0;
+      "
+    networks:
+      - pecado-network
+
   node:
     image: node:20-alpine
     container_name: pecado-node
@@ -127,3 +173,4 @@ volumes:
   mysql-data:
   meilisearch-data:
   redis-data:
+  minio-data:

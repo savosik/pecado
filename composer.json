@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.2",
@@ -11,6 +14,7 @@
         "laravel/framework": "^12.0",
         "laravel/scout": "^10.23",
         "laravel/tinker": "^2.10.1",
+        "league/flysystem-aws-s3-v3": "^3.31",
         "meilisearch/meilisearch-php": "^1.16",
         "tightenco/ziggy": "^2.6",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.4"
@@ -18,10 +22,12 @@
     "require-dev": {
         "fakerphp/faker": "^1.23",
         "laravel/pail": "^1.2.2",
-        "laravel/pint": "^1.24",
+        "laravel/pint": "^1.27",
         "laravel/sail": "^1.41",
+        "laravel/telescope": "^5.16",
         "mockery/mockery": "^1.6",
         "nunomaduro/collision": "^8.6",
+        "nunomaduro/larastan": "^3.9",
         "phpunit/phpunit": "^11.5.3"
     },
     "autoload": {
@@ -52,6 +58,12 @@
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "lint": [
+            "pint"
+        ],
+        "analyse": [
+            "phpstan analyse"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
