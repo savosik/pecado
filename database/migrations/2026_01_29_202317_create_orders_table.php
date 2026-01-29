@@ -26,6 +26,7 @@ return new class extends Migration
             $table->string('currency_code')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('orders')->onDelete('cascade');
             $table->string('type')->default(\App\Enums\OrderType::STANDARD->value);
+            $table->softDeletes();
             $table->timestamps();
         });
     }
