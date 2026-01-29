@@ -32,4 +32,20 @@ class Product extends Model
             ->withPivot('quantity')
             ->withTimestamps();
     }
+
+    /**
+     * Get the users who have favorited this product.
+     */
+    public function favoritedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'favorites');
+    }
+
+    /**
+     * Get the users who have this product in their wishlist.
+     */
+    public function wishlistedByUsers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'wishlist_items');
+    }
 }

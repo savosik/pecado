@@ -115,4 +115,44 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Discount::class, 'discount_user');
     }
+
+    /**
+     * Get the favorites for the user.
+     */
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class);
+    }
+
+    /**
+     * Get the wishlist items for the user.
+     */
+    public function wishlistItems(): HasMany
+    {
+        return $this->hasMany(WishlistItem::class);
+    }
+
+    /**
+     * Get the products that are favorited by the user.
+     */
+    public function favoriteProducts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'favorites');
+    }
+
+    /**
+     * Get the products in the user's wishlist.
+     */
+    public function wishlistProducts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'wishlist_items');
+    }
+
+    /**
+     * Get the carts for the user.
+     */
+    public function carts(): HasMany
+    {
+        return $this->hasMany(Cart::class);
+    }
 }
