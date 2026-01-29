@@ -35,6 +35,7 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'erp_id',
+        'region_id',
     ];
 
     /**
@@ -61,6 +62,7 @@ class User extends Authenticatable
             'terms_accepted' => 'boolean',
             'is_admin' => 'boolean',
             'country' => Country::class,
+            'region_id' => 'integer',
         ];
     }
 
@@ -88,5 +90,12 @@ class User extends Authenticatable
     public function deliveryAddresses(): HasMany
     {
         return $this->hasMany(DeliveryAddress::class);
+    }
+    /**
+     * Get the region that the user belongs to.
+     */
+    public function region(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Region::class);
     }
 }

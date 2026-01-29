@@ -30,6 +30,7 @@ return new class extends Migration
             $table->string('status')->default('processing');
             $table->boolean('is_admin')->default(false);
             $table->string('erp_id')->nullable()->unique();
+            $table->foreignId('region_id')->nullable()->constrained()->nullOnDelete();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
