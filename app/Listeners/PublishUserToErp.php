@@ -32,7 +32,7 @@ class PublishUserToErp
 
         \Illuminate\Support\Facades\Queue::connection('rabbitmq')->pushRaw(
             json_encode($payload),
-            'erp_events'
+            'erp_users'
         );
     }
 }

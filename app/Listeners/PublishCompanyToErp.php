@@ -38,7 +38,7 @@ class PublishCompanyToErp
 
         Queue::connection('rabbitmq')->pushRaw(
             json_encode($payload),
-            'erp_events'
+            'erp_companies'
         );
     }
 }

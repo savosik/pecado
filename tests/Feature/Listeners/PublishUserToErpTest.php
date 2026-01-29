@@ -33,7 +33,7 @@ class PublishUserToErpTest extends TestCase
             ->once()
             ->withArgs(function ($payload, $queue) {
                 $data = json_decode($payload, true);
-                return $queue === 'erp_events' 
+                return $queue === 'erp_users' 
                     && isset($data['event']) 
                     && $data['event'] === 'UserCreated';
             });
@@ -57,7 +57,7 @@ class PublishUserToErpTest extends TestCase
             ->once()
             ->withArgs(function ($payload, $queue) {
                 $data = json_decode($payload, true);
-                return $queue === 'erp_events' 
+                return $queue === 'erp_users' 
                     && isset($data['event']) 
                     && $data['event'] === 'UserUpdated';
             });

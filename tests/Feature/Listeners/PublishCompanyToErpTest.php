@@ -34,7 +34,7 @@ class PublishCompanyToErpTest extends TestCase
             ->once()
             ->withArgs(function ($payload, $queue) {
                 $data = json_decode($payload, true);
-                return $queue === 'erp_events' 
+                return $queue === 'erp_companies' 
                     && isset($data['event']) 
                     && $data['event'] === 'CompanyCreated';
             });
@@ -59,7 +59,7 @@ class PublishCompanyToErpTest extends TestCase
             ->once()
             ->withArgs(function ($payload, $queue) {
                 $data = json_decode($payload, true);
-                return $queue === 'erp_events' 
+                return $queue === 'erp_companies' 
                     && isset($data['event']) 
                     && $data['event'] === 'CompanyUpdated';
             });
@@ -84,7 +84,7 @@ class PublishCompanyToErpTest extends TestCase
             ->once()
             ->withArgs(function ($payload, $queue) {
                 $data = json_decode($payload, true);
-                return $queue === 'erp_events' 
+                return $queue === 'erp_companies' 
                     && isset($data['event']) 
                     && $data['event'] === 'CompanyDeleted';
             });
@@ -111,7 +111,7 @@ class PublishCompanyToErpTest extends TestCase
             ->once()
             ->withArgs(function ($payload, $queue) {
                 $data = json_decode($payload, true);
-                return $queue === 'erp_events' 
+                return $queue === 'erp_companies' 
                     && isset($data['company']['bank_accounts'])
                     && count($data['company']['bank_accounts']) === 1;
             });
@@ -137,7 +137,7 @@ class PublishCompanyToErpTest extends TestCase
             ->once()
             ->withArgs(function ($payload, $queue) {
                 $data = json_decode($payload, true);
-                return $queue === 'erp_events' 
+                return $queue === 'erp_companies' 
                     && isset($data['user']['erp_id'])
                     && $data['user']['erp_id'] === 'test-erp-id-999';
             });
