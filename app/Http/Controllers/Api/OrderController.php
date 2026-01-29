@@ -64,12 +64,19 @@ class OrderController extends Controller
             return response()->json(['message' => 'Cart is empty'], 422);
         }
 
-        $order = $this->checkoutService->checkout(
-            $cart,
-            $company,
-            $address,
-            $validated['comment'] ?? null
-        );
+        try {
+            $order = $this->checkoutService->checkout(
+                $cart,
+                $company,
+                $address,
+                $validated['comment'] ?? null
+            );
+        } catch (\App\Exceptions\InsufficientStockException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->getItems(),
+            ], 422);
+        }
 
         // Optionally clear the cart after checkout if needed, 
         // but often we just leave it or mark as processed.
@@ -77,7 +84,7 @@ class OrderController extends Controller
 
         return response()->json([
             'message' => 'Order created successfully',
-            'order' => $order->load('items'),
+            'order' => $order->load('items', 'children.items'),
         ], 201);
     }
 

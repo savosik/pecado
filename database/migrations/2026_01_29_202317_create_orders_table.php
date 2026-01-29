@@ -24,6 +24,8 @@ return new class extends Migration
             $table->decimal('exchange_rate', 20, 10)->default(1);
             $table->decimal('correction_factor', 10, 4)->default(1);
             $table->string('currency_code')->nullable();
+            $table->foreignId('parent_id')->nullable()->constrained('orders')->onDelete('cascade');
+            $table->string('type')->default(\App\Enums\OrderType::STANDARD->value);
             $table->timestamps();
         });
     }

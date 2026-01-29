@@ -25,6 +25,8 @@ class Order extends Model
         'exchange_rate',
         'correction_factor',
         'currency_code',
+        'parent_id',
+        'type',
     ];
 
     protected $casts = [
@@ -32,6 +34,7 @@ class Order extends Model
         'total_amount' => 'decimal:2',
         'exchange_rate' => 'decimal:10',
         'correction_factor' => 'decimal:4',
+        'type' => \App\Enums\OrderType::class,
     ];
 
     /**
@@ -69,5 +72,15 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(Order::class, 'parent_id');
     }
 }

@@ -26,6 +26,7 @@ class OrderFactory extends Factory
             'exchange_rate' => 1.0,
             'correction_factor' => 1.0,
             'currency_code' => 'RUB',
+            'type' => \App\Enums\OrderType::STANDARD,
         ];
     }
 }
