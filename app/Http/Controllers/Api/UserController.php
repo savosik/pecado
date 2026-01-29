@@ -51,7 +51,8 @@ class UserController extends Controller
             'terms_accepted' => 'sometimes|boolean',
             'comment' => 'sometimes|nullable|string',
             'status' => 'sometimes|string',
-            'is_admin' => 'sometimes|boolean', 
+            'is_admin' => 'sometimes|boolean',
+            'currency_id' => 'sometimes|nullable|exists:currencies,id',
         ]);
 
         // Only admin can change is_admin status

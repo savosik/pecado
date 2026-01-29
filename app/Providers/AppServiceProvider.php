@@ -15,6 +15,16 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\Pricing\PriceServiceInterface::class,
             \App\Services\Pricing\PriceService::class
         );
+        
+        $this->app->bind(
+            \App\Contracts\Currency\CurrencyConversionServiceInterface::class,
+            \App\Services\Currency\CurrencyConversionService::class
+        );
+
+        $this->app->bind(
+            \App\Contracts\Currency\UserCurrencyResolverInterface::class,
+            \App\Services\Currency\UserCurrencyResolver::class
+        );
     }
 
     /**

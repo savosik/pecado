@@ -36,6 +36,7 @@ class User extends Authenticatable
         'is_admin',
         'erp_id',
         'region_id',
+        'currency_id',
     ];
 
     /**
@@ -63,6 +64,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'country' => Country::class,
             'region_id' => 'integer',
+            'currency_id' => 'integer',
         ];
     }
 
@@ -97,5 +99,20 @@ class User extends Authenticatable
     public function region(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Region::class);
+    }
+
+    /**
+     * Get the currency that the user belongs to.
+     */
+    public function currency(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
+    }
+    /**
+     * Get the discounts for the user.
+     */
+    public function discounts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Discount::class, 'discount_user');
     }
 }
