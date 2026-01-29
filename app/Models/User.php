@@ -81,4 +81,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Company::class);
     }
+
+    /**
+     * Get the delivery addresses for the user.
+     */
+    public function deliveryAddresses(): HasMany
+    {
+        return $this->hasMany(DeliveryAddress::class);
+    }
 }
