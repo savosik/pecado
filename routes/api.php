@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WishlistItemController;
+use App\Http\Controllers\Api\FaqController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +17,7 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::apiResource('news', \App\Http\Controllers\Api\NewsController::class)->only(['index', 'show']);
 Route::apiResource('articles', \App\Http\Controllers\Api\ArticleController::class)->only(['index', 'show']);
 Route::apiResource('brand-stories', \App\Http\Controllers\Api\BrandStoryController::class)->only(['index', 'show']);
+Route::apiResource('faqs', FaqController::class)->only(['index', 'show']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
