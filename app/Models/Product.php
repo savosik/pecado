@@ -12,10 +12,14 @@ class Product extends Model
         'name',
         'base_price',
         'external_id',
+        'is_new',
+        'is_bestseller',
     ];
 
     protected $casts = [
         'base_price' => 'decimal:2',
+        'is_new' => 'boolean',
+        'is_bestseller' => 'boolean',
     ];
     /**
      * Get the discounts for the product.

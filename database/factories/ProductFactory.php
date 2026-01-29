@@ -20,6 +20,8 @@ class ProductFactory extends Factory
             'name' => $this->faker->words(3, true),
             'base_price' => $this->faker->randomFloat(2, 10, 500),
             'external_id' => $this->faker->uuid(),
+            'is_new' => $this->faker->boolean(20),
+            'is_bestseller' => $this->faker->boolean(20),
         ];
     }
 }

@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('name');
             $table->decimal('base_price', 15, 2);
             $table->uuid('external_id')->nullable()->unique();
+            $table->boolean('is_new')->default(false);
+            $table->boolean('is_bestseller')->default(false);
             $table->timestamps();
         });
     }
