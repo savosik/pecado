@@ -13,6 +13,9 @@ use Illuminate\Support\Facades\Route;
 
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
+Route::apiResource('news', \App\Http\Controllers\Api\NewsController::class)->only(['index', 'show']);
+Route::apiResource('articles', \App\Http\Controllers\Api\ArticleController::class)->only(['index', 'show']);
+Route::apiResource('brand-stories', \App\Http\Controllers\Api\BrandStoryController::class)->only(['index', 'show']);
 
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
