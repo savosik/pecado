@@ -62,4 +62,12 @@ class Product extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    /**
+     * Get the segments that belong to the product.
+     */
+    public function segments(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Segment::class, 'product_segment');
+    }
 }
