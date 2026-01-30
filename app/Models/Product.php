@@ -7,10 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Product extends Model
+class Product extends Model implements HasMedia
 {
-    use HasFactory;
+    use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
         'name',
@@ -32,6 +34,7 @@ class Product extends Model
         'short_description',
         'brand_id',
         'model_id',
+        'size_chart_id',
     ];
 
     protected $casts = [
@@ -42,6 +45,20 @@ class Product extends Model
         'is_liquidation' => 'boolean',
         'for_marketplaces' => 'boolean',
     ];
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('main')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
+            ->singleFile();
+
+        $this->addMediaCollection('additional')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']);
+
+        $this->addMediaCollection('video')
+            ->acceptsMimeTypes(['video/mp4', 'video/webm', 'video/quicktime'])
+            ->singleFile();
+    }
 
     /**
      * Get the brand for the product.
@@ -57,6 +74,14 @@ class Product extends Model
     public function model(): BelongsTo
     {
         return $this->belongsTo(ProductModel::class, 'model_id');
+    }
+
+    /**
+     * Get the size chart for the product.
+     */
+    public function sizeChart(): BelongsTo
+    {
+        return $this->belongsTo(SizeChart::class);
     }
 
     /**

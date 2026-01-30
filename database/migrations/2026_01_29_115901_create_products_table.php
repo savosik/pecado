@@ -40,6 +40,7 @@ return new class extends Migration
             // Foreign keys (actual constraints added later due to migration order)
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('model_id')->nullable();
+            $table->unsignedBigInteger('size_chart_id')->nullable();
 
             $table->timestamps();
         });

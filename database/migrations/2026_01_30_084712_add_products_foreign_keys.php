@@ -21,6 +21,11 @@ return new class extends Migration
                 ->references('id')
                 ->on('product_models')
                 ->nullOnDelete();
+
+            $table->foreign('size_chart_id')
+                ->references('id')
+                ->on('size_charts')
+                ->nullOnDelete();
         });
     }
 
@@ -32,6 +37,7 @@ return new class extends Migration
         Schema::table('products', function (Blueprint $table) {
             $table->dropForeign(['brand_id']);
             $table->dropForeign(['model_id']);
+            $table->dropForeign(['size_chart_id']);
         });
     }
 };
