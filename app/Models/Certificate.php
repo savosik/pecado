@@ -21,4 +21,12 @@ class Certificate extends Model
         'issued_at' => 'date',
         'files' => 'array',
     ];
+
+    /**
+     * Get the products for this certificate.
+     */
+    public function products(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_certificate');
+    }
 }

@@ -48,4 +48,12 @@ class Brand extends Model
     {
         return $this->hasOne(BrandStory::class);
     }
+
+    /**
+     * Get the products for this brand.
+     */
+    public function products(): HasMany
+    {
+        return $this->hasMany(Product::class);
+    }
 }

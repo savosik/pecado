@@ -18,6 +18,29 @@ return new class extends Migration
             $table->uuid('external_id')->nullable()->unique();
             $table->boolean('is_new')->default(false);
             $table->boolean('is_bestseller')->default(false);
+
+            // New fields from XML feed
+            $table->string('code')->nullable();
+            $table->string('sku')->nullable();
+            $table->string('slug')->nullable()->unique();
+            $table->string('url')->nullable();
+            $table->string('barcode')->nullable();
+            $table->string('tnved')->nullable();
+
+            // Flags
+            $table->boolean('is_marked')->default(false);
+            $table->boolean('is_liquidation')->default(false);
+            $table->boolean('for_marketplaces')->default(false);
+
+            // Descriptions
+            $table->text('description')->nullable();
+            $table->text('description_html')->nullable();
+            $table->text('short_description')->nullable();
+
+            // Foreign keys (actual constraints added later due to migration order)
+            $table->unsignedBigInteger('brand_id')->nullable();
+            $table->unsignedBigInteger('model_id')->nullable();
+
             $table->timestamps();
         });
     }
