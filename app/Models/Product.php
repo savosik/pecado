@@ -70,4 +70,12 @@ class Product extends Model
     {
         return $this->belongsToMany(Segment::class, 'product_segment');
     }
+
+    /**
+     * Get the promotions that belong to the product.
+     */
+    public function promotions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Promotion::class, 'product_promotion');
+    }
 }
