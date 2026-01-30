@@ -2,21 +2,28 @@
 
 namespace Database\Factories;
 
+use App\Models\Brand;
+use App\Models\BrandStory;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
-/**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Article>
- */
-class ArticleFactory extends Factory
+class BrandStoryFactory extends Factory
 {
+    /**
+     * The name of the factory's corresponding model.
+     *
+     * @var string
+     */
+    protected $model = BrandStory::class;
+
     /**
      * Define the model's default state.
      *
-     * @return array<string, mixed>
+     * @return array
      */
-    public function definition(): array
+    public function definition()
     {
         return [
+            'brand_id' => Brand::factory(),
             'title' => $this->faker->sentence,
             'slug' => $this->faker->slug,
             'short_description' => $this->faker->sentence,
