@@ -14,10 +14,21 @@ class BannerResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $desktopMedia = $this->getFirstMedia('desktop');
+        $mobileMedia = $this->getFirstMedia('mobile');
+
         return [
             'id' => $this->id,
             'title' => $this->title,
             'link' => $this->link,
+            'desktop_media' => $desktopMedia ? [
+                'url' => $desktopMedia->getUrl(),
+                'mime_type' => $desktopMedia->mime_type,
+            ] : null,
+            'mobile_media' => $mobileMedia ? [
+                'url' => $mobileMedia->getUrl(),
+                'mime_type' => $mobileMedia->mime_type,
+            ] : null,
         ];
     }
 }
