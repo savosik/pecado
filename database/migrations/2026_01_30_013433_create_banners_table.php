@@ -14,8 +14,13 @@ return new class extends Migration
         Schema::create('banners', function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->string('link');
+            $table->string('linkable_type')->nullable();
+            $table->unsignedBigInteger('linkable_id')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
+
+            $table->index(['linkable_type', 'linkable_id']);
         });
     }
 
