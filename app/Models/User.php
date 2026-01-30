@@ -168,4 +168,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserBalance::class);
     }
+
+    /**
+     * Get the returns for the user.
+     */
+    public function returns(): HasMany
+    {
+        return $this->hasMany(ProductReturn::class);
+    }
 }

@@ -91,4 +91,12 @@ class Order extends Model
     {
         return $this->hasMany(Order::class, 'parent_id');
     }
+
+    /**
+     * Get the return items for this order.
+     */
+    public function returnItems(): HasMany
+    {
+        return $this->hasMany(ReturnItem::class);
+    }
 }

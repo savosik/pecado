@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\CompanyController;
 use App\Http\Controllers\Api\DeliveryAddressController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\ReturnController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\WishlistItemController;
 use App\Http\Controllers\Api\FaqController;
@@ -41,5 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('orders', [OrderController::class, 'index']);
     Route::get('orders/{order}', [OrderController::class, 'show']);
     Route::post('orders/checkout', [OrderController::class, 'checkout']);
+
+    // Return routes
+    Route::apiResource('returns', ReturnController::class);
 });
 

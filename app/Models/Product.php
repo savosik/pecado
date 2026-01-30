@@ -158,4 +158,12 @@ class Product extends Model
     {
         return $this->belongsToMany(Promotion::class, 'product_promotion');
     }
+
+    /**
+     * Get the return items for the product.
+     */
+    public function returnItems(): HasMany
+    {
+        return $this->hasMany(ReturnItem::class);
+    }
 }
