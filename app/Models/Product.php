@@ -166,4 +166,12 @@ class Product extends Model
     {
         return $this->hasMany(ReturnItem::class);
     }
+
+    /**
+     * Get the product selections that the product belongs to.
+     */
+    public function productSelections(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductSelection::class, 'product_product_selection');
+    }
 }
