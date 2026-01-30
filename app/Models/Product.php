@@ -37,14 +37,22 @@ class Product extends Model implements HasMedia
         'size_chart_id',
     ];
 
-    protected $casts = [
-        'base_price' => 'decimal:2',
-        'is_new' => 'boolean',
-        'is_bestseller' => 'boolean',
-        'is_marked' => 'boolean',
-        'is_liquidation' => 'boolean',
-        'for_marketplaces' => 'boolean',
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'base_price' => 'decimal:2',
+            'is_new' => 'boolean',
+            'is_bestseller' => 'boolean',
+            'is_marked' => 'boolean',
+            'is_liquidation' => 'boolean',
+            'for_marketplaces' => 'boolean',
+        ];
+    }
 
     public function registerMediaCollections(): void
     {

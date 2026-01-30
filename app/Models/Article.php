@@ -13,7 +13,7 @@ class Article extends Model implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\ArticleFactory> */
     use HasFactory, HasTags;
-    use InteractsWithMedia;
+    use \App\Traits\HasContentMedia;
 
     protected $fillable = [
         'title',
@@ -24,18 +24,5 @@ class Article extends Model implements HasMedia
         'meta_description',
     ];
 
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('list-item')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
-            ->singleFile();
 
-        $this->addMediaCollection('detail-item-desktop')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
-            ->singleFile();
-
-        $this->addMediaCollection('detail-item-mobile')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
-            ->singleFile();
-    }
 }

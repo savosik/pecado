@@ -28,9 +28,17 @@ class Brand extends Model implements HasMedia
         'parent_id',
     ];
 
-    protected $casts = [
-        'category' => BrandCategory::class,
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'category' => BrandCategory::class,
+        ];
+    }
 
     public function sizeCharts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {

@@ -14,7 +14,7 @@ class BrandStory extends Model implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\BrandFactory> */
     use HasFactory, HasTags;
-    use InteractsWithMedia;
+    use \App\Traits\HasContentMedia;
 
     protected $fillable = [
         'title',
@@ -31,18 +31,5 @@ class BrandStory extends Model implements HasMedia
         return $this->belongsTo(Brand::class);
     }
 
-    public function registerMediaCollections(): void
-    {
-        $this->addMediaCollection('list-item')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
-            ->singleFile();
 
-        $this->addMediaCollection('detail-item-desktop')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
-            ->singleFile();
-
-        $this->addMediaCollection('detail-item-mobile')
-            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
-            ->singleFile();
-    }
 }

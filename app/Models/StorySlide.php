@@ -26,10 +26,18 @@ class StorySlide extends Model implements HasMedia
         'sort_order',
     ];
 
-    protected $casts = [
-        'duration' => 'integer',
-        'sort_order' => 'integer',
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'duration' => 'integer',
+            'sort_order' => 'integer',
+        ];
+    }
 
     /**
      * Сторис, которому принадлежит слайд

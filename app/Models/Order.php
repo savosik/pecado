@@ -37,13 +37,21 @@ class Order extends Model
         'type',
     ];
 
-    protected $casts = [
-        'status' => OrderStatus::class,
-        'total_amount' => 'decimal:2',
-        'exchange_rate' => 'decimal:10',
-        'correction_factor' => 'decimal:4',
-        'type' => \App\Enums\OrderType::class,
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => OrderStatus::class,
+            'total_amount' => 'decimal:2',
+            'exchange_rate' => 'decimal:10',
+            'correction_factor' => 'decimal:4',
+            'type' => \App\Enums\OrderType::class,
+        ];
+    }
 
     /**
      * The "booted" method of the model.
