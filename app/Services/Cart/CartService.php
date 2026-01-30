@@ -76,4 +76,35 @@ class CartService implements CartServiceInterface
 
         return $summaries;
     }
+
+    public function moveItems(Cart $sourceCart, Cart $targetCart, array $itemIds = []): void
+    {
+        $itemsQuery = $sourceCart->items();
+
+        if (!empty($itemIds)) {
+            $itemsQuery->whereIn('product_id', $itemIds);
+        }
+
+        $itemsToMove = $itemsQuery->get();
+
+        foreach ($itemsToMove as $item) {
+            // Check if item already exists in the target cart
+            $existingItem = $targetCart->items()
+                ->where('product_id', $item->product_id)
+                ->first();
+
+            if ($existingItem) {
+                // Update quantity and delete from source
+                $existingItem->update([
+                    'quantity' => $existingItem->quantity + $item->quantity,
+                ]);
+                $item->delete();
+            } else {
+                // Move item to target cart
+                $item->update([
+                    'cart_id' => $targetCart->id,
+                ]);
+            }
+        }
+    }
 }

@@ -209,4 +209,35 @@ class CartController extends Controller
             'message' => 'Item removed from cart',
         ]);
     }
+
+    /**
+     * Move items from one cart to another.
+     */
+    public function moveItems(Request $request, Cart $cart): JsonResponse
+    {
+        Gate::authorize('moveItems', $cart);
+
+        $validated = $request->validate([
+            'target_cart_id' => 'required|integer|exists:carts,id',
+            'product_ids' => 'nullable|array',
+            'product_ids.*' => 'integer|exists:products,id',
+        ]);
+
+        $targetCart = Cart::find($validated['target_cart_id']);
+
+        // Check ownership of target cart
+        if (!$request->user()->is_admin && $targetCart->user_id !== $request->user()->id) {
+            abort(403, 'You do not have permission to move items to this cart.');
+        }
+
+        $this->cartService->moveItems(
+            $cart,
+            $targetCart,
+            $validated['product_ids'] ?? []
+        );
+
+        return response()->json([
+            'message' => 'Items moved successfully',
+        ]);
+    }
 }

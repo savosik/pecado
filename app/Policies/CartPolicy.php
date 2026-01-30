@@ -64,10 +64,15 @@ class CartPolicy
         return $user->is_admin || $user->id === $cart->user_id;
     }
 
-    /**
-     * Determine whether the user can update an item in the cart.
-     */
     public function updateItem(User $user, Cart $cart): bool
+    {
+        return $user->is_admin || $user->id === $cart->user_id;
+    }
+
+    /**
+     * Determine whether the user can move items from the cart.
+     */
+    public function moveItems(User $user, Cart $cart): bool
     {
         return $user->is_admin || $user->id === $cart->user_id;
     }

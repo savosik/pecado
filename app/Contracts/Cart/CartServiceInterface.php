@@ -22,4 +22,6 @@ interface CartServiceInterface
      * @return array<int, array{total_price: float, items_count: int, available_count: int, preorder_count: int}>
      */
     public function getCartsSummary(Collection $carts, User $user): array;
+
+    public function moveItems(Cart $sourceCart, Cart $targetCart, array $itemIds = []): void;
 }
