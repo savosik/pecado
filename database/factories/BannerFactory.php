@@ -18,7 +18,10 @@ class BannerFactory extends Factory
     {
         return [
             'title' => $this->faker->sentence(3),
-            'link' => $this->faker->url(),
+            'linkable_type' => null,
+            'linkable_id' => null,
+            'is_active' => true,
+            'sort_order' => 0,
         ];
     }
 }
