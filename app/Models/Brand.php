@@ -16,6 +16,7 @@ class Brand extends Model
 
     protected $fillable = [
         'name',
+        'external_id',
         'slug',
         'short_description',
         'category',
@@ -27,6 +28,11 @@ class Brand extends Model
     protected $casts = [
         'category' => BrandCategory::class,
     ];
+
+    public function sizeCharts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(SizeChart::class);
+    }
 
     public function parent(): BelongsTo
     {
