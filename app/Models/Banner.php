@@ -21,10 +21,18 @@ class Banner extends Model implements HasMedia
         'sort_order',
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-        'sort_order' => 'integer',
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
 
     /**
      * Полиморфная связь - сущность, на которую ссылается баннер

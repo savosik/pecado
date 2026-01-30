@@ -20,10 +20,18 @@ class Attribute extends Model
         'sort_order',
     ];
 
-    protected $casts = [
-        'is_filterable' => 'boolean',
-        'sort_order' => 'integer',
-    ];
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_filterable' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
 
     /**
      * Get the predefined values for this attribute.
