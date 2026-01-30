@@ -4,33 +4,24 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Kalnoy\Nestedset\NodeTrait;
 use Spatie\Tags\HasTags;
 
 class Category extends Model
 {
     use HasFactory;
     use HasTags;
+    use NodeTrait;
 
     protected $fillable = [
         'name',
         'parent_id',
+        'external_id',
         'short_description',
         'description',
         'meta_title',
         'meta_description',
     ];
-
-    public function parent(): BelongsTo
-    {
-        return $this->belongsTo(Category::class, 'parent_id');
-    }
-
-    public function children(): HasMany
-    {
-        return $this->hasMany(Category::class, 'parent_id');
-    }
 
     /**
      * Get the products for this category.
