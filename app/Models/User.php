@@ -160,4 +160,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Get the balances for the user.
+     */
+    public function balances(): HasMany
+    {
+        return $this->hasMany(UserBalance::class);
+    }
 }
