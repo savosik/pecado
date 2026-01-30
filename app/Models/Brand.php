@@ -10,9 +10,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Spatie\Tags\HasTags;
 
-class Brand extends Model
+use Spatie\MediaLibrary\HasMedia;
+use Spatie\MediaLibrary\InteractsWithMedia;
+
+class Brand extends Model implements HasMedia
 {
-    use HasFactory, HasTags;
+    use HasFactory, HasTags, InteractsWithMedia;
 
     protected $fillable = [
         'name',
@@ -55,5 +58,14 @@ class Brand extends Model
     public function products(): HasMany
     {
         return $this->hasMany(Product::class);
+    }
+
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('logo')
+            ->acceptsMimeTypes([
+                'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'
+            ])
+            ->singleFile();
     }
 }
