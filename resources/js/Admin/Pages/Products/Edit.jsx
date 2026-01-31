@@ -1,0 +1,452 @@
+import { useMemo } from 'react';
+import { useForm } from '@inertiajs/react';
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor } from '@/Admin/Components';
+import { Box, Card, SimpleGrid, Input, Stack, Image, Tabs } from '@chakra-ui/react';
+import { Field } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
+import { toaster } from '@/components/ui/toaster';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
+
+export default function Edit({ product, brands, categories, productModels, sizeCharts }) {
+    const { data, setData, post, processing, errors } = useForm({
+        name: product.name || '',
+        slug: product.slug || '',
+        base_price: product.base_price || '',
+        brand_id: product.brand_id || null,
+        model_id: product.model_id || null,
+        size_chart_id: product.size_chart_id || null,
+        description: product.description_html || product.description || '',
+        short_description: product.short_description || '',
+        sku: product.sku || '',
+        code: product.code || '',
+        external_id: product.external_id || '',
+        url: product.url || '',
+        barcode: product.barcode || '',
+        tnved: product.tnved || '',
+        is_new: product.is_new || false,
+        is_bestseller: product.is_bestseller || false,
+        is_marked: product.is_marked || false,
+        is_liquidation: product.is_liquidation || false,
+        for_marketplaces: product.for_marketplaces || false,
+        categories: product.categories || [],
+        image: null,
+        additional_images: [],
+        video: null,
+        _method: 'PUT',
+    });
+
+    // Определяем, в каких табах есть ошибки
+    // Определяем, в каких табах есть ошибки (мемоизируем)
+    const tabErrors = useMemo(() => ({
+        general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcode', 'tnved'].some(field => errors[field]),
+        relations: ['brand_id', 'model_id', 'categories', 'size_chart_id'].some(field => errors[field]),
+        pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
+        descriptions: ['short_description', 'description'].some(field => errors[field]),
+        media: ['image', 'additional_images', 'video'].some(field => errors[field]),
+    }), [errors]);
+
+    // Мемоизируем опции для селектов
+    const brandOptions = useMemo(() => brands.map(b => ({ value: b.id, label: b.name })), [brands]);
+    const modelOptions = useMemo(() => productModels.map(m => ({ value: m.id, label: m.name })), [productModels]);
+    const categoryOptions = useMemo(() => categories.map(c => ({ value: c.id, label: c.name })), [categories]);
+    const sizeChartOptions = useMemo(() => sizeCharts.map(s => ({ value: s.id, label: s.name })), [sizeCharts]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        post(route('admin.products.update', product.id), {
+            onSuccess: () => {
+                toaster.create({
+                    title: 'Товар успешно обновлён',
+                    type: 'success',
+                });
+            },
+            onError: () => {
+                toaster.create({
+                    title: 'Ошибка при обновлении товара',
+                    description: 'Проверьте правильность заполнения полей',
+                    type: 'error',
+                });
+            },
+        });
+    };
+
+    const handleDescriptionChange = (html) => {
+        setData('description', html);
+    };
+
+    return (
+        <AdminLayout>
+            <Box p={6}>
+                <PageHeader
+                    title="Редактировать товар"
+                    description={`Редактирование: ${product.name}`}
+                />
+
+                <form onSubmit={handleSubmit}>
+                    <Card.Root>
+                        <Card.Body>
+                            <Tabs.Root defaultValue="general" colorPalette="blue">
+                                <Tabs.List>
+                                    <Tabs.Trigger value="general">
+                                        <LuFileText /> Основная информация
+                                        {tabErrors.general && (
+                                            <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                                ⚠️
+                                            </Box>
+                                        )}
+                                    </Tabs.Trigger>
+                                    <Tabs.Trigger value="relations">
+                                        <LuTag /> Связи
+                                        {tabErrors.relations && (
+                                            <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                                ⚠️
+                                            </Box>
+                                        )}
+                                    </Tabs.Trigger>
+                                    <Tabs.Trigger value="pricing">
+                                        <LuDollarSign /> Цена и статусы
+                                        {tabErrors.pricing && (
+                                            <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                                ⚠️
+                                            </Box>
+                                        )}
+                                    </Tabs.Trigger>
+                                    <Tabs.Trigger value="descriptions">
+                                        <LuAlignLeft /> Описания
+                                        {tabErrors.descriptions && (
+                                            <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                                ⚠️
+                                            </Box>
+                                        )}
+                                    </Tabs.Trigger>
+                                    <Tabs.Trigger value="media">
+                                        <LuImage /> Медиа
+                                        {tabErrors.media && (
+                                            <Box as="span" color="red.500" ml={2}>
+                                                <LuAlertCircle size={16} />
+                                            </Box>
+                                        )}
+                                    </Tabs.Trigger>
+                                </Tabs.List>
+
+                                {/* Таб 1: Основная информация */}
+                                <Tabs.Content value="general">
+                                    <Stack gap={6} mt={6}>
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <FormField
+                                                label="Название товара *"
+                                                error={errors.name}
+                                            >
+                                                <Input
+                                                    value={data.name}
+                                                    onChange={(e) => setData('name', e.target.value)}
+                                                    placeholder="Введите название товара"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Slug (ЧПУ)"
+                                                error={errors.slug}
+                                                helperText="Оставьте пустым для автогенерации"
+                                            >
+                                                <Input
+                                                    value={data.slug}
+                                                    onChange={(e) => setData('slug', e.target.value)}
+                                                    placeholder="Автоматически из названия"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Артикул (SKU)"
+                                                error={errors.sku}
+                                            >
+                                                <Input
+                                                    value={data.sku}
+                                                    onChange={(e) => setData('sku', e.target.value)}
+                                                    placeholder="Введите артикул"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Код товара"
+                                                error={errors.code}
+                                            >
+                                                <Input
+                                                    value={data.code}
+                                                    onChange={(e) => setData('code', e.target.value)}
+                                                    placeholder="Введите код товара"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Внешний ID"
+                                                error={errors.external_id}
+                                                helperText="ID из внешней системы/интеграции"
+                                            >
+                                                <Input
+                                                    value={data.external_id}
+                                                    onChange={(e) => setData('external_id', e.target.value)}
+                                                    placeholder="Внешний ID"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Штрихкод"
+                                                error={errors.barcode}
+                                            >
+                                                <Input
+                                                    value={data.barcode}
+                                                    onChange={(e) => setData('barcode', e.target.value)}
+                                                    placeholder="Введите штрихкод"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Код ТН ВЭД"
+                                                error={errors.tnved}
+                                                helperText="Код товарной номенклатуры внешнеэкономической деятельности"
+                                            >
+                                                <Input
+                                                    value={data.tnved}
+                                                    onChange={(e) => setData('tnved', e.target.value)}
+                                                    placeholder="Код ТН ВЭД"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="URL товара"
+                                                error={errors.url}
+                                            >
+                                                <Input
+                                                    value={data.url}
+                                                    onChange={(e) => setData('url', e.target.value)}
+                                                    placeholder="https://example.com/product"
+                                                />
+                                            </FormField>
+                                        </SimpleGrid>
+                                    </Stack>
+                                </Tabs.Content>
+
+                                {/* Таб 2: Связи и классификация */}
+                                <Tabs.Content value="relations">
+                                    <Stack gap={6} mt={6}>
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <SelectRelation
+                                                label="Бренд"
+                                                value={data.brand_id}
+                                                onChange={(value) => setData('brand_id', value)}
+                                                options={brandOptions}
+                                                placeholder="Выберите бренд"
+                                                error={errors.brand_id}
+                                            />
+
+                                            <SelectRelation
+                                                label="Модель"
+                                                value={data.model_id}
+                                                onChange={(value) => setData('model_id', value)}
+                                                options={modelOptions}
+                                                placeholder="Выберите модель"
+                                                error={errors.model_id}
+                                            />
+
+                                            <Box gridColumn={{ base: '1', md: 'span 2' }}>
+                                                <SelectRelation
+                                                    label="Категории"
+                                                    value={data.categories}
+                                                    onChange={(value) => setData('categories', value)}
+                                                    options={categoryOptions}
+                                                    placeholder="Выберите категории"
+                                                    multiple
+                                                    error={errors.categories}
+                                                />
+                                            </Box>
+
+                                            <SelectRelation
+                                                label="Размерная сетка"
+                                                value={data.size_chart_id}
+                                                onChange={(value) => setData('size_chart_id', value)}
+                                                options={sizeChartOptions}
+                                                placeholder="Выберите размерную сетку"
+                                                error={errors.size_chart_id}
+                                            />
+                                        </SimpleGrid>
+                                    </Stack>
+                                </Tabs.Content>
+
+                                {/* Таб 3: Цена и статусы */}
+                                <Tabs.Content value="pricing">
+                                    <Stack gap={6} mt={6}>
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <FormField
+                                                label="Базовая цена *"
+                                                error={errors.base_price}
+                                            >
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={data.base_price}
+                                                    onChange={(e) => setData('base_price', e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                            </FormField>
+
+                                            <Box /> {/* Пустая ячейка для выравнивания */}
+
+                                            <Field label="Новинка">
+                                                <Switch
+                                                    checked={data.is_new}
+                                                    onCheckedChange={(e) => setData('is_new', e.checked)}
+                                                    colorPalette="blue"
+                                                >
+                                                    {data.is_new ? 'Да' : 'Нет'}
+                                                </Switch>
+                                            </Field>
+
+                                            <Field label="Бестселлер">
+                                                <Switch
+                                                    checked={data.is_bestseller}
+                                                    onCheckedChange={(e) => setData('is_bestseller', e.checked)}
+                                                    colorPalette="blue"
+                                                >
+                                                    {data.is_bestseller ? 'Да' : 'Нет'}
+                                                </Switch>
+                                            </Field>
+
+                                            <Field label="Маркировка (честный знак)">
+                                                <Switch
+                                                    checked={data.is_marked}
+                                                    onCheckedChange={(e) => setData('is_marked', e.checked)}
+                                                    colorPalette="blue"
+                                                >
+                                                    {data.is_marked ? 'Да' : 'Нет'}
+                                                </Switch>
+                                            </Field>
+
+                                            <Field label="Ликвидация">
+                                                <Switch
+                                                    checked={data.is_liquidation}
+                                                    onCheckedChange={(e) => setData('is_liquidation', e.checked)}
+                                                    colorPalette="orange"
+                                                >
+                                                    {data.is_liquidation ? 'Да' : 'Нет'}
+                                                </Switch>
+                                            </Field>
+
+                                            <Field label="Для маркетплейсов">
+                                                <Switch
+                                                    checked={data.for_marketplaces}
+                                                    onCheckedChange={(e) => setData('for_marketplaces', e.checked)}
+                                                    colorPalette="green"
+                                                >
+                                                    {data.for_marketplaces ? 'Да' : 'Нет'}
+                                                </Switch>
+                                            </Field>
+                                        </SimpleGrid>
+                                    </Stack>
+                                </Tabs.Content>
+
+                                {/* Таб 4: Описания */}
+                                <Tabs.Content value="descriptions">
+                                    <Stack gap={6} mt={6}>
+                                        <FormField
+                                            label="Краткое описание"
+                                            error={errors.short_description}
+                                            helperText="Краткое описание для карточки товара"
+                                        >
+                                            <MarkdownEditor
+                                                value={data.short_description}
+                                                onChange={(val) => setData('short_description', val)}
+                                                placeholder="Введите краткое описание товара"
+                                                minHeight="100px"
+                                                context={`Товар: ${data.name} (Кратко)`}
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="Полное описание"
+                                            error={errors.description}
+                                            helperText="Подробное описание товара"
+                                        >
+                                            <MarkdownEditor
+                                                value={data.description}
+                                                onChange={handleDescriptionChange}
+                                                placeholder="Введите полное описание товара"
+                                                minHeight="300px"
+                                                context={`Товар: ${data.name}`}
+                                            />
+                                        </FormField>
+                                    </Stack>
+                                </Tabs.Content>
+
+                                {/* Таб 5: Медиа */}
+                                <Tabs.Content value="media">
+                                    <Stack gap={6} mt={6}>
+                                        <Box>
+                                            <Box fontSize="lg" fontWeight="semibold" mb={4}>
+                                                Главное изображение
+                                            </Box>
+
+                                            {product.main_image && !data.image && (
+                                                <Box mb={4}>
+                                                    <Box fontSize="sm" fontWeight="medium" mb={2}>
+                                                        Текущее изображение:
+                                                    </Box>
+                                                    <Image
+                                                        src={product.main_image}
+                                                        alt={product.name}
+                                                        maxW="300px"
+                                                        borderRadius="md"
+                                                    />
+                                                </Box>
+                                            )}
+
+                                            <ImageUploader
+                                                value={data.image}
+                                                onChange={(file) => setData('image', file)}
+                                                error={errors.image}
+                                                label="Загрузить новое изображение"
+                                            />
+                                        </Box>
+
+                                        <Box>
+                                            <Box fontSize="lg" fontWeight="semibold" mb={4}>
+                                                Дополнительные медиа
+                                            </Box>
+
+                                            <Stack gap={4}>
+                                                <MultipleImageUploader
+                                                    value={data.additional_images}
+                                                    existingImages={product.additional_media}
+                                                    onChange={(files) => setData('additional_images', files)}
+                                                    error={errors.additional_images}
+                                                    label="Дополнительные изображения товара"
+                                                    maxFiles={10}
+                                                />
+
+                                                <VideoUploader
+                                                    value={data.video}
+                                                    existingVideo={product.video_url}
+                                                    onChange={(file) => setData('video', file)}
+                                                    error={errors.video}
+                                                    label="Видео товара"
+                                                />
+                                            </Stack>
+                                        </Box>
+                                    </Stack>
+                                </Tabs.Content>
+                            </Tabs.Root>
+                        </Card.Body>
+
+                        <Card.Footer>
+                            <FormActions
+                                loading={processing}
+                                onCancel={() => window.history.back()}
+                            />
+                        </Card.Footer>
+                    </Card.Root>
+                </form>
+            </Box>
+        </AdminLayout>
+    );
+}

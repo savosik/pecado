@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
-import { Box, Container, Heading, SimpleGrid, Card, Text, VStack, HStack } from '@chakra-ui/react';
+import { Box, Heading, SimpleGrid, Text, VStack, HStack, Icon } from '@chakra-ui/react';
 import { LuShoppingCart, LuPackage, LuUsers, LuBanknote } from 'react-icons/lu';
+import { AdminLayout } from '../../Admin/Layouts/AdminLayout';
 
 export default function Dashboard({ stats }) {
     const statsCards = [
@@ -31,66 +32,75 @@ export default function Dashboard({ stats }) {
     ];
 
     return (
-        <>
+        <AdminLayout>
             <Head title="Панель управления" />
 
-            <Box minH="100vh" bg="bg.subtle" py={8}>
-                <Container maxW="7xl">
-                    <VStack align="stretch" gap={8}>
-                        {/* Header */}
-                        <Box>
-                            <Heading size="2xl" mb={2}>
-                                Панель управления
-                            </Heading>
-                            <Text color="fg.muted">
-                                Добро пожаловать в админ-панель Pecado
-                            </Text>
-                        </Box>
+            <VStack align="stretch" gap={8}>
+                {/* Header */}
+                <Box>
+                    <Heading size="2xl" mb={2}>
+                        Панель управления
+                    </Heading>
+                    <Text color="fg.muted">
+                        Добро пожаловать в админ-панель Pecado
+                    </Text>
+                </Box>
 
-                        {/* Stats Grid */}
-                        <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={6}>
-                            {statsCards.map((stat) => {
-                                const Icon = stat.icon;
-                                return (
-                                    <Card.Root key={stat.title} variant="elevated">
-                                        <Card.Body>
-                                            <HStack justify="space-between">
-                                                <VStack align="start" gap={1}>
-                                                    <Text fontSize="sm" color="fg.muted" fontWeight="medium">
-                                                        {stat.title}
-                                                    </Text>
-                                                    <Heading size="3xl" color="fg.default">
-                                                        {stat.value.toLocaleString('ru-RU')}
-                                                    </Heading>
-                                                </VStack>
-                                                <Box
-                                                    p={3}
-                                                    bg={`${stat.color}.subtle`}
-                                                    borderRadius="lg"
-                                                >
-                                                    <Icon size={24} color={`${stat.color}.600`} />
-                                                </Box>
-                                            </HStack>
-                                        </Card.Body>
-                                    </Card.Root>
-                                );
-                            })}
-                        </SimpleGrid>
+                {/* Stats Grid */}
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 4 }} gap={6}>
+                    {statsCards.map((stat) => {
+                        const StatIcon = stat.icon;
+                        return (
+                            <Box
+                                key={stat.title}
+                                bg="bg.panel"
+                                borderRadius="lg"
+                                borderWidth="1px"
+                                borderColor="border.default"
+                                p={6}
+                                boxShadow="sm"
+                                _hover={{ boxShadow: "md" }}
+                                transition="box-shadow 0.2s"
+                            >
+                                <HStack justify="space-between">
+                                    <VStack align="start" gap={1}>
+                                        <Text fontSize="sm" color="fg.muted" fontWeight="medium">
+                                            {stat.title}
+                                        </Text>
+                                        <Heading size="3xl" color="fg.default">
+                                            {stat.value.toLocaleString('ru-RU')}
+                                        </Heading>
+                                    </VStack>
+                                    <Box
+                                        p={3}
+                                        bg={`${stat.color}.subtle`}
+                                        borderRadius="lg"
+                                    >
+                                        <Icon as={StatIcon} boxSize={6} />
+                                    </Box>
+                                </HStack>
+                            </Box>
+                        );
+                    })}
+                </SimpleGrid>
 
-                        {/* Placeholder for future content */}
-                        <Card.Root variant="elevated">
-                            <Card.Body>
-                                <VStack align="start" gap={4}>
-                                    <Heading size="lg">Фаза 1 завершена</Heading>
-                                    <Text color="fg.muted">
-                                        Базовая инфраструктура админ-панели настроена. Следующий шаг — создание Layout и компонентов навигации (Фаза 2).
-                                    </Text>
-                                </VStack>
-                            </Card.Body>
-                        </Card.Root>
+                {/* Placeholder for future content */}
+                <Box
+                    bg="bg.panel"
+                    borderRadius="lg"
+                    borderWidth="1px"
+                    borderColor="border.default"
+                    p={6}
+                    boxShadow="sm"
+                >
+                    <VStack align="start" gap={4}>
+                        <Heading size="lg">Фаза 2 завершена</Heading>
+                        <Text color="fg.muted">
+                            Базовый Layout с навигацией создан. Следующий шаг — создание переиспользуемых компонентов (Фаза 3).
+                        </Text>
                     </VStack>
-                </Container>
-            </Box>
-        </>
+                </Box>
+            </VStack>
+        </AdminLayout>
     );
 }

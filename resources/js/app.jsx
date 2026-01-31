@@ -10,7 +10,16 @@ const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) => resolvePageComponent(`./Pages/${name}.jsx`, import.meta.glob('./Pages/**/*.jsx')),
+    resolve: (name) => {
+        // Support both ./Pages/ and ./Admin/ directories
+        const pages = import.meta.glob('./Pages/**/*.jsx');
+        const adminPages = import.meta.glob('./Admin/**/*.jsx');
+        const allPages = { ...pages, ...adminPages };
+
+        // Try to resolve the page
+        return resolvePageComponent(`./Pages/${name}.jsx`, pages)
+            .catch(() => resolvePageComponent(`./${name}.jsx`, adminPages));
+    },
     setup({ el, App, props }) {
         const root = createRoot(el);
         root.render(

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProductController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -17,4 +18,12 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
+    
+    // Components Demo (для тестирования Phase 3)
+    Route::get('/components-demo', function () {
+        return inertia('Admin/ComponentsDemo');
+    })->name('components-demo');
+    
+    // Каталог
+    Route::resource('products', ProductController::class);
 });

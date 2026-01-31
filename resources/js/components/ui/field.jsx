@@ -1,4 +1,4 @@
-import { Field as ChakraField } from "@chakra-ui/react"
+import { Field as ChakraField, Text } from "@chakra-ui/react"
 import * as React from "react"
 
 export const Field = React.forwardRef(function Field(props, ref) {
@@ -8,7 +8,11 @@ export const Field = React.forwardRef(function Field(props, ref) {
             {label && (
                 <ChakraField.Label>
                     {label}
-                    {optionalText && <ChakraField.OptionalIndicator>{optionalText}</ChakraField.OptionalIndicator>}
+                    {optionalText && (
+                        <Text as="span" fontSize="sm" color="fg.muted" fontWeight="normal" ml={1}>
+                            ({optionalText})
+                        </Text>
+                    )}
                 </ChakraField.Label>
             )}
             {children}
