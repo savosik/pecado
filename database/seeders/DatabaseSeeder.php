@@ -15,11 +15,16 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        $this->call([
+            CurrencySeeder::class,
+        ]);
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        // Создание администратора
+        User::create([
+            'name' => 'Admin',
+            'email' => 'admin@pecado.test',
+            'password' => 'password', // будет автоматически хешировано
+            'is_admin' => true,
         ]);
     }
 }

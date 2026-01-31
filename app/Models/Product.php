@@ -32,6 +32,8 @@ class Product extends Model implements HasMedia
         'description',
         'description_html',
         'short_description',
+        'meta_title',
+        'meta_description',
         'brand_id',
         'model_id',
         'size_chart_id',

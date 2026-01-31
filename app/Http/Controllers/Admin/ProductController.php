@@ -86,6 +86,8 @@ class ProductController extends AdminController
             'description' => 'nullable|string',
             'description_html' => 'nullable|string',
             'short_description' => 'nullable|string',
+            'meta_title' => 'nullable|string|max:255',
+            'meta_description' => 'nullable|string',
             'sku' => 'nullable|string|max:255',
             'code' => 'nullable|string|max:255',
             'external_id' => 'nullable|string|max:255',
@@ -161,6 +163,8 @@ class ProductController extends AdminController
                 'description' => $product->description,
                 'description_html' => $product->description_html,
                 'short_description' => $product->short_description,
+                'meta_title' => $product->meta_title,
+                'meta_description' => $product->meta_description,
                 'sku' => $product->sku,
                 'code' => $product->code,
                 'external_id' => $product->external_id,
@@ -176,6 +180,7 @@ class ProductController extends AdminController
                 'brand' => $product->brand,
                 'model' => $product->model,
                 'main_image' => $product->getFirstMediaUrl('main'),
+                'main_image_id' => $product->getFirstMedia('main')?->id,
                 'additional_media' => $product->getMedia('additional')->map(function ($media) {
                     return [
                         'id' => $media->id,
@@ -183,6 +188,7 @@ class ProductController extends AdminController
                     ];
                 }),
                 'video_url' => $product->getFirstMediaUrl('video'),
+                'video_id' => $product->getFirstMedia('video')?->id,
             ],
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
@@ -206,6 +212,8 @@ class ProductController extends AdminController
             'description' => 'nullable|string',
             'description_html' => 'nullable|string',
             'short_description' => 'nullable|string',
+            'meta_title' => 'nullable|string|max:255',
+            'meta_description' => 'nullable|string',
             'sku' => 'nullable|string|max:255',
             'code' => 'nullable|string|max:255',
             'external_id' => 'nullable|string|max:255',
@@ -276,5 +284,20 @@ class ProductController extends AdminController
         return redirect()
             ->route('admin.products.index')
             ->with('success', 'Товар успешно удалён');
+    }
+
+    /**
+     * Delete a specific media file from the product.
+     */
+    public function deleteMedia(Product $product, Request $request): \Illuminate\Http\JsonResponse
+    {
+        $validated = $request->validate([
+            'media_id' => 'required|integer|exists:media,id',
+        ]);
+
+        $media = $product->media()->findOrFail($validated['media_id']);
+        $media->delete();
+
+        return response()->json(['success' => true]);
     }
 }

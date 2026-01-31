@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
+import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor } from '@/Admin/Components';
-import { Box, Card, SimpleGrid, Input, Stack, Image, Tabs } from '@chakra-ui/react';
+import { Box, Card, SimpleGrid, Input, Stack, Image, Tabs, IconButton } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuX } from 'react-icons/lu';
 
 export default function Edit({ product, brands, categories, productModels, sizeCharts }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -18,6 +19,8 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         size_chart_id: product.size_chart_id || null,
         description: product.description_html || product.description || '',
         short_description: product.short_description || '',
+        meta_title: product.meta_title || '',
+        meta_description: product.meta_description || '',
         sku: product.sku || '',
         code: product.code || '',
         external_id: product.external_id || '',
@@ -42,7 +45,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcode', 'tnved'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'categories', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
-        descriptions: ['short_description', 'description'].some(field => errors[field]),
+        descriptions: ['short_description', 'description', 'meta_title', 'meta_description'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
     }), [errors]);
 
@@ -73,6 +76,73 @@ export default function Edit({ product, brands, categories, productModels, sizeC
 
     const handleDescriptionChange = (html) => {
         setData('description', html);
+    };
+
+    const handleDeleteMainImage = async () => {
+        if (!product.main_image_id) return;
+
+        try {
+            await axios.delete(route('admin.products.media.delete', product.id), {
+                data: { media_id: product.main_image_id },
+            });
+
+            toaster.create({
+                title: 'Главное изображение удалено',
+                type: 'success',
+            });
+
+            // Перезагрузить страницу для обновления данных
+            router.reload({ preserveScroll: true });
+        } catch (error) {
+            toaster.create({
+                title: 'Ошибка при удалении изображения',
+                type: 'error',
+            });
+        }
+    };
+
+    const handleDeleteAdditionalImage = async (mediaId) => {
+        try {
+            await axios.delete(route('admin.products.media.delete', product.id), {
+                data: { media_id: mediaId },
+            });
+
+            toaster.create({
+                title: 'Изображение удалено',
+                type: 'success',
+            });
+
+            // Перезагрузить страницу для обновления данных
+            router.reload({ preserveScroll: true });
+        } catch (error) {
+            toaster.create({
+                title: 'Ошибка при удалении изображения',
+                type: 'error',
+            });
+        }
+    };
+
+    const handleDeleteVideo = async () => {
+        if (!product.video_id) return;
+
+        try {
+            await axios.delete(route('admin.products.media.delete', product.id), {
+                data: { media_id: product.video_id },
+            });
+
+            toaster.create({
+                title: 'Видео удалено',
+                type: 'success',
+            });
+
+            // Перезагрузить страницу для обновления данных
+            router.reload({ preserveScroll: true });
+        } catch (error) {
+            toaster.create({
+                title: 'Ошибка при удалении видео',
+                type: 'error',
+            });
+        }
     };
 
     return (
@@ -376,6 +446,32 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                 context={`Товар: ${data.name}`}
                                             />
                                         </FormField>
+
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <FormField
+                                                label="Meta Title (SEO заголовок)"
+                                                error={errors.meta_title}
+                                                helperText="Заголовок для поисковых систем (рекомендуется до 60 символов)"
+                                            >
+                                                <Input
+                                                    value={data.meta_title}
+                                                    onChange={(e) => setData('meta_title', e.target.value)}
+                                                    placeholder="SEO заголовок товара"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Meta Description (SEO описание)"
+                                                error={errors.meta_description}
+                                                helperText="Описание для поисковых систем (рекомендуется 150-160 символов)"
+                                            >
+                                                <Input
+                                                    value={data.meta_description}
+                                                    onChange={(e) => setData('meta_description', e.target.value)}
+                                                    placeholder="SEO описание товара"
+                                                />
+                                            </FormField>
+                                        </SimpleGrid>
                                     </Stack>
                                 </Tabs.Content>
 
@@ -392,12 +488,25 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                     <Box fontSize="sm" fontWeight="medium" mb={2}>
                                                         Текущее изображение:
                                                     </Box>
-                                                    <Image
-                                                        src={product.main_image}
-                                                        alt={product.name}
-                                                        maxW="300px"
-                                                        borderRadius="md"
-                                                    />
+                                                    <Box position="relative" display="inline-block">
+                                                        <Image
+                                                            src={product.main_image}
+                                                            alt={product.name}
+                                                            maxW="300px"
+                                                            borderRadius="md"
+                                                        />
+                                                        <IconButton
+                                                            position="absolute"
+                                                            top={2}
+                                                            right={2}
+                                                            size="sm"
+                                                            colorPalette="red"
+                                                            onClick={handleDeleteMainImage}
+                                                            aria-label="Удалить изображение"
+                                                        >
+                                                            <LuX />
+                                                        </IconButton>
+                                                    </Box>
                                                 </Box>
                                             )}
 
@@ -419,6 +528,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                     value={data.additional_images}
                                                     existingImages={product.additional_media}
                                                     onChange={(files) => setData('additional_images', files)}
+                                                    onRemoveExisting={handleDeleteAdditionalImage}
                                                     error={errors.additional_images}
                                                     label="Дополнительные изображения товара"
                                                     maxFiles={10}
@@ -428,6 +538,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                     value={data.video}
                                                     existingVideo={product.video_url}
                                                     onChange={(file) => setData('video', file)}
+                                                    onRemoveExisting={handleDeleteVideo}
                                                     error={errors.video}
                                                     label="Видео товара"
                                                 />

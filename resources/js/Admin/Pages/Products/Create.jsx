@@ -7,7 +7,6 @@ import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
-import { marked } from 'marked';
 
 export default function Create({ brands, categories, productModels, sizeCharts }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -20,6 +19,8 @@ export default function Create({ brands, categories, productModels, sizeCharts }
         description: '',
         description_html: '',
         short_description: '',
+        meta_title: '',
+        meta_description: '',
         sku: '',
         code: '',
         external_id: '',
@@ -42,7 +43,7 @@ export default function Create({ brands, categories, productModels, sizeCharts }
         general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcode', 'tnved'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'categories', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
-        descriptions: ['short_description', 'description', 'description_html'].some(field => errors[field]),
+        descriptions: ['short_description', 'description', 'description_html', 'meta_title', 'meta_description'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
     }), [errors]);
 
@@ -71,12 +72,8 @@ export default function Create({ brands, categories, productModels, sizeCharts }
         });
     };
 
-    const handleDescriptionChange = (markdown) => {
-        setData(data => ({
-            ...data,
-            description: markdown,
-            description_html: marked.parse(markdown)
-        }));
+    const handleDescriptionChange = (html) => {
+        setData('description', html);
     };
 
     return (
@@ -380,6 +377,32 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                                 context={`Товар: ${data.name}`}
                                             />
                                         </FormField>
+
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <FormField
+                                                label="Meta Title (SEO заголовок)"
+                                                error={errors.meta_title}
+                                                helperText="Заголовок для поисковых систем (рекомендуется до 60 символов)"
+                                            >
+                                                <Input
+                                                    value={data.meta_title}
+                                                    onChange={(e) => setData('meta_title', e.target.value)}
+                                                    placeholder="SEO заголовок товара"
+                                                />
+                                            </FormField>
+
+                                            <FormField
+                                                label="Meta Description (SEO описание)"
+                                                error={errors.meta_description}
+                                                helperText="Описание для поисковых систем (рекомендуется 150-160 символов)"
+                                            >
+                                                <Input
+                                                    value={data.meta_description}
+                                                    onChange={(e) => setData('meta_description', e.target.value)}
+                                                    placeholder="SEO описание товара"
+                                                />
+                                            </FormField>
+                                        </SimpleGrid>
                                     </Stack>
                                 </Tabs.Content>
 

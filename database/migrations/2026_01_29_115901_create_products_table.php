@@ -37,6 +37,10 @@ return new class extends Migration
             $table->text('description_html')->nullable();
             $table->text('short_description')->nullable();
 
+            // SEO Meta
+            $table->string('meta_title')->nullable();
+            $table->text('meta_description')->nullable();
+
             // Foreign keys (actual constraints added later due to migration order)
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('model_id')->nullable();

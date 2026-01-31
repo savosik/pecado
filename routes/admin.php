@@ -26,4 +26,5 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     
     // Каталог
     Route::resource('products', ProductController::class);
+    Route::delete('/products/{product}/media', [ProductController::class, 'deleteMedia'])->name('products.media.delete');
 });
