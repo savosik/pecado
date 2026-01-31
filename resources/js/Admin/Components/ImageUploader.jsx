@@ -6,31 +6,54 @@ import {
     VStack,
     IconButton,
     Input,
+    Badge,
 } from '@chakra-ui/react';
-import { LuUpload, LuX, LuImage } from 'react-icons/lu';
+import { LuX, LuImage, LuRefreshCw } from 'react-icons/lu';
 
 /**
- * ImageUploader - компонент для загрузки изображений с превью
+ * ImageUploader - универсальный компонент для загрузки изображений
  * 
- * @param {string} name - Имя поля
- * @param {string} value - URL текущего изображения
- * @param {Function} onChange - Callback изменения (file)
- * @param {string} error - Текст ошибки
- * @param {number} maxSize - Максимальный размер в MB
- * @param {string[]} acceptedTypes - Допустимые типы файлов
+ * Поддерживает:
+ * - Загрузку нового файла с локальным превью
+ * - Отображение существующего изображения с сервера
+ * - Удаление существующего изображения
+ * - Замену существующего изображения новым
+ * - Drag & Drop
+ * - Валидацию размера и типа файла
+ * 
+ * @param {string} name - Имя поля для формы
+ * @param {Function} onChange - Callback при выборе нового файла (file | null)
+ * @param {string} existingUrl - URL существующего изображения с сервера
+ * @param {Function} onRemoveExisting - Callback для удаления существующего изображения
+ * @param {string} error - Текст ошибки валидации
+ * @param {number} maxSize - Максимальный размер файла в MB (default: 5)
+ * @param {string[]} acceptedTypes - Допустимые MIME-типы
+ * @param {string} aspectRatio - Соотношение сторон превью (default: "auto")
+ * @param {string} maxPreviewWidth - Максимальная ширина превью (default: "300px")
+ * @param {string} placeholder - Текст плейсхолдера
  */
 export const ImageUploader = ({
     name,
-    value = null,
     onChange,
+    existingUrl = null,
+    onRemoveExisting = null,
     error = null,
     maxSize = 5,
     acceptedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    aspectRatio = 'auto',
+    maxPreviewWidth = '300px',
+    placeholder = 'Перетащите изображение сюда',
 }) => {
-    const [preview, setPreview] = useState(value);
+    // Локальное превью нового выбранного файла
+    const [localPreview, setLocalPreview] = useState(null);
     const [uploadError, setUploadError] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const inputRef = useRef(null);
+
+    // Определяем, что показывать: локальное превью имеет приоритет
+    const displayUrl = localPreview || existingUrl;
+    const isExisting = !localPreview && existingUrl;
+    const isNew = !!localPreview;
 
     const handleFileSelect = (file) => {
         if (!file) return;
@@ -49,15 +72,15 @@ export const ImageUploader = ({
 
         setUploadError(null);
 
-        // Создание превью
+        // Создание локального превью
         const reader = new FileReader();
         reader.onloadend = () => {
-            setPreview(reader.result);
+            setLocalPreview(reader.result);
         };
         reader.readAsDataURL(file);
 
         // Передача файла родителю
-        onChange(file);
+        onChange?.(file);
     };
 
     const handleInputChange = (e) => {
@@ -81,13 +104,26 @@ export const ImageUploader = ({
         setIsDragging(false);
     };
 
-    const handleRemove = () => {
-        setPreview(null);
+    // Удаление локального превью (отмена выбора нового файла)
+    const handleRemoveLocal = () => {
+        setLocalPreview(null);
         setUploadError(null);
-        onChange(null);
+        onChange?.(null);
         if (inputRef.current) {
             inputRef.current.value = '';
         }
+    };
+
+    // Удаление существующего изображения с сервера
+    const handleRemoveExisting = () => {
+        if (onRemoveExisting) {
+            onRemoveExisting();
+        }
+    };
+
+    // Замена изображения — открыть диалог выбора файла
+    const handleReplace = () => {
+        inputRef.current?.click();
     };
 
     const handleClick = () => {
@@ -105,30 +141,66 @@ export const ImageUploader = ({
                 display="none"
             />
 
-            {preview ? (
-                // Превью загруженного изображения
+            {displayUrl ? (
+                // Превью изображения (локальное или существующее)
                 <Box position="relative" display="inline-block">
                     <Image
-                        src={preview}
+                        src={displayUrl}
                         alt="Превью"
-                        maxW="300px"
-                        aspectRatio={2 / 3}
+                        maxW={maxPreviewWidth}
+                        aspectRatio={aspectRatio}
                         objectFit="cover"
                         borderRadius="md"
                         borderWidth="1px"
                         borderColor="border.muted"
                     />
-                    <IconButton
+
+                    {/* Бейдж статуса */}
+                    {isNew && (
+                        <Badge
+                            position="absolute"
+                            top={2}
+                            left={2}
+                            colorPalette="green"
+                            size="sm"
+                        >
+                            Новое
+                        </Badge>
+                    )}
+
+                    {/* Кнопки управления */}
+                    <Box
                         position="absolute"
                         top={2}
                         right={2}
-                        size="sm"
-                        colorPalette="red"
-                        onClick={handleRemove}
-                        aria-label="Удалить изображение"
+                        display="flex"
+                        gap={1}
                     >
-                        <LuX />
-                    </IconButton>
+                        {/* Кнопка замены */}
+                        <IconButton
+                            size="xs"
+                            colorPalette="blue"
+                            variant="solid"
+                            onClick={handleReplace}
+                            aria-label="Заменить изображение"
+                            title="Заменить"
+                        >
+                            <LuRefreshCw />
+                        </IconButton>
+
+                        {/* Кнопка удаления */}
+                        <IconButton
+                            size="xs"
+                            colorPalette="red"
+                            variant="solid"
+                            onClick={isNew ? handleRemoveLocal : handleRemoveExisting}
+                            aria-label="Удалить изображение"
+                            title="Удалить"
+                            disabled={isExisting && !onRemoveExisting}
+                        >
+                            <LuX />
+                        </IconButton>
+                    </Box>
                 </Box>
             ) : (
                 // Dropzone для загрузки
@@ -160,7 +232,7 @@ export const ImageUploader = ({
                         </Box>
                         <VStack gap={1}>
                             <Text fontWeight="medium">
-                                Перетащите изображение сюда
+                                {placeholder}
                             </Text>
                             <Text fontSize="sm" color="fg.muted">
                                 или нажмите для выбора файла

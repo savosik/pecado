@@ -2,12 +2,12 @@ import { useMemo } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor } from '@/Admin/Components';
-import { Box, Card, SimpleGrid, Input, Stack, Image, Tabs, IconButton } from '@chakra-ui/react';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector } from '@/Admin/Components';
+import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuX } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
 
 export default function Edit({ product, brands, categories, productModels, sizeCharts }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -36,6 +36,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         image: null,
         additional_images: [],
         video: null,
+        tags: product.tags ? product.tags.map(t => t.value) : [],
         _method: 'PUT',
     });
 
@@ -340,6 +341,20 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                 placeholder="Выберите размерную сетку"
                                                 error={errors.size_chart_id}
                                             />
+
+                                            <Box gridColumn={{ base: '1', md: 'span 2' }}>
+                                                <FormField
+                                                    label="Теги"
+                                                    error={errors.tags}
+                                                >
+                                                    <TagSelector
+                                                        value={data.tags}
+                                                        onChange={(tags) => setData('tags', tags)}
+                                                        placeholder="Введите теги..."
+                                                        error={errors.tags}
+                                                    />
+                                                </FormField>
+                                            </Box>
                                         </SimpleGrid>
                                     </Stack>
                                 </Tabs.Content>
@@ -483,38 +498,14 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                 Главное изображение
                                             </Box>
 
-                                            {product.main_image && !data.image && (
-                                                <Box mb={4}>
-                                                    <Box fontSize="sm" fontWeight="medium" mb={2}>
-                                                        Текущее изображение:
-                                                    </Box>
-                                                    <Box position="relative" display="inline-block">
-                                                        <Image
-                                                            src={product.main_image}
-                                                            alt={product.name}
-                                                            maxW="300px"
-                                                            borderRadius="md"
-                                                        />
-                                                        <IconButton
-                                                            position="absolute"
-                                                            top={2}
-                                                            right={2}
-                                                            size="sm"
-                                                            colorPalette="red"
-                                                            onClick={handleDeleteMainImage}
-                                                            aria-label="Удалить изображение"
-                                                        >
-                                                            <LuX />
-                                                        </IconButton>
-                                                    </Box>
-                                                </Box>
-                                            )}
-
                                             <ImageUploader
-                                                value={data.image}
                                                 onChange={(file) => setData('image', file)}
+                                                existingUrl={product.main_image}
+                                                onRemoveExisting={product.main_image_id ? handleDeleteMainImage : null}
                                                 error={errors.image}
-                                                label="Загрузить новое изображение"
+                                                maxPreviewWidth="300px"
+                                                aspectRatio="2/3"
+                                                placeholder="Загрузить главное изображение"
                                             />
                                         </Box>
 

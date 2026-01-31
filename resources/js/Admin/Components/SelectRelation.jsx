@@ -83,6 +83,8 @@ export const SelectRelation = ({
                 value: String(option.id || option.value),
             };
         }),
+        itemToString: (item) => item.label,
+        itemToValue: (item) => item.value,
     }), [options]);
 
     // Обработка изменения значения
@@ -93,8 +95,12 @@ export const SelectRelation = ({
             onChange(selectedValues);
         } else {
             // Для одиночного выбора
-            const selectedValue = details.value.length > 0 ? parseInt(details.value[0]) : null;
-            onChange(selectedValue);
+            const selectedValue = details.value.length > 0 ? details.value[0] : null;
+            // Преобразуем пустую строку в null, иначе parseInt
+            const finalValue = selectedValue === '' || selectedValue === null
+                ? null
+                : parseInt(selectedValue);
+            onChange(finalValue);
         }
     };
 
@@ -113,6 +119,7 @@ export const SelectRelation = ({
             disabled={disabled}
         >
             <Select.HiddenSelect name={name} />
+            {label && <Select.Label>{label}</Select.Label>}
             <Select.Control>
                 <Select.Trigger>
                     <Select.ValueText placeholder={placeholder} />

@@ -3,6 +3,7 @@ export { FormField } from './FormField';
 export { FormActions } from './FormActions';
 export { PageHeader } from './PageHeader';
 export { DataTable } from './DataTable';
+export * from './TagSelector';
 export { SearchInput } from './SearchInput';
 export { FilterPanel } from './FilterPanel';
 export { ConfirmDialog } from './ConfirmDialog';

@@ -6,14 +6,14 @@ import { Box, HStack, Badge, Image, Text, IconButton, Button } from '@chakra-ui/
 import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Index({ products, filters }) {
+export default function Index({ categories, filters }) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [productToDelete, setProductToDelete] = useState(null);
+    const [categoryToDelete, setCategoryToDelete] = useState(null);
 
     const handleSearch = (value) => {
         setSearchQuery(value);
-        router.get(route('admin.products.index'), {
+        router.get(route('admin.categories.index'), {
             search: value,
             per_page: filters.per_page,
         }, {
@@ -25,7 +25,7 @@ export default function Index({ products, filters }) {
     const handleSort = (field) => {
         const newOrder = filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc';
 
-        router.get(route('admin.products.index'), {
+        router.get(route('admin.categories.index'), {
             ...filters,
             sort_by: field,
             sort_order: newOrder,
@@ -36,7 +36,7 @@ export default function Index({ products, filters }) {
     };
 
     const handlePerPageChange = (perPage) => {
-        router.get(route('admin.products.index'), {
+        router.get(route('admin.categories.index'), {
             ...filters,
             per_page: perPage,
         }, {
@@ -45,27 +45,27 @@ export default function Index({ products, filters }) {
         });
     };
 
-    const handleDelete = (product) => {
-        setProductToDelete(product);
+    const handleDelete = (category) => {
+        setCategoryToDelete(category);
         setDeleteDialogOpen(true);
     };
 
     const confirmDelete = () => {
-        if (productToDelete) {
-            router.delete(route('admin.products.destroy', productToDelete.id), {
+        if (categoryToDelete) {
+            router.delete(route('admin.categories.destroy', categoryToDelete.id), {
                 onSuccess: () => {
                     toaster.create({
-                        title: 'Товар удалён',
-                        description: 'Товар успешно удалён из системы',
+                        title: 'Категория удалена',
+                        description: 'Категория успешно удалена из системы',
                         type: 'success',
                     });
                     setDeleteDialogOpen(false);
-                    setProductToDelete(null);
+                    setCategoryToDelete(null);
                 },
                 onError: () => {
                     toaster.create({
                         title: 'Ошибка',
-                        description: 'Не удалось удалить товар',
+                        description: 'Не удалось удалить категорию',
                         type: 'error',
                     });
                 },
@@ -81,29 +81,29 @@ export default function Index({ products, filters }) {
             width: '80px',
         },
         {
-            key: 'image',
-            label: 'Изображение',
-            render: (_, product) => (
-                product?.media && product.media?.length > 0 ? (
+            key: 'icon',
+            label: 'Иконка',
+            render: (_, category) => (
+                category?.media && category.media?.length > 0 ? (
                     <Image
-                        src={product.media[0].original_url}
-                        alt={product.name}
-                        w="50px"
-                        h="75px"
+                        src={category.media[0].original_url}
+                        alt={category.name}
+                        w="40px"
+                        h="40px"
                         objectFit="cover"
                         borderRadius="md"
                     />
                 ) : (
                     <Box
-                        w="50px"
-                        h="75px"
+                        w="40px"
+                        h="40px"
                         bg="bg.muted"
                         borderRadius="md"
                         display="flex"
                         alignItems="center"
                         justifyContent="center"
                     >
-                        <Text fontSize="xs" color="fg.muted">Нет фото</Text>
+                        <Text fontSize="xs" color="fg.muted">—</Text>
                     </Box>
                 )
             ),
@@ -112,78 +112,54 @@ export default function Index({ products, filters }) {
             key: 'name',
             label: 'Название',
             sortable: true,
-            render: (_, product) => (
+            render: (_, category) => (
                 <Box>
-                    <Text fontWeight="medium">{product.name}</Text>
-                    {product.sku && (
-                        <Text fontSize="sm" color="fg.muted">SKU: {product.sku}</Text>
+                    <Text fontWeight="medium">{category.name}</Text>
+                    {category.external_id && (
+                        <Text fontSize="sm" color="fg.muted">ID: {category.external_id}</Text>
                     )}
                 </Box>
             ),
         },
         {
-            key: 'brand',
-            label: 'Бренд',
-            render: (_, product) => product?.brand?.name || '—',
-        },
-        {
-            key: 'categories',
-            label: 'Категории',
-            render: (_, product) => (
-                <HStack gap={1} flexWrap="wrap">
-                    {product.categories?.slice(0, 2).map((category) => (
-                        <Badge key={category.id} size="sm" colorPalette="blue">
-                            {category.name}
-                        </Badge>
-                    ))}
-                    {product.categories?.length > 2 && (
-                        <Badge size="sm" colorPalette="gray">
-                            +{product.categories.length - 2}
-                        </Badge>
-                    )}
-                </HStack>
-            ),
+            key: 'parent',
+            label: 'Родительская категория',
+            render: (_, category) => category?.parent?.name || '—',
         },
         {
             key: 'tags',
             label: 'Теги',
-            render: (_, product) => (
+            render: (_, category) => (
                 <HStack gap={1} flexWrap="wrap">
-                    {product.tags?.slice(0, 3).map((tag) => (
+                    {category.tags?.slice(0, 3).map((tag) => (
                         <Badge key={tag.id} size="xs" colorPalette="purple" variant="solid">
                             {tag.name?.ru || tag.name || ''}
                         </Badge>
                     ))}
-                    {product.tags?.length > 3 && (
+                    {category.tags?.length > 3 && (
                         <Badge size="xs" colorPalette="gray" variant="outline">
-                            +{product.tags.length - 3}
+                            +{category.tags.length - 3}
                         </Badge>
                     )}
                 </HStack>
             ),
         },
         {
-            key: 'base_price',
-            label: 'Цена',
-            sortable: true,
-            render: (_, product) => `${parseFloat(product.base_price).toFixed(2)} ₽`,
-        },
-        {
             key: 'created_at',
-            label: 'Создан',
+            label: 'Создана',
             sortable: true,
-            render: (_, product) => new Date(product.created_at).toLocaleDateString('ru-RU'),
+            render: (_, category) => new Date(category.created_at).toLocaleDateString('ru-RU'),
         },
         {
             key: 'actions',
             label: 'Действия',
-            render: (_, product) => (
+            render: (_, category) => (
                 <HStack gap={1}>
                     <IconButton
                         size="sm"
                         variant="ghost"
                         aria-label="Редактировать"
-                        onClick={() => router.visit(route('admin.products.edit', product.id))}
+                        onClick={() => router.visit(route('admin.categories.edit', category.id))}
                     >
                         <LuPencil />
                     </IconButton>
@@ -192,7 +168,7 @@ export default function Index({ products, filters }) {
                         variant="ghost"
                         colorPalette="red"
                         aria-label="Удалить"
-                        onClick={() => handleDelete(product)}
+                        onClick={() => handleDelete(category)}
                     >
                         <LuTrash2 />
                     </IconButton>
@@ -204,13 +180,13 @@ export default function Index({ products, filters }) {
     return (
         <>
             <PageHeader
-                title="Товары"
+                title="Категории"
                 actions={
                     <Button
                         colorPalette="blue"
-                        onClick={() => router.visit(route('admin.products.create'))}
+                        onClick={() => router.visit(route('admin.categories.create'))}
                     >
-                        <LuPlus /> Создать товар
+                        <LuPlus /> Создать категорию
                     </Button>
                 }
             />
@@ -219,14 +195,14 @@ export default function Index({ products, filters }) {
                 <SearchInput
                     value={searchQuery}
                     onChange={handleSearch}
-                    placeholder="Поиск по названию, SKU, коду..."
+                    placeholder="Поиск по названию, описанию..."
                 />
             </Box>
 
             <DataTable
-                data={products.data}
+                data={categories.data}
                 columns={columns}
-                pagination={products}
+                pagination={categories}
                 onSort={handleSort}
                 sortBy={filters.sort_by}
                 sortOrder={filters.sort_order}
@@ -238,8 +214,8 @@ export default function Index({ products, filters }) {
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
                 onConfirm={confirmDelete}
-                title="Удалить товар?"
-                description={`Вы уверены, что хотите удалить товар "${productToDelete?.name}"? Это действие нельзя отменить.`}
+                title="Удалить категорию?"
+                description={`Вы уверены, что хотите удалить категорию "${categoryToDelete?.name}"? Это действие нельзя отменить.`}
             />
         </>
     );

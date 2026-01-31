@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
@@ -36,6 +36,7 @@ export default function Create({ brands, categories, productModels, sizeCharts }
         image: null,
         additional_images: [],
         video: null,
+        tags: [],
     });
 
     // Определяем, в каких табах есть ошибки (мемоизируем, чтобы не пересчитывать при каждом вводе)
@@ -271,6 +272,20 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                                 placeholder="Выберите размерную сетку"
                                                 error={errors.size_chart_id}
                                             />
+
+                                            <Box gridColumn={{ base: '1', md: 'span 2' }}>
+                                                <FormField
+                                                    label="Теги"
+                                                    error={errors.tags}
+                                                >
+                                                    <TagSelector
+                                                        value={data.tags}
+                                                        onChange={(tags) => setData('tags', tags)}
+                                                        placeholder="Введите теги..."
+                                                        error={errors.tags}
+                                                    />
+                                                </FormField>
+                                            </Box>
                                         </SimpleGrid>
                                     </Stack>
                                 </Tabs.Content>
@@ -415,9 +430,11 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                             </Box>
 
                                             <ImageUploader
-                                                value={data.image}
                                                 onChange={(file) => setData('image', file)}
                                                 error={errors.image}
+                                                maxPreviewWidth="300px"
+                                                aspectRatio="2/3"
+                                                placeholder="Загрузить главное изображение"
                                             />
                                         </Box>
 

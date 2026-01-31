@@ -20,7 +20,7 @@ class ProductController extends AdminController
     public function index(Request $request): Response
     {
         $query = Product::query()
-            ->with(['brand', 'model', 'categories', 'media']);
+            ->with(['brand', 'model', 'categories', 'media', 'tags']);
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -105,6 +105,7 @@ class ProductController extends AdminController
             'additional_images' => 'nullable|array',
             'additional_images.*' => 'image|max:10240',
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
+            'tags' => 'nullable|array',
         ]);
 
         // Генерация slug если не указан
@@ -139,6 +140,11 @@ class ProductController extends AdminController
                 ->toMediaCollection('video');
         }
 
+        // Теги
+        if ($request->has('tags')) {
+            $product->syncTags($request->tags);
+        }
+
         return redirect()
             ->route('admin.products.index')
             ->with('success', 'Товар успешно создан');
@@ -149,7 +155,7 @@ class ProductController extends AdminController
      */
     public function edit(Product $product): Response
     {
-        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media']);
+        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags']);
 
         return Inertia::render('Admin/Pages/Products/Edit', [
             'product' => [
@@ -189,6 +195,12 @@ class ProductController extends AdminController
                 }),
                 'video_url' => $product->getFirstMediaUrl('video'),
                 'video_id' => $product->getFirstMedia('video')?->id,
+                'tags' => $product->tags->map(function ($tag) {
+                    return [
+                        'value' => $tag->name, // Using name as value for tags usually
+                        'label' => $tag->name,
+                    ];
+                }),
             ],
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
@@ -231,6 +243,7 @@ class ProductController extends AdminController
             'additional_images' => 'nullable|array',
             'additional_images.*' => 'image|max:10240',
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
+            'tags' => 'nullable|array',
         ]);
 
         // Генерация slug если не указан
@@ -267,6 +280,11 @@ class ProductController extends AdminController
             $product->clearMediaCollection('video');
             $product->addMediaFromRequest('video')
                 ->toMediaCollection('video');
+        }
+
+        // Теги
+        if ($request->has('tags')) {
+            $product->syncTags($request->tags);
         }
 
         return redirect()

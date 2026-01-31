@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\CategoryController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,4 +28,10 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Каталог
     Route::resource('products', ProductController::class);
     Route::delete('/products/{product}/media', [ProductController::class, 'deleteMedia'])->name('products.media.delete');
+    
+    Route::resource('categories', CategoryController::class);
+    Route::delete('/categories/{category}/media', [CategoryController::class, 'deleteMedia'])->name('categories.media.delete');
+    
+    // Теги
+    Route::get('/tags/search', [\App\Http\Controllers\Admin\TagController::class, 'search'])->name('tags.search');
 });

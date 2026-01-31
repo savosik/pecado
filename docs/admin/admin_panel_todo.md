@@ -103,9 +103,9 @@
 - [x] Добавить загрузку связей (brand, categories, attributes)
 
 #### Категории (Categories)
-- [ ] Создать `Admin\CategoryController`
-- [ ] Добавить маршруты `admin/categories`
-- [ ] Реализовать иерархическое отображение (parent_id)
+- [x] Создать `Admin\CategoryController`
+- [x] Добавить маршруты `admin/categories`
+- [x] Реализовать иерархическое отображение (parent_id)
 
 #### Бренды (Brands)
 - [ ] Создать `Admin\BrandController`
@@ -304,10 +304,10 @@
 - [x] Реализовать загрузку изображений
 
 #### Категории
-- [ ] Создать `Admin/Pages/Categories/Index.jsx`
-- [ ] Создать `Admin/Pages/Categories/Create.jsx`
-- [ ] Создать `Admin/Pages/Categories/Edit.jsx`
-- [ ] Реализовать выбор родительской категории
+- [x] Создать `Admin/Pages/Categories/Index.jsx`
+- [x] Создать `Admin/Pages/Categories/Create.jsx`
+- [x] Создать `Admin/Pages/Categories/Edit.jsx`
+- [x] Реализовать выбор родительской категории
 
 #### Бренды
 - [ ] Создать `Admin/Pages/Brands/Index.jsx`
