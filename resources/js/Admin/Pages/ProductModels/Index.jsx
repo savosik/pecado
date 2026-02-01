@@ -7,9 +7,8 @@ import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 
 
-export default function Index({ productModels, filters, brands }) {
+export default function Index({ productModels, filters }) {
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [selectedBrand, setSelectedBrand] = useState(filters.brand_id || '');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [modelToDelete, setModelToDelete] = useState(null);
 
@@ -25,17 +24,7 @@ export default function Index({ productModels, filters, brands }) {
         });
     };
 
-    const handleBrandFilter = (brandId) => {
-        setSelectedBrand(brandId);
-        router.get(route('admin.product-models.index'), {
-            ...filters,
-            brand_id: brandId,
-            page: 1,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
+
 
     const handleSort = (field) => {
         const newOrder = filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc';
@@ -93,11 +82,7 @@ export default function Index({ productModels, filters, brands }) {
                 </Box>
             )
         },
-        {
-            key: 'brand',
-            label: 'Бренд',
-            render: (_, model) => model.brand?.name || '—'
-        },
+
         {
             key: 'created_at',
             label: 'Создана',
@@ -155,20 +140,7 @@ export default function Index({ productModels, filters, brands }) {
                             placeholder="Поиск по названию или коду..."
                         />
                     </Box>
-                    <Box w={{ base: 'full', md: '300px' }}>
-                        {/* Native Select for simplicity or Custom Select */}
-                        <select
-                            className="chakra-select"
-                            style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid #E2E8F0', backgroundColor: 'transparent' }}
-                            value={selectedBrand}
-                            onChange={(e) => handleBrandFilter(e.target.value)}
-                        >
-                            <option value="">Все бренды</option>
-                            {brands.map(brand => (
-                                <option key={brand.id} value={brand.id}>{brand.name}</option>
-                            ))}
-                        </select>
-                    </Box>
+
                 </Flex>
 
                 <DataTable

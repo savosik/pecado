@@ -16,7 +16,7 @@ return new class extends Migration
             $table->uuid('external_id')->nullable()->unique();
             $table->string('code')->nullable();
             $table->string('name');
-            $table->foreignId('brand_id')->nullable()->constrained()->nullOnDelete();
+
             $table->timestamps();
         });
     }

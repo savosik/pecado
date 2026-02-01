@@ -36,6 +36,7 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                 'news': 'Новости',
                 'faqs': 'FAQ',
                 'settings': 'Настройки',
+                'product-models': 'Модели товаров',
             };
 
             crumbs.push({

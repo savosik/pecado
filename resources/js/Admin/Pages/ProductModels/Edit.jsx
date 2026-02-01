@@ -4,11 +4,11 @@ import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Comp
 import { Box, Card, SimpleGrid, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ productModel, brands }) {
+export default function Edit({ productModel }) {
     const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
         name: productModel.name || '',
-        brand_id: productModel.brand_id || '',
+
         code: productModel.code || '',
         external_id: productModel.external_id || '',
     });
@@ -57,14 +57,7 @@ export default function Edit({ productModel, brands }) {
                                         />
                                     </FormField>
 
-                                    <SelectRelation
-                                        label="Бренд"
-                                        value={data.brand_id}
-                                        onChange={(value) => setData('brand_id', value)}
-                                        options={brands.map(b => ({ value: b.id, label: b.name }))}
-                                        placeholder="Выберите бренд"
-                                        error={errors.brand_id}
-                                    />
+
 
                                     <FormField
                                         label="Код модели (Артикул)"

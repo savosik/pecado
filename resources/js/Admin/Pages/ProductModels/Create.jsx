@@ -4,10 +4,10 @@ import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Comp
 import { Box, Card, SimpleGrid, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ brands }) {
+export default function Create() {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
-        brand_id: '',
+
         code: '',
         external_id: '',
     });
@@ -56,14 +56,7 @@ export default function Create({ brands }) {
                                         />
                                     </FormField>
 
-                                    <SelectRelation
-                                        label="Бренд"
-                                        value={data.brand_id}
-                                        onChange={(value) => setData('brand_id', value)}
-                                        options={brands.map(b => ({ value: b.id, label: b.name }))}
-                                        placeholder="Выберите бренд"
-                                        error={errors.brand_id}
-                                    />
+
 
                                     <FormField
                                         label="Код модели (Артикул)"

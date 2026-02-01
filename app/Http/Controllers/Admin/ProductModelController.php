@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\ProductModel;
-use App\Models\Brand;
+
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,8 +16,7 @@ class ProductModelController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = ProductModel::query()
-            ->with(['brand']);
+        $query = ProductModel::query();
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -27,10 +26,7 @@ class ProductModelController extends AdminController
             });
         }
         
-        // Фильтр по бренду
-        if ($brandId = $request->input('brand_id')) {
-            $query->where('brand_id', $brandId);
-        }
+
 
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
@@ -51,13 +47,12 @@ class ProductModelController extends AdminController
             'productModels' => $productModels,
             'filters' => [
                 'search' => $search,
-                'brand_id' => $brandId,
+
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
             ],
-            // Передаем список брендов для фильтра
-            'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
+
         ]);
     }
 
@@ -67,7 +62,7 @@ class ProductModelController extends AdminController
     public function create(): Response
     {
         return Inertia::render('Admin/Pages/ProductModels/Create', [
-            'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
+
         ]);
     }
 
@@ -78,7 +73,7 @@ class ProductModelController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'brand_id' => 'nullable|exists:brands,id',
+
             'code' => 'nullable|string|max:255',
             'external_id' => 'nullable|string|max:255',
         ]);
@@ -97,7 +92,7 @@ class ProductModelController extends AdminController
     {
         return Inertia::render('Admin/Pages/ProductModels/Edit', [
             'productModel' => $productModel,
-            'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
+
         ]);
     }
 
@@ -108,7 +103,7 @@ class ProductModelController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'brand_id' => 'nullable|exists:brands,id',
+
             'code' => 'nullable|string|max:255',
             'external_id' => 'nullable|string|max:255',
         ]);

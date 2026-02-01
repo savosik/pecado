@@ -14,13 +14,10 @@ class ProductModel extends Model
         'external_id',
         'code',
         'name',
-        'brand_id',
+
     ];
 
-    public function brand(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(Brand::class);
-    }
+
 
     /**
      * Get the products for this model.
