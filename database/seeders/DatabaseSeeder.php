@@ -20,11 +20,18 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // Создание администратора
-        User::create([
-            'name' => 'Admin',
-            'email' => 'admin@pecado.test',
-            'password' => 'password', // будет автоматически хешировано
-            'is_admin' => true,
-        ]);
+        User::firstOrCreate(
+            ['email' => 'admin@pecado.test'],
+            [
+                'name' => 'Admin',
+                'password' => 'password',
+                'is_admin' => true,
+            ]
+        );
+
+        // Сиды для каталога
+        \App\Models\Category::factory(10)->create();
+        \App\Models\Brand::factory(5)->create();
+        \App\Models\Product::factory(20)->create();
     }
 }
