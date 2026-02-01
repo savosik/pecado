@@ -119,6 +119,9 @@ export const MarkdownEditor = ({
                     overflowY: 'auto',
                     fontSize: '1rem',
                     fontFamily: 'inherit',
+                    borderLeft: 'none',
+                    borderRight: 'none',
+                    borderBottom: 'none',
                 },
                 '& .ql-editor': {
                     minHeight: minHeight,
@@ -128,11 +131,6 @@ export const MarkdownEditor = ({
                     borderLeft: 'none',
                     borderRight: 'none',
                     background: 'var(--chakra-colors-bg-muted)',
-                },
-                '& .ql-container': {
-                    borderLeft: 'none',
-                    borderRight: 'none',
-                    borderBottom: 'none',
                 },
             }}
         >

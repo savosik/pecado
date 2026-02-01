@@ -39,6 +39,21 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Модели товаров
     Route::resource('product-models', \App\Http\Controllers\Admin\ProductModelController::class);
     
+    // Атрибуты
+    Route::resource('attributes', \App\Http\Controllers\Admin\AttributeController::class);
+    
+    // Размерные сетки
+    Route::resource('size-charts', \App\Http\Controllers\Admin\SizeChartController::class);
+    
+    // Штрихкоды
+    Route::resource('product-barcodes', \App\Http\Controllers\Admin\ProductBarcodeController::class);
+    
+    // Сертификаты
+    Route::resource('certificates', \App\Http\Controllers\Admin\CertificateController::class);
+    
+    // Сегменты
+    Route::resource('segments', \App\Http\Controllers\Admin\SegmentController::class);
+    
     // Теги
     Route::get('/tags/search', [\App\Http\Controllers\Admin\TagController::class, 'search'])->name('tags.search');
 });

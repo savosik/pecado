@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('size_charts', function (Blueprint $table) {
             $table->id();
-            $table->uuid('uuid')->unique();
+            $table->uuid('uuid')->nullable()->unique();
             $table->string('name');
             $table->json('values');
             $table->timestamps();
