@@ -101,6 +101,8 @@ class ProductController extends AdminController
             'for_marketplaces' => 'boolean',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:categories,id',
+            'barcodes' => 'nullable|array',
+            'barcodes.*' => 'string|max:255',
             'image' => 'nullable|image|max:10240',
             'additional_images' => 'nullable|array',
             'additional_images.*' => 'image|max:10240',
@@ -113,7 +115,19 @@ class ProductController extends AdminController
             $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
         }
 
+        // Устанавливаем основной штрихкод как первый из списка для совместимости
+        if (!empty($validated['barcodes'])) {
+            $validated['barcode'] = $validated['barcodes'][0];
+        }
+
         $product = Product::create($validated);
+
+        // Сохраняем все штрихкоды в связанную таблицу
+        if (!empty($validated['barcodes'])) {
+            foreach ($validated['barcodes'] as $barcode) {
+                $product->barcodes()->create(['barcode' => $barcode]);
+            }
+        }
 
         // Синхронизация категорий
         if (isset($validated['categories'])) {
@@ -155,7 +169,7 @@ class ProductController extends AdminController
      */
     public function edit(Product $product): Response
     {
-        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags']);
+        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags', 'barcodes']);
 
         return Inertia::render('Admin/Pages/Products/Edit', [
             'product' => [
@@ -175,7 +189,7 @@ class ProductController extends AdminController
                 'code' => $product->code,
                 'external_id' => $product->external_id,
                 'url' => $product->url,
-                'barcode' => $product->barcode,
+                'barcodes' => $product->barcodes->pluck('barcode')->toArray(),
                 'tnved' => $product->tnved,
                 'is_new' => $product->is_new,
                 'is_bestseller' => $product->is_bestseller,
@@ -239,6 +253,8 @@ class ProductController extends AdminController
             'for_marketplaces' => 'boolean',
             'categories' => 'nullable|array',
             'categories.*' => 'exists:categories,id',
+            'barcodes' => 'nullable|array',
+            'barcodes.*' => 'string|max:255',
             'image' => 'nullable|image|max:10240',
             'additional_images' => 'nullable|array',
             'additional_images.*' => 'image|max:10240',
@@ -251,7 +267,22 @@ class ProductController extends AdminController
             $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
         }
 
+        // Устанавливаем основной штрихкод как первый из списка для совместимости
+        if (isset($validated['barcodes'])) {
+            $validated['barcode'] = !empty($validated['barcodes']) ? $validated['barcodes'][0] : null;
+        }
+
         $product->update($validated);
+
+        // Синхронизируем штрихкоды
+        if (isset($validated['barcodes'])) {
+            $product->barcodes()->delete();
+            foreach ($validated['barcodes'] as $barcode) {
+                if (!empty($barcode)) {
+                    $product->barcodes()->create(['barcode' => $barcode]);
+                }
+            }
+        }
 
         // Синхронизация категорий
         if (isset($validated['categories'])) {

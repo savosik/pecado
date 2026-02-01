@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('certificates', function (Blueprint $table) {
             $table->id();
-            $table->uuid('external_id')->unique();
+            $table->uuid('external_id')->unique()->nullable();
             $table->string('name');
             $table->string('type');
             $table->date('issued_at')->nullable();

@@ -12,4 +12,5 @@ export { MultipleImageUploader } from './MultipleImageUploader';
 export { VideoUploader } from './VideoUploader';
 export { MarkdownEditor } from './Editor/MarkdownEditor';
 export { SelectRelation } from './SelectRelation';
+export { BarcodeSelector } from './BarcodeSelector';
 

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
@@ -25,7 +25,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         code: product.code || '',
         external_id: product.external_id || '',
         url: product.url || '',
-        barcode: product.barcode || '',
+        barcodes: product.barcodes || [],
         tnved: product.tnved || '',
         is_new: product.is_new || false,
         is_bestseller: product.is_bestseller || false,
@@ -43,7 +43,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
     // Определяем, в каких табах есть ошибки
     // Определяем, в каких табах есть ошибки (мемоизируем)
     const tabErrors = useMemo(() => ({
-        general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcode', 'tnved'].some(field => errors[field]),
+        general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'categories', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
         descriptions: ['short_description', 'description', 'meta_title', 'meta_description'].some(field => errors[field]),
@@ -263,13 +263,14 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             </FormField>
 
                                             <FormField
-                                                label="Штрихкод"
-                                                error={errors.barcode}
+                                                label="Штрихкоды"
+                                                error={errors.barcodes}
+                                                helperText="Введите штрихкод и нажмите Enter. Первый штрихкод будет основным."
                                             >
-                                                <Input
-                                                    value={data.barcode}
-                                                    onChange={(e) => setData('barcode', e.target.value)}
-                                                    placeholder="Введите штрихкод"
+                                                <BarcodeSelector
+                                                    value={data.barcodes}
+                                                    onChange={(barcodes) => setData('barcodes', barcodes)}
+                                                    placeholder="Введите штрихкод..."
                                                 />
                                             </FormField>
 
