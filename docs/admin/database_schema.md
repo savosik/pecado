@@ -15,7 +15,7 @@ Table users {
   country varchar
   city varchar
   is_admin boolean
-  region_id bigint
+  region_id bigintf
   currency_id bigint
   created_at timestamp
   updated_at timestamp
@@ -106,6 +106,7 @@ Table brands {
   name varchar
   slug varchar [unique]
   parent_id bigint
+  category varchar
   created_at timestamp
   updated_at timestamp
 }

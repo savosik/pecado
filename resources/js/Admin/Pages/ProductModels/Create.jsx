@@ -1,0 +1,106 @@
+import { useForm } from '@inertiajs/react';
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
+import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Components';
+import { Box, Card, SimpleGrid, Input, Stack } from '@chakra-ui/react';
+import { toaster } from '@/components/ui/toaster';
+
+export default function Create({ brands }) {
+    const { data, setData, post, processing, errors } = useForm({
+        name: '',
+        brand_id: '',
+        code: '',
+        external_id: '',
+    });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        post(route('admin.product-models.store'), {
+            onSuccess: () => {
+                toaster.create({
+                    title: 'Модель создана',
+                    description: 'Модель успешно добавлена в систему',
+                    type: 'success',
+                });
+            },
+            onError: () => {
+                toaster.create({
+                    title: 'Ошибка',
+                    description: 'Не удалось создать модель',
+                    type: 'error',
+                });
+            },
+        });
+    };
+
+    return (
+        <AdminLayout>
+            <Box p={6}>
+                <PageHeader
+                    title="Создать модель"
+                    description="Добавление новой модели товара"
+                />
+
+                <form onSubmit={handleSubmit}>
+                    <Card.Root>
+                        <Card.Body>
+                            <Stack gap={6}>
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                    <FormField
+                                        label="Название модели *"
+                                        error={errors.name}
+                                    >
+                                        <Input
+                                            value={data.name}
+                                            onChange={(e) => setData('name', e.target.value)}
+                                            placeholder="Введите название модели"
+                                        />
+                                    </FormField>
+
+                                    <SelectRelation
+                                        label="Бренд"
+                                        value={data.brand_id}
+                                        onChange={(value) => setData('brand_id', value)}
+                                        options={brands.map(b => ({ value: b.id, label: b.name }))}
+                                        placeholder="Выберите бренд"
+                                        error={errors.brand_id}
+                                    />
+
+                                    <FormField
+                                        label="Код модели (Артикул)"
+                                        error={errors.code}
+                                        helperText="Внутренний код или артикул производителя"
+                                    >
+                                        <Input
+                                            value={data.code}
+                                            onChange={(e) => setData('code', e.target.value)}
+                                            placeholder="Введите код"
+                                        />
+                                    </FormField>
+
+                                    <FormField
+                                        label="External ID"
+                                        error={errors.external_id}
+                                    >
+                                        <Input
+                                            value={data.external_id}
+                                            onChange={(e) => setData('external_id', e.target.value)}
+                                            placeholder="Внешний идентификатор"
+                                        />
+                                    </FormField>
+                                </SimpleGrid>
+                            </Stack>
+                        </Card.Body>
+
+                        <Card.Footer>
+                            <FormActions
+                                loading={processing}
+                                onCancel={() => window.history.back()}
+                                submitLabel="Создать модель"
+                            />
+                        </Card.Footer>
+                    </Card.Root>
+                </form>
+            </Box>
+        </AdminLayout>
+    );
+}

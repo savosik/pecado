@@ -108,13 +108,13 @@
 - [x] Реализовать иерархическое отображение (parent_id)
 
 #### Бренды (Brands)
-- [ ] Создать `Admin\BrandController`
-- [ ] Добавить маршруты `admin/brands`
-- [ ] Реализовать иерархию брендов (parent_id)
+- [x] Создать `Admin\BrandController`
+- [x] Добавить маршруты `admin/brands`
+- [x] Реализовать иерархию брендов (parent_id)
 
 #### Модели товаров (ProductModels)
-- [ ] Создать `Admin\ProductModelController`
-- [ ] Добавить маршруты `admin/product-models`
+- [x] Создать `Admin\ProductModelController`
+- [x] Добавить маршруты `admin/product-models`
 
 #### Атрибуты (Attributes)
 - [ ] Создать `Admin\AttributeController`
@@ -310,14 +310,14 @@
 - [x] Реализовать выбор родительской категории
 
 #### Бренды
-- [ ] Создать `Admin/Pages/Brands/Index.jsx`
-- [ ] Создать `Admin/Pages/Brands/Create.jsx`
-- [ ] Создать `Admin/Pages/Brands/Edit.jsx`
+- [x] Создать `Admin/Pages/Brands/Index.jsx`
+- [x] Создать `Admin/Pages/Brands/Create.jsx`
+- [x] Создать `Admin/Pages/Brands/Edit.jsx`
 
 #### Модели товаров
-- [ ] Создать `Admin/Pages/ProductModels/Index.jsx`
-- [ ] Создать `Admin/Pages/ProductModels/Create.jsx`
-- [ ] Создать `Admin/Pages/ProductModels/Edit.jsx`
+- [x] Создать `Admin/Pages/ProductModels/Index.jsx`
+- [x] Создать `Admin/Pages/ProductModels/Create.jsx`
+- [x] Создать `Admin/Pages/ProductModels/Edit.jsx`
 
 #### Атрибуты
 - [ ] Создать `Admin/Pages/Attributes/Index.jsx`

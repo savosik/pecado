@@ -31,6 +31,13 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     
     Route::resource('categories', CategoryController::class);
     Route::delete('/categories/{category}/media', [CategoryController::class, 'deleteMedia'])->name('categories.media.delete');
+
+    // Бренды
+    Route::resource('brands', \App\Http\Controllers\Admin\BrandController::class);
+    Route::delete('/brands/{brand}/media', [\App\Http\Controllers\Admin\BrandController::class, 'deleteMedia'])->name('brands.media.delete');
+    
+    // Модели товаров
+    Route::resource('product-models', \App\Http\Controllers\Admin\ProductModelController::class);
     
     // Теги
     Route::get('/tags/search', [\App\Http\Controllers\Admin\TagController::class, 'search'])->name('tags.search');

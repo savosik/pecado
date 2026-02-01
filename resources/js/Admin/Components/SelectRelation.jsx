@@ -89,18 +89,24 @@ export const SelectRelation = ({
 
     // Обработка изменения значения
     const handleValueChange = (details) => {
+        const parseValue = (v) => {
+            if (/^-?\d+$/.test(v)) return parseInt(v, 10);
+            return v;
+        };
+
         if (multiple) {
             // Для множественного выбора
-            const selectedValues = details.value.map(v => parseInt(v));
+            const selectedValues = details.value.map(parseValue);
             onChange(selectedValues);
         } else {
             // Для одиночного выбора
             const selectedValue = details.value.length > 0 ? details.value[0] : null;
-            // Преобразуем пустую строку в null, иначе parseInt
-            const finalValue = selectedValue === '' || selectedValue === null
-                ? null
-                : parseInt(selectedValue);
-            onChange(finalValue);
+
+            if (selectedValue === '' || selectedValue === null) {
+                onChange(null);
+            } else {
+                onChange(parseValue(selectedValue));
+            }
         }
     };
 

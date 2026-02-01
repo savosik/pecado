@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { router, usePage } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, Badge, Image, Text, IconButton, Button } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
+import CategoryTree from './CategoryTree';
+import { Box, HStack, Badge, Image, Text, IconButton, Button, Group } from '@chakra-ui/react';
+import { LuPencil, LuTrash2, LuPlus, LuList, LuNetwork } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Index({ categories, filters }) {
@@ -177,17 +178,52 @@ export default function Index({ categories, filters }) {
         },
     ];
 
+    const viewMode = filters.view || 'list';
+
+    const handleViewChange = (mode) => {
+        if (mode === viewMode) return;
+
+        router.get(route('admin.categories.index'), {
+            ...filters,
+            view: mode,
+            // Сбрасываем пагинацию при смене вида, но сохраняем поиск
+            page: 1,
+        }, {
+            preserveState: true,
+            replace: true,
+        });
+    };
+
     return (
         <>
             <PageHeader
                 title="Категории"
                 actions={
-                    <Button
-                        colorPalette="blue"
-                        onClick={() => router.visit(route('admin.categories.create'))}
-                    >
-                        <LuPlus /> Создать категорию
-                    </Button>
+                    <HStack>
+                        <Group attached>
+                            <Button
+                                size="sm"
+                                variant={viewMode === 'list' ? 'solid' : 'outline'}
+                                onClick={() => handleViewChange('list')}
+                            >
+                                <LuList /> Список
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={viewMode === 'tree' ? 'solid' : 'outline'}
+                                onClick={() => handleViewChange('tree')}
+                            >
+                                <LuNetwork /> Дерево
+                            </Button>
+                        </Group>
+
+                        <Button
+                            colorPalette="blue"
+                            onClick={() => router.visit(route('admin.categories.create'))}
+                        >
+                            <LuPlus /> Создать категорию
+                        </Button>
+                    </HStack>
                 }
             />
 
@@ -199,16 +235,23 @@ export default function Index({ categories, filters }) {
                 />
             </Box>
 
-            <DataTable
-                data={categories.data}
-                columns={columns}
-                pagination={categories}
-                onSort={handleSort}
-                sortBy={filters.sort_by}
-                sortOrder={filters.sort_order}
-                perPage={filters.per_page}
-                onPerPageChange={handlePerPageChange}
-            />
+            {viewMode === 'list' ? (
+                <DataTable
+                    data={categories.data}
+                    columns={columns}
+                    pagination={categories}
+                    onSort={handleSort}
+                    sortBy={filters.sort_by}
+                    sortOrder={filters.sort_order}
+                    perPage={filters.per_page}
+                    onPerPageChange={handlePerPageChange}
+                />
+            ) : (
+                <CategoryTree
+                    data={categories}
+                    onDelete={handleDelete}
+                />
+            )}
 
             <ConfirmDialog
                 open={deleteDialogOpen}

@@ -15,6 +15,27 @@ class CategoryController extends AdminController
      */
     public function index(Request $request): Response
     {
+        $viewMode = $request->input('view', 'list');
+
+        if ($viewMode === 'tree') {
+            $categories = Category::with(['media', 'tags', 'parent'])
+                ->defaultOrder()
+                ->get()
+                ->toTree();
+
+            // Ручная установка parent аттрибута не нужна для toTree,
+            // так как мы получаем полную иерархию через relation children.
+            // Но media и tags мы загружаем.
+
+            return Inertia::render('Admin/Pages/Categories/Index', [
+                'categories' => $categories,
+                'filters' => [
+                    'search' => $request->input('search'),
+                    'view' => 'tree',
+                ],
+            ]);
+        }
+
         $query = Category::query()
             ->with(['parent', 'media', 'tags']);
 
@@ -42,7 +63,7 @@ class CategoryController extends AdminController
 
         $categories = $query->paginate($perPage)->withQueryString();
 
-        // Явно добавляем parent в сериализацию (NodeTrait не сериализует parent автоматически)
+        // Явно добавляем parent в сериализацию
         $categories->through(function ($category) {
             $category->setAttribute('parent', $category->parent);
             return $category;
@@ -55,6 +76,7 @@ class CategoryController extends AdminController
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
+                'view' => 'list',
             ],
         ]);
     }

@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('slug')->unique();
             $table->text('short_description')->nullable();
-            $table->string('category');
+            $table->string('category')->default('other');
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('brands')->nullOnDelete();
