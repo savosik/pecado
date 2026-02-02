@@ -12,6 +12,20 @@ export const MobileSidebar = ({ isOpen, onClose }) => {
         return url.startsWith(path);
     };
 
+    // Определяем активную группу меню на основе текущего URL
+    const getActiveGroups = () => {
+        const activeGroups = [];
+        for (const group of menuConfig) {
+            for (const item of group.items) {
+                if (isActive(item.path)) {
+                    activeGroups.push(group.title);
+                    break;
+                }
+            }
+        }
+        return activeGroups.length > 0 ? activeGroups : ["Главная"];
+    };
+
     return (
         <Drawer.Root open={isOpen} onOpenChange={(e) => !e.open && onClose()} placement="start">
             <Drawer.Backdrop />
@@ -26,7 +40,7 @@ export const MobileSidebar = ({ isOpen, onClose }) => {
                         <Drawer.CloseTrigger />
                     </Drawer.Header>
                     <Drawer.Body>
-                        <Accordion.Root collapsible multiple defaultValue={["Каталог", "Контент"]}>
+                        <Accordion.Root collapsible multiple defaultValue={getActiveGroups()}>
                             {menuConfig.map((group) => (
                                 <Accordion.Item key={group.title} value={group.title}>
                                     <Accordion.ItemTrigger

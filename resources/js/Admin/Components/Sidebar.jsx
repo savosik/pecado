@@ -12,6 +12,20 @@ export const Sidebar = ({ isCollapsed = false }) => {
         return url.startsWith(path);
     };
 
+    // Определяем активную группу меню на основе текущего URL
+    const getActiveGroups = () => {
+        const activeGroups = [];
+        for (const group of menuConfig) {
+            for (const item of group.items) {
+                if (isActive(item.path)) {
+                    activeGroups.push(group.title);
+                    break;
+                }
+            }
+        }
+        return activeGroups.length > 0 ? activeGroups : ["Главная"];
+    };
+
     return (
         <Box
             as="nav"
@@ -37,7 +51,7 @@ export const Sidebar = ({ isCollapsed = false }) => {
             </Box>
 
             {/* Навигация */}
-            <Accordion.Root collapsible multiple defaultValue={["Каталог", "Контент"]}>
+            <Accordion.Root collapsible multiple defaultValue={getActiveGroups()}>
                 {menuConfig.map((group) => (
                     <Accordion.Item key={group.title} value={group.title}>
                         <Accordion.ItemTrigger
