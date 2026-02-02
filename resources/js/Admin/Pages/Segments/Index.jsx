@@ -130,7 +130,12 @@ export default function Index({ segments, filters }) {
     ];
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Сегменты' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader
                     title="Сегменты"

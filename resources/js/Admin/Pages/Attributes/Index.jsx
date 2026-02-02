@@ -150,7 +150,12 @@ export default function Index({ attributes, filters }) {
     ];
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Атрибуты' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader
                     title="Атрибуты"

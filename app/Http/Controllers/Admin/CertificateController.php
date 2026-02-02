@@ -27,7 +27,7 @@ class CertificateController extends AdminController
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
         
-        $allowedSortFields = ['id', 'name', 'external_id', 'created_at', 'issued_at'];
+        $allowedSortFields = ['id', 'name', 'external_id', 'created_at', 'issued_at', 'expires_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
         }
@@ -67,8 +67,11 @@ class CertificateController extends AdminController
             'external_id' => 'nullable|string|max:255',
             'type' => 'nullable|string|max:255',
             'issued_at' => 'nullable|date',
+            'expires_at' => 'nullable|date',
             'files' => 'nullable|array',
             'files.*' => 'file|max:10240',
+            'products' => 'nullable|array',
+            'products.*' => 'exists:products,id',
         ]);
 
         $certificate = Certificate::create($validated);
@@ -78,6 +81,11 @@ class CertificateController extends AdminController
                 $certificate->addMedia($file)
                     ->toMediaCollection('files');
             }
+        }
+
+        // Sync products
+        if (!empty($validated['products'])) {
+            $certificate->products()->sync($validated['products']);
         }
 
         return redirect()
@@ -90,7 +98,17 @@ class CertificateController extends AdminController
      */
     public function edit(Certificate $certificate): Response
     {
-        $certificate->load('media');
+        $certificate->load(['media', 'products.media']);
+
+        $products = $certificate->products->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'price' => $product->base_price,
+            ];
+        });
 
         return Inertia::render('Admin/Pages/Certificates/Edit', [
             'certificate' => [
@@ -99,11 +117,15 @@ class CertificateController extends AdminController
                 'external_id' => $certificate->external_id,
                 'type' => $certificate->type,
                 'issued_at' => $certificate->issued_at?->format('Y-m-d'),
+                'expires_at' => $certificate->expires_at?->format('Y-m-d'),
                 'media' => $certificate->getMedia('files')->map(fn($m) => [
                     'id' => $m->id,
                     'url' => $m->getUrl(),
                     'name' => $m->file_name,
+                    'size' => $m->size,
+                    'mime_type' => $m->mime_type,
                 ]),
+                'products' => $products,
             ],
         ]);
     }
@@ -118,8 +140,11 @@ class CertificateController extends AdminController
             'external_id' => 'nullable|string|max:255',
             'type' => 'nullable|string|max:255',
             'issued_at' => 'nullable|date',
+            'expires_at' => 'nullable|date',
             'files' => 'nullable|array',
             'files.*' => 'file|max:10240',
+            'products' => 'nullable|array',
+            'products.*' => 'exists:products,id',
         ]);
 
         $certificate->update($validated);
@@ -129,6 +154,13 @@ class CertificateController extends AdminController
                 $certificate->addMedia($file)
                     ->toMediaCollection('files');
             }
+        }
+
+        // Sync products
+        if (isset($validated['products'])) {
+            $certificate->products()->sync($validated['products']);
+        } else {
+            $certificate->products()->detach();
         }
 
         return redirect()
@@ -161,5 +193,33 @@ class CertificateController extends AdminController
         $media->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Search certificates for selector.
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = $request->input('query');
+
+        if (!$query) {
+            return response()->json([]);
+        }
+
+        $certificates = Certificate::search($query)
+            ->query(fn ($q) => $q->limit(20))
+            ->get()
+            ->map(function ($cert) {
+                return [
+                    'id' => $cert->id,
+                    'name' => $cert->name,
+                    'type' => $cert->type,
+                    'external_id' => $cert->external_id,
+                    'issued_at' => $cert->issued_at,
+                    'expires_at' => $cert->expires_at,
+                ];
+            });
+
+        return response()->json($certificates);
     }
 }

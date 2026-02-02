@@ -18,10 +18,12 @@ class Certificate extends Model implements HasMedia
         'name',
         'type',
         'issued_at',
+        'expires_at',
     ];
 
     protected $casts = [
         'issued_at' => 'date',
+        'expires_at' => 'date',
     ];
 
     public function registerMediaCollections(): void

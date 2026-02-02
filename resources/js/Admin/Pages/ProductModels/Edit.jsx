@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, SelectRelation, ProductSelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -11,11 +11,17 @@ export default function Edit({ productModel }) {
 
         code: productModel.code || '',
         external_id: productModel.external_id || '',
+        products: productModel.products || [],
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
         post(route('admin.product-models.update', productModel.id), {
+            prefix: null,
+            transform: (data) => ({
+                ...data,
+                products: data.products.map(p => p.id),
+            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Модель обновлена',
@@ -82,6 +88,16 @@ export default function Edit({ productModel }) {
                                         />
                                     </FormField>
                                 </SimpleGrid>
+
+                                <Box>
+                                    <FormField label="Привязанные товары" error={errors.products}>
+                                        <ProductSelector
+                                            value={data.products}
+                                            onChange={(products) => setData('products', products)}
+                                            error={errors.products}
+                                        />
+                                    </FormField>
+                                </Box>
                             </Stack>
                         </Card.Body>
 

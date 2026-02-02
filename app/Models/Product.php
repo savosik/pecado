@@ -11,9 +11,11 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\Tags\HasTags;
 
+use Laravel\Scout\Searchable;
+
 class Product extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, HasTags;
+    use HasFactory, InteractsWithMedia, HasTags, Searchable;
 
     protected $fillable = [
         'name',
@@ -209,5 +211,24 @@ class Product extends Model implements HasMedia
     public function productSelections(): BelongsToMany
     {
         return $this->belongsToMany(ProductSelection::class, 'product_product_selection');
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => (int) $this->id,
+            'name' => $this->name,
+            'sku' => $this->sku,
+            'code' => $this->code,
+            'description' => $this->description,
+            'barcodes' => $this->barcodes->pluck('barcode')->toArray(),
+            'brand' => $this->brand ? $this->brand->name : null,
+            'categories' => $this->categories->pluck('name')->toArray(),
+        ];
     }
 }

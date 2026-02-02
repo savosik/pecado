@@ -76,9 +76,16 @@ class ProductModelController extends AdminController
 
             'code' => 'nullable|string|max:255',
             'external_id' => 'nullable|string|max:255',
+            'products' => 'nullable|array',
+            'products.*' => 'exists:products,id',
         ]);
 
-        ProductModel::create($validated);
+        $productModel = ProductModel::create($validated);
+
+        // Assign products to this model
+        if (!empty($validated['products'])) {
+            \App\Models\Product::whereIn('id', $validated['products'])->update(['model_id' => $productModel->id]);
+        }
 
         return redirect()
             ->route('admin.product-models.index')
@@ -90,8 +97,22 @@ class ProductModelController extends AdminController
      */
     public function edit(ProductModel $productModel): Response
     {
+        $productModel->load(['products.media']);
+
+        $products = $productModel->products->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'price' => $product->base_price,
+            ];
+        });
+
         return Inertia::render('Admin/Pages/ProductModels/Edit', [
-            'productModel' => $productModel,
+            'productModel' => array_merge($productModel->toArray(), [
+                 'products' => $products
+            ]),
 
         ]);
     }
@@ -106,9 +127,26 @@ class ProductModelController extends AdminController
 
             'code' => 'nullable|string|max:255',
             'external_id' => 'nullable|string|max:255',
+            'products' => 'nullable|array',
+            'products.*' => 'exists:products,id',
         ]);
 
         $productModel->update($validated);
+
+        // Sync products (One-to-Many)
+        if (isset($validated['products'])) {
+            // Detach products that are no longer in the list
+            $productModel->products()->whereNotIn('id', $validated['products'])->update(['model_id' => null]);
+            
+            // Attach selected products
+            if (!empty($validated['products'])) {
+                \App\Models\Product::whereIn('id', $validated['products'])->update(['model_id' => $productModel->id]);
+            }
+        } else {
+             // If products field is present (and null/empty implied if not caught above, but here we cover case if isset but maybe explicit null sent differently? 
+             // Actually, if it's not in validated, we skip. If it is in validated and empty, we detach all.
+             $productModel->products()->update(['model_id' => null]);
+        }
 
         return redirect()
             ->route('admin.product-models.index')

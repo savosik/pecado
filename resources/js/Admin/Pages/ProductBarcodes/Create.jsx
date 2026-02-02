@@ -24,7 +24,13 @@ export default function Create({ products }) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Штрихкоды', href: route('admin.product-barcodes.index') },
+                { label: 'Создать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Добавить штрихкод" description="Привязка нового штрихкода к товару" />
 

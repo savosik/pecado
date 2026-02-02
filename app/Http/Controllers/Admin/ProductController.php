@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductModel;
 use App\Models\SizeChart;
+use App\Models\Segment;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -68,6 +69,7 @@ class ProductController extends AdminController
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
             'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
+            'segments' => Segment::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -107,7 +109,12 @@ class ProductController extends AdminController
             'additional_images' => 'nullable|array',
             'additional_images.*' => 'image|max:10240',
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
+            'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
             'tags' => 'nullable|array',
+            'segments' => 'nullable|array',
+            'segments.*' => 'exists:segments,id',
+            'certificates' => 'nullable|array',
+            'certificates.*' => 'exists:certificates,id',
         ]);
 
         // Генерация slug если не указан
@@ -159,6 +166,16 @@ class ProductController extends AdminController
             $product->syncTags($request->tags);
         }
 
+        // Сегменты
+        if (isset($validated['segments'])) {
+            $product->segments()->sync($validated['segments']);
+        }
+
+        // Сертификаты
+        if (isset($validated['certificates'])) {
+            $product->certificates()->sync($validated['certificates']);
+        }
+
         return redirect()
             ->route('admin.products.index')
             ->with('success', 'Товар успешно создан');
@@ -169,7 +186,7 @@ class ProductController extends AdminController
      */
     public function edit(Product $product): Response
     {
-        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags', 'barcodes']);
+        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags', 'barcodes', 'segments', 'certificates']);
 
         return Inertia::render('Admin/Pages/Products/Edit', [
             'product' => [
@@ -215,11 +232,21 @@ class ProductController extends AdminController
                         'label' => $tag->name,
                     ];
                 }),
+                'segments' => $product->segments->pluck('id')->toArray(),
+                'certificates' => $product->certificates->map(function ($cert) {
+                    return [
+                        'id' => $cert->id,
+                        'name' => $cert->name,
+                        'type' => $cert->type,
+                        'status' => $cert->expires_at && $cert->expires_at->isPast() ? 'expired' : 'active',
+                    ];
+                }),
             ],
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
             'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
+            'segments' => Segment::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -260,6 +287,10 @@ class ProductController extends AdminController
             'additional_images.*' => 'image|max:10240',
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
             'tags' => 'nullable|array',
+            'segments' => 'nullable|array',
+            'segments.*' => 'exists:segments,id',
+            'certificates' => 'nullable|array',
+            'certificates.*' => 'exists:certificates,id',
         ]);
 
         // Генерация slug если не указан
@@ -318,6 +349,20 @@ class ProductController extends AdminController
             $product->syncTags($request->tags);
         }
 
+        // Синхронизация сегментов
+        if (isset($validated['segments'])) {
+            $product->segments()->sync($validated['segments']);
+        } else {
+            $product->segments()->detach();
+        }
+
+        // Синхронизация сертификатов
+        if (isset($validated['certificates'])) {
+            $product->certificates()->sync($validated['certificates']);
+        } else {
+            $product->certificates()->detach();
+        }
+
         return redirect()
             ->route('admin.products.index')
             ->with('success', 'Товар успешно обновлён');
@@ -348,5 +393,32 @@ class ProductController extends AdminController
         $media->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    /**
+     * Search products for selector.
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = $request->input('query');
+
+        if (!$query) {
+            return response()->json([]);
+        }
+
+        $products = Product::search($query)
+            ->query(fn ($q) => $q->with(['media'])->limit(20))
+            ->get()
+            ->map(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
+                    'image_url' => $product->getFirstMediaUrl('main'),
+                    'price' => $product->base_price,
+                ];
+            });
+
+        return response()->json($products);
     }
 }

@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector } from '@/Admin/Components';
 import { Box, Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -12,11 +12,17 @@ export default function Edit({ segment }) {
         meta_description: segment.meta_description || '',
         desktop_image: null,
         mobile_image: null,
+        products: segment.products || [],
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
         post(route('admin.segments.update', segment.id), {
+            prefix: null, // Ensure products array is sent correctly if needed, but Inertia handles JSON well usually
+            transform: (data) => ({
+                ...data,
+                products: data.products.map(p => p.id),
+            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Сегмент обновлен',
@@ -28,7 +34,13 @@ export default function Edit({ segment }) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Сегменты', href: route('admin.segments.index') },
+                { label: 'Редактировать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Редактировать сегмент" description="Изменение данных сегмента или коллекции" />
 
@@ -84,6 +96,16 @@ export default function Edit({ segment }) {
                                         />
                                     </Box>
                                 </SimpleGrid>
+
+                                <Box>
+                                    <FormField label="Товары в подборке" error={errors.products}>
+                                        <ProductSelector
+                                            value={data.products}
+                                            onChange={(products) => setData('products', products)}
+                                            error={errors.products}
+                                        />
+                                    </FormField>
+                                </Box>
                             </Stack>
                         </Card.Body>
 

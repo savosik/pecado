@@ -1,14 +1,14 @@
 import { useMemo } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
 
-export default function Create({ brands, categories, productModels, sizeCharts }) {
+export default function Create({ brands, categories, productModels, sizeCharts, segments }) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         slug: '',
@@ -33,10 +33,12 @@ export default function Create({ brands, categories, productModels, sizeCharts }
         is_liquidation: false,
         for_marketplaces: false,
         categories: [],
+        segments: [],
         image: null,
         additional_images: [],
         video: null,
         tags: [],
+        certificates: [],
     });
 
     // Определяем, в каких табах есть ошибки (мемоизируем, чтобы не пересчитывать при каждом вводе)
@@ -53,6 +55,7 @@ export default function Create({ brands, categories, productModels, sizeCharts }
     const modelOptions = useMemo(() => productModels.map(m => ({ value: m.id, label: m.name })), [productModels]);
     const categoryOptions = useMemo(() => categories.map(c => ({ value: c.id, label: c.name })), [categories]);
     const sizeChartOptions = useMemo(() => sizeCharts.map(s => ({ value: s.id, label: s.name })), [sizeCharts]);
+    const segmentOptions = useMemo(() => segments.map(s => ({ value: s.id, label: s.name })), [segments]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -275,6 +278,18 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                             />
 
                                             <Box gridColumn={{ base: '1', md: 'span 2' }}>
+                                                <SelectRelation
+                                                    label="Подборки"
+                                                    value={data.segments}
+                                                    onChange={(value) => setData('segments', value)}
+                                                    options={segmentOptions}
+                                                    placeholder="Выберите подборки"
+                                                    multiple
+                                                    error={errors.segments}
+                                                />
+                                            </Box>
+
+                                            <Box gridColumn={{ base: '1', md: 'span 2' }}>
                                                 <FormField
                                                     label="Теги"
                                                     error={errors.tags}
@@ -284,6 +299,19 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                                         onChange={(tags) => setData('tags', tags)}
                                                         placeholder="Введите теги..."
                                                         error={errors.tags}
+                                                    />
+                                                </FormField>
+                                            </Box>
+
+                                            <Box gridColumn={{ base: '1', md: 'span 2' }}>
+                                                <FormField
+                                                    label="Сертификаты"
+                                                    error={errors.certificates}
+                                                >
+                                                    <CertificateSelector
+                                                        value={data.certificates}
+                                                        onChange={(certificates) => setData('certificates', certificates)}
+                                                        error={errors.certificates}
                                                     />
                                                 </FormField>
                                             </Box>

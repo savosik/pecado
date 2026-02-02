@@ -101,7 +101,13 @@ export default function Create({ brands }) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Размерные сетки', href: route('admin.size-charts.index') },
+                { label: 'Создать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Создать размерную сетку" description="Настройка таблицы размеров и привязка к брендам" />
 

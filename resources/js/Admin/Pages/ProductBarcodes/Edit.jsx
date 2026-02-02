@@ -24,7 +24,13 @@ export default function Edit({ productBarcode, products }) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Штрихкоды', href: route('admin.product-barcodes.index') },
+                { label: 'Редактировать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Редактировать штрихкод" description="Изменение данных штрихкода" />
 

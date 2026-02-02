@@ -88,7 +88,13 @@ export default function Index({ certificates, filters }) {
             key: 'issued_at',
             label: 'Дата выдачи',
             sortable: true,
-            render: (date) => date ? new Date(date).toLocaleDateString('ru-RU') : '—',
+            render: (date) => date ? date.substring(0, 10) : '—',
+        },
+        {
+            key: 'expires_at',
+            label: 'Действует до',
+            sortable: true,
+            render: (date) => date ? date.substring(0, 10) : '—',
         },
         {
             key: 'media',
@@ -138,7 +144,12 @@ export default function Index({ certificates, filters }) {
     ];
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Сертификаты' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader
                     title="Сертификаты"

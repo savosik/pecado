@@ -91,7 +91,17 @@ class SegmentController extends AdminController
      */
     public function edit(Segment $segment): Response
     {
-        $segment->load('media');
+        $segment->load(['media', 'products.media']);
+        
+        $products = $segment->products->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'price' => $product->base_price,
+            ];
+        });
 
         return Inertia::render('Admin/Pages/Segments/Edit', [
             'segment' => [
@@ -101,6 +111,7 @@ class SegmentController extends AdminController
                 'meta_description' => $segment->meta_description,
                 'desktop_image_url' => $segment->getFirstMediaUrl('desktop'),
                 'mobile_image_url' => $segment->getFirstMediaUrl('mobile'),
+                'products' => $products,
             ],
         ]);
     }
@@ -116,6 +127,8 @@ class SegmentController extends AdminController
             'meta_description' => 'nullable|string|max:500',
             'desktop_image' => 'nullable|image|max:5120',
             'mobile_image' => 'nullable|image|max:2048',
+            'products' => 'nullable|array',
+            'products.*' => 'exists:products,id',
         ]);
 
         $segment->update($validated);
@@ -128,6 +141,13 @@ class SegmentController extends AdminController
         if ($request->hasFile('mobile_image')) {
             $segment->addMediaFromRequest('mobile_image')
                 ->toMediaCollection('mobile');
+        }
+
+        // Синхронизация товаров
+        if (isset($validated['products'])) {
+            $segment->products()->sync($validated['products']);
+        } else {
+            $segment->products()->detach();
         }
 
         return redirect()

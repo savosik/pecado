@@ -13,4 +13,7 @@ export { VideoUploader } from './VideoUploader';
 export { MarkdownEditor } from './Editor/MarkdownEditor';
 export { SelectRelation } from './SelectRelation';
 export { BarcodeSelector } from './BarcodeSelector';
+export { ProductSelector } from './ProductSelector';
+export { FileUploader } from './FileUploader';
+export * from './CertificateSelector';
 

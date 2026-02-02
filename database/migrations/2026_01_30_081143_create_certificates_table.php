@@ -17,6 +17,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('type');
             $table->date('issued_at')->nullable();
+            $table->date('expires_at')->nullable();
 
             $table->timestamps();
         });
@@ -27,6 +28,8 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
         Schema::dropIfExists('certificates');
+        Schema::enableForeignKeyConstraints();
     }
 };

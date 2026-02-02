@@ -27,7 +27,13 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Сегменты', href: route('admin.segments.index') },
+                { label: 'Создать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Создать сегмент" description="Добавление нового сегмента или коллекции" />
 

@@ -47,7 +47,13 @@ export default function Create({ types }) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Атрибуты', href: route('admin.attributes.index') },
+                { label: 'Создать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader
                     title="Создать атрибут"

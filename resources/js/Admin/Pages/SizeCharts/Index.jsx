@@ -136,7 +136,12 @@ export default function Index({ sizeCharts, filters }) {
     ];
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Размерные сетки' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader
                     title="Размерные сетки"

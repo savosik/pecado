@@ -1,6 +1,6 @@
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, FileUploader, ProductSelector } from '@/Admin/Components';
 import { Box, Card, Input, Stack, SimpleGrid, Text, HStack, IconButton, Badge } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 import { LuFile, LuX } from 'react-icons/lu';
@@ -12,12 +12,19 @@ export default function Edit({ certificate }) {
         external_id: certificate.external_id || '',
         type: certificate.type || '',
         issued_at: certificate.issued_at || '',
+        expires_at: certificate.expires_at || '',
         files: [],
+        products: certificate.products || [],
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
         post(route('admin.certificates.update', certificate.id), {
+            prefix: null, // Critical to avoid double wrapping if data structure is complex
+            transform: (data) => ({
+                ...data,
+                products: data.products.map(p => p.id),
+            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Сертификат обновлен',
@@ -28,9 +35,7 @@ export default function Edit({ certificate }) {
         });
     };
 
-    const handleFileChange = (e) => {
-        setData('files', Array.from(e.target.files));
-    };
+
 
     const removeMedia = (mediaId) => {
         if (confirm('Вы уверены, что хотите удалить этот файл?')) {
@@ -48,7 +53,13 @@ export default function Edit({ certificate }) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Сертификаты', href: route('admin.certificates.index') },
+                { label: 'Редактировать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Редактировать сертификат" description="Изменение данных сертификата" />
 
@@ -88,42 +99,45 @@ export default function Edit({ certificate }) {
                                             onChange={(e) => setData('issued_at', e.target.value)}
                                         />
                                     </FormField>
+
+                                    <FormField label="Действует до" error={errors.expires_at}>
+                                        <Input
+                                            type="date"
+                                            value={data.expires_at}
+                                            onChange={(e) => setData('expires_at', e.target.value)}
+                                        />
+                                    </FormField>
                                 </SimpleGrid>
 
                                 <Box>
-                                    <Text fontWeight="medium" mb={2}>Существующие файлы:</Text>
-                                    <Stack gap={2}>
-                                        {certificate.media?.map(m => (
-                                            <HStack key={m.id} p={2} borderWidth="1px" borderRadius="md" justify="space-between">
-                                                <HStack>
-                                                    <LuFile />
-                                                    <Text fontSize="sm">{m.name}</Text>
-                                                </HStack>
-                                                <IconButton
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    colorPalette="red"
-                                                    onClick={() => removeMedia(m.id)}
-                                                    aria-label="Удалить файл"
-                                                >
-                                                    <LuX />
-                                                </IconButton>
-                                            </HStack>
-                                        ))}
-                                        {(!certificate.media || certificate.media.length === 0) && (
-                                            <Text fontSize="sm" color="fg.muted">Файлы не загружены</Text>
-                                        )}
-                                    </Stack>
+                                    <FileUploader
+                                        name="files"
+                                        label="Файлы сертификата"
+                                        value={data.files}
+                                        onChange={(files) => setData('files', files)}
+                                        existingFiles={certificate.media?.map(m => ({
+                                            id: m.id,
+                                            url: m.original_url,
+                                            name: m.file_name,
+                                            size: m.size,
+                                            mime_type: m.mime_type
+                                        }))}
+                                        onRemoveExisting={removeMedia}
+                                        error={errors.files}
+                                        maxFiles={10}
+                                        maxSize={10}
+                                    />
                                 </Box>
 
-                                <FormField label="Добавить новые файлы" error={errors.files}>
-                                    <Input
-                                        type="file"
-                                        multiple
-                                        onChange={handleFileChange}
-                                        p={1}
-                                    />
-                                </FormField>
+                                <Box>
+                                    <FormField label="Привязанные товары" error={errors.products}>
+                                        <ProductSelector
+                                            value={data.products}
+                                            onChange={(products) => setData('products', products)}
+                                            error={errors.products}
+                                        />
+                                    </FormField>
+                                </Box>
                             </Stack>
                         </Card.Body>
 

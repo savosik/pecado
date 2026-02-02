@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, FileUploader, ProductSelector } from '@/Admin/Components';
 import { Box, Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -10,12 +10,18 @@ export default function Create() {
         external_id: '',
         type: '',
         issued_at: '',
+        expires_at: '',
         files: [],
+        products: [],
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
         post(route('admin.certificates.store'), {
+            transform: (data) => ({
+                ...data,
+                products: data.products.map(p => p.id),
+            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Сертификат создан',
@@ -26,12 +32,16 @@ export default function Create() {
         });
     };
 
-    const handleFileChange = (e) => {
-        setData('files', Array.from(e.target.files));
-    };
+
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Сертификаты', href: route('admin.certificates.index') },
+                { label: 'Создать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Создать сертификат" description="Добавление нового сертификата соответствия" />
 
@@ -71,16 +81,36 @@ export default function Create() {
                                             onChange={(e) => setData('issued_at', e.target.value)}
                                         />
                                     </FormField>
+
+                                    <FormField label="Действует до" error={errors.expires_at}>
+                                        <Input
+                                            type="date"
+                                            value={data.expires_at}
+                                            onChange={(e) => setData('expires_at', e.target.value)}
+                                        />
+                                    </FormField>
                                 </SimpleGrid>
 
-                                <FormField label="Файлы сертификата" error={errors.files}>
-                                    <Input
-                                        type="file"
-                                        multiple
-                                        onChange={handleFileChange}
-                                        p={1}
-                                    />
-                                </FormField>
+                                <FileUploader
+                                    name="files"
+                                    label="Файлы сертификата"
+                                    value={data.files}
+                                    onChange={(files) => setData('files', files)}
+                                    error={errors.files}
+                                    maxFiles={5}
+                                    maxSize={10}
+                                />
+
+
+                                <Box>
+                                    <FormField label="Привязанные товары" error={errors.products}>
+                                        <ProductSelector
+                                            value={data.products}
+                                            onChange={(products) => setData('products', products)}
+                                            error={errors.products}
+                                        />
+                                    </FormField>
+                                </Box>
                             </Stack>
                         </Card.Body>
 
@@ -94,6 +124,6 @@ export default function Create() {
                     </Card.Root>
                 </form>
             </Box>
-        </AdminLayout>
+        </AdminLayout >
     );
 }

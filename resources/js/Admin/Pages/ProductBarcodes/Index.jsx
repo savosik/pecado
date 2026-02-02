@@ -120,7 +120,12 @@ export default function Index({ barcodes, filters }) {
     ];
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Штрихкоды' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader
                     title="Штрихкоды"

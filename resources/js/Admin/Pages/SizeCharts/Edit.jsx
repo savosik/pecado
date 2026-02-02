@@ -100,7 +100,13 @@ export default function Edit({ sizeChart, brands }) {
     };
 
     return (
-        <AdminLayout>
+        <AdminLayout
+            breadcrumbs={[
+                { label: 'Главная', href: route('admin.dashboard') },
+                { label: 'Размерные сетки', href: route('admin.size-charts.index') },
+                { label: 'Редактировать' },
+            ]}
+        >
             <Box p={6}>
                 <PageHeader title="Редактировать размерную сетку" description={`Изменение сетки: ${sizeChart.name}`} />
 
