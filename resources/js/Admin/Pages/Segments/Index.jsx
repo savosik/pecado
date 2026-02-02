@@ -160,8 +160,8 @@ export default function Index({ segments, filters }) {
                     columns={columns}
                     pagination={segments}
                     onSort={handleSort}
-                    sortBy={filters.sort_by}
-                    sortOrder={filters.sort_order}
+                    sortColumn={filters.sort_by}
+                    sortDirection={filters.sort_order}
                     perPage={filters.per_page}
                     onPerPageChange={handlePerPageChange}
                 />

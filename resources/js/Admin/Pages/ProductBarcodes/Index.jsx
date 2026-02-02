@@ -150,8 +150,8 @@ export default function Index({ barcodes, filters }) {
                     columns={columns}
                     pagination={barcodes}
                     onSort={handleSort}
-                    sortBy={filters.sort_by}
-                    sortOrder={filters.sort_order}
+                    sortColumn={filters.sort_by}
+                    sortDirection={filters.sort_order}
                     perPage={filters.per_page}
                     onPerPageChange={handlePerPageChange}
                 />

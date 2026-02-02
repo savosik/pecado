@@ -228,8 +228,8 @@ export default function Index({ products, filters }) {
                 columns={columns}
                 pagination={products}
                 onSort={handleSort}
-                sortBy={filters.sort_by}
-                sortOrder={filters.sort_order}
+                sortColumn={filters.sort_by}
+                sortDirection={filters.sort_order}
                 perPage={filters.per_page}
                 onPerPageChange={handlePerPageChange}
             />
