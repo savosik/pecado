@@ -57,4 +57,9 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     
     // Теги
     Route::get('/tags/search', [\App\Http\Controllers\Admin\TagController::class, 'search'])->name('tags.search');
+    // Склады
+    Route::resource('warehouses', \App\Http\Controllers\Admin\WarehouseController::class);
+
+    // Регионы
+    Route::resource('regions', \App\Http\Controllers\Admin\RegionController::class);
 });

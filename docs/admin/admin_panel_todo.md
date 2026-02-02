@@ -117,25 +117,25 @@
 - [x] Добавить маршруты `admin/product-models`
 
 #### Атрибуты (Attributes)
-- [ ] Создать `Admin\AttributeController`
-- [ ] Добавить маршруты `admin/attributes`
-- [ ] Включить управление значениями атрибутов (AttributeValues)
+- [x] Создать `Admin\AttributeController`
+- [x] Добавить маршруты `admin/attributes`
+- [x] Включить управление значениями атрибутов (AttributeValues)
 
 #### Размерные сетки (SizeCharts)
-- [ ] Создать `Admin\SizeChartController`
-- [ ] Добавить маршруты `admin/size-charts`
+- [x] Создать `Admin\SizeChartController`
+- [x] Добавить маршруты `admin/size-charts`
 
 #### Штрихкоды (ProductBarcodes)
-- [ ] Создать `Admin\ProductBarcodeController`
-- [ ] Добавить маршруты `admin/product-barcodes`
+- [x] Создать `Admin\ProductBarcodeController`
+- [x] Добавить маршруты `admin/product-barcodes`
 
 #### Сертификаты (Certificates)
-- [ ] Создать `Admin\CertificateController`
-- [ ] Добавить маршруты `admin/certificates`
+- [x] Создать `Admin\CertificateController`
+- [x] Добавить маршруты `admin/certificates`
 
 #### Сегменты (Segments)
-- [ ] Создать `Admin\SegmentController`
-- [ ] Добавить маршруты `admin/segments`
+- [x] Создать `Admin\SegmentController`
+- [x] Добавить маршруты `admin/segments`
 
 ---
 
@@ -320,30 +320,30 @@
 - [x] Создать `Admin/Pages/ProductModels/Edit.jsx`
 
 #### Атрибуты
-- [ ] Создать `Admin/Pages/Attributes/Index.jsx`
-- [ ] Создать `Admin/Pages/Attributes/Create.jsx`
-- [ ] Создать `Admin/Pages/Attributes/Edit.jsx`
-- [ ] Реализовать inline-редактирование значений атрибутов
+- [x] Создать `Admin/Pages/Attributes/Index.jsx`
+- [x] Создать `Admin/Pages/Attributes/Create.jsx`
+- [x] Создать `Admin/Pages/Attributes/Edit.jsx`
+- [x] Реализовать inline-редактирование значений атрибутов
 
 #### Размерные сетки
-- [ ] Создать `Admin/Pages/SizeCharts/Index.jsx`
-- [ ] Создать `Admin/Pages/SizeCharts/Create.jsx`
-- [ ] Создать `Admin/Pages/SizeCharts/Edit.jsx`
+- [x] Создать `Admin/Pages/SizeCharts/Index.jsx`
+- [x] Создать `Admin/Pages/SizeCharts/Create.jsx`
+- [x] Создать `Admin/Pages/SizeCharts/Edit.jsx`
 
 #### Штрихкоды
-- [ ] Создать `Admin/Pages/ProductBarcodes/Index.jsx`
-- [ ] Создать `Admin/Pages/ProductBarcodes/Create.jsx`
-- [ ] Создать `Admin/Pages/ProductBarcodes/Edit.jsx`
+- [x] Создать `Admin/Pages/ProductBarcodes/Index.jsx`
+- [x] Создать `Admin/Pages/ProductBarcodes/Create.jsx`
+- [x] Создать `Admin/Pages/ProductBarcodes/Edit.jsx`
 
 #### Сертификаты
-- [ ] Создать `Admin/Pages/Certificates/Index.jsx`
-- [ ] Создать `Admin/Pages/Certificates/Create.jsx`
-- [ ] Создать `Admin/Pages/Certificates/Edit.jsx`
+- [x] Создать `Admin/Pages/Certificates/Index.jsx`
+- [x] Создать `Admin/Pages/Certificates/Create.jsx`
+- [x] Создать `Admin/Pages/Certificates/Edit.jsx`
 
 #### Сегменты
-- [ ] Создать `Admin/Pages/Segments/Index.jsx`
-- [ ] Создать `Admin/Pages/Segments/Create.jsx`
-- [ ] Создать `Admin/Pages/Segments/Edit.jsx`
+- [x] Создать `Admin/Pages/Segments/Index.jsx`
+- [x] Создать `Admin/Pages/Segments/Create.jsx`
+- [x] Создать `Admin/Pages/Segments/Edit.jsx`
 
 ---
 
