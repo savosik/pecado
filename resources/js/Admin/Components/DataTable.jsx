@@ -146,7 +146,7 @@ export const DataTable = ({
                                         userSelect="none"
                                     >
                                         <HStack gap={2}>
-                                            <Text>{column.label}</Text>
+                                            <Text as="div">{column.label}</Text>
                                             {column.sortable && sortColumn === column.key && (
                                                 sortDirection === 'asc' ? (
                                                     <LuArrowUp size={14} />

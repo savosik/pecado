@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
 
-export default function Create({ brands, categories, productModels, sizeCharts, segments }) {
+export default function Create({ brands, categories, productModels, sizeCharts }) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         slug: '',
@@ -33,7 +33,7 @@ export default function Create({ brands, categories, productModels, sizeCharts, 
         is_liquidation: false,
         for_marketplaces: false,
         categories: [],
-        segments: [],
+
         image: null,
         additional_images: [],
         video: null,
@@ -55,7 +55,7 @@ export default function Create({ brands, categories, productModels, sizeCharts, 
     const modelOptions = useMemo(() => productModels.map(m => ({ value: m.id, label: m.name })), [productModels]);
     const categoryOptions = useMemo(() => categories.map(c => ({ value: c.id, label: c.name })), [categories]);
     const sizeChartOptions = useMemo(() => sizeCharts.map(s => ({ value: s.id, label: s.name })), [sizeCharts]);
-    const segmentOptions = useMemo(() => segments.map(s => ({ value: s.id, label: s.name })), [segments]);
+
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -277,17 +277,7 @@ export default function Create({ brands, categories, productModels, sizeCharts, 
                                                 error={errors.size_chart_id}
                                             />
 
-                                            <Box gridColumn={{ base: '1', md: 'span 2' }}>
-                                                <SelectRelation
-                                                    label="Подборки"
-                                                    value={data.segments}
-                                                    onChange={(value) => setData('segments', value)}
-                                                    options={segmentOptions}
-                                                    placeholder="Выберите подборки"
-                                                    multiple
-                                                    error={errors.segments}
-                                                />
-                                            </Box>
+
 
                                             <Box gridColumn={{ base: '1', md: 'span 2' }}>
                                                 <FormField

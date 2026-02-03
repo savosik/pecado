@@ -7,7 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductModel;
 use App\Models\SizeChart;
-use App\Models\Segment;
+
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -69,7 +69,7 @@ class ProductController extends AdminController
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
             'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
-            'segments' => Segment::select('id', 'name')->orderBy('name')->get(),
+
         ]);
     }
 
@@ -111,8 +111,7 @@ class ProductController extends AdminController
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
             'tags' => 'nullable|array',
-            'segments' => 'nullable|array',
-            'segments.*' => 'exists:segments,id',
+
             'certificates' => 'nullable|array',
             'certificates.*' => 'exists:certificates,id',
         ]);
@@ -166,10 +165,7 @@ class ProductController extends AdminController
             $product->syncTags($request->tags);
         }
 
-        // Сегменты
-        if (isset($validated['segments'])) {
-            $product->segments()->sync($validated['segments']);
-        }
+
 
         // Сертификаты
         if (isset($validated['certificates'])) {
@@ -186,7 +182,7 @@ class ProductController extends AdminController
      */
     public function edit(Product $product): Response
     {
-        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags', 'barcodes', 'segments', 'certificates']);
+        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags', 'barcodes', 'certificates']);
 
         return Inertia::render('Admin/Pages/Products/Edit', [
             'product' => [
@@ -232,7 +228,7 @@ class ProductController extends AdminController
                         'label' => $tag->name,
                     ];
                 }),
-                'segments' => $product->segments->pluck('id')->toArray(),
+
                 'certificates' => $product->certificates->map(function ($cert) {
                     return [
                         'id' => $cert->id,
@@ -246,7 +242,7 @@ class ProductController extends AdminController
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
             'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
-            'segments' => Segment::select('id', 'name')->orderBy('name')->get(),
+
         ]);
     }
 
@@ -287,8 +283,7 @@ class ProductController extends AdminController
             'additional_images.*' => 'image|max:10240',
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
             'tags' => 'nullable|array',
-            'segments' => 'nullable|array',
-            'segments.*' => 'exists:segments,id',
+
             'certificates' => 'nullable|array',
             'certificates.*' => 'exists:certificates,id',
         ]);
@@ -349,12 +344,7 @@ class ProductController extends AdminController
             $product->syncTags($request->tags);
         }
 
-        // Синхронизация сегментов
-        if (isset($validated['segments'])) {
-            $product->segments()->sync($validated['segments']);
-        } else {
-            $product->segments()->detach();
-        }
+
 
         // Синхронизация сертификатов
         if (isset($validated['certificates'])) {
@@ -407,7 +397,7 @@ class ProductController extends AdminController
         }
 
         $products = Product::search($query)
-            ->query(fn ($q) => $q->with(['media'])->limit(20))
+            ->query(fn ($q) => $q->with(['media', 'barcodes', 'brand'])->limit(20))
             ->get()
             ->map(function ($product) {
                 return [
@@ -416,6 +406,10 @@ class ProductController extends AdminController
                     'sku' => $product->sku,
                     'image_url' => $product->getFirstMediaUrl('main'),
                     'price' => $product->base_price,
+                    'barcode' => $product->barcode, // Main barcode
+                    'barcodes' => $product->barcodes->pluck('barcode')->toArray(), // All barcodes
+                    'brand_name' => $product->brand ? $product->brand->name : null,
+                    // Stock could be added if needed, but for now focus on identification
                 ];
             });
 

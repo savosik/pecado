@@ -142,41 +142,41 @@
 ### 4.2. Склады и логистика
 
 #### Склады (Warehouses)
-- [ ] Создать `Admin\WarehouseController`
-- [ ] Добавить маршруты `admin/warehouses`
+- [x] Создать `Admin\WarehouseController`
+- [x] Добавить маршруты `admin/warehouses`
 
 #### Регионы (Regions)
-- [ ] Создать `Admin\RegionController`
-- [ ] Добавить маршруты `admin/regions`
-- [ ] Реализовать привязку регионов к складам
+- [x] Создать `Admin\RegionController`
+- [x] Добавить маршруты `admin/regions`
+- [x] Реализовать привязку регионов к складам
 
 ---
 
 ### 4.3. Продажи
 
 #### Заказы (Orders)
-- [ ] Создать `Admin\OrderController`
-- [ ] Добавить маршруты `admin/orders`
-- [ ] Реализовать просмотр деталей заказа (order_items)
-- [ ] Добавить смену статуса заказа
+- [x] Создать `Admin\OrderController`
+- [x] Добавить маршруты `admin/orders`
+- [x] Реализовать просмотр деталей заказа (order_items)
+- [x] Добавить смену статуса заказа
 
 #### Корзины (Carts)
-- [ ] Создать `Admin\CartController`
-- [ ] Добавить маршруты `admin/carts`
-- [ ] Реализовать просмотр cart_items
+- [x] Создать `Admin\CartController`
+- [x] Добавить маршруты `admin/carts`
+- [x] Реализовать просмотр cart_items
 
 #### Возвраты (Returns)
-- [ ] Создать `Admin\ReturnController`
-- [ ] Добавить маршруты `admin/returns`
-- [ ] Реализовать просмотр return_items
+- [x] Создать `Admin\ReturnController`
+- [x] Добавить маршруты `admin/returns`
+- [x] Реализовать просмотр return_items
 
 #### Избранное (Favorites)
-- [ ] Создать `Admin\FavoriteController`
-- [ ] Добавить маршруты `admin/favorites`
+- [x] Создать `Admin\FavoriteController`
+- [x] Добавить маршруты `admin/favorites`
 
 #### Список желаний (Wishlist)
-- [ ] Создать `Admin\WishlistController`
-- [ ] Добавить маршруты `admin/wishlist`
+- [x] Создать `Admin\WishlistController`
+- [x] Добавить маршруты `admin/wishlist`
 
 ---
 
@@ -349,35 +349,35 @@
 
 ### 5.3. Склады
 
-- [ ] Создать `Admin/Pages/Warehouses/Index.jsx`
-- [ ] Создать `Admin/Pages/Warehouses/Create.jsx`
-- [ ] Создать `Admin/Pages/Warehouses/Edit.jsx`
-- [ ] Создать `Admin/Pages/Regions/Index.jsx`
-- [ ] Создать `Admin/Pages/Regions/Create.jsx`
-- [ ] Создать `Admin/Pages/Regions/Edit.jsx`
+- [x] Создать `Admin/Pages/Warehouses/Index.jsx`
+- [x] Создать `Admin/Pages/Warehouses/Create.jsx`
+- [x] Создать `Admin/Pages/Warehouses/Edit.jsx`
+- [x] Создать `Admin/Pages/Regions/Index.jsx`
+- [x] Создать `Admin/Pages/Regions/Create.jsx`
+- [x] Создать `Admin/Pages/Regions/Edit.jsx`
 
 ---
 
 ### 5.4. Продажи
 
 #### Заказы
-- [ ] Создать `Admin/Pages/Orders/Index.jsx`
-- [ ] Создать `Admin/Pages/Orders/Show.jsx` — детальный просмотр
-- [ ] Реализовать изменение статуса заказа
+- [x] Создать `Admin/Pages/Orders/Index.jsx`
+- [x] Создать `Admin/Pages/Orders/Show.jsx` — детальный просмотр
+- [x] Реализовать изменение статуса заказа
 
 #### Корзины
-- [ ] Создать `Admin/Pages/Carts/Index.jsx`
-- [ ] Создать `Admin/Pages/Carts/Show.jsx`
+- [x] Создать `Admin/Pages/Carts/Index.jsx`
+- [x] Создать `Admin/Pages/Carts/Show.jsx`
 
 #### Возвраты
-- [ ] Создать `Admin/Pages/Returns/Index.jsx`
-- [ ] Создать `Admin/Pages/Returns/Show.jsx`
+- [x] Создать `Admin/Pages/Returns/Index.jsx`
+- [x] Создать `Admin/Pages/Returns/Show.jsx`
 
 #### Избранное
-- [ ] Создать `Admin/Pages/Favorites/Index.jsx`
+- [x] Создать `Admin/Pages/Favorites/Index.jsx`
 
 #### Список желаний
-- [ ] Создать `Admin/Pages/Wishlist/Index.jsx`
+- [x] Создать `Admin/Pages/Wishlist/Index.jsx`
 
 ---
 
@@ -439,7 +439,7 @@
 - [ ] Реализовать привязку сегментов к товарам
 
 ### 6.2. Заказы
-- [ ] Реализовать просмотр и редактирование позиций заказа (order_items)
+- [x] Реализовать просмотр и редактирование позиций заказа (order_items)
 - [ ] Реализовать историю изменения статусов
 
 ### 6.3. Истории (Stories)

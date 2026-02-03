@@ -38,9 +38,13 @@ class PublishOrderToErp
             'order' => $orderData,
         ];
 
-        Queue::connection('rabbitmq')->pushRaw(
-            json_encode($payload),
-            'erp_orders'
-        );
+        try {
+            Queue::connection('rabbitmq')->pushRaw(
+                json_encode($payload),
+                'erp_orders'
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to publish order to ERP: ' . $e->getMessage());
+        }
     }
 }

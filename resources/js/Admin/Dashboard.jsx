@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
 import { Box, Heading, SimpleGrid, Text, VStack, HStack, Icon } from '@chakra-ui/react';
 import { LuShoppingCart, LuPackage, LuUsers, LuBanknote } from 'react-icons/lu';
-import { AdminLayout } from '../../Admin/Layouts/AdminLayout';
+import { AdminLayout } from './Layouts/AdminLayout';
 
 export default function Dashboard({ stats }) {
     const statsCards = [

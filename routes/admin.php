@@ -52,14 +52,46 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Сертификаты
     Route::resource('certificates', \App\Http\Controllers\Admin\CertificateController::class);
     
-    // Сегменты
-    Route::resource('segments', \App\Http\Controllers\Admin\SegmentController::class);
+
     
     // Теги
     Route::get('/tags/search', [\App\Http\Controllers\Admin\TagController::class, 'search'])->name('tags.search');
+    
     // Склады
     Route::resource('warehouses', \App\Http\Controllers\Admin\WarehouseController::class);
-
+    
     // Регионы
     Route::resource('regions', \App\Http\Controllers\Admin\RegionController::class);
+
+    // --------------------
+    // Продажи (Sales)
+    // --------------------
+    
+    // Заказы - полный resource + bulk operations
+    Route::post('/orders/bulk-status', [\App\Http\Controllers\Admin\OrderController::class, 'bulkUpdateStatus'])->name('orders.bulk-status');
+    Route::post('/orders/calculate-price', [\App\Http\Controllers\Admin\OrderController::class, 'calculatePrice'])->name('orders.calculate-price');
+    Route::get('/orders/search-users', [\App\Http\Controllers\Admin\OrderController::class, 'searchUsers'])->name('orders.search-users');
+    Route::get('/orders/search-companies', [\App\Http\Controllers\Admin\OrderController::class, 'searchCompanies'])->name('orders.search-companies');
+    Route::resource('orders', \App\Http\Controllers\Admin\OrderController::class);
+    
+    // Корзины
+    Route::post('/carts/bulk-delete', [\App\Http\Controllers\Admin\CartController::class, 'bulkDestroy'])->name('carts.bulk-delete');
+    Route::post('/carts/calculate-price', [\App\Http\Controllers\Admin\CartController::class, 'calculatePrice'])->name('carts.calculate-price');
+    Route::get('/carts/search-users', [\App\Http\Controllers\Admin\CartController::class, 'searchUsers'])->name('carts.search-users');
+    Route::post('/carts/{cart}/clear', [\App\Http\Controllers\Admin\CartController::class, 'clearItems'])->name('carts.clear');
+    Route::delete('/carts/{cart}/items/{item}', [\App\Http\Controllers\Admin\CartController::class, 'removeItem'])->name('carts.items.destroy');
+    Route::put('/carts/{cart}/items/{item}', [\App\Http\Controllers\Admin\CartController::class, 'updateItemQuantity'])->name('carts.items.update');
+    Route::resource('carts', \App\Http\Controllers\Admin\CartController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+    
+    // Возвраты
+    Route::patch('/returns/{return}/status', [\App\Http\Controllers\Admin\ReturnController::class, 'updateStatus'])->name('returns.status');
+    Route::patch('/returns/{return}/admin-comment', [\App\Http\Controllers\Admin\ReturnController::class, 'updateAdminComment'])->name('returns.admin-comment');
+    Route::post('/returns/bulk-status', [\App\Http\Controllers\Admin\ReturnController::class, 'bulkUpdateStatus'])->name('returns.bulk-status');
+    Route::resource('returns', \App\Http\Controllers\Admin\ReturnController::class);
+    
+    // Избранное
+    Route::resource('favorites', \App\Http\Controllers\Admin\FavoriteController::class)->only(['index', 'destroy']);
+    
+    // Список желаний
+    Route::resource('wishlist', \App\Http\Controllers\Admin\WishlistController::class)->only(['index', 'destroy']);
 });

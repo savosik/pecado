@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AdminLayout } from '../../Admin/Layouts/AdminLayout';
+import { AdminLayout } from './Layouts/AdminLayout';
 import {
     Box,
     VStack,
@@ -10,14 +10,14 @@ import {
     Badge,
     HStack,
 } from '@chakra-ui/react';
-import { PageHeader } from '../../Admin/Components/PageHeader';
-import { DataTable } from '../../Admin/Components/DataTable';
-import { FormField } from '../../Admin/Components/FormField';
-import { FormActions } from '../../Admin/Components/FormActions';
-import { SearchInput } from '../../Admin/Components/SearchInput';
-import { FilterPanel } from '../../Admin/Components/FilterPanel';
-import { ConfirmDialog } from '../../Admin/Components/ConfirmDialog';
-import { ImageUploader } from '../../Admin/Components/ImageUploader';
+import { PageHeader } from './Components/PageHeader';
+import { DataTable } from './Components/DataTable';
+import { FormField } from './Components/FormField';
+import { FormActions } from './Components/FormActions';
+import { SearchInput } from './Components/SearchInput';
+import { FilterPanel } from './Components/FilterPanel';
+import { ConfirmDialog } from './Components/ConfirmDialog';
+import { ImageUploader } from './Components/ImageUploader';
 import { LuPencil, LuTrash2 } from 'react-icons/lu';
 import { useForm } from '@inertiajs/react';
 

@@ -68,7 +68,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Размерные сетки", icon: LuRuler, path: "/admin/size-charts" },
             { label: "Штрихкоды", icon: LuBarcode, path: "/admin/product-barcodes" },
             { label: "Сертификаты", icon: LuShieldCheck, path: "/admin/certificates" },
-            { label: "Сегменты", icon: LuSlice, path: "/admin/segments" },
+
         ],
     },
     {

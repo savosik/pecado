@@ -181,13 +181,7 @@ class Product extends Model implements HasMedia
         return $this->hasMany(OrderItem::class);
     }
 
-    /**
-     * Get the segments that belong to the product.
-     */
-    public function segments(): BelongsToMany
-    {
-        return $this->belongsToMany(Segment::class, 'product_segment');
-    }
+
 
     /**
      * Get the promotions that belong to the product.
