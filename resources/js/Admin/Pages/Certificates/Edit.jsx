@@ -6,7 +6,7 @@ import { toaster } from '@/components/ui/toaster';
 import { LuFile, LuX } from 'react-icons/lu';
 
 export default function Edit({ certificate }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         _method: 'PUT',
         name: certificate.name || '',
         external_id: certificate.external_id || '',
@@ -19,12 +19,12 @@ export default function Edit({ certificate }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        transform((data) => ({
+            ...data,
+            products: data.products.map(p => p.id),
+        }));
+
         post(route('admin.certificates.update', certificate.id), {
-            prefix: null, // Critical to avoid double wrapping if data structure is complex
-            transform: (data) => ({
-                ...data,
-                products: data.products.map(p => p.id),
-            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Сертификат обновлен',
@@ -84,7 +84,7 @@ export default function Edit({ certificate }) {
                                         />
                                     </FormField>
 
-                                    <FormField label="Тип сертификата" error={errors.type}>
+                                    <FormField label="Тип сертификата *" error={errors.type}>
                                         <Input
                                             value={data.type}
                                             onChange={(e) => setData('type', e.target.value)}

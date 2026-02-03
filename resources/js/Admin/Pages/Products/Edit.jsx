@@ -209,7 +209,8 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                     <Stack gap={6} mt={6}>
                                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                             <FormField
-                                                label="Название товара *"
+                                                label="Название товара"
+                                                required
                                                 error={errors.name}
                                             >
                                                 <Input
@@ -383,7 +384,8 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                     <Stack gap={6} mt={6}>
                                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                             <FormField
-                                                label="Базовая цена *"
+                                                label="Базовая цена"
+                                                required
                                                 error={errors.base_price}
                                             >
                                                 <Input

@@ -119,7 +119,7 @@ export default function Create({ brands }) {
                             </Card.Header>
                             <Card.Body>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название *" error={errors.name}>
+                                    <FormField label="Название" required error={errors.name}>
                                         <Input
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}

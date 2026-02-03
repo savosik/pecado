@@ -5,7 +5,7 @@ import { Box, Card, SimpleGrid, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ productModel }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         _method: 'PUT',
         name: productModel.name || '',
 
@@ -16,12 +16,12 @@ export default function Edit({ productModel }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        transform((data) => ({
+            ...data,
+            products: data.products.map(p => p.id),
+        }));
+
         post(route('admin.product-models.update', productModel.id), {
-            prefix: null,
-            transform: (data) => ({
-                ...data,
-                products: data.products.map(p => p.id),
-            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Модель обновлена',
@@ -53,7 +53,8 @@ export default function Edit({ productModel }) {
                             <Stack gap={6}>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                     <FormField
-                                        label="Название модели *"
+                                        label="Название модели"
+                                        required
                                         error={errors.name}
                                     >
                                         <Input

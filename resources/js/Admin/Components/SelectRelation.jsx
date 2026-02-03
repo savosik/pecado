@@ -4,6 +4,7 @@ import {
     Portal,
     Spinner,
     createListCollection,
+    Field as ChakraField,
 } from '@chakra-ui/react';
 import axios from 'axios';
 
@@ -32,6 +33,7 @@ export const SelectRelation = ({
     error = null,
     label = null,
     disabled = false,
+    required = false,
 }) => {
     const [options, setOptions] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -125,7 +127,12 @@ export const SelectRelation = ({
             disabled={disabled}
         >
             <Select.HiddenSelect name={name} />
-            {label && <Select.Label>{label}</Select.Label>}
+            {label && (
+                <Select.Label>
+                    {label}
+                    {required && <ChakraField.RequiredIndicator />}
+                </Select.Label>
+            )}
             <Select.Control>
                 <Select.Trigger>
                     <Select.ValueText placeholder={placeholder} />

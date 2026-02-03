@@ -33,24 +33,12 @@ class CartController extends AdminController
     /**
      * Store a newly created cart in storage.
      */
-    public function store(Request $request): RedirectResponse
+    /**
+     * Store a newly created cart in storage.
+     */
+    public function store(\App\Http\Requests\Admin\CartRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'user_id' => 'required|exists:users,id',
-            'items' => 'required|array|min:1',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-        ], [
-            'user_id.required' => 'Выберите пользователя',
-            'user_id.exists' => 'Пользователь не найден',
-            'items.required' => 'Добавьте хотя бы один товар',
-            'items.min' => 'Добавьте хотя бы один товар',
-            'items.*.product_id.required' => 'Выберите товар',
-            'items.*.product_id.exists' => 'Товар не найден',
-            'items.*.quantity.required' => 'Укажите количество',
-            'items.*.quantity.min' => 'Минимальное количество: 1',
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
@@ -69,7 +57,7 @@ class CartController extends AdminController
             DB::commit();
 
             return redirect()
-                ->route('admin.carts.edit', $cart)
+                ->route('admin.carts.index')
                 ->with('success', 'Корзина успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -250,21 +238,16 @@ class CartController extends AdminController
     /**
      * Update the specified cart in storage.
      */
-    public function update(Request $request, Cart $cart): RedirectResponse
+    public function update(\App\Http\Requests\Admin\CartRequest $request, Cart $cart): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'nullable|string|max:255',
-            'items' => 'required|array',
-            'items.*.id' => 'nullable|exists:cart_items,id',
-            'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
             // Обновление названия корзины
             $cart->update([
                 'name' => $validated['name'] ?? $cart->name,
+                'user_id' => $validated['user_id'], // Allow updating user
             ]);
 
             // Синхронизация элементов корзины
@@ -296,7 +279,7 @@ class CartController extends AdminController
             DB::commit();
 
             return redirect()
-                ->route('admin.carts.edit', $cart)
+                ->route('admin.carts.index')
                 ->with('success', 'Корзина успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();

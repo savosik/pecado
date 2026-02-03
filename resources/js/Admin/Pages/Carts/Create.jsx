@@ -235,8 +235,8 @@ const CartCreate = ({ currencies = [] }) => {
                                     <Box flex="1" minW="200px">
                                         <FormField
                                             label="Название корзины"
+                                            required
                                             error={errors.name}
-                                            helperText="Необязательное поле"
                                         >
                                             <Input
                                                 value={data.name}
@@ -300,11 +300,20 @@ const CartCreate = ({ currencies = [] }) => {
                         <Card.Header>
                             <HStack justify="space-between">
                                 <HStack gap={3}>
-                                    <Heading size="md">Товары в корзине</Heading>
+                                    <Heading size="md">
+                                        Товары в корзине
+                                        <Text as="span" color="red.500" ml={1}>*</Text>
+                                    </Heading>
                                     <Badge colorPalette={data.items.length > 0 ? "blue" : "gray"} size="lg">
                                         {data.items.length} позиций
                                     </Badge>
                                 </HStack>
+
+                                {errors.items && (
+                                    <Text color="red.500" fontSize="sm">
+                                        {errors.items}
+                                    </Text>
+                                )}
                             </HStack>
                         </Card.Header>
                         <Card.Body p={0}>
@@ -464,7 +473,7 @@ const CartCreate = ({ currencies = [] }) => {
                             colorPalette="blue"
                             type="submit"
                             loading={processing}
-                            disabled={!data.user_id || data.items.length === 0}
+                            disabled={!data.name || !data.user_id || data.items.length === 0}
                         >
                             <LuSave /> Создать корзину
                         </Button>

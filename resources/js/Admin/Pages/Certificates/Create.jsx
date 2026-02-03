@@ -5,7 +5,7 @@ import { Box, Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         external_id: '',
         type: '',
@@ -17,11 +17,12 @@ export default function Create() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        transform((data) => ({
+            ...data,
+            products: data.products.map(p => p.id),
+        }));
+
         post(route('admin.certificates.store'), {
-            transform: (data) => ({
-                ...data,
-                products: data.products.map(p => p.id),
-            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Сертификат создан',
@@ -66,7 +67,7 @@ export default function Create() {
                                         />
                                     </FormField>
 
-                                    <FormField label="Тип сертификата" error={errors.type}>
+                                    <FormField label="Тип сертификата *" error={errors.type}>
                                         <Input
                                             value={data.type}
                                             onChange={(e) => setData('type', e.target.value)}

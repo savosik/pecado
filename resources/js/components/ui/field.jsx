@@ -8,6 +8,7 @@ export const Field = React.forwardRef(function Field(props, ref) {
             {label && (
                 <ChakraField.Label>
                     {label}
+                    <ChakraField.RequiredIndicator />
                     {optionalText && (
                         <Text as="span" fontSize="sm" color="fg.muted" fontWeight="normal" ml={1}>
                             ({optionalText})

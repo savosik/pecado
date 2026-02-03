@@ -99,7 +99,8 @@ export default function Create({ categories }) {
                                     <Stack gap={6} mt={6}>
                                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                             <FormField
-                                                label="Название категории *"
+                                                label="Название категории"
+                                                required
                                                 error={errors.name}
                                             >
                                                 <Input

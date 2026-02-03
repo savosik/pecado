@@ -22,11 +22,11 @@ import axios from "axios";
  * 
  * @param {Array} value - массив позиций заказа
  * @param {Function} onChange - callback при изменении позиций
- * @param {String} error - сообщение об ошибке
+ * @param {Object} errors - объект ошибок валидации из Inertia
  * @param {Number} userId - ID выбранного пользователя (для расчета скидок)
  * @param {String} currencyCode - Код валюты заказа (для конвертации)
  */
-const OrderItemsEditor = ({ value = [], onChange, error, userId, currencyCode = 'RUB' }) => {
+const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyCode = 'RUB' }) => {
     const [calculating, setCalculating] = useState(false);
 
     // Добавление товара в позиции
@@ -82,6 +82,7 @@ const OrderItemsEditor = ({ value = [], onChange, error, userId, currencyCode = 
             toaster.create({
                 description: "Ошибка при расчете цены",
                 type: "error",
+                duration: 5000,
             });
             // Fallback to base price if API fails
             const newItem = {
@@ -127,6 +128,9 @@ const OrderItemsEditor = ({ value = [], onChange, error, userId, currencyCode = 
     // Подсчёт общей суммы
     const totalAmount = value.reduce((sum, item) => sum + (item.subtotal || 0), 0);
 
+    // Global error for the items array itself (e.g. required|min:1)
+    const itemsError = errors.items;
+
     return (
         <VStack align="stretch" gap={4}>
             {/* Поиск и добавление товара */}
@@ -154,68 +158,94 @@ const OrderItemsEditor = ({ value = [], onChange, error, userId, currencyCode = 
                                 <Table.Row>
                                     <Table.ColumnHeader width="60px">Фото</Table.ColumnHeader>
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                    <Table.ColumnHeader width="150px">Цена ({currencyCode})</Table.ColumnHeader>
-                                    <Table.ColumnHeader width="120px">Кол-во</Table.ColumnHeader>
+                                    <Table.ColumnHeader width="150px">
+                                        Цена ({currencyCode}) <Text as="span" color="red.500">*</Text>
+                                    </Table.ColumnHeader>
+                                    <Table.ColumnHeader width="120px">
+                                        Кол-во <Text as="span" color="red.500">*</Text>
+                                    </Table.ColumnHeader>
                                     <Table.ColumnHeader width="150px">Сумма</Table.ColumnHeader>
                                     <Table.ColumnHeader width="80px"></Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {value.map((item, index) => (
-                                    <Table.Row key={index}>
-                                        <Table.Cell>
-                                            {item.image_url ? (
-                                                <Image src={item.image_url} boxSize="40px" objectFit="cover" borderRadius="md" alt={item.name} />
-                                            ) : (
-                                                <Box boxSize="40px" bg="gray.100" borderRadius="md" />
-                                            )}
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <VStack align="start" gap={0}>
-                                                <Text fontWeight="medium">{item.name}</Text>
-                                                <Text fontSize="xs" color="fg.muted">
-                                                    SKU: {item.sku || '-'} | ID: {item.product_id}
-                                                </Text>
-                                                {item.brand_name && (
-                                                    <Text fontSize="xs" color="blue.500">
-                                                        {item.brand_name}
-                                                    </Text>
+                                {value.map((item, index) => {
+                                    // Check for nested errors: items.0.price, items.0.quantity
+                                    const priceError = errors[`items.${index}.price`];
+                                    const quantityError = errors[`items.${index}.quantity`];
+
+                                    return (
+                                        <Table.Row key={index}>
+                                            <Table.Cell>
+                                                {item.image_url ? (
+                                                    <Image src={item.image_url} boxSize="40px" objectFit="cover" borderRadius="md" alt={item.name} />
+                                                ) : (
+                                                    <Box boxSize="40px" bg="gray.100" borderRadius="md" />
                                                 )}
-                                            </VStack>
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Input
-                                                type="number"
-                                                step="0.01"
-                                                value={item.price}
-                                                onChange={(e) => handleUpdatePrice(index, e.target.value)}
-                                                size="sm"
-                                            />
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Input
-                                                type="number"
-                                                min="1"
-                                                value={item.quantity}
-                                                onChange={(e) => handleUpdateQuantity(index, e.target.value)}
-                                                size="sm"
-                                            />
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Text fontWeight="medium">{item.subtotal?.toFixed(2)} </Text>
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <IconButton
-                                                size="sm"
-                                                variant="ghost"
-                                                colorPalette="red"
-                                                onClick={() => handleRemoveItem(index)}
-                                            >
-                                                <LuTrash2 />
-                                            </IconButton>
-                                        </Table.Cell>
-                                    </Table.Row>
-                                ))}
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <VStack align="start" gap={0}>
+                                                    <Text fontWeight="medium">{item.name}</Text>
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        SKU: {item.sku || '-'} | ID: {item.product_id}
+                                                    </Text>
+                                                    {item.brand_name && (
+                                                        <Text fontSize="xs" color="blue.500">
+                                                            {item.brand_name}
+                                                        </Text>
+                                                    )}
+                                                </VStack>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <VStack align="start" gap={1} w="full">
+                                                    <Input
+                                                        type="number"
+                                                        step="0.01"
+                                                        value={item.price}
+                                                        onChange={(e) => handleUpdatePrice(index, e.target.value)}
+                                                        size="sm"
+                                                        invalid={!!priceError}
+                                                    />
+                                                    {priceError && (
+                                                        <Text fontSize="xs" color="red.500" truncate maxW="150px" title={priceError}>
+                                                            {priceError}
+                                                        </Text>
+                                                    )}
+                                                </VStack>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <VStack align="start" gap={1} w="full">
+                                                    <Input
+                                                        type="number"
+                                                        min="1"
+                                                        value={item.quantity}
+                                                        onChange={(e) => handleUpdateQuantity(index, e.target.value)}
+                                                        size="sm"
+                                                        invalid={!!quantityError}
+                                                    />
+                                                    {quantityError && (
+                                                        <Text fontSize="xs" color="red.500" truncate maxW="120px" title={quantityError}>
+                                                            {quantityError}
+                                                        </Text>
+                                                    )}
+                                                </VStack>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Text fontWeight="medium">{item.subtotal?.toFixed(2)} </Text>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <IconButton
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    colorPalette="red"
+                                                    onClick={() => handleRemoveItem(index)}
+                                                >
+                                                    <LuTrash2 />
+                                                </IconButton>
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    );
+                                })}
                             </Table.Body>
                         </Table.Root>
                     </Card.Body>
@@ -238,8 +268,8 @@ const OrderItemsEditor = ({ value = [], onChange, error, userId, currencyCode = 
                 </Card.Root>
             )}
 
-            {error && (
-                <Text color="red.500" fontSize="sm">{error}</Text>
+            {itemsError && (
+                <Text color="red.500" fontSize="sm">{itemsError}</Text>
             )}
 
             {calculating && (

@@ -242,7 +242,7 @@ const Create = ({ statuses, currencies }) => {
                         <OrderItemsEditor
                             value={data.items}
                             onChange={(items) => setData("items", items)}
-                            error={errors.items}
+                            errors={errors}
                             userId={data.user_id}
                             currencyCode={data.currency_code}
                         />

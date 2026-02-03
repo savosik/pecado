@@ -65,7 +65,7 @@ export default function Create({ types }) {
                         <Card.Body>
                             <Stack gap={6}>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название *" error={errors.name}>
+                                    <FormField label="Название" required error={errors.name}>
                                         <Input
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}
@@ -82,7 +82,8 @@ export default function Create({ types }) {
                                     </FormField>
 
                                     <SelectRelation
-                                        label="Тип данных *"
+                                        label="Тип данных"
+                                        required
                                         value={data.type}
                                         onChange={(val) => setData('type', val)}
                                         options={types}

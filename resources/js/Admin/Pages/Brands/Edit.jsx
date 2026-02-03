@@ -122,7 +122,8 @@ export default function Edit({ brand, brands, categories }) {
                                     <Stack gap={6} mt={6}>
                                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                             <FormField
-                                                label="Название бренда *"
+                                                label="Название бренда"
+                                                required
                                                 error={errors.name}
                                             >
                                                 <Input
@@ -145,7 +146,8 @@ export default function Edit({ brand, brands, categories }) {
                                             />
 
                                             <SelectRelation
-                                                label="Категория бренда *"
+                                                label="Категория бренда"
+                                                required
                                                 value={data.category}
                                                 onChange={(value) => setData('category', value)}
                                                 options={categories}

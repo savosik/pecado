@@ -5,7 +5,7 @@ import { Box, Card, SimpleGrid, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
 
         code: '',
@@ -15,11 +15,12 @@ export default function Create() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        transform((data) => ({
+            ...data,
+            products: data.products.map(p => p.id),
+        }));
+
         post(route('admin.product-models.store'), {
-            transform: (data) => ({
-                ...data,
-                products: data.products.map(p => p.id),
-            }),
             onSuccess: () => {
                 toaster.create({
                     title: 'Модель создана',
@@ -51,7 +52,8 @@ export default function Create() {
                             <Stack gap={6}>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                     <FormField
-                                        label="Название модели *"
+                                        label="Название модели"
+                                        required
                                         error={errors.name}
                                     >
                                         <Input

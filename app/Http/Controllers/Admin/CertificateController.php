@@ -65,7 +65,7 @@ class CertificateController extends AdminController
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'external_id' => 'nullable|string|max:255',
-            'type' => 'nullable|string|max:255',
+            'type' => 'required|string|max:255',
             'issued_at' => 'nullable|date',
             'expires_at' => 'nullable|date',
             'files' => 'nullable|array',
@@ -74,7 +74,7 @@ class CertificateController extends AdminController
             'products.*' => 'exists:products,id',
         ]);
 
-        $certificate = Certificate::create($validated);
+        $certificate = Certificate::create(\Illuminate\Support\Arr::except($validated, ['products', 'files']));
 
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {
@@ -138,7 +138,7 @@ class CertificateController extends AdminController
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'external_id' => 'nullable|string|max:255',
-            'type' => 'nullable|string|max:255',
+            'type' => 'required|string|max:255',
             'issued_at' => 'nullable|date',
             'expires_at' => 'nullable|date',
             'files' => 'nullable|array',
@@ -147,7 +147,7 @@ class CertificateController extends AdminController
             'products.*' => 'exists:products,id',
         ]);
 
-        $certificate->update($validated);
+        $certificate->update(\Illuminate\Support\Arr::except($validated, ['products', 'files']));
 
         if ($request->hasFile('files')) {
             foreach ($request->file('files') as $file) {

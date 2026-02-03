@@ -80,7 +80,7 @@ class ProductModelController extends AdminController
             'products.*' => 'exists:products,id',
         ]);
 
-        $productModel = ProductModel::create($validated);
+        $productModel = ProductModel::create(\Illuminate\Support\Arr::except($validated, ['products']));
 
         // Assign products to this model
         if (!empty($validated['products'])) {
@@ -131,7 +131,7 @@ class ProductModelController extends AdminController
             'products.*' => 'exists:products,id',
         ]);
 
-        $productModel->update($validated);
+        $productModel->update(\Illuminate\Support\Arr::except($validated, ['products']));
 
         // Sync products (One-to-Many)
         if (isset($validated['products'])) {
