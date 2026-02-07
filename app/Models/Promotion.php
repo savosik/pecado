@@ -19,7 +19,25 @@ class Promotion extends Model implements HasMedia
         'description',
     ];
 
+    public function registerMediaCollections(): void
+    {
+        // Вызываем коллекции из трейта HasContentMedia (list-item, detail-item-desktop, detail-item-mobile)
+        $this->addMediaCollection('list-item')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
+            ->singleFile();
 
+        $this->addMediaCollection('detail-item-desktop')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
+            ->singleFile();
+
+        $this->addMediaCollection('detail-item-mobile')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'])
+            ->singleFile();
+
+        // Дополнительная коллекция для галереи (только для Promotion)
+        $this->addMediaCollection('gallery')
+            ->acceptsMimeTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml']);
+    }
 
     /**
      * Get the products that belong to the promotion.

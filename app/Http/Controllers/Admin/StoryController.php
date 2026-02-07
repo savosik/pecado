@@ -73,7 +73,7 @@ class StoryController extends Controller
         // Добавить URL медиафайлов и linkable_name к каждому слайду
         $story->slides->transform(function ($slide) {
             $slide->media_url = $slide->getFirstMediaUrl('default');
-            $slide->media_thumbnail = $slide->getFirstMedia('default')?->getUrl('thumb') ?? $slide->media_url;
+            $slide->media_thumbnail = $slide->getFirstMediaUrl('default');
             
             if ($slide->linkable) {
                 $slide->linkable_name = $slide->linkable->title ?? $slide->linkable->name ?? null;

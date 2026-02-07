@@ -1,8 +1,8 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable, PageHeader, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Button, HStack, Text } from '@chakra-ui/react';
-import { LuPencil, LuTrash2 } from 'react-icons/lu';
+import { Text, Image, Box } from '@chakra-ui/react';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
 export default function Index({ pages, filters }) {
@@ -27,6 +27,16 @@ export default function Index({ pages, filters }) {
             width: '80px',
         },
         {
+            key: 'list_image',
+            label: 'Фото',
+            width: '70px',
+            render: (_, row) => row.list_image ? (
+                <Image src={row.list_image} alt={row.title} boxSize="40px" objectFit="cover" borderRadius="md" />
+            ) : (
+                <Box boxSize="40px" bg="bg.muted" borderRadius="md" />
+            ),
+        },
+        {
             key: 'title',
             label: 'Заголовок',
             sortable: true,
@@ -44,31 +54,7 @@ export default function Index({ pages, filters }) {
             sortable: true,
             render: (_, row) => new Date(row.created_at).toLocaleDateString('ru-RU'),
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            width: '150px',
-            render: (_, row) => (
-                <HStack gap={2}>
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => router.visit(route('admin.pages.edit', row.id))}
-                    >
-                        <LuPencil />
-                        Изменить
-                    </Button>
-                    <Button
-                        size="sm"
-                        colorPalette="red"
-                        variant="outline"
-                        onClick={() => openDeleteDialog(row)}
-                    >
-                        <LuTrash2 />
-                    </Button>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.pages', openDeleteDialog),
     ];
 
     return (
@@ -79,11 +65,13 @@ export default function Index({ pages, filters }) {
                 createLabel="Создать страницу"
             />
 
-            <SearchInput
-                value={searchQuery}
-                onChange={handleSearch}
-                placeholder="Поиск по заголовку, slug, содержимому..."
-            />
+            <Box mb={4}>
+                <SearchInput
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    placeholder="Поиск по заголовку, slug, содержимому..."
+                />
+            </Box>
 
             <DataTable
                 columns={columns}

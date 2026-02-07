@@ -89,7 +89,7 @@ class AttributeController extends AdminController
         ]);
 
         if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['name']);
+            $validated['slug'] = Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
 
         $attribute = Attribute::create($validated);
@@ -152,7 +152,7 @@ class AttributeController extends AdminController
         ]);
 
         if (empty($validated['slug'])) {
-            $validated['slug'] = Str::slug($validated['name']);
+            $validated['slug'] = Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
 
         $attribute->update($validated);

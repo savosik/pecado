@@ -3,6 +3,7 @@ import { Box } from "@chakra-ui/react";
 import { Sidebar } from "../Components/Sidebar";
 import { MobileSidebar } from "../Components/MobileSidebar";
 import { Header } from "../Components/Header";
+import { Toaster } from "@/components/ui/toaster";
 
 export const AdminLayout = ({ children, breadcrumbs = [] }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -31,6 +32,8 @@ export const AdminLayout = ({ children, breadcrumbs = [] }) => {
                     {children}
                 </Box>
             </Box>
+
+            <Toaster />
         </Box>
     );
 };

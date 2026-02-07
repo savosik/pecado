@@ -1,9 +1,9 @@
 import { useForm } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, FileUploader, MarkdownEditor } from '@/Admin/Components';
-import { Card, Input, Stack, SimpleGrid, Textarea, Image, Box } from '@chakra-ui/react';
+import { PageHeader, FormField, FormActions, ContentMediaFields, MarkdownEditor } from '@/Admin/Components';
+import { Card, Input, Stack, SimpleGrid, Textarea } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
-import { useState } from 'react';
 
 export default function Edit({ page }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -12,31 +12,15 @@ export default function Edit({ page }) {
         content: page.content || '',
         meta_title: page.meta_title || '',
         meta_description: page.meta_description || '',
-        main_image: null,
+        list_item: null,
+        detail_desktop: null,
+        detail_mobile: null,
         _method: 'PUT',
     });
 
-    const [autoSlug, setAutoSlug] = useState(false);
-
-    const handleTitleChange = (e) => {
-        const title = e.target.value;
-        setData('title', title);
-
-        if (autoSlug) {
-            const slug = title
-                .toLowerCase()
-                .replace(/[^a-zа-я0-9\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .trim();
-            setData('slug', slug);
-        }
-    };
-
-    const handleSlugChange = (e) => {
-        setAutoSlug(false);
-        setData('slug', e.target.value);
-    };
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'title', isEditing: true,
+    });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -69,7 +53,7 @@ export default function Edit({ page }) {
                                 <FormField label="Заголовок" error={errors.title} required>
                                     <Input
                                         value={data.title}
-                                        onChange={handleTitleChange}
+                                        onChange={(e) => handleSourceChange(e.target.value)}
                                         placeholder="Введите заголовок страницы"
                                     />
                                 </FormField>
@@ -77,7 +61,7 @@ export default function Edit({ page }) {
                                 <FormField label="Slug" error={errors.slug} required>
                                     <Input
                                         value={data.slug}
-                                        onChange={handleSlugChange}
+                                        onChange={(e) => handleSlugChange(e.target.value)}
                                         placeholder="url-slug-stranicy"
                                     />
                                 </FormField>
@@ -111,29 +95,21 @@ export default function Edit({ page }) {
                                 </FormField>
                             </SimpleGrid>
 
-                            <FormField label="Главное изображение" error={errors.main_image}>
-                                {page.main_image && !data.main_image && (
-                                    <Box mb={4}>
-                                        <Image
-                                            src={page.main_image}
-                                            alt={page.title}
-                                            maxH="200px"
-                                            objectFit="contain"
-                                            borderRadius="md"
-                                        />
-                                    </Box>
-                                )}
-                                <FileUploader
-                                    value={data.main_image}
-                                    onChange={(file) => setData('main_image', file)}
-                                    accept="image/*"
-                                />
-                            </FormField>
+                            <ContentMediaFields
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                                existing={{
+                                    list_image: page.list_image,
+                                    detail_desktop_image: page.detail_desktop_image,
+                                    detail_mobile_image: page.detail_mobile_image,
+                                }}
+                            />
 
                             <FormActions
                                 submitLabel="Сохранить изменения"
                                 onCancel={() => window.history.back()}
-                                processing={processing}
+                                isLoading={processing}
                             />
                         </Stack>
                     </form>

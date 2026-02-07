@@ -33,15 +33,16 @@ export default function SlideForm({ slide, story, onSave, onCancel }) {
     ];
 
     const getEntitySearchUrl = (type) => {
-        const urlMap = {
-            'App\\Models\\Product': route('admin.products.search'),
-            'App\\Models\\Page': route('admin.pages.search'),
-            'App\\Models\\Article': route('admin.articles.search'),
-            'App\\Models\\Category': route('admin.categories.search'),
-            'App\\Models\\News': route('admin.news.search'),
-            'App\\Models\\Promotion': route('admin.promotions.search'),
+        const routeMap = {
+            'App\\Models\\Product': 'admin.products.search',
+            'App\\Models\\Page': 'admin.pages.search',
+            'App\\Models\\Article': 'admin.articles.search',
+            'App\\Models\\Category': 'admin.categories.search',
+            'App\\Models\\News': 'admin.news.search',
+            'App\\Models\\Promotion': 'admin.promotions.search',
         };
-        return urlMap[type] || '';
+        const routeName = routeMap[type];
+        return routeName ? route(routeName) : '';
     };
 
     const handleSubmit = async (e) => {
@@ -52,10 +53,16 @@ export default function SlideForm({ slide, story, onSave, onCancel }) {
         const formDataToSend = new FormData();
 
         Object.keys(formData).forEach(key => {
+            if (key.startsWith('_')) return; // Skip internal fields
             if (formData[key] !== null && formData[key] !== '') {
-                if (key === 'media' && formData[key] instanceof File) {
-                    formDataToSend.append(key, formData[key]);
-                } else if (key !== 'media') {
+                if (key === 'media') {
+                    // FileUploader returns an array of files
+                    if (Array.isArray(formData[key]) && formData[key].length > 0) {
+                        formDataToSend.append(key, formData[key][0]);
+                    } else if (formData[key] instanceof File) {
+                        formDataToSend.append(key, formData[key]);
+                    }
+                } else {
                     formDataToSend.append(key, formData[key]);
                 }
             }
@@ -196,8 +203,8 @@ export default function SlideForm({ slide, story, onSave, onCancel }) {
                 {formData.linkable_type && (
                     <FormField label="Сущность" error={errors.linkable_id}>
                         <EntitySelector
-                            value={formData.linkable_id}
-                            onChange={(value) => setFormData({ ...formData, linkable_id: value })}
+                            value={formData.linkable_id ? { id: formData.linkable_id, name: formData._linkable_name || slide.linkable_name } : null}
+                            onChange={(item) => setFormData({ ...formData, linkable_id: item ? item.id : null, _linkable_name: item ? (item.name || item.label) : '' })}
                             searchUrl={getEntitySearchUrl(formData.linkable_type)}
                             placeholder={`Выберите ${entityTypeOptions.find(o => o.value === formData.linkable_type)?.label.toLowerCase()}`}
                             initialName={slide.linkable_name}

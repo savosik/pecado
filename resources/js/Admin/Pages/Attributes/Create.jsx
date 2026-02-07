@@ -1,4 +1,5 @@
 import { useForm } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Button, HStack, Text, IconButton, Fieldset } from '@chakra-ui/react';
@@ -19,6 +20,10 @@ export default function Create({ types, categories }) {
         sort_order: 0,
         values: [],
         category_ids: [],
+    });
+
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'name',
     });
 
     const handleSubmit = (e) => {
@@ -65,7 +70,7 @@ export default function Create({ types, categories }) {
                                 <FormField label="Название" required error={errors.name}>
                                     <Input
                                         value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
+                                        onChange={(e) => handleSourceChange(e.target.value)}
                                         placeholder="Например: Объем"
                                     />
                                 </FormField>
@@ -73,7 +78,7 @@ export default function Create({ types, categories }) {
                                 <FormField label="Slug" error={errors.slug} helperText="Оставьте пустым для автогенерации">
                                     <Input
                                         value={data.slug}
-                                        onChange={(e) => setData('slug', e.target.value)}
+                                        onChange={(e) => handleSlugChange(e.target.value)}
                                         placeholder="volume"
                                     />
                                 </FormField>

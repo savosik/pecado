@@ -1,6 +1,6 @@
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, ProductSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -12,9 +12,10 @@ export default function Edit({ promotion }) {
         meta_description: promotion.meta_description || '',
         description: promotion.description || '',
         products: promotion.products || [],
-        main_image: null,
+        list_item: null,
+        detail_desktop: null,
+        detail_mobile: null,
         images: [],
-        delete_main_image: false,
         delete_images: [],
     });
 
@@ -33,13 +34,10 @@ export default function Edit({ promotion }) {
             formData.append(`product_ids[${index}]`, product.id);
         });
 
-        // Главное изображение
-        if (data.main_image) {
-            formData.append('main_image', data.main_image);
-        }
-        if (data.delete_main_image) {
-            formData.append('delete_main_image', '1');
-        }
+        // Изображения контента
+        if (data.list_item) formData.append('list_item', data.list_item);
+        if (data.detail_desktop) formData.append('detail_desktop', data.detail_desktop);
+        if (data.detail_mobile) formData.append('detail_mobile', data.detail_mobile);
 
         // Галерея
         data.images.forEach((image, index) => {
@@ -48,7 +46,7 @@ export default function Edit({ promotion }) {
 
         // Удаление изображений из галереи
         data.delete_images.forEach((imageId, index) => {
-            formData.append(`delete_images[${index}]`, imageId);
+            formData.append(`delete_gallery_ids[${index}]`, imageId);
         });
 
         post(route('admin.promotions.update', promotion.id), {
@@ -68,28 +66,6 @@ export default function Edit({ promotion }) {
                     type: 'error',
                 });
             },
-        });
-    };
-
-    const handleRemoveMainImage = () => {
-        if (!promotion.main_image_id) return;
-
-        router.delete(route('admin.promotions.media.delete', { promotion: promotion.id }), {
-            data: { media_id: promotion.main_image_id },
-            onSuccess: () => {
-                toaster.create({
-                    title: 'Изображение удалено',
-                    type: 'success',
-                });
-                router.reload({ only: ['promotion'] });
-            },
-            onError: () => {
-                toaster.create({
-                    title: 'Ошибка',
-                    description: 'Не удалось удалить изображение',
-                    type: 'error',
-                });
-            }
         });
     };
 
@@ -115,91 +91,93 @@ export default function Edit({ promotion }) {
 
     return (
         <>
-                <PageHeader
-                    title={`Редактирование: ${promotion.name}`}
-                    description="Изменение информации об акции"
-                />
+            <PageHeader
+                title={`Редактирование: ${promotion.name}`}
+                description="Изменение информации об акции"
+            />
 
-                <form onSubmit={handleSubmit}>
-                    <Card.Root>
-                        <Card.Body>
-                            <Stack gap={6}>
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название" error={errors.name} required>
-                                        <Input
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="Например: Летняя распродажа"
-                                        />
-                                    </FormField>
-
-                                    <FormField label="Meta заголовок" error={errors.meta_title}>
-                                        <Input
-                                            value={data.meta_title}
-                                            onChange={(e) => setData('meta_title', e.target.value)}
-                                            placeholder="SEO заголовок"
-                                        />
-                                    </FormField>
-                                </SimpleGrid>
-
-                                <FormField label="Meta описание" error={errors.meta_description}>
-                                    <Textarea
-                                        value={data.meta_description}
-                                        onChange={(e) => setData('meta_description', e.target.value)}
-                                        placeholder="SEO описание"
-                                        rows={2}
+            <form onSubmit={handleSubmit}>
+                <Card.Root>
+                    <Card.Body>
+                        <Stack gap={6}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Название" error={errors.name} required>
+                                    <Input
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder="Например: Летняя распродажа"
                                     />
                                 </FormField>
 
-                                <FormField label="Описание акции" error={errors.description}>
-                                    <Textarea
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        placeholder="Подробное описание акции"
-                                        rows={5}
+                                <FormField label="Meta заголовок" error={errors.meta_title}>
+                                    <Input
+                                        value={data.meta_title}
+                                        onChange={(e) => setData('meta_title', e.target.value)}
+                                        placeholder="SEO заголовок"
                                     />
                                 </FormField>
+                            </SimpleGrid>
 
-                                <ImageUploader
-                                    label="Главное изображение"
-                                    onChange={(file) => setData('main_image', file)}
-                                    error={errors.main_image}
-                                    maxSize={10}
-                                    currentImageUrl={promotion.main_image_url}
-                                    onRemoveExisting={handleRemoveMainImage}
+                            <FormField label="Meta описание" error={errors.meta_description}>
+                                <Textarea
+                                    value={data.meta_description}
+                                    onChange={(e) => setData('meta_description', e.target.value)}
+                                    placeholder="SEO описание"
+                                    rows={2}
                                 />
+                            </FormField>
 
-                                <MultipleImageUploader
-                                    label="Галерея изображений"
-                                    onChange={(files) => setData('images', files)}
-                                    error={errors.images}
-                                    maxFiles={10}
-                                    maxSize={10}
-                                    currentImages={promotion.gallery_images}
-                                    onRemoveExisting={handleRemoveGalleryImage}
+                            <FormField label="Описание акции" error={errors.description}>
+                                <Textarea
+                                    value={data.description}
+                                    onChange={(e) => setData('description', e.target.value)}
+                                    placeholder="Подробное описание акции"
+                                    rows={5}
                                 />
+                            </FormField>
 
-                                <Box>
-                                    <FormField label="Привязанные товары" error={errors.product_ids}>
-                                        <ProductSelector
-                                            value={data.products}
-                                            onChange={(products) => setData('products', products)}
-                                            error={errors.product_ids}
-                                        />
-                                    </FormField>
-                                </Box>
-                            </Stack>
-                        </Card.Body>
-
-                        <Card.Footer>
-                            <FormActions
-                                loading={processing}
-                                onCancel={() => window.history.back()}
-                                submitLabel="Сохранить изменения"
+                            <ContentMediaFields
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                                existing={{
+                                    list_image: promotion.list_image,
+                                    detail_desktop_image: promotion.detail_desktop_image,
+                                    detail_mobile_image: promotion.detail_mobile_image,
+                                }}
                             />
-                        </Card.Footer>
-                    </Card.Root>
-                </form>
+
+                            <MultipleImageUploader
+                                label="Галерея изображений"
+                                onChange={(files) => setData('images', files)}
+                                error={errors.images}
+                                maxFiles={10}
+                                maxSize={10}
+                                existingImages={promotion.gallery_images || []}
+                                onRemoveExisting={handleRemoveGalleryImage}
+                            />
+
+                            <Box>
+                                <FormField label="Привязанные товары" error={errors.product_ids}>
+                                    <ProductSelector
+                                        value={data.products}
+                                        onChange={(products) => setData('products', products)}
+                                        error={errors.product_ids}
+                                    />
+                                </FormField>
+                            </Box>
+                        </Stack>
+                    </Card.Body>
+
+                    <Card.Footer>
+                        <FormActions
+                            isLoading={processing}
+                            onCancel={() => window.history.back()}
+                            submitLabel="Сохранить изменения"
+                        />
+                    </Card.Footer>
+                </Card.Root>
+            </form>
         </>
     );
 }

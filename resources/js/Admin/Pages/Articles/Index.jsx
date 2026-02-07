@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, Badge, Text } from '@chakra-ui/react';
+import { Box, HStack, Badge, Text, Image } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
@@ -25,6 +25,16 @@ export default function Index({ articles, filters }) {
             label: 'ID',
             sortable: true,
             render: (_, row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
+        },
+        {
+            key: 'list_image',
+            label: 'Фото',
+            width: '70px',
+            render: (_, row) => row.list_image ? (
+                <Image src={row.list_image} alt={row.title} boxSize="40px" objectFit="cover" borderRadius="md" />
+            ) : (
+                <Box boxSize="40px" bg="bg.muted" borderRadius="md" />
+            ),
         },
         {
             key: 'title',
@@ -53,12 +63,6 @@ export default function Index({ articles, filters }) {
                     )}
                 </HStack>
             ),
-        },
-        {
-            key: 'tags_count',
-            label: 'Кол-во тегов',
-            sortable: true,
-            render: (_, row) => <Text fontSize="sm">{row.tags_count || 0}</Text>,
         },
         createActionsColumn('admin.articles', openDeleteDialog),
     ];

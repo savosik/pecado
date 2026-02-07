@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, Text, Button, Badge } from '@chakra-ui/react';
+import { Box, Text, Button, Badge, Image } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
@@ -27,6 +27,16 @@ export default function Index({ promotions, filters }) {
             label: 'ID',
             sortable: true,
             width: '80px',
+        },
+        {
+            key: 'list_image',
+            label: 'Фото',
+            width: '70px',
+            render: (_, row) => row.list_image ? (
+                <Image src={row.list_image} alt={row.name} boxSize="40px" objectFit="cover" borderRadius="md" />
+            ) : (
+                <Box boxSize="40px" bg="bg.muted" borderRadius="md" />
+            ),
         },
         {
             key: 'name',

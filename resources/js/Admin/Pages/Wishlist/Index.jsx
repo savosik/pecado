@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { HStack, IconButton, Image, Text, Box, Button, Input, VStack, SimpleGrid } from "@chakra-ui/react";
+import { HStack, Image, Text, Box, Button, Input, VStack, SimpleGrid } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
-import { LuTrash2, LuPackage, LuFilter, LuX, LuPlus, LuPencil } from "react-icons/lu";
+import { LuTrash2, LuPackage, LuFilter, LuX, LuPlus } from "react-icons/lu";
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
@@ -176,29 +177,7 @@ const WishlistIndex = ({ filters }) => {
             key: "created_at",
             sortable: true,
         },
-        {
-            label: "Действия",
-            key: "actions",
-            render: (_, item) => (
-                <HStack gap={1}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route("admin.wishlist.edit", item.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(item.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.wishlist', (item) => setDeleteId(item.id)),
     ];
 
     const handleDelete = () => {

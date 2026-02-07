@@ -65,7 +65,8 @@ export const EntitySelector = ({
     const search = async (searchQuery) => {
         setLoading(true);
         try {
-            const response = await axios.get(route(searchUrl), {
+            const url = searchUrl.startsWith('http') ? searchUrl : route(searchUrl);
+            const response = await axios.get(url, {
                 params: { query: searchQuery, ...searchParams }
             });
             setSuggestions(response.data);

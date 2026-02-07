@@ -117,11 +117,18 @@ class ProductController extends AdminController
 
             'certificates' => 'nullable|array',
             'certificates.*' => 'exists:certificates,id',
+
+            'attributes' => 'nullable|array',
+            'attributes.*.attribute_id' => 'required|exists:attributes,id',
+            'attributes.*.attribute_value_id' => 'nullable|exists:attribute_values,id',
+            'attributes.*.text_value' => 'nullable|string',
+            'attributes.*.number_value' => 'nullable|numeric',
+            'attributes.*.boolean_value' => 'nullable|boolean',
         ]);
 
         // Генерация slug если не указан
         if (empty($validated['slug'])) {
-            $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            $validated['slug'] = \Illuminate\Support\Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
 
         // Устанавливаем основной штрихкод как первый из списка для совместимости
@@ -173,6 +180,19 @@ class ProductController extends AdminController
         // Сертификаты
         if (isset($validated['certificates'])) {
             $product->certificates()->sync($validated['certificates']);
+        }
+
+        // Сохранение атрибутов
+        if (isset($validated['attributes'])) {
+            foreach ($validated['attributes'] as $attr) {
+                $product->attributeValues()->create([
+                    'attribute_id' => $attr['attribute_id'],
+                    'attribute_value_id' => $attr['attribute_value_id'] ?? null,
+                    'text_value' => $attr['text_value'] ?? null,
+                    'number_value' => $attr['number_value'] ?? null,
+                    'boolean_value' => $attr['boolean_value'] ?? null,
+                ]);
+            }
         }
 
         return redirect()
@@ -334,7 +354,7 @@ class ProductController extends AdminController
 
         // Генерация slug если не указан
         if (empty($validated['slug'])) {
-            $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            $validated['slug'] = \Illuminate\Support\Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
 
         // Устанавливаем основной штрихкод как первый из списка для совместимости

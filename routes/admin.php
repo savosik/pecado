@@ -26,6 +26,8 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::resource('products', ProductController::class);
     Route::delete('/products/{product}/media', [ProductController::class, 'deleteMedia'])->name('products.media.delete');
     
+    Route::get('/categories/attributes', [CategoryController::class, 'attributes'])->name('categories.attributes');
+    Route::get('/categories/search', [CategoryController::class, 'search'])->name('categories.search');
     Route::resource('categories', CategoryController::class);
     Route::delete('/categories/{category}/media', [CategoryController::class, 'deleteMedia'])->name('categories.media.delete');
 
@@ -129,6 +131,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // --------------------
 
     // Акции
+    Route::get('/promotions/search', [\App\Http\Controllers\Admin\PromotionController::class, 'search'])->name('promotions.search');
     Route::delete('/promotions/{promotion}/media', [\App\Http\Controllers\Admin\PromotionController::class, 'deleteMedia'])->name('promotions.media.delete');
     Route::resource('promotions', \App\Http\Controllers\Admin\PromotionController::class);
 

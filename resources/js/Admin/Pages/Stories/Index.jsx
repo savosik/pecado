@@ -1,8 +1,8 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, SearchInput, DataTable, ConfirmDialog } from '@/Admin/Components';
-import { Button, Badge, HStack } from '@chakra-ui/react';
-import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { Badge, Box } from '@chakra-ui/react';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
 export default function Index({ stories, filters }) {
@@ -56,30 +56,7 @@ export default function Index({ stories, filters }) {
             label: 'Порядок',
             sortable: true,
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (_, story) => (
-                <HStack gap={2}>
-                    <Button
-                        size="sm"
-                        colorPalette="blue"
-                        onClick={() => router.visit(route('admin.stories.edit', story.id))}
-                    >
-                        <LuPencil />
-                        Редактировать
-                    </Button>
-                    <Button
-                        size="sm"
-                        colorPalette="red"
-                        variant="outline"
-                        onClick={() => openDeleteDialog(story)}
-                    >
-                        <LuTrash2 />
-                    </Button>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.stories', openDeleteDialog),
     ];
 
     return (
@@ -91,12 +68,13 @@ export default function Index({ stories, filters }) {
                 createLabel="Создать сторис"
             />
 
-            <SearchInput
-                value={searchQuery}
-                onChange={handleSearch}
-                placeholder="Поиск по названию..."
-                mb={6}
-            />
+            <Box mb={4}>
+                <SearchInput
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    placeholder="Поиск по названию..."
+                />
+            </Box>
 
             <DataTable
                 columns={columns}

@@ -86,7 +86,7 @@ class BrandController extends AdminController
         ]);
 
         if (empty($validated['slug'])) {
-            $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            $validated['slug'] = \Illuminate\Support\Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
 
         $brand = Brand::create($validated);
@@ -174,7 +174,7 @@ class BrandController extends AdminController
         }
         
         if (empty($validated['slug'])) {
-            $validated['slug'] = \Illuminate\Support\Str::slug($validated['name']);
+            $validated['slug'] = \Illuminate\Support\Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
 
         $brand->update($validated);

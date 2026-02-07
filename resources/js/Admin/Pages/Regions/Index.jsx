@@ -1,7 +1,8 @@
 import React from "react";
-import { HStack, Button, IconButton } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
 import { Head, Link, usePage, router } from "@inertiajs/react";
-import { LuPlus, LuPencil, LuTrash2 } from "react-icons/lu";
+import { LuPlus } from "react-icons/lu";
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
@@ -68,29 +69,7 @@ const RegionsIndex = ({ filters }) => {
                 </div>
             ),
         },
-        {
-            label: "Действия",
-            key: "actions",
-            render: (_value, region) => (
-                <HStack gap={2}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route("admin.regions.edit", region.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(region.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.regions', (region) => setDeleteId(region.id)),
     ];
 
     const handleDelete = () => {

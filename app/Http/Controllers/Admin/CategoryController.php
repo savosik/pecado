@@ -261,4 +261,74 @@ class CategoryController extends AdminController
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Get attributes for given category IDs (AJAX endpoint).
+     */
+    public function attributes(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $request->validate([
+            'category_ids' => 'required|array',
+            'category_ids.*' => 'integer|exists:categories,id',
+        ]);
+
+        $categoryIds = $request->input('category_ids', []);
+
+        // Получаем уникальные атрибуты для выбранных категорий
+        $attributes = Attribute::whereHas('categories', function ($query) use ($categoryIds) {
+            $query->whereIn('categories.id', $categoryIds);
+        })
+            ->with(['values' => function ($query) {
+                $query->orderBy('sort_order');
+            }])
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->map(function ($attr) {
+                return [
+                    'id' => $attr->id,
+                    'name' => $attr->name,
+                    'slug' => $attr->slug,
+                    'type' => $attr->type,
+                    'unit' => $attr->unit,
+                    'is_filterable' => $attr->is_filterable,
+                    'values' => $attr->values->map(function ($v) {
+                        return [
+                            'id' => $v->id,
+                            'value' => $v->value,
+                        ];
+                    }),
+                ];
+            });
+
+        return response()->json($attributes);
+    }
+
+    /**
+     * Search categories for entity selector (AJAX endpoint).
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = Category::query();
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%");
+            });
+        }
+
+        $categories = $query->select('id', 'name', 'slug')
+            ->limit(20)
+            ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                ];
+            });
+
+        return response()->json($categories);
+    }
 }

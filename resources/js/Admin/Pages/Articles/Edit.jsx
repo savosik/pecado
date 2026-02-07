@@ -1,7 +1,8 @@
 import { useForm } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, TagSelector, FileUploader } from '@/Admin/Components';
-import { Card, Input, Textarea, Stack, SimpleGrid, Box, Image } from '@chakra-ui/react';
+import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields } from '@/Admin/Components';
+import { Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ article }) {
@@ -13,8 +14,14 @@ export default function Edit({ article }) {
         meta_title: article.meta_title || '',
         meta_description: article.meta_description || '',
         tags: article.tag_list || [],
-        main_image: null,
+        list_item: null,
+        detail_desktop: null,
+        detail_mobile: null,
         _method: 'PUT',
+    });
+
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'title', isEditing: true,
     });
 
     const handleSubmit = (e) => {
@@ -48,14 +55,14 @@ export default function Edit({ article }) {
                                 <FormField label="Заголовок" error={errors.title} required>
                                     <Input
                                         value={data.title}
-                                        onChange={(e) => setData('title', e.target.value)}
+                                        onChange={(e) => handleSourceChange(e.target.value)}
                                     />
                                 </FormField>
 
                                 <FormField label="Slug" error={errors.slug} required>
                                     <Input
                                         value={data.slug}
-                                        onChange={(e) => setData('slug', e.target.value)}
+                                        onChange={(e) => handleSlugChange(e.target.value)}
                                     />
                                 </FormField>
                             </SimpleGrid>
@@ -100,28 +107,21 @@ export default function Edit({ article }) {
                                 />
                             </FormField>
 
-                            <FormField label="Изображение" error={errors.main_image}>
-                                {article.main_image && (
-                                    <Box mb={2}>
-                                        <Image
-                                            src={article.main_image}
-                                            alt={article.title}
-                                            maxH="200px"
-                                            borderRadius="md"
-                                        />
-                                    </Box>
-                                )}
-                                <FileUploader
-                                    value={data.main_image}
-                                    onChange={(file) => setData('main_image', file)}
-                                    accept="image/*"
-                                />
-                            </FormField>
+                            <ContentMediaFields
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                                existing={{
+                                    list_image: article.list_image,
+                                    detail_desktop_image: article.detail_desktop_image,
+                                    detail_mobile_image: article.detail_mobile_image,
+                                }}
+                            />
 
                             <FormActions
                                 submitLabel="Сохранить изменения"
                                 onCancel={() => window.history.back()}
-                                processing={processing}
+                                isLoading={processing}
                             />
                         </Stack>
                     </form>

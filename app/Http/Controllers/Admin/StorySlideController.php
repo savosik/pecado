@@ -34,7 +34,7 @@ class StorySlideController extends Controller
         // Загрузить созданный слайд с медиа
         $slide->load('media');
         $slide->media_url = $slide->getFirstMediaUrl('default');
-        $slide->media_thumbnail = $slide->getFirstMedia('default')?->getUrl('thumb') ?? $slide->media_url;
+        $slide->media_thumbnail = $slide->getFirstMediaUrl('default');
 
         return response()->json([
             'message' => 'Слайд успешно создан',
@@ -71,7 +71,7 @@ class StorySlideController extends Controller
         // Загрузить обновлённый слайд с медиа
         $slide->load('media');
         $slide->media_url = $slide->getFirstMediaUrl('default');
-        $slide->media_thumbnail = $slide->getFirstMedia('default')?->getUrl('thumb') ?? $slide->media_url;
+        $slide->media_thumbnail = $slide->getFirstMediaUrl('default');
 
         if ($slide->linkable) {
             $slide->linkable_name = $slide->linkable->title ?? $slide->linkable->name ?? null;

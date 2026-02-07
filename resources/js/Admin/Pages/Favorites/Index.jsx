@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { HStack, IconButton, Image, Text, Box, Button, Input, VStack, SimpleGrid } from "@chakra-ui/react";
+import { HStack, Image, Text, Box, Button, Input, VStack, SimpleGrid } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
-import { LuTrash2, LuPackage, LuFilter, LuX, LuPlus, LuPencil } from "react-icons/lu";
+import { LuTrash2, LuPackage, LuFilter, LuX, LuPlus } from "react-icons/lu";
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
@@ -176,29 +177,7 @@ const FavoritesIndex = ({ filters }) => {
             key: "created_at",
             sortable: true,
         },
-        {
-            label: "Действия",
-            key: "actions",
-            render: (_, favorite) => (
-                <HStack gap={1}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route("admin.favorites.edit", favorite.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(favorite.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.favorites', (favorite) => setDeleteId(favorite.id)),
     ];
 
     const handleDelete = () => {

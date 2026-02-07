@@ -20,6 +20,8 @@ export default function Index({ settings }) {
     const handleSubmit = (e) => {
         e.preventDefault();
         put(route('admin.settings.update'), {
+            preserveState: true,
+            preserveScroll: true,
             onSuccess: () => {
                 toaster.create({
                     title: 'Настройки успешно обновлены',

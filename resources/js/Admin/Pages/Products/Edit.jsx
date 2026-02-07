@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { useForm, router } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector } from '@/Admin/Components';
@@ -7,9 +8,9 @@ import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuListChecks } from 'react-icons/lu';
 import { WarehousesSection } from './Components/WarehousesSection';
-import { AttributesSection } from './Components/AttributesSection';
+import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
 export default function Edit({ product, brands, categories, productModels, sizeCharts, warehouses, attributes, certificates }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -43,6 +44,10 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         warehouses: product.warehouses || [],
         attributes: product.attributes || [],
         _method: 'PUT',
+    });
+
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'name', isEditing: true,
     });
 
     // Определяем, в каких табах есть ошибки
@@ -205,7 +210,10 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                     )}
                                 </Tabs.Trigger>
                                 <Tabs.Trigger value="inventory">
-                                    <LuWarehouse /> Склады и атрибуты
+                                    <LuWarehouse /> Склады
+                                </Tabs.Trigger>
+                                <Tabs.Trigger value="attributes">
+                                    <LuListChecks /> Атрибуты
                                 </Tabs.Trigger>
                             </Tabs.List>
 
@@ -220,7 +228,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                         >
                                             <Input
                                                 value={data.name}
-                                                onChange={(e) => setData('name', e.target.value)}
+                                                onChange={(e) => handleSourceChange(e.target.value)}
                                                 placeholder="Введите название товара"
                                             />
                                         </FormField>
@@ -232,7 +240,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                         >
                                             <Input
                                                 value={data.slug}
-                                                onChange={(e) => setData('slug', e.target.value)}
+                                                onChange={(e) => handleSlugChange(e.target.value)}
                                                 placeholder="Автоматически из названия"
                                             />
                                         </FormField>
@@ -564,7 +572,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                 </Stack>
                             </Tabs.Content>
 
-                            {/* Таб 6: Склады и атрибуты */}
+                            {/* Таб 6: Склады */}
                             <Tabs.Content value="inventory">
                                 <Stack gap={6} mt={6}>
                                     <WarehousesSection
@@ -573,12 +581,17 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                         onChange={(wh) => setData('warehouses', wh)}
                                         error={errors.warehouses}
                                     />
+                                </Stack>
+                            </Tabs.Content>
 
-                                    <AttributesSection
-                                        attributes={data.attributes}
-                                        availableAttributes={attributes}
+                            {/* Таб 7: Атрибуты */}
+                            <Tabs.Content value="attributes">
+                                <Stack gap={6} mt={6}>
+                                    <CategoryAttributesSection
+                                        categoryIds={data.categories}
+                                        value={data.attributes}
                                         onChange={(attrs) => setData('attributes', attrs)}
-                                        error={errors.attributes}
+                                        errors={errors.attributes}
                                     />
                                 </Stack>
                             </Tabs.Content>

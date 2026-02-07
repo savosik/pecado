@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { HStack, IconButton, Badge, Button, Input, Box, VStack, Text, SimpleGrid } from "@chakra-ui/react";
+import { HStack, Badge, Button, Input, Box, VStack, Text, SimpleGrid } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
-import { LuTrash2, LuPencil, LuFilter, LuX, LuPlus } from "react-icons/lu";
+import { LuTrash2, LuFilter, LuX, LuPlus } from "react-icons/lu";
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
@@ -180,31 +181,7 @@ const CartsIndex = ({ filters }) => {
             key: "updated_at",
             sortable: true,
         },
-        {
-            label: "Действия",
-            key: "actions",
-            render: (_, cart) => (
-                <HStack gap={2}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route("admin.carts.edit", cart.id))}
-                        title="Редактировать"
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(cart.id)}
-                        title="Удалить"
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.carts', (cart) => setDeleteId(cart.id)),
     ];
 
     const handleDelete = () => {

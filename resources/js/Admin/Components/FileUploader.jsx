@@ -28,9 +28,9 @@ import { LuUpload, LuX, LuFile, LuImage } from 'react-icons/lu';
  */
 export const FileUploader = ({
     name,
-    value = [],
+    value: rawValue = [],
     onChange,
-    existingFiles = [],
+    existingFiles: rawExistingFiles = [],
     onRemoveExisting,
     error = null,
     label = 'Файлы',
@@ -38,6 +38,8 @@ export const FileUploader = ({
     maxSize = 10, // MB
     acceptedTypes = [], // Empty = all
 }) => {
+    const value = rawValue ?? [];
+    const existingFiles = rawExistingFiles ?? [];
     const [uploadError, setUploadError] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const inputRef = useRef(null);
@@ -148,6 +150,7 @@ export const FileUploader = ({
                 onChange={handleInputChange}
                 display="none"
                 multiple
+                required={false}
             />
 
             <VStack gap={3} align="stretch">

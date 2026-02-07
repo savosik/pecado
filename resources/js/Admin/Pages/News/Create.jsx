@@ -1,6 +1,7 @@
 import { useForm } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, TagSelector, FileUploader } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields } from '@/Admin/Components';
 import { Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -12,22 +13,14 @@ export default function Create() {
         meta_title: '',
         meta_description: '',
         tags: [],
-        main_image: null,
+        list_item: null,
+        detail_desktop: null,
+        detail_mobile: null,
     });
 
-    // Auto-generate slug from title
-    const handleTitleChange = (value) => {
-        setData({
-            ...data,
-            title: value,
-            slug: value
-                .toLowerCase()
-                .replace(/[^a-z0-9а-яё\s-]/g, '')
-                .replace(/\s+/g, '-')
-                .replace(/-+/g, '-')
-                .trim(),
-        });
-    };
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'title',
+    });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -60,14 +53,14 @@ export default function Create() {
                                 <FormField label="Заголовок" error={errors.title} required>
                                     <Input
                                         value={data.title}
-                                        onChange={(e) => handleTitleChange(e.target.value)}
+                                        onChange={(e) => handleSourceChange(e.target.value)}
                                     />
                                 </FormField>
 
                                 <FormField label="Slug" error={errors.slug} required>
                                     <Input
                                         value={data.slug}
-                                        onChange={(e) => setData('slug', e.target.value)}
+                                        onChange={(e) => handleSlugChange(e.target.value)}
                                     />
                                 </FormField>
                             </SimpleGrid>
@@ -104,18 +97,16 @@ export default function Create() {
                                 />
                             </FormField>
 
-                            <FormField label="Изображение" error={errors.main_image}>
-                                <FileUploader
-                                    value={data.main_image}
-                                    onChange={(file) => setData('main_image', file)}
-                                    accept="image/*"
-                                />
-                            </FormField>
+                            <ContentMediaFields
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                            />
 
                             <FormActions
                                 submitLabel="Создать новость"
                                 onCancel={() => window.history.back()}
-                                processing={processing}
+                                isLoading={processing}
                             />
                         </Stack>
                     </form>

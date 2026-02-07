@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField } from '@/Admin/Components';
 import { Card, Input, Button, HStack, Stack, Heading, Box } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { LuSave, LuX } from 'react-icons/lu';
-import { useEffect } from 'react';
 import SlidesEditor from './Components/SlidesEditor';
 
 export default function Edit({ story }) {
@@ -18,16 +18,9 @@ export default function Edit({ story }) {
 
     const [slides, setSlides] = useState(story.slides || []);
 
-    // Auto-generate slug from name
-    useEffect(() => {
-        if (data.name && !data.slug) {
-            const slug = data.name
-                .toLowerCase()
-                .replace(/[^a-z0-9а-я]+/g, '-')
-                .replace(/(^-|-$)/g, '');
-            setData('slug', slug);
-        }
-    }, [data.name]);
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'name', isEditing: true,
+    });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -53,7 +46,7 @@ export default function Edit({ story }) {
                             <FormField label="Название" required error={errors.name}>
                                 <Input
                                     value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
+                                    onChange={(e) => handleSourceChange(e.target.value)}
                                     placeholder="Название сториса"
                                 />
                             </FormField>
@@ -61,7 +54,7 @@ export default function Edit({ story }) {
                             <FormField label="Slug" error={errors.slug}>
                                 <Input
                                     value={data.slug}
-                                    onChange={(e) => setData('slug', e.target.value)}
+                                    onChange={(e) => handleSlugChange(e.target.value)}
                                     placeholder="URL-адрес (автоматически)"
                                 />
                             </FormField>

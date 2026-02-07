@@ -6,7 +6,6 @@ use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use Illuminate\Support\Str;
 
 class ArticleController extends Controller
 {
@@ -35,7 +34,7 @@ class ArticleController extends Controller
         // Загружаем теги и медиа для каждой статьи
         $articles->getCollection()->transform(function ($article) {
             $article->tag_list = $article->tags->pluck('name')->toArray();
-            $article->main_image = $article->getFirstMediaUrl('main_image');
+            $article->list_image = $article->getFirstMediaUrl('list-item');
             return $article;
         });
 
@@ -61,7 +60,9 @@ class ArticleController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
         ]);
 
         $article = Article::create($validated);
@@ -71,9 +72,15 @@ class ArticleController extends Controller
             $article->attachTags($validated['tags']);
         }
 
-        // Загрузить изображение через Spatie Media Library
-        if ($request->hasFile('main_image')) {
-            $article->addMediaFromRequest('main_image')->toMediaCollection('main_image');
+        // Загрузить изображения
+        if ($request->hasFile('list_item')) {
+            $article->addMediaFromRequest('list_item')->toMediaCollection('list-item');
+        }
+        if ($request->hasFile('detail_desktop')) {
+            $article->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+        }
+        if ($request->hasFile('detail_mobile')) {
+            $article->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
         return redirect()
@@ -84,7 +91,9 @@ class ArticleController extends Controller
     public function edit(Article $article)
     {
         $article->tag_list = $article->tags->pluck('name')->toArray();
-        $article->main_image = $article->getFirstMediaUrl('main_image');
+        $article->list_image = $article->getFirstMediaUrl('list-item');
+        $article->detail_desktop_image = $article->getFirstMediaUrl('detail-item-desktop');
+        $article->detail_mobile_image = $article->getFirstMediaUrl('detail-item-mobile');
 
         return Inertia::render('Admin/Pages/Articles/Edit', [
             'article' => $article,
@@ -102,7 +111,9 @@ class ArticleController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
         ]);
 
         $article->update($validated);
@@ -114,10 +125,18 @@ class ArticleController extends Controller
             $article->syncTags([]);
         }
 
-        // Обновить изображение если загружено новое
-        if ($request->hasFile('main_image')) {
-            $article->clearMediaCollection('main_image');
-            $article->addMediaFromRequest('main_image')->toMediaCollection('main_image');
+        // Обновить изображения
+        if ($request->hasFile('list_item')) {
+            $article->clearMediaCollection('list-item');
+            $article->addMediaFromRequest('list_item')->toMediaCollection('list-item');
+        }
+        if ($request->hasFile('detail_desktop')) {
+            $article->clearMediaCollection('detail-item-desktop');
+            $article->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+        }
+        if ($request->hasFile('detail_mobile')) {
+            $article->clearMediaCollection('detail-item-mobile');
+            $article->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
         return redirect()

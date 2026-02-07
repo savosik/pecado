@@ -42,6 +42,11 @@ class PromotionController extends AdminController
 
         $promotions = $query->paginate($perPage)->withQueryString();
 
+        $promotions->getCollection()->transform(function ($promotion) {
+            $promotion->list_image = $promotion->getFirstMediaUrl('list-item');
+            return $promotion;
+        });
+
         return Inertia::render('Admin/Pages/Promotions/Index', [
             'promotions' => $promotions,
             'filters' => [
@@ -73,7 +78,9 @@ class PromotionController extends AdminController
             'description' => 'nullable|string',
             'product_ids' => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
-            'main_image' => 'nullable|image|max:10240',
+            'list_item' => 'nullable|image|max:10240',
+            'detail_desktop' => 'nullable|image|max:10240',
+            'detail_mobile' => 'nullable|image|max:10240',
             'images' => 'nullable|array',
             'images.*' => 'image|max:10240',
         ]);
@@ -93,9 +100,14 @@ class PromotionController extends AdminController
             }
 
             // Загрузка медиафайлов
-            if ($request->hasFile('main_image')) {
-                $promotion->addMedia($request->file('main_image'))
-                    ->toMediaCollection('main');
+            if ($request->hasFile('list_item')) {
+                $promotion->addMediaFromRequest('list_item')->toMediaCollection('list-item');
+            }
+            if ($request->hasFile('detail_desktop')) {
+                $promotion->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+            }
+            if ($request->hasFile('detail_mobile')) {
+                $promotion->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
             }
 
             if ($request->hasFile('images')) {
@@ -136,7 +148,9 @@ class PromotionController extends AdminController
                 'description' => $promotion->description,
                 'created_at' => $promotion->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $promotion->updated_at?->format('d.m.Y H:i'),
-                'main_image_url' => $promotion->getFirstMediaUrl('main'),
+                'list_image' => $promotion->getFirstMediaUrl('list-item'),
+                'detail_desktop_image' => $promotion->getFirstMediaUrl('detail-item-desktop'),
+                'detail_mobile_image' => $promotion->getFirstMediaUrl('detail-item-mobile'),
                 'gallery_urls' => $promotion->getMedia('gallery')->map(fn ($media) => $media->getUrl()),
                 'products' => $promotion->products->map(function ($product) {
                     return [
@@ -165,8 +179,12 @@ class PromotionController extends AdminController
                 'meta_description' => $promotion->meta_description,
                 'description' => $promotion->description,
                 'product_ids' => $promotion->products->pluck('id'),
-                'main_image_url' => $promotion->getFirstMediaUrl('main'),
-                'main_image_id' => $promotion->getFirstMedia('main')?->id,
+                'list_image' => $promotion->getFirstMediaUrl('list-item'),
+                'list_image_id' => $promotion->getFirstMedia('list-item')?->id,
+                'detail_desktop_image' => $promotion->getFirstMediaUrl('detail-item-desktop'),
+                'detail_desktop_image_id' => $promotion->getFirstMedia('detail-item-desktop')?->id,
+                'detail_mobile_image' => $promotion->getFirstMediaUrl('detail-item-mobile'),
+                'detail_mobile_image_id' => $promotion->getFirstMedia('detail-item-mobile')?->id,
                 'gallery_images' => $promotion->getMedia('gallery')->map(function ($media) {
                     return [
                         'id' => $media->id,
@@ -190,10 +208,11 @@ class PromotionController extends AdminController
             'description' => 'nullable|string',
             'product_ids' => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
-            'main_image' => 'nullable|image|max:10240',
+            'list_item' => 'nullable|image|max:10240',
+            'detail_desktop' => 'nullable|image|max:10240',
+            'detail_mobile' => 'nullable|image|max:10240',
             'images' => 'nullable|array',
             'images.*' => 'image|max:10240',
-            'delete_main_image' => 'nullable|boolean',
             'delete_gallery_ids' => 'nullable|array',
             'delete_gallery_ids.*' => 'integer',
         ]);
@@ -210,16 +229,18 @@ class PromotionController extends AdminController
             // Синхронизация товаров
             $promotion->products()->sync($validated['product_ids'] ?? []);
 
-            // Удаление главного изображения
-            if (!empty($validated['delete_main_image'])) {
-                $promotion->clearMediaCollection('main');
+            // Загрузка изображений контента
+            if ($request->hasFile('list_item')) {
+                $promotion->clearMediaCollection('list-item');
+                $promotion->addMediaFromRequest('list_item')->toMediaCollection('list-item');
             }
-
-            // Загрузка нового главного изображения
-            if ($request->hasFile('main_image')) {
-                $promotion->clearMediaCollection('main');
-                $promotion->addMedia($request->file('main_image'))
-                    ->toMediaCollection('main');
+            if ($request->hasFile('detail_desktop')) {
+                $promotion->clearMediaCollection('detail-item-desktop');
+                $promotion->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+            }
+            if ($request->hasFile('detail_mobile')) {
+                $promotion->clearMediaCollection('detail-item-mobile');
+                $promotion->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
             }
 
             // Удаление изображений галереи
@@ -286,5 +307,31 @@ class PromotionController extends AdminController
         }
 
         return redirect()->back()->withErrors(['error' => 'Медиафайл не найден']);
+    }
+
+    /**
+     * Search promotions for entity selector (AJAX endpoint).
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = Promotion::query();
+
+        if ($search = $request->input('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            });
+        }
+
+        $promotions = $query->select('id', 'name')
+            ->limit(20)
+            ->get()
+            ->map(function ($promotion) {
+                return [
+                    'id' => $promotion->id,
+                    'name' => $promotion->name,
+                ];
+            });
+
+        return response()->json($promotions);
     }
 }

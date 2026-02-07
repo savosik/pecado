@@ -29,15 +29,16 @@ export default function Edit({ banner }) {
     ];
 
     const getEntitySearchUrl = (type) => {
-        const urlMap = {
-            'App\\Models\\Product': route('admin.products.search'),
-            'App\\Models\\Page': route('admin.pages.search'),
-            'App\\Models\\Article': route('admin.articles.search'),
-            'App\\Models\\Category': route('admin.categories.search'),
-            'App\\Models\\News': route('admin.news.search'),
-            'App\\Models\\Promotion': route('admin.promotions.search'),
+        const routeMap = {
+            'App\\Models\\Product': 'admin.products.search',
+            'App\\Models\\Page': 'admin.pages.search',
+            'App\\Models\\Article': 'admin.articles.search',
+            'App\\Models\\Category': 'admin.categories.search',
+            'App\\Models\\News': 'admin.news.search',
+            'App\\Models\\Promotion': 'admin.promotions.search',
         };
-        return urlMap[type] || '';
+        const routeName = routeMap[type];
+        return routeName ? route(routeName) : '';
     };
 
     const handleTypeChange = (e) => {

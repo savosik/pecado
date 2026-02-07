@@ -153,7 +153,7 @@ export default function SlideCard({ slide, story, onUpdate, onDelete }) {
 
             <ConfirmDialog
                 open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
+                onClose={() => setDeleteDialogOpen(false)}
                 onConfirm={handleDelete}
                 title="Удалить слайд?"
                 description={`Вы уверены, что хотите удалить этот слайд? Это действие нельзя отменить.`}

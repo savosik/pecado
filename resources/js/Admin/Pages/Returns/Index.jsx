@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { HStack, IconButton, Badge, Button, Input, Box, VStack } from "@chakra-ui/react";
+import { HStack, Badge, Button, Input, Box, VStack } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Head, usePage, router } from "@inertiajs/react";
-import { LuEye, LuTrash2, LuPlus, LuPencil, LuFilter, LuX } from "react-icons/lu";
+import { LuPlus, LuFilter, LuX } from "react-icons/lu";
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
@@ -173,39 +174,7 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
             key: "created_at",
             sortable: true,
         },
-        {
-            label: "Действия",
-            key: "actions",
-            render: (_, returnItem) => (
-                <HStack gap={2}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route("admin.returns.show", returnItem.id))}
-                        title="Просмотр"
-                    >
-                        <LuEye />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route("admin.returns.edit", returnItem.id))}
-                        title="Редактировать"
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(returnItem.id)}
-                        title="Удалить"
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id)),
     ];
 
     const handleDelete = () => {

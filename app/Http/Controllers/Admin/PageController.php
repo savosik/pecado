@@ -6,7 +6,6 @@ use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use Illuminate\Support\Str;
 
 class PageController extends Controller
 {
@@ -34,7 +33,7 @@ class PageController extends Controller
 
         // Загружаем медиа для каждой страницы
         $pages->getCollection()->transform(function ($page) {
-            $page->main_image = $page->getFirstMediaUrl('main_image');
+            $page->list_image = $page->getFirstMediaUrl('list-item');
             return $page;
         });
 
@@ -57,14 +56,22 @@ class PageController extends Controller
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
         ]);
 
         $page = Page::create($validated);
 
-        // Загрузить изображение через Spatie Media Library
-        if ($request->hasFile('main_image')) {
-            $page->addMediaFromRequest('main_image')->toMediaCollection('main_image');
+        // Загрузить изображения
+        if ($request->hasFile('list_item')) {
+            $page->addMediaFromRequest('list_item')->toMediaCollection('list-item');
+        }
+        if ($request->hasFile('detail_desktop')) {
+            $page->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+        }
+        if ($request->hasFile('detail_mobile')) {
+            $page->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
         return redirect()
@@ -74,7 +81,9 @@ class PageController extends Controller
 
     public function edit(Page $page)
     {
-        $page->main_image = $page->getFirstMediaUrl('main_image');
+        $page->list_image = $page->getFirstMediaUrl('list-item');
+        $page->detail_desktop_image = $page->getFirstMediaUrl('detail-item-desktop');
+        $page->detail_mobile_image = $page->getFirstMediaUrl('detail-item-mobile');
 
         return Inertia::render('Admin/Pages/Pages/Edit', [
             'page' => $page,
@@ -89,15 +98,25 @@ class PageController extends Controller
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
         ]);
 
         $page->update($validated);
 
-        // Обновить изображение если загружено новое
-        if ($request->hasFile('main_image')) {
-            $page->clearMediaCollection('main_image');
-            $page->addMediaFromRequest('main_image')->toMediaCollection('main_image');
+        // Обновить изображения
+        if ($request->hasFile('list_item')) {
+            $page->clearMediaCollection('list-item');
+            $page->addMediaFromRequest('list_item')->toMediaCollection('list-item');
+        }
+        if ($request->hasFile('detail_desktop')) {
+            $page->clearMediaCollection('detail-item-desktop');
+            $page->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+        }
+        if ($request->hasFile('detail_mobile')) {
+            $page->clearMediaCollection('detail-item-mobile');
+            $page->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
         return redirect()

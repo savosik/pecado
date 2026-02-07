@@ -1,12 +1,14 @@
 import { useMemo } from 'react';
 import { useForm } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuListChecks } from 'react-icons/lu';
+import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
 export default function Create({ brands, categories, productModels, sizeCharts }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -39,6 +41,11 @@ export default function Create({ brands, categories, productModels, sizeCharts }
         video: null,
         tags: [],
         certificates: [],
+        attributes: [],
+    });
+
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'name',
     });
 
     // Определяем, в каких табах есть ошибки (мемоизируем, чтобы не пересчитывать при каждом вводе)
@@ -132,6 +139,9 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                         </Box>
                                     )}
                                 </Tabs.Trigger>
+                                <Tabs.Trigger value="attributes">
+                                    <LuListChecks /> Атрибуты
+                                </Tabs.Trigger>
                             </Tabs.List>
 
                             {/* Таб 1: Основная информация */}
@@ -145,7 +155,7 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                         >
                                             <Input
                                                 value={data.name}
-                                                onChange={(e) => setData('name', e.target.value)}
+                                                onChange={(e) => handleSourceChange(e.target.value)}
                                                 placeholder="Введите название товара"
                                             />
                                         </FormField>
@@ -157,7 +167,7 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                         >
                                             <Input
                                                 value={data.slug}
-                                                onChange={(e) => setData('slug', e.target.value)}
+                                                onChange={(e) => handleSlugChange(e.target.value)}
                                                 placeholder="Автоматически из названия"
                                             />
                                         </FormField>
@@ -480,6 +490,18 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                             />
                                         </Stack>
                                     </Box>
+                                </Stack>
+                            </Tabs.Content>
+
+                            {/* Таб 6: Атрибуты */}
+                            <Tabs.Content value="attributes">
+                                <Stack gap={6} mt={6}>
+                                    <CategoryAttributesSection
+                                        categoryIds={data.categories}
+                                        value={data.attributes}
+                                        onChange={(attrs) => setData('attributes', attrs)}
+                                        errors={errors.attributes}
+                                    />
                                 </Stack>
                             </Tabs.Content>
                         </Tabs.Root>

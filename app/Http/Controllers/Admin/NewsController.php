@@ -33,7 +33,7 @@ class NewsController extends Controller
         // Загружаем теги и медиа
         $news->getCollection()->transform(function ($item) {
             $item->tag_list = $item->tags->pluck('name')->toArray();
-            $item->main_image = $item->getFirstMediaUrl('main_image');
+            $item->list_image = $item->getFirstMediaUrl('list-item');
             return $item;
         });
 
@@ -58,7 +58,9 @@ class NewsController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
         ]);
 
         $newsItem = News::create($validated);
@@ -68,9 +70,15 @@ class NewsController extends Controller
             $newsItem->attachTags($validated['tags']);
         }
 
-        // Загрузить изображение
-        if ($request->hasFile('main_image')) {
-            $newsItem->addMediaFromRequest('main_image')->toMediaCollection('main_image');
+        // Загрузить изображения
+        if ($request->hasFile('list_item')) {
+            $newsItem->addMediaFromRequest('list_item')->toMediaCollection('list-item');
+        }
+        if ($request->hasFile('detail_desktop')) {
+            $newsItem->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+        }
+        if ($request->hasFile('detail_mobile')) {
+            $newsItem->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
         return redirect()
@@ -81,7 +89,9 @@ class NewsController extends Controller
     public function edit(News $news)
     {
         $news->tag_list = $news->tags->pluck('name')->toArray();
-        $news->main_image = $news->getFirstMediaUrl('main_image');
+        $news->list_image = $news->getFirstMediaUrl('list-item');
+        $news->detail_desktop_image = $news->getFirstMediaUrl('detail-item-desktop');
+        $news->detail_mobile_image = $news->getFirstMediaUrl('detail-item-mobile');
 
         return Inertia::render('Admin/Pages/News/Edit', [
             'news' => $news,
@@ -98,7 +108,9 @@ class NewsController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
-            'main_image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
         ]);
 
         $news->update($validated);
@@ -110,10 +122,18 @@ class NewsController extends Controller
             $news->syncTags([]);
         }
 
-        // Обновить изображение
-        if ($request->hasFile('main_image')) {
-            $news->clearMediaCollection('main_image');
-            $news->addMediaFromRequest('main_image')->toMediaCollection('main_image');
+        // Обновить изображения
+        if ($request->hasFile('list_item')) {
+            $news->clearMediaCollection('list-item');
+            $news->addMediaFromRequest('list_item')->toMediaCollection('list-item');
+        }
+        if ($request->hasFile('detail_desktop')) {
+            $news->clearMediaCollection('detail-item-desktop');
+            $news->addMediaFromRequest('detail_desktop')->toMediaCollection('detail-item-desktop');
+        }
+        if ($request->hasFile('detail_mobile')) {
+            $news->clearMediaCollection('detail-item-mobile');
+            $news->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
         return redirect()

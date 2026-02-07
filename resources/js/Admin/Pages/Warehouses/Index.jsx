@@ -1,7 +1,8 @@
 import React from "react";
-import { HStack, Button, IconButton } from "@chakra-ui/react";
+import { Button } from "@chakra-ui/react";
 import { Head, Link, usePage, router } from "@inertiajs/react";
-import { LuPlus, LuPencil, LuTrash2 } from "react-icons/lu";
+import { LuPlus } from "react-icons/lu";
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
@@ -27,29 +28,7 @@ const WarehousesIndex = ({ filters }) => {
         { label: "ID", key: "id", sortable: true },
         { label: "Название", key: "name", sortable: true },
         { label: "Внешний ID", key: "external_id", sortable: true },
-        {
-            label: "Действия",
-            key: "actions",
-            render: (_value, warehouse) => (
-                <HStack gap={2}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route("admin.warehouses.edit", warehouse.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(warehouse.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id)),
     ];
 
     const handleDelete = () => {
