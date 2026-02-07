@@ -1,21 +1,34 @@
-import { useForm } from '@inertiajs/react';
 import { useState } from 'react';
+import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, FileUploader, EntitySelector } from '@/Admin/Components';
 import { Card, Input, Stack, SimpleGrid, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
+import axios from 'axios';
 
 export default function Create() {
-    const { data, setData, post, processing, errors } = useForm({
+    const [data, setFormData] = useState({
         title: '',
         linkable_type: '',
         linkable_id: null,
+        _linkable_name: '',
         is_active: true,
         sort_order: 0,
         desktop_image: null,
         mobile_image: null,
     });
+
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
+
+    const setData = (key, value) => {
+        if (typeof key === 'object') {
+            setFormData(prev => ({ ...prev, ...key }));
+        } else {
+            setFormData(prev => ({ ...prev, [key]: value }));
+        }
+    };
 
     const entityTypeOptions = [
         { value: '', label: 'Нет ссылки' },
@@ -42,29 +55,67 @@ export default function Create() {
 
     const handleTypeChange = (e) => {
         setData({
-            ...data,
             linkable_type: e.target.value,
-            linkable_id: null, // Сбросить ID при смене типа
+            linkable_id: null,
+            _linkable_name: '',
         });
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        post(route('admin.banners.store'), {
-            onSuccess: () => {
-                toaster.create({
-                    title: 'Баннер успешно создан',
-                    type: 'success',
-                });
-            },
-            onError: () => {
-                toaster.create({
-                    title: 'Ошибка при создании баннера',
-                    description: 'Проверьте правильность заполнения полей',
-                    type: 'error',
-                });
-            },
-        });
+        setProcessing(true);
+        setErrors({});
+
+        const formDataToSend = new FormData();
+
+        // Append simple fields
+        formDataToSend.append('title', data.title);
+        if (data.linkable_type) {
+            formDataToSend.append('linkable_type', data.linkable_type);
+        }
+        if (data.linkable_id) {
+            formDataToSend.append('linkable_id', data.linkable_id);
+        }
+        formDataToSend.append('is_active', data.is_active ? '1' : '0');
+        formDataToSend.append('sort_order', data.sort_order);
+
+        // Append files — FileUploader returns array of File objects
+        if (Array.isArray(data.desktop_image) && data.desktop_image.length > 0) {
+            formDataToSend.append('desktop_image', data.desktop_image[0]);
+        } else if (data.desktop_image instanceof File) {
+            formDataToSend.append('desktop_image', data.desktop_image);
+        }
+
+        if (Array.isArray(data.mobile_image) && data.mobile_image.length > 0) {
+            formDataToSend.append('mobile_image', data.mobile_image[0]);
+        } else if (data.mobile_image instanceof File) {
+            formDataToSend.append('mobile_image', data.mobile_image);
+        }
+
+        try {
+            await axios.post(route('admin.banners.store'), formDataToSend, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+
+            toaster.create({
+                title: 'Баннер успешно создан',
+                type: 'success',
+            });
+
+            router.visit(route('admin.banners.index'));
+        } catch (error) {
+            if (error.response?.data?.errors) {
+                setErrors(error.response.data.errors);
+            }
+
+            toaster.create({
+                title: 'Ошибка при создании баннера',
+                description: 'Проверьте правильность заполнения полей',
+                type: 'error',
+            });
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
@@ -102,8 +153,11 @@ export default function Create() {
                                 {data.linkable_type && (
                                     <FormField label="Сущность" error={errors.linkable_id}>
                                         <EntitySelector
-                                            value={data.linkable_id}
-                                            onChange={(value) => setData('linkable_id', value)}
+                                            value={data.linkable_id ? { id: data.linkable_id, name: data._linkable_name } : null}
+                                            onChange={(item) => setData({
+                                                linkable_id: item ? item.id : null,
+                                                _linkable_name: item ? (item.name || item.label) : '',
+                                            })}
                                             searchUrl={getEntitySearchUrl(data.linkable_type)}
                                             placeholder={`Выберите ${entityTypeOptions.find(o => o.value === data.linkable_type)?.label.toLowerCase()}`}
                                         />

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
@@ -5,6 +6,7 @@ import { Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ balance, currencies }) {
+    const [selectedUser, setSelectedUser] = useState(balance.user || null);
     const { data, setData, put, processing, errors } = useForm({
         user_id: balance.user_id || '',
         currency_id: balance.currency_id || '',
@@ -41,12 +43,14 @@ export default function Edit({ balance, currencies }) {
                         <Stack gap={6}>
                             <FormField label="Пользователь" error={errors.user_id} required>
                                 <EntitySelector
-                                    value={data.user_id}
-                                    onChange={(value) => setData('user_id', value)}
-                                    searchRoute="admin.users.search"
+                                    value={selectedUser}
+                                    onChange={(user) => {
+                                        setSelectedUser(user);
+                                        setData('user_id', user?.id || '');
+                                    }}
+                                    searchUrl="admin.users.search"
                                     placeholder="Выберите пользователя"
                                     displayField="name"
-                                    initialDisplay={balance.user.name}
                                 />
                             </FormField>
 

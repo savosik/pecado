@@ -1,7 +1,8 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions } from '@/Admin/Components';
-import { Box, Card, Input, Stack, SimpleGrid, Checkbox } from '@chakra-ui/react';
+import { Box, Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ currency }) {

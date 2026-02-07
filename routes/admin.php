@@ -169,6 +169,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
 
     // Валюты
     Route::get('/currencies/search', [\App\Http\Controllers\Admin\CurrencyController::class, 'search'])->name('currencies.search');
+    Route::post('/currencies/update-rates', [\App\Http\Controllers\Admin\CurrencyController::class, 'updateRates'])->name('currencies.update-rates');
     Route::resource('currencies', \App\Http\Controllers\Admin\CurrencyController::class);
 
     // Балансы пользователей

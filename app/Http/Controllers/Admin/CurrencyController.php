@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Artisan;
 use Inertia\Inertia;
 
 class CurrencyController extends Controller
@@ -131,5 +132,21 @@ class CurrencyController extends Controller
             });
 
         return response()->json($currencies);
+    }
+
+    public function updateRates()
+    {
+        try {
+            Artisan::call('currency:update');
+            $output = Artisan::output();
+
+            return redirect()
+                ->route('admin.currencies.index')
+                ->with('success', 'Курсы валют успешно обновлены');
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.currencies.index')
+                ->with('error', 'Ошибка обновления курсов: ' . $e->getMessage());
+        }
     }
 }

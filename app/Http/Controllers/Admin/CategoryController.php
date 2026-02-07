@@ -311,21 +311,17 @@ class CategoryController extends AdminController
     {
         $query = Category::query();
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('slug', 'like', "%{$search}%");
-            });
+        if ($search = $request->input('query')) {
+            $query->where('name', 'like', "%{$search}%");
         }
 
-        $categories = $query->select('id', 'name', 'slug')
+        $categories = $query->select('id', 'name')
             ->limit(20)
             ->get()
             ->map(function ($category) {
                 return [
                     'id' => $category->id,
                     'name' => $category->name,
-                    'slug' => $category->slug,
                 ];
             });
 

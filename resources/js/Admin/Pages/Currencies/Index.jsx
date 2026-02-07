@@ -1,12 +1,15 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, Badge } from '@chakra-ui/react';
-import { LuPlus } from 'react-icons/lu';
+import { Box, Badge, Button } from '@chakra-ui/react';
+import { LuPlus, LuRefreshCw } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { useState } from 'react';
 
 export default function Index({ currencies, filters }) {
+    const [updatingRates, setUpdatingRates] = useState(false);
+
     const {
         searchQuery,
         handleSearch,
@@ -18,6 +21,13 @@ export default function Index({ currencies, filters }) {
     } = useResourceIndex('admin.currencies', filters, {
         entityLabel: 'Валюта',
     });
+
+    const handleUpdateRates = () => {
+        setUpdatingRates(true);
+        router.post(route('admin.currencies.update-rates'), {}, {
+            onFinish: () => setUpdatingRates(false),
+        });
+    };
 
     const columns = [
         {
@@ -57,6 +67,12 @@ export default function Index({ currencies, filters }) {
             sortable: true,
             render: (_, row) => <Box fontFamily="mono">{row.exchange_rate}</Box>,
         },
+        {
+            key: 'correction_factor',
+            label: 'Коэфф. коррекции',
+            sortable: true,
+            render: (_, row) => <Box fontFamily="mono">{row.correction_factor}</Box>,
+        },
         createActionsColumn('admin.currencies', openDeleteDialog),
     ];
 
@@ -66,6 +82,18 @@ export default function Index({ currencies, filters }) {
                 title="Валюты"
                 onCreate={() => router.visit(route('admin.currencies.create'))}
                 createLabel="Создать валюту"
+                actions={
+                    <Button
+                        onClick={handleUpdateRates}
+                        loading={updatingRates}
+                        loadingText="Обновление..."
+                        colorPalette="teal"
+                        variant="outline"
+                    >
+                        <LuRefreshCw />
+                        Обновить курсы
+                    </Button>
+                }
             />
 
             <Box mb={4}>
