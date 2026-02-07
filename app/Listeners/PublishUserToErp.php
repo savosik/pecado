@@ -2,19 +2,10 @@
 
 namespace App\Listeners;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
+use App\Jobs\PublishUserToErpJob;
 
 class PublishUserToErp
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
-
     /**
      * Handle the event.
      */
@@ -47,9 +38,6 @@ class PublishUserToErp
             'user' => $userData,
         ];
 
-        \Illuminate\Support\Facades\Queue::connection('rabbitmq')->pushRaw(
-            json_encode($payload),
-            'erp_users'
-        );
+        PublishUserToErpJob::dispatch($payload);
     }
 }

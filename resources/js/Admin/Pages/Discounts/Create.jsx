@@ -45,14 +45,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Скидки', href: route('admin.discounts.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать скидку" description="Добавление новой скидки для товаров и пользователей" />
 
                 <form onSubmit={handleSubmit}>
@@ -179,7 +172,8 @@ export default function Create() {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -27,3 +27,9 @@ Thumbs.db
 test-results/
 playwright-report/
 playwright/.cache/
+
+# WSL2 metadata
+*.Zone.Identifier
+
+# Compiled views
+/storage/framework/views/

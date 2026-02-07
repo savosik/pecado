@@ -36,95 +36,89 @@ export default function Create() {
 
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Сертификаты', href: route('admin.certificates.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
-                <PageHeader title="Создать сертификат" description="Добавление нового сертификата соответствия" />
+        <>
+            <PageHeader title="Создать сертификат" description="Добавление нового сертификата соответствия" />
 
-                <form onSubmit={handleSubmit}>
-                    <Card.Root>
-                        <Card.Body>
-                            <Stack gap={6}>
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название *" error={errors.name}>
-                                        <Input
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="Например: Сертификат качества №123"
-                                        />
-                                    </FormField>
+            <form onSubmit={handleSubmit}>
+                <Card.Root>
+                    <Card.Body>
+                        <Stack gap={6}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Название *" error={errors.name}>
+                                    <Input
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder="Например: Сертификат качества №123"
+                                    />
+                                </FormField>
 
-                                    <FormField label="Внешний ID" error={errors.external_id}>
-                                        <Input
-                                            value={data.external_id}
-                                            onChange={(e) => setData('external_id', e.target.value)}
-                                            placeholder="ID из внешней системы"
-                                        />
-                                    </FormField>
+                                <FormField label="Внешний ID" error={errors.external_id}>
+                                    <Input
+                                        value={data.external_id}
+                                        onChange={(e) => setData('external_id', e.target.value)}
+                                        placeholder="ID из внешней системы"
+                                    />
+                                </FormField>
 
-                                    <FormField label="Тип сертификата *" error={errors.type}>
-                                        <Input
-                                            value={data.type}
-                                            onChange={(e) => setData('type', e.target.value)}
-                                            placeholder="Например: ISO 9001"
-                                        />
-                                    </FormField>
+                                <FormField label="Тип сертификата *" error={errors.type}>
+                                    <Input
+                                        value={data.type}
+                                        onChange={(e) => setData('type', e.target.value)}
+                                        placeholder="Например: ISO 9001"
+                                    />
+                                </FormField>
 
-                                    <FormField label="Дата выдачи" error={errors.issued_at}>
-                                        <Input
-                                            type="date"
-                                            value={data.issued_at}
-                                            onChange={(e) => setData('issued_at', e.target.value)}
-                                        />
-                                    </FormField>
+                                <FormField label="Дата выдачи" error={errors.issued_at}>
+                                    <Input
+                                        type="date"
+                                        value={data.issued_at}
+                                        onChange={(e) => setData('issued_at', e.target.value)}
+                                    />
+                                </FormField>
 
-                                    <FormField label="Действует до" error={errors.expires_at}>
-                                        <Input
-                                            type="date"
-                                            value={data.expires_at}
-                                            onChange={(e) => setData('expires_at', e.target.value)}
-                                        />
-                                    </FormField>
-                                </SimpleGrid>
+                                <FormField label="Действует до" error={errors.expires_at}>
+                                    <Input
+                                        type="date"
+                                        value={data.expires_at}
+                                        onChange={(e) => setData('expires_at', e.target.value)}
+                                    />
+                                </FormField>
+                            </SimpleGrid>
 
-                                <FileUploader
-                                    name="files"
-                                    label="Файлы сертификата"
-                                    value={data.files}
-                                    onChange={(files) => setData('files', files)}
-                                    error={errors.files}
-                                    maxFiles={5}
-                                    maxSize={10}
-                                />
-
-
-                                <Box>
-                                    <FormField label="Привязанные товары" error={errors.products}>
-                                        <ProductSelector
-                                            value={data.products}
-                                            onChange={(products) => setData('products', products)}
-                                            error={errors.products}
-                                        />
-                                    </FormField>
-                                </Box>
-                            </Stack>
-                        </Card.Body>
-
-                        <Card.Footer>
-                            <FormActions
-                                loading={processing}
-                                onCancel={() => window.history.back()}
-                                submitLabel="Создать сертификат"
+                            <FileUploader
+                                name="files"
+                                label="Файлы сертификата"
+                                value={data.files}
+                                onChange={(files) => setData('files', files)}
+                                error={errors.files}
+                                maxFiles={5}
+                                maxSize={10}
                             />
-                        </Card.Footer>
-                    </Card.Root>
-                </form>
-            </Box>
-        </AdminLayout >
+
+
+                            <Box>
+                                <FormField label="Привязанные товары" error={errors.products}>
+                                    <ProductSelector
+                                        value={data.products}
+                                        onChange={(products) => setData('products', products)}
+                                        error={errors.products}
+                                    />
+                                </FormField>
+                            </Box>
+                        </Stack>
+                    </Card.Body>
+
+                    <Card.Footer>
+                        <FormActions
+                            loading={processing}
+                            onCancel={() => window.history.back()}
+                            submitLabel="Создать сертификат"
+                        />
+                    </Card.Footer>
+                </Card.Root>
+            </form>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

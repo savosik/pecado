@@ -48,6 +48,8 @@ export const DataTable = ({
     bulkActions = [],
     selectable = false,
     emptyMessage = 'Нет данных для отображения',
+    perPage = null,
+    onPerPageChange,
 }) => {
     const [selectedRows, setSelectedRows] = useState([]);
 
@@ -227,11 +229,30 @@ export const DataTable = ({
                         p={3}
                         bg="bg.subtle"
                     >
-                        <HStack justifyContent="space-between">
-                            <Text fontSize="sm" color="fg.muted">
-                                Показано {pagination.from || 0} - {pagination.to || 0} из{' '}
-                                {pagination.total || 0}
-                            </Text>
+                        <HStack justifyContent="space-between" flexWrap="wrap" gap={3}>
+                            <HStack gap={3}>
+                                <Text fontSize="sm" color="fg.muted">
+                                    Показано {pagination.from || 0} - {pagination.to || 0} из{' '}
+                                    {pagination.total || 0}
+                                </Text>
+                                {onPerPageChange && (
+                                    <HStack gap={2}>
+                                        <Text fontSize="sm" color="fg.muted">Показывать:</Text>
+                                        <NativeSelect.Root size="sm" width="80px">
+                                            <NativeSelect.Field
+                                                value={perPage || pagination.per_page || 15}
+                                                onChange={(e) => onPerPageChange(Number(e.target.value))}
+                                            >
+                                                <option value={10}>10</option>
+                                                <option value={15}>15</option>
+                                                <option value={25}>25</option>
+                                                <option value={50}>50</option>
+                                                <option value={100}>100</option>
+                                            </NativeSelect.Field>
+                                        </NativeSelect.Root>
+                                    </HStack>
+                                )}
+                            </HStack>
                             <HStack gap={1}>
                                 <IconButton
                                     as={Link}

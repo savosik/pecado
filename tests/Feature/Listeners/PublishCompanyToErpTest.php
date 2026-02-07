@@ -5,6 +5,7 @@ namespace Tests\Feature\Listeners;
 use App\Events\CompanyCreated;
 use App\Events\CompanyUpdated;
 use App\Events\CompanyDeleted;
+use App\Jobs\PublishCompanyToErpJob;
 use App\Listeners\PublishCompanyToErp;
 use App\Models\Company;
 use App\Models\CompanyBankAccount;
@@ -18,79 +19,61 @@ class PublishCompanyToErpTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Queue::fake();
+    }
+
     #[Test]
-    public function it_publishes_message_when_company_created(): void
+    public function it_dispatches_job_when_company_created(): void
     {
         $user = User::factory()->create(['erp_id' => 'user-erp-123']);
         $company = Company::factory()->create(['user_id' => $user->id]);
         $event = new CompanyCreated($company);
 
-        Queue::shouldReceive('connection')
-            ->with('rabbitmq')
-            ->once()
-            ->andReturnSelf();
-        
-        Queue::shouldReceive('pushRaw')
-            ->once()
-            ->withArgs(function ($payload, $queue) {
-                $data = json_decode($payload, true);
-                return $queue === 'erp_companies' 
-                    && isset($data['event']) 
-                    && $data['event'] === 'CompanyCreated';
-            });
-
         $listener = new PublishCompanyToErp();
         $listener->handle($event);
+
+        Queue::assertPushed(PublishCompanyToErpJob::class, function ($job) {
+            return $job->payload['event'] === 'CompanyCreated'
+                && isset($job->payload['company'])
+                && isset($job->payload['timestamp']);
+        });
     }
 
     #[Test]
-    public function it_publishes_message_when_company_updated(): void
+    public function it_dispatches_job_when_company_updated(): void
     {
         $user = User::factory()->create(['erp_id' => 'user-erp-456']);
         $company = Company::factory()->create(['user_id' => $user->id]);
         $event = new CompanyUpdated($company);
 
-        Queue::shouldReceive('connection')
-            ->with('rabbitmq')
-            ->once()
-            ->andReturnSelf();
-        
-        Queue::shouldReceive('pushRaw')
-            ->once()
-            ->withArgs(function ($payload, $queue) {
-                $data = json_decode($payload, true);
-                return $queue === 'erp_companies' 
-                    && isset($data['event']) 
-                    && $data['event'] === 'CompanyUpdated';
-            });
-
         $listener = new PublishCompanyToErp();
         $listener->handle($event);
+
+        Queue::assertPushed(PublishCompanyToErpJob::class, function ($job) {
+            return $job->payload['event'] === 'CompanyUpdated'
+                && isset($job->payload['company'])
+                && isset($job->payload['timestamp']);
+        });
     }
 
     #[Test]
-    public function it_publishes_message_when_company_deleted(): void
+    public function it_dispatches_job_when_company_deleted(): void
     {
         $user = User::factory()->create(['erp_id' => 'user-erp-789']);
         $company = Company::factory()->create(['user_id' => $user->id]);
         $event = new CompanyDeleted($company);
 
-        Queue::shouldReceive('connection')
-            ->with('rabbitmq')
-            ->once()
-            ->andReturnSelf();
-        
-        Queue::shouldReceive('pushRaw')
-            ->once()
-            ->withArgs(function ($payload, $queue) {
-                $data = json_decode($payload, true);
-                return $queue === 'erp_companies' 
-                    && isset($data['event']) 
-                    && $data['event'] === 'CompanyDeleted';
-            });
-
         $listener = new PublishCompanyToErp();
         $listener->handle($event);
+
+        Queue::assertPushed(PublishCompanyToErpJob::class, function ($job) {
+            return $job->payload['event'] === 'CompanyDeleted'
+                && isset($job->payload['company'])
+                && isset($job->payload['timestamp']);
+        });
     }
 
     #[Test]
@@ -102,22 +85,13 @@ class PublishCompanyToErpTest extends TestCase
         
         $event = new CompanyCreated($company);
 
-        Queue::shouldReceive('connection')
-            ->with('rabbitmq')
-            ->once()
-            ->andReturnSelf();
-        
-        Queue::shouldReceive('pushRaw')
-            ->once()
-            ->withArgs(function ($payload, $queue) {
-                $data = json_decode($payload, true);
-                return $queue === 'erp_companies' 
-                    && isset($data['company']['bank_accounts'])
-                    && count($data['company']['bank_accounts']) === 1;
-            });
-
         $listener = new PublishCompanyToErp();
         $listener->handle($event);
+
+        Queue::assertPushed(PublishCompanyToErpJob::class, function ($job) {
+            return isset($job->payload['company']['bank_accounts'])
+                && count($job->payload['company']['bank_accounts']) === 1;
+        });
     }
 
     #[Test]
@@ -128,35 +102,23 @@ class PublishCompanyToErpTest extends TestCase
         
         $event = new CompanyCreated($company);
 
-        Queue::shouldReceive('connection')
-            ->with('rabbitmq')
-            ->once()
-            ->andReturnSelf();
-        
-        Queue::shouldReceive('pushRaw')
-            ->once()
-            ->withArgs(function ($payload, $queue) {
-                $data = json_decode($payload, true);
-                return $queue === 'erp_companies' 
-                    && isset($data['user']['erp_id'])
-                    && $data['user']['erp_id'] === 'test-erp-id-999';
-            });
-
         $listener = new PublishCompanyToErp();
         $listener->handle($event);
+
+        Queue::assertPushed(PublishCompanyToErpJob::class, function ($job) {
+            return isset($job->payload['user']['erp_id'])
+                && $job->payload['user']['erp_id'] === 'test-erp-id-999';
+        });
     }
 
     #[Test]
     public function it_does_nothing_when_event_has_no_company(): void
     {
-        Queue::shouldReceive('connection')->never();
-        Queue::shouldReceive('pushRaw')->never();
-
         $event = new \stdClass();
 
         $listener = new PublishCompanyToErp();
         $listener->handle($event);
-        
-        $this->assertTrue(true);
+
+        Queue::assertNothingPushed();
     }
 }

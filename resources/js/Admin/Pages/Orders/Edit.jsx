@@ -125,7 +125,7 @@ const Edit = ({ order, statuses, currencies }) => {
     };
 
     return (
-        <AdminLayout>
+        <>
             <Head title={`Редактировать заказ #${order.id}`} />
 
             <PageHeader
@@ -297,8 +297,10 @@ const Edit = ({ order, statuses, currencies }) => {
                     </Tabs.Content>
                 </Tabs.Root>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default Edit;

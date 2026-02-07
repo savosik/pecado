@@ -2,31 +2,32 @@ import { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, IconButton, Text } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { Box, HStack, Text } from '@chakra-ui/react';
+import { LuPlus } from 'react-icons/lu';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ balances, currencies, filters }) {
-    const [search, setSearch] = useState(filters.search || '');
-    const [deleteId, setDeleteId] = useState(null);
     const [currencyFilter, setCurrencyFilter] = useState(filters.currency_id || '');
 
-    const handleSearch = (value) => {
-        setSearch(value);
-        router.get(route('admin.user-balances.index'), {
-            search: value,
-            currency_id: currencyFilter
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        deleteDialogOpen,
+        entityToDelete,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.user-balances', filters, {
+        entityLabel: 'Баланс',
+    });
 
     const handleCurrencyFilter = (e) => {
         const value = e.target.value;
         setCurrencyFilter(value);
         router.get(route('admin.user-balances.index'), {
-            search,
+            search: searchQuery,
             currency_id: value
         }, {
             preserveState: true,
@@ -34,37 +35,17 @@ export default function Index({ balances, currencies, filters }) {
         });
     };
 
-    const handleDelete = () => {
-        if (deleteId) {
-            router.delete(route('admin.user-balances.destroy', deleteId), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Баланс успешно удалён',
-                        type: 'success',
-                    });
-                    setDeleteId(null);
-                },
-                onError: () => {
-                    toaster.create({
-                        title: 'Ошибка при удалении баланса',
-                        type: 'error',
-                    });
-                },
-            });
-        }
-    };
-
     const columns = [
         {
             key: 'id',
             label: 'ID',
             sortable: true,
-            render: (row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
+            render: (_, row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
         },
         {
             key: 'user',
             label: 'Пользователь',
-            render: (row) => (
+            render: (_, row) => (
                 <Link href={route('admin.users.edit', row.user.id)}>
                     <Text color="blue.600" _hover={{ textDecoration: 'underline' }}>
                         {row.user.name}
@@ -75,7 +56,7 @@ export default function Index({ balances, currencies, filters }) {
         {
             key: 'currency',
             label: 'Валюта',
-            render: (row) => (
+            render: (_, row) => (
                 <Box>
                     <Text fontWeight="semibold">{row.currency.code}</Text>
                     <Text fontSize="sm" color="gray.600">{row.currency.symbol}</Text>
@@ -86,7 +67,7 @@ export default function Index({ balances, currencies, filters }) {
             key: 'balance',
             label: 'Баланс',
             sortable: true,
-            render: (row) => (
+            render: (_, row) => (
                 <Box fontFamily="mono" fontWeight="medium">
                     {parseFloat(row.balance).toFixed(2)} {row.currency.symbol}
                 </Box>
@@ -95,7 +76,7 @@ export default function Index({ balances, currencies, filters }) {
         {
             key: 'overdue_debt',
             label: 'Просроченная задолженность',
-            render: (row) => row.overdue_debt ? (
+            render: (_, row) => row.overdue_debt ? (
                 <Box fontFamily="mono" color="red.600" fontWeight="medium">
                     {parseFloat(row.overdue_debt).toFixed(2)} {row.currency.symbol}
                 </Box>
@@ -103,47 +84,22 @@ export default function Index({ balances, currencies, filters }) {
                 <Text color="gray.500">—</Text>
             ),
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (row) => (
-                <HStack gap={2}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route('admin.user-balances.edit', row.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(row.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.user-balances', openDeleteDialog),
     ];
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title="Балансы пользователей"
-                action={{
-                    label: 'Создать баланс',
-                    icon: LuPlus,
-                    onClick: () => router.visit(route('admin.user-balances.create')),
-                }}
+                onCreate={() => router.visit(route('admin.user-balances.create'))}
+                createLabel="Создать баланс"
             />
 
             <Box mb={4}>
                 <HStack gap={4}>
                     <Box flex={1}>
                         <SearchInput
-                            value={search}
+                            value={searchQuery}
                             onChange={handleSearch}
                             placeholder="Поиск по имени или email пользователя..."
                         />
@@ -176,25 +132,18 @@ export default function Index({ balances, currencies, filters }) {
                 pagination={balances}
                 sortColumn={filters.sort_by}
                 sortDirection={filters.sort_order}
-                onSort={(column, direction) => {
-                    router.get(route('admin.user-balances.index'), {
-                        ...filters,
-                        sort_by: column,
-                        sort_order: direction,
-                    }, {
-                        preserveState: true,
-                        replace: true,
-                    });
-                }}
+                onSort={handleSort}
             />
 
             <ConfirmDialog
-                open={!!deleteId}
-                onClose={() => setDeleteId(null)}
-                onConfirm={handleDelete}
+                open={deleteDialogOpen}
+                onClose={closeDeleteDialog}
+                onConfirm={confirmDelete}
                 title="Удалить баланс?"
                 description="Вы уверены, что хотите удалить этот баланс? Это действие нельзя отменить."
             />
-        </AdminLayout>
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

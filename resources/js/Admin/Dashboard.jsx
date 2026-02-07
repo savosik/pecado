@@ -1,7 +1,7 @@
 import { Head, Link } from '@inertiajs/react';
 import { Box, Heading, SimpleGrid, Text, VStack, HStack, Icon, Table, Badge } from '@chakra-ui/react';
 import { LuShoppingCart, LuPackage, LuUsers, LuBanknote, LuClock, LuTrendingUp } from 'react-icons/lu';
-import { AdminLayout } from './Layouts/AdminLayout';
+import AdminLayout from './Layouts/AdminLayout';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 
@@ -56,7 +56,7 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
     };
 
     return (
-        <AdminLayout>
+        <>
             <Head title="Панель управления" />
 
             <VStack align="stretch" gap={8}>
@@ -123,7 +123,7 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                     <Box p={6}>
                         <ResponsiveContainer width="100%" height={300}>
                             <LineChart data={salesChartData}>
-                                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--chakra-colors-border-muted)" />
                                 <XAxis
                                     dataKey="date"
                                     style={{ fontSize: '12px' }}
@@ -139,9 +139,10 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                                 />
                                 <Tooltip
                                     contentStyle={{
-                                        backgroundColor: 'white',
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '8px'
+                                        backgroundColor: 'var(--chakra-colors-bg-panel)',
+                                        border: '1px solid var(--chakra-colors-border-muted)',
+                                        borderRadius: '8px',
+                                        color: 'var(--chakra-colors-fg-default)',
                                     }}
                                 />
                                 <Legend />
@@ -149,19 +150,19 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                                     yAxisId="left"
                                     type="monotone"
                                     dataKey="orders"
-                                    stroke="#3182ce"
+                                    stroke="var(--chakra-colors-blue-500)"
                                     strokeWidth={2}
                                     name="Заказы"
-                                    dot={{ fill: '#3182ce', r: 4 }}
+                                    dot={{ fill: 'var(--chakra-colors-blue-500)', r: 4 }}
                                 />
                                 <Line
                                     yAxisId="right"
                                     type="monotone"
                                     dataKey="revenue"
-                                    stroke="#38a169"
+                                    stroke="var(--chakra-colors-green-500)"
                                     strokeWidth={2}
                                     name="Выручка (₽)"
-                                    dot={{ fill: '#38a169', r: 4 }}
+                                    dot={{ fill: 'var(--chakra-colors-green-500)', r: 4 }}
                                 />
                             </LineChart>
                         </ResponsiveContainer>
@@ -199,7 +200,7 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                                                 <Link
                                                     href={route('admin.orders.edit', order.id)}
                                                     style={{
-                                                        color: '#3182ce',
+                                                        color: 'var(--chakra-colors-blue-500)',
                                                         textDecoration: 'underline',
                                                         fontWeight: 'medium'
                                                     }}
@@ -235,6 +236,8 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                     </Box>
                 </Box>
             </VStack>
-        </AdminLayout>
+        </>
     );
 }
+
+Dashboard.layout = (page) => <AdminLayout>{page}</AdminLayout>;

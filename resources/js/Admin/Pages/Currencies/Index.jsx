@@ -1,55 +1,36 @@
-import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, IconButton, Badge } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { Box, Badge } from '@chakra-ui/react';
+import { LuPlus } from 'react-icons/lu';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ currencies, filters }) {
-    const [search, setSearch] = useState(filters.search || '');
-    const [deleteId, setDeleteId] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearch(value);
-        router.get(route('admin.currencies.index'), { search: value }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleDelete = () => {
-        if (deleteId) {
-            router.delete(route('admin.currencies.destroy', deleteId), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Валюта успешно удалена',
-                        type: 'success',
-                    });
-                    setDeleteId(null);
-                },
-                onError: () => {
-                    toaster.create({
-                        title: 'Ошибка при удалении валюты',
-                        type: 'error',
-                    });
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        deleteDialogOpen,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.currencies', filters, {
+        entityLabel: 'Валюта',
+    });
 
     const columns = [
         {
             key: 'id',
             label: 'ID',
             sortable: true,
-            render: (row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
+            render: (_, row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
         },
         {
             key: 'code',
             label: 'Код',
             sortable: true,
-            render: (row) => <Box fontWeight="semibold">{row.code}</Box>,
+            render: (_, row) => <Box fontWeight="semibold">{row.code}</Box>,
         },
         {
             key: 'name',
@@ -59,12 +40,12 @@ export default function Index({ currencies, filters }) {
         {
             key: 'symbol',
             label: 'Символ',
-            render: (row) => <Box fontWeight="semibold" fontSize="lg">{row.symbol}</Box>,
+            render: (_, row) => <Box fontWeight="semibold" fontSize="lg">{row.symbol}</Box>,
         },
         {
             key: 'is_base',
             label: 'Базовая',
-            render: (row) => row.is_base ? (
+            render: (_, row) => row.is_base ? (
                 <Badge colorPalette="green">Да</Badge>
             ) : (
                 <Badge colorPalette="gray">Нет</Badge>
@@ -74,47 +55,22 @@ export default function Index({ currencies, filters }) {
             key: 'exchange_rate',
             label: 'Курс',
             sortable: true,
-            render: (row) => <Box fontFamily="mono">{row.exchange_rate}</Box>,
+            render: (_, row) => <Box fontFamily="mono">{row.exchange_rate}</Box>,
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (row) => (
-                <HStack gap={2}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route('admin.currencies.edit', row.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(row.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.currencies', openDeleteDialog),
     ];
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title="Валюты"
-                action={{
-                    label: 'Создать валюту',
-                    icon: LuPlus,
-                    onClick: () => router.visit(route('admin.currencies.create')),
-                }}
+                onCreate={() => router.visit(route('admin.currencies.create'))}
+                createLabel="Создать валюту"
             />
 
             <Box mb={4}>
                 <SearchInput
-                    value={search}
+                    value={searchQuery}
                     onChange={handleSearch}
                     placeholder="Поиск по коду, названию или символу..."
                 />
@@ -126,25 +82,18 @@ export default function Index({ currencies, filters }) {
                 pagination={currencies}
                 sortColumn={filters.sort_by}
                 sortDirection={filters.sort_order}
-                onSort={(column, direction) => {
-                    router.get(route('admin.currencies.index'), {
-                        ...filters,
-                        sort_by: column,
-                        sort_order: direction,
-                    }, {
-                        preserveState: true,
-                        replace: true,
-                    });
-                }}
+                onSort={handleSort}
             />
 
             <ConfirmDialog
-                open={!!deleteId}
-                onClose={() => setDeleteId(null)}
-                onConfirm={handleDelete}
+                open={deleteDialogOpen}
+                onClose={closeDeleteDialog}
+                onConfirm={confirmDelete}
                 title="Удалить валюту?"
                 description="Вы уверены, что хотите удалить эту валюту? Это действие нельзя отменить."
             />
-        </AdminLayout>
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

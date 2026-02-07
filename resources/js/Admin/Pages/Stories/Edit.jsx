@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader } from '@/Admin/Components';
-import { FormField } from '@/Admin/Components/FormField';
+import { PageHeader, FormField } from '@/Admin/Components';
 import { Card, Input, Button, HStack, Stack, Heading, Box } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { LuSave, LuX } from 'react-icons/lu';
@@ -36,7 +35,7 @@ export default function Edit({ story }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title={`Редактировать сторис: ${story.name}`}
                 description="Управление информацией и слайдами сториса"
@@ -115,6 +114,8 @@ export default function Edit({ story }) {
                     onSlidesChange={setSlides}
                 />
             </Stack>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

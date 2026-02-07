@@ -1,78 +1,27 @@
-import { useState } from 'react';
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
 import CategoryTree from './CategoryTree';
-import { Box, HStack, Badge, Image, Text, IconButton, Button, Group } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus, LuList, LuNetwork } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { Box, HStack, Badge, Image, Text, Button, Group } from '@chakra-ui/react';
+import { LuPlus, LuList, LuNetwork } from 'react-icons/lu';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ categories, filters }) {
-    const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [categoryToDelete, setCategoryToDelete] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearchQuery(value);
-        router.get(route('admin.categories.index'), {
-            search: value,
-            per_page: filters.per_page,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleSort = (field) => {
-        const newOrder = filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc';
-
-        router.get(route('admin.categories.index'), {
-            ...filters,
-            sort_by: field,
-            sort_order: newOrder,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handlePerPageChange = (perPage) => {
-        router.get(route('admin.categories.index'), {
-            ...filters,
-            per_page: perPage,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleDelete = (category) => {
-        setCategoryToDelete(category);
-        setDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (categoryToDelete) {
-            router.delete(route('admin.categories.destroy', categoryToDelete.id), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Категория удалена',
-                        description: 'Категория успешно удалена из системы',
-                        type: 'success',
-                    });
-                    setDeleteDialogOpen(false);
-                    setCategoryToDelete(null);
-                },
-                onError: () => {
-                    toaster.create({
-                        title: 'Ошибка',
-                        description: 'Не удалось удалить категорию',
-                        type: 'error',
-                    });
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        handlePerPageChange,
+        deleteDialogOpen,
+        entityToDelete,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+        navigate,
+    } = useResourceIndex('admin.categories', filters, {
+        entityLabel: 'Категория',
+    });
 
     const columns = [
         {
@@ -151,46 +100,17 @@ export default function Index({ categories, filters }) {
             sortable: true,
             render: (_, category) => new Date(category.created_at).toLocaleDateString('ru-RU'),
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (_, category) => (
-                <HStack gap={1}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Редактировать"
-                        onClick={() => router.visit(route('admin.categories.edit', category.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить"
-                        onClick={() => handleDelete(category)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.categories', openDeleteDialog),
     ];
 
     const viewMode = filters.view || 'list';
 
     const handleViewChange = (mode) => {
         if (mode === viewMode) return;
-
-        router.get(route('admin.categories.index'), {
+        navigate({
             ...filters,
             view: mode,
-            // Сбрасываем пагинацию при смене вида, но сохраняем поиск
             page: 1,
-        }, {
-            preserveState: true,
-            replace: true,
         });
     };
 
@@ -249,16 +169,16 @@ export default function Index({ categories, filters }) {
             ) : (
                 <CategoryTree
                     data={categories}
-                    onDelete={handleDelete}
+                    onDelete={openDeleteDialog}
                 />
             )}
 
             <ConfirmDialog
                 open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
+                onClose={closeDeleteDialog}
                 onConfirm={confirmDelete}
                 title="Удалить категорию?"
-                description={`Вы уверены, что хотите удалить категорию "${categoryToDelete?.name}"? Это действие нельзя отменить.`}
+                description={`Вы уверены, что хотите удалить категорию "${entityToDelete?.name}"? Это действие нельзя отменить.`}
             />
         </>
     );

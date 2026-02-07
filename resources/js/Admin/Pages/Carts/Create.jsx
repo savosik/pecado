@@ -17,7 +17,7 @@ import {
 import axios from "axios";
 import { Head, router, useForm } from "@inertiajs/react";
 import { LuArrowLeft, LuPackage, LuTrash2, LuMinus, LuPlus, LuSave } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { ProductSelector } from "@/Admin/Components/ProductSelector";
@@ -191,13 +191,7 @@ const CartCreate = ({ currencies = [] }) => {
     const totalQuantity = data.items.reduce((sum, item) => sum + item.quantity, 0);
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Корзины", href: route("admin.carts.index") },
-                { label: "Создание корзины" },
-            ]}
-        >
+        <>
             <Head title="Создание корзины" />
 
             <PageHeader
@@ -480,8 +474,10 @@ const CartCreate = ({ currencies = [] }) => {
                     </HStack>
                 </VStack>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+CartCreate.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default CartCreate;

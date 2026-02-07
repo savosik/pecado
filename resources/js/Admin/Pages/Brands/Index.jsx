@@ -1,79 +1,25 @@
-import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, Badge, Image, Text, IconButton, Button } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { Box, HStack, Badge, Image, Text, Button } from '@chakra-ui/react';
+import { LuPlus } from 'react-icons/lu';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ brands, filters }) {
-    const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [brandToDelete, setBrandToDelete] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearchQuery(value);
-        router.get(route('admin.brands.index'), {
-            search: value,
-            per_page: filters.per_page,
-            sort_by: filters.sort_by,
-            sort_order: filters.sort_order,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleSort = (field) => {
-        const newOrder = filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc';
-
-        router.get(route('admin.brands.index'), {
-            ...filters,
-            sort_by: field,
-            sort_order: newOrder,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handlePerPageChange = (perPage) => {
-        router.get(route('admin.brands.index'), {
-            ...filters,
-            per_page: perPage,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleDelete = (brand) => {
-        setBrandToDelete(brand);
-        setDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (brandToDelete) {
-            router.delete(route('admin.brands.destroy', brandToDelete.id), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Бренд удален',
-                        description: 'Бренд успешно удален из системы',
-                        type: 'success',
-                    });
-                    setDeleteDialogOpen(false);
-                    setBrandToDelete(null);
-                },
-                onError: () => {
-                    toaster.create({
-                        title: 'Ошибка',
-                        description: 'Не удалось удалить бренд',
-                        type: 'error',
-                    });
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        handlePerPageChange,
+        deleteDialogOpen,
+        entityToDelete,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.brands', filters, {
+        entityLabel: 'Бренд',
+    });
 
     const columns = [
         {
@@ -152,76 +98,52 @@ export default function Index({ brands, filters }) {
             sortable: true,
             render: (_, brand) => new Date(brand.created_at).toLocaleDateString('ru-RU'),
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (_, brand) => (
-                <HStack gap={1}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Редактировать"
-                        onClick={() => router.visit(route('admin.brands.edit', brand.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить"
-                        onClick={() => handleDelete(brand)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.brands', openDeleteDialog),
     ];
 
     return (
-        <AdminLayout>
-            <Box p={6}>
-                <PageHeader
-                    title="Бренды"
-                    description="Управление брендами и производителями"
-                    actions={
-                        <Button
-                            colorPalette="blue"
-                            onClick={() => router.visit(route('admin.brands.create'))}
-                        >
-                            <LuPlus /> Создать бренд
-                        </Button>
-                    }
-                />
+        <>
+            <PageHeader
+                title="Бренды"
+                description="Управление брендами и производителями"
+                actions={
+                    <Button
+                        colorPalette="blue"
+                        onClick={() => router.visit(route('admin.brands.create'))}
+                    >
+                        <LuPlus /> Создать бренд
+                    </Button>
+                }
+            />
 
-                <Box mb={4}>
-                    <SearchInput
-                        value={searchQuery}
-                        onChange={handleSearch}
-                        placeholder="Поиск по названию..."
-                    />
-                </Box>
-
-                <DataTable
-                    data={brands.data}
-                    columns={columns}
-                    pagination={brands}
-                    onSort={handleSort}
-                    sortColumn={filters.sort_by}
-                    sortDirection={filters.sort_order}
-                    perPage={filters.per_page}
-                    onPerPageChange={handlePerPageChange}
-                />
-
-                <ConfirmDialog
-                    open={deleteDialogOpen}
-                    onClose={() => setDeleteDialogOpen(false)}
-                    onConfirm={confirmDelete}
-                    title="Удалить бренд?"
-                    description={`Вы уверены, что хотите удалить бренд "${brandToDelete?.name}"? Это действие нельзя отменить.`}
+            <Box mb={4}>
+                <SearchInput
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    placeholder="Поиск по названию..."
                 />
             </Box>
-        </AdminLayout>
+
+            <DataTable
+                data={brands.data}
+                columns={columns}
+                pagination={brands}
+                onSort={handleSort}
+                sortColumn={filters.sort_by}
+                sortDirection={filters.sort_order}
+                perPage={filters.per_page}
+                onPerPageChange={handlePerPageChange}
+            />
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onClose={closeDeleteDialog}
+                onConfirm={confirmDelete}
+                title="Удалить бренд?"
+                description={`Вы уверены, что хотите удалить бренд "${entityToDelete?.name}"? Это действие нельзя отменить.`}
+            />
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

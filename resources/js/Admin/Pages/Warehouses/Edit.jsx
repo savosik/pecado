@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Button, Input, Stack, Card } from "@chakra-ui/react";
 import { Head, useForm, Link } from "@inertiajs/react";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { FormActions } from "@/Admin/Components/FormActions";
@@ -26,13 +26,7 @@ const WarehousesEdit = ({ warehouse }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Склады", href: route("admin.warehouses.index") },
-                { label: "Редактирование" },
-            ]}
-        >
+        <>
             <Head title={`Редактирование склада: ${warehouse.name}`} />
 
             <PageHeader
@@ -69,8 +63,10 @@ const WarehousesEdit = ({ warehouse }) => {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 };
+
+WarehousesEdit.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default WarehousesEdit;

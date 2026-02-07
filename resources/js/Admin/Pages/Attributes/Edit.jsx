@@ -154,14 +154,7 @@ export default function Edit({ attribute, types }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Атрибуты', href: route('admin.attributes.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактировать атрибут: ${attribute.name}`}
                     description="Изменение характеристик и значений"
@@ -281,7 +274,8 @@ export default function Edit({ attribute, types }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

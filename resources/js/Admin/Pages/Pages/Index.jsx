@@ -1,51 +1,23 @@
-import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable, PageHeader, SearchInput, ConfirmDialog } from '@/Admin/Components';
 import { Button, HStack, Text } from '@chakra-ui/react';
 import { LuPencil, LuTrash2 } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
 export default function Index({ pages, filters }) {
-    const [search, setSearch] = useState(filters.search || '');
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [pageToDelete, setPageToDelete] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearch(value);
-        router.get(route('admin.pages.index'),
-            { ...filters, search: value, page: 1 },
-            { preserveState: true, preserveScroll: true }
-        );
-    };
-
-    const handleSort = (column) => {
-        const newSortOrder = filters.sort_by === column && filters.sort_order === 'asc' ? 'desc' : 'asc';
-        router.get(route('admin.pages.index'),
-            { ...filters, sort_by: column, sort_order: newSortOrder },
-            { preserveState: true, preserveScroll: true }
-        );
-    };
-
-    const handleDelete = (page) => {
-        setPageToDelete(page);
-        setDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (pageToDelete) {
-            router.delete(route('admin.pages.destroy', pageToDelete.id), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Страница успешно удалена',
-                        type: 'success',
-                    });
-                    setDeleteDialogOpen(false);
-                    setPageToDelete(null);
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        deleteDialogOpen,
+        entityToDelete,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.pages', filters, {
+        entityLabel: 'Страница',
+    });
 
     const columns = [
         {
@@ -58,25 +30,25 @@ export default function Index({ pages, filters }) {
             key: 'title',
             label: 'Заголовок',
             sortable: true,
-            render: (row) => <Text fontWeight="semibold">{row.title}</Text>,
+            render: (_, row) => <Text fontWeight="semibold">{row.title}</Text>,
         },
         {
             key: 'slug',
             label: 'Slug',
             sortable: true,
-            render: (row) => <Text fontFamily="mono" fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>{row.slug}</Text>,
+            render: (_, row) => <Text fontFamily="mono" fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>{row.slug}</Text>,
         },
         {
             key: 'created_at',
             label: 'Дата создания',
             sortable: true,
-            render: (row) => new Date(row.created_at).toLocaleDateString('ru-RU'),
+            render: (_, row) => new Date(row.created_at).toLocaleDateString('ru-RU'),
         },
         {
             key: 'actions',
             label: 'Действия',
             width: '150px',
-            render: (row) => (
+            render: (_, row) => (
                 <HStack gap={2}>
                     <Button
                         size="sm"
@@ -90,7 +62,7 @@ export default function Index({ pages, filters }) {
                         size="sm"
                         colorPalette="red"
                         variant="outline"
-                        onClick={() => handleDelete(row)}
+                        onClick={() => openDeleteDialog(row)}
                     >
                         <LuTrash2 />
                     </Button>
@@ -100,17 +72,15 @@ export default function Index({ pages, filters }) {
     ];
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title="Страницы"
-                action={{
-                    label: 'Создать страницу',
-                    onClick: () => router.visit(route('admin.pages.create')),
-                }}
+                onCreate={() => router.visit(route('admin.pages.create'))}
+                createLabel="Создать страницу"
             />
 
             <SearchInput
-                value={search}
+                value={searchQuery}
                 onChange={handleSearch}
                 placeholder="Поиск по заголовку, slug, содержимому..."
             />
@@ -126,11 +96,13 @@ export default function Index({ pages, filters }) {
 
             <ConfirmDialog
                 open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
+                onClose={closeDeleteDialog}
                 onConfirm={confirmDelete}
                 title="Удалить страницу?"
-                description={`Вы уверены, что хотите удалить страницу "${pageToDelete?.title}"? Это действие нельзя отменить.`}
+                description={`Вы уверены, что хотите удалить страницу "${entityToDelete?.title}"? Это действие нельзя отменить.`}
             />
-        </AdminLayout>
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

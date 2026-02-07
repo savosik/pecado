@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Button, Input, Stack, Card } from "@chakra-ui/react";
 import { Head, useForm, Link } from "@inertiajs/react";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { FormActions } from "@/Admin/Components/FormActions";
@@ -28,13 +28,7 @@ const RegionsEdit = ({ region, warehouses }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Регионы", href: route("admin.regions.index") },
-                { label: "Редактирование" },
-            ]}
-        >
+        <>
             <Head title={`Редактирование региона: ${region.name}`} />
 
             <PageHeader
@@ -83,8 +77,10 @@ const RegionsEdit = ({ region, warehouses }) => {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 };
+
+RegionsEdit.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default RegionsEdit;

@@ -53,14 +53,7 @@ export default function Edit({ certificate }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Сертификаты', href: route('admin.certificates.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Редактировать сертификат" description="Изменение данных сертификата" />
 
                 <form onSubmit={handleSubmit}>
@@ -150,7 +143,8 @@ export default function Edit({ certificate }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -95,13 +95,7 @@ const ReturnsCreate = ({ statuses, reasons }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Возвраты", href: route("admin.returns.index") },
-                { label: "Создание возврата" },
-            ]}
-        >
+        <>
             <Head title="Создание возврата" />
 
             <PageHeader
@@ -232,8 +226,10 @@ const ReturnsCreate = ({ statuses, reasons }) => {
                     </Tabs.Content>
                 </Tabs.Root>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+ReturnsCreate.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default ReturnsCreate;

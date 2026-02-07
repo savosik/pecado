@@ -39,14 +39,7 @@ export default function Create({ regions, currencies, countries }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Пользователи', href: route('admin.users.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать пользователя" description="Добавление нового пользователя в систему" />
 
                 <form onSubmit={handleSubmit}>
@@ -225,7 +218,8 @@ export default function Create({ regions, currencies, countries }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { Head, router, useForm } from "@inertiajs/react";
 import { LuArrowLeft, LuSave } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { ProductSelector } from "@/Admin/Components/ProductSelector";
@@ -78,13 +78,7 @@ const FavoriteCreate = () => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Избранное", href: route("admin.favorites.index") },
-                { label: "Добавление в избранное" },
-            ]}
-        >
+        <>
             <Head title="Добавление в избранное" />
 
             <PageHeader
@@ -168,8 +162,10 @@ const FavoriteCreate = () => {
                     </HStack>
                 </VStack>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+FavoriteCreate.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default FavoriteCreate;

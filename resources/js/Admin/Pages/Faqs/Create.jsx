@@ -30,7 +30,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title="Создать FAQ" />
 
             <Card.Root>
@@ -61,6 +61,8 @@ export default function Create() {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

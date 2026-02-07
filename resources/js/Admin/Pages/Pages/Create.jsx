@@ -1,7 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, FileUploader } from '@/Admin/Components';
-import { MarkdownEditor } from '@/Admin/Components/Editor/MarkdownEditor';
+import { PageHeader, FormField, FormActions, FileUploader, MarkdownEditor } from '@/Admin/Components';
 import { Card, Input, Stack, SimpleGrid, Textarea } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 import { useState } from 'react';
@@ -58,7 +57,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title="Создать страницу" />
 
             <Card.Root>
@@ -128,6 +127,8 @@ export default function Create() {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

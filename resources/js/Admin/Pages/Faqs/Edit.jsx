@@ -30,7 +30,7 @@ export default function Edit({ faq }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title={`Редактировать FAQ: ${faq.title}`} />
 
             <Card.Root>
@@ -61,6 +61,8 @@ export default function Edit({ faq }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

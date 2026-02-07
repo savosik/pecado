@@ -96,7 +96,7 @@ export default function Index({ media, filters, collections, modelTypes }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title="Медиафайлы"
                 description={`Всего: ${media.total} файлов`}
@@ -280,6 +280,8 @@ export default function Index({ media, filters, collections, modelTypes }) {
                 title="Удалить медиафайл?"
                 description={`Вы уверены, что хотите удалить файл "${mediaToDelete?.file_name}"? Это действие нельзя отменить.`}
             />
-        </AdminLayout>
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Helpers\SearchHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -214,15 +215,21 @@ class Product extends Model implements HasMedia
      */
     public function toSearchableArray(): array
     {
+        $name = $this->name ?? '';
+
         return [
             'id' => (int) $this->id,
-            'name' => $this->name,
+            'name' => $name,
+            'name_translit' => SearchHelper::transliterate($name),
+            'name_cyrillic' => SearchHelper::transliterateToCyrillic($name),
+            'name_layout' => SearchHelper::convertLayout($name),
+            'brand' => $this->brand?->name,
+            'category' => $this->categories->first()?->name,
+            'description' => $this->description,
             'sku' => $this->sku,
             'code' => $this->code,
-            'description' => $this->description,
             'barcodes' => $this->barcodes->pluck('barcode')->toArray(),
-            'brand' => $this->brand ? $this->brand->name : null,
-            'categories' => $this->categories->pluck('name')->toArray(),
+            'base_price' => (float) $this->base_price,
         ];
     }
 }

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { HStack, IconButton, Badge, Button, Input, Box, VStack } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuEye, LuTrash2, LuPlus, LuPencil, LuFilter, LuX } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
@@ -224,12 +224,7 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Заказы" },
-            ]}
-        >
+        <>
             <Head title="Заказы" />
 
             <PageHeader
@@ -391,8 +386,10 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
                 title="Удаление заказа"
                 description="Вы уверены, что хотите удалить этот заказ? Это действие нельзя отменить."
             />
-        </AdminLayout>
+        </>
     );
 };
+
+OrdersIndex.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default OrdersIndex;

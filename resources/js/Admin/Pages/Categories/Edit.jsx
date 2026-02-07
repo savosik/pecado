@@ -71,8 +71,7 @@ export default function Edit({ category, categories }) {
     };
 
     return (
-        <AdminLayout>
-            <Box p={6}>
+        <>
                 <PageHeader
                     title="Редактировать категорию"
                     description={`Редактирование: ${category.name}`}
@@ -270,7 +269,8 @@ export default function Edit({ category, categories }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

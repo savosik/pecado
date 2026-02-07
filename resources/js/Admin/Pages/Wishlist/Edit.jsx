@@ -9,7 +9,7 @@ import {
 } from "@chakra-ui/react";
 import { Head, router, useForm } from "@inertiajs/react";
 import { LuArrowLeft, LuSave } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { ProductSelector } from "@/Admin/Components/ProductSelector";
@@ -78,13 +78,7 @@ const WishlistEdit = ({ wishlistItem }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Список желаний", href: route("admin.wishlist.index") },
-                { label: `Редактирование #${wishlistItem.id}` },
-            ]}
-        >
+        <>
             <Head title={`Редактирование списка желаний #${wishlistItem.id}`} />
 
             <PageHeader
@@ -168,8 +162,10 @@ const WishlistEdit = ({ wishlistItem }) => {
                     </HStack>
                 </VStack>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+WishlistEdit.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default WishlistEdit;

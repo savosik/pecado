@@ -61,7 +61,7 @@ services:
       MYSQL_USER: pecado
       MYSQL_PASSWORD: secret
     ports:
-      - "3307:3306"
+      - "3308:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     networks:
@@ -99,7 +99,7 @@ services:
     container_name: pecado-redis
     restart: unless-stopped
     ports:
-      - "6380:6379"
+      - "6381:6379"
     volumes:
       - redis-data:/data
     networks:

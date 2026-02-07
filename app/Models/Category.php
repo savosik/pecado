@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Helpers\SearchHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Kalnoy\Nestedset\NodeTrait;
+use Laravel\Scout\Searchable;
 use Spatie\Tags\HasTags;
 
 use Spatie\MediaLibrary\HasMedia;
@@ -16,6 +18,9 @@ class Category extends Model implements HasMedia
     use HasTags;
     use NodeTrait;
     use InteractsWithMedia;
+    use Searchable {
+        Searchable::usesSoftDelete insteadof NodeTrait;
+    }
 
     protected $fillable = [
         'name',
@@ -42,5 +47,23 @@ class Category extends Model implements HasMedia
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'
             ])
             ->singleFile();
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        $name = $this->name ?? '';
+
+        return [
+            'id' => (int) $this->id,
+            'name' => $name,
+            'name_translit' => SearchHelper::transliterate($name),
+            'name_cyrillic' => SearchHelper::transliterateToCyrillic($name),
+            'name_layout' => SearchHelper::convertLayout($name),
+        ];
     }
 }

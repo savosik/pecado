@@ -95,7 +95,7 @@ export default function Index({ settings }) {
     ];
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title="Настройки" />
 
             <Card.Root>
@@ -129,6 +129,8 @@ export default function Index({ settings }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

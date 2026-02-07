@@ -53,14 +53,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Акции', href: route('admin.promotions.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать акцию" description="Добавление новой рекламной акции" />
 
                 <form onSubmit={handleSubmit}>
@@ -141,7 +134,8 @@ export default function Create() {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -114,14 +114,7 @@ export default function Edit({ promotion }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Акции', href: route('admin.promotions.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${promotion.name}`}
                     description="Изменение информации об акции"
@@ -207,7 +200,8 @@ export default function Edit({ promotion }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

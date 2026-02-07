@@ -1,77 +1,25 @@
-import { useState } from 'react';
-import { router, usePage } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, Badge, Image, Text, IconButton, Button } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { Box, HStack, Badge, Image, Text, Button } from '@chakra-ui/react';
+import { LuPlus } from 'react-icons/lu';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ products, filters }) {
-    const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [productToDelete, setProductToDelete] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearchQuery(value);
-        router.get(route('admin.products.index'), {
-            search: value,
-            per_page: filters.per_page,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleSort = (field) => {
-        const newOrder = filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc';
-
-        router.get(route('admin.products.index'), {
-            ...filters,
-            sort_by: field,
-            sort_order: newOrder,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handlePerPageChange = (perPage) => {
-        router.get(route('admin.products.index'), {
-            ...filters,
-            per_page: perPage,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleDelete = (product) => {
-        setProductToDelete(product);
-        setDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (productToDelete) {
-            router.delete(route('admin.products.destroy', productToDelete.id), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Товар удалён',
-                        description: 'Товар успешно удалён из системы',
-                        type: 'success',
-                    });
-                    setDeleteDialogOpen(false);
-                    setProductToDelete(null);
-                },
-                onError: () => {
-                    toaster.create({
-                        title: 'Ошибка',
-                        description: 'Не удалось удалить товар',
-                        type: 'error',
-                    });
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        handlePerPageChange,
+        deleteDialogOpen,
+        entityToDelete,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.products', filters, {
+        entityLabel: 'Товар',
+    });
 
     const columns = [
         {
@@ -174,31 +122,7 @@ export default function Index({ products, filters }) {
             sortable: true,
             render: (_, product) => new Date(product.created_at).toLocaleDateString('ru-RU'),
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (_, product) => (
-                <HStack gap={1}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Редактировать"
-                        onClick={() => router.visit(route('admin.products.edit', product.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить"
-                        onClick={() => handleDelete(product)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.products', openDeleteDialog),
     ];
 
     return (
@@ -236,10 +160,10 @@ export default function Index({ products, filters }) {
 
             <ConfirmDialog
                 open={deleteDialogOpen}
-                onClose={() => setDeleteDialogOpen(false)}
+                onClose={closeDeleteDialog}
                 onConfirm={confirmDelete}
                 title="Удалить товар?"
-                description={`Вы уверены, что хотите удалить товар "${productToDelete?.name}"? Это действие нельзя отменить.`}
+                description={`Вы уверены, что хотите удалить товар "${entityToDelete?.name}"? Это действие нельзя отменить.`}
             />
         </>
     );

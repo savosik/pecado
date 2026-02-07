@@ -3,7 +3,7 @@ import { HStack, IconButton, Badge, Button, Input, Box, VStack } from "@chakra-u
 import { Checkbox } from "@/components/ui/checkbox";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuEye, LuTrash2, LuPlus, LuPencil, LuFilter, LuX } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
@@ -223,12 +223,7 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Возвраты" },
-            ]}
-        >
+        <>
             <Head title="Возвраты" />
 
             <PageHeader
@@ -390,8 +385,10 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                 title="Удаление возврата"
                 description="Вы уверены, что хотите удалить этот возврат? Это действие нельзя отменить."
             />
-        </AdminLayout>
+        </>
     );
 };
+
+ReturnsIndex.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default ReturnsIndex;

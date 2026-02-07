@@ -1,5 +1,5 @@
 import { useForm } from '@inertiajs/react';
-import { AdminLayout } from '@/Admin/Layouts/AdminLayout';
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Components';
 import {
     Box, Card, Input, Stack, SimpleGrid, Button,
@@ -101,14 +101,7 @@ export default function Create({ brands }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Размерные сетки', href: route('admin.size-charts.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать размерную сетку" description="Настройка таблицы размеров и привязка к брендам" />
 
                 <form onSubmit={handleSubmit}>
@@ -239,7 +232,8 @@ export default function Create({ brands }) {
                         </Card.Root>
                     </Stack>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -14,7 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuArrowLeft, LuPencil, LuSave } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { toaster } from "@/components/ui/toaster";
 
@@ -75,13 +75,7 @@ const ReturnShow = () => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Возвраты", href: route("admin.returns.index") },
-                { label: `Возврат #${returnData.id}` },
-            ]}
-        >
+        <>
             <Head title={`Возврат #${returnData.id}`} />
 
             <PageHeader
@@ -297,8 +291,10 @@ const ReturnShow = () => {
                     </Table.Root>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 };
+
+ReturnShow.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default ReturnShow;

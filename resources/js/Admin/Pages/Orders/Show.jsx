@@ -13,7 +13,7 @@ import {
 } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuArrowLeft, LuPencil } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
@@ -48,13 +48,7 @@ const OrderShow = () => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Заказы", href: route("admin.orders.index") },
-                { label: `Заказ #${order.id}` },
-            ]}
-        >
+        <>
             <Head title={`Заказ #${order.id}`} />
 
             <PageHeader
@@ -225,8 +219,10 @@ const OrderShow = () => {
             <Box mt={6}>
                 <StatusHistoryTimeline histories={order.status_histories || []} />
             </Box>
-        </AdminLayout>
+        </>
     );
 };
+
+OrderShow.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default OrderShow;

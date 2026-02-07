@@ -40,8 +40,7 @@ export default function Edit({ productModel }) {
     };
 
     return (
-        <AdminLayout>
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${productModel.name}`}
                     description="Изменение информации о модели"
@@ -111,7 +110,8 @@ export default function Edit({ productModel }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

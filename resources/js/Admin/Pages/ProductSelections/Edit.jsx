@@ -104,14 +104,7 @@ export default function Edit({ productSelection }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Подборки товаров', href: route('admin.product-selections.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${productSelection.name}`}
                     description="Изменение информации о подборке товаров"
@@ -198,7 +191,8 @@ export default function Edit({ productSelection }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

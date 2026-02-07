@@ -25,14 +25,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Адреса доставки', href: route('admin.delivery-addresses.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать адрес доставки" description="Добавление нового адреса доставки" />
 
                 <form onSubmit={handleSubmit}>
@@ -77,7 +70,8 @@ export default function Create() {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -2,18 +2,10 @@
 
 namespace App\Listeners;
 
-use Illuminate\Support\Facades\Queue;
+use App\Jobs\PublishCompanyToErpJob;
 
 class PublishCompanyToErp
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
-
     /**
      * Handle the event.
      */
@@ -36,9 +28,6 @@ class PublishCompanyToErp
             ],
         ];
 
-        Queue::connection('rabbitmq')->pushRaw(
-            json_encode($payload),
-            'erp_companies'
-        );
+        PublishCompanyToErpJob::dispatch($payload);
     }
 }

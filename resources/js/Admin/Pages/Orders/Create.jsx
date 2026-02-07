@@ -114,7 +114,7 @@ const Create = ({ statuses, currencies }) => {
     };
 
     return (
-        <AdminLayout>
+        <>
             <Head title="Создать заказ" />
 
             <PageHeader
@@ -280,8 +280,10 @@ const Create = ({ statuses, currencies }) => {
                     </Tabs.Content>
                 </Tabs.Root>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default Create;

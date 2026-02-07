@@ -48,8 +48,7 @@ export default function Create({ categories }) {
     };
 
     return (
-        <AdminLayout>
-            <Box p={6}>
+        <>
                 <PageHeader
                     title="Создать категорию"
                     description="Добавление новой категории в каталог"
@@ -245,7 +244,8 @@ export default function Create({ categories }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

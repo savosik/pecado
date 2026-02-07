@@ -53,14 +53,7 @@ export default function Edit({ discount }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Скидки', href: route('admin.discounts.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${discount.name || `Скидка ${discount.percentage}%`}`}
                     description="Изменение информации о скидке"
@@ -190,7 +183,8 @@ export default function Edit({ discount }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

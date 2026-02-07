@@ -39,8 +39,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout>
-            <Box p={6}>
+        <>
                 <PageHeader
                     title="Создать модель"
                     description="Добавление новой модели товара"
@@ -110,7 +109,8 @@ export default function Create() {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

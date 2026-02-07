@@ -72,8 +72,7 @@ export default function Edit({ brand, brands, categories }) {
     };
 
     return (
-        <AdminLayout>
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${brand.name}`}
                     description="Изменение информации о бренде"
@@ -285,7 +284,8 @@ export default function Edit({ brand, brands, categories }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

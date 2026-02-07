@@ -3,6 +3,19 @@ import { Box, HStack, IconButton, Text, Breadcrumb, Menu } from "@chakra-ui/reac
 import { usePage, router } from "@inertiajs/react";
 import { LuMenu, LuUser, LuLogOut } from "react-icons/lu";
 import { ColorModeButton } from "@/components/ui/color-mode";
+import { menuConfig } from "../config/menuConfig";
+
+// Build label map from menuConfig: path segment -> Russian label
+const labelMap = {};
+menuConfig.forEach((group) => {
+    group.items.forEach((item) => {
+        // Extract the segment after /admin/ (e.g. "product-barcodes" from "/admin/product-barcodes")
+        const segment = item.path.replace('/admin/', '').replace('/admin', '');
+        if (segment) {
+            labelMap[segment] = item.label;
+        }
+    });
+});
 
 export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
     const { auth } = usePage().props;
@@ -25,24 +38,24 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
         const crumbs = [{ label: 'Главная', href: '/admin' }];
 
         if (parts.length > 1) {
-            // Simple label mapping for common routes
-            const labelMap = {
-                'products': 'Товары',
-                'categories': 'Категории',
-                'brands': 'Бренды',
-                'users': 'Пользователи',
-                'orders': 'Заказы',
-                'articles': 'Статьи',
-                'news': 'Новости',
-                'faqs': 'FAQ',
-                'settings': 'Настройки',
-                'product-models': 'Модели товаров',
-            };
-
             crumbs.push({
                 label: labelMap[parts[1]] || parts[1],
                 href: `/${parts.slice(0, 2).join('/')}`,
             });
+        }
+
+        // Add action breadcrumb for create/edit pages
+        if (parts.length > 2) {
+            const actionMap = {
+                'create': 'Создание',
+                'edit': 'Редактирование',
+            };
+            if (actionMap[parts[parts.length - 1]]) {
+                crumbs.push({
+                    label: actionMap[parts[parts.length - 1]],
+                    href: cleanUrl,
+                });
+            }
         }
 
         return crumbs;

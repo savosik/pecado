@@ -17,7 +17,7 @@ import {
 import axios from "axios";
 import { Head, usePage, router, useForm } from "@inertiajs/react";
 import { LuArrowLeft, LuPackage, LuTrash2, LuMinus, LuPlus, LuSave } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { ProductSelector } from "@/Admin/Components/ProductSelector";
@@ -191,13 +191,7 @@ const CartEdit = ({ currencies = [] }) => {
     const totalQuantity = data.items.reduce((sum, item) => sum + item.quantity, 0);
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Корзины", href: route("admin.carts.index") },
-                { label: `Редактирование корзины #${cart.id}` },
-            ]}
-        >
+        <>
             <Head title={`Редактирование корзины #${cart.id}`} />
 
             <PageHeader
@@ -488,8 +482,10 @@ const CartEdit = ({ currencies = [] }) => {
                     </HStack>
                 </VStack>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+CartEdit.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default CartEdit;

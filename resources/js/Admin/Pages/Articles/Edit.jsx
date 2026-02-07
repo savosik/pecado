@@ -37,7 +37,7 @@ export default function Edit({ article }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title={`Редактировать статью: ${article.title}`} />
 
             <Card.Root>
@@ -127,6 +127,8 @@ export default function Edit({ article }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

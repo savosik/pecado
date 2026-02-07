@@ -1,55 +1,36 @@
-import { useState } from 'react';
-import { router, Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, IconButton, Badge, Text } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { Box, HStack, Badge, Text } from '@chakra-ui/react';
+import { LuPlus } from 'react-icons/lu';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ articles, filters }) {
-    const [search, setSearch] = useState(filters.search || '');
-    const [deleteId, setDeleteId] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearch(value);
-        router.get(route('admin.articles.index'), { search: value }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleDelete = () => {
-        if (deleteId) {
-            router.delete(route('admin.articles.destroy', deleteId), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Статья успешно удалена',
-                        type: 'success',
-                    });
-                    setDeleteId(null);
-                },
-                onError: () => {
-                    toaster.create({
-                        title: 'Ошибка при удалении статьи',
-                        type: 'error',
-                    });
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        deleteDialogOpen,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.articles', filters, {
+        entityLabel: 'Статья',
+    });
 
     const columns = [
         {
             key: 'id',
             label: 'ID',
             sortable: true,
-            render: (row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
+            render: (_, row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
         },
         {
             key: 'title',
             label: 'Заголовок',
             sortable: true,
-            render: (row) => (
+            render: (_, row) => (
                 <Box>
                     <Text fontWeight="semibold">{row.title}</Text>
                     <Text fontSize="sm" color="gray.600">{row.slug}</Text>
@@ -59,7 +40,7 @@ export default function Index({ articles, filters }) {
         {
             key: 'tags',
             label: 'Теги',
-            render: (row) => (
+            render: (_, row) => (
                 <HStack gap={1} flexWrap="wrap">
                     {row.tag_list && row.tag_list.length > 0 ? (
                         row.tag_list.map((tag, index) => (
@@ -77,47 +58,22 @@ export default function Index({ articles, filters }) {
             key: 'tags_count',
             label: 'Кол-во тегов',
             sortable: true,
-            render: (row) => <Text fontSize="sm">{row.tags_count || 0}</Text>,
+            render: (_, row) => <Text fontSize="sm">{row.tags_count || 0}</Text>,
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (row) => (
-                <HStack gap={2}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route('admin.articles.edit', row.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => setDeleteId(row.id)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.articles', openDeleteDialog),
     ];
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title="Статьи"
-                action={{
-                    label: 'Создать статью',
-                    icon: LuPlus,
-                    onClick: () => router.visit(route('admin.articles.create')),
-                }}
+                onCreate={() => router.visit(route('admin.articles.create'))}
+                createLabel="Создать статью"
             />
 
             <Box mb={4}>
                 <SearchInput
-                    value={search}
+                    value={searchQuery}
                     onChange={handleSearch}
                     placeholder="Поиск по заголовку, описанию..."
                 />
@@ -129,25 +85,18 @@ export default function Index({ articles, filters }) {
                 pagination={articles}
                 sortColumn={filters.sort_by}
                 sortDirection={filters.sort_order}
-                onSort={(column, direction) => {
-                    router.get(route('admin.articles.index'), {
-                        ...filters,
-                        sort_by: column,
-                        sort_order: direction,
-                    }, {
-                        preserveState: true,
-                        replace: true,
-                    });
-                }}
+                onSort={handleSort}
             />
 
             <ConfirmDialog
-                open={!!deleteId}
-                onClose={() => setDeleteId(null)}
-                onConfirm={handleDelete}
+                open={deleteDialogOpen}
+                onClose={closeDeleteDialog}
+                onConfirm={confirmDelete}
                 title="Удалить статью?"
                 description="Вы уверены, что хотите удалить эту статью? Это действие нельзя отменить."
             />
-        </AdminLayout>
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -36,14 +36,7 @@ export default function Create({ countries }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Компании', href: route('admin.companies.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать компанию" description="Добавление новой компании" />
 
                 <form onSubmit={handleSubmit}>
@@ -185,7 +178,8 @@ export default function Create({ countries }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

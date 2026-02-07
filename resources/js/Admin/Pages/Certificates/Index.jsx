@@ -1,70 +1,25 @@
-import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, Text, IconButton, Button, Link } from '@chakra-ui/react';
-import { LuPencil, LuTrash2, LuPlus, LuDownload, LuFile } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { Box, HStack, Text, IconButton, Button } from '@chakra-ui/react';
+import { LuPlus, LuFile } from 'react-icons/lu';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ certificates, filters }) {
-    const [searchQuery, setSearchQuery] = useState(filters.search || '');
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [itemToDelete, setItemToDelete] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearchQuery(value);
-        router.get(route('admin.certificates.index'), {
-            search: value,
-            per_page: filters.per_page,
-            sort_by: filters.sort_by,
-            sort_order: filters.sort_order,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleSort = (field) => {
-        const newOrder = filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc';
-        router.get(route('admin.certificates.index'), {
-            ...filters,
-            sort_by: field,
-            sort_order: newOrder,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handlePerPageChange = (perPage) => {
-        router.get(route('admin.certificates.index'), {
-            ...filters,
-            per_page: perPage,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleDelete = (item) => {
-        setItemToDelete(item);
-        setDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (itemToDelete) {
-            router.delete(route('admin.certificates.destroy', itemToDelete.id), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Удалено',
-                        description: 'Сертификат успешно удален',
-                        type: 'success',
-                    });
-                    setDeleteDialogOpen(false);
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        handlePerPageChange,
+        deleteDialogOpen,
+        entityToDelete,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.certificates', filters, {
+        entityLabel: 'Сертификат',
+    });
 
     const columns = [
         {
@@ -118,76 +73,49 @@ export default function Index({ certificates, filters }) {
                 </HStack>
             ),
         },
-        {
-            key: 'actions',
-            label: 'Действия',
-            render: (_, item) => (
-                <HStack gap={1}>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => router.visit(route('admin.certificates.edit', item.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => handleDelete(item)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
-                </HStack>
-            ),
-        },
+        createActionsColumn('admin.certificates', openDeleteDialog),
     ];
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Сертификаты' },
-            ]}
-        >
-            <Box p={6}>
-                <PageHeader
-                    title="Сертификаты"
-                    description="Управление сертификатами соответствия"
-                    actions={
-                        <Button colorPalette="blue" onClick={() => router.visit(route('admin.certificates.create'))}>
-                            <LuPlus /> Создать сертификат
-                        </Button>
-                    }
-                />
+        <>
+            <PageHeader
+                title="Сертификаты"
+                description="Управление сертификатами соответствия"
+                actions={
+                    <Button colorPalette="blue" onClick={() => router.visit(route('admin.certificates.create'))}>
+                        <LuPlus /> Создать сертификат
+                    </Button>
+                }
+            />
 
-                <Box mb={4}>
-                    <SearchInput
-                        value={searchQuery}
-                        onChange={handleSearch}
-                        placeholder="Поиск по названию или внешнему ID..."
-                    />
-                </Box>
-
-                <DataTable
-                    data={certificates.data}
-                    columns={columns}
-                    pagination={certificates}
-                    onSort={handleSort}
-                    sortColumn={filters.sort_by}
-                    sortDirection={filters.sort_order}
-                    perPage={filters.per_page}
-                    onPerPageChange={handlePerPageChange}
-                />
-
-                <ConfirmDialog
-                    open={deleteDialogOpen}
-                    onClose={() => setDeleteDialogOpen(false)}
-                    onConfirm={confirmDelete}
-                    title="Удалить сертификат?"
-                    description={`Вы уверены, что хотите удалить сертификат "${itemToDelete?.name}"?`}
+            <Box mb={4}>
+                <SearchInput
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    placeholder="Поиск по названию или внешнему ID..."
                 />
             </Box>
-        </AdminLayout>
+
+            <DataTable
+                data={certificates.data}
+                columns={columns}
+                pagination={certificates}
+                onSort={handleSort}
+                sortColumn={filters.sort_by}
+                sortDirection={filters.sort_order}
+                perPage={filters.per_page}
+                onPerPageChange={handlePerPageChange}
+            />
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onClose={closeDeleteDialog}
+                onConfirm={confirmDelete}
+                title="Удалить сертификат?"
+                description={`Вы уверены, что хотите удалить сертификат "${entityToDelete?.name}"?`}
+            />
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

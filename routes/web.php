@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\CatalogController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -16,5 +17,9 @@ Route::get('/', function () {
     ]);
 });
 
+// Каталог товаров с поиском
+Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
+
 // AI Generation
 Route::post('/ai/generate', [App\Http\Controllers\Admin\AiController::class, 'generate'])->name('admin.ai.generate');
+

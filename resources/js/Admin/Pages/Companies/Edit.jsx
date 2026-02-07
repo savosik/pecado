@@ -36,14 +36,7 @@ export default function Edit({ company, countries }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Компании', href: route('admin.companies.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${company.name}`}
                     description="Изменение информации о компании"
@@ -178,7 +171,8 @@ export default function Edit({ company, countries }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -32,7 +32,7 @@ export default function Create({ currencies }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title="Создать баланс" />
 
             <Card.Root>
@@ -100,6 +100,8 @@ export default function Create({ currencies }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

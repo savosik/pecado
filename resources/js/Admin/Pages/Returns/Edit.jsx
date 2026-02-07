@@ -103,14 +103,7 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Возвраты", href: route("admin.returns.index") },
-                { label: `Возврат #${returnData.id}`, href: route("admin.returns.show", returnData.id) },
-                { label: "Редактирование" },
-            ]}
-        >
+        <>
             <Head title={`Редактирование возврата #${returnData.id}`} />
 
             <PageHeader
@@ -248,8 +241,10 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
                     </Tabs.Content>
                 </Tabs.Root>
             </form>
-        </AdminLayout>
+        </>
     );
 };
+
+ReturnsEdit.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default ReturnsEdit;

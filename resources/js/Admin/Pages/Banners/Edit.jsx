@@ -68,7 +68,7 @@ export default function Edit({ banner }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title={`Редактировать баннер: ${banner.title}`} />
 
             <Card.Root>
@@ -182,6 +182,8 @@ export default function Edit({ banner }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

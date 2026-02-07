@@ -20,10 +20,6 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     
-    // Components Demo (для тестирования Phase 3)
-    Route::get('/components-demo', function () {
-        return inertia('Admin/ComponentsDemo');
-    })->name('components-demo');
     
     // Каталог
     Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');

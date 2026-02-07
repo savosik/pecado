@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { HStack, IconButton, Badge, Button, Input, Box, VStack, Text, SimpleGrid } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuTrash2, LuPencil, LuFilter, LuX, LuPlus } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
@@ -222,12 +222,7 @@ const CartsIndex = ({ filters }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Корзины" },
-            ]}
-        >
+        <>
             <Head title="Корзины" />
 
             <PageHeader
@@ -395,8 +390,10 @@ const CartsIndex = ({ filters }) => {
                 title="Массовое удаление корзин"
                 description={`Вы уверены, что хотите удалить ${selectedCarts.length} корзин(ы)? Это действие нельзя отменить.`}
             />
-        </AdminLayout>
+        </>
     );
 };
+
+CartsIndex.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default CartsIndex;

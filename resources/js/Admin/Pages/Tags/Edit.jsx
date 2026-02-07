@@ -31,7 +31,7 @@ export default function Edit({ tag }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title={`Редактировать тег: ${tag.display_name}`} />
 
             <Card.Root>
@@ -73,6 +73,8 @@ export default function Edit({ tag }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

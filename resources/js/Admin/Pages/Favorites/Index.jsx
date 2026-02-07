@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { HStack, IconButton, Image, Text, Box, Button, Input, VStack, SimpleGrid } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuTrash2, LuPackage, LuFilter, LuX, LuPlus, LuPencil } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
@@ -216,12 +216,7 @@ const FavoritesIndex = ({ filters }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Избранное" },
-            ]}
-        >
+        <>
             <Head title="Избранное" />
 
             <PageHeader
@@ -339,8 +334,10 @@ const FavoritesIndex = ({ filters }) => {
                 title="Массовое удаление избранного"
                 description={`Вы уверены, что хотите удалить ${selectedItems.length} записей? Это действие нельзя отменить.`}
             />
-        </AdminLayout>
+        </>
     );
 };
+
+FavoritesIndex.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default FavoritesIndex;

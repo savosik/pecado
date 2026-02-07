@@ -1,51 +1,23 @@
-import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable, PageHeader, SearchInput, ConfirmDialog } from '@/Admin/Components';
 import { Button, HStack, Text, Image, Box, Badge } from '@chakra-ui/react';
 import { LuPencil, LuTrash2 } from 'react-icons/lu';
-import { toaster } from '@/components/ui/toaster';
+import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
 export default function Index({ banners, filters }) {
-    const [search, setSearch] = useState(filters.search || '');
-    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [bannerToDelete, setBannerToDelete] = useState(null);
-
-    const handleSearch = (value) => {
-        setSearch(value);
-        router.get(route('admin.banners.index'),
-            { ...filters, search: value, page: 1 },
-            { preserveState: true, preserveScroll: true }
-        );
-    };
-
-    const handleSort = (column) => {
-        const newSortOrder = filters.sort_by === column && filters.sort_order === 'asc' ? 'desc' : 'asc';
-        router.get(route('admin.banners.index'),
-            { ...filters, sort_by: column, sort_order: newSortOrder },
-            { preserveState: true, preserveScroll: true }
-        );
-    };
-
-    const handleDelete = (banner) => {
-        setBannerToDelete(banner);
-        setDeleteDialogOpen(true);
-    };
-
-    const confirmDelete = () => {
-        if (bannerToDelete) {
-            router.delete(route('admin.banners.destroy', bannerToDelete.id), {
-                onSuccess: () => {
-                    toaster.create({
-                        title: 'Баннер успешно удален',
-                        type: 'success',
-                    });
-                    setDeleteDialogOpen(false);
-                    setBannerToDelete(null);
-                },
-            });
-        }
-    };
+    const {
+        searchQuery,
+        handleSearch,
+        handleSort,
+        deleteDialogOpen,
+        entityToDelete,
+        openDeleteDialog,
+        confirmDelete,
+        closeDeleteDialog,
+    } = useResourceIndex('admin.banners', filters, {
+        entityLabel: 'Баннер',
+    });
 
     const getLinkableType = (type) => {
         if (!type) return '—';
@@ -71,13 +43,13 @@ export default function Index({ banners, filters }) {
             key: 'title',
             label: 'Заголовок',
             sortable: true,
-            render: (row) => <Text fontWeight="semibold">{row.title}</Text>,
+            render: (_, row) => <Text fontWeight="semibold">{row.title}</Text>,
         },
         {
             key: 'desktop_image',
             label: 'Desktop',
             width: '100px',
-            render: (row) => (
+            render: (_, row) => (
                 row.desktop_image ? (
                     <Image
                         src={row.desktop_image}
@@ -93,7 +65,7 @@ export default function Index({ banners, filters }) {
             key: 'mobile_image',
             label: 'Mobile',
             width: '100px',
-            render: (row) => (
+            render: (_, row) => (
                 row.mobile_image ? (
                     <Image
                         src={row.mobile_image}
@@ -108,7 +80,7 @@ export default function Index({ banners, filters }) {
         {
             key: 'linkable',
             label: 'Ссылка',
-            render: (row) => (
+            render: (_, row) => (
                 <Box>
                     <Text fontSize="sm" fontWeight="medium">
                         {getLinkableType(row.linkable_type)}
@@ -126,7 +98,7 @@ export default function Index({ banners, filters }) {
             label: 'Активность',
             sortable: true,
             width: '120px',
-            render: (row) => (
+            render: (_, row) => (
                 <Badge colorPalette={row.is_active ? 'green' : 'red'}>
                     {row.is_active ? 'Активен' : 'Неактивен'}
                 </Badge>
@@ -142,7 +114,7 @@ export default function Index({ banners, filters }) {
             key: 'actions',
             label: 'Действия',
             width: '150px',
-            render: (row) => (
+            render: (_, row) => (
                 <HStack gap={2}>
                     <Button
                         size="sm"
@@ -156,7 +128,7 @@ export default function Index({ banners, filters }) {
                         size="sm"
                         colorPalette="red"
                         variant="outline"
-                        onClick={() => handleDelete(row)}
+                        onClick={() => openDeleteDialog(row)}
                     >
                         <LuTrash2 />
                     </Button>
@@ -166,17 +138,15 @@ export default function Index({ banners, filters }) {
     ];
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title="Баннеры"
-                action={{
-                    label: 'Создать баннер',
-                    onClick: () => router.visit(route('admin.banners.create')),
-                }}
+                onCreate={() => router.visit(route('admin.banners.create'))}
+                createLabel="Создать баннер"
             />
 
             <SearchInput
-                value={search}
+                value={searchQuery}
                 onChange={handleSearch}
                 placeholder="Поиск по заголовку..."
             />
@@ -192,11 +162,13 @@ export default function Index({ banners, filters }) {
 
             <ConfirmDialog
                 open={deleteDialogOpen}
-                onOpenChange={setDeleteDialogOpen}
+                onClose={closeDeleteDialog}
                 onConfirm={confirmDelete}
                 title="Удалить баннер?"
-                description={`Вы уверены, что хотите удалить баннер "${bannerToDelete?.title}"? Это действие нельзя отменить.`}
+                description={`Вы уверены, что хотите удалить баннер "${entityToDelete?.title}"? Это действие нельзя отменить.`}
             />
-        </AdminLayout>
+        </>
     );
 }
+
+Index.layout = (page) => <AdminLayout>{page}</AdminLayout>;

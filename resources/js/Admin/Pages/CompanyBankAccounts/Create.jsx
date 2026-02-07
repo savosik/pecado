@@ -28,14 +28,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Банковские счета', href: route('admin.company-bank-accounts.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать банковский счет" description="Добавление нового счета компании" />
 
                 <form onSubmit={handleSubmit}>
@@ -104,7 +97,8 @@ export default function Create() {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

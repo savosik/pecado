@@ -2,7 +2,7 @@ import React from "react";
 import { HStack, Button, IconButton } from "@chakra-ui/react";
 import { Head, Link, usePage, router } from "@inertiajs/react";
 import { LuPlus, LuPencil, LuTrash2 } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
@@ -67,12 +67,7 @@ const WarehousesIndex = ({ filters }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Склады" },
-            ]}
-        >
+        <>
             <Head title="Склады" />
 
             <PageHeader
@@ -101,8 +96,10 @@ const WarehousesIndex = ({ filters }) => {
                 title="Удаление склада"
                 description="Вы уверены, что хотите удалить этот склад? Это действие нельзя отменить."
             />
-        </AdminLayout>
+        </>
     );
 };
+
+WarehousesIndex.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default WarehousesIndex;

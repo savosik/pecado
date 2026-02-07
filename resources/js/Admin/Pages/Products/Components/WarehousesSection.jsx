@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Box, Card, Stack, Input, Button, Table, IconButton } from '@chakra-ui/react';
-import { Field } from '@/components/ui/field';
-import { SelectRelation } from '@/Admin/Components';
+import { FormField, SelectRelation } from '@/Admin/Components';
 import { LuPlus, LuTrash2 } from 'react-icons/lu';
 
 export function WarehousesSection({ warehouses = [], availableWarehouses = [], onChange, error }) {
@@ -108,7 +107,7 @@ export function WarehousesSection({ warehouses = [], availableWarehouses = [], o
                                 />
                             </Box>
                             <Box flex="1">
-                                <Field label="Количество">
+                                <FormField label="Количество">
                                     <Input
                                         type="number"
                                         value={quantity}
@@ -116,7 +115,7 @@ export function WarehousesSection({ warehouses = [], availableWarehouses = [], o
                                         min="0"
                                         placeholder="0"
                                     />
-                                </Field>
+                                </FormField>
                             </Box>
                             <Box>
                                 <Button

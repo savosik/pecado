@@ -51,14 +51,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Подборки товаров', href: route('admin.product-selections.index') },
-                { label: 'Создать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader title="Создать подборку товаров" description="Добавление новой подборки для отображения на сайте" />
 
                 <form onSubmit={handleSubmit}>
@@ -140,7 +133,8 @@ export default function Create() {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

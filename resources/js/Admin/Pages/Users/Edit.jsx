@@ -41,14 +41,7 @@ export default function Edit({ user, regions, currencies, countries }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Пользователи', href: route('admin.users.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${user.name}`}
                     description="Изменение информации о пользователе"
@@ -224,7 +217,8 @@ export default function Edit({ user, regions, currencies, countries }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

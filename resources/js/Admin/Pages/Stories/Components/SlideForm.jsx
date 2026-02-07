@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { Stack, Input, Textarea, Button, HStack, Box, NativeSelectRoot, NativeSelectField, Image } from '@chakra-ui/react';
-import { FormField } from '@/Admin/Components/FormField';
-import { FileUploader } from '@/Admin/Components/FileUploader';
-import EntitySelector from '@/Admin/Components/EntitySelector';
+import { FormField, FileUploader, EntitySelector } from '@/Admin/Components';
 import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
 import { LuSave, LuX } from 'react-icons/lu';

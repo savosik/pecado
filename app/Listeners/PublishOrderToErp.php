@@ -2,20 +2,10 @@
 
 namespace App\Listeners;
 
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Support\Facades\Queue;
+use App\Jobs\PublishOrderToErpJob;
 
 class PublishOrderToErp
 {
-    /**
-     * Create the event listener.
-     */
-    public function __construct()
-    {
-        //
-    }
-
     /**
      * Handle the event.
      */
@@ -38,13 +28,6 @@ class PublishOrderToErp
             'order' => $orderData,
         ];
 
-        try {
-            Queue::connection('rabbitmq')->pushRaw(
-                json_encode($payload),
-                'erp_orders'
-            );
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to publish order to ERP: ' . $e->getMessage());
-        }
+        PublishOrderToErpJob::dispatch($payload);
     }
 }

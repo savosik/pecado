@@ -49,8 +49,7 @@ export default function Create({ brands, categories }) {
     };
 
     return (
-        <AdminLayout>
-            <Box p={6}>
+        <>
                 <PageHeader
                     title="Создать бренд"
                     description="Добавление нового бренда"
@@ -260,7 +259,8 @@ export default function Create({ brands, categories }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

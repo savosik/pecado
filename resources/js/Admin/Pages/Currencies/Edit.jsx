@@ -34,7 +34,7 @@ export default function Edit({ currency }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title={`Редактировать валюту: ${currency.code}`} />
 
             <Card.Root>
@@ -109,6 +109,8 @@ export default function Edit({ currency }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

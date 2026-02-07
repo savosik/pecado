@@ -25,14 +25,7 @@ export default function Edit({ deliveryAddress }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Адреса доставки', href: route('admin.delivery-addresses.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование: ${deliveryAddress.name}`}
                     description="Изменение информации об адресе доставки"
@@ -79,7 +72,8 @@ export default function Edit({ deliveryAddress }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

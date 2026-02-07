@@ -32,7 +32,7 @@ export default function Edit({ balance, currencies }) {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader title={`Редактировать баланс: ${balance.user.name} (${balance.currency.code})`} />
 
             <Card.Root>
@@ -101,6 +101,8 @@ export default function Edit({ balance, currencies }) {
                     </form>
                 </Card.Body>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

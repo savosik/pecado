@@ -28,14 +28,7 @@ export default function Edit({ bankAccount }) {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: 'Главная', href: route('admin.dashboard') },
-                { label: 'Банковские счета', href: route('admin.company-bank-accounts.index') },
-                { label: 'Редактировать' },
-            ]}
-        >
-            <Box p={6}>
+        <>
                 <PageHeader
                     title={`Редактирование счета ${bankAccount.account_number}`}
                     description="Изменение информации о банковском счете"
@@ -104,7 +97,8 @@ export default function Edit({ bankAccount }) {
                         </Card.Footer>
                     </Card.Root>
                 </form>
-            </Box>
-        </AdminLayout>
+        </>
     );
 }
+
+Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;

@@ -2,7 +2,7 @@ import React from "react";
 import { HStack, Button, IconButton } from "@chakra-ui/react";
 import { Head, Link, usePage, router } from "@inertiajs/react";
 import { LuPlus, LuPencil, LuTrash2 } from "react-icons/lu";
-import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
@@ -108,12 +108,7 @@ const RegionsIndex = ({ filters }) => {
     };
 
     return (
-        <AdminLayout
-            breadcrumbs={[
-                { label: "Главная", href: route("admin.dashboard") },
-                { label: "Регионы" },
-            ]}
-        >
+        <>
             <Head title="Регионы" />
 
             <PageHeader
@@ -142,8 +137,10 @@ const RegionsIndex = ({ filters }) => {
                 title="Удаление региона"
                 description="Вы уверены, что хотите удалить этот регион? Это действие нельзя отменить."
             />
-        </AdminLayout>
+        </>
     );
 };
+
+RegionsIndex.layout = (page) => <AdminLayout>{page}</AdminLayout>;
 
 export default RegionsIndex;

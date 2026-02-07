@@ -1,7 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader } from '@/Admin/Components';
-import { FormField } from '@/Admin/Components/FormField';
+import { PageHeader, FormField } from '@/Admin/Components';
 import { Card, Input, Button, HStack, Stack } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { LuSave, LuX } from 'react-icons/lu';
@@ -33,7 +32,7 @@ export default function Create() {
     };
 
     return (
-        <AdminLayout>
+        <>
             <PageHeader
                 title="Создать сторис"
                 description="После создания вы сможете добавить слайды"
@@ -98,6 +97,8 @@ export default function Create() {
                     </HStack>
                 </Card.Footer>
             </Card.Root>
-        </AdminLayout>
+        </>
     );
 }
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

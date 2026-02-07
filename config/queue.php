@@ -72,6 +72,27 @@ return [
             'worker' => env('RABBITMQ_WORKER', 'default'),
         ],
 
+        'rabbitmq-erp-incoming' => [
+            'driver' => 'rabbitmq',
+            'queue' => env('RABBITMQ_ERP_INCOMING_QUEUE', 'erp_incoming'),
+            'connection' => PhpAmqpLib\Connection\AMQPLazyConnection::class,
+            'hosts' => [
+                [
+                    'host' => env('RABBITMQ_HOST', 'rabbitmq'),
+                    'port' => env('RABBITMQ_PORT', 5672),
+                    'user' => env('RABBITMQ_USER', 'guest'),
+                    'password' => env('RABBITMQ_PASSWORD', 'guest'),
+                    'vhost' => env('RABBITMQ_VHOST', '/'),
+                ],
+            ],
+            'options' => [
+                'queue' => [
+                    'job' => App\Queue\Jobs\ErpIncomingJob::class,
+                ],
+            ],
+            'worker' => env('RABBITMQ_WORKER', 'default'),
+        ],
+
         'beanstalkd' => [
             'driver' => 'beanstalkd',
             'host' => env('BEANSTALKD_QUEUE_HOST', 'localhost'),
