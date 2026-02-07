@@ -42,6 +42,14 @@ class Attribute extends Model
     }
 
     /**
+     * Get the categories associated with this attribute.
+     */
+    public function categories(): BelongsToMany
+    {
+        return $this->belongsToMany(Category::class);
+    }
+
+    /**
      * Get the products that have this attribute.
      */
     public function products(): BelongsToMany

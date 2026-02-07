@@ -39,7 +39,7 @@ export default function Create({ currencies }) {
                 <Card.Body>
                     <form onSubmit={handleSubmit}>
                         <Stack gap={6}>
-                            <FormField label="Пользователь *" error={errors.user_id} required>
+                            <FormField label="Пользователь" error={errors.user_id} required>
                                 <EntitySelector
                                     value={data.user_id}
                                     onChange={(value) => setData('user_id', value)}
@@ -49,7 +49,7 @@ export default function Create({ currencies }) {
                                 />
                             </FormField>
 
-                            <FormField label="Валюта *" error={errors.currency_id} required>
+                            <FormField label="Валюта" error={errors.currency_id} required>
                                 <select
                                     value={data.currency_id}
                                     onChange={(e) => setData('currency_id', e.target.value)}
@@ -70,7 +70,7 @@ export default function Create({ currencies }) {
                             </FormField>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Баланс *" error={errors.balance} required>
+                                <FormField label="Баланс" error={errors.balance} required>
                                     <Input
                                         type="number"
                                         step="0.01"

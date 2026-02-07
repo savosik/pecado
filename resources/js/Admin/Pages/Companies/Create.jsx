@@ -43,7 +43,7 @@ export default function Create({ countries }) {
                     <Card.Root>
                         <Card.Body>
                             <Stack gap={6}>
-                                <FormField label="Пользователь *" error={errors.user_id} required>
+                                <FormField label="Пользователь" error={errors.user_id} required>
                                     <EntitySelector
                                         searchUrl={route('admin.users.search')}
                                         placeholder="Выберите пользователя"
@@ -54,7 +54,7 @@ export default function Create({ countries }) {
                                 </FormField>
 
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название *" error={errors.name} required>
+                                    <FormField label="Название" error={errors.name} required>
                                         <Input
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}
@@ -62,7 +62,7 @@ export default function Create({ countries }) {
                                         />
                                     </FormField>
 
-                                    <FormField label="Страна *" error={errors.country} required>
+                                    <FormField label="Страна" error={errors.country} required>
                                         <select
                                             value={data.country}
                                             onChange={(e) => setData('country', e.target.value)}

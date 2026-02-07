@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\Attribute;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -88,6 +89,7 @@ class CategoryController extends AdminController
     {
         return Inertia::render('Admin/Pages/Categories/Create', [
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
+            'availableAttributes' => Attribute::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -106,6 +108,8 @@ class CategoryController extends AdminController
             'meta_description' => 'nullable|string',
             'icon' => 'nullable|image|max:5120',
             'tags' => 'nullable|array',
+            'attribute_ids' => 'nullable|array',
+            'attribute_ids.*' => 'exists:attributes,id',
         ]);
 
         $category = Category::create($validated);
@@ -133,6 +137,10 @@ class CategoryController extends AdminController
             $category->syncTags($tagNames);
         }
 
+        if (!empty($validated['attribute_ids'])) {
+            $category->attributes()->sync($validated['attribute_ids']);
+        }
+
         return redirect()
             ->route('admin.categories.index')
             ->with('success', 'Категория успешно создана');
@@ -143,7 +151,7 @@ class CategoryController extends AdminController
      */
     public function edit(Category $category): Response
     {
-        $category->load(['parent', 'media', 'tags']);
+        $category->load(['parent', 'media', 'tags', 'attributes:id,name']);
 
         return Inertia::render('Admin/Pages/Categories/Edit', [
             'category' => [
@@ -158,11 +166,13 @@ class CategoryController extends AdminController
                 'icon_url' => $category->getFirstMediaUrl('icon'),
                 'icon_id' => $category->getFirstMedia('icon')?->id,
                 'tags' => $category->tags,
+                'attributes' => $category->attributes,
             ],
             'categories' => Category::select('id', 'name', 'parent_id')
-                ->where('id', '!=', $category->id) // Исключаем текущую категорию
+                ->where('id', '!=', $category->id)
                 ->orderBy('name')
                 ->get(),
+            'availableAttributes' => Attribute::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -181,6 +191,8 @@ class CategoryController extends AdminController
             'meta_description' => 'nullable|string',
             'icon' => 'nullable|image|max:5120',
             'tags' => 'nullable|array',
+            'attribute_ids' => 'nullable|array',
+            'attribute_ids.*' => 'exists:attributes,id',
         ]);
 
         // Предотвращаем установку категории самой себе в качестве родителя
@@ -215,6 +227,8 @@ class CategoryController extends AdminController
             })->filter()->values()->toArray();
             $category->syncTags($tagNames);
         }
+
+        $category->attributes()->sync($validated['attribute_ids'] ?? []);
 
         return redirect()
             ->route('admin.categories.index')

@@ -45,14 +45,14 @@ export default function Edit({ article }) {
                     <form onSubmit={handleSubmit}>
                         <Stack gap={6}>
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Заголовок *" error={errors.title} required>
+                                <FormField label="Заголовок" error={errors.title} required>
                                     <Input
                                         value={data.title}
                                         onChange={(e) => setData('title', e.target.value)}
                                     />
                                 </FormField>
 
-                                <FormField label="Slug *" error={errors.slug} required>
+                                <FormField label="Slug" error={errors.slug} required>
                                     <Input
                                         value={data.slug}
                                         onChange={(e) => setData('slug', e.target.value)}
@@ -60,7 +60,7 @@ export default function Edit({ article }) {
                                 </FormField>
                             </SimpleGrid>
 
-                            <FormField label="Краткое описание *" error={errors.short_description} required>
+                            <FormField label="Краткое описание" error={errors.short_description} required>
                                 <Textarea
                                     value={data.short_description}
                                     onChange={(e) => setData('short_description', e.target.value)}
@@ -68,7 +68,7 @@ export default function Edit({ article }) {
                                 />
                             </FormField>
 
-                            <FormField label="Полное описание *" error={errors.detailed_description} required>
+                            <FormField label="Полное описание" error={errors.detailed_description} required>
                                 <Textarea
                                     value={data.detailed_description}
                                     onChange={(e) => setData('detailed_description', e.target.value)}

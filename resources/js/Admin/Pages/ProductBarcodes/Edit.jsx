@@ -32,7 +32,7 @@ export default function Edit({ productBarcode, products }) {
                         <Card.Body>
                             <Stack gap={6}>
                                 <SelectRelation
-                                    label="Товар *"
+                                    label="Товар"
                                     value={data.product_id}
                                     onChange={(val) => setData('product_id', val)}
                                     options={products.map(p => ({ value: p.id, label: p.name }))}
@@ -40,7 +40,7 @@ export default function Edit({ productBarcode, products }) {
                                     error={errors.product_id}
                                 />
 
-                                <FormField label="Штрихкод *" error={errors.barcode}>
+                                <FormField label="Штрихкод" error={errors.barcode}>
                                     <Input
                                         value={data.barcode}
                                         onChange={(e) => setData('barcode', e.target.value)}

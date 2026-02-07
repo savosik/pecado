@@ -38,7 +38,7 @@ export default function Edit({ bankAccount }) {
                     <Card.Root>
                         <Card.Body>
                             <Stack gap={6}>
-                                <FormField label="Компания *" error={errors.company_id} required>
+                                <FormField label="Компания" error={errors.company_id} required>
                                     <EntitySelector
                                         searchUrl={route('admin.companies.search')}
                                         placeholder="Выберите компанию"
@@ -49,7 +49,7 @@ export default function Edit({ bankAccount }) {
                                     />
                                 </FormField>
 
-                                <FormField label="Название банка *" error={errors.bank_name} required>
+                                <FormField label="Название банка" error={errors.bank_name} required>
                                     <Input
                                         value={data.bank_name}
                                         onChange={(e) => setData('bank_name', e.target.value)}
@@ -72,7 +72,7 @@ export default function Edit({ bankAccount }) {
                                     </FormField>
                                 </SimpleGrid>
 
-                                <FormField label="Номер счета *" error={errors.account_number} required>
+                                <FormField label="Номер счета" error={errors.account_number} required>
                                     <Input
                                         value={data.account_number}
                                         onChange={(e) => setData('account_number', e.target.value)}

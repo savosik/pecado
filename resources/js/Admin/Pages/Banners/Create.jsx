@@ -74,7 +74,7 @@ export default function Create() {
                 <Card.Body>
                     <form onSubmit={handleSubmit}>
                         <Stack gap={6}>
-                            <FormField label="Заголовок *" error={errors.title} required>
+                            <FormField label="Заголовок" error={errors.title} required>
                                 <Input
                                     value={data.title}
                                     onChange={(e) => setData('title', e.target.value)}
@@ -111,7 +111,7 @@ export default function Create() {
                             </SimpleGrid>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Desktop изображение *" error={errors.desktop_image} required>
+                                <FormField label="Desktop изображение" error={errors.desktop_image} required>
                                     <FileUploader
                                         value={data.desktop_image}
                                         onChange={(file) => setData('desktop_image', file)}
@@ -119,7 +119,7 @@ export default function Create() {
                                     />
                                 </FormField>
 
-                                <FormField label="Mobile изображение *" error={errors.mobile_image} required>
+                                <FormField label="Mobile изображение" error={errors.mobile_image} required>
                                     <FileUploader
                                         value={data.mobile_image}
                                         onChange={(file) => setData('mobile_image', file)}

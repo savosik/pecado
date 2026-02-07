@@ -61,7 +61,7 @@ export default function Create() {
                         <Card.Body>
                             <Stack gap={6}>
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название *" error={errors.name} required>
+                                    <FormField label="Название" error={errors.name} required>
                                         <Input
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}

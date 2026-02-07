@@ -1,0 +1,28 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "docker",
+            "args": [
+                "exec",
+                "-i",
+                "pecado-app",
+                "php",
+                "artisan",
+                "boost:mcp"
+            ]
+        },
+        "context7": {
+            "command": "./docker/context7-mcp.sh",
+            "args": []
+        },
+        "chakra-ui": {
+            "command": "docker",
+            "args": [
+                "exec",
+                "-i",
+                "pecado-node",
+                "chakra-ui-mcp"
+            ]
+        }
+    }
+}

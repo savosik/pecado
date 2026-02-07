@@ -40,6 +40,14 @@ class Category extends Model implements HasMedia
         return $this->belongsToMany(Product::class, 'category_product');
     }
 
+    /**
+     * Get the attributes associated with this category.
+     */
+    public function attributes(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Attribute::class);
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('icon')

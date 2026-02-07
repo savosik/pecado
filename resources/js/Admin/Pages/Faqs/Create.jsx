@@ -37,14 +37,14 @@ export default function Create() {
                 <Card.Body>
                     <form onSubmit={handleSubmit}>
                         <Stack gap={6}>
-                            <FormField label="Вопрос *" error={errors.title} required>
+                            <FormField label="Вопрос" error={errors.title} required>
                                 <Input
                                     value={data.title}
                                     onChange={(e) => setData('title', e.target.value)}
                                 />
                             </FormField>
 
-                            <FormField label="Ответ *" error={errors.content} required>
+                            <FormField label="Ответ" error={errors.content} required>
                                 <Textarea
                                     value={data.content}
                                     onChange={(e) => setData('content', e.target.value)}

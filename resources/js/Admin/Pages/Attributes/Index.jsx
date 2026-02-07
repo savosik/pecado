@@ -68,6 +68,21 @@ export default function Index({ attributes, filters }) {
             label: 'Сортировка',
             sortable: true,
         },
+        {
+            key: 'categories',
+            label: 'Категории',
+            render: (_, attr) => {
+                const cats = attr.categories || [];
+                if (cats.length === 0) return <Text color="fg.muted">—</Text>;
+                return (
+                    <Box display="flex" flexWrap="wrap" gap={1}>
+                        {cats.map(c => (
+                            <Badge key={c.id} colorPalette="purple" size="sm">{c.name}</Badge>
+                        ))}
+                    </Box>
+                );
+            },
+        },
         createActionsColumn('admin.attributes', openDeleteDialog),
     ];
 

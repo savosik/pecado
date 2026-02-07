@@ -35,7 +35,7 @@ export default function Edit({ deliveryAddress }) {
                     <Card.Root>
                         <Card.Body>
                             <Stack gap={6}>
-                                <FormField label="Пользователь *" error={errors.user_id} required>
+                                <FormField label="Пользователь" error={errors.user_id} required>
                                     <EntitySelector
                                         searchUrl={route('admin.users.search')}
                                         placeholder="Выберите пользователя"
@@ -46,14 +46,14 @@ export default function Edit({ deliveryAddress }) {
                                     />
                                 </FormField>
 
-                                <FormField label="Название *" error={errors.name} required>
+                                <FormField label="Название" error={errors.name} required>
                                     <Input
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
                                     />
                                 </FormField>
 
-                                <FormField label="Адрес *" error={errors.address} required>
+                                <FormField label="Адрес" error={errors.address} required>
                                     <Textarea
                                         value={data.address}
                                         onChange={(e) => setData('address', e.target.value)}

@@ -66,7 +66,7 @@ export default function Edit({ page }) {
                     <form onSubmit={handleSubmit}>
                         <Stack gap={6}>
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Заголовок *" error={errors.title} required>
+                                <FormField label="Заголовок" error={errors.title} required>
                                     <Input
                                         value={data.title}
                                         onChange={handleTitleChange}
@@ -74,7 +74,7 @@ export default function Edit({ page }) {
                                     />
                                 </FormField>
 
-                                <FormField label="Slug *" error={errors.slug} required>
+                                <FormField label="Slug" error={errors.slug} required>
                                     <Input
                                         value={data.slug}
                                         onChange={handleSlugChange}
@@ -83,7 +83,7 @@ export default function Edit({ page }) {
                                 </FormField>
                             </SimpleGrid>
 
-                            <FormField label="Содержимое *" error={errors.content} required>
+                            <FormField label="Содержимое" error={errors.content} required>
                                 <MarkdownEditor
                                     value={data.content}
                                     onChange={(value) => setData('content', value)}

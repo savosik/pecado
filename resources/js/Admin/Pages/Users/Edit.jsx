@@ -52,7 +52,7 @@ export default function Edit({ user, regions, currencies, countries }) {
                         <Card.Body>
                             <Stack gap={6}>
                                 <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                    <FormField label="Имя *" error={errors.name} required>
+                                    <FormField label="Имя" error={errors.name} required>
                                         <Input
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}
@@ -75,7 +75,7 @@ export default function Edit({ user, regions, currencies, countries }) {
                                 </SimpleGrid>
 
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Email *" error={errors.email} required>
+                                    <FormField label="Email" error={errors.email} required>
                                         <Input
                                             type="email"
                                             value={data.email}

@@ -80,7 +80,7 @@ export default function Edit({ discount }) {
                                         />
                                     </FormField>
 
-                                    <FormField label="Процент скидки *" error={errors.percentage} required>
+                                    <FormField label="Процент скидки" error={errors.percentage} required>
                                         <Input
                                             type="number"
                                             min="0"

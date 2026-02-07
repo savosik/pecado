@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Attribute;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +17,7 @@ class AttributeController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = Attribute::query()->withCount('values');
+        $query = Attribute::query()->withCount('values')->with('categories:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -64,6 +65,7 @@ class AttributeController extends AdminController
                 ['value' => 'boolean', 'label' => 'Логический (Checkbox)'],
                 ['value' => 'select', 'label' => 'Выбор из списка (Select)'],
             ],
+            'categories' => Category::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -82,6 +84,8 @@ class AttributeController extends AdminController
             'values' => 'required_if:type,select|array',
             'values.*.value' => 'required|string|max:255',
             'values.*.sort_order' => 'nullable|integer',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
         ]);
 
         if (empty($validated['slug'])) {
@@ -99,6 +103,10 @@ class AttributeController extends AdminController
             }
         }
 
+        if (!empty($validated['category_ids'])) {
+            $attribute->categories()->sync($validated['category_ids']);
+        }
+
         return redirect()
             ->route('admin.attributes.index')
             ->with('success', 'Атрибут успешно создан');
@@ -109,7 +117,7 @@ class AttributeController extends AdminController
      */
     public function edit(Attribute $attribute): Response
     {
-        $attribute->load('values');
+        $attribute->load(['values', 'categories:id,name']);
 
         return Inertia::render('Admin/Pages/Attributes/Edit', [
             'attribute' => $attribute,
@@ -119,6 +127,7 @@ class AttributeController extends AdminController
                 ['value' => 'boolean', 'label' => 'Логический (Checkbox)'],
                 ['value' => 'select', 'label' => 'Выбор из списка (Select)'],
             ],
+            'categories' => Category::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -138,6 +147,8 @@ class AttributeController extends AdminController
             'values.*.id' => 'nullable|exists:attribute_values,id',
             'values.*.value' => 'required|string|max:255',
             'values.*.sort_order' => 'nullable|integer',
+            'category_ids' => 'nullable|array',
+            'category_ids.*' => 'exists:categories,id',
         ]);
 
         if (empty($validated['slug'])) {
@@ -166,6 +177,8 @@ class AttributeController extends AdminController
         } elseif ($validated['type'] !== 'select') {
             $attribute->values()->delete();
         }
+
+        $attribute->categories()->sync($validated['category_ids'] ?? []);
 
         return redirect()
             ->route('admin.attributes.index')

@@ -154,8 +154,8 @@ services:
   node:
     image: node:20-alpine
     container_name: pecado-node
-    user: "1000:1000"
     working_dir: /var/www
+    entrypoint: ["/var/www/docker/node-entrypoint.sh"]
     volumes:
       - ./:/var/www
     ports:

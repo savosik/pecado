@@ -33,3 +33,9 @@ playwright/.cache/
 
 # Compiled views
 /storage/framework/views/
+
+# Laravel Boost (auto-generated)
+CLAUDE.md
+AGENTS.md
+boost.json
+/.claude/skills/

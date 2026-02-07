@@ -42,7 +42,7 @@ export default function Create() {
                     <form onSubmit={handleSubmit}>
                         <Stack gap={6}>
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Код валюты *" error={errors.code} required>
+                                <FormField label="Код валюты" error={errors.code} required>
                                     <Input
                                         value={data.code}
                                         onChange={(e) => setData('code', e.target.value.toUpperCase())}
@@ -51,7 +51,7 @@ export default function Create() {
                                     />
                                 </FormField>
 
-                                <FormField label="Название *" error={errors.name} required>
+                                <FormField label="Название" error={errors.name} required>
                                     <Input
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
@@ -61,7 +61,7 @@ export default function Create() {
                             </SimpleGrid>
 
                             <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                <FormField label="Символ *" error={errors.symbol} required>
+                                <FormField label="Символ" error={errors.symbol} required>
                                     <Input
                                         value={data.symbol}
                                         onChange={(e) => setData('symbol', e.target.value)}
@@ -70,7 +70,7 @@ export default function Create() {
                                     />
                                 </FormField>
 
-                                <FormField label="Курс обмена *" error={errors.exchange_rate} required>
+                                <FormField label="Курс обмена" error={errors.exchange_rate} required>
                                     <Input
                                         type="number"
                                         step="0.0000000001"

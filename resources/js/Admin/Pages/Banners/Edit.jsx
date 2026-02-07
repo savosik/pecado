@@ -75,7 +75,7 @@ export default function Edit({ banner }) {
                 <Card.Body>
                     <form onSubmit={handleSubmit}>
                         <Stack gap={6}>
-                            <FormField label="Заголовок *" error={errors.title} required>
+                            <FormField label="Заголовок" error={errors.title} required>
                                 <Input
                                     value={data.title}
                                     onChange={(e) => setData('title', e.target.value)}
