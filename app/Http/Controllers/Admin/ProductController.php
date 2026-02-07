@@ -7,6 +7,9 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductModel;
 use App\Models\SizeChart;
+use App\Models\Warehouse;
+use App\Models\Attribute;
+use App\Models\Certificate;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -182,7 +185,18 @@ class ProductController extends AdminController
      */
     public function edit(Product $product): Response
     {
-        $product->load(['brand', 'model', 'categories', 'sizeChart', 'media', 'tags', 'barcodes', 'certificates']);
+        $product->load([
+            'brand', 
+            'model', 
+            'categories', 
+            'sizeChart', 
+            'media', 
+            'tags', 
+            'barcodes', 
+            'certificates',
+            'warehouses',
+            'attributeValues.attribute',
+        ]);
 
         return Inertia::render('Admin/Pages/Products/Edit', [
             'product' => [
@@ -224,11 +238,10 @@ class ProductController extends AdminController
                 'video_id' => $product->getFirstMedia('video')?->id,
                 'tags' => $product->tags->map(function ($tag) {
                     return [
-                        'value' => $tag->name, // Using name as value for tags usually
+                        'value' => $tag->name,
                         'label' => $tag->name,
                     ];
                 }),
-
                 'certificates' => $product->certificates->map(function ($cert) {
                     return [
                         'id' => $cert->id,
@@ -237,12 +250,32 @@ class ProductController extends AdminController
                         'status' => $cert->expires_at && $cert->expires_at->isPast() ? 'expired' : 'active',
                     ];
                 }),
+                'warehouses' => $product->warehouses->map(function ($warehouse) {
+                    return [
+                        'id' => $warehouse->id,
+                        'name' => $warehouse->name,
+                        'quantity' => $warehouse->pivot->quantity,
+                    ];
+                }),
+                'attributes' => $product->attributeValues->map(function ($attrValue) {
+                    return [
+                        'id' => $attrValue->id,
+                        'attribute_id' => $attrValue->attribute_id,
+                        'attribute_name' => $attrValue->attribute->name,
+                        'attribute_value_id' => $attrValue->attribute_value_id,
+                        'text_value' => $attrValue->text_value,
+                        'number_value' => $attrValue->number_value,
+                        'boolean_value' => $attrValue->boolean_value,
+                    ];
+                   }),
             ],
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
             'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
             'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
-
+            'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
+            'attributes' => Attribute::with('values')->orderBy('name')->get(),
+            'certificates' => Certificate::select('id', 'name', 'type')->orderBy('name')->get(),
         ]);
     }
 
@@ -286,6 +319,17 @@ class ProductController extends AdminController
 
             'certificates' => 'nullable|array',
             'certificates.*' => 'exists:certificates,id',
+            
+            'warehouses' => 'nullable|array',
+            'warehouses.*.id' => 'required|exists:warehouses,id',
+            'warehouses.*.quantity' => 'required|integer|min:0',
+            
+            'attributes' => 'nullable|array',
+            'attributes.*.attribute_id' => 'required|exists:attributes,id',
+            'attributes.*.attribute_value_id' => 'nullable|exists:attribute_values,id',
+            'attributes.*.text_value' => 'nullable|string',
+            'attributes.*.number_value' => 'nullable|numeric',
+            'attributes.*.boolean_value' => 'nullable|boolean',
         ]);
 
         // Генерация slug если не указан
@@ -351,6 +395,36 @@ class ProductController extends AdminController
             $product->certificates()->sync($validated['certificates']);
         } else {
             $product->certificates()->detach();
+        }
+        
+        // Синхронизация складов с количеством
+        if (isset($validated['warehouses'])) {
+            $warehouseData = [];
+            foreach ($validated['warehouses'] as $warehouse) {
+                $warehouseData[$warehouse['id']] = ['quantity' => $warehouse['quantity']];
+            }
+            $product->warehouses()->sync($warehouseData);
+        } else {
+            $product->warehouses()->detach();
+        }
+        
+        // Синхронизация атрибутов
+        if (isset($validated['attributes'])) {
+            // Удалить старые значения атрибутов
+            $product->attributeValues()->delete();
+            
+            // Создать новые
+            foreach ($validated['attributes'] as $attr) {
+                $product->attributeValues()->create([
+                    'attribute_id' => $attr['attribute_id'],
+                    'attribute_value_id' => $attr['attribute_value_id'] ?? null,
+                    'text_value' => $attr['text_value'] ?? null,
+                    'number_value' => $attr['number_value'] ?? null,
+                    'boolean_value' => $attr['boolean_value'] ?? null,
+                ]);
+            }
+        } else {
+            $product->attributeValues()->delete();
         }
 
         return redirect()

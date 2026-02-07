@@ -4,7 +4,82 @@ import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Comp
 import { Box, Card, SimpleGrid, Input, Stack, Button, HStack, Text, IconButton, Fieldset } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuPlus, LuTrash2 } from 'react-icons/lu';
+import { LuPlus, LuTrash2, LuGripVertical } from 'react-icons/lu';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+// Компонент для одного значения атрибута с drag-and-drop
+function AttributeValueItem({ value, index, onUpdate, onRemove }) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: value.id || `value-${index}` });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+    };
+
+    return (
+        <HStack
+            ref={setNodeRef}
+            style={style}
+            gap={2}
+            bg={isDragging ? 'blue.50' : 'white'}
+            p={2}
+            borderRadius="md"
+            borderWidth="1px"
+            borderColor={isDragging ? 'blue.200' : 'gray.200'}
+            opacity={isDragging ? 0.5 : 1}
+        >
+            <Box
+                {...attributes}
+                {...listeners}
+                cursor="grab"
+                color="gray.400"
+                _hover={{ color: 'gray.600' }}
+                px={1}
+            >
+                <LuGripVertical size={18} />
+            </Box>
+
+            <Input
+                value={value.value}
+                onChange={(e) => onUpdate(index, e.target.value)}
+                placeholder="Значение"
+                flex={1}
+            />
+
+            <IconButton
+                size="sm"
+                variant="ghost"
+                colorPalette="red"
+                onClick={() => onRemove(index)}
+                aria-label="Удалить"
+            >
+                <LuTrash2 />
+            </IconButton>
+        </HStack>
+    );
+}
 
 export default function Edit({ attribute, types }) {
     const { data, setData, put, processing, errors } = useForm({
@@ -16,6 +91,13 @@ export default function Edit({ attribute, types }) {
         sort_order: attribute.sort_order || 0,
         values: attribute.values || [],
     });
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -37,13 +119,38 @@ export default function Edit({ attribute, types }) {
     const removeValue = (index) => {
         const newValues = [...data.values];
         newValues.splice(index, 1);
-        setData('values', newValues);
+        // Пересчитываем sort_order после удаления
+        const reorderedValues = newValues.map((v, idx) => ({ ...v, sort_order: idx }));
+        setData('values', reorderedValues);
     };
 
     const updateValue = (index, val) => {
         const newValues = [...data.values];
         newValues[index].value = val;
         setData('values', newValues);
+    };
+
+    const handleDragEnd = (event) => {
+        const { active, over } = event;
+
+        if (active.id !== over.id) {
+            setData('values', (items) => {
+                const oldIndex = items.findIndex(
+                    (item, idx) => (item.id || `value-${idx}`) === active.id
+                );
+                const newIndex = items.findIndex(
+                    (item, idx) => (item.id || `value-${idx}`) === over.id
+                );
+
+                const newItems = arrayMove(items, oldIndex, newIndex);
+
+                // Обновляем sort_order для всех элементов
+                return newItems.map((item, index) => ({
+                    ...item,
+                    sort_order: index,
+                }));
+            });
+        }
     };
 
     return (
@@ -132,31 +239,33 @@ export default function Edit({ attribute, types }) {
                                                 <Text color="red.500" fontSize="sm">{errors.values}</Text>
                                             )}
 
-                                            <Stack gap={2}>
-                                                {data.values.map((v, index) => (
-                                                    <HStack key={v.id || index} gap={2}>
-                                                        <Input
-                                                            value={v.value}
-                                                            onChange={(e) => updateValue(index, e.target.value)}
-                                                            placeholder="Значение"
-                                                        />
-                                                        <IconButton
-                                                            size="sm"
-                                                            variant="ghost"
-                                                            colorPalette="red"
-                                                            onClick={() => removeValue(index)}
-                                                            aria-label="Удалить"
-                                                        >
-                                                            <LuTrash2 />
-                                                        </IconButton>
-                                                    </HStack>
-                                                ))}
-                                                {data.values.length === 0 && (
-                                                    <Text color="fg.muted" textAlign="center" py={4} border="1px dashed" borderColor="border.muted" borderRadius="md">
-                                                        Список значений пуст. Нажмите "Добавить значение".
-                                                    </Text>
-                                                )}
-                                            </Stack>
+                                            <DndContext
+                                                sensors={sensors}
+                                                collisionDetection={closestCenter}
+                                                onDragEnd={handleDragEnd}
+                                            >
+                                                <SortableContext
+                                                    items={data.values.map((v, idx) => v.id || `value-${idx}`)}
+                                                    strategy={verticalListSortingStrategy}
+                                                >
+                                                    <Stack gap={2}>
+                                                        {data.values.map((v, index) => (
+                                                            <AttributeValueItem
+                                                                key={v.id || `value-${index}`}
+                                                                value={v}
+                                                                index={index}
+                                                                onUpdate={updateValue}
+                                                                onRemove={removeValue}
+                                                            />
+                                                        ))}
+                                                        {data.values.length === 0 && (
+                                                            <Text color="fg.muted" textAlign="center" py={4} border="1px dashed" borderColor="border.muted" borderRadius="md">
+                                                                Список значений пуст. Нажмите "Добавить значение".
+                                                            </Text>
+                                                        )}
+                                                    </Stack>
+                                                </SortableContext>
+                                            </DndContext>
                                         </Stack>
                                     </Fieldset.Root>
                                 )}

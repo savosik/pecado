@@ -7,9 +7,11 @@ import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse } from 'react-icons/lu';
+import { WarehousesSection } from './Components/WarehousesSection';
+import { AttributesSection } from './Components/AttributesSection';
 
-export default function Edit({ product, brands, categories, productModels, sizeCharts }) {
+export default function Edit({ product, brands, categories, productModels, sizeCharts, warehouses, attributes, certificates }) {
     const { data, setData, post, processing, errors } = useForm({
         name: product.name || '',
         slug: product.slug || '',
@@ -34,11 +36,12 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         for_marketplaces: product.for_marketplaces || false,
         categories: product.categories || [],
 
-        image: null,
         additional_images: [],
         video: null,
         tags: product.tags ? product.tags.map(t => t.value) : [],
         certificates: product.certificates || [],
+        warehouses: product.warehouses || [],
+        attributes: product.attributes || [],
         _method: 'PUT',
     });
 
@@ -201,6 +204,9 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                 <LuAlertCircle size={16} />
                                             </Box>
                                         )}
+                                    </Tabs.Trigger>
+                                    <Tabs.Trigger value="inventory">
+                                        <LuWarehouse /> Склады и атрибуты
                                     </Tabs.Trigger>
                                 </Tabs.List>
 
@@ -556,6 +562,25 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                                 />
                                             </Stack>
                                         </Box>
+                                    </Stack>
+                                </Tabs.Content>
+
+                                {/* Таб 6: Склады и атрибуты */}
+                                <Tabs.Content value="inventory">
+                                    <Stack gap={6} mt={6}>
+                                        <WarehousesSection
+                                            warehouses={data.warehouses}
+                                            availableWarehouses={warehouses}
+                                            onChange={(wh) => setData('warehouses', wh)}
+                                            error={errors.warehouses}
+                                        />
+
+                                        <AttributesSection
+                                            attributes={data.attributes}
+                                            availableAttributes={attributes}
+                                            onChange={(attrs) => setData('attributes', attrs)}
+                                            error={errors.attributes}
+                                        />
                                     </Stack>
                                 </Tabs.Content>
                             </Tabs.Root>

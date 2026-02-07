@@ -19,6 +19,7 @@ import { toaster } from "@/components/ui/toaster";
 import { Select } from "@/components/ui/select";
 import OrderItemsEditor from "@/Admin/Components/OrderItemsEditor";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
+import { StatusHistoryTimeline } from "./Components/StatusHistoryTimeline";
 
 const Edit = ({ order, statuses, currencies }) => {
     const { data, setData, put, processing, errors } = useForm({
@@ -156,6 +157,7 @@ const Edit = ({ order, statuses, currencies }) => {
                         <Tabs.Trigger value="general">Основное</Tabs.Trigger>
                         <Tabs.Trigger value="items">Позиции заказа</Tabs.Trigger>
                         <Tabs.Trigger value="additional">Дополнительно</Tabs.Trigger>
+                        <Tabs.Trigger value="history">История</Tabs.Trigger>
                     </Tabs.List>
 
                     <Tabs.Content value="general">
@@ -288,6 +290,10 @@ const Edit = ({ order, statuses, currencies }) => {
                                 </Field>
                             </Card.Body>
                         </Card.Root>
+                    </Tabs.Content>
+
+                    <Tabs.Content value="history">
+                        <StatusHistoryTimeline histories={order.status_histories || []} />
                     </Tabs.Content>
                 </Tabs.Root>
             </form>

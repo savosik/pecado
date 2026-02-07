@@ -292,29 +292,14 @@ const CartsIndex = ({ filters }) => {
 
                             <Field label="Товар в корзине">
                                 <ProductSelector
-                                    mode="search"
-                                    onSelect={(product) => setLocalFilters({ ...localFilters, product_id: product.id, product: product })}
-                                    trigger={
-                                        <Button variant="outline" width="100%" justifyContent="space-between" fontWeight="normal">
-                                            {localFilters.product ? (
-                                                <Box as="span" isTruncated>{localFilters.product.name}</Box>
-                                            ) : (
-                                                <Text color="fg.muted">Любой товар</Text>
-                                            )}
-                                        </Button>
-                                    }
+                                    mode="single"
+                                    value={localFilters.product}
+                                    onChange={(product) => setLocalFilters({
+                                        ...localFilters,
+                                        product_id: product ? product.id : null,
+                                        product: product
+                                    })}
                                 />
-                                {localFilters.product_id && (
-                                    <Button
-                                        size="xs"
-                                        variant="ghost"
-                                        colorPalette="red"
-                                        mt={1}
-                                        onClick={() => setLocalFilters({ ...localFilters, product_id: null, product: null })}
-                                    >
-                                        Сбросить товар
-                                    </Button>
-                                )}
                             </Field>
 
                             <Field label="Пользователь">

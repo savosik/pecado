@@ -118,73 +118,77 @@ export const SelectRelation = ({
         : (value ? [String(value)] : []);
 
     return (
-        <Select.Root
-            collection={collection}
-            value={selectValue}
-            onValueChange={handleValueChange}
-            multiple={multiple}
-            invalid={!!error}
-            disabled={disabled}
-        >
-            <Select.HiddenSelect name={name} />
+        <ChakraField.Root invalid={!!error} disabled={disabled} required={required} width="full">
             {label && (
-                <Select.Label>
+                <ChakraField.Label>
                     {label}
-                    {required && <ChakraField.RequiredIndicator />}
-                </Select.Label>
+                    <ChakraField.RequiredIndicator />
+                </ChakraField.Label>
             )}
-            <Select.Control>
-                <Select.Trigger>
-                    <Select.ValueText placeholder={placeholder} />
-                </Select.Trigger>
-                <Select.IndicatorGroup>
-                    {loading && <Spinner size="xs" />}
-                    {multiple && <Select.ClearTrigger />}
-                    <Select.Indicator />
-                </Select.IndicatorGroup>
-            </Select.Control>
+            <Select.Root
+                collection={collection}
+                value={selectValue}
+                onValueChange={handleValueChange}
+                multiple={multiple}
+                invalid={!!error}
+                disabled={disabled}
+                width="full"
+            >
+                <Select.HiddenSelect name={name} />
+                <Select.Control>
+                    <Select.Trigger>
+                        <Select.ValueText placeholder={placeholder} />
+                    </Select.Trigger>
+                    <Select.IndicatorGroup>
+                        {loading && <Spinner size="xs" />}
+                        {multiple && <Select.ClearTrigger />}
+                        <Select.Indicator />
+                    </Select.IndicatorGroup>
+                </Select.Control>
 
-            <Portal>
-                <Select.Positioner>
-                    <Select.Content>
-                        {/* Поиск */}
-                        <Select.ItemGroup>
-                            <Select.ItemGroupLabel>
-                                <input
-                                    type="text"
-                                    placeholder="Поиск..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '8px',
-                                        border: 'none',
-                                        outline: 'none',
-                                    }}
-                                />
-                            </Select.ItemGroupLabel>
-                        </Select.ItemGroup>
+                <Portal>
+                    <Select.Positioner>
+                        <Select.Content>
+                            {/* Поиск */}
+                            <Select.ItemGroup>
+                                <Select.ItemGroupLabel>
+                                    <input
+                                        type="text"
+                                        placeholder="Поиск..."
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        style={{
+                                            width: '100%',
+                                            padding: '8px',
+                                            border: 'none',
+                                            outline: 'none',
+                                        }}
+                                    />
+                                </Select.ItemGroupLabel>
+                            </Select.ItemGroup>
 
-                        {/* Опции */}
-                        {loading ? (
-                            <Select.Item item={{ label: 'Загрузка...', value: 'loading' }} disabled>
-                                Загрузка...
-                            </Select.Item>
-                        ) : options.length === 0 ? (
-                            <Select.Item item={{ label: 'Нет данных', value: 'empty' }} disabled>
-                                Нет данных
-                            </Select.Item>
-                        ) : (
-                            collection.items.map((item) => (
-                                <Select.Item key={item.value} item={item}>
-                                    {item.label}
-                                    <Select.ItemIndicator />
+                            {/* Опции */}
+                            {loading ? (
+                                <Select.Item item={{ label: 'Загрузка...', value: 'loading' }} disabled>
+                                    Загрузка...
                                 </Select.Item>
-                            ))
-                        )}
-                    </Select.Content>
-                </Select.Positioner>
-            </Portal>
-        </Select.Root>
+                            ) : options.length === 0 ? (
+                                <Select.Item item={{ label: 'Нет данных', value: 'empty' }} disabled>
+                                    Нет данных
+                                </Select.Item>
+                            ) : (
+                                collection.items.map((item) => (
+                                    <Select.Item key={item.value} item={item}>
+                                        {item.label}
+                                        <Select.ItemIndicator />
+                                    </Select.Item>
+                                ))
+                            )}
+                        </Select.Content>
+                    </Select.Positioner>
+                </Portal>
+            </Select.Root>
+            {error && <ChakraField.ErrorText>{error}</ChakraField.ErrorText>}
+        </ChakraField.Root>
     );
 };

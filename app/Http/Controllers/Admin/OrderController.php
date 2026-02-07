@@ -209,7 +209,7 @@ class OrderController extends AdminController
      */
     public function show(Order $order): Response
     {
-        $order->load(['user', 'company', 'items.product', 'cart']);
+        $order->load(['user', 'company', 'items.product', 'cart', 'statusHistories.user']);
 
         return Inertia::render('Admin/Pages/Orders/Show', [
             'order' => [
@@ -250,6 +250,19 @@ class OrderController extends AdminController
                         ] : null,
                     ];
                 }),
+                'status_histories' => $order->statusHistories->map(function ($history) {
+                    return [
+                        'id' => $history->id,
+                        'old_status' => $history->old_status,
+                        'new_status' => $history->new_status,
+                        'old_status_label' => $history->old_status_label,
+                        'new_status_label' => $history->new_status_label,
+                        'user_name' => $history->user ? $history->user->name : 'Система',
+                        'comment' => $history->comment,
+                        'created_at' => $history->created_at->format('d.m.Y H:i'),
+                        'created_at_human' => $history->created_at->diffForHumans(),
+                    ];
+                }),
             ],
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
@@ -263,7 +276,7 @@ class OrderController extends AdminController
      */
     public function edit(Order $order): Response
     {
-        $order->load(['user', 'company', 'items.product.media', 'items.product.brand']);
+        $order->load(['user', 'company', 'items.product.media', 'items.product.brand', 'statusHistories.user']);
 
         return Inertia::render('Admin/Pages/Orders/Edit', [
             'order' => [
@@ -296,6 +309,19 @@ class OrderController extends AdminController
                         'sku' => $item->product ? $item->product->sku : null,
                         'image_url' => $item->product ? $item->product->getFirstMediaUrl('main') : null,
                         'brand_name' => $item->product && $item->product->brand ? $item->product->brand->name : null,
+                    ];
+                }),
+                'status_histories' => $order->statusHistories->map(function ($history) {
+                    return [
+                        'id' => $history->id,
+                        'old_status' => $history->old_status,
+                        'new_status' => $history->new_status,
+                        'old_status_label' => $history->old_status_label,
+                        'new_status_label' => $history->new_status_label,
+                        'user_name' => $history->user ? $history->user->name : 'Система',
+                        'comment' => $history->comment,
+                        'created_at' => $history->created_at->format('d.m.Y H:i'),
+                        'created_at_human' => $history->created_at->diffForHumans(),
                     ];
                 }),
             ],

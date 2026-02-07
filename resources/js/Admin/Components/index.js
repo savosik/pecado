@@ -14,6 +14,7 @@ export { MarkdownEditor } from './Editor/MarkdownEditor';
 export { SelectRelation } from './SelectRelation';
 export { BarcodeSelector } from './BarcodeSelector';
 export { ProductSelector } from './ProductSelector';
+export { EntitySelector } from './EntitySelector';
 export { FileUploader } from './FileUploader';
 export * from './CertificateSelector';
 

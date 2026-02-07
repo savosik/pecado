@@ -1,0 +1,133 @@
+import { useForm } from '@inertiajs/react';
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
+import { PageHeader, FormField, FormActions, FileUploader } from '@/Admin/Components';
+import { MarkdownEditor } from '@/Admin/Components/Editor/MarkdownEditor';
+import { Card, Input, Stack, SimpleGrid, Textarea } from '@chakra-ui/react';
+import { toaster } from '@/components/ui/toaster';
+import { useState } from 'react';
+
+export default function Create() {
+    const { data, setData, post, processing, errors } = useForm({
+        title: '',
+        slug: '',
+        content: '',
+        meta_title: '',
+        meta_description: '',
+        main_image: null,
+    });
+
+    const [autoSlug, setAutoSlug] = useState(true);
+
+    const handleTitleChange = (e) => {
+        const title = e.target.value;
+        setData('title', title);
+
+        if (autoSlug) {
+            const slug = title
+                .toLowerCase()
+                .replace(/[^a-zа-я0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .trim();
+            setData('slug', slug);
+        }
+    };
+
+    const handleSlugChange = (e) => {
+        setAutoSlug(false);
+        setData('slug', e.target.value);
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        post(route('admin.pages.store'), {
+            onSuccess: () => {
+                toaster.create({
+                    title: 'Страница успешно создана',
+                    type: 'success',
+                });
+            },
+            onError: () => {
+                toaster.create({
+                    title: 'Ошибка при создании страницы',
+                    description: 'Проверьте правильность заполнения полей',
+                    type: 'error',
+                });
+            },
+        });
+    };
+
+    return (
+        <AdminLayout>
+            <PageHeader title="Создать страницу" />
+
+            <Card.Root>
+                <Card.Body>
+                    <form onSubmit={handleSubmit}>
+                        <Stack gap={6}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Заголовок *" error={errors.title} required>
+                                    <Input
+                                        value={data.title}
+                                        onChange={handleTitleChange}
+                                        placeholder="Введите заголовок страницы"
+                                    />
+                                </FormField>
+
+                                <FormField label="Slug *" error={errors.slug} required>
+                                    <Input
+                                        value={data.slug}
+                                        onChange={handleSlugChange}
+                                        placeholder="url-slug-stranicy"
+                                    />
+                                </FormField>
+                            </SimpleGrid>
+
+                            <FormField label="Содержимое *" error={errors.content} required>
+                                <MarkdownEditor
+                                    value={data.content}
+                                    onChange={(value) => setData('content', value)}
+                                    placeholder="Введите содержимое страницы..."
+                                    context="page content"
+                                />
+                            </FormField>
+
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Meta Title" error={errors.meta_title}>
+                                    <Input
+                                        value={data.meta_title}
+                                        onChange={(e) => setData('meta_title', e.target.value)}
+                                        placeholder="SEO заголовок"
+                                    />
+                                </FormField>
+
+                                <FormField label="Meta Description" error={errors.meta_description}>
+                                    <Textarea
+                                        value={data.meta_description}
+                                        onChange={(e) => setData('meta_description', e.target.value)}
+                                        placeholder="SEO описание"
+                                        rows={3}
+                                    />
+                                </FormField>
+                            </SimpleGrid>
+
+                            <FormField label="Главное изображение" error={errors.main_image}>
+                                <FileUploader
+                                    value={data.main_image}
+                                    onChange={(file) => setData('main_image', file)}
+                                    accept="image/*"
+                                />
+                            </FormField>
+
+                            <FormActions
+                                submitLabel="Создать страницу"
+                                onCancel={() => window.history.back()}
+                                processing={processing}
+                            />
+                        </Stack>
+                    </form>
+                </Card.Body>
+            </Card.Root>
+        </AdminLayout>
+    );
+}

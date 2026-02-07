@@ -18,6 +18,7 @@ export default defineConfig({
         host: '0.0.0.0',
         port: 5173,
         strictPort: true,
+        cors: true,  // Enable CORS for Docker cross-container requests
         hmr: {
             host: 'localhost',
             clientPort: 5174,

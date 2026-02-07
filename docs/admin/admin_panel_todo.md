@@ -183,103 +183,105 @@
 ### 4.4. Маркетинг
 
 #### Акции (Promotions)
-- [ ] Создать `Admin\PromotionController`
-- [ ] Добавить маршруты `admin/promotions`
-- [ ] Реализовать привязку товаров к акциям
+- [x] Создать `Admin\PromotionController`
+- [x] Добавить маршруты `admin/promotions`
+- [x] Реализовать привязку товаров к акциям
 
 #### Скидки (Discounts)
-- [ ] Создать `Admin\DiscountController`
-- [ ] Добавить маршруты `admin/discounts`
-- [ ] Реализовать привязку к товарам и пользователям
+- [x] Создать `Admin\DiscountController`
+- [x] Добавить маршруты `admin/discounts`
+- [x] Реализовать привязку к товарам и пользователям
 
 #### Подборки товаров (ProductSelections)
-- [ ] Создать `Admin\ProductSelectionController`
-- [ ] Добавить маршруты `admin/product-selections`
+- [x] Создать `Admin\ProductSelectionController`
+- [x] Добавить маршруты `admin/product-selections`
 
 ---
 
 ### 4.5. Пользователи
 
 #### Пользователи (Users)
-- [ ] Создать `Admin\UserController`
-- [ ] Добавить маршруты `admin/users`
-- [ ] Реализовать фильтрацию по региону, is_admin
+- [x] Создать `Admin\UserController`
+- [x] Добавить маршруты `admin/users`
+- [x] Реализовать фильтрацию по региону, is_admin, status
 
 #### Компании (Companies)
-- [ ] Создать `Admin\CompanyController`
-- [ ] Добавить маршруты `admin/companies`
+- [x] Создать `Admin\CompanyController`
+- [x] Добавить маршруты `admin/companies`
 
 #### Банковские счета (CompanyBankAccounts)
-- [ ] Создать `Admin\CompanyBankAccountController`
-- [ ] Добавить маршруты `admin/company-bank-accounts`
+- [x] Создать `Admin\CompanyBankAccountController`
+- [x] Добавить маршруты `admin/company-bank-accounts`
 
 #### Адреса доставки (DeliveryAddresses)
-- [ ] Создать `Admin\DeliveryAddressController`
-- [ ] Добавить маршруты `admin/delivery-addresses`
+- [x] Создать `Admin\DeliveryAddressController`
+- [x] Добавить маршруты `admin/delivery-addresses`
 
 ---
 
 ### 4.6. Финансы
 
 #### Валюты (Currencies)
-- [ ] Создать `Admin\CurrencyController`
-- [ ] Добавить маршруты `admin/currencies`
+- [x] Создать `Admin\CurrencyController`
+- [x] Добавить маршруты `admin/currencies`
 
 #### Балансы пользователей (UserBalances)
-- [ ] Создать `Admin\UserBalanceController`
-- [ ] Добавить маршруты `admin/user-balances`
+- [x] Создать `Admin\UserBalanceController`
+- [x] Добавить маршруты `admin/user-balances`
 
 ---
 
 ### 4.7. Контент
 
 #### Статьи (Articles)
-- [ ] Создать `Admin\ArticleController`
-- [ ] Добавить маршруты `admin/articles`
-- [ ] Реализовать загрузку изображений
-- [ ] Интегрировать теги
+- [x] Создать `Admin\ArticleController`
+- [x] Добавить маршруты `admin/articles`
+- [x] Реализовать загрузку изображений
+- [x] Интегрировать теги
 
 #### Новости (News)
-- [ ] Создать `Admin\NewsController`
-- [ ] Добавить маршруты `admin/news`
+- [x] Создать `Admin\NewsController`
+- [x] Добавить маршруты `admin/news`
 
 #### FAQ
-- [ ] Создать `Admin\FaqController`
-- [ ] Добавить маршруты `admin/faqs`
+- [x] Создать `Admin\FaqController`
+- [x] Добавить маршруты `admin/faqs`
 
 #### Баннеры (Banners)
-- [ ] Создать `Admin\BannerController`
-- [ ] Добавить маршруты `admin/banners`
-- [ ] Реализовать polymorphic-связь (linkable)
+- [x] Создать `Admin\BannerController`
+- [x] Добавить маршруты `admin/banners`
+- [x] Реализовать polymorphic-связь (linkable)
 
 #### Страницы (Pages)
-- [ ] Создать `Admin\PageController`
-- [ ] Добавить маршруты `admin/pages`
+- [x] Создать `Admin\PageController`
+- [x] Добавить маршруты `admin/pages`
 
 #### Истории (Stories)
-- [ ] Создать `Admin\StoryController`
-- [ ] Добавить маршруты `admin/stories`
-- [ ] Реализовать управление story_slides
+- [x] Создать `Admin\StoryController` и `Admin\StorySlideController`
+- [x] Добавить маршруты `admin/stories` (с nested slides)
+- [x] Реализовать CRUD для Stories
+- [x] Реализовать inline создание/редактирование слайдов
+- [x] Реализовать drag-and-drop сортировку
 
 ---
 
 ### 4.8. Теги
 
-- [ ] Создать `Admin\TagController`
-- [ ] Добавить маршруты `admin/tags`
+- [x] Создать `Admin\TagController`
+- [x] Добавить маршруты `admin/tags`
 
 ---
 
 ### 4.9. Система
 
 #### Медиа (Media)
-- [ ] Создать `Admin\MediaController`
-- [ ] Добавить маршруты `admin/media`
-- [ ] Реализовать просмотр и удаление медиафайлов
+- [x] Создать `Admin\MediaController`
+- [x] Добавить маршруты `admin/media`
+- [x] Реализовать просмотр и удаление медиафайлов
 
 #### Настройки
-- [ ] Создать `Admin\SettingsController`
-- [ ] Добавить маршруты `admin/settings`
+- [x] Создать `Admin\SettingsController`
+- [x] Добавить маршруты `admin/settings`
 
 ---
 
@@ -383,72 +385,83 @@
 
 ### 5.5. Маркетинг
 
-- [ ] Создать страницы CRUD для Promotions
-- [ ] Создать страницы CRUD для Discounts
-- [ ] Создать страницы CRUD для ProductSelections
+#### Promotions
+- [x] Создать `Admin/Pages/Promotions/Index.jsx`
+- [x] Создать `Admin/Pages/Promotions/Create.jsx`
+- [x] Создать `Admin/Pages/Promotions/Edit.jsx`
+
+#### Discounts
+- [x] Создать `Admin/Pages/Discounts/Index.jsx`
+- [x] Создать `Admin/Pages/Discounts/Create.jsx`
+- [x] Создать `Admin/Pages/Discounts/Edit.jsx`
+
+#### ProductSelections
+- [x] Создать `Admin/Pages/ProductSelections/Index.jsx`
+- [x] Создать `Admin/Pages/ProductSelections/Create.jsx`
+- [x] Создать `Admin/Pages/ProductSelections/Edit.jsx`
 
 ---
 
 ### 5.6. Пользователи
 
-- [ ] Создать страницы CRUD для Users
-- [ ] Создать страницы CRUD для Companies
-- [ ] Создать страницы CRUD для CompanyBankAccounts
-- [ ] Создать страницы CRUD для DeliveryAddresses
+- [x] Создать страницы CRUD для Users
+- [x] Создать страницы CRUD для Companies
+- [x] Создать страницы CRUD для CompanyBankAccounts
+- [x] Создать страницы CRUD для DeliveryAddresses
 
 ---
 
 ### 5.7. Финансы
 
-- [ ] Создать страницы CRUD для Currencies
-- [ ] Создать страницы CRUD для UserBalances
+- [x] Создать страницы CRUD для Currencies
+- [x] Создать страницы CRUD для UserBalances
 
 ---
 
 ### 5.8. Контент
 
-- [ ] Создать страницы CRUD для Articles (с тегами, изображениями)
-- [ ] Создать страницы CRUD для News
-- [ ] Создать страницы CRUD для Faqs
-- [ ] Создать страницы CRUD для Banners
-- [ ] Создать страницы CRUD для Pages
-- [ ] Создать страницы CRUD для Stories (с управлением слайдами)
+- [x] Создать страницы CRUD для Articles (с тегами, изображениями)
+- [x] Создать страницы CRUD для News
+- [x] Создать страницы CRUD для Faqs
+- [x] Создать страницы CRUD для Banners
+- [x] Создать страницы CRUD для Pages
+- [x] Создать страницы CRUD для Stories (с управлением слайдами)
 
 ---
 
 ### 5.9. Теги
 
-- [ ] Создать страницы CRUD для Tags
+- [x] Создать страницы CRUD для Tags
 
 ---
 
 ### 5.10. Система
 
-- [ ] Создать страницу Media (галерея медиафайлов)
-- [ ] Создать страницу Settings
+- [x] Создать страницу Media (галерея медиафайлов)
+- [x] Создать страницу Settings
 
 ---
 
 ## Фаза 6: Сложные связи и вложенные сущности
 
 ### 6.1. Продукты и связи
-- [ ] Реализовать привязку товаров к категориям (many-to-many)
-- [ ] Реализовать привязку товаров к складам с quantity
-- [ ] Реализовать управление атрибутами товара (product_attribute_values)
-- [ ] Реализовать привязку сертификатов к товарам
-- [ ] Реализовать привязку сегментов к товарам
+- [x] Реализовать привязку товаров к категориям (many-to-many)
+- [x] Реализовать привязку товаров к складам с quantity
+- [x] Реализовать управление атрибутами товара (product_attribute_values)
+- [x] Реализовать привязку сертификатов к товарам
+- [x] ~~Реализовать привязку сегментов к товарам~~ (сегменты удалены из проекта)
 
 ### 6.2. Заказы
 - [x] Реализовать просмотр и редактирование позиций заказа (order_items)
-- [ ] Реализовать историю изменения статусов
+- [x] Реализовать историю изменения статусов
 
 ### 6.3. Истории (Stories)
-- [ ] Реализовать drag-and-drop для сортировки слайдов
-- [ ] Реализовать inline-создание слайдов
+- [x] Реализовать drag-and-drop для сортировки слайдов
+- [x] Реализовать inline-создание слайдов
 
 ### 6.4. Атрибуты
-- [ ] Реализовать inline-редактирование значений атрибутов
-- [ ] Реализовать сортировку значений (sort_order)
+- [x] Реализовать inline-редактирование значений атрибутов
+- [x] Реализовать сортировку значений (sort_order)
 
 ---
 

@@ -56,6 +56,33 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     
     // Теги
     Route::get('/tags/search', [\App\Http\Controllers\Admin\TagController::class, 'search'])->name('tags.search');
+    Route::resource('tags', \App\Http\Controllers\Admin\TagController::class);
+    
+    // Настройки
+    Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index');
+    Route::put('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update');
+    
+    // Страницы
+    Route::get('/pages/search', [\App\Http\Controllers\Admin\PageController::class, 'search'])->name('pages.search');
+    Route::resource('pages', \App\Http\Controllers\Admin\PageController::class);
+    
+    // Баннеры
+    Route::get('/banners/search', [\App\Http\Controllers\Admin\BannerController::class, 'search'])->name('banners.search');
+    Route::resource('banners', \App\Http\Controllers\Admin\BannerController::class);
+    
+    // Медиа
+    Route::get('/media', [\App\Http\Controllers\Admin\MediaController::class, 'index'])->name('media.index');
+    Route::delete('/media/{media}', [\App\Http\Controllers\Admin\MediaController::class, 'destroy'])->name('media.destroy');
+    
+    // Сторис
+    Route::get('/stories/search', [\App\Http\Controllers\Admin\StoryController::class, 'search'])->name('stories.search');
+    Route::resource('stories', \App\Http\Controllers\Admin\StoryController::class);
+    
+    // Слайды сторис (nested resource)
+    Route::post('/stories/{story}/slides', [\App\Http\Controllers\Admin\StorySlideController::class, 'store'])->name('stories.slides.store');
+    Route::put('/stories/{story}/slides/{slide}', [\App\Http\Controllers\Admin\StorySlideController::class, 'update'])->name('stories.slides.update');
+    Route::delete('/stories/{story}/slides/{slide}', [\App\Http\Controllers\Admin\StorySlideController::class, 'destroy'])->name('stories.slides.destroy');
+    Route::put('/stories/{story}/slides-reorder', [\App\Http\Controllers\Admin\StorySlideController::class, 'reorder'])->name('stories.slides.reorder');
     
     // Склады
     Route::resource('warehouses', \App\Http\Controllers\Admin\WarehouseController::class);
@@ -84,14 +111,84 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::resource('carts', \App\Http\Controllers\Admin\CartController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     
     // Возвраты
+    Route::get('/returns/search-products', [\App\Http\Controllers\Admin\ReturnController::class, 'searchProducts'])->name('returns.search-products');
+    Route::get('/returns/product-orders', [\App\Http\Controllers\Admin\ReturnController::class, 'getProductOrders'])->name('returns.product-orders');
     Route::patch('/returns/{return}/status', [\App\Http\Controllers\Admin\ReturnController::class, 'updateStatus'])->name('returns.status');
     Route::patch('/returns/{return}/admin-comment', [\App\Http\Controllers\Admin\ReturnController::class, 'updateAdminComment'])->name('returns.admin-comment');
     Route::post('/returns/bulk-status', [\App\Http\Controllers\Admin\ReturnController::class, 'bulkUpdateStatus'])->name('returns.bulk-status');
     Route::resource('returns', \App\Http\Controllers\Admin\ReturnController::class);
     
     // Избранное
-    Route::resource('favorites', \App\Http\Controllers\Admin\FavoriteController::class)->only(['index', 'destroy']);
+    Route::post('/favorites/bulk-delete', [\App\Http\Controllers\Admin\FavoriteController::class, 'bulkDelete'])->name('favorites.bulk-delete');
+    Route::get('/favorites/search-users', [\App\Http\Controllers\Admin\FavoriteController::class, 'searchUsers'])->name('favorites.search-users');
+    Route::resource('favorites', \App\Http\Controllers\Admin\FavoriteController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     
     // Список желаний
-    Route::resource('wishlist', \App\Http\Controllers\Admin\WishlistController::class)->only(['index', 'destroy']);
+    Route::post('/wishlist/bulk-delete', [\App\Http\Controllers\Admin\WishlistController::class, 'bulkDelete'])->name('wishlist.bulk-delete');
+    Route::get('/wishlist/search-users', [\App\Http\Controllers\Admin\WishlistController::class, 'searchUsers'])->name('wishlist.search-users');
+    Route::resource('wishlist', \App\Http\Controllers\Admin\WishlistController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
+
+    // --------------------
+    // Маркетинг (Marketing)
+    // --------------------
+
+    // Акции
+    Route::delete('/promotions/{promotion}/media', [\App\Http\Controllers\Admin\PromotionController::class, 'deleteMedia'])->name('promotions.media.delete');
+    Route::resource('promotions', \App\Http\Controllers\Admin\PromotionController::class);
+
+    // Скидки
+    Route::get('/discounts/search-users', [\App\Http\Controllers\Admin\DiscountController::class, 'searchUsers'])->name('discounts.search-users');
+    Route::resource('discounts', \App\Http\Controllers\Admin\DiscountController::class);
+
+    // Подборки товаров
+    Route::delete('/product-selections/{product_selection}/media', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'deleteMedia'])->name('product-selections.media.delete');
+    Route::resource('product-selections', \App\Http\Controllers\Admin\ProductSelectionController::class);
+
+    // --------------------
+    // Пользователи (Users)
+    // --------------------
+
+    // Пользователи
+    Route::get('/users/search', [\App\Http\Controllers\Admin\UserController::class, 'search'])->name('users.search');
+    Route::resource('users', \App\Http\Controllers\Admin\UserController::class);
+
+    // Компании
+    Route::get('/companies/search', [\App\Http\Controllers\Admin\CompanyController::class, 'search'])->name('companies.search');
+    Route::resource('companies', \App\Http\Controllers\Admin\CompanyController::class);
+
+    // Банковские счета компаний
+    Route::get('/company-bank-accounts/search', [\App\Http\Controllers\Admin\CompanyBankAccountController::class, 'search'])->name('company-bank-accounts.search');
+    Route::resource('company-bank-accounts', \App\Http\Controllers\Admin\CompanyBankAccountController::class);
+
+    // Адреса доставки
+    Route::get('/delivery-addresses/search', [\App\Http\Controllers\Admin\DeliveryAddressController::class, 'search'])->name('delivery-addresses.search');
+    Route::resource('delivery-addresses', \App\Http\Controllers\Admin\DeliveryAddressController::class);
+
+    // --------------------
+    // Финансы (Finance)
+    // --------------------
+
+    // Валюты
+    Route::get('/currencies/search', [\App\Http\Controllers\Admin\CurrencyController::class, 'search'])->name('currencies.search');
+    Route::resource('currencies', \App\Http\Controllers\Admin\CurrencyController::class);
+
+    // Балансы пользователей
+    Route::get('/user-balances/search', [\App\Http\Controllers\Admin\UserBalanceController::class, 'search'])->name('user-balances.search');
+    Route::resource('user-balances', \App\Http\Controllers\Admin\UserBalanceController::class);
+
+    // --------------------
+    // Контент (Content)
+    // --------------------
+
+    // Статьи
+    Route::get('/articles/search', [\App\Http\Controllers\Admin\ArticleController::class, 'search'])->name('articles.search');
+    Route::resource('articles', \App\Http\Controllers\Admin\ArticleController::class);
+
+    // Новости
+    Route::get('/news/search', [\App\Http\Controllers\Admin\NewsController::class, 'search'])->name('news.search');
+    Route::resource('news', \App\Http\Controllers\Admin\NewsController::class);
+
+    // FAQ
+    Route::get('/faqs/search', [\App\Http\Controllers\Admin\FaqController::class, 'search'])->name('faqs.search');
+    Route::resource('faqs', \App\Http\Controllers\Admin\FaqController::class);
 });

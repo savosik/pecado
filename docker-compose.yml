@@ -166,6 +166,22 @@ services:
     depends_on:
       - app
 
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.58.1-jammy
+    container_name: pecado-playwright
+    working_dir: /app
+    user: "1000:1000"
+    volumes:
+      - ./:/app
+    networks:
+      - pecado-network
+    depends_on:
+      - nginx
+      - app
+    environment:
+      - CI=true
+    command: tail -f /dev/null
+
 networks:
   pecado-network:
     driver: bridge

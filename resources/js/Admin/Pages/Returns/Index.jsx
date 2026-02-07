@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { HStack, IconButton, Badge, Button, Input, Box, VStack, Checkbox } from "@chakra-ui/react";
+import { HStack, IconButton, Badge, Button, Input, Box, VStack } from "@chakra-ui/react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuEye, LuTrash2, LuPlus, LuPencil, LuFilter, LuX } from "react-icons/lu";
 import { AdminLayout } from "@/Admin/Layouts/AdminLayout";

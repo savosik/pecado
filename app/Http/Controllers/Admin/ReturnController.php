@@ -6,11 +6,14 @@ use App\Enums\ReturnReason;
 use App\Enums\ReturnStatus;
 use App\Models\ProductReturn;
 use App\Models\User;
+use App\Models\Product;
+use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 
 class ReturnController extends AdminController
 {
@@ -450,6 +453,86 @@ class ReturnController extends AdminController
         return redirect()
             ->route('admin.returns.index')
             ->with('success', 'Возврат успешно удалён');
+    }
+
+    /**
+     * Search products for return items (with optional user filtering).
+     */
+    public function searchProducts(Request $request): JsonResponse
+    {
+        $query = $request->input('query');
+        $userId = $request->input('user_id');
+
+        if (!$query) {
+            return response()->json([]);
+        }
+
+        // Поиск через Meilisearch
+        $products = Product::search($query)
+            ->query(fn ($q) => $q->with(['media', 'barcodes', 'brand'])->limit(20))
+            ->get();
+
+        // Если указан user_id, фильтруем только товары из заказов этого пользователя
+        if ($userId) {
+            $orderedProductIds = Order::where('user_id', $userId)
+                ->with('items')
+                ->get()
+                ->flatMap(fn ($order) => $order->items->pluck('product_id'))
+                ->unique()
+                ->toArray();
+
+            $products = $products->filter(fn ($product) => in_array($product->id, $orderedProductIds));
+        }
+
+        return response()->json($products->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'price' => $product->base_price,
+                'barcode' => $product->barcode,
+                'barcodes' => $product->barcodes->pluck('barcode')->toArray(),
+                'brand_name' => $product->brand?->name,
+            ];
+        })->values());
+    }
+
+    /**
+     * Get orders for a specific product and user.
+     */
+    public function getProductOrders(Request $request): JsonResponse
+    {
+        $productId = $request->input('product_id');
+        $userId = $request->input('user_id');
+
+        if (!$productId || !$userId) {
+            return response()->json([]);
+        }
+
+        // Получаем заказы пользователя, содержащие этот товар
+        $orders = Order::where('user_id', $userId)
+            ->whereHas('items', function ($query) use ($productId) {
+                $query->where('product_id', $productId);
+            })
+            ->with(['items' => function ($query) use ($productId) {
+                $query->where('product_id', $productId);
+            }])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($order) use ($productId) {
+                $item = $order->items->first();
+                return [
+                    'id' => $order->id,
+                    'uuid' => $order->uuid,
+                    'label' => "Заказ #{$order->id} от " . $order->created_at->format('d.m.Y'),
+                    'price' => $item?->price ?? 0,
+                    'quantity' => $item?->quantity ?? 0,
+                    'created_at' => $order->created_at->format('d.m.Y H:i'),
+                ];
+            });
+
+        return response()->json($orders);
     }
 
     /**

@@ -63,6 +63,18 @@ class Order extends Model
                 $order->uuid = (string) Str::uuid();
             }
         });
+
+        // Автоматическая запись истории при изменении статуса
+        static::updating(function (Order $order) {
+            if ($order->isDirty('status')) {
+                $order->statusHistories()->create([
+                    'old_status' => $order->getOriginal('status'),
+                    'new_status' => $order->status,
+                    'user_id' => auth()->id(),
+                    'comment' => request()->input('status_comment'),
+                ]);
+            }
+        });
     }
 
     public function user(): BelongsTo
@@ -101,5 +113,13 @@ class Order extends Model
     public function returnItems(): HasMany
     {
         return $this->hasMany(ReturnItem::class);
+    }
+
+    /**
+     * Get the status history for this order.
+     */
+    public function statusHistories(): HasMany
+    {
+        return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at', 'desc');
     }
 }

@@ -17,6 +17,7 @@ import { AdminLayout } from "@/Admin/Layouts/AdminLayout";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
+import { StatusHistoryTimeline } from "./Components/StatusHistoryTimeline";
 
 const getStatusColor = (status) => {
     const colors = {
@@ -219,6 +220,11 @@ const OrderShow = () => {
                     </Table.Root>
                 </Card.Body>
             </Card.Root>
+
+            {/* История статусов */}
+            <Box mt={6}>
+                <StatusHistoryTimeline histories={order.status_histories || []} />
+            </Box>
         </AdminLayout>
     );
 };
