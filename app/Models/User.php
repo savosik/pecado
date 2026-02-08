@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -17,6 +18,31 @@ class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, InteractsWithMedia;
+
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var list<string>
+     */
+    protected $appends = ['full_name'];
+
+    /**
+     * ФИО пользователя: Фамилия Имя Отчество.
+     */
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $parts = array_filter([
+                    $this->surname,
+                    $this->name,
+                    $this->patronymic,
+                ]);
+
+                return count($parts) > 0 ? implode(' ', $parts) : ($this->name ?? '');
+            },
+        );
+    }
 
     /**
      * The attributes that are mass assignable.

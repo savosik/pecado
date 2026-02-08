@@ -75,6 +75,11 @@ export default function Index({ discounts, filters }) {
             key: 'created_at',
             label: 'Создано',
             sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.discounts', openDeleteDialog),
     ];

@@ -96,7 +96,11 @@ export default function Index({ brands, filters }) {
             key: 'created_at',
             label: 'Создан',
             sortable: true,
-            render: (_, brand) => new Date(brand.created_at).toLocaleDateString('ru-RU'),
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.brands', openDeleteDialog),
     ];

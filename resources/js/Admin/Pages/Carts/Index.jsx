@@ -175,11 +175,21 @@ const CartsIndex = ({ filters }) => {
             label: "Создана",
             key: "created_at",
             sortable: true,
+            render: (_, cart) => (
+                <Text fontSize="sm" color="gray.600">
+                    {cart.created_at ? new Date(cart.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         {
             label: "Обновлена",
             key: "updated_at",
             sortable: true,
+            render: (_, cart) => (
+                <Text fontSize="sm" color="gray.600">
+                    {cart.updated_at ? new Date(cart.updated_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.carts', (cart) => setDeleteId(cart.id)),
     ];

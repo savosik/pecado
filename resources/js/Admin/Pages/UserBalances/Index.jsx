@@ -48,7 +48,7 @@ export default function Index({ balances, currencies, filters }) {
             render: (_, row) => (
                 <Link href={route('admin.users.edit', row.user.id)}>
                     <Text color="blue.600" _hover={{ textDecoration: 'underline' }}>
-                        {row.user.name}
+                        {row.user.full_name}
                     </Text>
                 </Link>
             ),
@@ -82,6 +82,16 @@ export default function Index({ balances, currencies, filters }) {
                 </Box>
             ) : (
                 <Text color="gray.500">—</Text>
+            ),
+        },
+        {
+            key: 'updated_at',
+            label: 'Дата обновления',
+            sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.updated_at ? new Date(row.updated_at).toLocaleString('ru-RU') : '—'}
+                </Text>
             ),
         },
         createActionsColumn('admin.user-balances', openDeleteDialog),

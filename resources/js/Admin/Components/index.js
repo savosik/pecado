@@ -18,4 +18,5 @@ export { EntitySelector } from './EntitySelector';
 export { FileUploader } from './FileUploader';
 export { ContentMediaFields } from './ContentMediaFields';
 export * from './CertificateSelector';
+export { PhoneInput } from './PhoneInput';
 

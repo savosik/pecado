@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -48,19 +48,19 @@ export default function Create({ regions, currencies, countries }) {
                     <Card.Body>
                         <Stack gap={6}>
                             <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                <FormField label="Имя" error={errors.name} required>
-                                    <Input
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                        placeholder="Иван"
-                                    />
-                                </FormField>
-
                                 <FormField label="Фамилия" error={errors.surname}>
                                     <Input
                                         value={data.surname}
                                         onChange={(e) => setData('surname', e.target.value)}
                                         placeholder="Иванов"
+                                    />
+                                </FormField>
+
+                                <FormField label="Имя" error={errors.name} required>
+                                    <Input
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder="Иван"
                                     />
                                 </FormField>
 
@@ -95,10 +95,9 @@ export default function Create({ regions, currencies, countries }) {
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Телефон" error={errors.phone}>
-                                    <Input
+                                    <PhoneInput
                                         value={data.phone}
-                                        onChange={(e) => setData('phone', e.target.value)}
-                                        placeholder="+7 (999) 123-45-67"
+                                        onChange={(value) => setData('phone', value)}
                                     />
                                 </FormField>
 

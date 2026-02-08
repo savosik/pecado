@@ -43,13 +43,21 @@ export default function Index({ certificates, filters }) {
             key: 'issued_at',
             label: 'Дата выдачи',
             sortable: true,
-            render: (date) => date ? date.substring(0, 10) : '—',
+            render: (date) => (
+                <Text fontSize="sm" color="gray.600">
+                    {date ? new Date(date).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         {
             key: 'expires_at',
             label: 'Действует до',
             sortable: true,
-            render: (date) => date ? date.substring(0, 10) : '—',
+            render: (date) => (
+                <Text fontSize="sm" color="gray.600">
+                    {date ? new Date(date).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         {
             key: 'media',

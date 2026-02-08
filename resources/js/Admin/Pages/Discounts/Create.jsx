@@ -138,7 +138,7 @@ export default function Create() {
                                                             alignItems="center"
                                                         >
                                                             <Box>
-                                                                <Text fontWeight="medium">{user.name}</Text>
+                                                                <Text fontWeight="medium">{user.full_name}</Text>
                                                                 {user.email && (
                                                                     <Text fontSize="xs" color="fg.muted">{user.email}</Text>
                                                                 )}

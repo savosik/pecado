@@ -61,7 +61,7 @@ class UserController extends Controller
             'currencies' => Currency::select('id', 'code', 'name')->orderBy('code')->get(),
             'countries' => collect(Country::cases())->map(fn($country) => [
                 'value' => $country->value,
-                'label' => $country->value,
+                'label' => $country->label(),
             ]),
         ]);
     }
@@ -74,7 +74,7 @@ class UserController extends Controller
             'patronymic' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'phone' => 'nullable|string|max:255',
+            'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
             'country' => 'nullable|string',
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',
@@ -104,7 +104,7 @@ class UserController extends Controller
             'currencies' => Currency::select('id', 'code', 'name')->orderBy('code')->get(),
             'countries' => collect(Country::cases())->map(fn($country) => [
                 'value' => $country->value,
-                'label' => $country->value,
+                'label' => $country->label(),
             ]),
         ]);
     }
@@ -117,7 +117,7 @@ class UserController extends Controller
             'patronymic' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8', // Опционально при обновлении
-            'phone' => 'nullable|string|max:255',
+            'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
             'country' => 'nullable|string',
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',
@@ -161,18 +161,20 @@ class UserController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('surname', 'like', "%{$search}%")
+                    ->orWhere('patronymic', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
-        $users = $query->select('id', 'name', 'email', 'phone')
+        $users = $query->select('id', 'name', 'surname', 'patronymic', 'email', 'phone')
             ->limit(20)
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => $user->name,
+                    'name' => $user->full_name,
                     'email' => $user->email,
                     'phone' => $user->phone,
                 ];

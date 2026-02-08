@@ -112,9 +112,9 @@ class DeliveryAddressController extends Controller
             ->map(function ($address) {
                 return [
                     'id' => $address->id,
-                    'name' => $address->name . ' (' . $address->user?->name . ')',
+                    'name' => $address->name . ' (' . $address->user?->full_name . ')',
                     'address' => $address->address,
-                    'user_name' => $address->user?->name,
+                    'user_name' => $address->user?->full_name,
                 ];
             });
 

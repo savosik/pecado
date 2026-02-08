@@ -47,7 +47,11 @@ export default function Index({ barcodes, filters }) {
             key: 'created_at',
             label: 'Добавлен',
             sortable: true,
-            render: (date) => new Date(date).toLocaleDateString('ru-RU'),
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.product-barcodes', openDeleteDialog),
     ];

@@ -176,6 +176,11 @@ const FavoritesIndex = ({ filters }) => {
             label: "Дата добавления",
             key: "created_at",
             sortable: true,
+            render: (_, favorite) => (
+                <Text fontSize="sm" color="gray.600">
+                    {favorite.created_at ? new Date(favorite.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.favorites', (favorite) => setDeleteId(favorite.id)),
     ];

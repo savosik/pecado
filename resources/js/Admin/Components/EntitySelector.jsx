@@ -11,14 +11,16 @@ import axios from 'axios';
 /**
  * EntitySelector - универсальный async-селектор с поиском
  * 
- * @param {Object} value - Выбранное значение { id, name/label, ... }
- * @param {Function} onChange - Callback при изменении значения
- * @param {string} searchUrl - URL для поиска (route name)
+ * @param {number|string|Object|null} value - Выбранное значение (ID или объект { id, name/label, ... })
+ * @param {Function} onChange - Callback при изменении значения. Получает объект item или null (при очистке)
+ * @param {string} searchUrl - URL для поиска (полный URL или route name)
  * @param {Object} searchParams - Дополнительные параметры для поиска
  * @param {string} placeholder - Placeholder для инпута
  * @param {string} displayField - Поле для отображения (default: 'label')
  * @param {boolean} disabled - Отключен ли селектор
  * @param {string} error - Ошибка валидации
+ * @param {string} initialDisplay - Текст для отображения когда value — скалярный ID (для Edit-страниц)
+ * @param {string} valueKey - Ключ, по которому из item извлекается значение для onChange (default: null — передаёт весь объект)
  */
 export const EntitySelector = ({
     value = null,
@@ -29,13 +31,40 @@ export const EntitySelector = ({
     displayField = 'label',
     disabled = false,
     error = null,
+    initialDisplay = null,
+    valueKey = null,
 }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [isFocused, setIsFocused] = useState(false);
+    // Внутренний стейт для хранения отображаемого текста при скалярном value
+    const [selectedDisplayText, setSelectedDisplayText] = useState(initialDisplay || '');
     const containerRef = useRef(null);
+
+    // Определяем, является ли значение "выбранным" (не пустым)
+    const isValueObject = value !== null && typeof value === 'object';
+    const isValueScalar = value !== null && value !== '' && typeof value !== 'object';
+    const hasValue = isValueObject || isValueScalar;
+
+    // Получаем текст для отображения выбранного значения
+    const getDisplayText = () => {
+        if (isValueObject) {
+            return value[displayField] || value.name || value.label || '';
+        }
+        if (isValueScalar && selectedDisplayText) {
+            return selectedDisplayText;
+        }
+        return '';
+    };
+
+    // Обновляем selectedDisplayText при изменении initialDisplay
+    useEffect(() => {
+        if (initialDisplay) {
+            setSelectedDisplayText(initialDisplay);
+        }
+    }, [initialDisplay]);
 
     // Click outside handler
     useEffect(() => {
@@ -80,12 +109,20 @@ export const EntitySelector = ({
     };
 
     const handleSelect = (item) => {
-        onChange(item);
+        // Сохраняем текст для отображения
+        setSelectedDisplayText(item[displayField] || item.name || item.label || '');
+        // Если задан valueKey, передаём только нужное поле (например, id)
+        if (valueKey) {
+            onChange(item[valueKey]);
+        } else {
+            onChange(item);
+        }
         setQuery('');
         setShowSuggestions(false);
     };
 
     const handleClear = () => {
+        setSelectedDisplayText('');
         onChange(null);
         setQuery('');
     };
@@ -104,7 +141,7 @@ export const EntitySelector = ({
 
     return (
         <Box position="relative" ref={containerRef} w="100%">
-            {value ? (
+            {hasValue ? (
                 <Box
                     px={3}
                     py={2}
@@ -116,7 +153,7 @@ export const EntitySelector = ({
                     justifyContent="space-between"
                     alignItems="center"
                 >
-                    <Text truncate>{value[displayField] || value.name || value.label}</Text>
+                    <Text truncate>{getDisplayText()}</Text>
                     {!disabled && (
                         <Text
                             as="button"
@@ -144,7 +181,7 @@ export const EntitySelector = ({
                 />
             )}
 
-            {showSuggestions && !value && (
+            {showSuggestions && !hasValue && (
                 <Box
                     position="absolute"
                     top="100%"

@@ -1,6 +1,6 @@
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text } from '@chakra-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -44,7 +44,7 @@ export default function Edit({ user, regions, currencies, countries }) {
     return (
         <>
             <PageHeader
-                title={`Редактирование: ${user.name}`}
+                title={`Редактирование: ${user.full_name}`}
                 description="Изменение информации о пользователе"
             />
 
@@ -53,17 +53,17 @@ export default function Edit({ user, regions, currencies, countries }) {
                     <Card.Body>
                         <Stack gap={6}>
                             <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                <FormField label="Имя" error={errors.name} required>
-                                    <Input
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                    />
-                                </FormField>
-
                                 <FormField label="Фамилия" error={errors.surname}>
                                     <Input
                                         value={data.surname}
                                         onChange={(e) => setData('surname', e.target.value)}
+                                    />
+                                </FormField>
+
+                                <FormField label="Имя" error={errors.name} required>
+                                    <Input
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
                                     />
                                 </FormField>
 
@@ -99,9 +99,9 @@ export default function Edit({ user, regions, currencies, countries }) {
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Телефон" error={errors.phone}>
-                                    <Input
+                                    <PhoneInput
                                         value={data.phone}
-                                        onChange={(e) => setData('phone', e.target.value)}
+                                        onChange={(value) => setData('phone', value)}
                                     />
                                 </FormField>
 

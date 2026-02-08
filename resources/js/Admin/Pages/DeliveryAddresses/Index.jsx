@@ -38,7 +38,7 @@ export default function Index({ deliveryAddresses, filters }) {
                     _hover={{ textDecoration: 'underline' }}
                     onClick={() => router.visit(route('admin.users.edit', user.id))}
                 >
-                    {user.name}
+                    {user.full_name}
                 </Text>
             ) : '—',
         },
@@ -52,7 +52,7 @@ export default function Index({ deliveryAddresses, filters }) {
             key: 'address',
             label: 'Адрес',
             render: (address) => (
-                <Text maxW="400px" noOfLines={2}>
+                <Text maxW="400px">
                     {address}
                 </Text>
             ),
@@ -61,6 +61,11 @@ export default function Index({ deliveryAddresses, filters }) {
             key: 'created_at',
             label: 'Создан',
             sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.delivery-addresses', openDeleteDialog),
     ];

@@ -35,7 +35,7 @@ export default function Edit({ balance, currencies }) {
 
     return (
         <>
-            <PageHeader title={`Редактировать баланс: ${balance.user.name} (${balance.currency.code})`} />
+            <PageHeader title={`Редактировать баланс: ${balance.user.full_name} (${balance.currency.code})`} />
 
             <Card.Root>
                 <Card.Body>
@@ -95,6 +95,16 @@ export default function Edit({ balance, currencies }) {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField label="Дата обновления">
+                                <Input
+                                    value={balance.updated_at ? new Date(balance.updated_at).toLocaleString('ru-RU') : '—'}
+                                    readOnly
+                                    variant="flushed"
+                                    bg="gray.50"
+                                    _dark={{ bg: 'gray.800' }}
+                                />
+                            </FormField>
 
                             <FormActions
                                 submitLabel="Сохранить изменения"

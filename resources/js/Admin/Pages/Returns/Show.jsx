@@ -145,7 +145,7 @@ const ReturnShow = () => {
                                 <>
                                     <HStack justify="space-between">
                                         <Text color="fg.muted">Имя:</Text>
-                                        <Text>{returnData.user.name}</Text>
+                                        <Text>{returnData.user.full_name}</Text>
                                     </HStack>
                                     <HStack justify="space-between">
                                         <Text color="fg.muted">Email:</Text>

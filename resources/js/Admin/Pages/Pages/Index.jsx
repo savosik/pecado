@@ -52,7 +52,11 @@ export default function Index({ pages, filters }) {
             key: 'created_at',
             label: 'Дата создания',
             sortable: true,
-            render: (_, row) => new Date(row.created_at).toLocaleDateString('ru-RU'),
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.pages', openDeleteDialog),
     ];

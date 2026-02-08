@@ -160,7 +160,7 @@ class CartController extends AdminController
                 'updated_at' => $cart->updated_at?->format('d.m.Y H:i'),
                 'user' => $cart->user ? [
                     'id' => $cart->user->id,
-                    'name' => $cart->user->name,
+                    'name' => $cart->user->full_name,
                     'email' => $cart->user->email,
                 ] : null,
                 'items_count' => $cart->items->count(),
@@ -211,7 +211,7 @@ class CartController extends AdminController
                 'updated_at' => $cart->updated_at?->format('d.m.Y H:i'),
                 'user' => $cart->user ? [
                     'id' => $cart->user->id,
-                    'name' => $cart->user->name,
+                    'name' => $cart->user->full_name,
                     'email' => $cart->user->email,
                 ] : null,
                 'items' => $cart->items->map(function ($item) {
@@ -431,18 +431,20 @@ class CartController extends AdminController
         $users = User::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('surname', 'like', "%{$query}%")
+                  ->orWhere('patronymic', 'like', "%{$query}%")
                   ->orWhere('email', 'like', "%{$query}%");
             })
-            ->select('id', 'name', 'email')
-            ->orderBy('name')
+            ->select('id', 'name', 'surname', 'patronymic', 'email')
+            ->orderBy('surname')
             ->limit(20)
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => $user->name,
+                    'name' => $user->full_name,
                     'email' => $user->email,
-                    'label' => "{$user->name} ({$user->email})",
+                    'label' => "{$user->full_name} ({$user->email})",
                 ];
             });
             

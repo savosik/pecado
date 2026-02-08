@@ -65,6 +65,10 @@ class CompanyBankAccountController extends Controller
 
         $bankAccount = CompanyBankAccount::create($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json($bankAccount, 201);
+        }
+
         return redirect()
             ->route('admin.company-bank-accounts.index')
             ->with('success', 'Банковский счет успешно создан');
@@ -99,14 +103,22 @@ class CompanyBankAccountController extends Controller
 
         $companyBankAccount->update($validated);
 
+        if ($request->wantsJson()) {
+            return response()->json($companyBankAccount);
+        }
+
         return redirect()
             ->route('admin.company-bank-accounts.index')
             ->with('success', 'Банковский счет успешно обновлен');
     }
 
-    public function destroy(CompanyBankAccount $companyBankAccount)
+    public function destroy(Request $request, CompanyBankAccount $companyBankAccount)
     {
         $companyBankAccount->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true]);
+        }
 
         return redirect()
             ->route('admin.company-bank-accounts.index')

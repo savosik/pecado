@@ -174,6 +174,11 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
             label: "Дата",
             key: "created_at",
             sortable: true,
+            render: (_, order) => (
+                <Text fontSize="sm" color="gray.600">
+                    {order.created_at ? new Date(order.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.orders', (order) => setDeleteId(order.id)),
     ];

@@ -38,7 +38,11 @@ export default function Index({ productModels, filters }) {
             key: 'created_at',
             label: 'Создана',
             sortable: true,
-            render: (_, model) => new Date(model.created_at).toLocaleDateString('ru-RU')
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.product-models', openDeleteDialog),
     ];

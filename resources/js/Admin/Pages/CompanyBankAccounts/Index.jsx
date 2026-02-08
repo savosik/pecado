@@ -36,7 +36,7 @@ export default function Index({ bankAccounts, filters }) {
                     <Text fontWeight="medium">{company.name}</Text>
                     {company.user && (
                         <Text fontSize="xs" color="fg.muted">
-                            Пользователь: {company.user.name}
+                            Пользователь: {company.user.full_name}
                         </Text>
                     )}
                 </Box>
@@ -70,6 +70,11 @@ export default function Index({ bankAccounts, filters }) {
             key: 'created_at',
             label: 'Создан',
             sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.company-bank-accounts', openDeleteDialog),
     ];

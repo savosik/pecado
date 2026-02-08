@@ -54,7 +54,7 @@ class CompanyController extends Controller
         return Inertia::render('Admin/Pages/Companies/Create', [
             'countries' => collect(Country::cases())->map(fn($country) => [
                 'value' => $country->value,
-                'label' => $country->value,
+                'label' => $country->label(),
             ]),
         ]);
     }
@@ -72,7 +72,7 @@ class CompanyController extends Controller
             'okpo_code' => 'nullable|string|max:255',
             'legal_address' => 'nullable|string',
             'actual_address' => 'nullable|string',
-            'phone' => 'nullable|string|max:255',
+            'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id',
         ]);
@@ -92,7 +92,7 @@ class CompanyController extends Controller
             'company' => $company,
             'countries' => collect(Country::cases())->map(fn($country) => [
                 'value' => $country->value,
-                'label' => $country->value,
+                'label' => $country->label(),
             ]),
         ]);
     }
@@ -110,7 +110,7 @@ class CompanyController extends Controller
             'okpo_code' => 'nullable|string|max:255',
             'legal_address' => 'nullable|string',
             'actual_address' => 'nullable|string',
-            'phone' => 'nullable|string|max:255',
+            'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id,' . $company->id,
         ]);
@@ -152,9 +152,9 @@ class CompanyController extends Controller
             ->map(function ($company) {
                 return [
                     'id' => $company->id,
-                    'name' => $company->name . ' (' . ($company->user ? $company->user->name : 'No user') . ')',
+                    'name' => $company->name . ' (' . ($company->user ? $company->user->full_name : 'No user') . ')',
                     'display_name' => $company->name,
-                    'user_name' => $company->user?->name,
+                    'user_name' => $company->user?->full_name,
                 ];
             });
 

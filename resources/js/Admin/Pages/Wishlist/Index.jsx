@@ -176,6 +176,11 @@ const WishlistIndex = ({ filters }) => {
             label: "Дата добавления",
             key: "created_at",
             sortable: true,
+            render: (_, item) => (
+                <Text fontSize="sm" color="gray.600">
+                    {item.created_at ? new Date(item.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.wishlist', (item) => setDeleteId(item.id)),
     ];

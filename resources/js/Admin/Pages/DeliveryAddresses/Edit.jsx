@@ -26,52 +26,54 @@ export default function Edit({ deliveryAddress }) {
 
     return (
         <>
-                <PageHeader
-                    title={`Редактирование: ${deliveryAddress.name}`}
-                    description="Изменение информации об адресе доставки"
-                />
+            <PageHeader
+                title={`Редактирование: ${deliveryAddress.name}`}
+                description="Изменение информации об адресе доставки"
+            />
 
-                <form onSubmit={handleSubmit}>
-                    <Card.Root>
-                        <Card.Body>
-                            <Stack gap={6}>
-                                <FormField label="Пользователь" error={errors.user_id} required>
-                                    <EntitySelector
-                                        searchUrl={route('admin.users.search')}
-                                        placeholder="Выберите пользователя"
-                                        value={data.user_id}
-                                        onChange={(value) => setData('user_id', value)}
-                                        error={errors.user_id}
-                                        initialDisplay={deliveryAddress.user?.name}
-                                    />
-                                </FormField>
+            <form onSubmit={handleSubmit}>
+                <Card.Root>
+                    <Card.Body>
+                        <Stack gap={6}>
+                            <FormField label="Пользователь" error={errors.user_id} required>
+                                <EntitySelector
+                                    searchUrl={route('admin.users.search')}
+                                    placeholder="Выберите пользователя"
+                                    value={data.user_id}
+                                    onChange={(value) => setData('user_id', value)}
+                                    error={errors.user_id}
+                                    initialDisplay={deliveryAddress.user?.name}
+                                    valueKey="id"
+                                    displayField="name"
+                                />
+                            </FormField>
 
-                                <FormField label="Название" error={errors.name} required>
-                                    <Input
-                                        value={data.name}
-                                        onChange={(e) => setData('name', e.target.value)}
-                                    />
-                                </FormField>
+                            <FormField label="Название" error={errors.name} required>
+                                <Input
+                                    value={data.name}
+                                    onChange={(e) => setData('name', e.target.value)}
+                                />
+                            </FormField>
 
-                                <FormField label="Адрес" error={errors.address} required>
-                                    <Textarea
-                                        value={data.address}
-                                        onChange={(e) => setData('address', e.target.value)}
-                                        rows={4}
-                                    />
-                                </FormField>
-                            </Stack>
-                        </Card.Body>
+                            <FormField label="Адрес" error={errors.address} required>
+                                <Textarea
+                                    value={data.address}
+                                    onChange={(e) => setData('address', e.target.value)}
+                                    rows={4}
+                                />
+                            </FormField>
+                        </Stack>
+                    </Card.Body>
 
-                        <Card.Footer>
-                            <FormActions
-                                loading={processing}
-                                onCancel={() => window.history.back()}
-                                submitLabel="Сохранить изменения"
-                            />
-                        </Card.Footer>
-                    </Card.Root>
-                </form>
+                    <Card.Footer>
+                        <FormActions
+                            loading={processing}
+                            onCancel={() => window.history.back()}
+                            submitLabel="Сохранить изменения"
+                        />
+                    </Card.Footer>
+                </Card.Root>
+            </form>
         </>
     );
 }

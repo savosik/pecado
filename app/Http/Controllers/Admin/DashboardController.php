@@ -53,7 +53,7 @@ class DashboardController extends AdminController
                 return [
                     'id' => $order->id,
                     'order_number' => $order->order_number,
-                    'user_name' => $order->user->name ?? 'N/A',
+                    'user_name' => $order->user->full_name ?? 'N/A',
                     'total_amount' => $order->total_amount,
                     'status' => $order->status,
                     'status_label' => $order->status_label,

@@ -43,6 +43,8 @@ export default function Create() {
                                     value={data.company_id}
                                     onChange={(value) => setData('company_id', value)}
                                     error={errors.company_id}
+                                    valueKey="id"
+                                    displayField="name"
                                 />
                             </FormField>
 

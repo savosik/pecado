@@ -51,7 +51,7 @@ export default function Index({ companies, filters }) {
                     _hover={{ textDecoration: 'underline' }}
                     onClick={() => router.visit(route('admin.users.edit', user.id))}
                 >
-                    {user.name}
+                    {user.full_name}
                 </Text>
             ) : '—',
         },
@@ -74,6 +74,11 @@ export default function Index({ companies, filters }) {
             key: 'created_at',
             label: 'Создана',
             sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.companies', openDeleteDialog),
     ];

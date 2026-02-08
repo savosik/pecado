@@ -173,6 +173,11 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
             label: "Дата",
             key: "created_at",
             sortable: true,
+            render: (_, returnItem) => (
+                <Text fontSize="sm" color="gray.600">
+                    {returnItem.created_at ? new Date(returnItem.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id)),
     ];

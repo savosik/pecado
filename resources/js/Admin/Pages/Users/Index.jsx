@@ -29,12 +29,12 @@ export default function Index({ users, filters }) {
             width: '80px',
         },
         {
-            key: 'name',
-            label: 'Имя',
-            sortable: true,
-            render: (name, item) => (
+            key: 'full_name',
+            label: 'ФИО',
+            sortable: false,
+            render: (fullName, item) => (
                 <Box>
-                    <Text fontWeight="medium">{name}</Text>
+                    <Text fontWeight="medium">{fullName}</Text>
                     {item.email && <Text fontSize="xs" color="fg.muted">{item.email}</Text>}
                 </Box>
             ),
@@ -67,6 +67,11 @@ export default function Index({ users, filters }) {
             key: 'created_at',
             label: 'Создан',
             sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.created_at ? new Date(row.created_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
         },
         createActionsColumn('admin.users', openDeleteDialog),
     ];

@@ -47,6 +47,8 @@ export default function Edit({ bankAccount }) {
                                     onChange={(value) => setData('company_id', value)}
                                     error={errors.company_id}
                                     initialDisplay={bankAccount.company?.name}
+                                    valueKey="id"
+                                    displayField="name"
                                 />
                             </FormField>
 

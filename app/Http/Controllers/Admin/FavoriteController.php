@@ -75,7 +75,7 @@ class FavoriteController extends AdminController
                 'created_at' => $favorite->created_at?->format('d.m.Y H:i'),
                 'user' => $favorite->user ? [
                     'id' => $favorite->user->id,
-                    'name' => $favorite->user->name,
+                    'name' => $favorite->user->full_name,
                     'email' => $favorite->user->email,
                 ] : null,
                 'product' => $favorite->product ? [
@@ -93,9 +93,9 @@ class FavoriteController extends AdminController
             if ($user) {
                 $userFilter = [
                     'id' => $user->id,
-                    'name' => $user->name,
+                    'name' => $user->full_name,
                     'email' => $user->email,
-                    'label' => "{$user->name} ({$user->email})",
+                    'label' => "{$user->full_name} ({$user->email})",
                 ];
             }
         }
@@ -196,9 +196,9 @@ class FavoriteController extends AdminController
                 'product_id' => $favorite->product_id,
                 'user' => $favorite->user ? [
                     'id' => $favorite->user->id,
-                    'name' => $favorite->user->name,
+                    'name' => $favorite->user->full_name,
                     'email' => $favorite->user->email,
-                    'label' => "{$favorite->user->name} ({$favorite->user->email})",
+                    'label' => "{$favorite->user->full_name} ({$favorite->user->email})",
                 ] : null,
                 'product' => $favorite->product ? [
                     'id' => $favorite->product->id,
@@ -271,18 +271,20 @@ class FavoriteController extends AdminController
         $users = User::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
+                  ->orWhere('surname', 'like', "%{$query}%")
+                  ->orWhere('patronymic', 'like', "%{$query}%")
                   ->orWhere('email', 'like', "%{$query}%");
             })
-            ->select('id', 'name', 'email')
-            ->orderBy('name')
+            ->select('id', 'name', 'surname', 'patronymic', 'email')
+            ->orderBy('surname')
             ->limit(20)
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => $user->name,
+                    'name' => $user->full_name,
                     'email' => $user->email,
-                    'label' => "{$user->name} ({$user->email})",
+                    'label' => "{$user->full_name} ({$user->email})",
                 ];
             });
             
