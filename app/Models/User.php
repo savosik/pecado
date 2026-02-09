@@ -25,7 +25,7 @@ class User extends Authenticatable implements HasMedia
      *
      * @var list<string>
      */
-    protected $appends = ['full_name'];
+    protected $appends = ['full_name', 'status_label'];
 
     /**
      * ФИО пользователя: Фамилия Имя Отчество.
@@ -42,6 +42,16 @@ class User extends Authenticatable implements HasMedia
 
                 return count($parts) > 0 ? implode(' ', $parts) : ($this->name ?? '');
             },
+        );
+    }
+
+    /**
+     * Человекочитаемое название статуса.
+     */
+    protected function statusLabel(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->status?->label() ?? '—',
         );
     }
 
@@ -206,5 +216,13 @@ class User extends Authenticatable implements HasMedia
     public function returns(): HasMany
     {
         return $this->hasMany(ProductReturn::class);
+    }
+
+    /**
+     * Get the product exports for the user.
+     */
+    public function productExports(): HasMany
+    {
+        return $this->hasMany(ProductExport::class);
     }
 }

@@ -1,12 +1,12 @@
-import { useMemo, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, SelectRelation, CategoryTreeSelector } from '@/Admin/Components';
-import { Box, Card, SimpleGrid, Input, Stack, Button, HStack, Text, IconButton, Fieldset, Tabs } from '@chakra-ui/react';
+import { Box, Card, SimpleGrid, Input, Stack, Button, HStack, Text, IconButton, Fieldset, Tabs, Dialog, Portal, CloseButton } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuPlus, LuTrash2, LuGripVertical, LuFileText, LuFolderTree } from 'react-icons/lu';
+import { LuPlus, LuTrash2, LuGripVertical, LuFileText, LuFolderTree, LuBookOpen } from 'react-icons/lu';
 import {
     DndContext,
     closestCenter,
@@ -83,7 +83,11 @@ function AttributeValueItem({ value, index, onUpdate, onRemove }) {
     );
 }
 
-export default function Edit({ attribute, types, categoryTree }) {
+export default function Edit({ attribute, types, categoryTree, attributeGroups }) {
+    const originalType = useRef(attribute.type);
+    const [convertDialogOpen, setConvertDialogOpen] = useState(false);
+    const [pendingType, setPendingType] = useState(null);
+
     const { data, setData, put, processing, errors, transform } = useForm({
         name: attribute.name || '',
         slug: attribute.slug || '',
@@ -93,6 +97,9 @@ export default function Edit({ attribute, types, categoryTree }) {
         sort_order: attribute.sort_order || 0,
         values: attribute.values || [],
         category_ids: (attribute.categories || []).map(c => c.id),
+        attribute_group_id: attribute.attribute_group_id || null,
+        _convert_to_select: false,
+        _convert_to_boolean: false,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -113,11 +120,58 @@ export default function Edit({ attribute, types, categoryTree }) {
         })
     );
 
+    // Обработка смены типа — если меняем на select или boolean из другого типа, показать диалог
+    const handleTypeChange = (newType) => {
+        if (newType === 'select' && originalType.current !== 'select') {
+            setPendingType(newType);
+            setConvertDialogOpen(true);
+        } else if (newType === 'boolean' && originalType.current !== 'boolean') {
+            setPendingType(newType);
+            setConvertDialogOpen(true);
+        } else {
+            setData(prev => ({
+                ...prev,
+                type: newType,
+                _convert_to_select: false,
+                _convert_to_boolean: false,
+            }));
+        }
+    };
+
+    // Подтверждение конвертации
+    const handleConfirmConvert = () => {
+        if (pendingType === 'select') {
+            setData(prev => ({
+                ...prev,
+                type: 'select',
+                _convert_to_select: true,
+                _convert_to_boolean: false,
+            }));
+        } else if (pendingType === 'boolean') {
+            setData(prev => ({
+                ...prev,
+                type: 'boolean',
+                _convert_to_boolean: true,
+                _convert_to_select: false,
+            }));
+        }
+        setConvertDialogOpen(false);
+        setPendingType(null);
+    };
+
+    // Отмена конвертации
+    const handleCancelConvert = () => {
+        setConvertDialogOpen(false);
+        setPendingType(null);
+    };
+
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
         closeAfterSaveRef.current = shouldClose;
         put(route('admin.attributes.update', attribute.id), {
             onSuccess: () => {
+                // Обновляем originalType после успешного сохранения
+                originalType.current = data.type;
                 toaster.create({
                     title: 'Атрибут обновлен',
                     description: 'Изменения успешно сохранены',
@@ -216,7 +270,7 @@ export default function Edit({ attribute, types, categoryTree }) {
                                             label="Тип данных"
                                             required
                                             value={data.type}
-                                            onChange={(val) => setData('type', val)}
+                                            onChange={(val) => handleTypeChange(val)}
                                             options={types}
                                             error={errors.type}
                                         />
@@ -249,7 +303,51 @@ export default function Edit({ attribute, types, categoryTree }) {
                                         </FormField>
                                     </SimpleGrid>
 
-                                    {data.type === 'select' && (
+                                    <SelectRelation
+                                        label="Группа атрибутов"
+                                        value={data.attribute_group_id}
+                                        onChange={(val) => setData('attribute_group_id', val)}
+                                        options={attributeGroups.map(g => ({ value: g.id, label: g.name }))}
+                                        placeholder="Без группы"
+                                        error={errors.attribute_group_id}
+                                    />
+
+                                    {/* Уведомление о конвертации */}
+                                    {data._convert_to_select && (
+                                        <Box
+                                            p={4}
+                                            bg="blue.50"
+                                            borderRadius="md"
+                                            borderWidth="1px"
+                                            borderColor="blue.200"
+                                        >
+                                            <HStack gap={2}>
+                                                <LuBookOpen size={18} color="var(--chakra-colors-blue-500)" />
+                                                <Text color="blue.700" fontWeight="medium">
+                                                    При сохранении все существующие значения товаров будут преобразованы в варианты справочника.
+                                                </Text>
+                                            </HStack>
+                                        </Box>
+                                    )}
+
+                                    {data._convert_to_boolean && (
+                                        <Box
+                                            p={4}
+                                            bg="orange.50"
+                                            borderRadius="md"
+                                            borderWidth="1px"
+                                            borderColor="orange.200"
+                                        >
+                                            <HStack gap={2}>
+                                                <LuBookOpen size={18} color="var(--chakra-colors-orange-500)" />
+                                                <Text color="orange.700" fontWeight="medium">
+                                                    При сохранении все существующие значения товаров будут преобразованы в Да/Нет.
+                                                </Text>
+                                            </HStack>
+                                        </Box>
+                                    )}
+
+                                    {data.type === 'select' && !data._convert_to_select && (
                                         <Fieldset.Root>
                                             <Stack gap={4}>
                                                 <HStack justify="space-between">
@@ -319,6 +417,65 @@ export default function Edit({ attribute, types, categoryTree }) {
                     </Card.Footer>
                 </Card.Root>
             </form>
+
+            {/* Диалог подтверждения конвертации в справочник */}
+            <Dialog.Root
+                role="alertdialog"
+                open={convertDialogOpen}
+                onOpenChange={(e) => {
+                    if (!e.open) handleCancelConvert();
+                }}
+            >
+                <Portal>
+                    <Dialog.Backdrop />
+                    <Dialog.Positioner>
+                        <Dialog.Content>
+                            <Dialog.Header>
+                                <Dialog.Title>
+                                    {pendingType === 'select'
+                                        ? 'Конвертировать в справочник?'
+                                        : 'Конвертировать в логический тип?'}
+                                </Dialog.Title>
+                            </Dialog.Header>
+                            <Dialog.Body>
+                                {pendingType === 'select' ? (
+                                    <>
+                                        <Text>
+                                            Все уникальные значения товаров для этого атрибута будут автоматически
+                                            добавлены как варианты выбора справочника.
+                                        </Text>
+                                        <Text mt={2} color="fg.muted" fontSize="sm">
+                                            После конвертации при импорте товаров новые значения будут автоматически
+                                            добавляться в справочник.
+                                        </Text>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Text>
+                                            Все существующие значения товаров будут преобразованы в Да/Нет.
+                                        </Text>
+                                        <Text mt={2} color="fg.muted" fontSize="sm">
+                                            Значения «Да», «Yes», «true», «1» будут считаться как «Да».
+                                            Все остальные значения станут «Нет».
+                                        </Text>
+                                    </>
+                                )}
+                            </Dialog.Body>
+                            <Dialog.Footer>
+                                <Button variant="outline" onClick={handleCancelConvert}>
+                                    Отмена
+                                </Button>
+                                <Button colorPalette="blue" onClick={handleConfirmConvert}>
+                                    Конвертировать
+                                </Button>
+                            </Dialog.Footer>
+                            <Dialog.CloseTrigger asChild>
+                                <CloseButton size="sm" />
+                            </Dialog.CloseTrigger>
+                        </Dialog.Content>
+                    </Dialog.Positioner>
+                </Portal>
+            </Dialog.Root>
         </>
     );
 }

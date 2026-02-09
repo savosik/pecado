@@ -161,4 +161,27 @@ class ProductModelController extends AdminController
 
         return redirect()->route('admin.product-models.index')->with('success', 'Модель товара успешно удалена');
     }
+
+    /**
+     * Search product models by name (JSON).
+     */
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+
+        $models = ProductModel::query()
+            ->when($query, function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%");
+            })
+            ->take(20)
+            ->get()
+            ->map(function ($model) {
+                return [
+                    'id' => $model->id,
+                    'name' => $model->name,
+                ];
+            });
+
+        return response()->json($models);
+    }
 }

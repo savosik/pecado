@@ -1,4 +1,4 @@
-import React, { useState, useEffect , useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     Box,
     Card,
@@ -27,7 +27,7 @@ import { toaster } from "@/components/ui/toaster";
 const CartEdit = ({ currencies = [] }) => {
     const { cart } = usePage().props;
 
-    const { data, setData, put, processing, errors , transform } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         name: cart.name || "",
         user_id: cart.user_id || null,
         user: cart.user || null,
@@ -261,7 +261,7 @@ const CartEdit = ({ currencies = [] }) => {
                                                 onChange={handleUserChange}
                                                 searchUrl="admin.carts.search-users"
                                                 placeholder="Поиск по имени или email..."
-                                                displayField="name"
+                                                displayField="full_name"
                                             />
                                         </FormField>
                                     </Box>

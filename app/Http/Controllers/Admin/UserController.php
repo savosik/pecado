@@ -52,9 +52,21 @@ class UserController extends Controller
 
         $users = $query->paginate($request->input('per_page', 15));
 
+        // Подсчёт пользователей по статусам (без фильтров)
+        $statusCounts = [];
+        foreach (UserStatus::cases() as $status) {
+            $statusCounts[$status->value] = User::where('status', $status->value)->count();
+        }
+        $statusCounts['all'] = User::count();
+
         return Inertia::render('Admin/Pages/Users/Index', [
             'users' => $users,
             'filters' => $request->only(['search', 'region_id', 'is_admin', 'status', 'sort_by', 'sort_order', 'per_page']),
+            'statuses' => collect(UserStatus::cases())->map(fn($status) => [
+                'value' => $status->value,
+                'label' => $status->label(),
+            ]),
+            'statusCounts' => $statusCounts,
         ]);
     }
 
@@ -164,7 +176,7 @@ class UserController extends Controller
     {
         $query = User::query();
 
-        if ($search = $request->input('search')) {
+        if ($search = $request->input('query', $request->input('search'))) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('surname', 'like', "%{$search}%")

@@ -69,6 +69,15 @@ export default function Index({ attributes, filters }) {
             sortable: true,
         },
         {
+            key: 'attribute_group',
+            label: 'Группа',
+            render: (_, attr) => {
+                const group = attr.attribute_group;
+                if (!group) return <Text color="fg.muted">—</Text>;
+                return <Badge colorPalette="teal">{group.name}</Badge>;
+            },
+        },
+        {
             key: 'categories',
             label: 'Категории',
             render: (_, attr) => {

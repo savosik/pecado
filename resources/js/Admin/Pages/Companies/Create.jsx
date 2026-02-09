@@ -7,7 +7,7 @@ import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs, Switch } from '@ch
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create({ countries, yandexMapsApiKey }) {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         user_id: '',
         country: '',
         name: '',
@@ -74,7 +74,7 @@ export default function Create({ countries, yandexMapsApiKey }) {
                                             onChange={(value) => setData('user_id', value)}
                                             error={errors.user_id}
                                             valueKey="id"
-                                            displayField="name"
+                                            displayField="full_name"
                                         />
                                     </FormField>
 

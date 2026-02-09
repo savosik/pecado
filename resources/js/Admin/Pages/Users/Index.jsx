@@ -1,12 +1,21 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, Text, Button, Badge } from '@chakra-ui/react';
+import { Box, Text, Button, Badge, HStack } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
-export default function Index({ users, filters }) {
+const getStatusColor = (status) => {
+    const colors = {
+        processing: 'yellow',
+        active: 'green',
+        blocked: 'red',
+    };
+    return colors[status] || 'gray';
+};
+
+export default function Index({ users, filters, statuses, statusCounts }) {
     const {
         searchQuery,
         handleSearch,
@@ -20,6 +29,16 @@ export default function Index({ users, filters }) {
     } = useResourceIndex('admin.users', filters, {
         entityLabel: 'Пользователь',
     });
+
+    const handleStatusFilter = (statusValue) => {
+        router.get(route('admin.users.index'), {
+            ...filters,
+            status: statusValue || undefined,
+        }, {
+            preserveState: true,
+            replace: true,
+        });
+    };
 
     const columns = [
         {
@@ -43,6 +62,23 @@ export default function Index({ users, filters }) {
             key: 'phone',
             label: 'Телефон',
             render: (phone) => phone || '—',
+        },
+        {
+            key: 'status',
+            label: 'Статус',
+            render: (status, item) => (
+                <Badge
+                    colorPalette={getStatusColor(status)}
+                    variant="subtle"
+                    px={2}
+                    py={1}
+                    borderRadius="md"
+                    fontSize="xs"
+                    fontWeight="semibold"
+                >
+                    {item.status_label}
+                </Badge>
+            ),
         },
         {
             key: 'region',
@@ -87,6 +123,29 @@ export default function Index({ users, filters }) {
                     </Button>
                 }
             />
+
+            {/* Фильтр по статусам */}
+            <HStack gap={2} mb={4} flexWrap="wrap">
+                <Button
+                    size="sm"
+                    variant={!filters.status ? 'solid' : 'outline'}
+                    colorPalette={!filters.status ? 'blue' : 'gray'}
+                    onClick={() => handleStatusFilter('')}
+                >
+                    Все ({statusCounts?.all || 0})
+                </Button>
+                {statuses?.map((status) => (
+                    <Button
+                        key={status.value}
+                        size="sm"
+                        variant={filters.status === status.value ? 'solid' : 'outline'}
+                        colorPalette={filters.status === status.value ? getStatusColor(status.value) : 'gray'}
+                        onClick={() => handleStatusFilter(status.value)}
+                    >
+                        {status.label} ({statusCounts?.[status.value] || 0})
+                    </Button>
+                ))}
+            </HStack>
 
             <Box mb={4}>
                 <SearchInput

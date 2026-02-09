@@ -2,13 +2,13 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
-import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text } from '@chakra-ui/react';
+import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text, HStack, Badge, Button } from '@chakra-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ user, regions, currencies, countries, statuses }) {
-    const { data, setData, put, processing, errors , transform } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         name: user.name || '',
         surname: user.surname
 
@@ -173,22 +173,66 @@ export default function Edit({ user, regions, currencies, countries, statuses })
                                         ))}
                                     </select>
                                 </FormField>
-
-                                <FormField label="Статус" error={errors.status}>
-                                    <select
-                                        value={data.status}
-                                        onChange={(e) => setData('status', e.target.value)}
-                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
-                                    >
-                                        <option value="">Выберите статус</option>
-                                        {statuses.map((status) => (
-                                            <option key={status.value} value={status.value}>
-                                                {status.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </FormField>
                             </SimpleGrid>
+
+                            {/* Выделенный блок статуса */}
+                            <Box
+                                p={4}
+                                borderWidth="2px"
+                                borderColor={
+                                    data.status === 'active' ? 'green.500' :
+                                        data.status === 'blocked' ? 'red.500' :
+                                            data.status === 'processing' ? 'yellow.500' :
+                                                'blue.300'
+                                }
+                                borderRadius="lg"
+                                bg={
+                                    data.status === 'active' ? 'green.50' :
+                                        data.status === 'blocked' ? 'red.50' :
+                                            data.status === 'processing' ? 'yellow.50' :
+                                                'blue.50'
+                                }
+                            >
+                                <HStack gap={3} align="center" mb={2}>
+                                    <Badge
+                                        colorPalette={
+                                            data.status === 'active' ? 'green' :
+                                                data.status === 'blocked' ? 'red' :
+                                                    data.status === 'processing' ? 'yellow' :
+                                                        'blue'
+                                        }
+                                        fontSize="sm"
+                                        px={3}
+                                        py={1}
+                                    >
+                                        Статус пользователя
+                                    </Badge>
+                                </HStack>
+                                <HStack gap={2} flexWrap="wrap">
+                                    {statuses.map((status) => {
+                                        const colorMap = {
+                                            active: 'green',
+                                            blocked: 'red',
+                                            processing: 'yellow',
+                                        };
+                                        const palette = colorMap[status.value] || 'gray';
+                                        const isSelected = data.status === status.value;
+                                        return (
+                                            <Button
+                                                key={status.value}
+                                                size="sm"
+                                                variant={isSelected ? 'solid' : 'outline'}
+                                                colorPalette={palette}
+                                                onClick={() => setData('status', status.value)}
+                                                fontWeight={isSelected ? 'bold' : 'normal'}
+                                            >
+                                                {status.label}
+                                            </Button>
+                                        );
+                                    })}
+                                </HStack>
+                                {errors.status && <Text color="red.500" fontSize="sm" mt={1}>{errors.status}</Text>}
+                            </Box>
 
                             <FormField label="ERP ID" error={errors.erp_id}>
                                 <Input

@@ -33,7 +33,7 @@ export const ContentMediaFields = ({
                         onChange={(file) => setData('list_item', file)}
                         existingUrl={existing.list_image || null}
                         error={errors.list_item}
-                        maxSize={5}
+                        maxSize={20}
                         placeholder="Изображение для списка"
                     />
                 </FormField>
@@ -43,7 +43,7 @@ export const ContentMediaFields = ({
                         onChange={(file) => setData('detail_desktop', file)}
                         existingUrl={existing.detail_desktop_image || null}
                         error={errors.detail_desktop}
-                        maxSize={5}
+                        maxSize={20}
                         placeholder="Десктопное изображение"
                     />
                 </FormField>
@@ -53,7 +53,7 @@ export const ContentMediaFields = ({
                         onChange={(file) => setData('detail_mobile', file)}
                         existingUrl={existing.detail_mobile_image || null}
                         error={errors.detail_mobile}
-                        maxSize={5}
+                        maxSize={20}
                         placeholder="Мобильное изображение"
                     />
                 </FormField>

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -18,6 +19,7 @@ class Attribute extends Model
         'unit',
         'is_filterable',
         'sort_order',
+        'attribute_group_id',
     ];
 
     /**
@@ -47,6 +49,14 @@ class Attribute extends Model
     public function categories(): BelongsToMany
     {
         return $this->belongsToMany(Category::class);
+    }
+
+    /**
+     * Get the attribute group this attribute belongs to.
+     */
+    public function attributeGroup(): BelongsTo
+    {
+        return $this->belongsTo(AttributeGroup::class);
     }
 
     /**

@@ -9,7 +9,7 @@ import { LuPlus, LuTrash2, LuFileText, LuFolderTree } from 'react-icons/lu';
 
 import { useMemo, useRef } from 'react';
 
-export default function Create({ types, categoryTree }) {
+export default function Create({ types, categoryTree, attributeGroups }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         slug: '',
@@ -19,6 +19,7 @@ export default function Create({ types, categoryTree }) {
         sort_order: 0,
         values: [],
         category_ids: [],
+        attribute_group_id: null,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -142,6 +143,15 @@ export default function Create({ types, categoryTree }) {
                                             </HStack>
                                         </FormField>
                                     </SimpleGrid>
+
+                                    <SelectRelation
+                                        label="Группа атрибутов"
+                                        value={data.attribute_group_id}
+                                        onChange={(val) => setData('attribute_group_id', val)}
+                                        options={attributeGroups.map(g => ({ value: g.id, label: g.name }))}
+                                        placeholder="Без группы"
+                                        error={errors.attribute_group_id}
+                                    />
 
                                     {data.type === 'select' && (
                                         <Fieldset.Root>

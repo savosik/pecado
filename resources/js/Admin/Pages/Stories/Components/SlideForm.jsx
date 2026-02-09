@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Stack, Input, Textarea, Button, HStack, Box, NativeSelectRoot, NativeSelectField, Image } from '@chakra-ui/react';
-import { FormField, FileUploader, EntitySelector } from '@/Admin/Components';
+import { Stack, Input, Textarea, Button, HStack, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
+import { FormField, ImageUploader, EntitySelector } from '@/Admin/Components';
 import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
 import { LuSave, LuX } from 'react-icons/lu';
@@ -56,10 +56,8 @@ export default function SlideForm({ slide, story, onSave, onCancel }) {
             if (key.startsWith('_')) return; // Skip internal fields
             if (formData[key] !== null && formData[key] !== '') {
                 if (key === 'media') {
-                    // FileUploader returns an array of files
-                    if (Array.isArray(formData[key]) && formData[key].length > 0) {
-                        formDataToSend.append(key, formData[key][0]);
-                    } else if (formData[key] instanceof File) {
+                    // ImageUploader returns File | null
+                    if (formData[key] instanceof File) {
                         formDataToSend.append(key, formData[key]);
                     }
                 } else {
@@ -143,21 +141,11 @@ export default function SlideForm({ slide, story, onSave, onCancel }) {
                 </FormField>
 
                 <FormField label="Медиафайл" required={slide.isNew} error={errors.media}>
-                    {currentMedia && !formData.media && (
-                        <Box mb={2}>
-                            <Image
-                                src={currentMedia}
-                                alt="Текущее медиа"
-                                maxH="150px"
-                                objectFit="contain"
-                                borderRadius="md"
-                            />
-                        </Box>
-                    )}
-                    <FileUploader
-                        value={formData.media}
+                    <ImageUploader
                         onChange={(file) => setFormData({ ...formData, media: file })}
-                        accept="image/*,video/*"
+                        existingUrl={currentMedia}
+                        error={errors.media}
+                        placeholder="Загрузите медиафайл"
                     />
                 </FormField>
 

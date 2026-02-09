@@ -146,7 +146,7 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
         {
             label: "Пользователь",
             key: "user",
-            render: (_, returnItem) => returnItem.user?.name || returnItem.user?.email || "—",
+            render: (_, returnItem) => returnItem.user?.full_name || returnItem.user?.email || "—",
         },
         {
             label: "Статус",

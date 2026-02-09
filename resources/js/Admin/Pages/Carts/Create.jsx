@@ -1,4 +1,4 @@
-import React, { useState, useEffect , useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
     Box,
     Card,
@@ -25,7 +25,7 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { toaster } from "@/components/ui/toaster";
 
 const CartCreate = ({ currencies = [] }) => {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: "",
         user_id: null,
         user: null,
@@ -262,7 +262,7 @@ const CartCreate = ({ currencies = [] }) => {
                                                 onChange={handleUserChange}
                                                 searchUrl="admin.carts.search-users"
                                                 placeholder="Поиск по имени или email..."
-                                                displayField="name"
+                                                displayField="full_name"
                                             />
                                         </FormField>
                                     </Box>

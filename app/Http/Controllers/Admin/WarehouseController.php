@@ -97,4 +97,27 @@ class WarehouseController extends Controller
         return redirect()->route('admin.warehouses.index')
             ->with('success', 'Склад успешно удален');
     }
+
+    /**
+     * Search warehouses by name (JSON).
+     */
+    public function search(Request $request)
+    {
+        $query = $request->input('query');
+
+        $warehouses = Warehouse::query()
+            ->when($query, function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%");
+            })
+            ->take(20)
+            ->get()
+            ->map(function ($warehouse) {
+                return [
+                    'id' => $warehouse->id,
+                    'name' => $warehouse->name,
+                ];
+            });
+
+        return response()->json($warehouses);
+    }
 }

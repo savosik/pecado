@@ -147,7 +147,7 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
         {
             label: "Пользователь",
             key: "user",
-            render: (_, order) => order.user?.name || order.user?.email || "—",
+            render: (_, order) => order.user?.full_name || order.user?.email || "—",
         },
         {
             label: "Компания",

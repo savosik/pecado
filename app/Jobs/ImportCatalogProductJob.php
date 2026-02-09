@@ -211,7 +211,23 @@ class ImportCatalogProductJob implements ShouldQueue
                 'attribute_id' => $attribute->id,
             ]);
 
-            if ($attribute->type === 'number' && is_numeric($attrValue)) {
+            if ($attribute->type === 'select') {
+                // Для справочников: находим или создаём значение в справочнике
+                $attributeValue = \App\Models\AttributeValue::firstOrCreate(
+                    [
+                        'attribute_id' => $attribute->id,
+                        'value' => $attrValue,
+                    ],
+                    [
+                        'sort_order' => $attribute->values()->count(),
+                    ]
+                );
+                $pav->attribute_value_id = $attributeValue->id;
+            } elseif ($attribute->type === 'boolean') {
+                // Для булевых: конвертируем текст в boolean
+                $trueValues = ['да', 'yes', 'true', '1', 'on'];
+                $pav->boolean_value = in_array(mb_strtolower(trim($attrValue)), $trueValues);
+            } elseif ($attribute->type === 'number' && is_numeric($attrValue)) {
                 $pav->number_value = (float) $attrValue;
             } else {
                 $pav->text_value = $attrValue;
@@ -256,19 +272,14 @@ class ImportCatalogProductJob implements ShouldQueue
                 continue;
             }
 
-            $certificate = Certificate::firstOrCreate(
-                ['external_id' => $certUidStr],
-                [
-                    'name' => 'Сертификат ' . Str::limit($certUidStr, 20),
-                    'type' => 'other',
-                ]
-            );
+            // Привязываем только сертификаты, которые уже существуют в БД
+            $certificate = Certificate::where('external_id', $certUidStr)->first();
 
-            $certificateIds[] = $certificate->id;
+            if ($certificate) {
+                $certificateIds[] = $certificate->id;
+            }
         }
 
-        if (!empty($certificateIds)) {
-            $product->certificates()->syncWithoutDetaching($certificateIds);
-        }
+        $product->certificates()->sync($certificateIds);
     }
 }

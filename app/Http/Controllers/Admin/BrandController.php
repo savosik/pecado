@@ -83,7 +83,7 @@ class BrandController extends AdminController
             'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'logo' => 'nullable|image|max:5120',
+            'logo' => 'nullable|image|max:20480',
             'tags' => 'nullable|array',
             'category' => ['required', Rule::enum(BrandCategory::class)],
         ]);
@@ -163,7 +163,7 @@ class BrandController extends AdminController
             'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'logo' => 'nullable|image|max:5120',
+            'logo' => 'nullable|image|max:20480',
             'tags' => 'nullable|array',
             'category' => ['required', Rule::enum(BrandCategory::class)],
         ]);

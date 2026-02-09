@@ -77,7 +77,7 @@ class ProductBarcodeController extends AdminController
             'barcode' => 'required|string|max:255|unique:product_barcodes,barcode',
         ]);
 
-        ProductBarcode::create($validated);
+        $barcode = ProductBarcode::create($validated);
 
         return $this->redirectAfterSave($request, 'admin.product-barcodes.index', 'admin.product-barcodes.edit', $barcode, 'Штрихкод успешно добавлен');
     }
@@ -105,7 +105,7 @@ class ProductBarcodeController extends AdminController
 
         $productBarcode->update($validated);
 
-        return $this->redirectAfterSave($request, 'admin.product-barcodes.index', 'admin.product-barcodes.edit', $barcode, 'Штрихкод успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.product-barcodes.index', 'admin.product-barcodes.edit', $productBarcode, 'Штрихкод успешно обновлен');
     }
 
     /**

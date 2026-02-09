@@ -6,7 +6,7 @@ import { Box, Card, Input, Textarea, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         user_id: '',
         name: '',
         address: '',
@@ -53,7 +53,7 @@ export default function Create() {
                                     onChange={(value) => setData('user_id', value)}
                                     error={errors.user_id}
                                     valueKey="id"
-                                    displayField="name"
+                                    displayField="full_name"
                                 />
                             </FormField>
 

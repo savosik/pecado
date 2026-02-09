@@ -1,4 +1,4 @@
-import { useState , useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
@@ -8,7 +8,7 @@ import { toaster } from '@/components/ui/toaster';
 export default function Create({ currencies }) {
     const [selectedUser, setSelectedUser] = useState(null);
 
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         user_id: '',
         currency_id: '',
         balance: '0.00',
@@ -63,7 +63,7 @@ export default function Create({ currencies }) {
                                     }}
                                     searchUrl="admin.users.search"
                                     placeholder="Выберите пользователя"
-                                    displayField="name"
+                                    displayField="full_name"
                                 />
                             </FormField>
 
@@ -111,7 +111,7 @@ export default function Create({ currencies }) {
 
                             <FormActions
                                 onSaveAndClose={handleSaveAndClose}
-                            submitLabel="Создать баланс"
+                                submitLabel="Создать баланс"
                                 onCancel={() => window.history.back()}
                                 processing={processing}
                             />

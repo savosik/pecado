@@ -23,3 +23,5 @@ Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
 // AI Generation
 Route::post('/ai/generate', [App\Http\Controllers\Admin\AiController::class, 'generate'])->name('admin.ai.generate');
 
+// Публичная ссылка для скачивания выгрузки товаров
+Route::get('/export/{hash}', [\App\Http\Controllers\ProductExportDownloadController::class, 'download'])->name('export.download');

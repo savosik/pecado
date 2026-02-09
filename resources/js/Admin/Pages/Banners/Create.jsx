@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, FileUploader, EntitySelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, EntitySelector } from '@/Admin/Components';
 import { Card, Input, Stack, SimpleGrid, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
@@ -82,16 +82,12 @@ export default function Create() {
             formDataToSend.append('_close', '1');
         }
 
-        // Append files — FileUploader returns array of File objects
-        if (Array.isArray(data.desktop_image) && data.desktop_image.length > 0) {
-            formDataToSend.append('desktop_image', data.desktop_image[0]);
-        } else if (data.desktop_image instanceof File) {
+        // Append files — ImageUploader returns File | null
+        if (data.desktop_image instanceof File) {
             formDataToSend.append('desktop_image', data.desktop_image);
         }
 
-        if (Array.isArray(data.mobile_image) && data.mobile_image.length > 0) {
-            formDataToSend.append('mobile_image', data.mobile_image[0]);
-        } else if (data.mobile_image instanceof File) {
+        if (data.mobile_image instanceof File) {
             formDataToSend.append('mobile_image', data.mobile_image);
         }
 
@@ -178,18 +174,18 @@ export default function Create() {
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Desktop изображение" error={errors.desktop_image} required>
-                                    <FileUploader
-                                        value={data.desktop_image}
+                                    <ImageUploader
                                         onChange={(file) => setData('desktop_image', file)}
-                                        accept="image/*,video/*"
+                                        error={errors.desktop_image}
+                                        placeholder="Десктопное изображение"
                                     />
                                 </FormField>
 
                                 <FormField label="Mobile изображение" error={errors.mobile_image} required>
-                                    <FileUploader
-                                        value={data.mobile_image}
+                                    <ImageUploader
                                         onChange={(file) => setData('mobile_image', file)}
-                                        accept="image/*,video/*"
+                                        error={errors.mobile_image}
+                                        placeholder="Мобильное изображение"
                                     />
                                 </FormField>
                             </SimpleGrid>

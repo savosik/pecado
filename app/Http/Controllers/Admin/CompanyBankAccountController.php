@@ -108,7 +108,7 @@ class CompanyBankAccountController extends Controller
             return response()->json($companyBankAccount);
         }
 
-        return $this->redirectAfterSave($request, 'admin.company-bank-accounts.index', 'admin.company-bank-accounts.edit', $bankAccount, 'Банковский счет успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.company-bank-accounts.index', 'admin.company-bank-accounts.edit', $companyBankAccount, 'Банковский счет успешно обновлен');
     }
 
     public function destroy(Request $request, CompanyBankAccount $companyBankAccount)

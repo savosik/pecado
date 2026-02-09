@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Attribute;
+use App\Models\AttributeGroup;
+use App\Models\AttributeValue;
 use App\Models\Category;
+use App\Models\ProductAttributeValue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +24,7 @@ class AttributeController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = Attribute::query()->withCount('values')->with('categories:id,name');
+        $query = Attribute::query()->withCount('values')->with(['categories:id,name', 'attributeGroup:id,name']);
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -69,6 +73,7 @@ class AttributeController extends AdminController
                 ['value' => 'select', 'label' => 'Выбор из списка (Select)'],
             ],
             'categoryTree' => Category::defaultOrder()->get()->toTree(),
+            'attributeGroups' => AttributeGroup::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -89,6 +94,7 @@ class AttributeController extends AdminController
             'values.*.sort_order' => 'nullable|integer',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:categories,id',
+            'attribute_group_id' => 'nullable|exists:attribute_groups,id',
         ]);
 
         if (empty($validated['slug'])) {
@@ -129,6 +135,7 @@ class AttributeController extends AdminController
                 ['value' => 'select', 'label' => 'Выбор из списка (Select)'],
             ],
             'categoryTree' => Category::defaultOrder()->get()->toTree(),
+            'attributeGroups' => AttributeGroup::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -137,6 +144,8 @@ class AttributeController extends AdminController
      */
     public function update(Request $request, Attribute $attribute): RedirectResponse
     {
+        $oldType = $attribute->type;
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:attributes,slug,' . $attribute->id,
@@ -144,12 +153,15 @@ class AttributeController extends AdminController
             'unit' => 'nullable|string|max:50',
             'is_filterable' => 'boolean',
             'sort_order' => 'nullable|integer',
-            'values' => 'required_if:type,select|array',
+            'values' => 'nullable|array',
             'values.*.id' => 'nullable|exists:attribute_values,id',
             'values.*.value' => 'required|string|max:255',
             'values.*.sort_order' => 'nullable|integer',
             'category_ids' => 'nullable|array',
             'category_ids.*' => 'exists:categories,id',
+            'attribute_group_id' => 'nullable|exists:attribute_groups,id',
+            '_convert_to_select' => 'nullable|boolean',
+            '_convert_to_boolean' => 'nullable|boolean',
         ]);
 
         if (empty($validated['slug'])) {
@@ -158,7 +170,22 @@ class AttributeController extends AdminController
 
         $attribute->update($validated);
 
-        if ($validated['type'] === 'select' && isset($validated['values'])) {
+        $convertToSelect = $oldType !== 'select'
+            && $validated['type'] === 'select'
+            && !empty($validated['_convert_to_select']);
+
+        $convertToBoolean = $oldType !== 'boolean'
+            && $validated['type'] === 'boolean'
+            && !empty($validated['_convert_to_boolean']);
+
+        if ($convertToSelect) {
+            // Автоматическая конвертация: собираем значения из товаров
+            $this->convertToSelect($attribute);
+        } elseif ($convertToBoolean) {
+            // Конвертация в булев тип
+            $this->convertToBoolean($attribute);
+        } elseif ($validated['type'] === 'select' && isset($validated['values'])) {
+            // Обычное редактирование значений справочника
             $keepIds = collect($validated['values'])->pluck('id')->filter()->toArray();
             $attribute->values()->whereNotIn('id', $keepIds)->delete();
 
@@ -192,5 +219,83 @@ class AttributeController extends AdminController
         $attribute->delete();
 
         return redirect()->route('admin.attributes.index')->with('success', 'Атрибут успешно удален');
+    }
+
+    /**
+     * Конвертировать атрибут в справочник: собрать уникальные значения из товаров
+     * и создать записи AttributeValue, затем привязать product_attribute_values.
+     */
+    private function convertToSelect(Attribute $attribute): void
+    {
+        // 1. Собираем уникальные текстовые значения из product_attribute_values
+        $uniqueValues = ProductAttributeValue::where('attribute_id', $attribute->id)
+            ->whereNotNull('text_value')
+            ->where('text_value', '!=', '')
+            ->select('text_value')
+            ->distinct()
+            ->orderBy('text_value')
+            ->pluck('text_value');
+
+        if ($uniqueValues->isEmpty()) {
+            return;
+        }
+
+        // 2. Создаём записи AttributeValue для каждого уникального значения
+        $valueMap = []; // text_value => attribute_value_id
+        foreach ($uniqueValues as $index => $textValue) {
+            $attrValue = AttributeValue::firstOrCreate(
+                [
+                    'attribute_id' => $attribute->id,
+                    'value' => $textValue,
+                ],
+                [
+                    'sort_order' => $index,
+                ]
+            );
+            $valueMap[$textValue] = $attrValue->id;
+        }
+
+        // 3. Обновляем product_attribute_values: привязываем attribute_value_id
+        foreach ($valueMap as $textValue => $attributeValueId) {
+            ProductAttributeValue::where('attribute_id', $attribute->id)
+                ->where('text_value', $textValue)
+                ->update([
+                    'attribute_value_id' => $attributeValueId,
+                    'text_value' => null,
+                ]);
+        }
+    }
+
+    /**
+     * Конвертировать атрибут в булев тип: преобразовать текстовые значения
+     * товаров в boolean_value.
+     */
+    private function convertToBoolean(Attribute $attribute): void
+    {
+        $trueValues = ['да', 'yes', 'true', '1', 'on'];
+
+        // Обновляем записи с "истинными" значениями
+        ProductAttributeValue::where('attribute_id', $attribute->id)
+            ->whereNotNull('text_value')
+            ->get()
+            ->each(function ($pav) use ($trueValues) {
+                $pav->update([
+                    'boolean_value' => in_array(mb_strtolower(trim($pav->text_value)), $trueValues),
+                    'text_value' => null,
+                    'number_value' => null,
+                    'attribute_value_id' => null,
+                ]);
+            });
+
+        // Обновляем записи с числовыми значениями
+        ProductAttributeValue::where('attribute_id', $attribute->id)
+            ->whereNotNull('number_value')
+            ->update([
+                'boolean_value' => true,
+                'number_value' => null,
+            ]);
+
+        // Удаляем значения справочника, если были
+        $attribute->values()->delete();
     }
 }

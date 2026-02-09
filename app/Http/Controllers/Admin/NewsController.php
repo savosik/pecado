@@ -61,9 +61,9 @@ class NewsController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
-            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $newsItem = News::create($validated);
@@ -109,9 +109,9 @@ class NewsController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
-            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $news->update($validated);

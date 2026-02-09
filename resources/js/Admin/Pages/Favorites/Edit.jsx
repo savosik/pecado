@@ -17,7 +17,7 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { toaster } from "@/components/ui/toaster";
 
 const FavoriteEdit = ({ favorite }) => {
-    const { data, setData, put, processing, errors , transform } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         user_id: favorite.user_id,
         user: favorite.user,
         product_id: favorite.product_id,
@@ -134,7 +134,7 @@ const FavoriteEdit = ({ favorite }) => {
                                             onChange={handleUserChange}
                                             searchUrl="admin.favorites.search-users"
                                             placeholder="Поиск по имени или email..."
-                                            displayField="name"
+                                            displayField="full_name"
                                         />
                                     </FormField>
                                 </Box>

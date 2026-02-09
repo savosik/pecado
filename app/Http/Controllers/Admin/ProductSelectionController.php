@@ -238,7 +238,7 @@ class ProductSelectionController extends AdminController
 
             DB::commit();
 
-            return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $selection, 'Подборка успешно обновлена');
+            return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()

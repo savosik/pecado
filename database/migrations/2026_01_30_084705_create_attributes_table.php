@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('unit')->nullable(); // кг, м, шт и т.д.
             $table->boolean('is_filterable')->default(false);
             $table->integer('sort_order')->default(0);
+            $table->foreignId('attribute_group_id')->nullable()->constrained('attribute_groups')->nullOnDelete();
             $table->timestamps();
         });
     }

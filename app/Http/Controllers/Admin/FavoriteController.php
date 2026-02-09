@@ -176,7 +176,7 @@ class FavoriteController extends AdminController
                 ->withErrors(['product_id' => 'Этот товар уже в избранном у данного пользователя']);
         }
 
-        Favorite::create($validated);
+        $favorite = Favorite::create($validated);
 
         return $this->redirectAfterSave($request, 'admin.favorites.index', 'admin.favorites.edit', $favorite, 'Запись избранного успешно создана');
     }
@@ -253,7 +253,7 @@ class FavoriteController extends AdminController
 
         Favorite::whereIn('id', $request->input('favorite_ids'))->delete();
 
-        return $this->redirectAfterSave($request, 'admin.favorites.index', 'admin.favorites.edit', $favorite, 'Выбранные записи избранного успешно удалены');
+        return redirect()->route('admin.favorites.index')->with('success', 'Выбранные записи избранного успешно удалены');
     }
 
     /**

@@ -3,7 +3,7 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput, YandexMapPicker } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs, Table, Badge, Button, IconButton, HStack, Text, Flex, Dialog, Portal, Switch } from '@chakra-ui/react';
 import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
-import { useState , useRef } from 'react';
+import { useState, useRef } from 'react';
 import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
 
@@ -16,7 +16,7 @@ const emptyBankAccount = {
 };
 
 export default function Edit({ company, countries, yandexMapsApiKey }) {
-    const { data, setData, put, processing, errors , transform } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         user_id: company.user_id || '',
         country: company.country || '',
         name: company.name || '',
@@ -144,7 +144,7 @@ export default function Edit({ company, countries, yandexMapsApiKey }) {
                                             error={errors.user_id}
                                             initialDisplay={company.user?.full_name}
                                             valueKey="id"
-                                            displayField="name"
+                                            displayField="full_name"
                                         />
                                     </FormField>
 

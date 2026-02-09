@@ -51,7 +51,7 @@ class FaqController extends Controller
             'content' => 'required|string',
         ]);
 
-        Faq::create($validated);
+        $faq = Faq::create($validated);
 
         return $this->redirectAfterSave($request, 'admin.faqs.index', 'admin.faqs.edit', $faq, 'FAQ успешно создан');
     }

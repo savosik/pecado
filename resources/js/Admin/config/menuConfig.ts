@@ -5,6 +5,7 @@ import {
     LuBadge,
     LuBox,
     LuList,
+    LuLayers,
     LuRuler,
     LuBarcode,
     LuShieldCheck,
@@ -34,6 +35,7 @@ import {
     LuTags,
     LuImagePlay,
     LuSettings,
+    LuDownload,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -65,9 +67,11 @@ export const menuConfig: MenuGroup[] = [
             { label: "Бренды", icon: LuBadge, path: "/admin/brands" },
             { label: "Модели", icon: LuBox, path: "/admin/product-models" },
             { label: "Атрибуты", icon: LuList, path: "/admin/attributes" },
+            { label: "Группы атрибутов", icon: LuLayers, path: "/admin/attribute-groups" },
             { label: "Размерные сетки", icon: LuRuler, path: "/admin/size-charts" },
             { label: "Штрихкоды", icon: LuBarcode, path: "/admin/product-barcodes" },
             { label: "Сертификаты", icon: LuShieldCheck, path: "/admin/certificates" },
+            { label: "Выгрузки", icon: LuDownload, path: "/admin/product-exports" },
 
         ],
     },

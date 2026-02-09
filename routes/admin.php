@@ -41,6 +41,10 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Атрибуты
     Route::resource('attributes', \App\Http\Controllers\Admin\AttributeController::class);
     
+    // Группы атрибутов
+    Route::get('/attribute-groups/search', [\App\Http\Controllers\Admin\AttributeGroupController::class, 'search'])->name('attribute-groups.search');
+    Route::resource('attribute-groups', \App\Http\Controllers\Admin\AttributeGroupController::class);
+    
     // Размерные сетки
     Route::resource('size-charts', \App\Http\Controllers\Admin\SizeChartController::class);
     
@@ -50,6 +54,10 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Сертификаты
     Route::resource('certificates', \App\Http\Controllers\Admin\CertificateController::class);
     
+    // Выгрузки товаров
+    Route::post('/product-exports/preview', [\App\Http\Controllers\Admin\ProductExportController::class, 'preview'])->name('product-exports.preview');
+    Route::get('/product-exports/filter-options', [\App\Http\Controllers\Admin\ProductExportController::class, 'filterOptions'])->name('product-exports.filter-options');
+    Route::resource('product-exports', \App\Http\Controllers\Admin\ProductExportController::class)->except(['show']);
 
     
     // Теги

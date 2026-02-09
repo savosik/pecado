@@ -80,7 +80,7 @@ class DeliveryAddressController extends Controller
 
         $deliveryAddress->update($validated);
 
-        return $this->redirectAfterSave($request, 'admin.delivery-addresses.index', 'admin.delivery-addresses.edit', $address, 'Адрес доставки успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.delivery-addresses.index', 'admin.delivery-addresses.edit', $deliveryAddress, 'Адрес доставки успешно обновлен');
     }
 
     public function destroy(DeliveryAddress $deliveryAddress)

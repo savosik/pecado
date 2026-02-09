@@ -165,7 +165,7 @@ const WishlistIndex = ({ filters }) => {
             key: "user",
             render: (_, item) => (
                 <Box>
-                    <Text>{item.user?.name || "—"}</Text>
+                    <Text>{item.user?.full_name || "—"}</Text>
                     {item.user?.email && (
                         <Text color="fg.muted" fontSize="xs">{item.user.email}</Text>
                     )}
@@ -261,7 +261,7 @@ const WishlistIndex = ({ filters }) => {
                                     onChange={(user) => setLocalFilters({ ...localFilters, user_id: user?.id, user: user })}
                                     searchUrl="admin.wishlist.search-users"
                                     placeholder="Поиск пользователя..."
-                                    displayField="name"
+                                    displayField="full_name"
                                 />
                             </Field>
                         </SimpleGrid>

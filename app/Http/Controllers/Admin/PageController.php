@@ -59,9 +59,9 @@ class PageController extends Controller
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $page = Page::create($validated);
@@ -99,9 +99,9 @@ class PageController extends Controller
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
-            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
-            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:5120',
+            'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
+            'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $page->update($validated);

@@ -62,7 +62,7 @@ class CurrencyController extends Controller
             Currency::where('is_base', true)->update(['is_base' => false]);
         }
 
-        Currency::create($validated);
+        $currency = Currency::create($validated);
 
         return $this->redirectAfterSave($request, 'admin.currencies.index', 'admin.currencies.edit', $currency, 'Валюта успешно создана');
     }
@@ -137,7 +137,7 @@ class CurrencyController extends Controller
             Artisan::call('currency:update');
             $output = Artisan::output();
 
-            return $this->redirectAfterSave($request, 'admin.currencies.index', 'admin.currencies.edit', $currency, 'Курсы валют успешно обновлены');
+            return redirect()->route('admin.currencies.index')->with('success', 'Курсы валют успешно обновлены');
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.currencies.index')

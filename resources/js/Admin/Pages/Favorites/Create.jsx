@@ -17,7 +17,7 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { toaster } from "@/components/ui/toaster";
 
 const FavoriteCreate = () => {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         user_id: null,
         user: null,
         product_id: null,
@@ -134,7 +134,7 @@ const FavoriteCreate = () => {
                                             onChange={handleUserChange}
                                             searchUrl="admin.favorites.search-users"
                                             placeholder="Поиск по имени или email..."
-                                            displayField="name"
+                                            displayField="full_name"
                                         />
                                     </FormField>
                                 </Box>

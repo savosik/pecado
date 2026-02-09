@@ -76,7 +76,7 @@ class UserBalanceController extends Controller
             'overdue_debt' => 'nullable|numeric|min:0',
         ]);
 
-        UserBalance::create($validated);
+        $balance = UserBalance::create($validated);
 
         return $this->redirectAfterSave($request, 'admin.user-balances.index', 'admin.user-balances.edit', $balance, 'Баланс успешно создан');
     }
@@ -103,7 +103,7 @@ class UserBalanceController extends Controller
 
         $userBalance->update($validated);
 
-        return $this->redirectAfterSave($request, 'admin.user-balances.index', 'admin.user-balances.edit', $balance, 'Баланс успешно обновлён');
+        return $this->redirectAfterSave($request, 'admin.user-balances.index', 'admin.user-balances.edit', $userBalance, 'Баланс успешно обновлён');
     }
 
     public function destroy(UserBalance $userBalance)

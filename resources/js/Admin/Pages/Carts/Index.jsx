@@ -145,7 +145,7 @@ const CartsIndex = ({ filters }) => {
             key: "user",
             render: (_, cart) => (
                 <VStack align="start" gap={0}>
-                    <Text fontSize="sm">{cart.user?.name || "—"}</Text>
+                    <Text fontSize="sm">{cart.user?.full_name || "—"}</Text>
                     {cart.user?.email && (
                         <Text fontSize="xs" color="fg.muted">{cart.user.email}</Text>
                     )}
@@ -290,7 +290,7 @@ const CartsIndex = ({ filters }) => {
                                     onChange={(user) => setLocalFilters({ ...localFilters, user_id: user?.id, user: user })}
                                     searchUrl="admin.carts.search-users"
                                     placeholder="Поиск пользователя..."
-                                    displayField="name"
+                                    displayField="full_name"
                                 />
                                 {localFilters.user_id && (
                                     <Button

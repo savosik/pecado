@@ -130,7 +130,7 @@ export default function Create() {
                                         <EntitySelector
                                             searchUrl="admin.discounts.search-users"
                                             placeholder="Поиск пользователя..."
-                                            displayField="name"
+                                            displayField="full_name"
                                             onChange={handleAddUser}
                                         />
 

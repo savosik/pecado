@@ -165,7 +165,7 @@ const FavoritesIndex = ({ filters }) => {
             key: "user",
             render: (_, favorite) => (
                 <Box>
-                    <Text>{favorite.user?.name || "—"}</Text>
+                    <Text>{favorite.user?.full_name || "—"}</Text>
                     {favorite.user?.email && (
                         <Text color="fg.muted" fontSize="xs">{favorite.user.email}</Text>
                     )}
@@ -261,7 +261,7 @@ const FavoritesIndex = ({ filters }) => {
                                     onChange={(user) => setLocalFilters({ ...localFilters, user_id: user?.id, user: user })}
                                     searchUrl="admin.favorites.search-users"
                                     placeholder="Поиск пользователя..."
-                                    displayField="name"
+                                    displayField="full_name"
                                 />
                             </Field>
                         </SimpleGrid>

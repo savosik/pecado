@@ -17,7 +17,7 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { toaster } from "@/components/ui/toaster";
 
 const WishlistEdit = ({ wishlistItem }) => {
-    const { data, setData, put, processing, errors , transform } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         user_id: wishlistItem.user_id,
         user: wishlistItem.user,
         product_id: wishlistItem.product_id,
@@ -134,7 +134,7 @@ const WishlistEdit = ({ wishlistItem }) => {
                                             onChange={handleUserChange}
                                             searchUrl="admin.wishlist.search-users"
                                             placeholder="Поиск по имени или email..."
-                                            displayField="name"
+                                            displayField="full_name"
                                         />
                                     </FormField>
                                 </Box>

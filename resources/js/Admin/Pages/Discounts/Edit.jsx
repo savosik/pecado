@@ -141,7 +141,7 @@ export default function Edit({ discount }) {
                                         <EntitySelector
                                             searchUrl="admin.discounts.search-users"
                                             placeholder="Поиск пользователя..."
-                                            displayField="name"
+                                            displayField="full_name"
                                             onChange={handleAddUser}
                                         />
 
