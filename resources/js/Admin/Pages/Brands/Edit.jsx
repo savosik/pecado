@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
@@ -8,7 +8,7 @@ import { toaster } from '@/components/ui/toaster';
 import { LuFileText, LuAlignLeft, LuImage, LuTag, LuSearch } from 'react-icons/lu';
 
 export default function Edit({ brand, brands, categories }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         _method: 'PUT',
         name: brand.name || '',
         parent_id: brand.parent_id || '',
@@ -23,6 +23,13 @@ export default function Edit({ brand, brands, categories }) {
         tags: brand.tags || [],
     });
 
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
     const tabErrors = useMemo(() => ({
         general: ['name', 'parent_id', 'category', 'external_id', 'slug'].some(field => errors[field]),
         descriptions: ['short_description', 'description'].some(field => errors[field]),
@@ -34,8 +41,9 @@ export default function Edit({ brand, brands, categories }) {
         data, setData, sourceField: 'name', isEditing: true,
     });
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
+    const handleSubmit = (e, shouldClose = false) => {
+        if (e) e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.brands.update', brand.id), {
             onSuccess: () => {
                 toaster.create({
@@ -52,6 +60,10 @@ export default function Edit({ brand, brands, categories }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     const handleRemoveLogo = () => {
@@ -284,7 +296,8 @@ export default function Edit({ brand, brands, categories }) {
                         <FormActions
                             loading={processing}
                             onCancel={() => window.history.back()}
-                            submitLabel="Сохранить изменения"
+                            onSaveAndClose={handleSaveAndClose}
+                            submitLabel="Сохранить"
                         />
                     </Card.Footer>
                 </Card.Root>

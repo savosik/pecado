@@ -9,9 +9,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class PromotionController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of promotions.
      */
@@ -118,9 +121,7 @@ class PromotionController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.promotions.index')
-                ->with('success', 'Акция успешно создана');
+            return $this->redirectAfterSave($request, 'admin.promotions.index', 'admin.promotions.edit', $promotion, 'Акция успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -260,9 +261,7 @@ class PromotionController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.promotions.index')
-                ->with('success', 'Акция успешно обновлена');
+            return $this->redirectAfterSave($request, 'admin.promotions.index', 'admin.promotions.edit', $promotion, 'Акция успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -280,9 +279,7 @@ class PromotionController extends AdminController
         try {
             $promotion->delete();
 
-            return redirect()
-                ->route('admin.promotions.index')
-                ->with('success', 'Акция успешно удалена');
+            return redirect()->route('admin.promotions.index')->with('success', 'Акция успешно удалена');
         } catch (\Exception $e) {
             return redirect()
                 ->back()

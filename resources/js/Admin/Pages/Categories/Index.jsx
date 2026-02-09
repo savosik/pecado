@@ -77,6 +77,16 @@ export default function Index({ categories, filters }) {
             render: (_, category) => category?.parent?.name || '—',
         },
         {
+            key: 'products_count',
+            label: 'Товаров',
+            width: '100px',
+            render: (_, category) => (
+                <Badge size="sm" colorPalette={category.products_count > 0 ? 'blue' : 'gray'} variant="subtle">
+                    {category.products_count ?? 0}
+                </Badge>
+            ),
+        },
+        {
             key: 'tags',
             label: 'Теги',
             render: (_, category) => (

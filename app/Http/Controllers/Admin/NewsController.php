@@ -6,9 +6,12 @@ use App\Models\News;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class NewsController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = News::query()->withCount('tags');
@@ -81,9 +84,7 @@ class NewsController extends Controller
             $newsItem->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
-        return redirect()
-            ->route('admin.news.index')
-            ->with('success', 'Новость успешно создана');
+        return $this->redirectAfterSave($request, 'admin.news.index', 'admin.news.edit', $newsItem, 'Новость успешно создана');
     }
 
     public function edit(News $news)
@@ -136,18 +137,14 @@ class NewsController extends Controller
             $news->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
-        return redirect()
-            ->route('admin.news.index')
-            ->with('success', 'Новость успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.news.index', 'admin.news.edit', $news, 'Новость успешно обновлена');
     }
 
     public function destroy(News $news)
     {
         $news->delete();
 
-        return redirect()
-            ->route('admin.news.index')
-            ->with('success', 'Новость успешно удалена');
+        return redirect()->route('admin.news.index')->with('success', 'Новость успешно удалена');
     }
 
     public function search(Request $request)

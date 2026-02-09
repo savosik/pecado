@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState , useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
@@ -9,12 +9,19 @@ import { LuSave, LuX } from 'react-icons/lu';
 import SlidesEditor from './Components/SlidesEditor';
 
 export default function Edit({ story }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         name: story.name || '',
         slug: story.slug || '',
         is_active: story.is_active ?? true,
         sort_order: story.sort_order || 0,
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     const [slides, setSlides] = useState(story.slides || []);
 
@@ -22,9 +29,14 @@ export default function Edit({ story }) {
         data, setData, sourceField: 'name', isEditing: true,
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         put(route('admin.stories.update', story.id));
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (

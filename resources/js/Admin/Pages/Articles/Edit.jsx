@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
@@ -6,7 +7,7 @@ import { Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ article }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         title: article.title || '',
         slug: article.slug || '',
         short_description: article.short_description || '',
@@ -20,12 +21,20 @@ export default function Edit({ article }) {
         _method: 'PUT',
     });
 
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
     const { handleSourceChange, handleSlugChange } = useSlugField({
         data, setData, sourceField: 'title', isEditing: true,
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.articles.update', article.id), {
             onSuccess: () => {
                 toaster.create({
@@ -41,6 +50,10 @@ export default function Edit({ article }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -119,7 +132,8 @@ export default function Edit({ article }) {
                             />
 
                             <FormActions
-                                submitLabel="Сохранить изменения"
+                                onSaveAndClose={handleSaveAndClose}
+                            submitLabel="Сохранить изменения"
                                 onCancel={() => window.history.back()}
                                 isLoading={processing}
                             />

@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class WarehouseController extends Controller
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the resource.
      */
@@ -54,10 +57,9 @@ class WarehouseController extends Controller
             'external_id' => 'nullable|string|max:255|unique:warehouses,external_id',
         ]);
 
-        Warehouse::create($validated);
+        $warehouse = Warehouse::create($validated);
 
-        return redirect()->route('admin.warehouses.index')
-            ->with('success', 'Склад успешно создан');
+        return $this->redirectAfterSave($request, 'admin.warehouses.index', 'admin.warehouses.edit', $warehouse, 'Склад успешно создан');
     }
 
     /**
@@ -82,8 +84,7 @@ class WarehouseController extends Controller
 
         $warehouse->update($validated);
 
-        return redirect()->route('admin.warehouses.index')
-            ->with('success', 'Склад успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.warehouses.index', 'admin.warehouses.edit', $warehouse, 'Склад успешно обновлен');
     }
 
     /**

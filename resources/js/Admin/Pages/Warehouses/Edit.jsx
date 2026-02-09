@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Box, Button, Input, Stack, Card } from "@chakra-ui/react";
 import { Head, useForm, Link } from "@inertiajs/react";
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
@@ -8,13 +8,21 @@ import { FormActions } from "@/Admin/Components/FormActions";
 import { toaster } from "@/components/ui/toaster";
 
 const WarehousesEdit = ({ warehouse }) => {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         name: warehouse.name || "",
         external_id: warehouse.external_id || "",
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         put(route("admin.warehouses.update", warehouse.id), {
             onSuccess: () => {
                 toaster.create({
@@ -23,6 +31,10 @@ const WarehousesEdit = ({ warehouse }) => {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -55,7 +67,8 @@ const WarehousesEdit = ({ warehouse }) => {
                             </FormField>
 
                             <FormActions
-                                backUrl={route("admin.warehouses.index")}
+                                onSaveAndClose={handleSaveAndClose}
+                            backUrl={route("admin.warehouses.index")}
                                 isLoading={processing}
                                 submitLabel="Сохранить"
                             />

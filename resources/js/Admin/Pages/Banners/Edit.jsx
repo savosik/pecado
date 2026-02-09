@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, FileUploader, EntitySelector } from '@/Admin/Components';
@@ -61,8 +61,8 @@ export default function Edit({ banner }) {
         });
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e, shouldClose = false) => {
+        if (e) e.preventDefault();
         setProcessing(true);
         setErrors({});
 
@@ -79,6 +79,9 @@ export default function Edit({ banner }) {
         }
         formDataToSend.append('is_active', data.is_active ? '1' : '0');
         formDataToSend.append('sort_order', data.sort_order);
+        if (shouldClose) {
+            formDataToSend.append('_close', '1');
+        }
 
         // Append files — FileUploader returns array of File objects
         if (Array.isArray(data.desktop_image) && data.desktop_image.length > 0) {
@@ -103,7 +106,11 @@ export default function Edit({ banner }) {
                 type: 'success',
             });
 
-            router.visit(route('admin.banners.index'));
+            if (shouldClose) {
+                router.visit(route('admin.banners.index'));
+            } else {
+                router.visit(route('admin.banners.edit', banner.id));
+            }
         } catch (error) {
             if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors);
@@ -117,6 +124,10 @@ export default function Edit({ banner }) {
         } finally {
             setProcessing(false);
         }
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -229,6 +240,7 @@ export default function Edit({ banner }) {
                             </SimpleGrid>
 
                             <FormActions
+                                onSaveAndClose={handleSaveAndClose}
                                 submitLabel="Сохранить изменения"
                                 onCancel={() => window.history.back()}
                                 processing={processing}

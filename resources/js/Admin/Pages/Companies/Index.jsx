@@ -71,6 +71,15 @@ export default function Index({ companies, filters }) {
             render: (count) => <Badge colorPalette="blue">{count || 0}</Badge>,
         },
         {
+            key: 'is_our_company',
+            label: 'Наша',
+            render: (val) => val ? (
+                <Badge colorPalette="green">Да</Badge>
+            ) : (
+                <Badge colorPalette="gray">Нет</Badge>
+            ),
+        },
+        {
             key: 'created_at',
             label: 'Создана',
             sortable: true,

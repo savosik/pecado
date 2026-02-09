@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ProductModelController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the product models.
      */
@@ -87,9 +90,7 @@ class ProductModelController extends AdminController
             \App\Models\Product::whereIn('id', $validated['products'])->update(['model_id' => $productModel->id]);
         }
 
-        return redirect()
-            ->route('admin.product-models.index')
-            ->with('success', 'Модель товара успешно создана');
+        return $this->redirectAfterSave($request, 'admin.product-models.index', 'admin.product-models.edit', $productModel, 'Модель товара успешно создана');
     }
 
     /**
@@ -148,9 +149,7 @@ class ProductModelController extends AdminController
              $productModel->products()->update(['model_id' => null]);
         }
 
-        return redirect()
-            ->route('admin.product-models.index')
-            ->with('success', 'Модель товара успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.product-models.index', 'admin.product-models.edit', $productModel, 'Модель товара успешно обновлена');
     }
 
     /**
@@ -160,8 +159,6 @@ class ProductModelController extends AdminController
     {
         $productModel->delete();
 
-        return redirect()
-            ->route('admin.product-models.index')
-            ->with('success', 'Модель товара успешно удалена');
+        return redirect()->route('admin.product-models.index')->with('success', 'Модель товара успешно удалена');
     }
 }

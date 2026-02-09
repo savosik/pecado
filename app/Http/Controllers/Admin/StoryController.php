@@ -6,9 +6,12 @@ use App\Models\Story;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class StoryController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Story::query()->withCount('slides');
@@ -59,9 +62,7 @@ class StoryController extends Controller
 
         $story = Story::create($validated);
 
-        return redirect()
-            ->route('admin.stories.edit', $story)
-            ->with('success', 'Сторис успешно создан. Теперь добавьте слайды.');
+        return $this->redirectAfterSave($request, 'admin.stories.index', 'admin.stories.edit', $story, 'Сторис успешно создан. Теперь добавьте слайды.');
     }
 
     public function edit(Story $story)
@@ -100,17 +101,13 @@ class StoryController extends Controller
 
         $story->update($validated);
 
-        return redirect()
-            ->route('admin.stories.edit', $story)
-            ->with('success', 'Сторис успешно обновлён');
+        return $this->redirectAfterSave($request, 'admin.stories.index', 'admin.stories.edit', $story, 'Сторис успешно обновлён');
     }
 
     public function destroy(Story $story)
     {
         $story->delete(); // Cascade удалит слайды
 
-        return redirect()
-            ->route('admin.stories.index')
-            ->with('success', 'Сторис успешно удалён');
+        return redirect()->route('admin.stories.index')->with('success', 'Сторис успешно удалён');
     }
 }

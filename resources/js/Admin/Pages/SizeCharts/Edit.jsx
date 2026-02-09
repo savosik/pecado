@@ -9,7 +9,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { toaster } from '@/components/ui/toaster';
 import { LuPlus, LuTrash2 } from 'react-icons/lu';
-import { useMemo } from 'react';
+import { useMemo , useRef } from 'react';
 
 const MEASUREMENT_COLUMNS = [
     { key: 'bust', label: 'Грудь' },
@@ -21,12 +21,19 @@ const MEASUREMENT_COLUMNS = [
 ];
 
 export default function Edit({ sizeChart, brands }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         name: sizeChart.name || '',
         uuid: sizeChart.uuid || '',
         brand_ids: sizeChart.brand_ids || [],
         values: sizeChart.values || [{ size: '' }],
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     const activeColumns = useMemo(() => {
         const active = new Set();
@@ -51,8 +58,9 @@ export default function Edit({ sizeChart, brands }) {
         brands.map(b => ({ value: b.id, label: b.name })),
         [brands]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         put(route('admin.size-charts.update', sizeChart.id), {
             onSuccess: () => {
                 toaster.create({
@@ -97,6 +105,10 @@ export default function Edit({ sizeChart, brands }) {
             return newRow;
         });
         setData('values', newValues);
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -223,7 +235,8 @@ export default function Edit({ sizeChart, brands }) {
                             </Card.Body>
                             <Card.Footer>
                                 <FormActions
-                                    isLoading={processing}
+                                    onSaveAndClose={handleSaveAndClose}
+                            isLoading={processing}
                                     onCancel={() => window.history.back()}
                                     submitLabel="Сохранить изменения"
                                 />

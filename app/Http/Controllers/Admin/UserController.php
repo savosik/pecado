@@ -3,15 +3,19 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\Country;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class UserController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = User::query()
@@ -63,6 +67,10 @@ class UserController extends Controller
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
+            'statuses' => collect(UserStatus::cases())->map(fn($status) => [
+                'value' => $status->value,
+                'label' => $status->label(),
+            ]),
         ]);
     }
 
@@ -82,16 +90,14 @@ class UserController extends Controller
             'is_admin' => 'boolean',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
-            'status' => 'nullable|string|max:255',
+            'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id',
         ]);
 
         $user = User::create($validated);
 
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Пользователь успешно создан');
+        return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно создан');
     }
 
     public function edit(User $user)
@@ -105,6 +111,10 @@ class UserController extends Controller
             'countries' => collect(Country::cases())->map(fn($country) => [
                 'value' => $country->value,
                 'label' => $country->label(),
+            ]),
+            'statuses' => collect(UserStatus::cases())->map(fn($status) => [
+                'value' => $status->value,
+                'label' => $status->label(),
             ]),
         ]);
     }
@@ -125,7 +135,7 @@ class UserController extends Controller
             'is_admin' => 'boolean',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
-            'status' => 'nullable|string|max:255',
+            'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id,' . $user->id,
         ]);
@@ -137,18 +147,14 @@ class UserController extends Controller
 
         $user->update($validated);
 
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Пользователь успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно обновлен');
     }
 
     public function destroy(User $user)
     {
         $user->delete();
 
-        return redirect()
-            ->route('admin.users.index')
-            ->with('success', 'Пользователь успешно удален');
+        return redirect()->route('admin.users.index')->with('success', 'Пользователь успешно удален');
     }
 
     /**

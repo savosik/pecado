@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
@@ -5,14 +6,22 @@ import { Box, Card, Input, Textarea, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ deliveryAddress }) {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         user_id: deliveryAddress.user_id || '',
         name: deliveryAddress.name || '',
         address: deliveryAddress.address || '',
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         put(route('admin.delivery-addresses.update', deliveryAddress.id), {
             onSuccess: () => {
                 toaster.create({
@@ -22,6 +31,10 @@ export default function Edit({ deliveryAddress }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -67,6 +80,7 @@ export default function Edit({ deliveryAddress }) {
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                             submitLabel="Сохранить изменения"

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useCallback, useRef } from 'react';
 import { Input } from '@chakra-ui/react';
 
 /**
@@ -9,66 +9,81 @@ function extractDigits(value) {
 }
 
 /**
- * Определяет формат маски по набранным цифрам.
- * Возвращает объект { prefix, groups, maxDigits }
- *
- * +375(XX)XXX-XX-XX  — Беларусь (12 цифр: 375 + 9)
- * +7(XXX)XXX-XX-XX   — Россия / Казахстан (11 цифр: 7 + 10)
+ * Проверяет, является ли набор цифр (потенциально) белорусским номером.
+ * Возвращает true если digits начинается с 3, 37 или 375.
  */
-function detectMask(digits) {
-    // Если начинается с 375 — Беларусь
-    if (digits.startsWith('375')) {
-        return {
-            prefix: '375',
-            // после +375: (XX) XXX-XX-XX  → 2 + 3 + 2 + 2 = 9
-            groups: [2, 3, 2, 2],
-            maxDigits: 12, // 375 + 9
-        };
-    }
-
-    // По умолчанию — Россия/Казахстан (+7)
-    return {
-        prefix: '7',
-        // после +7: (XXX) XXX-XX-XX  → 3 + 3 + 2 + 2 = 10
-        groups: [3, 3, 2, 2],
-        maxDigits: 11, // 7 + 10
-    };
+function isBelarus(digits) {
+    return '375'.startsWith(digits.slice(0, 3)) && digits.startsWith('3');
 }
 
 /**
- * Форматирует набор цифр в красивый вид: +7(XXX)XXX-XX-XX
+ * Форматирует набор цифр в красивый вид.
+ *
+ * Форматы:
+ * +7(XXX)XXX-XX-XX    — Россия / Казахстан (11 цифр)
+ * +375(XX)XXX-XX-XX   — Беларусь (12 цифр)
  */
 function formatPhone(digits) {
     if (!digits) return '';
 
-    // Убираем ведущий 8 → заменяем на 7
-    if (digits.startsWith('8') && !digits.startsWith('375')) {
+    // Замена 8 → 7 (российская конвенция)
+    if (digits.charAt(0) === '8') {
         digits = '7' + digits.slice(1);
     }
 
-    const mask = detectMask(digits);
-    const prefixLen = mask.prefix.length;
+    // Определяем тип номера
+    if (digits.startsWith('375') || (digits.length < 3 && isBelarus(digits))) {
+        // Беларусь: +375(XX)XXX-XX-XX
+        const maxDigits = 12;
+        digits = digits.slice(0, maxDigits);
+        const prefix = '375';
 
-    // Ограничиваем длину
-    digits = digits.slice(0, mask.maxDigits);
+        // Пока пользователь набирает код страны (3, 37, 375)
+        if (digits.length <= prefix.length) {
+            return '+' + digits;
+        }
 
-    let result = '+' + mask.prefix;
-    const rest = digits.slice(prefixLen);
+        const rest = digits.slice(prefix.length);
+        return '+' + prefix + formatGroups(rest, [2, 3, 2, 2]);
+    }
 
-    if (rest.length === 0) return result;
+    // Россия / Казахстан: +7(XXX)XXX-XX-XX
+    const maxDigits = 11;
 
+    // Если первая цифра не 7, подставляем 7 (пользователь начал с цифры оператора)
+    if (digits.charAt(0) !== '7') {
+        digits = '7' + digits;
+    }
+
+    digits = digits.slice(0, maxDigits);
+    const rest = digits.slice(1); // после "7"
+
+    if (rest.length === 0) return '+7';
+
+    return '+7' + formatGroups(rest, [3, 3, 2, 2]);
+}
+
+/**
+ * Форматирует цифры по группам: (XX)XXX-XX-XX
+ */
+function formatGroups(digits, groups) {
+    let result = '';
     let pos = 0;
-    for (let i = 0; i < mask.groups.length; i++) {
-        const groupLen = mask.groups[i];
-        const chunk = rest.slice(pos, pos + groupLen);
+
+    for (let i = 0; i < groups.length; i++) {
+        const groupLen = groups[i];
+        const chunk = digits.slice(pos, pos + groupLen);
         if (chunk.length === 0) break;
 
         if (i === 0) {
+            // Первая группа оборачивается в скобки
             result += '(' + chunk;
             if (chunk.length === groupLen) result += ')';
         } else if (i === 1) {
+            // Вторая группа без разделителя
             result += chunk;
         } else {
+            // Остальные через дефис
             result += '-' + chunk;
         }
         pos += groupLen;
@@ -84,9 +99,9 @@ function formatPhone(digits) {
  * - +375(XX)XXX-XX-XX  (Беларусь)
  *
  * Props:
- * - value: string — текущее значение
+ * - value: string — текущее значение (отформатированное)
  * - onChange: (formatted: string) => void — коллбэк с отформатированным значением
- * - placeholder: string — подсказка (по умолчанию "+7(___) ___-__-__")
+ * - placeholder: string — подсказка
  * - остальные пропсы передаются в <Input>
  */
 export function PhoneInput({ value, onChange, placeholder, ...rest }) {
@@ -94,36 +109,24 @@ export function PhoneInput({ value, onChange, placeholder, ...rest }) {
 
     const handleChange = useCallback((e) => {
         const rawInput = e.target.value;
-        let digits = extractDigits(rawInput);
+        const digits = extractDigits(rawInput);
 
-        // Если пользователь начал с 8, заменяем на 7
-        if (digits.startsWith('8') && !digits.startsWith('375')) {
-            digits = '7' + digits.slice(1);
-        }
-
-        // Если ничего нет — очищаем
         if (digits.length === 0) {
             onChange('');
             return;
         }
 
-        const formatted = formatPhone(digits);
-        onChange(formatted);
+        onChange(formatPhone(digits));
     }, [onChange]);
 
     const handlePaste = useCallback((e) => {
         e.preventDefault();
         const pasted = e.clipboardData.getData('text');
-        let digits = extractDigits(pasted);
-
-        if (digits.startsWith('8') && !digits.startsWith('375')) {
-            digits = '7' + digits.slice(1);
-        }
+        const digits = extractDigits(pasted);
 
         if (digits.length === 0) return;
 
-        const formatted = formatPhone(digits);
-        onChange(formatted);
+        onChange(formatPhone(digits));
     }, [onChange]);
 
     const handleKeyDown = useCallback((e) => {
@@ -136,8 +139,7 @@ export function PhoneInput({ value, onChange, placeholder, ...rest }) {
                 return;
             }
             const newDigits = digits.slice(0, -1);
-            const formatted = formatPhone(newDigits);
-            onChange(formatted);
+            onChange(formatPhone(newDigits));
         }
     }, [value, onChange]);
 
@@ -149,7 +151,7 @@ export function PhoneInput({ value, onChange, placeholder, ...rest }) {
             onChange={handleChange}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder || '+7(___) ___-__-__'}
+            placeholder={placeholder || 'Введите номер телефона'}
             {...rest}
         />
     );

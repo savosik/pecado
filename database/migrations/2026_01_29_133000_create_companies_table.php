@@ -26,6 +26,9 @@ return new class extends Migration
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->string('erp_id')->nullable()->unique(); // ID в ERP системе
+            $table->decimal('latitude', 10, 7)->nullable(); // Широта
+            $table->decimal('longitude', 10, 7)->nullable(); // Долгота
+            $table->boolean('is_our_company')->default(false); // Наша компания
             $table->timestamps();
             $table->softDeletes();
 

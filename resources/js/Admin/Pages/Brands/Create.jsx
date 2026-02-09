@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo , useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
@@ -8,7 +8,7 @@ import { toaster } from '@/components/ui/toaster';
 import { LuFileText, LuAlignLeft, LuImage, LuTag, LuSearch } from 'react-icons/lu';
 
 export default function Create({ brands, categories }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         name: '',
         parent_id: '',
         category: 'other',
@@ -22,6 +22,13 @@ export default function Create({ brands, categories }) {
         tags: [],
     });
 
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
     const tabErrors = useMemo(() => ({
         general: ['name', 'parent_id', 'category', 'external_id', 'slug'].some(field => errors[field]),
         descriptions: ['short_description', 'description'].some(field => errors[field]),
@@ -33,8 +40,9 @@ export default function Create({ brands, categories }) {
         data, setData, sourceField: 'name',
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.brands.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -51,6 +59,10 @@ export default function Create({ brands, categories }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -257,6 +269,7 @@ export default function Create({ brands, categories }) {
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                             submitLabel="Создать бренд"

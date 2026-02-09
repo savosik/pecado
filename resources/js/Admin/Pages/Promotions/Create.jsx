@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector } from '@/Admin/Components';
@@ -17,8 +18,16 @@ export default function Create() {
         images: [],
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         const formData = new FormData();
         formData.append('name', data.name);
@@ -52,6 +61,10 @@ export default function Create() {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -127,6 +140,7 @@ export default function Create() {
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             isLoading={processing}
                             onCancel={() => window.history.back()}
                             submitLabel="Создать акцию"

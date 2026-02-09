@@ -8,9 +8,12 @@ use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CompanyController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Company::query()
@@ -56,6 +59,7 @@ class CompanyController extends Controller
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
+            'yandexMapsApiKey' => config('services.yandex_maps.api_key'),
         ]);
     }
 
@@ -75,13 +79,14 @@ class CompanyController extends Controller
             'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'is_our_company' => 'boolean',
         ]);
 
         $company = Company::create($validated);
 
-        return redirect()
-            ->route('admin.companies.index')
-            ->with('success', 'Компания успешно создана');
+        return $this->redirectAfterSave($request, 'admin.companies.index', 'admin.companies.edit', $company, 'Компания успешно создана');
     }
 
     public function edit(Company $company)
@@ -94,6 +99,7 @@ class CompanyController extends Controller
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
+            'yandexMapsApiKey' => config('services.yandex_maps.api_key'),
         ]);
     }
 
@@ -113,22 +119,21 @@ class CompanyController extends Controller
             'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id,' . $company->id,
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
+            'is_our_company' => 'boolean',
         ]);
 
         $company->update($validated);
 
-        return redirect()
-            ->route('admin.companies.index')
-            ->with('success', 'Компания успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.companies.index', 'admin.companies.edit', $company, 'Компания успешно обновлена');
     }
 
     public function destroy(Company $company)
     {
         $company->delete();
 
-        return redirect()
-            ->route('admin.companies.index')
-            ->with('success', 'Компания успешно удалена');
+        return redirect()->route('admin.companies.index')->with('success', 'Компания успешно удалена');
     }
 
     /**

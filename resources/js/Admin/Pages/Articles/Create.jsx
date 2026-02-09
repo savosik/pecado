@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
@@ -6,7 +7,7 @@ import { Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         title: '',
         slug: '',
         short_description: '',
@@ -19,12 +20,20 @@ export default function Create() {
         detail_mobile: null,
     });
 
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
     const { handleSourceChange, handleSlugChange } = useSlugField({
         data, setData, sourceField: 'title',
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.articles.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -40,6 +49,10 @@ export default function Create() {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -113,7 +126,8 @@ export default function Create() {
                             />
 
                             <FormActions
-                                submitLabel="Создать статью"
+                                onSaveAndClose={handleSaveAndClose}
+                            submitLabel="Создать статью"
                                 onCancel={() => window.history.back()}
                                 isLoading={processing}
                             />

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Country;
+use App\Enums\UserStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -92,6 +93,7 @@ class User extends Authenticatable implements HasMedia
             'terms_accepted' => 'boolean',
             'is_admin' => 'boolean',
             'country' => Country::class,
+            'status' => UserStatus::class,
             'region_id' => 'integer',
             'currency_id' => 'integer',
         ];

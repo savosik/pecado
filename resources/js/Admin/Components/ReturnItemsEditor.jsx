@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import {
     Box,
     Button,
@@ -11,16 +11,15 @@ import {
     Heading,
     IconButton,
     Input,
-    Spinner,
     Badge,
     Textarea,
     createListCollection,
-    Collapsible,
 } from "@chakra-ui/react";
 import axios from "axios";
-import { LuPlus, LuTrash2, LuMinus, LuPackage, LuMessageSquare, LuX, LuCheck, LuChevronRight } from "react-icons/lu";
+import { LuPlus, LuTrash2, LuMinus, LuPackage, LuMessageSquare, LuX, LuCheck } from "react-icons/lu";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
+import { ProductSelector } from "@/Admin/Components/ProductSelector";
 
 /**
  * ReturnItemsEditor - редактор позиций возврата
@@ -256,13 +255,6 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
     const [reasonComment, setReasonComment] = useState("");
     const [price, setPrice] = useState(0);
 
-    // Поиск товаров
-    const [productQuery, setProductQuery] = useState("");
-    const [productResults, setProductResults] = useState([]);
-    const [productLoading, setProductLoading] = useState(false);
-    const [showProductDropdown, setShowProductDropdown] = useState(false);
-    const productContainerRef = useRef(null);
-
     // Заказы
     const [orders, setOrders] = useState([]);
     const [ordersLoading, setOrdersLoading] = useState(false);
@@ -271,49 +263,8 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
         items: reasons?.map(r => ({ label: r.label, value: r.value })) || [],
     });
 
-    // Поиск товаров с debounce
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            if (productQuery.trim().length >= 2) {
-                searchProducts();
-            } else {
-                setProductResults([]);
-                setShowProductDropdown(false);
-            }
-        }, 300);
-        return () => clearTimeout(timer);
-    }, [productQuery]);
-
-    // Click outside для dropdown
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (productContainerRef.current && !productContainerRef.current.contains(event.target)) {
-                setShowProductDropdown(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const searchProducts = async () => {
-        setProductLoading(true);
-        try {
-            const response = await axios.get(route("admin.returns.search-products"), {
-                params: { query: productQuery, user_id: userId },
-            });
-            setProductResults(response.data);
-            setShowProductDropdown(true);
-        } catch (error) {
-            console.error("Product search error:", error);
-        } finally {
-            setProductLoading(false);
-        }
-    };
-
     const handleSelectProduct = async (product) => {
         setSelectedProduct(product);
-        setProductQuery("");
-        setShowProductDropdown(false);
         setStep(2);
 
         // Загружаем заказы для этого товара
@@ -377,83 +328,12 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                 {step === 1 && (
                     <VStack align="stretch" gap={4} py={4}>
                         <Field label="Поиск товара" helperText="Введите название, артикул (SKU) или отсканируйте штрихкод">
-                            <Box position="relative" ref={productContainerRef}>
-                                <Input
-                                    size="lg"
-                                    placeholder="Найти товар..."
-                                    value={productQuery}
-                                    onChange={(e) => setProductQuery(e.target.value)}
-                                    autoFocus
-                                    borderRadius="md"
-                                />
-                                {showProductDropdown && (productResults.length > 0 || productLoading) && (
-                                    <Box
-                                        position="absolute"
-                                        top="100%"
-                                        left={0}
-                                        right={0}
-                                        zIndex={1000}
-                                        bg="white"
-                                        boxShadow="xl"
-                                        borderRadius="md"
-                                        mt={2}
-                                        maxHeight="320px"
-                                        overflowY="auto"
-                                        borderWidth="1px"
-                                        borderColor="gray.100"
-                                    >
-                                        {productLoading ? (
-                                            <Box p={6} textAlign="center">
-                                                <Spinner size="md" color="blue.500" />
-                                            </Box>
-                                        ) : (
-                                            <VStack align="stretch" gap={0}>
-                                                {productResults.map((product) => (
-                                                    <HStack
-                                                        key={product.id}
-                                                        p={3}
-                                                        cursor="pointer"
-                                                        _hover={{ bg: "blue.50" }}
-                                                        transition="background 0.2s"
-                                                        onClick={() => handleSelectProduct(product)}
-                                                        borderBottomWidth="1px"
-                                                        borderColor="gray.50"
-                                                    >
-                                                        <Image
-                                                            src={product.image_url || null}
-                                                            boxSize="48px"
-                                                            objectFit="cover"
-                                                            borderRadius="md"
-                                                            fallbackSrc="https://via.placeholder.com/48"
-                                                            borderWidth="1px"
-                                                            borderColor="gray.100"
-                                                        />
-                                                        <Box flex={1}>
-                                                            <Text fontWeight="medium" color="gray.800">
-                                                                {product.name}
-                                                            </Text>
-                                                            <HStack fontSize="xs" mt={1} gap={2}>
-                                                                <Badge size="sm" variant="surface" colorPalette="gray">SKU: {product.sku || "—"}</Badge>
-                                                                {product.barcode && (
-                                                                    <Badge size="sm" variant="surface" colorPalette="blue">
-                                                                        {product.barcode}
-                                                                    </Badge>
-                                                                )}
-                                                            </HStack>
-                                                        </Box>
-                                                        <LuChevronRight color="gray" />
-                                                    </HStack>
-                                                ))}
-                                                {productResults.length === 0 && !productLoading && (
-                                                    <Box p={6} textAlign="center" color="fg.muted">
-                                                        <Text>Товары не найдены</Text>
-                                                    </Box>
-                                                )}
-                                            </VStack>
-                                        )}
-                                    </Box>
-                                )}
-                            </Box>
+                            <ProductSelector
+                                mode="search"
+                                onSelect={handleSelectProduct}
+                                searchRoute="admin.returns.search-products"
+                                searchParams={{ user_id: userId }}
+                            />
                         </Field>
                     </VStack>
                 )}

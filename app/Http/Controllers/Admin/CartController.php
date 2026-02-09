@@ -11,9 +11,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CartController extends AdminController
 {
+    use RedirectsAfterSave;
+
     public function __construct(
         protected \App\Services\Pricing\PriceService $priceService
     ) {
@@ -56,9 +59,7 @@ class CartController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.carts.index')
-                ->with('success', 'Корзина успешно создана');
+            return $this->redirectAfterSave($request, 'admin.carts.index', 'admin.carts.edit', $cart, 'Корзина успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -278,9 +279,7 @@ class CartController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.carts.index')
-                ->with('success', 'Корзина успешно обновлена');
+            return $this->redirectAfterSave($request, 'admin.carts.index', 'admin.carts.edit', $cart, 'Корзина успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -298,9 +297,7 @@ class CartController extends AdminController
         $cart->items()->delete();
         $cart->delete();
 
-        return redirect()
-            ->route('admin.carts.index')
-            ->with('success', 'Корзина успешно удалена');
+        return redirect()->route('admin.carts.index')->with('success', 'Корзина успешно удалена');
     }
 
     /**

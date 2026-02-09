@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState , useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
@@ -7,15 +7,23 @@ import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ balance, currencies }) {
     const [selectedUser, setSelectedUser] = useState(balance.user || null);
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         user_id: balance.user_id || '',
         currency_id: balance.currency_id || '',
         balance: balance.balance || '0.00',
         overdue_debt: balance.overdue_debt || '0.00',
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         put(route('admin.user-balances.update', balance.id), {
             onSuccess: () => {
                 toaster.create({
@@ -31,6 +39,10 @@ export default function Edit({ balance, currencies }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -107,7 +119,8 @@ export default function Edit({ balance, currencies }) {
                             </FormField>
 
                             <FormActions
-                                submitLabel="Сохранить изменения"
+                                onSaveAndClose={handleSaveAndClose}
+                            submitLabel="Сохранить изменения"
                                 onCancel={() => window.history.back()}
                                 processing={processing}
                             />

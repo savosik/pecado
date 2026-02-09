@@ -6,9 +6,12 @@ use App\Models\Faq;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class FaqController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Faq::query();
@@ -50,9 +53,7 @@ class FaqController extends Controller
 
         Faq::create($validated);
 
-        return redirect()
-            ->route('admin.faqs.index')
-            ->with('success', 'FAQ успешно создан');
+        return $this->redirectAfterSave($request, 'admin.faqs.index', 'admin.faqs.edit', $faq, 'FAQ успешно создан');
     }
 
     public function edit(Faq $faq)
@@ -71,18 +72,14 @@ class FaqController extends Controller
 
         $faq->update($validated);
 
-        return redirect()
-            ->route('admin.faqs.index')
-            ->with('success', 'FAQ успешно обновлён');
+        return $this->redirectAfterSave($request, 'admin.faqs.index', 'admin.faqs.edit', $faq, 'FAQ успешно обновлён');
     }
 
     public function destroy(Faq $faq)
     {
         $faq->delete();
 
-        return redirect()
-            ->route('admin.faqs.index')
-            ->with('success', 'FAQ успешно удалён');
+        return redirect()->route('admin.faqs.index')->with('success', 'FAQ успешно удалён');
     }
 
     public function search(Request $request)

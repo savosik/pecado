@@ -9,9 +9,12 @@ use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class FavoriteController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of favorites.
      */
@@ -136,9 +139,7 @@ class FavoriteController extends AdminController
     {
         $favorite->delete();
 
-        return redirect()
-            ->route('admin.favorites.index')
-            ->with('success', 'Запись избранного успешно удалена');
+        return redirect()->route('admin.favorites.index')->with('success', 'Запись избранного успешно удалена');
     }
 
     /**
@@ -177,9 +178,7 @@ class FavoriteController extends AdminController
 
         Favorite::create($validated);
 
-        return redirect()
-            ->route('admin.favorites.index')
-            ->with('success', 'Запись избранного успешно создана');
+        return $this->redirectAfterSave($request, 'admin.favorites.index', 'admin.favorites.edit', $favorite, 'Запись избранного успешно создана');
     }
 
     /**
@@ -239,9 +238,7 @@ class FavoriteController extends AdminController
 
         $favorite->update($validated);
 
-        return redirect()
-            ->route('admin.favorites.index')
-            ->with('success', 'Запись избранного успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.favorites.index', 'admin.favorites.edit', $favorite, 'Запись избранного успешно обновлена');
     }
 
     /**
@@ -256,9 +253,7 @@ class FavoriteController extends AdminController
 
         Favorite::whereIn('id', $request->input('favorite_ids'))->delete();
 
-        return redirect()
-            ->route('admin.favorites.index')
-            ->with('success', 'Выбранные записи избранного успешно удалены');
+        return $this->redirectAfterSave($request, 'admin.favorites.index', 'admin.favorites.edit', $favorite, 'Выбранные записи избранного успешно удалены');
     }
 
     /**

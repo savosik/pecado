@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Box, Button, Input, Stack, Card } from "@chakra-ui/react";
 import { Head, useForm, Link } from "@inertiajs/react";
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
@@ -9,14 +9,22 @@ import { SelectRelation } from "@/Admin/Components/SelectRelation";
 import { toaster } from "@/components/ui/toaster";
 
 const RegionsCreate = ({ warehouses }) => {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         name: "",
         primary_warehouse_ids: [],
         preorder_warehouse_ids: [],
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route("admin.regions.store"), {
             onSuccess: () => {
                 toaster.create({
@@ -25,6 +33,10 @@ const RegionsCreate = ({ warehouses }) => {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -66,7 +78,8 @@ const RegionsCreate = ({ warehouses }) => {
                             />
 
                             <FormActions
-                                backUrl={route("admin.regions.index")}
+                                onSaveAndClose={handleSaveAndClose}
+                            backUrl={route("admin.regions.index")}
                                 isLoading={processing}
                                 submitLabel="Создать"
                             />

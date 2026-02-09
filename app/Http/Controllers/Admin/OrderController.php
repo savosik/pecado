@@ -13,9 +13,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class OrderController extends AdminController
 {
+    use RedirectsAfterSave;
+
     public function __construct(
         protected \App\Services\Pricing\PriceService $priceService
     ) {
@@ -192,9 +195,7 @@ class OrderController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.orders.show', $order)
-                ->with('success', 'Заказ успешно создан');
+            return $this->redirectAfterSave($request, 'admin.orders.index', 'admin.orders.edit', $order, 'Заказ успешно создан');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -405,9 +406,7 @@ class OrderController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.orders.show', $order)
-                ->with('success', 'Заказ успешно обновлён');
+            return $this->redirectAfterSave($request, 'admin.orders.index', 'admin.orders.edit', $order, 'Заказ успешно обновлён');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -462,9 +461,7 @@ class OrderController extends AdminController
     {
         $order->delete();
 
-        return redirect()
-            ->route('admin.orders.index')
-            ->with('success', 'Заказ успешно удалён');
+        return redirect()->route('admin.orders.index')->with('success', 'Заказ успешно удалён');
     }
 
     /**

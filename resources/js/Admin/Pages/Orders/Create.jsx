@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState , useRef } from "react";
 import { Head, router, useForm } from "@inertiajs/react";
 import {
     Box,
@@ -21,7 +21,7 @@ import OrderItemsEditor from "@/Admin/Components/OrderItemsEditor";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
 
 const Create = ({ statuses, currencies }) => {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         user_id: "",
         company_id: "",
         status: "pending",
@@ -30,6 +30,13 @@ const Create = ({ statuses, currencies }) => {
         currency_code: "RUB",
         items: [],
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     // State for selected entities (for display)
     const [selectedUser, setSelectedUser] = useState(null);
@@ -76,8 +83,9 @@ const Create = ({ statuses, currencies }) => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         if (!data.items || data.items.length === 0) {
             toaster.create({
@@ -111,6 +119,10 @@ const Create = ({ statuses, currencies }) => {
 
     const handleCancel = () => {
         router.visit(route("admin.orders.index"));
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (

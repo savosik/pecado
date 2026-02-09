@@ -6,9 +6,12 @@ use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class PageController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Page::query();
@@ -74,9 +77,7 @@ class PageController extends Controller
             $page->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
-        return redirect()
-            ->route('admin.pages.index')
-            ->with('success', 'Страница успешно создана');
+        return $this->redirectAfterSave($request, 'admin.pages.index', 'admin.pages.edit', $page, 'Страница успешно создана');
     }
 
     public function edit(Page $page)
@@ -119,18 +120,14 @@ class PageController extends Controller
             $page->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
-        return redirect()
-            ->route('admin.pages.index')
-            ->with('success', 'Страница успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.pages.index', 'admin.pages.edit', $page, 'Страница успешно обновлена');
     }
 
     public function destroy(Page $page)
     {
         $page->delete();
 
-        return redirect()
-            ->route('admin.pages.index')
-            ->with('success', 'Страница успешно удалена');
+        return redirect()->route('admin.pages.index')->with('success', 'Страница успешно удалена');
     }
 
     public function search(Request $request)

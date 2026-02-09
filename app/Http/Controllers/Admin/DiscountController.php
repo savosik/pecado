@@ -10,9 +10,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class DiscountController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of discounts.
      */
@@ -106,9 +109,7 @@ class DiscountController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.discounts.index')
-                ->with('success', 'Скидка успешно создана');
+            return $this->redirectAfterSave($request, 'admin.discounts.index', 'admin.discounts.edit', $discount, 'Скидка успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -207,9 +208,7 @@ class DiscountController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.discounts.index')
-                ->with('success', 'Скидка успешно обновлена');
+            return $this->redirectAfterSave($request, 'admin.discounts.index', 'admin.discounts.edit', $discount, 'Скидка успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -227,9 +226,7 @@ class DiscountController extends AdminController
         try {
             $discount->delete();
 
-            return redirect()
-                ->route('admin.discounts.index')
-                ->with('success', 'Скидка успешно удалена');
+            return redirect()->route('admin.discounts.index')->with('success', 'Скидка успешно удалена');
         } catch (\Exception $e) {
             return redirect()
                 ->back()

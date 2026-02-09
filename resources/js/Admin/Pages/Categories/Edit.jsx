@@ -1,15 +1,17 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, MarkdownEditor } from '@/Admin/Components';
-import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
+import { Box, Card, SimpleGrid, Input, Stack, Tabs, Badge, HStack, Text } from '@chakra-ui/react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuAlignLeft, LuImage, LuTag, LuSearch } from 'react-icons/lu';
+import { LuFileText, LuAlignLeft, LuImage, LuTag, LuSearch, LuListChecks } from 'react-icons/lu';
 
 export default function Edit({ category, categories, availableAttributes }) {
-    const attributeOptions = useMemo(() => availableAttributes.map(a => ({ value: a.id, label: a.name })), [availableAttributes]);
-    const { data, setData, post, processing, errors } = useForm({
+    const sortedAttributes = useMemo(() => [...availableAttributes].sort((a, b) => a.name.localeCompare(b.name, 'ru')), [availableAttributes]);
+    const [attrSearch, setAttrSearch] = useState('');
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: category.name || '',
         parent_id: category.parent_id || '',
         external_id: category.external_id || '',
@@ -23,16 +25,51 @@ export default function Edit({ category, categories, availableAttributes }) {
         _method: 'PUT',
     });
 
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const filteredAttributes = useMemo(() => {
+        if (!attrSearch.trim()) return sortedAttributes;
+        const q = attrSearch.trim().toLowerCase();
+        return sortedAttributes.filter(a => a.name.toLowerCase().includes(q));
+    }, [sortedAttributes, attrSearch]);
+
+    const handleToggleAttribute = (attrId) => {
+        const ids = data.attribute_ids;
+        if (ids.includes(attrId)) {
+            setData('attribute_ids', ids.filter(id => id !== attrId));
+        } else {
+            setData('attribute_ids', [...ids, attrId]);
+        }
+    };
+
+    const handleSelectAllAttributes = () => {
+        const allFilteredIds = filteredAttributes.map(a => a.id);
+        const merged = [...new Set([...data.attribute_ids, ...allFilteredIds])];
+        setData('attribute_ids', merged);
+    };
+
+    const handleDeselectAllAttributes = () => {
+        const filteredIds = new Set(filteredAttributes.map(a => a.id));
+        setData('attribute_ids', data.attribute_ids.filter(id => !filteredIds.has(id)));
+    };
+
     // Определяем, в каких табах есть ошибки
     const tabErrors = useMemo(() => ({
         general: ['name', 'parent_id', 'external_id'].some(field => errors[field]),
         descriptions: ['short_description', 'description'].some(field => errors[field]),
         seo: ['meta_title', 'meta_description'].some(field => errors[field]),
         media: ['icon', 'tags'].some(field => errors[field]),
+        attributes: !!errors.attribute_ids,
     }), [errors]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.categories.update', category.id), {
             onSuccess: () => {
                 toaster.create({
@@ -49,6 +86,10 @@ export default function Edit({ category, categories, availableAttributes }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     const handleDeleteIcon = async () => {
@@ -108,6 +149,19 @@ export default function Edit({ category, categories, availableAttributes }) {
                                         </Box>
                                     )}
                                 </Tabs.Trigger>
+                                <Tabs.Trigger value="attributes">
+                                    <LuListChecks /> Атрибуты
+                                    {data.attribute_ids.length > 0 && (
+                                        <Badge size="xs" colorPalette="blue" variant="solid" ml={1}>
+                                            {data.attribute_ids.length}
+                                        </Badge>
+                                    )}
+                                    {tabErrors.attributes && (
+                                        <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                            ⚠️
+                                        </Box>
+                                    )}
+                                </Tabs.Trigger>
                                 <Tabs.Trigger value="media">
                                     <LuImage /> Медиа и теги
                                     {tabErrors.media && (
@@ -158,18 +212,102 @@ export default function Edit({ category, categories, availableAttributes }) {
                                             />
                                         </FormField>
                                     </SimpleGrid>
+                                </Stack>
+                            </Tabs.Content>
 
-                                    <Box mt={4}>
-                                        <SelectRelation
-                                            label="Атрибуты"
-                                            value={data.attribute_ids}
-                                            onChange={(value) => setData('attribute_ids', value)}
-                                            options={attributeOptions}
-                                            placeholder="Выберите атрибуты"
-                                            multiple
-                                            error={errors.attribute_ids}
-                                        />
+                            {/* Таб: Атрибуты */}
+                            <Tabs.Content value="attributes">
+                                <Stack gap={4} mt={6}>
+                                    <HStack gap={3} flexWrap="wrap">
+                                        <Box flex="1" minW="200px">
+                                            <Input
+                                                placeholder="Поиск атрибутов..."
+                                                value={attrSearch}
+                                                onChange={(e) => setAttrSearch(e.target.value)}
+                                                size="sm"
+                                            />
+                                        </Box>
+                                        <HStack gap={2}>
+                                            <Text
+                                                fontSize="sm"
+                                                color="blue.fg"
+                                                cursor="pointer"
+                                                _hover={{ textDecoration: 'underline' }}
+                                                onClick={handleSelectAllAttributes}
+                                            >
+                                                Выбрать все
+                                            </Text>
+                                            <Text fontSize="sm" color="fg.muted">|</Text>
+                                            <Text
+                                                fontSize="sm"
+                                                color="blue.fg"
+                                                cursor="pointer"
+                                                _hover={{ textDecoration: 'underline' }}
+                                                onClick={handleDeselectAllAttributes}
+                                            >
+                                                Снять все
+                                            </Text>
+                                        </HStack>
+                                    </HStack>
+
+                                    <Box
+                                        borderWidth="1px"
+                                        borderRadius="lg"
+                                        overflow="hidden"
+                                        bg="bg.panel"
+                                        maxH="500px"
+                                        overflowY="auto"
+                                    >
+                                        {filteredAttributes.length === 0 ? (
+                                            <Box p={6} textAlign="center" color="fg.muted">
+                                                <Text fontSize="sm">Атрибуты не найдены</Text>
+                                            </Box>
+                                        ) : (
+                                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={0}>
+                                                {filteredAttributes.map(attr => {
+                                                    const isChecked = data.attribute_ids.includes(attr.id);
+
+                                                    return (
+                                                        <HStack
+                                                            key={attr.id}
+                                                            py={2}
+                                                            px={3}
+                                                            _hover={{ bg: 'bg.subtle' }}
+                                                            cursor="pointer"
+                                                            onClick={() => handleToggleAttribute(attr.id)}
+                                                            borderBottomWidth="1px"
+                                                            borderColor="border.muted"
+                                                        >
+                                                            <Checkbox
+                                                                checked={isChecked}
+                                                                onCheckedChange={() => handleToggleAttribute(attr.id)}
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                colorPalette="blue"
+                                                                size="sm"
+                                                            />
+                                                            <Text
+                                                                fontSize="sm"
+                                                                fontWeight={isChecked ? 'semibold' : 'normal'}
+                                                                color={isChecked ? 'blue.fg' : undefined}
+                                                            >
+                                                                {attr.name}{attr.unit ? ` (${attr.unit})` : ''}
+                                                            </Text>
+                                                        </HStack>
+                                                    );
+                                                })}
+                                            </SimpleGrid>
+                                        )}
                                     </Box>
+
+                                    <Text fontSize="xs" color="fg.muted">
+                                        Выбрано атрибутов: {data.attribute_ids.length} из {availableAttributes.length}
+                                    </Text>
+
+                                    {errors.attribute_ids && (
+                                        <Box color="red.500" fontSize="sm">
+                                            {errors.attribute_ids}
+                                        </Box>
+                                    )}
                                 </Stack>
                             </Tabs.Content>
 
@@ -276,6 +414,7 @@ export default function Edit({ category, categories, availableAttributes }) {
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                             submitLabel="Сохранить изменения"

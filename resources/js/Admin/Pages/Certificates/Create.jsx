@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, FileUploader, ProductSelector } from '@/Admin/Components';
@@ -15,8 +16,16 @@ export default function Create() {
         products: [],
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         transform((data) => ({
             ...data,
             products: data.products.map(p => p.id),
@@ -34,6 +43,10 @@ export default function Create() {
     };
 
 
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
+    };
 
     return (
         <>
@@ -110,6 +123,7 @@ export default function Create() {
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                             submitLabel="Создать сертификат"

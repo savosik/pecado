@@ -2,6 +2,7 @@
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Media;
 
 return [
 
@@ -114,6 +115,28 @@ return [
                     'name_translit',
                     'name_cyrillic',
                     'name_layout',
+                ],
+            ],
+            Media::class => [
+                'searchableAttributes' => [
+                    'owner_name',       // 1. Название владельца (товар, статья, бренд...)
+                    'owner_code',       // 2. Код товара
+                    'owner_sku',        // 3. Артикул товара
+                    'owner_brand',      // 4. Бренд
+                    'owner_category',   // 5. Категория
+                    'owner_description',// 6. Описание владельца
+                    'name',             // 7. Название медиафайла
+                    'file_name',        // 8. Имя файла
+                    'tags',             // 9. Теги
+                ],
+                'filterableAttributes' => [
+                    'mime_type',
+                    'mime_type_group',
+                    'collection_name',
+                    'model_type',
+                ],
+                'sortableAttributes' => [
+                    'id',
                 ],
             ],
         ],

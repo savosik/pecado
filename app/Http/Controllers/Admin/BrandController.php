@@ -9,9 +9,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class BrandController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the brands.
      */
@@ -112,9 +115,7 @@ class BrandController extends AdminController
             $brand->syncTags($tagNames);
         }
 
-        return redirect()
-            ->route('admin.brands.index')
-            ->with('success', 'Бренд успешно создан');
+        return $this->redirectAfterSave($request, 'admin.brands.index', 'admin.brands.edit', $brand, 'Бренд успешно создан');
     }
 
     /**
@@ -201,9 +202,7 @@ class BrandController extends AdminController
             $brand->syncTags($tagNames);
         }
 
-        return redirect()
-            ->route('admin.brands.index')
-            ->with('success', 'Бренд успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.brands.index', 'admin.brands.edit', $brand, 'Бренд успешно обновлен');
     }
 
     /**
@@ -213,9 +212,7 @@ class BrandController extends AdminController
     {
         $brand->delete();
 
-        return redirect()
-            ->route('admin.brands.index')
-            ->with('success', 'Бренд успешно удален');
+        return redirect()->route('admin.brands.index')->with('success', 'Бренд успешно удален');
     }
     
      /**

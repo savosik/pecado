@@ -99,12 +99,14 @@ export function WarehousesSection({ warehouses = [], availableWarehouses = [], o
                         </Box>
                         <Stack direction={{ base: 'column', md: 'row' }} gap={3}>
                             <Box flex="2">
-                                <SelectRelation
-                                    value={selectedWarehouseId}
-                                    onChange={setSelectedWarehouseId}
-                                    options={warehouseOptions}
-                                    placeholder="Выберите склад"
-                                />
+                                <FormField label="Склад">
+                                    <SelectRelation
+                                        value={selectedWarehouseId}
+                                        onChange={setSelectedWarehouseId}
+                                        options={warehouseOptions}
+                                        placeholder="Выберите склад"
+                                    />
+                                </FormField>
                             </Box>
                             <Box flex="1">
                                 <FormField label="Количество">

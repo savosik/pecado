@@ -9,9 +9,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ProductSelectionController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of product selections.
      */
@@ -41,6 +44,11 @@ class ProductSelectionController extends AdminController
         $perPage = min(max($perPage, 5), 100);
 
         $productSelections = $query->paginate($perPage)->withQueryString();
+
+        $productSelections->through(function ($selection) {
+            $selection->desktop_image_url = $selection->getFirstMediaUrl('desktop');
+            return $selection;
+        });
 
         return Inertia::render('Admin/Pages/ProductSelections/Index', [
             'product_selections' => $productSelections,
@@ -106,9 +114,7 @@ class ProductSelectionController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.product-selections.index')
-                ->with('success', 'Подборка успешно создана');
+            return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -232,9 +238,7 @@ class ProductSelectionController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.product-selections.index')
-                ->with('success', 'Подборка успешно обновлена');
+            return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $selection, 'Подборка успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -252,9 +256,7 @@ class ProductSelectionController extends AdminController
         try {
             $productSelection->delete();
 
-            return redirect()
-                ->route('admin.product-selections.index')
-                ->with('success', 'Подборка успешно удалена');
+            return redirect()->route('admin.product-selections.index')->with('success', 'Подборка успешно удалена');
         } catch (\Exception $e) {
             return redirect()
                 ->back()

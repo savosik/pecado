@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\CompanyBankAccount;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CompanyBankAccountController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = CompanyBankAccount::query()
@@ -69,9 +72,7 @@ class CompanyBankAccountController extends Controller
             return response()->json($bankAccount, 201);
         }
 
-        return redirect()
-            ->route('admin.company-bank-accounts.index')
-            ->with('success', 'Банковский счет успешно создан');
+        return $this->redirectAfterSave($request, 'admin.company-bank-accounts.index', 'admin.company-bank-accounts.edit', $bankAccount, 'Банковский счет успешно создан');
     }
 
     public function edit(CompanyBankAccount $companyBankAccount)
@@ -107,9 +108,7 @@ class CompanyBankAccountController extends Controller
             return response()->json($companyBankAccount);
         }
 
-        return redirect()
-            ->route('admin.company-bank-accounts.index')
-            ->with('success', 'Банковский счет успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.company-bank-accounts.index', 'admin.company-bank-accounts.edit', $bankAccount, 'Банковский счет успешно обновлен');
     }
 
     public function destroy(Request $request, CompanyBankAccount $companyBankAccount)
@@ -120,9 +119,7 @@ class CompanyBankAccountController extends Controller
             return response()->json(['success' => true]);
         }
 
-        return redirect()
-            ->route('admin.company-bank-accounts.index')
-            ->with('success', 'Банковский счет успешно удален');
+        return redirect()->route('admin.company-bank-accounts.index')->with('success', 'Банковский счет успешно удален');
     }
 
     /**

@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Components';
@@ -5,13 +6,21 @@ import { Box, Card, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create({ products }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         product_id: '',
         barcode: '',
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.product-barcodes.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -21,6 +30,10 @@ export default function Create({ products }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -52,7 +65,8 @@ export default function Create({ products }) {
 
                         <Card.Footer>
                             <FormActions
-                                loading={processing}
+                                onSaveAndClose={handleSaveAndClose}
+                            loading={processing}
                                 onCancel={() => window.history.back()}
                                 submitLabel="Добавить штрихкод"
                             />

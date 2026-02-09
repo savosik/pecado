@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect , useRef } from "react";
 import {
     Box,
     Card,
@@ -25,12 +25,19 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { toaster } from "@/components/ui/toaster";
 
 const CartCreate = ({ currencies = [] }) => {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         name: "",
         user_id: null,
         user: null,
         items: [],
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     const [currencyCode, setCurrencyCode] = useState("RUB");
     const [currencySymbol, setCurrencySymbol] = useState("₽");
@@ -44,8 +51,9 @@ const CartCreate = ({ currencies = [] }) => {
         }
     }, [currencyCode, currencies]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         if (!data.user_id) {
             toaster.create({
@@ -189,6 +197,10 @@ const CartCreate = ({ currencies = [] }) => {
     };
 
     const totalQuantity = data.items.reduce((sum, item) => sum + item.quantity, 0);
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
+    };
 
     return (
         <>

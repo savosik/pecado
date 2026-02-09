@@ -8,9 +8,12 @@ use App\Models\UserBalance;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class UserBalanceController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = UserBalance::query()
@@ -75,9 +78,7 @@ class UserBalanceController extends Controller
 
         UserBalance::create($validated);
 
-        return redirect()
-            ->route('admin.user-balances.index')
-            ->with('success', 'Баланс успешно создан');
+        return $this->redirectAfterSave($request, 'admin.user-balances.index', 'admin.user-balances.edit', $balance, 'Баланс успешно создан');
     }
 
     public function edit(UserBalance $userBalance)
@@ -102,18 +103,14 @@ class UserBalanceController extends Controller
 
         $userBalance->update($validated);
 
-        return redirect()
-            ->route('admin.user-balances.index')
-            ->with('success', 'Баланс успешно обновлён');
+        return $this->redirectAfterSave($request, 'admin.user-balances.index', 'admin.user-balances.edit', $balance, 'Баланс успешно обновлён');
     }
 
     public function destroy(UserBalance $userBalance)
     {
         $userBalance->delete();
 
-        return redirect()
-            ->route('admin.user-balances.index')
-            ->with('success', 'Баланс успешно удалён');
+        return redirect()->route('admin.user-balances.index')->with('success', 'Баланс успешно удалён');
     }
 
     public function search(Request $request)

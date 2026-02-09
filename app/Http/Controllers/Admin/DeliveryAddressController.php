@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\DeliveryAddress;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class DeliveryAddressController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = DeliveryAddress::query()
@@ -55,9 +58,7 @@ class DeliveryAddressController extends Controller
 
         $deliveryAddress = DeliveryAddress::create($validated);
 
-        return redirect()
-            ->route('admin.delivery-addresses.index')
-            ->with('success', 'Адрес доставки успешно создан');
+        return $this->redirectAfterSave($request, 'admin.delivery-addresses.index', 'admin.delivery-addresses.edit', $deliveryAddress, 'Адрес доставки успешно создан');
     }
 
     public function edit(DeliveryAddress $deliveryAddress)
@@ -79,18 +80,14 @@ class DeliveryAddressController extends Controller
 
         $deliveryAddress->update($validated);
 
-        return redirect()
-            ->route('admin.delivery-addresses.index')
-            ->with('success', 'Адрес доставки успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.delivery-addresses.index', 'admin.delivery-addresses.edit', $address, 'Адрес доставки успешно обновлен');
     }
 
     public function destroy(DeliveryAddress $deliveryAddress)
     {
         $deliveryAddress->delete();
 
-        return redirect()
-            ->route('admin.delivery-addresses.index')
-            ->with('success', 'Адрес доставки успешно удален');
+        return redirect()->route('admin.delivery-addresses.index')->with('success', 'Адрес доставки успешно удален');
     }
 
     /**

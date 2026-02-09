@@ -6,9 +6,12 @@ use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ArticleController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Article::query()->withCount('tags');
@@ -83,9 +86,7 @@ class ArticleController extends Controller
             $article->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
-        return redirect()
-            ->route('admin.articles.index')
-            ->with('success', 'Статья успешно создана');
+        return $this->redirectAfterSave($request, 'admin.articles.index', 'admin.articles.edit', $article, 'Статья успешно создана');
     }
 
     public function edit(Article $article)
@@ -139,18 +140,14 @@ class ArticleController extends Controller
             $article->addMediaFromRequest('detail_mobile')->toMediaCollection('detail-item-mobile');
         }
 
-        return redirect()
-            ->route('admin.articles.index')
-            ->with('success', 'Статья успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.articles.index', 'admin.articles.edit', $article, 'Статья успешно обновлена');
     }
 
     public function destroy(Article $article)
     {
         $article->delete();
 
-        return redirect()
-            ->route('admin.articles.index')
-            ->with('success', 'Статья успешно удалена');
+        return redirect()->route('admin.articles.index')->with('success', 'Статья успешно удалена');
     }
 
     public function search(Request $request)

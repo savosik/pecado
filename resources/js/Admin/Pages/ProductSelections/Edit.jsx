@@ -1,23 +1,32 @@
+import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ productSelection }) {
-    const { data, setData, post, processing, errors } = useForm({
+export default function Edit({ product_selection }) {
+    const { data, setData, post, processing, errors , transform } = useForm({
         _method: 'PUT',
-        name: productSelection.name || '',
-        meta_title: productSelection.meta_title || '',
-        meta_description: productSelection.meta_description || '',
-        description: productSelection.description || '',
-        products: productSelection.products || [],
+        name: product_selection.name || '',
+        meta_title: product_selection.meta_title || '',
+        meta_description: product_selection.meta_description || '',
+        description: product_selection.description || '',
+        products: product_selection.products || [],
         desktop_image: null,
         mobile_image: null,
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         const formData = new FormData();
         formData.append('_method', 'PUT');
@@ -39,7 +48,7 @@ export default function Edit({ productSelection }) {
             formData.append('mobile_image', data.mobile_image);
         }
 
-        post(route('admin.product-selections.update', productSelection.id), {
+        post(route('admin.product-selections.update', product_selection.id), {
             data: formData,
             forceFormData: true,
             onSuccess: () => {
@@ -60,16 +69,16 @@ export default function Edit({ productSelection }) {
     };
 
     const handleRemoveDesktopImage = () => {
-        if (!productSelection.desktop_image_id) return;
+        if (!product_selection.desktop_image_id) return;
 
-        router.delete(route('admin.product-selections.media.delete', { product_selection: productSelection.id }), {
-            data: { media_id: productSelection.desktop_image_id },
+        router.delete(route('admin.product-selections.media.delete', { product_selection: product_selection.id }), {
+            data: { media_id: product_selection.desktop_image_id },
             onSuccess: () => {
                 toaster.create({
                     title: 'Изображение удалено',
                     type: 'success',
                 });
-                router.reload({ only: ['productSelection'] });
+                router.reload({ only: ['product_selection'] });
             },
             onError: () => {
                 toaster.create({
@@ -82,16 +91,16 @@ export default function Edit({ productSelection }) {
     };
 
     const handleRemoveMobileImage = () => {
-        if (!productSelection.mobile_image_id) return;
+        if (!product_selection.mobile_image_id) return;
 
-        router.delete(route('admin.product-selections.media.delete', { product_selection: productSelection.id }), {
-            data: { media_id: productSelection.mobile_image_id },
+        router.delete(route('admin.product-selections.media.delete', { product_selection: product_selection.id }), {
+            data: { media_id: product_selection.mobile_image_id },
             onSuccess: () => {
                 toaster.create({
                     title: 'Изображение удалено',
                     type: 'success',
                 });
-                router.reload({ only: ['productSelection'] });
+                router.reload({ only: ['product_selection'] });
             },
             onError: () => {
                 toaster.create({
@@ -103,94 +112,101 @@ export default function Edit({ productSelection }) {
         });
     };
 
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
+    };
+
     return (
         <>
-                <PageHeader
-                    title={`Редактирование: ${productSelection.name}`}
-                    description="Изменение информации о подборке товаров"
-                />
+            <PageHeader
+                title={`Редактирование: ${product_selection.name}`}
+                description="Изменение информации о подборке товаров"
+            />
 
-                <form onSubmit={handleSubmit}>
-                    <Card.Root>
-                        <Card.Body>
-                            <Stack gap={6}>
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название" error={errors.name} required>
-                                        <Input
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="Например: Новинки сезона"
-                                        />
-                                    </FormField>
-
-                                    <FormField label="Meta заголовок" error={errors.meta_title}>
-                                        <Input
-                                            value={data.meta_title}
-                                            onChange={(e) => setData('meta_title', e.target.value)}
-                                            placeholder="SEO заголовок"
-                                        />
-                                    </FormField>
-                                </SimpleGrid>
-
-                                <FormField label="Meta описание" error={errors.meta_description}>
-                                    <Textarea
-                                        value={data.meta_description}
-                                        onChange={(e) => setData('meta_description', e.target.value)}
-                                        placeholder="SEO описание"
-                                        rows={2}
+            <form onSubmit={handleSubmit}>
+                <Card.Root>
+                    <Card.Body>
+                        <Stack gap={6}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Название" error={errors.name} required>
+                                    <Input
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder="Например: Новинки сезона"
                                     />
                                 </FormField>
 
-                                <FormField label="Описание подборки" error={errors.description}>
-                                    <Textarea
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        placeholder="Подробное описание подборки"
-                                        rows={4}
+                                <FormField label="Meta заголовок" error={errors.meta_title}>
+                                    <Input
+                                        value={data.meta_title}
+                                        onChange={(e) => setData('meta_title', e.target.value)}
+                                        placeholder="SEO заголовок"
                                     />
                                 </FormField>
+                            </SimpleGrid>
 
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                            <FormField label="Meta описание" error={errors.meta_description}>
+                                <Textarea
+                                    value={data.meta_description}
+                                    onChange={(e) => setData('meta_description', e.target.value)}
+                                    placeholder="SEO описание"
+                                    rows={2}
+                                />
+                            </FormField>
+
+                            <FormField label="Описание подборки" error={errors.description}>
+                                <Textarea
+                                    value={data.description}
+                                    onChange={(e) => setData('description', e.target.value)}
+                                    placeholder="Подробное описание подборки"
+                                    rows={4}
+                                />
+                            </FormField>
+
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Изображение для Desktop" error={errors.desktop_image}>
                                     <ImageUploader
-                                        label="Изображение для Desktop"
                                         onChange={(file) => setData('desktop_image', file)}
                                         error={errors.desktop_image}
                                         maxSize={10}
-                                        currentImageUrl={productSelection.desktop_image_url}
+                                        existingUrl={product_selection.desktop_image_url}
                                         onRemoveExisting={handleRemoveDesktopImage}
                                     />
+                                </FormField>
 
+                                <FormField label="Изображение для Mobile" error={errors.mobile_image}>
                                     <ImageUploader
-                                        label="Изображение для Mobile"
                                         onChange={(file) => setData('mobile_image', file)}
                                         error={errors.mobile_image}
                                         maxSize={10}
-                                        currentImageUrl={productSelection.mobile_image_url}
+                                        existingUrl={product_selection.mobile_image_url}
                                         onRemoveExisting={handleRemoveMobileImage}
                                     />
-                                </SimpleGrid>
+                                </FormField>
+                            </SimpleGrid>
 
-                                <Box>
-                                    <FormField label="Привязанные товары" error={errors.product_ids}>
-                                        <ProductSelector
-                                            value={data.products}
-                                            onChange={(products) => setData('products', products)}
-                                            error={errors.product_ids}
-                                        />
-                                    </FormField>
-                                </Box>
-                            </Stack>
-                        </Card.Body>
+                            <Box>
+                                <FormField label="Привязанные товары" error={errors.product_ids}>
+                                    <ProductSelector
+                                        value={data.products}
+                                        onChange={(products) => setData('products', products)}
+                                        error={errors.product_ids}
+                                    />
+                                </FormField>
+                            </Box>
+                        </Stack>
+                    </Card.Body>
 
-                        <Card.Footer>
-                            <FormActions
-                                loading={processing}
-                                onCancel={() => window.history.back()}
-                                submitLabel="Сохранить изменения"
-                            />
-                        </Card.Footer>
-                    </Card.Root>
-                </form>
+                    <Card.Footer>
+                        <FormActions
+                            onSaveAndClose={handleSaveAndClose}
+                            loading={processing}
+                            onCancel={() => window.history.back()}
+                            submitLabel="Сохранить изменения"
+                        />
+                    </Card.Footer>
+                </Card.Root>
+            </form>
         </>
     );
 }

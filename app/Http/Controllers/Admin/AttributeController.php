@@ -9,9 +9,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Str;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class AttributeController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the attributes.
      */
@@ -65,7 +68,7 @@ class AttributeController extends AdminController
                 ['value' => 'boolean', 'label' => 'Логический (Checkbox)'],
                 ['value' => 'select', 'label' => 'Выбор из списка (Select)'],
             ],
-            'categories' => Category::select('id', 'name')->orderBy('name')->get(),
+            'categoryTree' => Category::defaultOrder()->get()->toTree(),
         ]);
     }
 
@@ -107,9 +110,7 @@ class AttributeController extends AdminController
             $attribute->categories()->sync($validated['category_ids']);
         }
 
-        return redirect()
-            ->route('admin.attributes.index')
-            ->with('success', 'Атрибут успешно создан');
+        return $this->redirectAfterSave($request, 'admin.attributes.index', 'admin.attributes.edit', $attribute, 'Атрибут успешно создан');
     }
 
     /**
@@ -127,7 +128,7 @@ class AttributeController extends AdminController
                 ['value' => 'boolean', 'label' => 'Логический (Checkbox)'],
                 ['value' => 'select', 'label' => 'Выбор из списка (Select)'],
             ],
-            'categories' => Category::select('id', 'name')->orderBy('name')->get(),
+            'categoryTree' => Category::defaultOrder()->get()->toTree(),
         ]);
     }
 
@@ -180,9 +181,7 @@ class AttributeController extends AdminController
 
         $attribute->categories()->sync($validated['category_ids'] ?? []);
 
-        return redirect()
-            ->route('admin.attributes.index')
-            ->with('success', 'Атрибут успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.attributes.index', 'admin.attributes.edit', $attribute, 'Атрибут успешно обновлен');
     }
 
     /**
@@ -192,8 +191,6 @@ class AttributeController extends AdminController
     {
         $attribute->delete();
 
-        return redirect()
-            ->route('admin.attributes.index')
-            ->with('success', 'Атрибут успешно удален');
+        return redirect()->route('admin.attributes.index')->with('success', 'Атрибут успешно удален');
     }
 }

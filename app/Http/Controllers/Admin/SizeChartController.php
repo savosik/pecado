@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class SizeChartController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the size charts.
      */
@@ -83,9 +86,7 @@ class SizeChartController extends AdminController
             $sizeChart->brands()->sync($request->brand_ids);
         }
 
-        return redirect()
-            ->route('admin.size-charts.index')
-            ->with('success', 'Размерная сетка успешно создана');
+        return $this->redirectAfterSave($request, 'admin.size-charts.index', 'admin.size-charts.edit', $sizeChart, 'Размерная сетка успешно создана');
     }
 
     /**
@@ -129,9 +130,7 @@ class SizeChartController extends AdminController
 
         $sizeChart->brands()->sync($request->brand_ids ?? []);
 
-        return redirect()
-            ->route('admin.size-charts.index')
-            ->with('success', 'Размерная сетка успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.size-charts.index', 'admin.size-charts.edit', $sizeChart, 'Размерная сетка успешно обновлена');
     }
 
     /**
@@ -141,8 +140,6 @@ class SizeChartController extends AdminController
     {
         $sizeChart->delete();
 
-        return redirect()
-            ->route('admin.size-charts.index')
-            ->with('success', 'Размерная сетка успешно удалена');
+        return redirect()->route('admin.size-charts.index')->with('success', 'Размерная сетка успешно удалена');
     }
 }

@@ -7,9 +7,12 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Artisan;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CurrencyController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Currency::query();
@@ -61,9 +64,7 @@ class CurrencyController extends Controller
 
         Currency::create($validated);
 
-        return redirect()
-            ->route('admin.currencies.index')
-            ->with('success', 'Валюта успешно создана');
+        return $this->redirectAfterSave($request, 'admin.currencies.index', 'admin.currencies.edit', $currency, 'Валюта успешно создана');
     }
 
     public function edit(Currency $currency)
@@ -93,18 +94,14 @@ class CurrencyController extends Controller
 
         $currency->update($validated);
 
-        return redirect()
-            ->route('admin.currencies.index')
-            ->with('success', 'Валюта успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.currencies.index', 'admin.currencies.edit', $currency, 'Валюта успешно обновлена');
     }
 
     public function destroy(Currency $currency)
     {
         $currency->delete();
 
-        return redirect()
-            ->route('admin.currencies.index')
-            ->with('success', 'Валюта успешно удалена');
+        return redirect()->route('admin.currencies.index')->with('success', 'Валюта успешно удалена');
     }
 
     public function search(Request $request)
@@ -140,9 +137,7 @@ class CurrencyController extends Controller
             Artisan::call('currency:update');
             $output = Artisan::output();
 
-            return redirect()
-                ->route('admin.currencies.index')
-                ->with('success', 'Курсы валют успешно обновлены');
+            return $this->redirectAfterSave($request, 'admin.currencies.index', 'admin.currencies.edit', $currency, 'Курсы валют успешно обновлены');
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.currencies.index')

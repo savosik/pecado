@@ -49,36 +49,12 @@ export default function Index({ product_selections, filters }) {
             key: 'name',
             label: 'Название',
             sortable: true,
-            render: (name, item) => (
-                <Box>
-                    <Text fontWeight="medium">{name || '—'}</Text>
-                    {item.meta_title && <Text fontSize="xs" color="fg.muted">{item.meta_title}</Text>}
-                </Box>
-            ),
         },
         {
             key: 'products_count',
             label: 'Товаров',
             render: (count) => (
                 <Badge colorPalette="blue">{count || 0}</Badge>
-            ),
-        },
-        {
-            key: 'has_desktop',
-            label: 'Desktop',
-            render: (_, item) => (
-                <Badge colorPalette={item.desktop_image_url ? 'green' : 'gray'}>
-                    {item.desktop_image_url ? 'Да' : 'Нет'}
-                </Badge>
-            ),
-        },
-        {
-            key: 'has_mobile',
-            label: 'Mobile',
-            render: (_, item) => (
-                <Badge colorPalette={item.mobile_image_url ? 'green' : 'gray'}>
-                    {item.mobile_image_url ? 'Да' : 'Нет'}
-                </Badge>
             ),
         },
         {

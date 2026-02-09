@@ -6,9 +6,12 @@ use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Spatie\Tags\Tag;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class TagController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Tag::query();
@@ -65,9 +68,7 @@ class TagController extends Controller
             $tag->save();
         }
 
-        return redirect()
-            ->route('admin.tags.index')
-            ->with('success', 'Тег успешно создан');
+        return $this->redirectAfterSave($request, 'admin.tags.index', 'admin.tags.edit', $tag, 'Тег успешно создан');
     }
 
     public function edit(Tag $tag)
@@ -96,18 +97,14 @@ class TagController extends Controller
         $tag->order_column = $validated['order_column'] ?? 0;
         $tag->save();
 
-        return redirect()
-            ->route('admin.tags.index')
-            ->with('success', 'Тег успешно обновлён');
+        return $this->redirectAfterSave($request, 'admin.tags.index', 'admin.tags.edit', $tag, 'Тег успешно обновлён');
     }
 
     public function destroy(Tag $tag)
     {
         $tag->delete();
 
-        return redirect()
-            ->route('admin.tags.index')
-            ->with('success', 'Тег успешно удалён');
+        return redirect()->route('admin.tags.index')->with('success', 'Тег успешно удалён');
     }
 
     public function search(Request $request)

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import {
     Box,
     Card,
@@ -17,15 +17,23 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { toaster } from "@/components/ui/toaster";
 
 const FavoriteEdit = ({ favorite }) => {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         user_id: favorite.user_id,
         user: favorite.user,
         product_id: favorite.product_id,
         product: favorite.product,
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         if (!data.user_id) {
             toaster.create({
@@ -75,6 +83,10 @@ const FavoriteEdit = ({ favorite }) => {
             product_id: product?.id || null,
             product: product,
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (

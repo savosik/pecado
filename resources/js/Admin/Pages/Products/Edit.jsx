@@ -1,19 +1,19 @@
-import { useMemo } from 'react';
+import { useMemo , useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuListChecks } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuListChecks, LuFolderTree } from 'react-icons/lu';
 import { WarehousesSection } from './Components/WarehousesSection';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
-export default function Edit({ product, brands, categories, productModels, sizeCharts, warehouses, attributes, certificates }) {
-    const { data, setData, post, processing, errors } = useForm({
+export default function Edit({ product, brands, categoryTree, productModels, sizeCharts, warehouses, attributes, certificates }) {
+    const { data, setData, post, processing, errors , transform } = useForm({
         name: product.name || '',
         slug: product.slug || '',
         base_price: product.base_price || '',
@@ -46,6 +46,13 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         _method: 'PUT',
     });
 
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
     const { handleSourceChange, handleSlugChange } = useSlugField({
         data, setData, sourceField: 'name', isEditing: true,
     });
@@ -54,7 +61,8 @@ export default function Edit({ product, brands, categories, productModels, sizeC
     // Определяем, в каких табах есть ошибки (мемоизируем)
     const tabErrors = useMemo(() => ({
         general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
-        relations: ['brand_id', 'model_id', 'categories', 'size_chart_id'].some(field => errors[field]),
+        categories: ['categories'].some(field => errors[field]),
+        relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
         descriptions: ['short_description', 'description', 'meta_title', 'meta_description'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
@@ -63,12 +71,12 @@ export default function Edit({ product, brands, categories, productModels, sizeC
     // Мемоизируем опции для селектов
     const brandOptions = useMemo(() => brands.map(b => ({ value: b.id, label: b.name })), [brands]);
     const modelOptions = useMemo(() => productModels.map(m => ({ value: m.id, label: m.name })), [productModels]);
-    const categoryOptions = useMemo(() => categories.map(c => ({ value: c.id, label: c.name })), [categories]);
     const sizeChartOptions = useMemo(() => sizeCharts.map(s => ({ value: s.id, label: s.name })), [sizeCharts]);
 
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.products.update', product.id), {
             onSuccess: () => {
                 toaster.create({
@@ -76,11 +84,15 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                     type: 'success',
                 });
             },
-            onError: () => {
+            onError: (formErrors) => {
+                const errorMessages = Object.values(formErrors).flat();
                 toaster.create({
                     title: 'Ошибка при обновлении товара',
-                    description: 'Проверьте правильность заполнения полей',
+                    description: errorMessages.length > 0
+                        ? errorMessages.join('; ')
+                        : 'Проверьте правильность заполнения полей',
                     type: 'error',
+                    duration: 10000,
                 });
             },
         });
@@ -157,6 +169,10 @@ export default function Edit({ product, brands, categories, productModels, sizeC
         }
     };
 
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
+    };
+
     return (
         <>
             <PageHeader
@@ -180,6 +196,14 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                 <Tabs.Trigger value="relations">
                                     <LuTag /> Связи
                                     {tabErrors.relations && (
+                                        <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                            ⚠️
+                                        </Box>
+                                    )}
+                                </Tabs.Trigger>
+                                <Tabs.Trigger value="categories">
+                                    <LuFolderTree /> Категории
+                                    {tabErrors.categories && (
                                         <Box as="span" color="red.500" ml={2} fontWeight="bold">
                                             ⚠️
                                         </Box>
@@ -317,6 +341,17 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                 </Stack>
                             </Tabs.Content>
 
+                            {/* Таб: Категории */}
+                            <Tabs.Content value="categories">
+                                <Stack gap={6} mt={6}>
+                                    <CategoryTreeSelector
+                                        categoryTree={categoryTree}
+                                        value={data.categories}
+                                        onChange={(ids) => setData('categories', ids)}
+                                    />
+                                </Stack>
+                            </Tabs.Content>
+
                             {/* Таб 2: Связи и классификация */}
                             <Tabs.Content value="relations">
                                 <Stack gap={6} mt={6}>
@@ -339,18 +374,6 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             error={errors.model_id}
                                         />
 
-                                        <Box gridColumn={{ base: '1', md: 'span 2' }}>
-                                            <SelectRelation
-                                                label="Категории"
-                                                value={data.categories}
-                                                onChange={(value) => setData('categories', value)}
-                                                options={categoryOptions}
-                                                placeholder="Выберите категории"
-                                                multiple
-                                                error={errors.categories}
-                                            />
-                                        </Box>
-
                                         <SelectRelation
                                             label="Размерная сетка"
                                             value={data.size_chart_id}
@@ -359,8 +382,6 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             placeholder="Выберите размерную сетку"
                                             error={errors.size_chart_id}
                                         />
-
-
 
                                         <Box gridColumn={{ base: '1', md: 'span 2' }}>
                                             <FormField
@@ -412,7 +433,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
 
                                         <Box /> {/* Пустая ячейка для выравнивания */}
 
-                                        <Field label="Новинка">
+                                        <FormField label="Новинка">
                                             <Switch
                                                 checked={data.is_new}
                                                 onCheckedChange={(e) => setData('is_new', e.checked)}
@@ -420,9 +441,9 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             >
                                                 {data.is_new ? 'Да' : 'Нет'}
                                             </Switch>
-                                        </Field>
+                                        </FormField>
 
-                                        <Field label="Бестселлер">
+                                        <FormField label="Бестселлер">
                                             <Switch
                                                 checked={data.is_bestseller}
                                                 onCheckedChange={(e) => setData('is_bestseller', e.checked)}
@@ -430,9 +451,9 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             >
                                                 {data.is_bestseller ? 'Да' : 'Нет'}
                                             </Switch>
-                                        </Field>
+                                        </FormField>
 
-                                        <Field label="Маркировка (честный знак)">
+                                        <FormField label="Маркировка (честный знак)">
                                             <Switch
                                                 checked={data.is_marked}
                                                 onCheckedChange={(e) => setData('is_marked', e.checked)}
@@ -440,9 +461,9 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             >
                                                 {data.is_marked ? 'Да' : 'Нет'}
                                             </Switch>
-                                        </Field>
+                                        </FormField>
 
-                                        <Field label="Ликвидация">
+                                        <FormField label="Ликвидация">
                                             <Switch
                                                 checked={data.is_liquidation}
                                                 onCheckedChange={(e) => setData('is_liquidation', e.checked)}
@@ -450,9 +471,9 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             >
                                                 {data.is_liquidation ? 'Да' : 'Нет'}
                                             </Switch>
-                                        </Field>
+                                        </FormField>
 
-                                        <Field label="Для маркетплейсов">
+                                        <FormField label="Для маркетплейсов">
                                             <Switch
                                                 checked={data.for_marketplaces}
                                                 onCheckedChange={(e) => setData('for_marketplaces', e.checked)}
@@ -460,7 +481,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
                                             >
                                                 {data.for_marketplaces ? 'Да' : 'Нет'}
                                             </Switch>
-                                        </Field>
+                                        </FormField>
                                     </SimpleGrid>
                                 </Stack>
                             </Tabs.Content>
@@ -600,6 +621,7 @@ export default function Edit({ product, brands, categories, productModels, sizeC
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                         />

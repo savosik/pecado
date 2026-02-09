@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ProductBarcodeController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the barcodes.
      */
@@ -76,9 +79,7 @@ class ProductBarcodeController extends AdminController
 
         ProductBarcode::create($validated);
 
-        return redirect()
-            ->route('admin.product-barcodes.index')
-            ->with('success', 'Штрихкод успешно добавлен');
+        return $this->redirectAfterSave($request, 'admin.product-barcodes.index', 'admin.product-barcodes.edit', $barcode, 'Штрихкод успешно добавлен');
     }
 
     /**
@@ -104,9 +105,7 @@ class ProductBarcodeController extends AdminController
 
         $productBarcode->update($validated);
 
-        return redirect()
-            ->route('admin.product-barcodes.index')
-            ->with('success', 'Штрихкод успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.product-barcodes.index', 'admin.product-barcodes.edit', $barcode, 'Штрихкод успешно обновлен');
     }
 
     /**
@@ -116,8 +115,6 @@ class ProductBarcodeController extends AdminController
     {
         $productBarcode->delete();
 
-        return redirect()
-            ->route('admin.product-barcodes.index')
-            ->with('success', 'Штрихкод успешно удален');
+        return redirect()->route('admin.product-barcodes.index')->with('success', 'Штрихкод успешно удален');
     }
 }

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             CurrencySeeder::class,
+            SettingsSeeder::class,
         ]);
 
         // Создание администратора

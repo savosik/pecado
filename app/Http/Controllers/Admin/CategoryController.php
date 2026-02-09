@@ -8,9 +8,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CategoryController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the categories.
      */
@@ -19,7 +22,8 @@ class CategoryController extends AdminController
         $viewMode = $request->input('view', 'list');
 
         if ($viewMode === 'tree') {
-            $categories = Category::with(['media', 'tags', 'parent'])
+            $categories = Category::withCount('products')
+                ->with(['media', 'tags', 'parent'])
                 ->defaultOrder()
                 ->get()
                 ->toTree();
@@ -38,6 +42,7 @@ class CategoryController extends AdminController
         }
 
         $query = Category::query()
+            ->withCount('products')
             ->with(['parent', 'media', 'tags']);
 
         // Поиск
@@ -141,9 +146,7 @@ class CategoryController extends AdminController
             $category->attributes()->sync($validated['attribute_ids']);
         }
 
-        return redirect()
-            ->route('admin.categories.index')
-            ->with('success', 'Категория успешно создана');
+        return $this->redirectAfterSave($request, 'admin.categories.index', 'admin.categories.edit', $category, 'Категория успешно создана');
     }
 
     /**
@@ -230,9 +233,7 @@ class CategoryController extends AdminController
 
         $category->attributes()->sync($validated['attribute_ids'] ?? []);
 
-        return redirect()
-            ->route('admin.categories.index')
-            ->with('success', 'Категория успешно обновлена');
+        return $this->redirectAfterSave($request, 'admin.categories.index', 'admin.categories.edit', $category, 'Категория успешно обновлена');
     }
 
     /**
@@ -242,9 +243,7 @@ class CategoryController extends AdminController
     {
         $category->delete();
 
-        return redirect()
-            ->route('admin.categories.index')
-            ->with('success', 'Категория успешно удалена');
+        return redirect()->route('admin.categories.index')->with('success', 'Категория успешно удалена');
     }
 
     /**

@@ -7,9 +7,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CertificateController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the certificates.
      */
@@ -88,9 +91,7 @@ class CertificateController extends AdminController
             $certificate->products()->sync($validated['products']);
         }
 
-        return redirect()
-            ->route('admin.certificates.index')
-            ->with('success', 'Сертификат успешно создан');
+        return $this->redirectAfterSave($request, 'admin.certificates.index', 'admin.certificates.edit', $certificate, 'Сертификат успешно создан');
     }
 
     /**
@@ -163,9 +164,7 @@ class CertificateController extends AdminController
             $certificate->products()->detach();
         }
 
-        return redirect()
-            ->route('admin.certificates.index')
-            ->with('success', 'Сертификат успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.certificates.index', 'admin.certificates.edit', $certificate, 'Сертификат успешно обновлен');
     }
 
     /**
@@ -175,9 +174,7 @@ class CertificateController extends AdminController
     {
         $certificate->delete();
 
-        return redirect()
-            ->route('admin.certificates.index')
-            ->with('success', 'Сертификат успешно удален');
+        return redirect()->route('admin.certificates.index')->with('success', 'Сертификат успешно удален');
     }
 
     /**

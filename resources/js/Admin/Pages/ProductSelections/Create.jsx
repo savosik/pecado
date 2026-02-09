@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector } from '@/Admin/Components';
@@ -15,8 +16,16 @@ export default function Create() {
         mobile_image: null,
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         const formData = new FormData();
         formData.append('name', data.name);
@@ -50,89 +59,94 @@ export default function Create() {
         });
     };
 
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
+    };
+
     return (
         <>
-                <PageHeader title="Создать подборку товаров" description="Добавление новой подборки для отображения на сайте" />
+            <PageHeader title="Создать подборку товаров" description="Добавление новой подборки для отображения на сайте" />
 
-                <form onSubmit={handleSubmit}>
-                    <Card.Root>
-                        <Card.Body>
-                            <Stack gap={6}>
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                    <FormField label="Название" error={errors.name} required>
-                                        <Input
-                                            value={data.name}
-                                            onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="Например: Новинки сезона"
-                                        />
-                                    </FormField>
-
-                                    <FormField label="Meta заголовок" error={errors.meta_title}>
-                                        <Input
-                                            value={data.meta_title}
-                                            onChange={(e) => setData('meta_title', e.target.value)}
-                                            placeholder="SEO заголовок"
-                                        />
-                                    </FormField>
-                                </SimpleGrid>
-
-                                <FormField label="Meta описание" error={errors.meta_description}>
-                                    <Textarea
-                                        value={data.meta_description}
-                                        onChange={(e) => setData('meta_description', e.target.value)}
-                                        placeholder="SEO описание"
-                                        rows={2}
+            <form onSubmit={handleSubmit}>
+                <Card.Root>
+                    <Card.Body>
+                        <Stack gap={6}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Название" error={errors.name} required>
+                                    <Input
+                                        value={data.name}
+                                        onChange={(e) => setData('name', e.target.value)}
+                                        placeholder="Например: Новинки сезона"
                                     />
                                 </FormField>
 
-                                <FormField label="Описание подборки" error={errors.description}>
-                                    <Textarea
-                                        value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
-                                        placeholder="Подробное описание подборки"
-                                        rows={4}
+                                <FormField label="Meta заголовок" error={errors.meta_title}>
+                                    <Input
+                                        value={data.meta_title}
+                                        onChange={(e) => setData('meta_title', e.target.value)}
+                                        placeholder="SEO заголовок"
                                     />
                                 </FormField>
+                            </SimpleGrid>
 
-                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                            <FormField label="Meta описание" error={errors.meta_description}>
+                                <Textarea
+                                    value={data.meta_description}
+                                    onChange={(e) => setData('meta_description', e.target.value)}
+                                    placeholder="SEO описание"
+                                    rows={2}
+                                />
+                            </FormField>
+
+                            <FormField label="Описание подборки" error={errors.description}>
+                                <Textarea
+                                    value={data.description}
+                                    onChange={(e) => setData('description', e.target.value)}
+                                    placeholder="Подробное описание подборки"
+                                    rows={4}
+                                />
+                            </FormField>
+
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Изображение для Desktop" error={errors.desktop_image}>
                                     <ImageUploader
-                                        label="Изображение для Desktop"
-                                        value={data.desktop_image}
                                         onChange={(file) => setData('desktop_image', file)}
                                         error={errors.desktop_image}
                                         maxSize={10}
                                     />
+                                </FormField>
 
+                                <FormField label="Изображение для Mobile" error={errors.mobile_image}>
                                     <ImageUploader
-                                        label="Изображение для Mobile"
-                                        value={data.mobile_image}
                                         onChange={(file) => setData('mobile_image', file)}
                                         error={errors.mobile_image}
                                         maxSize={10}
                                     />
-                                </SimpleGrid>
+                                </FormField>
+                            </SimpleGrid>
 
-                                <Box>
-                                    <FormField label="Привязанные товары" error={errors.product_ids}>
-                                        <ProductSelector
-                                            value={data.products}
-                                            onChange={(products) => setData('products', products)}
-                                            error={errors.product_ids}
-                                        />
-                                    </FormField>
-                                </Box>
-                            </Stack>
-                        </Card.Body>
+                            <Box>
+                                <FormField label="Привязанные товары" error={errors.product_ids}>
+                                    <ProductSelector
+                                        value={data.products}
+                                        onChange={(products) => setData('products', products)}
+                                        error={errors.product_ids}
+                                    />
+                                </FormField>
+                            </Box>
+                        </Stack>
+                    </Card.Body>
 
-                        <Card.Footer>
-                            <FormActions
-                                loading={processing}
-                                onCancel={() => window.history.back()}
-                                submitLabel="Создать подборку"
-                            />
-                        </Card.Footer>
-                    </Card.Root>
-                </form>
+                    <Card.Footer>
+                        <FormActions
+                            onSaveAndClose={handleSaveAndClose}
+                            loading={processing}
+                            onCancel={() => window.history.back()}
+                            submitLabel="Создать подборку"
+                        />
+                    </Card.Footer>
+                </Card.Root>
+            </form>
         </>
     );
 }

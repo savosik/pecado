@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState , useRef } from "react";
 import { Head, router, useForm } from "@inertiajs/react";
 import {
     Box,
@@ -22,7 +22,7 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { StatusHistoryTimeline } from "./Components/StatusHistoryTimeline";
 
 const Edit = ({ order, statuses, currencies }) => {
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         user_id: order.user_id || "",
         company_id: order.company_id || "",
         status: order.status || "pending",
@@ -31,6 +31,13 @@ const Edit = ({ order, statuses, currencies }) => {
         currency_code: order.currency_code || "RUB",
         items: order.items || [],
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     // State for selected entities - initialize from order data
     const [selectedUser, setSelectedUser] = useState(order.user ? {
@@ -88,8 +95,9 @@ const Edit = ({ order, statuses, currencies }) => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         if (!data.items || data.items.length === 0) {
             toaster.create({
@@ -122,6 +130,10 @@ const Edit = ({ order, statuses, currencies }) => {
 
     const handleCancel = () => {
         router.visit(route("admin.orders.show", order.id));
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (

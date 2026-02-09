@@ -9,7 +9,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { toaster } from '@/components/ui/toaster';
 import { LuPlus, LuTrash2 } from 'react-icons/lu';
-import { useMemo } from 'react';
+import { useMemo , useRef } from 'react';
 
 const MEASUREMENT_COLUMNS = [
     { key: 'bust', label: 'Грудь' },
@@ -21,12 +21,19 @@ const MEASUREMENT_COLUMNS = [
 ];
 
 export default function Create({ brands }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         name: '',
         uuid: '',
         brand_ids: [],
         values: [{ size: '' }],
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     // Опредяем активные колонки на основе данных в первой строке (или всех строк)
     const activeColumns = useMemo(() => {
@@ -52,8 +59,9 @@ export default function Create({ brands }) {
         brands.map(b => ({ value: b.id, label: b.name })),
         [brands]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.size-charts.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -98,6 +106,10 @@ export default function Create({ brands }) {
             return newRow;
         });
         setData('values', newValues);
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -224,7 +236,8 @@ export default function Create({ brands }) {
                             </Card.Body>
                             <Card.Footer>
                                 <FormActions
-                                    isLoading={processing}
+                                    onSaveAndClose={handleSaveAndClose}
+                            isLoading={processing}
                                     onCancel={() => window.history.back()}
                                     submitLabel="Создать сетку"
                                 />

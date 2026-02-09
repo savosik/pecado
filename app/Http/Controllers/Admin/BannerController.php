@@ -6,9 +6,12 @@ use App\Models\Banner;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class BannerController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = Banner::query();
@@ -81,9 +84,7 @@ class BannerController extends Controller
             $banner->addMediaFromRequest('mobile_image')->toMediaCollection('mobile');
         }
 
-        return redirect()
-            ->route('admin.banners.index')
-            ->with('success', 'Баннер успешно создан');
+        return $this->redirectAfterSave($request, 'admin.banners.index', 'admin.banners.edit', $banner, 'Баннер успешно создан');
     }
 
     public function edit(Banner $banner)
@@ -127,18 +128,14 @@ class BannerController extends Controller
             $banner->addMediaFromRequest('mobile_image')->toMediaCollection('mobile');
         }
 
-        return redirect()
-            ->route('admin.banners.index')
-            ->with('success', 'Баннер успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.banners.index', 'admin.banners.edit', $banner, 'Баннер успешно обновлен');
     }
 
     public function destroy(Banner $banner)
     {
         $banner->delete();
 
-        return redirect()
-            ->route('admin.banners.index')
-            ->with('success', 'Баннер успешно удален');
+        return redirect()->route('admin.banners.index')->with('success', 'Баннер успешно удален');
     }
 
     public function search(Request $request)

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, FileUploader, EntitySelector } from '@/Admin/Components';
@@ -61,8 +61,8 @@ export default function Create() {
         });
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async (e, shouldClose = false) => {
+        if (e) e.preventDefault();
         setProcessing(true);
         setErrors({});
 
@@ -78,6 +78,9 @@ export default function Create() {
         }
         formDataToSend.append('is_active', data.is_active ? '1' : '0');
         formDataToSend.append('sort_order', data.sort_order);
+        if (shouldClose) {
+            formDataToSend.append('_close', '1');
+        }
 
         // Append files — FileUploader returns array of File objects
         if (Array.isArray(data.desktop_image) && data.desktop_image.length > 0) {
@@ -102,7 +105,11 @@ export default function Create() {
                 type: 'success',
             });
 
-            router.visit(route('admin.banners.index'));
+            if (shouldClose) {
+                router.visit(route('admin.banners.index'));
+            } else {
+                router.visit(route('admin.banners.index'));
+            }
         } catch (error) {
             if (error.response?.data?.errors) {
                 setErrors(error.response.data.errors);
@@ -116,6 +123,10 @@ export default function Create() {
         } finally {
             setProcessing(false);
         }
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -205,6 +216,7 @@ export default function Create() {
                             </SimpleGrid>
 
                             <FormActions
+                                onSaveAndClose={handleSaveAndClose}
                                 submitLabel="Создать баннер"
                                 onCancel={() => window.history.back()}
                                 processing={processing}

@@ -65,6 +65,9 @@ const CategoryNode = ({ category, level = 0, onDelete }) => {
                                 {category.external_id}
                             </Badge>
                         )}
+                        <Badge size="xs" variant="subtle" colorPalette={category.products_count > 0 ? 'blue' : 'gray'}>
+                            {category.products_count ?? 0} тов.
+                        </Badge>
                     </HStack>
                 </HStack>
 

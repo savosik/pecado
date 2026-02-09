@@ -14,9 +14,12 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ReturnController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of returns.
      */
@@ -193,9 +196,7 @@ class ReturnController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.returns.show', $return->id)
-                ->with('success', 'Возврат успешно создан');
+            return $this->redirectAfterSave($request, 'admin.returns.index', 'admin.returns.edit', $return, 'Возврат успешно создан');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -324,9 +325,7 @@ class ReturnController extends AdminController
 
             DB::commit();
 
-            return redirect()
-                ->route('admin.returns.show', $return->id)
-                ->with('success', 'Возврат успешно обновлён');
+            return $this->redirectAfterSave($request, 'admin.returns.index', 'admin.returns.edit', $return, 'Возврат успешно обновлён');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()
@@ -450,9 +449,7 @@ class ReturnController extends AdminController
     {
         $return->delete();
 
-        return redirect()
-            ->route('admin.returns.index')
-            ->with('success', 'Возврат успешно удалён');
+        return redirect()->route('admin.returns.index')->with('success', 'Возврат успешно удалён');
     }
 
     /**

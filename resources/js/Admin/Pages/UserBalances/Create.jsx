@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState , useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
@@ -8,15 +8,23 @@ import { toaster } from '@/components/ui/toaster';
 export default function Create({ currencies }) {
     const [selectedUser, setSelectedUser] = useState(null);
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         user_id: '',
         currency_id: '',
         balance: '0.00',
         overdue_debt: '0.00',
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.user-balances.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -32,6 +40,10 @@ export default function Create({ currencies }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -98,7 +110,8 @@ export default function Create({ currencies }) {
                             </SimpleGrid>
 
                             <FormActions
-                                submitLabel="Создать баланс"
+                                onSaveAndClose={handleSaveAndClose}
+                            submitLabel="Создать баланс"
                                 onCancel={() => window.history.back()}
                                 processing={processing}
                             />

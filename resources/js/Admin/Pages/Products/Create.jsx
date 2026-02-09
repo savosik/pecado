@@ -1,17 +1,17 @@
-import { useMemo } from 'react';
+import { useMemo , useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuListChecks } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuListChecks, LuFolderTree } from 'react-icons/lu';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
-export default function Create({ brands, categories, productModels, sizeCharts }) {
-    const { data, setData, post, processing, errors } = useForm({
+export default function Create({ brands, categoryTree, productModels, sizeCharts }) {
+    const { data, setData, post, processing, errors , transform } = useForm({
         name: '',
         slug: '',
         base_price: '',
@@ -44,6 +44,13 @@ export default function Create({ brands, categories, productModels, sizeCharts }
         attributes: [],
     });
 
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
     const { handleSourceChange, handleSlugChange } = useSlugField({
         data, setData, sourceField: 'name',
     });
@@ -51,7 +58,8 @@ export default function Create({ brands, categories, productModels, sizeCharts }
     // Определяем, в каких табах есть ошибки (мемоизируем, чтобы не пересчитывать при каждом вводе)
     const tabErrors = useMemo(() => ({
         general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
-        relations: ['brand_id', 'model_id', 'categories', 'size_chart_id'].some(field => errors[field]),
+        categories: ['categories'].some(field => errors[field]),
+        relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
         descriptions: ['short_description', 'description', 'description_html', 'meta_title', 'meta_description'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
@@ -60,12 +68,12 @@ export default function Create({ brands, categories, productModels, sizeCharts }
     // Мемоизируем опции для селектов, чтобы избежать лишних ре-рендеров
     const brandOptions = useMemo(() => brands.map(b => ({ value: b.id, label: b.name })), [brands]);
     const modelOptions = useMemo(() => productModels.map(m => ({ value: m.id, label: m.name })), [productModels]);
-    const categoryOptions = useMemo(() => categories.map(c => ({ value: c.id, label: c.name })), [categories]);
     const sizeChartOptions = useMemo(() => sizeCharts.map(s => ({ value: s.id, label: s.name })), [sizeCharts]);
 
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.products.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -85,6 +93,10 @@ export default function Create({ brands, categories, productModels, sizeCharts }
 
     const handleDescriptionChange = (html) => {
         setData('description', html);
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -110,6 +122,14 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                 <Tabs.Trigger value="relations">
                                     <LuTag /> Связи
                                     {tabErrors.relations && (
+                                        <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                            ⚠️
+                                        </Box>
+                                    )}
+                                </Tabs.Trigger>
+                                <Tabs.Trigger value="categories">
+                                    <LuFolderTree /> Категории
+                                    {tabErrors.categories && (
                                         <Box as="span" color="red.500" ml={2} fontWeight="bold">
                                             ⚠️
                                         </Box>
@@ -244,6 +264,17 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                 </Stack>
                             </Tabs.Content>
 
+                            {/* Таб: Категории */}
+                            <Tabs.Content value="categories">
+                                <Stack gap={6} mt={6}>
+                                    <CategoryTreeSelector
+                                        categoryTree={categoryTree}
+                                        value={data.categories}
+                                        onChange={(ids) => setData('categories', ids)}
+                                    />
+                                </Stack>
+                            </Tabs.Content>
+
                             {/* Таб 2: Связи и классификация */}
                             <Tabs.Content value="relations">
                                 <Stack gap={6} mt={6}>
@@ -266,18 +297,6 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                             error={errors.model_id}
                                         />
 
-                                        <Box gridColumn={{ base: '1', md: 'span 2' }}>
-                                            <SelectRelation
-                                                label="Категории"
-                                                value={data.categories}
-                                                onChange={(value) => setData('categories', value)}
-                                                options={categoryOptions}
-                                                placeholder="Выберите категории"
-                                                multiple
-                                                error={errors.categories}
-                                            />
-                                        </Box>
-
                                         <SelectRelation
                                             label="Размерная сетка"
                                             value={data.size_chart_id}
@@ -286,8 +305,6 @@ export default function Create({ brands, categories, productModels, sizeCharts }
                                             placeholder="Выберите размерную сетку"
                                             error={errors.size_chart_id}
                                         />
-
-
 
                                         <Box gridColumn={{ base: '1', md: 'span 2' }}>
                                             <FormField
@@ -509,6 +526,7 @@ export default function Create({ brands, categories, productModels, sizeCharts }
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                         />

@@ -11,59 +11,65 @@ class MediaController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Media::query()->with('model');
-
-        // Поиск по имени и файлу
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('file_name', 'like', "%{$search}%");
-            });
-        }
-
-        // Фильтр по типу файла
-        if ($type = $request->input('type')) {
-            match ($type) {
-                'images' => $query->where('mime_type', 'like', 'image/%'),
-                'videos' => $query->where('mime_type', 'like', 'video/%'),
-                'documents' => $query->where('mime_type', 'like', 'application/%'),
-                default => null,
-            };
-        }
-
-        // Фильтр по коллекции
-        if ($collection = $request->input('collection')) {
-            $query->where('collection_name', $collection);
-        }
-
-        // Фильтр по модели
-        if ($modelType = $request->input('model_type')) {
-            $query->where('model_type', $modelType);
-        }
-
-        // Сортировка
-        $sortBy = $request->input('sort_by', 'created_at');
-        $sortOrder = $request->input('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-
-        // Пагинация
+        $search = $request->input('search');
+        $type = $request->input('type');
+        $collection = $request->input('collection');
+        $modelType = $request->input('model_type');
         $perPage = $request->input('per_page', 30);
-        $media = $query->paginate($perPage)->withQueryString();
+
+        if ($search) {
+            // Поиск через Meilisearch с фильтрами
+            $meilisearchFilters = $this->buildMeilisearchFilters($type, $collection, $modelType);
+
+            $mediaQuery = Media::search($search);
+
+            if ($meilisearchFilters) {
+                $mediaQuery->options(['filter' => $meilisearchFilters]);
+            }
+
+            // Получить ID из Meilisearch, затем загрузить с Eloquent
+            $media = $mediaQuery->query(function ($query) {
+                $query->with('model');
+            })->paginate($perPage)->withQueryString();
+        } else {
+            // Без поиска — обычный Eloquent запрос с фильтрами
+            $query = Media::query()->with('model');
+
+            if ($type) {
+                match ($type) {
+                    'images' => $query->where('mime_type', 'like', 'image/%'),
+                    'videos' => $query->where('mime_type', 'like', 'video/%'),
+                    'documents' => $query->where('mime_type', 'like', 'application/%'),
+                    default => null,
+                };
+            }
+
+            if ($collection) {
+                $query->where('collection_name', $collection);
+            }
+
+            if ($modelType) {
+                $query->where('model_type', $modelType);
+            }
+
+            $query->orderByDesc('id');
+
+            $media = $query->paginate($perPage)->withQueryString();
+        }
 
         // Добавить URL для каждого медиафайла
         $media->getCollection()->transform(function ($item) {
-            $item->url = $item->getUrl();
-            $item->preview_url = $item->hasGeneratedConversion('thumb') 
-                ? $item->getUrl('thumb') 
+            $item->thumbnail_url = $item->hasGeneratedConversion('thumb')
+                ? $item->getUrl('thumb')
                 : $item->getUrl();
-            
+
             // Название модели для отображения
             if ($item->model) {
-                $item->model_name = $item->model->title ?? $item->model->name ?? null;
+                $item->owner_display_name = $item->model->title ?? $item->model->name ?? null;
             } else {
-                $item->model_name = null;
+                $item->owner_display_name = null;
             }
-            
+
             return $item;
         });
 
@@ -89,6 +95,28 @@ class MediaController extends Controller
             'collections' => $collections,
             'modelTypes' => $modelTypes,
         ]);
+    }
+
+    /**
+     * Построить строку фильтров для Meilisearch.
+     */
+    private function buildMeilisearchFilters(?string $type, ?string $collection, ?string $modelType): string
+    {
+        $filters = [];
+
+        if ($type) {
+            $filters[] = 'mime_type_group = "' . addslashes($type) . '"';
+        }
+
+        if ($collection) {
+            $filters[] = 'collection_name = "' . addslashes($collection) . '"';
+        }
+
+        if ($modelType) {
+            $filters[] = 'model_type = "' . addslashes($modelType) . '"';
+        }
+
+        return implode(' AND ', $filters);
     }
 
     public function destroy(Media $media)

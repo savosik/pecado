@@ -7,9 +7,12 @@ use App\Models\Region;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class RegionController extends Controller
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the resource.
      */
@@ -64,8 +67,7 @@ class RegionController extends Controller
         $this->syncWarehouses($region, $request->input('primary_warehouse_ids', []), 'primary');
         $this->syncWarehouses($region, $request->input('preorder_warehouse_ids', []), 'preorder');
 
-        return redirect()->route('admin.regions.index')
-            ->with('success', 'Регион успешно создан');
+        return $this->redirectAfterSave($request, 'admin.regions.index', 'admin.regions.edit', $region, 'Регион успешно создан');
     }
 
     /**
@@ -99,8 +101,7 @@ class RegionController extends Controller
         $this->syncWarehouses($region, $request->input('primary_warehouse_ids', []), 'primary');
         $this->syncWarehouses($region, $request->input('preorder_warehouse_ids', []), 'preorder');
 
-        return redirect()->route('admin.regions.index')
-            ->with('success', 'Регион успешно обновлен');
+        return $this->redirectAfterSave($request, 'admin.regions.index', 'admin.regions.edit', $region, 'Регион успешно обновлен');
     }
 
     /**

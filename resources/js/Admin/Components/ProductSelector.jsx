@@ -28,6 +28,8 @@ export const ProductSelector = ({
     onSelect,
     error = null,
     mode = 'multi',
+    searchRoute: customSearchRoute = null,
+    searchParams: customSearchParams = {},
 }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
@@ -63,8 +65,9 @@ export const ProductSelector = ({
     const searchProducts = async (searchQuery, autoSelect = false) => {
         setLoading(true);
         try {
-            const response = await axios.get(route('admin.products.search'), {
-                params: { query: searchQuery }
+            const searchRouteName = customSearchRoute || 'admin.products.search';
+            const response = await axios.get(route(searchRouteName), {
+                params: { query: searchQuery, ...customSearchParams }
             });
 
             // Фильтрация

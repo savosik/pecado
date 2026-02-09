@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
@@ -6,8 +7,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ regions, currencies, countries }) {
-    const { data, setData, post, processing, errors } = useForm({
+export default function Create({ regions, currencies, countries, statuses }) {
+    const { data, setData, post, processing, errors , transform } = useForm({
         name: '',
         surname: '',
         patronymic: '',
@@ -26,8 +27,16 @@ export default function Create({ regions, currencies, countries }) {
         erp_id: '',
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.users.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -37,6 +46,10 @@ export default function Create({ regions, currencies, countries }) {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -159,11 +172,18 @@ export default function Create({ regions, currencies, countries }) {
                                 </FormField>
 
                                 <FormField label="Статус" error={errors.status}>
-                                    <Input
+                                    <select
                                         value={data.status}
                                         onChange={(e) => setData('status', e.target.value)}
-                                        placeholder="active, inactive и т.д."
-                                    />
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
+                                    >
+                                        <option value="">Выберите статус</option>
+                                        {statuses.map((status) => (
+                                            <option key={status.value} value={status.value}>
+                                                {status.label}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </FormField>
                             </SimpleGrid>
 
@@ -211,6 +231,7 @@ export default function Create({ regions, currencies, countries }) {
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                             submitLabel="Создать пользователя"

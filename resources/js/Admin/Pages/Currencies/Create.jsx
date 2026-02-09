@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions } from '@/Admin/Components';
@@ -6,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         code: '',
         name: '',
         symbol: '',
@@ -15,8 +16,16 @@ export default function Create() {
         correction_factor: '1.0000',
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         post(route('admin.currencies.store'), {
             onSuccess: () => {
                 toaster.create({
@@ -32,6 +41,10 @@ export default function Create() {
                 });
             },
         });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -102,7 +115,8 @@ export default function Create() {
                             </Box>
 
                             <FormActions
-                                submitLabel="Создать валюту"
+                                onSaveAndClose={handleSaveAndClose}
+                            submitLabel="Создать валюту"
                                 onCancel={() => window.history.back()}
                                 processing={processing}
                             />

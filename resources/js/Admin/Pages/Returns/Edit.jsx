@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState , useRef } from "react";
 import { Head, router, useForm } from "@inertiajs/react";
 import {
     Box,
@@ -30,13 +30,20 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
         label: `${initialUser.name} (${initialUser.email})`,
     } : null);
 
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, processing, errors , transform } = useForm({
         user_id: returnData.user_id || "",
         status: returnData.status || "pending",
         comment: returnData.comment || "",
         admin_comment: returnData.admin_comment || "",
         items: returnData.items || [],
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     const statusesCollection = createListCollection({
         items: statuses?.map((status) => ({
@@ -50,8 +57,9 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
         setData("user_id", user ? user.id : "");
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         if (!data.user_id) {
             toaster.create({
@@ -100,6 +108,10 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
 
     const handleCancel = () => {
         router.visit(route("admin.returns.show", returnData.id));
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (

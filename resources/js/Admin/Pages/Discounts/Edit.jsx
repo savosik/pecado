@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ProductSelector, EntitySelector } from '@/Admin/Components';
@@ -17,8 +18,16 @@ export default function Edit({ discount }) {
         users: discount.users || [],
     });
 
-    const handleSubmit = (e) => {
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
         transform((data) => ({
             ...data,
             products: data.products.map(p => p.id),
@@ -51,6 +60,10 @@ export default function Edit({ discount }) {
 
     const handleRemoveUser = (userId) => {
         setData('users', data.users.filter(u => u.id !== userId));
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
@@ -177,6 +190,7 @@ export default function Edit({ discount }) {
 
                     <Card.Footer>
                         <FormActions
+                            onSaveAndClose={handleSaveAndClose}
                             loading={processing}
                             onCancel={() => window.history.back()}
                             submitLabel="Сохранить изменения"

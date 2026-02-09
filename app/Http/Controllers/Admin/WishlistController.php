@@ -9,9 +9,12 @@ use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class WishlistController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of wishlist items.
      */

@@ -15,9 +15,12 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ProductController extends AdminController
 {
+    use RedirectsAfterSave;
+
     /**
      * Display a listing of the products.
      */
@@ -69,7 +72,10 @@ class ProductController extends AdminController
     {
         return Inertia::render('Admin/Pages/Products/Create', [
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
-            'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
+            'categoryTree' => Category::withCount('products')
+                ->defaultOrder()
+                ->get()
+                ->toTree(),
             'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
 
@@ -195,9 +201,7 @@ class ProductController extends AdminController
             }
         }
 
-        return redirect()
-            ->route('admin.products.index')
-            ->with('success', 'Товар успешно создан');
+        return $this->redirectAfterSave($request, 'admin.products.index', 'admin.products.edit', $product, 'Товар успешно создан');
     }
 
     /**
@@ -290,7 +294,10 @@ class ProductController extends AdminController
                    }),
             ],
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
-            'categories' => Category::select('id', 'name', 'parent_id')->orderBy('name')->get(),
+            'categoryTree' => Category::withCount('products')
+                ->defaultOrder()
+                ->get()
+                ->toTree(),
             'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
             'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
@@ -447,9 +454,7 @@ class ProductController extends AdminController
             $product->attributeValues()->delete();
         }
 
-        return redirect()
-            ->route('admin.products.index')
-            ->with('success', 'Товар успешно обновлён');
+        return $this->redirectAfterSave($request, 'admin.products.index', 'admin.products.edit', $product, 'Товар успешно обновлён');
     }
 
     /**
@@ -459,9 +464,7 @@ class ProductController extends AdminController
     {
         $product->delete();
 
-        return redirect()
-            ->route('admin.products.index')
-            ->with('success', 'Товар успешно удалён');
+        return redirect()->route('admin.products.index')->with('success', 'Товар успешно удалён');
     }
 
     /**

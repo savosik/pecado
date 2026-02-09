@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState , useRef } from "react";
 import { Head, router, useForm } from "@inertiajs/react";
 import {
     Box,
@@ -20,13 +20,20 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import ReturnItemsEditor from "@/Admin/Components/ReturnItemsEditor";
 
 const ReturnsCreate = ({ statuses, reasons }) => {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors , transform } = useForm({
         user_id: "",
         status: "pending",
         comment: "",
         admin_comment: "",
         items: [],
     });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
 
     const [selectedUser, setSelectedUser] = useState(null);
 
@@ -42,8 +49,9 @@ const ReturnsCreate = ({ statuses, reasons }) => {
         setData("user_id", user ? user.id : "");
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
 
         if (!data.user_id) {
             toaster.create({
@@ -92,6 +100,10 @@ const ReturnsCreate = ({ statuses, reasons }) => {
 
     const handleCancel = () => {
         router.visit(route("admin.returns.index"));
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
     };
 
     return (
