@@ -32,10 +32,12 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::delete('/categories/{category}/media', [CategoryController::class, 'deleteMedia'])->name('categories.media.delete');
 
     // Бренды
+    Route::get('/brands/search', [\App\Http\Controllers\Admin\BrandController::class, 'search'])->name('brands.search');
     Route::resource('brands', \App\Http\Controllers\Admin\BrandController::class);
     Route::delete('/brands/{brand}/media', [\App\Http\Controllers\Admin\BrandController::class, 'deleteMedia'])->name('brands.media.delete');
     
     // Модели товаров
+    Route::get('/product-models/search', [\App\Http\Controllers\Admin\ProductModelController::class, 'search'])->name('product-models.search');
     Route::resource('product-models', \App\Http\Controllers\Admin\ProductModelController::class);
     
     // Атрибуты
@@ -52,6 +54,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::resource('product-barcodes', \App\Http\Controllers\Admin\ProductBarcodeController::class);
     
     // Сертификаты
+    Route::get('/certificates/search', [\App\Http\Controllers\Admin\CertificateController::class, 'search'])->name('certificates.search');
     Route::resource('certificates', \App\Http\Controllers\Admin\CertificateController::class);
     
     // Выгрузки товаров
@@ -91,6 +94,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::put('/stories/{story}/slides-reorder', [\App\Http\Controllers\Admin\StorySlideController::class, 'reorder'])->name('stories.slides.reorder');
     
     // Склады
+    Route::get('/warehouses/search', [\App\Http\Controllers\Admin\WarehouseController::class, 'search'])->name('warehouses.search');
     Route::resource('warehouses', \App\Http\Controllers\Admin\WarehouseController::class);
     
     // Регионы

@@ -199,21 +199,16 @@ class CertificateController extends AdminController
     {
         $query = $request->input('query');
 
-        if (!$query) {
-            return response()->json([]);
-        }
-
-        $certificates = Certificate::search($query)
-            ->query(fn ($q) => $q->limit(20))
+        $certificates = Certificate::query()
+            ->when($query, function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%");
+            })
+            ->take(20)
             ->get()
             ->map(function ($cert) {
                 return [
                     'id' => $cert->id,
                     'name' => $cert->name,
-                    'type' => $cert->type,
-                    'external_id' => $cert->external_id,
-                    'issued_at' => $cert->issued_at,
-                    'expires_at' => $cert->expires_at,
                 ];
             });
 

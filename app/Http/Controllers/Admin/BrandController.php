@@ -229,4 +229,27 @@ class BrandController extends AdminController
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Search brands by name (JSON).
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = $request->input('query');
+
+        $brands = Brand::query()
+            ->when($query, function ($q) use ($query) {
+                $q->where('name', 'like', "%{$query}%");
+            })
+            ->take(20)
+            ->get()
+            ->map(function ($brand) {
+                return [
+                    'id' => $brand->id,
+                    'name' => $brand->name,
+                ];
+            });
+
+        return response()->json($brands);
+    }
 }
