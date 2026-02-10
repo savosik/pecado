@@ -12,8 +12,13 @@
             ]
         },
         "context7": {
-            "command": "./docker/context7-mcp.sh",
-            "args": []
+            "command": "docker",
+            "args": [
+                "exec",
+                "-i",
+                "pecado-node",
+                "context7-mcp"
+            ]
         },
         "chakra-ui": {
             "command": "docker",

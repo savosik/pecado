@@ -20,18 +20,15 @@ export default function Edit({ discount }) {
 
     const closeAfterSaveRef = useRef(false);
 
-    transform((data) => ({
-        ...data,
-        _close: closeAfterSaveRef.current ? 1 : 0,
-    }));
-
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
         closeAfterSaveRef.current = shouldClose;
+
         transform((data) => ({
             ...data,
-            products: data.products.map(p => p.id),
-            users: data.users.map(u => u.id),
+            _close: closeAfterSaveRef.current ? 1 : 0,
+            product_ids: data.products.map(p => p.id),
+            user_ids: data.users.map(u => u.id),
         }));
 
         post(route('admin.discounts.update', discount.id), {
@@ -137,11 +134,10 @@ export default function Edit({ discount }) {
 
                             <Box>
                                 <FormField label="Пользователи со скидкой" error={errors.users}>
-                                    <Stack gap={3}>
+                                    <Stack gap={3} w="100%">
                                         <EntitySelector
-                                            searchUrl="admin.discounts.search-users"
-                                            placeholder="Поиск пользователя..."
-                                            displayField="full_name"
+                                            searchUrl="admin.users.search"
+                                            placeholder="Введите имя или email пользователя..."
                                             onChange={handleAddUser}
                                         />
 
@@ -162,7 +158,7 @@ export default function Edit({ discount }) {
                                                             alignItems="center"
                                                         >
                                                             <Box>
-                                                                <Text fontWeight="medium">{user.full_name}</Text>
+                                                                <Text fontWeight="medium">{user.name}</Text>
                                                                 {user.email && (
                                                                     <Text fontSize="xs" color="fg.muted">{user.email}</Text>
                                                                 )}

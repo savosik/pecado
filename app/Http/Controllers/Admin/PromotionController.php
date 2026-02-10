@@ -179,7 +179,10 @@ class PromotionController extends AdminController
                 'meta_title' => $promotion->meta_title,
                 'meta_description' => $promotion->meta_description,
                 'description' => $promotion->description,
-                'product_ids' => $promotion->products->pluck('id'),
+                'products' => $promotion->products->map(fn ($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                ]),
                 'list_image' => $promotion->getFirstMediaUrl('list-item'),
                 'list_image_id' => $promotion->getFirstMedia('list-item')?->id,
                 'detail_desktop_image' => $promotion->getFirstMediaUrl('detail-item-desktop'),

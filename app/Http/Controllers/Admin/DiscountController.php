@@ -168,9 +168,17 @@ class DiscountController extends AdminController
                 'name' => $discount->name,
                 'percentage' => $discount->percentage,
                 'external_id' => $discount->external_id,
+                'description' => $discount->description,
                 'is_posted' => $discount->is_posted,
-                'product_ids' => $discount->products->pluck('id'),
-                'user_ids' => $discount->users->pluck('id'),
+                'products' => $discount->products->map(fn ($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                ]),
+                'users' => $discount->users->map(fn ($u) => [
+                    'id' => $u->id,
+                    'name' => $u->full_name,
+                    'email' => $u->email,
+                ]),
             ],
         ]);
     }

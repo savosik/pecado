@@ -1,12 +1,12 @@
 import { useRef } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector, MarkdownEditor } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors, transform } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         name: '',
         meta_title: '',
         meta_description: '',
@@ -20,16 +20,14 @@ export default function Create() {
 
     const closeAfterSaveRef = useRef(false);
 
-    transform((data) => ({
-        ...data,
-        _close: closeAfterSaveRef.current ? 1 : 0,
-    }));
+
 
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
         closeAfterSaveRef.current = shouldClose;
 
         const formData = new FormData();
+        formData.append('_close', shouldClose ? '1' : '0');
         formData.append('name', data.name);
         if (data.meta_title) formData.append('meta_title', data.meta_title);
         if (data.meta_description) formData.append('meta_description', data.meta_description);
@@ -50,8 +48,7 @@ export default function Create() {
             formData.append(`images[${index}]`, image);
         });
 
-        post(route('admin.promotions.store'), {
-            data: formData,
+        router.post(route('admin.promotions.store'), formData, {
             forceFormData: true,
             onSuccess: () => {
                 toaster.create({
@@ -103,11 +100,11 @@ export default function Create() {
                             </FormField>
 
                             <FormField label="Описание акции" error={errors.description}>
-                                <Textarea
+                                <MarkdownEditor
                                     value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    placeholder="Подробное описание акции"
-                                    rows={5}
+                                    onChange={(value) => setData('description', value)}
+                                    placeholder="Подробное описание акции..."
+                                    context="promotion description"
                                 />
                             </FormField>
 

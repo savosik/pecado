@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Stack, Input, Textarea, Button, HStack, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
+import { Stack, Input, Textarea, Button, HStack, NativeSelectRoot, NativeSelectField, Text } from '@chakra-ui/react';
 import { FormField, ImageUploader, EntitySelector } from '@/Admin/Components';
 import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
@@ -195,7 +195,18 @@ export default function SlideForm({ slide, story, onSave, onCancel }) {
                             onChange={(item) => setFormData({ ...formData, linkable_id: item ? item.id : null, _linkable_name: item ? (item.name || item.label) : '' })}
                             searchUrl={getEntitySearchUrl(formData.linkable_type)}
                             placeholder={`Выберите ${entityTypeOptions.find(o => o.value === formData.linkable_type)?.label.toLowerCase()}`}
-                            initialName={slide.linkable_name}
+                            displayField="name"
+                            initialDisplay={slide.linkable_name}
+                            renderItem={formData.linkable_type === 'App\\Models\\Product' ? (item) => (
+                                <>
+                                    <Text fontWeight="medium">{item.name}</Text>
+                                    <HStack gap={3} mt={1}>
+                                        {item.sku && <Text fontSize="xs" color="fg.muted">Артикул: {item.sku}</Text>}
+                                        {item.brand_name && <Text fontSize="xs" color="fg.muted">Бренд: {item.brand_name}</Text>}
+                                        {item.barcode && <Text fontSize="xs" color="fg.muted">ШК: {item.barcode}</Text>}
+                                    </HStack>
+                                </>
+                            ) : undefined}
                         />
                     </FormField>
                 )}

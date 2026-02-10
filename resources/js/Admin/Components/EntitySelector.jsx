@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
     Box,
     Input,
@@ -21,6 +22,7 @@ import axios from 'axios';
  * @param {string} error - Ошибка валидации
  * @param {string} initialDisplay - Текст для отображения когда value — скалярный ID (для Edit-страниц)
  * @param {string} valueKey - Ключ, по которому из item извлекается значение для onChange (default: null — передаёт весь объект)
+ * @param {Function} renderItem - Кастомная функция рендеринга элемента списка (item) => ReactNode
  */
 export const EntitySelector = ({
     value = null,
@@ -33,6 +35,7 @@ export const EntitySelector = ({
     error = null,
     initialDisplay = null,
     valueKey = null,
+    renderItem = null,
 }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
@@ -42,6 +45,7 @@ export const EntitySelector = ({
     // Внутренний стейт для хранения отображаемого текста при скалярном value
     const [selectedDisplayText, setSelectedDisplayText] = useState(initialDisplay || '');
     const containerRef = useRef(null);
+    const [dropdownStyle, setDropdownStyle] = useState({});
 
     // Определяем, является ли значение "выбранным" (не пустым)
     const isValueObject = value !== null && typeof value === 'object';
@@ -66,10 +70,27 @@ export const EntitySelector = ({
         }
     }, [initialDisplay]);
 
+    // Обновить позицию dropdown
+    const updateDropdownPosition = useCallback(() => {
+        if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            setDropdownStyle({
+                position: 'fixed',
+                top: rect.bottom + 4,
+                left: rect.left,
+                width: rect.width,
+                zIndex: 10000,
+            });
+        }
+    }, []);
+
     // Click outside handler
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (containerRef.current && !containerRef.current.contains(event.target)) {
+                // Также проверяем, не кликнули ли на dropdown в портале
+                const portalEl = document.getElementById('entity-selector-portal');
+                if (portalEl && portalEl.contains(event.target)) return;
                 setShowSuggestions(false);
             }
         };
@@ -129,7 +150,7 @@ export const EntitySelector = ({
 
     const handleFocus = () => {
         setIsFocused(true);
-        // useEffect will trigger search when isFocused becomes true
+        updateDropdownPosition();
     };
 
     const handleBlur = () => {
@@ -181,20 +202,16 @@ export const EntitySelector = ({
                 />
             )}
 
-            {showSuggestions && !hasValue && (
+            {showSuggestions && !hasValue && createPortal(
                 <Box
-                    position="absolute"
-                    top="100%"
-                    left={0}
-                    right={0}
-                    zIndex={1000}
+                    id="entity-selector-portal"
+                    style={dropdownStyle}
                     bg="bg.panel"
                     borderWidth="1px"
                     borderRadius="md"
                     boxShadow="lg"
                     maxH="300px"
                     overflowY="auto"
-                    mt={1}
                 >
                     {loading ? (
                         <Box p={4} textAlign="center">
@@ -212,9 +229,13 @@ export const EntitySelector = ({
                                     borderBottomWidth="1px"
                                     _last={{ borderBottomWidth: 0 }}
                                 >
-                                    <Text fontWeight="medium">{item[displayField] || item.name || item.label}</Text>
-                                    {item.email && (
-                                        <Text fontSize="xs" color="fg.muted">{item.email}</Text>
+                                    {renderItem ? renderItem(item) : (
+                                        <>
+                                            <Text fontWeight="medium">{item[displayField] || item.name || item.label}</Text>
+                                            {item.email && (
+                                                <Text fontSize="xs" color="fg.muted">{item.email}</Text>
+                                            )}
+                                        </>
                                     )}
                                 </Box>
                             ))}
@@ -224,7 +245,8 @@ export const EntitySelector = ({
                             Ничего не найдено
                         </Box>
                     )}
-                </Box>
+                </Box>,
+                document.body
             )}
         </Box>
     );

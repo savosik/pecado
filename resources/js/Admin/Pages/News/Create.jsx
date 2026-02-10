@@ -2,12 +2,12 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields, MarkdownEditor } from '@/Admin/Components';
 import { Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         title: '',
         slug: '',
         detailed_description: '',
@@ -79,10 +79,11 @@ export default function Create() {
                             </SimpleGrid>
 
                             <FormField label="Полное описание" error={errors.detailed_description} required>
-                                <Textarea
+                                <MarkdownEditor
                                     value={data.detailed_description}
-                                    onChange={(e) => setData('detailed_description', e.target.value)}
-                                    rows={10}
+                                    onChange={(value) => setData('detailed_description', value)}
+                                    placeholder="Введите полное описание новости..."
+                                    context="news content"
                                 />
                             </FormField>
 
@@ -118,7 +119,7 @@ export default function Create() {
 
                             <FormActions
                                 onSaveAndClose={handleSaveAndClose}
-                            submitLabel="Создать новость"
+                                submitLabel="Создать новость"
                                 onCancel={() => window.history.back()}
                                 isLoading={processing}
                             />

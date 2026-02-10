@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions } from '@/Admin/Components';
-import { Card, Input, Textarea, Stack } from '@chakra-ui/react';
+import { PageHeader, FormField, FormActions, MarkdownEditor } from '@/Admin/Components';
+import { Card, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         title: '',
         content: '',
     });
@@ -58,16 +58,17 @@ export default function Create() {
                             </FormField>
 
                             <FormField label="Ответ" error={errors.content} required>
-                                <Textarea
+                                <MarkdownEditor
                                     value={data.content}
-                                    onChange={(e) => setData('content', e.target.value)}
-                                    rows={8}
+                                    onChange={(value) => setData('content', value)}
+                                    placeholder="Введите ответ на вопрос..."
+                                    context="faq answer"
                                 />
                             </FormField>
 
                             <FormActions
                                 onSaveAndClose={handleSaveAndClose}
-                            submitLabel="Создать FAQ"
+                                submitLabel="Создать FAQ"
                                 onCancel={() => window.history.back()}
                                 processing={processing}
                             />

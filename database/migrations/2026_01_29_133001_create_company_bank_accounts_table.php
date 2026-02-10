@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->foreignId('company_id')->constrained()->cascadeOnDelete();
             $table->string('bank_name');
-            $table->string('bank_bik'); // БИК банка
-            $table->string('correspondent_account'); // Корреспондентский счёт
+            $table->string('bank_bik')->nullable(); // БИК банка
+            $table->string('correspondent_account')->nullable(); // Корреспондентский счёт
             $table->string('account_number'); // Номер расчётного счёта
             $table->boolean('is_primary')->default(false);
             $table->timestamps();

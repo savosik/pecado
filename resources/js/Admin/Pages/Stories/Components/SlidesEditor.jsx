@@ -32,35 +32,38 @@ export default function SlidesEditor({ story, slides, onSlidesChange }) {
     const handleDragEnd = (event) => {
         const { active, over } = event;
 
-        if (active.id !== over.id) {
-            const oldIndex = slides.findIndex((slide) => slide.id === active.id);
-            const newIndex = slides.findIndex((slide) => slide.id === over.id);
+        if (!over || active.id === over.id) return;
 
-            const newSlides = arrayMove(slides, oldIndex, newIndex);
+        const oldIndex = slides.findIndex((slide) => slide.id === active.id);
+        const newIndex = slides.findIndex((slide) => slide.id === over.id);
 
-            // Обновить sort_order
-            const updatedSlides = newSlides.map((slide, index) => ({
-                ...slide,
-                sort_order: index
-            }));
+        const newSlides = arrayMove(slides, oldIndex, newIndex);
 
-            onSlidesChange(updatedSlides);
+        // Обновить sort_order
+        const updatedSlides = newSlides.map((slide, index) => ({
+            ...slide,
+            sort_order: index
+        }));
 
-            // Отправить на сервер
-            axios.put(route('admin.stories.slides.reorder', story.id), {
-                slides: updatedSlides.map(s => ({ id: s.id, sort_order: s.sort_order }))
-            }).then(() => {
-                toaster.create({
-                    title: 'Порядок слайдов обновлён',
-                    type: 'success',
-                });
-            }).catch(() => {
-                toaster.create({
-                    title: 'Ошибка при обновлении порядка',
-                    type: 'error',
-                });
+        onSlidesChange(updatedSlides);
+
+        // Отправить на сервер только сохранённые слайды (без isNew)
+        const savedSlides = updatedSlides.filter(s => !s.isNew);
+        if (savedSlides.length === 0) return;
+
+        axios.put(route('admin.stories.slides.reorder', story.id), {
+            slides: savedSlides.map(s => ({ id: s.id, sort_order: s.sort_order }))
+        }).then(() => {
+            toaster.create({
+                title: 'Порядок слайдов обновлён',
+                type: 'success',
             });
-        }
+        }).catch(() => {
+            toaster.create({
+                title: 'Ошибка при обновлении порядка',
+                type: 'error',
+            });
+        });
     };
 
     const handleAddSlide = () => {

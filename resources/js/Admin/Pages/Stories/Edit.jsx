@@ -1,15 +1,14 @@
-import { useState , useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField } from '@/Admin/Components';
-import { Card, Input, Button, HStack, Stack, Heading, Box } from '@chakra-ui/react';
+import { PageHeader, FormField, FormActions } from '@/Admin/Components';
+import { Card, Input, Stack, Heading, Box } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
-import { LuSave, LuX } from 'react-icons/lu';
 import SlidesEditor from './Components/SlidesEditor';
 
 export default function Edit({ story }) {
-    const { data, setData, put, processing, errors , transform } = useForm({
+    const { data, setData, put, processing, errors, transform } = useForm({
         name: story.name || '',
         slug: story.slug || '',
         is_active: story.is_active ?? true,
@@ -91,24 +90,11 @@ export default function Edit({ story }) {
                     </Card.Body>
 
                     <Card.Footer>
-                        <HStack gap={3}>
-                            <Button
-                                type="submit"
-                                colorPalette="blue"
-                                loading={processing}
-                            >
-                                <LuSave />
-                                Сохранить
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => router.visit(route('admin.stories.index'))}
-                            >
-                                <LuX />
-                                Отмена
-                            </Button>
-                        </HStack>
+                        <FormActions
+                            isLoading={processing}
+                            onSaveAndClose={handleSaveAndClose}
+                            cancelHref={route('admin.stories.index')}
+                        />
                     </Card.Footer>
                 </Card.Root>
 
@@ -124,3 +110,4 @@ export default function Edit({ story }) {
 }
 
 Edit.layout = (page) => <AdminLayout>{page}</AdminLayout>;
+

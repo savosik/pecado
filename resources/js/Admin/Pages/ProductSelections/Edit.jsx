@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector, MarkdownEditor } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ product_selection }) {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
         name: product_selection.name || '',
         meta_title: product_selection.meta_title || '',
@@ -19,10 +19,7 @@ export default function Edit({ product_selection }) {
 
     const closeAfterSaveRef = useRef(false);
 
-    transform((data) => ({
-        ...data,
-        _close: closeAfterSaveRef.current ? 1 : 0,
-    }));
+
 
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
@@ -30,6 +27,7 @@ export default function Edit({ product_selection }) {
 
         const formData = new FormData();
         formData.append('_method', 'PUT');
+        formData.append('_close', shouldClose ? '1' : '0');
         formData.append('name', data.name);
         if (data.meta_title) formData.append('meta_title', data.meta_title);
         if (data.meta_description) formData.append('meta_description', data.meta_description);
@@ -48,8 +46,7 @@ export default function Edit({ product_selection }) {
             formData.append('mobile_image', data.mobile_image);
         }
 
-        post(route('admin.product-selections.update', product_selection.id), {
-            data: formData,
+        router.post(route('admin.product-selections.update', product_selection.id), formData, {
             forceFormData: true,
             onSuccess: () => {
                 toaster.create({
@@ -155,11 +152,11 @@ export default function Edit({ product_selection }) {
                             </FormField>
 
                             <FormField label="Описание подборки" error={errors.description}>
-                                <Textarea
+                                <MarkdownEditor
                                     value={data.description}
-                                    onChange={(e) => setData('description', e.target.value)}
-                                    placeholder="Подробное описание подборки"
-                                    rows={4}
+                                    onChange={(value) => setData('description', value)}
+                                    placeholder="Подробное описание подборки..."
+                                    context="product selection description"
                                 />
                             </FormField>
 

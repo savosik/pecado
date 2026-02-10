@@ -171,7 +171,10 @@ class ProductSelectionController extends AdminController
                 'description' => $productSelection->description,
                 'meta_title' => $productSelection->meta_title,
                 'meta_description' => $productSelection->meta_description,
-                'product_ids' => $productSelection->products->pluck('id'),
+                'products' => $productSelection->products->map(fn ($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                ]),
                 'desktop_image_url' => $productSelection->getFirstMediaUrl('desktop'),
                 'desktop_image_id' => $productSelection->getFirstMedia('desktop')?->id,
                 'mobile_image_url' => $productSelection->getFirstMediaUrl('mobile'),
