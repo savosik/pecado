@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Product;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\ProductModel;
+
 use App\Models\SizeChart;
 use App\Models\Warehouse;
 use App\Models\Attribute;
@@ -76,9 +76,7 @@ class ProductController extends AdminController
                 ->defaultOrder()
                 ->get()
                 ->toTree(),
-            'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
-
         ]);
     }
 
@@ -298,7 +296,7 @@ class ProductController extends AdminController
                 ->defaultOrder()
                 ->get()
                 ->toTree(),
-            'productModels' => ProductModel::select('id', 'name')->orderBy('name')->get(),
+            'modelName' => $product->model?->name,
             'sizeCharts' => SizeChart::select('id', 'name')->orderBy('name')->get(),
             'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
             'attributes' => Attribute::with('values')->orderBy('name')->get(),

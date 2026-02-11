@@ -1,16 +1,17 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, SelectRelation } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ProductSelector } from '@/Admin/Components';
 import { Box, Card, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ productBarcode, products }) {
+export default function Edit({ productBarcode, currentProduct }) {
     const { data, setData, put, processing, errors , transform } = useForm({
         product_id: productBarcode.product_id || '',
         barcode: productBarcode.barcode || '',
     });
 
+    const [selectedProduct, setSelectedProduct] = useState(currentProduct || null);
     const closeAfterSaveRef = useRef(false);
 
     transform((data) => ({
@@ -44,14 +45,17 @@ export default function Edit({ productBarcode, products }) {
                     <Card.Root>
                         <Card.Body>
                             <Stack gap={6}>
-                                <SelectRelation
-                                    label="Товар"
-                                    value={data.product_id}
-                                    onChange={(val) => setData('product_id', val)}
-                                    options={products.map(p => ({ value: p.id, label: p.name }))}
-                                    placeholder="Выберите товар"
-                                    error={errors.product_id}
-                                />
+                                <FormField label="Товар" error={errors.product_id}>
+                                    <ProductSelector
+                                        mode="single"
+                                        value={selectedProduct}
+                                        onChange={(product) => {
+                                            setSelectedProduct(product);
+                                            setData('product_id', product ? product.id : '');
+                                        }}
+                                        error={errors.product_id}
+                                    />
+                                </FormField>
 
                                 <FormField label="Штрихкод" error={errors.barcode}>
                                     <Input

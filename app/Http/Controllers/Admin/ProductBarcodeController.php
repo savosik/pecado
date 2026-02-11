@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\ProductBarcode;
-use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ProductBarcodeController extends AdminController
 {
@@ -25,7 +24,7 @@ class ProductBarcodeController extends AdminController
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('barcode', 'like', "%{$search}%")
-                    ->orWhereHas('product', function($qp) use ($search) {
+                    ->orWhereHas('product', function ($qp) use ($search) {
                         $qp->where('name', 'like', "%{$search}%");
                     });
             });
@@ -34,7 +33,7 @@ class ProductBarcodeController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'barcode', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -62,9 +61,7 @@ class ProductBarcodeController extends AdminController
      */
     public function create(): Response
     {
-        return Inertia::render('Admin/Pages/ProductBarcodes/Create', [
-            'products' => Product::select('id', 'name')->orderBy('name')->get(),
-        ]);
+        return Inertia::render('Admin/Pages/ProductBarcodes/Create');
     }
 
     /**
@@ -87,9 +84,28 @@ class ProductBarcodeController extends AdminController
      */
     public function edit(ProductBarcode $productBarcode): Response
     {
+        $productBarcode->load(['product.media', 'product.barcodes', 'product.brand']);
+
+        $currentProduct = null;
+
+        if ($productBarcode->product !== null) {
+            $product = $productBarcode->product;
+
+            $currentProduct = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'price' => $product->base_price,
+                'barcode' => $product->barcode,
+                'barcodes' => $product->barcodes->pluck('barcode')->toArray(),
+                'brand_name' => $product->brand ? $product->brand->name : null,
+            ];
+        }
+
         return Inertia::render('Admin/Pages/ProductBarcodes/Edit', [
             'productBarcode' => $productBarcode,
-            'products' => Product::select('id', 'name')->orderBy('name')->get(),
+            'currentProduct' => $currentProduct,
         ]);
     }
 
@@ -100,7 +116,7 @@ class ProductBarcodeController extends AdminController
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'barcode' => 'required|string|max:255|unique:product_barcodes,barcode,' . $productBarcode->id,
+            'barcode' => 'required|string|max:255|unique:product_barcodes,barcode,'.$productBarcode->id,
         ]);
 
         $productBarcode->update($validated);

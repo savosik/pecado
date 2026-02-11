@@ -8,8 +8,8 @@ use App\Models\Currency;
 use App\Models\Product;
 use App\Models\ProductExport;
 use App\Models\User;
-use App\Services\ProductExport\DynamicAttributeField;
 use App\Services\ProductExport\FieldRegistry;
+use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -64,7 +64,7 @@ class ProductExportService
                 $operator = $filter['operator'] ?? null;
                 $value = $filter['value'] ?? null;
 
-                if (!$field || !$operator) {
+                if (! $field || ! $operator) {
                     continue;
                 }
 
@@ -106,7 +106,7 @@ class ProductExportService
                     $operator = $condition['operator'] ?? null;
                     $value = $condition['value'] ?? null;
 
-                    if (!$field || !$operator) {
+                    if (! $field || ! $operator) {
                         continue;
                     }
 
@@ -157,10 +157,10 @@ class ProductExportService
                 $keys[] = $field;
             } elseif (is_array($field) && isset($field['key'])) {
                 $keys[] = $field['key'];
-                if (!empty($field['label'])) {
+                if (! empty($field['label'])) {
                     $customLabels[$field['key']] = $field['label'];
                 }
-                if (!empty($field['modifiers']) && is_array($field['modifiers'])) {
+                if (! empty($field['modifiers']) && is_array($field['modifiers'])) {
                     $modifiers[$field['key']] = $field['modifiers'];
                 }
             }
@@ -178,7 +178,7 @@ class ProductExportService
 
         [$fieldKeys, , $modifiers] = $this->normalizeFields($export->fields ?? []);
         $relations = $this->registry->eagerLoadFor($fieldKeys);
-        if (!empty($relations)) {
+        if (! empty($relations)) {
             $query->with($relations);
         }
 
@@ -218,7 +218,7 @@ class ProductExportService
             $value = $field?->getValue($product, $clientUser);
             $fieldModifiers = $modifiers[$fieldKey] ?? [];
 
-            if ($field && !empty($fieldModifiers)) {
+            if ($field && ! empty($fieldModifiers)) {
                 $value = $this->applyModifiers($value, $field->modifierType(), $fieldModifiers);
             }
 
@@ -233,7 +233,9 @@ class ProductExportService
      */
     protected function applyModifiers(mixed $value, ?string $modifierType, array $modifiers): mixed
     {
-        if (!$modifierType) return $value;
+        if (! $modifierType) {
+            return $value;
+        }
 
         return match ($modifierType) {
             'boolean' => $this->applyBooleanModifier($value, $modifiers),
@@ -253,7 +255,9 @@ class ProductExportService
 
     protected function applyPriceModifier(mixed $value, array $modifiers): mixed
     {
-        if ($value === null || $value === '') return '';
+        if ($value === null || $value === '') {
+            return '';
+        }
 
         $currencyId = $modifiers['currency_id'] ?? null;
 
@@ -263,7 +267,7 @@ class ProductExportService
 
         $currency = $this->resolveCurrency((int) $currencyId);
 
-        if (!$currency || $currency->is_base) {
+        if (! $currency || $currency->is_base) {
             return $value;
         }
 
@@ -272,9 +276,10 @@ class ProductExportService
 
     protected function resolveCurrency(int $id): ?Currency
     {
-        if (!isset($this->currencyCache[$id])) {
+        if (! isset($this->currencyCache[$id])) {
             $this->currencyCache[$id] = Currency::find($id);
         }
+
         return $this->currencyCache[$id];
     }
 
@@ -282,10 +287,13 @@ class ProductExportService
     {
         $separator = $modifiers['separator'] ?? ', ';
 
-        if (!is_string($value)) return $value;
+        if (! is_string($value)) {
+            return $value;
+        }
 
         // Re-split by default separator and re-join with custom one
         $parts = preg_split('/\s*,\s*/', $value);
+
         return implode($separator, $parts);
     }
 
@@ -336,7 +344,7 @@ class ProductExportService
         $query = $this->buildQuery($filters);
         $total = $query->count();
 
-        $export = new ProductExport();
+        $export = new ProductExport;
         $export->filters = $filters;
         $export->fields = $fields;
         $export->client_user_id = $clientUserId;
@@ -384,7 +392,7 @@ class ProductExportService
                 $line = [];
                 foreach (array_keys($labels) as $key) {
                     $value = $row[$key] ?? '';
-                    $line[] = is_bool($value) ? ($value ? 'Да' : 'Нет') : (string) $value;
+                    $line[] = $this->normalizeExportValue($value);
                 }
                 fputcsv($output, $line, ';');
             }
@@ -399,7 +407,7 @@ class ProductExportService
     protected function generateXml(Collection $data, array $labels, string $filename): StreamedResponse
     {
         return new StreamedResponse(function () use ($data, $labels) {
-            $xml = new \XMLWriter();
+            $xml = new \XMLWriter;
             $xml->openURI('php://output');
             $xml->startDocument('1.0', 'UTF-8');
             $xml->setIndent(true);
@@ -411,11 +419,9 @@ class ProductExportService
                 $xml->startElement('product');
                 foreach (array_keys($labels) as $key) {
                     $value = $row[$key] ?? '';
-                    if (is_bool($value)) {
-                        $value = $value ? 'Да' : 'Нет';
-                    }
+                    $value = $this->normalizeExportValue($value);
                     $xmlKey = preg_replace('/[^a-zA-Z0-9_]/', '_', $key);
-                    $xml->writeElement($xmlKey, (string) $value);
+                    $xml->writeElement($xmlKey, $value);
                 }
                 $xml->endElement();
             }
@@ -432,7 +438,7 @@ class ProductExportService
     protected function generateXls(Collection $data, array $labels, string $filename): StreamedResponse
     {
         return new StreamedResponse(function () use ($data, $labels) {
-            $spreadsheet = new Spreadsheet();
+            $spreadsheet = new Spreadsheet;
             $sheet = $spreadsheet->getActiveSheet();
             $sheet->setTitle('Товары');
 
@@ -450,9 +456,7 @@ class ProductExportService
                 $col = 1;
                 foreach (array_keys($labels) as $key) {
                     $value = $row[$key] ?? '';
-                    if (is_bool($value)) {
-                        $value = $value ? 'Да' : 'Нет';
-                    }
+                    $value = $this->normalizeExportValue($value);
                     $sheet->setCellValueByColumnAndRow($col, $rowNum, $value);
                     $col++;
                 }
@@ -469,5 +473,18 @@ class ProductExportService
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
+    }
+
+    protected function normalizeExportValue(mixed $value): string
+    {
+        if (is_bool($value)) {
+            return $value ? 'Да' : 'Нет';
+        }
+
+        if ($value instanceof BackedEnum) {
+            return (string) $value->value;
+        }
+
+        return (string) $value;
     }
 }

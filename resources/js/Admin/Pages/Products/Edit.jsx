@@ -3,7 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
 import { Switch } from '@/components/ui/switch';
@@ -12,7 +12,7 @@ import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuL
 import { WarehousesSection } from './Components/WarehousesSection';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
-export default function Edit({ product, brands, categoryTree, productModels, sizeCharts, warehouses, attributes, certificates }) {
+export default function Edit({ product, brands, categoryTree, modelName, sizeCharts, warehouses, attributes, certificates }) {
     const { data, setData, post, processing, errors , transform } = useForm({
         name: product.name || '',
         slug: product.slug || '',
@@ -70,7 +70,6 @@ export default function Edit({ product, brands, categoryTree, productModels, siz
 
     // Мемоизируем опции для селектов
     const brandOptions = useMemo(() => brands.map(b => ({ value: b.id, label: b.name })), [brands]);
-    const modelOptions = useMemo(() => productModels.map(m => ({ value: m.id, label: m.name })), [productModels]);
     const sizeChartOptions = useMemo(() => sizeCharts.map(s => ({ value: s.id, label: s.name })), [sizeCharts]);
 
 
@@ -365,14 +364,17 @@ export default function Edit({ product, brands, categoryTree, productModels, siz
                                             error={errors.brand_id}
                                         />
 
-                                        <SelectRelation
-                                            label="Модель"
-                                            value={data.model_id}
-                                            onChange={(value) => setData('model_id', value)}
-                                            options={modelOptions}
-                                            placeholder="Выберите модель"
-                                            error={errors.model_id}
-                                        />
+                                        <FormField label="Модель" error={errors.model_id}>
+                                            <EntitySelector
+                                                value={data.model_id}
+                                                onChange={(item) => setData('model_id', item ? item.id : null)}
+                                                searchUrl="admin.product-models.search"
+                                                displayField="name"
+                                                placeholder="Поиск модели..."
+                                                initialDisplay={modelName}
+                                                error={errors.model_id}
+                                            />
+                                        </FormField>
 
                                         <SelectRelation
                                             label="Размерная сетка"
