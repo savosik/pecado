@@ -5,6 +5,7 @@ namespace App\Services\ProductExport;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Attribute;
+use App\Services\ProductExport\DynamicAttributeField;
 use Illuminate\Support\Collection;
 
 /**
@@ -157,22 +158,32 @@ class FieldRegistry
 
     /**
      * Найти поле по ключу.
-     * Для атрибутов ищем и по attr.{id}, и по attribute.{id}.
+     * Для атрибутов ищем по attr.{id}, attribute.{slug} и legacy attribute.{id}.
      */
     public function resolve(string $key): ?ExportField
     {
         $this->boot();
 
-        // Прямой поиск
+        // Прямой поиск (статические поля + attr.{id})
         if ($this->fields->has($key)) {
             return $this->fields->get($key);
         }
 
-        // attribute.{id} → attr.{id} (экспортный ключ → фильтровый ключ)
+        // attribute.{slug} или legacy attribute.{id}
         if (str_starts_with($key, 'attribute.')) {
-            $attrId = str_replace('attribute.', '', $key);
-            $filterKey = "attr.{$attrId}";
-            return $this->fields->get($filterKey);
+            $identifier = str_replace('attribute.', '', $key);
+
+            // Если идентификатор числовой — legacy формат attribute.{id}
+            if (is_numeric($identifier)) {
+                $filterKey = "attr.{$identifier}";
+                return $this->fields->get($filterKey);
+            }
+
+            // Иначе — ищем по slug
+            return $this->fields->first(function (ExportField $field) use ($identifier) {
+                return $field instanceof DynamicAttributeField
+                    && $field->getAttributeSlug() === $identifier;
+            });
         }
 
         // Legacy: attribute filter

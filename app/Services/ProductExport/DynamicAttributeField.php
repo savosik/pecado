@@ -35,7 +35,12 @@ class DynamicAttributeField extends ExportField
 
     public function exportKey(): string
     {
-        return "attribute.{$this->attribute->id}";
+        return "attribute.{$this->attribute->slug}";
+    }
+
+    public function getAttributeSlug(): string
+    {
+        return $this->attribute->slug;
     }
 
     public function name(): string

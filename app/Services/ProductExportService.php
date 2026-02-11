@@ -373,7 +373,16 @@ class ProductExportService
     protected function generateJson(Collection $data, array $labels, string $filename): StreamedResponse
     {
         return new StreamedResponse(function () use ($data) {
-            echo json_encode($data->values()->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+            $filtered = $data->map(function (array $row) {
+                return array_filter($row, function ($value, $key) {
+                    // Убираем атрибуты с null значением
+                    if (str_starts_with($key, 'attribute.') && $value === null) {
+                        return false;
+                    }
+                    return true;
+                }, ARRAY_FILTER_USE_BOTH);
+            });
+            echo json_encode($filtered->values()->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
         }, 200, [
             'Content-Type' => 'application/json; charset=utf-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
@@ -418,8 +427,14 @@ class ProductExportService
             foreach ($data as $row) {
                 $xml->startElement('product');
                 foreach (array_keys($labels) as $key) {
-                    $value = $row[$key] ?? '';
-                    $value = $this->normalizeExportValue($value);
+                    $value = $row[$key] ?? null;
+
+                    // Пропускаем атрибуты с null значением
+                    if (str_starts_with($key, 'attribute.') && $value === null) {
+                        continue;
+                    }
+
+                    $value = $this->normalizeExportValue($value ?? '');
                     $xmlKey = preg_replace('/[^a-zA-Z0-9_]/', '_', $key);
                     $xml->writeElement($xmlKey, $value);
                 }
@@ -444,7 +459,7 @@ class ProductExportService
 
             $col = 1;
             foreach (array_values($labels) as $label) {
-                $sheet->setCellValueByColumnAndRow($col, 1, $label);
+                $sheet->setCellValue([$col, 1], $label);
                 $col++;
             }
 
@@ -457,13 +472,15 @@ class ProductExportService
                 foreach (array_keys($labels) as $key) {
                     $value = $row[$key] ?? '';
                     $value = $this->normalizeExportValue($value);
-                    $sheet->setCellValueByColumnAndRow($col, $rowNum, $value);
+                    $sheet->setCellValue([$col, $rowNum], $value);
                     $col++;
                 }
                 $rowNum++;
             }
 
-            foreach (range('A', $lastCol) as $columnID) {
+            $colCount = count($labels);
+            for ($c = 1; $c <= $colCount; $c++) {
+                $columnID = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c);
                 $sheet->getColumnDimension($columnID)->setAutoSize(true);
             }
 

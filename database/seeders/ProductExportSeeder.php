@@ -13,7 +13,8 @@ class ProductExportSeeder extends Seeder
      */
     protected function getAllFields(): array
     {
-        return [
+        // Статические поля
+        $fields = [
             // ─── Основные ───
             ['key' => 'id', 'label' => 'ID товара'],
             ['key' => 'name', 'label' => 'Наименование'],
@@ -21,6 +22,7 @@ class ProductExportSeeder extends Seeder
             ['key' => 'code', 'label' => 'Код товара'],
             ['key' => 'barcode', 'label' => 'Штрихкод (основной)'],
             ['key' => 'base_price', 'label' => 'Базовая цена', 'modifiers' => ['currency_id' => null]],
+            ['key' => 'recommended_price', 'label' => 'Рекомендованная цена'],
             ['key' => 'slug', 'label' => 'URL-slug'],
             ['key' => 'url', 'label' => 'URL'],
             ['key' => 'tnved', 'label' => 'Код ТН ВЭД'],
@@ -82,34 +84,18 @@ class ProductExportSeeder extends Seeder
             // ─── Служебные ───
             ['key' => 'created_at', 'label' => 'Дата создания'],
             ['key' => 'updated_at', 'label' => 'Дата обновления'],
-
-            // ─── Атрибуты (динамические) ───
-            ['key' => 'attribute.14', 'label' => 'Основной цвет'],
-            ['key' => 'attribute.16', 'label' => 'Размер'],
-            ['key' => 'attribute.11', 'label' => 'Состав'],
-            ['key' => 'attribute.18', 'label' => 'Страна происхождения'],
-            ['key' => 'attribute.15', 'label' => 'Ткань'],
-            ['key' => 'attribute.1', 'label' => 'Тип упаковки'],
-            ['key' => 'attribute.2', 'label' => 'Вес брутто, кг'],
-            ['key' => 'attribute.3', 'label' => 'Вес нетто, кг'],
-            ['key' => 'attribute.4', 'label' => 'Длина упаковки, м'],
-            ['key' => 'attribute.5', 'label' => 'Ширина упаковки, м'],
-            ['key' => 'attribute.6', 'label' => 'Высота упаковки, м'],
-            ['key' => 'attribute.7', 'label' => 'Коробок в упаковке'],
-            ['key' => 'attribute.8', 'label' => 'Модель (атрибут)'],
-            ['key' => 'attribute.43', 'label' => 'Основной материал'],
-            ['key' => 'attribute.37', 'label' => 'Вид ткани'],
-            ['key' => 'attribute.36', 'label' => 'Декор'],
-            ['key' => 'attribute.35', 'label' => 'Дополнительный цвет'],
-            ['key' => 'attribute.19', 'label' => 'Состав изделия'],
-            ['key' => 'attribute.22', 'label' => 'Composition'],
-            ['key' => 'attribute.13', 'label' => 'Рекомендации по применению'],
-            ['key' => 'attribute.28', 'label' => 'Количество в комплекте'],
-            ['key' => 'attribute.21', 'label' => 'Кол-во изделий в розничной упаковке'],
-            ['key' => 'attribute.23', 'label' => 'Подходит для маркетплейсов (атр.)'],
-            ['key' => 'attribute.38', 'label' => 'Дата производства'],
-            ['key' => 'attribute.41', 'label' => 'Ссылка на видео'],
         ];
+
+        // ─── Динамические атрибуты (по slug из БД) ───
+        $attributes = \App\Models\Attribute::orderBy('id')->get();
+        foreach ($attributes as $attribute) {
+            $fields[] = [
+                'key' => "attribute.{$attribute->slug}",
+                'label' => $attribute->name,
+            ];
+        }
+
+        return $fields;
     }
 
     /**

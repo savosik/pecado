@@ -1,17 +1,18 @@
-import { useMemo , useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
+import { Field } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuListChecks, LuFolderTree } from 'react-icons/lu';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
 export default function Create({ brands, categoryTree, sizeCharts }) {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         slug: '',
         base_price: '',
