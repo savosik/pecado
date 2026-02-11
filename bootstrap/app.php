@@ -21,10 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->alias([
-            'admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'is_admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
         ]);
 
         $middleware->group('admin', [
+            \App\Http\Middleware\EnsureUserIsAdmin::class,
             \App\Http\Middleware\HandleAdminInertiaRequests::class,
         ]);
     })

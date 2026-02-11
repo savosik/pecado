@@ -225,4 +225,12 @@ class User extends Authenticatable implements HasMedia
     {
         return $this->hasMany(ProductExport::class);
     }
+
+    /**
+     * Get the social accounts for the user.
+     */
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
 }

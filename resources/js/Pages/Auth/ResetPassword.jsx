@@ -1,20 +1,19 @@
-import { Head, useForm, Link } from '@inertiajs/react';
-import { Box, Input, Button, Text, Stack } from '@chakra-ui/react';
+import { Head, useForm } from '@inertiajs/react';
+import { Input, Button, Text, Stack } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
-import { Checkbox } from '@/components/ui/checkbox';
 import AuthLayout from './AuthLayout';
-import SocialAuthButtons from './SocialAuthButtons';
 
-export default function Login({ errors }) {
+export default function ResetPassword({ token, email, errors }) {
     const { data, setData, post, processing } = useForm({
-        email: '',
+        token: token,
+        email: email,
         password: '',
-        remember: false,
+        password_confirmation: '',
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/login');
+        post('/reset-password');
     };
 
     const inputStyles = {
@@ -34,9 +33,12 @@ export default function Login({ errors }) {
 
     return (
         <>
-            <Head title="Вход" />
+            <Head title="Сброс пароля" />
 
-            <AuthLayout title="Вход в систему" subtitle="Добро пожаловать в Pecado">
+            <AuthLayout
+                title="Новый пароль"
+                subtitle="Придумайте новый надёжный пароль"
+            >
                 <form onSubmit={handleSubmit}>
                     <Stack gap={4}>
                         <Field
@@ -48,14 +50,14 @@ export default function Login({ errors }) {
                                 type="email"
                                 value={data.email}
                                 onChange={(e) => setData('email', e.target.value)}
-                                placeholder="your@email.com"
-                                autoFocus
+                                readOnly
                                 {...inputStyles}
+                                opacity={0.7}
                             />
                         </Field>
 
                         <Field
-                            label={<Text color="rgba(255,255,255,0.85)" fontWeight="medium">Пароль</Text>}
+                            label={<Text color="rgba(255,255,255,0.85)" fontWeight="medium">Новый пароль</Text>}
                             invalid={!!errors.password}
                             errorText={errors.password}
                         >
@@ -63,34 +65,25 @@ export default function Login({ errors }) {
                                 type="password"
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
-                                placeholder="••••••••"
+                                placeholder="Минимум 8 символов"
+                                autoFocus
                                 {...inputStyles}
                             />
                         </Field>
 
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Checkbox
-                                checked={data.remember}
-                                onCheckedChange={(e) => setData('remember', e.checked)}
-                                colorPalette="purple"
-                            >
-                                <Text color="rgba(255,255,255,0.7)" fontSize="sm">
-                                    Запомнить меня
-                                </Text>
-                            </Checkbox>
-
-                            <Link href="/forgot-password">
-                                <Text
-                                    fontSize="sm"
-                                    color="rgba(139, 92, 246, 0.9)"
-                                    _hover={{ color: "rgba(167, 139, 250, 1)" }}
-                                    transition="color 0.2s"
-                                    cursor="pointer"
-                                >
-                                    Забыли пароль?
-                                </Text>
-                            </Link>
-                        </Box>
+                        <Field
+                            label={<Text color="rgba(255,255,255,0.85)" fontWeight="medium">Подтвердите пароль</Text>}
+                            invalid={!!errors.password_confirmation}
+                            errorText={errors.password_confirmation}
+                        >
+                            <Input
+                                type="password"
+                                value={data.password_confirmation}
+                                onChange={(e) => setData('password_confirmation', e.target.value)}
+                                placeholder="Повторите пароль"
+                                {...inputStyles}
+                            />
+                        </Field>
 
                         <Button
                             type="submit"
@@ -108,29 +101,10 @@ export default function Login({ errors }) {
                             }}
                             transition="all 0.3s ease"
                         >
-                            Войти
+                            Сменить пароль
                         </Button>
                     </Stack>
                 </form>
-
-                <SocialAuthButtons label="Или войдите через" />
-
-                <Box mt={6} textAlign="center">
-                    <Text color="rgba(255, 255, 255, 0.6)" fontSize="sm">
-                        Нет аккаунта?{' '}
-                        <Link href="/register">
-                            <Text
-                                as="span"
-                                color="rgba(139, 92, 246, 0.9)"
-                                fontWeight="semibold"
-                                _hover={{ color: "rgba(167, 139, 250, 1)" }}
-                                transition="color 0.2s"
-                            >
-                                Зарегистрироваться
-                            </Text>
-                        </Link>
-                    </Text>
-                </Box>
             </AuthLayout>
         </>
     );

@@ -15,8 +15,12 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() || !$request->user()->is_admin) {
-            abort(403, 'Доступ запрещён. Требуются права администратора.');
+        if (!$request->user()) {
+            return redirect('/login')->with('error', 'Необходимо войти в систему');
+        }
+
+        if (!$request->user()->is_admin) {
+            return redirect('/')->with('error', 'Доступ запрещён. Требуются права администратора.');
         }
 
         return $next($request);

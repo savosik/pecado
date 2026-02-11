@@ -1,20 +1,17 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { Box, Input, Button, Text, Stack } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
-import { Checkbox } from '@/components/ui/checkbox';
 import AuthLayout from './AuthLayout';
-import SocialAuthButtons from './SocialAuthButtons';
 
-export default function Login({ errors }) {
+export default function ForgotPassword({ errors }) {
+    const { flash } = usePage().props;
     const { data, setData, post, processing } = useForm({
         email: '',
-        password: '',
-        remember: false,
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/login');
+        post('/forgot-password');
     };
 
     const inputStyles = {
@@ -34,9 +31,26 @@ export default function Login({ errors }) {
 
     return (
         <>
-            <Head title="Вход" />
+            <Head title="Восстановление пароля" />
 
-            <AuthLayout title="Вход в систему" subtitle="Добро пожаловать в Pecado">
+            <AuthLayout
+                title="Восстановление пароля"
+                subtitle="Введите email и мы отправим ссылку для сброса пароля"
+            >
+                {flash?.success && (
+                    <Box
+                        mb={4}
+                        p={4}
+                        borderRadius="xl"
+                        bg="rgba(16, 185, 129, 0.15)"
+                        border="1px solid rgba(16, 185, 129, 0.3)"
+                    >
+                        <Text color="rgba(134, 239, 172, 1)" fontSize="sm" fontWeight="medium">
+                            ✓ {flash.success}
+                        </Text>
+                    </Box>
+                )}
+
                 <form onSubmit={handleSubmit}>
                     <Stack gap={4}>
                         <Field
@@ -54,44 +68,6 @@ export default function Login({ errors }) {
                             />
                         </Field>
 
-                        <Field
-                            label={<Text color="rgba(255,255,255,0.85)" fontWeight="medium">Пароль</Text>}
-                            invalid={!!errors.password}
-                            errorText={errors.password}
-                        >
-                            <Input
-                                type="password"
-                                value={data.password}
-                                onChange={(e) => setData('password', e.target.value)}
-                                placeholder="••••••••"
-                                {...inputStyles}
-                            />
-                        </Field>
-
-                        <Box display="flex" justifyContent="space-between" alignItems="center">
-                            <Checkbox
-                                checked={data.remember}
-                                onCheckedChange={(e) => setData('remember', e.checked)}
-                                colorPalette="purple"
-                            >
-                                <Text color="rgba(255,255,255,0.7)" fontSize="sm">
-                                    Запомнить меня
-                                </Text>
-                            </Checkbox>
-
-                            <Link href="/forgot-password">
-                                <Text
-                                    fontSize="sm"
-                                    color="rgba(139, 92, 246, 0.9)"
-                                    _hover={{ color: "rgba(167, 139, 250, 1)" }}
-                                    transition="color 0.2s"
-                                    cursor="pointer"
-                                >
-                                    Забыли пароль?
-                                </Text>
-                            </Link>
-                        </Box>
-
                         <Button
                             type="submit"
                             width="full"
@@ -108,17 +84,15 @@ export default function Login({ errors }) {
                             }}
                             transition="all 0.3s ease"
                         >
-                            Войти
+                            Отправить ссылку
                         </Button>
                     </Stack>
                 </form>
 
-                <SocialAuthButtons label="Или войдите через" />
-
                 <Box mt={6} textAlign="center">
                     <Text color="rgba(255, 255, 255, 0.6)" fontSize="sm">
-                        Нет аккаунта?{' '}
-                        <Link href="/register">
+                        Вспомнили пароль?{' '}
+                        <Link href="/login">
                             <Text
                                 as="span"
                                 color="rgba(139, 92, 246, 0.9)"
@@ -126,7 +100,7 @@ export default function Login({ errors }) {
                                 _hover={{ color: "rgba(167, 139, 250, 1)" }}
                                 transition="color 0.2s"
                             >
-                                Зарегистрироваться
+                                Войти
                             </Text>
                         </Link>
                     </Text>
