@@ -51,7 +51,7 @@ export default function UserFooter() {
                         <GridItem>
                             <Box as="img" src="/images/logo.png" alt="Pecado" h="16" objectFit="contain" mb="4" filter="brightness(0) invert(1)" />
                             <Text fontSize="sm" color="rgba(255,255,255,0.7)" lineHeight="relaxed">
-                                Интернет-магазин товаров для взрослых. Качественная продукция проверенных брендов с быстрой доставкой по всей России.
+                                Зарабатывать на удовольствии — это не грех, это Pecado. Мы отобрали товары, перед которыми не устоит ваш клиент, и создали условия, от которых невозможно отказаться партнеру.
                             </Text>
                         </GridItem>
 

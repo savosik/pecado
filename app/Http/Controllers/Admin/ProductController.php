@@ -10,6 +10,7 @@ use App\Models\SizeChart;
 use App\Models\Warehouse;
 use App\Models\Attribute;
 use App\Models\Certificate;
+use App\Models\ProductSelection;
 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -218,6 +219,7 @@ class ProductController extends AdminController
             'certificates',
             'warehouses',
             'attributeValues.attribute',
+            'productSelections',
         ]);
 
         return Inertia::render('Admin/Pages/Products/Edit', [
@@ -290,6 +292,7 @@ class ProductController extends AdminController
                         'boolean_value' => $attrValue->boolean_value,
                     ];
                    }),
+                'product_selections' => $product->productSelections->pluck('id')->toArray(),
             ],
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
             'categoryTree' => Category::withCount('products')
@@ -301,6 +304,7 @@ class ProductController extends AdminController
             'warehouses' => Warehouse::select('id', 'name')->orderBy('name')->get(),
             'attributes' => Attribute::with('values')->orderBy('name')->get(),
             'certificates' => Certificate::select('id', 'name', 'type')->orderBy('name')->get(),
+            'productSelections' => ProductSelection::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -344,6 +348,9 @@ class ProductController extends AdminController
 
             'certificates' => 'nullable|array',
             'certificates.*' => 'exists:certificates,id',
+
+            'product_selections' => 'nullable|array',
+            'product_selections.*' => 'exists:product_selections,id',
             
             'warehouses' => 'nullable|array',
             'warehouses.*.id' => 'required|exists:warehouses,id',
@@ -431,6 +438,13 @@ class ProductController extends AdminController
             $product->warehouses()->sync($warehouseData);
         } else {
             $product->warehouses()->detach();
+        }
+
+        // Синхронизация подборок
+        if (isset($validated['product_selections'])) {
+            $product->productSelections()->sync($validated['product_selections']);
+        } else {
+            $product->productSelections()->detach();
         }
         
         // Синхронизация атрибутов

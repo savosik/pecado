@@ -14,11 +14,48 @@ class ProductSelection extends Model implements HasMedia
 
     protected $fillable = [
         'name',
+        'slug',
         'short_description',
         'description',
         'meta_title',
         'meta_description',
+        'is_active',
+        'show_on_home',
+        'sort_order',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+            'show_on_home' => 'boolean',
+            'sort_order' => 'integer',
+        ];
+    }
+
+    /**
+     * Scope: только активные подборки.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    /**
+     * Scope: только подборки для главной.
+     */
+    public function scopeShowOnHome($query)
+    {
+        return $query->where('show_on_home', true);
+    }
+
+    /**
+     * Scope: сортировка по sort_order.
+     */
+    public function scopeOrdered($query)
+    {
+        return $query->orderBy('sort_order');
+    }
 
     public function registerMediaCollections(): void
     {
@@ -38,10 +75,21 @@ class ProductSelection extends Model implements HasMedia
     }
 
     /**
-     * Get the products that belong to the product selection.
+     * Все товары подборки.
      */
     public function products(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        return $this->belongsToMany(Product::class, 'product_product_selection');
+        return $this->belongsToMany(Product::class, 'product_product_selection')
+            ->withPivot('featured');
+    }
+
+    /**
+     * Только featured-товары (для показа на главной).
+     */
+    public function featuredProducts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Product::class, 'product_product_selection')
+            ->withPivot('featured')
+            ->wherePivot('featured', true);
     }
 }

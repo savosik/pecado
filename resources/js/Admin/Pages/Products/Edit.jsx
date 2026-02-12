@@ -1,4 +1,4 @@
-import { useMemo , useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import axios from 'axios';
@@ -12,8 +12,8 @@ import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuL
 import { WarehousesSection } from './Components/WarehousesSection';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
-export default function Edit({ product, brands, categoryTree, modelName, sizeCharts, warehouses, attributes, certificates }) {
-    const { data, setData, post, processing, errors , transform } = useForm({
+export default function Edit({ product, brands, categoryTree, modelName, sizeCharts, warehouses, attributes, certificates, productSelections }) {
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: product.name || '',
         slug: product.slug || '',
         base_price: product.base_price || '',
@@ -43,6 +43,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         certificates: product.certificates || [],
         warehouses: product.warehouses || [],
         attributes: product.attributes || [],
+        product_selections: product.product_selections || [],
         _method: 'PUT',
     });
 
@@ -71,6 +72,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
     // Мемоизируем опции для селектов
     const brandOptions = useMemo(() => brands.map(b => ({ value: b.id, label: b.name })), [brands]);
     const sizeChartOptions = useMemo(() => sizeCharts.map(s => ({ value: s.id, label: s.name })), [sizeCharts]);
+    const selectionOptions = useMemo(() => (productSelections || []).map(s => ({ value: s.id, label: s.name })), [productSelections]);
 
 
     const handleSubmit = (e, shouldClose = false) => {
@@ -410,6 +412,18 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                                     error={errors.certificates}
                                                 />
                                             </FormField>
+                                        </Box>
+
+                                        <Box gridColumn={{ base: '1', md: 'span 2' }}>
+                                            <SelectRelation
+                                                label="Подборки"
+                                                value={data.product_selections}
+                                                onChange={(value) => setData('product_selections', value)}
+                                                options={selectionOptions}
+                                                multiple={true}
+                                                placeholder="Выберите подборки..."
+                                                error={errors.product_selections}
+                                            />
                                         </Box>
                                     </SimpleGrid>
                                 </Stack>

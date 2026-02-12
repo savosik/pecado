@@ -14,9 +14,11 @@ return new class extends Migration
         // Сторис - набор слайдов (группа)
         Schema::create('stories', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // Название сториса (отображается под превью)
+            $table->string('name');
             $table->string('slug')->nullable();
             $table->boolean('is_active')->default(true);
+            $table->boolean('is_published')->default(false);
+            $table->boolean('show_name')->default(true);
             $table->integer('sort_order')->default(0);
             $table->timestamps();
         });

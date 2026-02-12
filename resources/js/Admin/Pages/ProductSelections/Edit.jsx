@@ -2,8 +2,10 @@ import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector, MarkdownEditor } from '@/Admin/Components';
-import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
+import { Box, Card, Input, Textarea, Stack, SimpleGrid, Flex, Text, IconButton } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 
 export default function Edit({ product_selection }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -12,7 +14,9 @@ export default function Edit({ product_selection }) {
         meta_title: product_selection.meta_title || '',
         meta_description: product_selection.meta_description || '',
         description: product_selection.description || '',
+        show_on_home: product_selection.show_on_home || false,
         products: product_selection.products || [],
+        featured_ids: (product_selection.products || []).filter(p => p.featured).map(p => p.id),
         desktop_image: null,
         mobile_image: null,
     });
@@ -29,6 +33,7 @@ export default function Edit({ product_selection }) {
         formData.append('_method', 'PUT');
         formData.append('_close', shouldClose ? '1' : '0');
         formData.append('name', data.name);
+        formData.append('show_on_home', data.show_on_home ? '1' : '0');
         if (data.meta_title) formData.append('meta_title', data.meta_title);
         if (data.meta_description) formData.append('meta_description', data.meta_description);
         if (data.description) formData.append('description', data.description);
@@ -36,6 +41,11 @@ export default function Edit({ product_selection }) {
         // Привязка товаров
         data.products.forEach((product, index) => {
             formData.append(`product_ids[${index}]`, product.id);
+        });
+
+        // Featured товары
+        data.featured_ids.forEach((id, index) => {
+            formData.append(`featured_ids[${index}]`, id);
         });
 
         // Изображения
@@ -132,7 +142,16 @@ export default function Edit({ product_selection }) {
                                         placeholder="Например: Новинки сезона"
                                     />
                                 </FormField>
+                            </SimpleGrid>
 
+                            <Switch
+                                checked={data.show_on_home}
+                                onCheckedChange={(e) => setData('show_on_home', e.checked)}
+                            >
+                                Показывать на главной (в табах)
+                            </Switch>
+
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Meta заголовок" error={errors.meta_title}>
                                     <Input
                                         value={data.meta_title}
@@ -186,10 +205,42 @@ export default function Edit({ product_selection }) {
                                 <FormField label="Привязанные товары" error={errors.product_ids}>
                                     <ProductSelector
                                         value={data.products}
-                                        onChange={(products) => setData('products', products)}
+                                        onChange={(products) => {
+                                            setData('products', products);
+                                            // Убираем из featured_ids те, что больше не в списке
+                                            const ids = products.map(p => p.id);
+                                            setData('featured_ids', data.featured_ids.filter(id => ids.includes(id)));
+                                        }}
                                         error={errors.product_ids}
                                     />
                                 </FormField>
+
+                                {data.products.length > 0 && (
+                                    <Box mt="3" p="3" bg="gray.50" borderRadius="md" _dark={{ bg: 'gray.800' }}>
+                                        <Text fontSize="sm" fontWeight="600" mb="2" color="gray.600">
+                                            Показывать на главной (в табах):
+                                        </Text>
+                                        <Stack gap="1">
+                                            {data.products.map((product) => (
+                                                <Checkbox
+                                                    key={product.id}
+                                                    size="sm"
+                                                    checked={data.featured_ids.includes(product.id)}
+                                                    onCheckedChange={(e) => {
+                                                        const checked = e.checked;
+                                                        setData('featured_ids',
+                                                            checked
+                                                                ? [...data.featured_ids, product.id]
+                                                                : data.featured_ids.filter(id => id !== product.id)
+                                                        );
+                                                    }}
+                                                >
+                                                    {product.name}
+                                                </Checkbox>
+                                            ))}
+                                        </Stack>
+                                    </Box>
+                                )}
                             </Box>
                         </Stack>
                     </Card.Body>

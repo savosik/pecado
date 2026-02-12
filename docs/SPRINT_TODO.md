@@ -144,33 +144,33 @@
 
 ### 3.1 Баннеры
 
-- [ ] `app/Http/Controllers/User/BannerController.php` — `GET /api/banners`, активные + sort_order
-- [ ] Создать директорию `resources/js/components/banner/`
-- [ ] `components/banner/BannerSlider.jsx` — карусель: изображение, ссылка, overlay-текст
-- [ ] API-маршрут `GET /api/banners`
-- [ ] Серверное кеширование баннеров (TTL 10 мин)
+- [x] `app/Http/Controllers/User/BannerController.php` — `GET /api/banners`, активные + sort_order
+- [x] Создать директорию `resources/js/components/banner/`
+- [x] `components/banner/BannerSlider.jsx` — карусель: изображение, ссылка, overlay-текст
+- [x] API-маршрут `GET /api/banners`
+- [x] Серверное кеширование баннеров (TTL 10 мин)
 
 ### 3.2 Stories
 
-- [ ] `app/Http/Controllers/User/StoryController.php` — `GET /api/stories`, активные со slides
-- [ ] Создать директорию `resources/js/components/stories/`
-- [ ] `components/stories/StoryCircles.jsx` — горизонтальная прокрутка круглых превью
-- [ ] `components/stories/StoryViewer.jsx` — полноэкранный просмотр, slide-by-slide, auto-progress
-- [ ] Lazy loading для `StoryViewer` (heavy component)
-- [ ] API-маршрут `GET /api/stories`
-- [ ] Серверное кеширование (TTL 10 мин)
+- [x] `app/Http/Controllers/User/StoryController.php` — `GET /api/stories`, активные со slides
+- [x] Создать директорию `resources/js/components/stories/`
+- [x] `components/stories/StoryCircles.jsx` — горизонтальная прокрутка круглых превью
+- [x] `components/stories/StoryViewer.jsx` — полноэкранный просмотр, slide-by-slide, auto-progress
+- [x] Lazy loading для `StoryViewer` (heavy component)
+- [x] API-маршрут `GET /api/stories`
+- [x] Серверное кеширование (TTL 10 мин)
 
 ### 3.3 Подборки товаров
 
-- [ ] `app/Http/Controllers/User/ProductSelectionController.php` — данные для главной
-- [ ] `components/product/ProductSelectionCarousel.jsx` — горизонтальная карусель `ProductCard`
-- [ ] Для этого нужен `ProductCard` (часть Слоя 4 → делаем базовую версию)
+- [x] `app/Http/Controllers/User/ProductSelectionController.php` — данные для главной
+- [x] `components/product/ProductSelectionCarousel.jsx` — горизонтальная карусель `ProductCard`
+- [x] Для этого нужен `ProductCard` (часть Слоя 4 → делаем базовую версию)
 
 ### 3.4 Обновление Home.jsx
 
-- [ ] Интегрировать `StoryCircles`, `BannerSlider`, подборки товаров
-- [ ] Обновить `HomeController` — передавать banners, stories, productSelections
-- [ ] SEO + structured data для главной
+- [x] Интегрировать `StoryCircles`, `BannerSlider`, подборки товаров
+- [x] Обновить `HomeController` — передавать banners, stories, productSelections
+- [x] SEO + structured data для главной
 
 ---
 

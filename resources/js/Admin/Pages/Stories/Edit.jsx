@@ -12,6 +12,8 @@ export default function Edit({ story }) {
         name: story.name || '',
         slug: story.slug || '',
         is_active: story.is_active ?? true,
+        is_published: story.is_published ?? false,
+        show_name: story.show_name ?? true,
         sort_order: story.sort_order || 0,
     });
 
@@ -76,6 +78,24 @@ export default function Edit({ story }) {
                                     onCheckedChange={(e) => setData('is_active', e.checked)}
                                 >
                                     Активен
+                                </Switch>
+                            </FormField>
+
+                            <FormField label="Публикация" error={errors.is_published}>
+                                <Switch
+                                    checked={data.is_published}
+                                    onCheckedChange={(e) => setData('is_published', e.checked)}
+                                >
+                                    Опубликован
+                                </Switch>
+                            </FormField>
+
+                            <FormField label="Показывать название" error={errors.show_name}>
+                                <Switch
+                                    checked={data.show_name}
+                                    onCheckedChange={(e) => setData('show_name', e.checked)}
+                                >
+                                    Отображать название на превью
                                 </Switch>
                             </FormField>
 

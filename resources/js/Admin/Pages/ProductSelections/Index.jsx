@@ -58,6 +58,22 @@ export default function Index({ product_selections, filters }) {
             ),
         },
         {
+            key: 'featured_products_count',
+            label: 'На главной',
+            render: (count) => (
+                <Badge colorPalette="purple">{count || 0}</Badge>
+            ),
+        },
+        {
+            key: 'show_on_home',
+            label: 'В табах',
+            render: (value) => (
+                <Badge colorPalette={value ? 'green' : 'gray'}>
+                    {value ? 'Да' : 'Нет'}
+                </Badge>
+            ),
+        },
+        {
             key: 'created_at',
             label: 'Создано',
             sortable: true,

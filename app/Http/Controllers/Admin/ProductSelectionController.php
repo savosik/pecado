@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\ProductSelection;
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +21,7 @@ class ProductSelectionController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = ProductSelection::query()->withCount('products');
+        $query = ProductSelection::query()->withCount(['products', 'featuredProducts']);
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -80,8 +81,11 @@ class ProductSelectionController extends AdminController
             'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'show_on_home' => 'nullable|boolean',
             'product_ids' => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
+            'featured_ids' => 'nullable|array',
+            'featured_ids.*' => 'exists:products,id',
             'desktop_image' => 'nullable|image|max:10240',
             'mobile_image' => 'nullable|image|max:10240',
         ]);
@@ -90,15 +94,22 @@ class ProductSelectionController extends AdminController
         try {
             $productSelection = ProductSelection::create([
                 'name' => $validated['name'],
+                'slug' => Str::slug($validated['name']),
                 'short_description' => $validated['short_description'] ?? null,
                 'description' => $validated['description'] ?? null,
                 'meta_title' => $validated['meta_title'] ?? null,
                 'meta_description' => $validated['meta_description'] ?? null,
+                'show_on_home' => $validated['show_on_home'] ?? false,
             ]);
 
-            // Привязка товаров
+            // Привязка товаров с featured
             if (!empty($validated['product_ids'])) {
-                $productSelection->products()->sync($validated['product_ids']);
+                $featuredIds = $validated['featured_ids'] ?? [];
+                $syncData = [];
+                foreach ($validated['product_ids'] as $productId) {
+                    $syncData[$productId] = ['featured' => in_array($productId, $featuredIds)];
+                }
+                $productSelection->products()->sync($syncData);
             }
 
             // Загрузка медиафайлов
@@ -135,10 +146,13 @@ class ProductSelectionController extends AdminController
             'product_selection' => [
                 'id' => $productSelection->id,
                 'name' => $productSelection->name,
+                'slug' => $productSelection->slug,
                 'short_description' => $productSelection->short_description,
                 'description' => $productSelection->description,
                 'meta_title' => $productSelection->meta_title,
                 'meta_description' => $productSelection->meta_description,
+                'is_active' => $productSelection->is_active,
+                'show_on_home' => $productSelection->show_on_home,
                 'created_at' => $productSelection->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $productSelection->updated_at?->format('d.m.Y H:i'),
                 'desktop_image_url' => $productSelection->getFirstMediaUrl('desktop'),
@@ -150,6 +164,7 @@ class ProductSelectionController extends AdminController
                         'brand_name' => $product->brand?->name,
                         'base_price' => $product->base_price,
                         'image_url' => $product->getFirstMediaUrl('main'),
+                        'featured' => (bool) $product->pivot->featured,
                     ];
                 }),
             ],
@@ -167,13 +182,16 @@ class ProductSelectionController extends AdminController
             'product_selection' => [
                 'id' => $productSelection->id,
                 'name' => $productSelection->name,
+                'slug' => $productSelection->slug,
                 'short_description' => $productSelection->short_description,
                 'description' => $productSelection->description,
                 'meta_title' => $productSelection->meta_title,
                 'meta_description' => $productSelection->meta_description,
+                'show_on_home' => $productSelection->show_on_home,
                 'products' => $productSelection->products->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
+                    'featured' => (bool) $p->pivot->featured,
                 ]),
                 'desktop_image_url' => $productSelection->getFirstMediaUrl('desktop'),
                 'desktop_image_id' => $productSelection->getFirstMedia('desktop')?->id,
@@ -194,8 +212,11 @@ class ProductSelectionController extends AdminController
             'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'show_on_home' => 'nullable|boolean',
             'product_ids' => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
+            'featured_ids' => 'nullable|array',
+            'featured_ids.*' => 'exists:products,id',
             'desktop_image' => 'nullable|image|max:10240',
             'mobile_image' => 'nullable|image|max:10240',
             'delete_desktop_image' => 'nullable|boolean',
@@ -210,10 +231,17 @@ class ProductSelectionController extends AdminController
                 'description' => $validated['description'] ?? null,
                 'meta_title' => $validated['meta_title'] ?? null,
                 'meta_description' => $validated['meta_description'] ?? null,
+                'show_on_home' => $validated['show_on_home'] ?? false,
             ]);
 
-            // Синхронизация товаров
-            $productSelection->products()->sync($validated['product_ids'] ?? []);
+            // Синхронизация товаров с featured
+            $productIds = $validated['product_ids'] ?? [];
+            $featuredIds = $validated['featured_ids'] ?? [];
+            $syncData = [];
+            foreach ($productIds as $productId) {
+                $syncData[$productId] = ['featured' => in_array($productId, $featuredIds)];
+            }
+            $productSelection->products()->sync($syncData);
 
             // Удаление desktop изображения
             if (!empty($validated['delete_desktop_image'])) {

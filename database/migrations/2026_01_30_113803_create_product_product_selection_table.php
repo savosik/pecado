@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('product_product_selection', function (Blueprint $table) {
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_selection_id')->constrained()->cascadeOnDelete();
+            $table->boolean('featured')->default(false);
             $table->primary(['product_id', 'product_selection_id']);
         });
     }

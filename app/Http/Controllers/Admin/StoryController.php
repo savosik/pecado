@@ -57,6 +57,8 @@ class StoryController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|unique:stories,slug',
             'is_active' => 'boolean',
+            'is_published' => 'boolean',
+            'show_name' => 'boolean',
             'sort_order' => 'integer',
         ]);
 
@@ -96,6 +98,8 @@ class StoryController extends Controller
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|unique:stories,slug,' . $story->id,
             'is_active' => 'boolean',
+            'is_published' => 'boolean',
+            'show_name' => 'boolean',
             'sort_order' => 'integer',
         ]);
 

@@ -19,6 +19,10 @@ class DatabaseSeeder extends Seeder
             CurrencySeeder::class,
             SettingsSeeder::class,
             ProductExportSeeder::class,
+            BannerSeeder::class,
+            StorySeeder::class,
+            ProductSeeder::class,
+            ProductSelectionSeeder::class,
         ]);
 
         // Создание администратора

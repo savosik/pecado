@@ -14,11 +14,15 @@ class Story extends Model
         'name',
         'slug',
         'is_active',
+        'is_published',
+        'show_name',
         'sort_order',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_published' => 'boolean',
+        'show_name' => 'boolean',
         'sort_order' => 'integer',
     ];
 
@@ -36,6 +40,14 @@ class Story extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Скоуп для опубликованных сторис
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true);
     }
 
     /**

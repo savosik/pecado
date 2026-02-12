@@ -52,6 +52,26 @@ export default function Index({ stories, filters }) {
             ),
         },
         {
+            key: 'is_published',
+            label: 'Публикация',
+            sortable: true,
+            render: (_, story) => (
+                <Badge colorPalette={story.is_published ? 'blue' : 'gray'}>
+                    {story.is_published ? 'Опубликован' : 'Черновик'}
+                </Badge>
+            ),
+        },
+        {
+            key: 'show_name',
+            label: 'Название',
+            sortable: true,
+            render: (_, story) => (
+                <Badge colorPalette={story.show_name ? 'green' : 'gray'}>
+                    {story.show_name ? 'Видно' : 'Скрыто'}
+                </Badge>
+            ),
+        },
+        {
             key: 'sort_order',
             label: 'Порядок',
             sortable: true,

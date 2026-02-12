@@ -9,10 +9,12 @@ import { LuSave, LuX } from 'react-icons/lu';
 import { router } from '@inertiajs/react';
 
 export default function Create() {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         slug: '',
         is_active: true,
+        is_published: false,
+        show_name: true,
         sort_order: 0,
     });
 
@@ -69,6 +71,24 @@ export default function Create() {
                                 onCheckedChange={(e) => setData('is_active', e.checked)}
                             >
                                 Активен
+                            </Switch>
+                        </FormField>
+
+                        <FormField label="Публикация" error={errors.is_published}>
+                            <Switch
+                                checked={data.is_published}
+                                onCheckedChange={(e) => setData('is_published', e.checked)}
+                            >
+                                Опубликован
+                            </Switch>
+                        </FormField>
+
+                        <FormField label="Показывать название" error={errors.show_name}>
+                            <Switch
+                                checked={data.show_name}
+                                onCheckedChange={(e) => setData('show_name', e.checked)}
+                            >
+                                Отображать название на превью
                             </Switch>
                         </FormField>
 

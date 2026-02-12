@@ -115,6 +115,15 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * Get the product selections for the product.
+     */
+    public function productSelections(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductSelection::class, 'product_product_selection')
+            ->withPivot('featured');
+    }
+
+    /**
      * Get the barcodes for the product.
      */
     public function barcodes(): HasMany
@@ -200,13 +209,6 @@ class Product extends Model implements HasMedia
         return $this->hasMany(ReturnItem::class);
     }
 
-    /**
-     * Get the product selections that the product belongs to.
-     */
-    public function productSelections(): BelongsToMany
-    {
-        return $this->belongsToMany(ProductSelection::class, 'product_product_selection');
-    }
 
     /**
      * Get the indexable data array for the model.

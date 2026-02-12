@@ -14,10 +14,14 @@ return new class extends Migration
         Schema::create('product_selections', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('slug')->unique();
             $table->text('short_description')->nullable();
             $table->text('description')->nullable();
             $table->string('meta_title')->nullable();
             $table->string('meta_description')->nullable();
+            $table->boolean('is_active')->default(true);
+            $table->boolean('show_on_home')->default(false);
+            $table->integer('sort_order')->default(0);
             $table->timestamps();
         });
     }
