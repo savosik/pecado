@@ -15,7 +15,7 @@ export default function PageHeader({ title, subtitle, actions }) {
             mb="6"
         >
             <Box>
-                <Heading as="h1" size="2xl" fontWeight="bold" color="fg">
+                <Heading as="h1" size="3xl" fontWeight="normal" color="fg">
                     {title}
                 </Heading>
                 {subtitle && (

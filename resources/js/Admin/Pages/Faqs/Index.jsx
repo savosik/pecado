@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, Text } from '@chakra-ui/react';
+import { Box, Text, Badge } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
@@ -33,12 +33,19 @@ export default function Index({ faqs, filters }) {
             render: (_, row) => <Text fontWeight="semibold">{row.title}</Text>,
         },
         {
-            key: 'content',
-            label: 'Ответ',
+            key: 'sort_order',
+            label: 'Порядок',
+            sortable: true,
+            render: (_, row) => <Text fontSize="sm">{row.sort_order}</Text>,
+        },
+        {
+            key: 'is_published',
+            label: 'Статус',
+            sortable: true,
             render: (_, row) => (
-                <Text noOfLines={2} fontSize="sm" color="gray.600">
-                    {row.content}
-                </Text>
+                <Badge colorPalette={row.is_published ? 'green' : 'gray'} variant="subtle">
+                    {row.is_published ? 'Опубликован' : 'Скрыт'}
+                </Badge>
             ),
         },
         createActionsColumn('admin.faqs', openDeleteDialog),

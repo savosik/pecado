@@ -19,7 +19,10 @@ class Page extends Model implements HasMedia
         'content',
         'meta_title',
         'meta_description',
+        'is_published',
     ];
 
-
+    protected $casts = [
+        'is_published' => 'boolean',
+    ];
 }

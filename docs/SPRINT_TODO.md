@@ -97,19 +97,19 @@
 
 ### 2.1 FAQ
 
-- [ ] `app/Http/Controllers/User/FaqController.php` — `index()`, данные: faqs с группировкой по category
-- [ ] `Pages/User/Faq/Index.jsx` — Chakra Accordion с категориями
-- [ ] Маршрут `GET /faq`
-- [ ] SEO: title, description, breadcrumbs
-- [ ] Empty state: если FAQ пуст
+- [x] `app/Http/Controllers/User/FaqController.php` — `index()`, данные: faqs с группировкой по category
+- [x] `Pages/User/Faq/Index.jsx` — Chakra Accordion с категориями
+- [x] Маршрут `GET /faq`
+- [x] SEO: title, description, breadcrumbs
+- [x] Empty state: если FAQ пуст
 
 ### 2.2 CMS-страницы
 
-- [ ] `app/Http/Controllers/User/PageController.php` — `show($slug)`, проверка `is_published`, abort(404)
-- [ ] `Pages/User/Pages/Show.jsx` — рендер HTML-контента через `dangerouslySetInnerHTML` + Chakra prose стили
-- [ ] Маршрут `GET /pages/{slug}`
-- [ ] SEO + breadcrumbs
-- [ ] HTML-санитизация на бэкенде
+- [x] `app/Http/Controllers/User/PageController.php` — `show($slug)`, проверка `is_published`, abort(404)
+- [x] `Pages/User/Pages/Show.jsx` — рендер HTML-контента через `dangerouslySetInnerHTML` + Chakra prose стили
+- [x] Маршрут `GET /pages/{slug}`
+- [x] SEO + breadcrumbs
+- [x] HTML-санитизация на бэкенде
 
 ### 2.3 Новости
 

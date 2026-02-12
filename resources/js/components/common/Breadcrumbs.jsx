@@ -1,6 +1,6 @@
-import { Breadcrumb, HStack, Text } from '@chakra-ui/react';
+import React from 'react';
+import { Breadcrumb } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuChevronRight } from 'react-icons/lu';
 
 /**
  * Хлебные крошки с JSON-LD (BreadcrumbList schema).
@@ -28,35 +28,31 @@ export default function Breadcrumbs({ items }) {
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            <Breadcrumb.Root
-                mb="4"
-                fontSize="sm"
-                separator={<LuChevronRight size={14} color="gray" />}
-            >
+            <Breadcrumb.Root mb="4" fontSize="sm">
                 <Breadcrumb.List>
                     {items.map((item, index) => {
                         const isLast = index === items.length - 1;
 
                         return (
-                            <Breadcrumb.Item key={index}>
-                                {isLast ? (
-                                    <Breadcrumb.CurrentLink
-                                        color="fg.muted"
-                                        fontWeight="medium"
-                                    >
-                                        {item.label}
-                                    </Breadcrumb.CurrentLink>
-                                ) : (
-                                    <>
+                            <React.Fragment key={index}>
+                                <Breadcrumb.Item>
+                                    {isLast ? (
+                                        <Breadcrumb.CurrentLink
+                                            color="fg.muted"
+                                            fontWeight="medium"
+                                        >
+                                            {item.label}
+                                        </Breadcrumb.CurrentLink>
+                                    ) : (
                                         <Breadcrumb.Link asChild>
                                             <Link href={item.url || '/'}>
                                                 {item.label}
                                             </Link>
                                         </Breadcrumb.Link>
-                                        <Breadcrumb.Separator />
-                                    </>
-                                )}
-                            </Breadcrumb.Item>
+                                    )}
+                                </Breadcrumb.Item>
+                                {!isLast && <Breadcrumb.Separator />}
+                            </React.Fragment>
                         );
                     })}
                 </Breadcrumb.List>

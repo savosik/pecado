@@ -18,6 +18,7 @@ return new class extends Migration
             $table->text('content');
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
+            $table->boolean('is_published')->default(true);
             $table->timestamps();
         });
     }

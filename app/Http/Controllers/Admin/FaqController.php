@@ -49,7 +49,12 @@ class FaqController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_published' => 'boolean',
         ]);
+
+        $validated['sort_order'] = $validated['sort_order'] ?? 0;
+        $validated['is_published'] = $validated['is_published'] ?? true;
 
         $faq = Faq::create($validated);
 
@@ -68,7 +73,11 @@ class FaqController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'required|string',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_published' => 'boolean',
         ]);
+
+        $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         $faq->update($validated);
 

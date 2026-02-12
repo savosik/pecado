@@ -89,27 +89,31 @@ export default function UserHeader() {
 
                         {/* Desktop Actions — lg+ */}
                         <HStack as="nav" gap="2" display={{ base: 'none', lg: 'flex' }} flexShrink="0">
-                            <IconButton
-                                as={Link}
-                                href="/favorites"
-                                aria-label="Избранное"
-                                variant="ghost"
-                                colorPalette="gray"
-                                size="sm"
-                            >
-                                <LuHeart />
-                            </IconButton>
+                            {user && (
+                                <>
+                                    <IconButton
+                                        as={Link}
+                                        href="/favorites"
+                                        aria-label="Избранное"
+                                        variant="ghost"
+                                        colorPalette="gray"
+                                        size="sm"
+                                    >
+                                        <LuHeart />
+                                    </IconButton>
 
-                            <IconButton
-                                as={Link}
-                                href="/cart"
-                                aria-label="Корзина"
-                                variant="ghost"
-                                colorPalette="gray"
-                                size="sm"
-                            >
-                                <LuShoppingCart />
-                            </IconButton>
+                                    <IconButton
+                                        as={Link}
+                                        href="/cart"
+                                        aria-label="Корзина"
+                                        variant="ghost"
+                                        colorPalette="gray"
+                                        size="sm"
+                                    >
+                                        <LuShoppingCart />
+                                    </IconButton>
+                                </>
+                            )}
 
                             {user ? (
                                 <Button
@@ -123,16 +127,27 @@ export default function UserHeader() {
                                     {user.name?.split(' ')[0] || 'Кабинет'}
                                 </Button>
                             ) : (
-                                <Button
-                                    as={Link}
-                                    href="/login"
-                                    variant="ghost"
-                                    colorPalette="gray"
-                                    size="sm"
-                                >
-                                    <LuUser />
-                                    Войти
-                                </Button>
+                                <HStack gap="1">
+                                    <Button
+                                        as={Link}
+                                        href="/login"
+                                        variant="ghost"
+                                        colorPalette="gray"
+                                        size="sm"
+                                    >
+                                        <LuUser />
+                                        Войти
+                                    </Button>
+                                    <Button
+                                        as={Link}
+                                        href="/register"
+                                        variant="outline"
+                                        colorPalette="pecado"
+                                        size="sm"
+                                    >
+                                        Регистрация
+                                    </Button>
+                                </HStack>
                             )}
                         </HStack>
 
@@ -153,9 +168,6 @@ export default function UserHeader() {
                 {/* Desktop Nav Row */}
                 <Box
                     display={{ base: 'none', lg: 'block' }}
-                    borderTop="1px solid"
-                    borderColor="gray.100"
-                    _dark={{ borderColor: 'gray.700' }}
                 >
                     <Box maxW="1360px" mx="auto" px="6" py="1.5">
                         <HStack gap="6">
@@ -166,7 +178,7 @@ export default function UserHeader() {
                                         as="button"
                                         onClick={openCatalog}
                                         fontSize="xs"
-                                        fontWeight="600"
+                                        fontWeight="500"
                                         textTransform="uppercase"
                                         letterSpacing="0.04em"
                                         color="gray.600"
@@ -181,7 +193,7 @@ export default function UserHeader() {
                                     <Link key={item.href} href={item.href}>
                                         <Text
                                             fontSize="xs"
-                                            fontWeight="600"
+                                            fontWeight="500"
                                             textTransform="uppercase"
                                             letterSpacing="0.04em"
                                             color="gray.600"
@@ -258,21 +270,25 @@ export default function UserHeader() {
                                         )
                                     ))}
 
-                                    <Separator />
+                                    {user && (
+                                        <>
+                                            <Separator />
 
-                                    <Link href="/favorites" onClick={() => setMobileMenuOpen(false)}>
-                                        <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
-                                            <LuHeart size={18} />
-                                            <Text fontSize="sm" fontWeight="500">Избранное</Text>
-                                        </HStack>
-                                    </Link>
+                                            <Link href="/favorites" onClick={() => setMobileMenuOpen(false)}>
+                                                <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
+                                                    <LuHeart size={18} />
+                                                    <Text fontSize="sm" fontWeight="500">Избранное</Text>
+                                                </HStack>
+                                            </Link>
 
-                                    <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
-                                        <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
-                                            <LuShoppingCart size={18} />
-                                            <Text fontSize="sm" fontWeight="500">Корзина</Text>
-                                        </HStack>
-                                    </Link>
+                                            <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
+                                                <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
+                                                    <LuShoppingCart size={18} />
+                                                    <Text fontSize="sm" fontWeight="500">Корзина</Text>
+                                                </HStack>
+                                            </Link>
+                                        </>
+                                    )}
 
                                     {user && (
                                         <>

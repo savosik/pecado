@@ -18,7 +18,9 @@ class FaqFactory extends Factory
     {
         return [
             'title' => $this->faker->sentence(),
-            'content' => $this->faker->paragraph(),
+            'content' => $this->faker->paragraphs(2, true),
+            'sort_order' => $this->faker->numberBetween(0, 100),
+            'is_published' => true,
         ];
     }
 }

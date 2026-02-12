@@ -2,13 +2,16 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, MarkdownEditor } from '@/Admin/Components';
-import { Card, Input, Stack } from '@chakra-ui/react';
+import { Card, Input, Stack, Flex } from '@chakra-ui/react';
+import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
     const { data, setData, post, processing, errors, transform } = useForm({
         title: '',
         content: '',
+        sort_order: 0,
+        is_published: true,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -65,6 +68,27 @@ export default function Create() {
                                     context="faq answer"
                                 />
                             </FormField>
+
+                            <Flex gap={6}>
+                                <FormField label="Порядок сортировки" error={errors.sort_order} flex="1">
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        value={data.sort_order}
+                                        onChange={(e) => setData('sort_order', parseInt(e.target.value) || 0)}
+                                    />
+                                </FormField>
+
+                                <FormField label="Опубликован" error={errors.is_published}>
+                                    <Switch
+                                        checked={data.is_published}
+                                        onCheckedChange={(e) => setData('is_published', e.checked)}
+                                        colorPalette="green"
+                                        size="lg"
+                                        mt="1"
+                                    />
+                                </FormField>
+                            </Flex>
 
                             <FormActions
                                 onSaveAndClose={handleSaveAndClose}

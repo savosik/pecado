@@ -27,6 +27,7 @@ class PageFactory extends Factory
             'content' => $this->faker->paragraphs(3, true),
             'meta_title' => $this->faker->sentence,
             'meta_description' => $this->faker->paragraph,
+            'is_published' => true,
         ];
     }
 }

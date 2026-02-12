@@ -6,6 +6,8 @@ use App\Http\Controllers\User\CabinetController;
 use App\Http\Controllers\User\FavoriteController;
 use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CurrencyController;
+use App\Http\Controllers\User\FaqController;
+use App\Http\Controllers\User\PageController;
 use Illuminate\Support\Facades\Route;
 
 // ──────────────────────────────────────────────
@@ -13,6 +15,8 @@ use Illuminate\Support\Facades\Route;
 // ──────────────────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/faq', [FaqController::class, 'index'])->name('faq');
+Route::get('/pages/{slug}', [PageController::class, 'show'])->name('pages.show');
 
 // ──────────────────────────────────────────────
 // API — Auth-protected endpoints

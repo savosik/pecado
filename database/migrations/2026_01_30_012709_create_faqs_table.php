@@ -15,6 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('title');
             $table->text('content');
+            $table->integer('sort_order')->default(0);
+            $table->boolean('is_published')->default(true);
             $table->timestamps();
         });
     }
