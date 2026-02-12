@@ -13,7 +13,7 @@ export default function AuthLayout({ children, title, subtitle }) {
                 justifyContent="center"
                 position="relative"
                 overflow="hidden"
-                bg="linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)"
+                bg="linear-gradient(135deg, #1a0508 0%, #4a0d19 50%, #2a0810 100%)"
             >
                 {/* Animated gradient orbs */}
                 <Box
@@ -23,7 +23,7 @@ export default function AuthLayout({ children, title, subtitle }) {
                     w="500px"
                     h="500px"
                     borderRadius="full"
-                    bg="linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(236, 72, 153, 0.2))"
+                    bg="linear-gradient(135deg, rgba(158, 27, 50, 0.4), rgba(226, 88, 88, 0.25))"
                     filter="blur(80px)"
                     animation="float 8s ease-in-out infinite"
                 />
@@ -34,7 +34,7 @@ export default function AuthLayout({ children, title, subtitle }) {
                     w="400px"
                     h="400px"
                     borderRadius="full"
-                    bg="linear-gradient(135deg, rgba(59, 130, 246, 0.3), rgba(16, 185, 129, 0.2))"
+                    bg="linear-gradient(135deg, rgba(226, 88, 88, 0.3), rgba(176, 176, 176, 0.2))"
                     filter="blur(80px)"
                     animation="float 6s ease-in-out infinite reverse"
                 />
@@ -45,7 +45,7 @@ export default function AuthLayout({ children, title, subtitle }) {
                     w="300px"
                     h="300px"
                     borderRadius="full"
-                    bg="linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(239, 68, 68, 0.15))"
+                    bg="linear-gradient(135deg, rgba(158, 27, 50, 0.2), rgba(226, 88, 88, 0.15))"
                     filter="blur(60px)"
                     animation="float 10s ease-in-out infinite"
                 />

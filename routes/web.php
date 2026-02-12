@@ -38,16 +38,11 @@ Route::middleware('auth')->group(function () {
 });
 
 // ──────────────────────────────────────────────
-// Public routes
+// User-facing routes (Home, Products, Cabinet)
 // ──────────────────────────────────────────────
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'laravelVersion' => app()->version(),
-        'phpVersion' => PHP_VERSION,
-    ]);
-});
+require __DIR__.'/user.php';
 
-// Каталог товаров с поиском
+// Каталог товаров с поиском (API)
 Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
 
 // AI Generation
