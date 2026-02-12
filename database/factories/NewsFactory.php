@@ -18,8 +18,10 @@ class NewsFactory extends Factory
     {
         return [
             'title' => $this->faker->sentence,
-            'slug' => $this->faker->slug,
-            'detailed_description' => $this->faker->text,
+            'slug' => $this->faker->unique()->slug,
+            'detailed_description' => $this->faker->paragraphs(5, true),
+            'is_published' => $this->faker->boolean(80),
+            'published_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
             'meta_title' => $this->faker->sentence,
             'meta_description' => $this->faker->paragraph,
         ];

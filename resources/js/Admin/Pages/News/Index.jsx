@@ -48,6 +48,15 @@ export default function Index({ news, filters }) {
             ),
         },
         {
+            key: 'is_published',
+            label: 'Статус',
+            render: (_, row) => (
+                <Badge colorPalette={row.is_published ? 'green' : 'gray'} variant="subtle">
+                    {row.is_published ? 'Опубликован' : 'Скрыт'}
+                </Badge>
+            ),
+        },
+        {
             key: 'tags',
             label: 'Теги',
             render: (_, row) => (

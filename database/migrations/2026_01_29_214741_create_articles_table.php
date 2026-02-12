@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('short_description');
             $table->text('detailed_description');
+            $table->boolean('is_published')->default(false);
+            $table->timestamp('published_at')->nullable();
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
             $table->timestamps();

@@ -59,6 +59,8 @@ class ArticleController extends Controller
             'slug' => 'required|string|max:255|unique:articles,slug',
             'short_description' => 'required|string',
             'detailed_description' => 'required|string',
+            'is_published' => 'boolean',
+            'published_at' => 'nullable|date',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
@@ -95,6 +97,7 @@ class ArticleController extends Controller
         $article->list_image = $article->getFirstMediaUrl('list-item');
         $article->detail_desktop_image = $article->getFirstMediaUrl('detail-item-desktop');
         $article->detail_mobile_image = $article->getFirstMediaUrl('detail-item-mobile');
+        $article->published_at = $article->published_at?->format('Y-m-d\TH:i');
 
         return Inertia::render('Admin/Pages/Articles/Edit', [
             'article' => $article,
@@ -108,6 +111,8 @@ class ArticleController extends Controller
             'slug' => 'required|string|max:255|unique:articles,slug,' . $article->id,
             'short_description' => 'required|string',
             'detailed_description' => 'required|string',
+            'is_published' => 'boolean',
+            'published_at' => 'nullable|date',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',

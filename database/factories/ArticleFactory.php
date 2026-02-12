@@ -18,9 +18,11 @@ class ArticleFactory extends Factory
     {
         return [
             'title' => $this->faker->sentence,
-            'slug' => $this->faker->slug,
+            'slug' => $this->faker->unique()->slug,
             'short_description' => $this->faker->sentence,
             'detailed_description' => $this->faker->paragraphs(3, true),
+            'is_published' => $this->faker->boolean(80),
+            'published_at' => $this->faker->dateTimeBetween('-6 months', 'now'),
             'meta_title' => $this->faker->sentence,
             'meta_description' => $this->faker->paragraph,
         ];

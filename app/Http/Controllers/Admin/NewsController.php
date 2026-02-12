@@ -57,6 +57,8 @@ class NewsController extends Controller
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:news,slug',
             'detailed_description' => 'required|string',
+            'is_published' => 'boolean',
+            'published_at' => 'nullable|date',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
@@ -93,6 +95,7 @@ class NewsController extends Controller
         $news->list_image = $news->getFirstMediaUrl('list-item');
         $news->detail_desktop_image = $news->getFirstMediaUrl('detail-item-desktop');
         $news->detail_mobile_image = $news->getFirstMediaUrl('detail-item-mobile');
+        $news->published_at = $news->published_at?->format('Y-m-d\TH:i');
 
         return Inertia::render('Admin/Pages/News/Edit', [
             'news' => $news,
@@ -105,6 +108,8 @@ class NewsController extends Controller
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:news,slug,' . $news->id,
             'detailed_description' => 'required|string',
+            'is_published' => 'boolean',
+            'published_at' => 'nullable|date',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',

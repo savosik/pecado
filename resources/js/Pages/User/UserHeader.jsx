@@ -8,13 +8,14 @@ import {
 import { Link, usePage } from '@inertiajs/react';
 import {
     LuSearch, LuHeart, LuShoppingCart, LuUser, LuMenu,
-    LuHouse, LuGrid2X2, LuNewspaper, LuCircleHelp, LuMapPin,
+    LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
 } from 'react-icons/lu';
 
 const navLinks = [
     { href: '/products', label: 'Каталог', icon: LuGrid2X2 },
     { href: '/promotions', label: 'Акции' },
     { href: '/news', label: 'Новости', icon: LuNewspaper },
+    { href: '/articles', label: 'Статьи', icon: LuFileText },
     { href: '/faq', label: 'FAQ', icon: LuCircleHelp },
     { href: '/where-to-buy', label: 'Где купить', icon: LuMapPin },
 ];

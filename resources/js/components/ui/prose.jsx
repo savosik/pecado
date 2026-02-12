@@ -6,7 +6,7 @@ export const Prose = chakra("div", {
     base: {
         color: "fg.muted",
         maxWidth: "65ch",
-        fontSize: "sm",
+        fontSize: "md",
         lineHeight: "1.7em",
         "& :where(p):not(.not-prose, .not-prose *)": {
             marginTop: "1em",
@@ -176,10 +176,10 @@ export const Prose = chakra("div", {
     variants: {
         size: {
             md: {
-                fontSize: "sm",
+                fontSize: "md",
             },
             lg: {
-                fontSize: "md",
+                fontSize: "lg",
             },
         },
     },

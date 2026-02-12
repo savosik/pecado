@@ -19,9 +19,23 @@ class News extends Model implements HasMedia
         'title',
         'slug',
         'detailed_description',
+        'is_published',
+        'published_at',
         'meta_title',
         'meta_description',
     ];
 
+    protected $casts = [
+        'is_published' => 'boolean',
+        'published_at' => 'datetime',
+    ];
 
+    /**
+     * Scope: только опубликованные новости.
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true)
+                     ->where('published_at', '<=', now());
+    }
 }

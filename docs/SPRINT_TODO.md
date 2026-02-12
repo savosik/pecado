@@ -113,26 +113,26 @@
 
 ### 2.3 Новости
 
-- [ ] `app/Http/Controllers/User/NewsController.php` — `index()` пагинация 12/стр., `show($slug)`
-- [ ] `components/common/ContentCard.jsx` — переиспользуемая карточка (изображение, дата, заголовок, excerpt, url, tags)
-- [ ] `Pages/User/News/Index.jsx` — Grid карточек ContentCard
-- [ ] `Pages/User/News/Show.jsx` — детальная: заголовок, дата, изображение, контент
-- [ ] Маршруты `GET /news`, `GET /news/{slug}`
-- [ ] SEO + breadcrumbs + structured data (Article)
-- [ ] Пагинация
+- [x] `app/Http/Controllers/User/NewsController.php` — `index()` пагинация 12/стр., `show($slug)`
+- [x] `components/common/ContentCard.jsx` — переиспользуемая карточка (изображение, дата, заголовок, excerpt, url, tags)
+- [x] `Pages/User/News/Index.jsx` — Grid карточек ContentCard
+- [x] `Pages/User/News/Show.jsx` — детальная: заголовок, дата, изображение, контент
+- [x] Маршруты `GET /news`, `GET /news/{slug}`
+- [x] SEO + breadcrumbs + structured data (Article)
+- [x] Пагинация
 
 ### 2.4 Статьи
 
-- [ ] `app/Http/Controllers/User/ArticleController.php` — `index()`, `show($slug)`
-- [ ] `Pages/User/Articles/Index.jsx` — аналогично News, переиспользует `ContentCard`
-- [ ] `Pages/User/Articles/Show.jsx` — детальная страница
-- [ ] Маршруты `GET /articles`, `GET /articles/{slug}`
-- [ ] SEO + breadcrumbs
+- [x] `app/Http/Controllers/User/ArticleController.php` — `index()`, `show($slug)`
+- [x] `Pages/User/Articles/Index.jsx` — аналогично News, переиспользует `ContentCard`
+- [x] `Pages/User/Articles/Show.jsx` — детальная страница
+- [x] Маршруты `GET /articles`, `GET /articles/{slug}`
+- [x] SEO + breadcrumbs
 
 ### 2.5 Обновление навигации
 
-- [ ] Добавить в `UserHeader.jsx` ссылки: Новости, Статьи, FAQ
-- [ ] Добавить ссылки в `UserFooter.jsx`
+- [x] Добавить в `UserHeader.jsx` ссылки: Новости, Статьи, FAQ
+- [x] Добавить ссылки в `UserFooter.jsx`
 
 ---
 

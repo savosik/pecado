@@ -4,6 +4,7 @@ import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields, MarkdownEditor } from '@/Admin/Components';
 import { Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
+import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
@@ -12,6 +13,8 @@ export default function Create() {
         slug: '',
         short_description: '',
         detailed_description: '',
+        is_published: true,
+        published_at: '',
         meta_title: '',
         meta_description: '',
         tags: [],
@@ -75,6 +78,23 @@ export default function Create() {
                                     <Input
                                         value={data.slug}
                                         onChange={(e) => handleSlugChange(e.target.value)}
+                                    />
+                                </FormField>
+                            </SimpleGrid>
+
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Опубликован" error={errors.is_published}>
+                                    <Switch
+                                        checked={data.is_published}
+                                        onCheckedChange={(e) => setData('is_published', e.checked)}
+                                    />
+                                </FormField>
+
+                                <FormField label="Дата публикации" error={errors.published_at}>
+                                    <Input
+                                        type="datetime-local"
+                                        value={data.published_at}
+                                        onChange={(e) => setData('published_at', e.target.value)}
                                     />
                                 </FormField>
                             </SimpleGrid>

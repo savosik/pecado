@@ -7,6 +7,8 @@ use App\Http\Controllers\User\FavoriteController;
 use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CurrencyController;
 use App\Http\Controllers\User\FaqController;
+use App\Http\Controllers\User\NewsController;
+use App\Http\Controllers\User\ArticleController;
 use App\Http\Controllers\User\PageController;
 use Illuminate\Support\Facades\Route;
 
@@ -16,6 +18,10 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/faq', [FaqController::class, 'index'])->name('faq');
+Route::get('/news', [NewsController::class, 'index'])->name('news.index');
+Route::get('/news/{slug}', [NewsController::class, 'show'])->name('news.show');
+Route::get('/articles', [ArticleController::class, 'index'])->name('articles.index');
+Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('articles.show');
 Route::get('/pages/{slug}', [PageController::class, 'show'])->name('pages.show');
 
 // ──────────────────────────────────────────────
