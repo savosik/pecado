@@ -100,6 +100,7 @@ class ImportCatalogProductJob implements ShouldQueue
                 ],
                 [
                     'name' => $partName,
+                    'slug' => Str::slug($partName) ?: Str::slug(Str::transliterate($partName)),
                     'parent_id' => $parentId,
                 ]
             );

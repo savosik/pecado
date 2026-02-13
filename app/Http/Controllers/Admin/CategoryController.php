@@ -105,6 +105,7 @@ class CategoryController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:categories,slug',
             'parent_id' => 'nullable|exists:categories,id',
             'external_id' => 'nullable|string|max:255',
             'short_description' => 'nullable|string',
@@ -116,6 +117,10 @@ class CategoryController extends AdminController
             'attribute_ids' => 'nullable|array',
             'attribute_ids.*' => 'exists:attributes,id',
         ]);
+
+        if (empty($validated['slug'])) {
+            $validated['slug'] = \Illuminate\Support\Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
+        }
 
         $category = Category::create($validated);
 
@@ -160,6 +165,7 @@ class CategoryController extends AdminController
             'category' => [
                 'id' => $category->id,
                 'name' => $category->name,
+                'slug' => $category->slug,
                 'parent_id' => $category->parent_id,
                 'external_id' => $category->external_id,
                 'short_description' => $category->short_description,
@@ -186,6 +192,7 @@ class CategoryController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
             'parent_id' => 'nullable|exists:categories,id',
             'external_id' => 'nullable|string|max:255',
             'short_description' => 'nullable|string',
@@ -203,6 +210,10 @@ class CategoryController extends AdminController
             return redirect()
                 ->back()
                 ->withErrors(['parent_id' => 'Категория не может быть родителем самой себя']);
+        }
+
+        if (empty($validated['slug'])) {
+            $validated['slug'] = \Illuminate\Support\Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
 
         $category->update($validated);

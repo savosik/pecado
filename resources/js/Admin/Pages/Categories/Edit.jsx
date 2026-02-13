@@ -1,6 +1,7 @@
 import { useMemo, useState, useRef } from 'react';
 import axios from 'axios';
 import { useForm, router } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, MarkdownEditor } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs, Badge, HStack, Text } from '@chakra-ui/react';
@@ -13,6 +14,7 @@ export default function Edit({ category, categories, availableAttributes }) {
     const [attrSearch, setAttrSearch] = useState('');
     const { data, setData, post, processing, errors, transform } = useForm({
         name: category.name || '',
+        slug: category.slug || '',
         parent_id: category.parent_id || '',
         external_id: category.external_id || '',
         short_description: category.short_description || '',
@@ -60,12 +62,16 @@ export default function Edit({ category, categories, availableAttributes }) {
 
     // Определяем, в каких табах есть ошибки
     const tabErrors = useMemo(() => ({
-        general: ['name', 'parent_id', 'external_id'].some(field => errors[field]),
+        general: ['name', 'slug', 'parent_id', 'external_id'].some(field => errors[field]),
         descriptions: ['short_description', 'description'].some(field => errors[field]),
         seo: ['meta_title', 'meta_description'].some(field => errors[field]),
         media: ['icon', 'tags'].some(field => errors[field]),
         attributes: !!errors.attribute_ids,
     }), [errors]);
+
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'name', isEditing: true,
+    });
 
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
@@ -183,7 +189,7 @@ export default function Edit({ category, categories, availableAttributes }) {
                                         >
                                             <Input
                                                 value={data.name}
-                                                onChange={(e) => setData('name', e.target.value)}
+                                                onChange={(e) => handleSourceChange(e.target.value)}
                                                 placeholder="Введите название категории"
                                             />
                                         </FormField>
@@ -199,6 +205,18 @@ export default function Edit({ category, categories, availableAttributes }) {
                                             placeholder="Выберите родительскую категорию"
                                             error={errors.parent_id}
                                         />
+
+                                        <FormField
+                                            label="Slug (URL)"
+                                            error={errors.slug}
+                                            helperText="Оставьте пустым для автогенерации"
+                                        >
+                                            <Input
+                                                value={data.slug}
+                                                onChange={(e) => handleSlugChange(e.target.value)}
+                                                placeholder="slug-kategorii"
+                                            />
+                                        </FormField>
 
                                         <FormField
                                             label="External ID"
