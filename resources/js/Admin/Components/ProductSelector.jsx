@@ -30,6 +30,7 @@ export const ProductSelector = ({
     mode = 'multi',
     searchRoute: customSearchRoute = null,
     searchParams: customSearchParams = {},
+    renderItemActions = null,
 }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
@@ -246,10 +247,10 @@ export const ProductSelector = ({
             {mode !== 'search' && (
                 <VStack align="stretch" gap={2}>
                     {mode === 'multi' && Array.isArray(value) && value.map((product) => (
-                        <SelectedItem key={product.id} product={product} onRemove={() => handleRemove(product.id)} />
+                        <SelectedItem key={product.id} product={product} onRemove={() => handleRemove(product.id)} renderItemActions={renderItemActions} />
                     ))}
                     {mode === 'single' && value && (
-                        <SelectedItem product={value} onRemove={() => handleRemove(value.id)} />
+                        <SelectedItem product={value} onRemove={() => handleRemove(value.id)} renderItemActions={renderItemActions} />
                     )}
                 </VStack>
             )}
@@ -257,7 +258,7 @@ export const ProductSelector = ({
     );
 };
 
-const SelectedItem = ({ product, onRemove }) => (
+const SelectedItem = ({ product, onRemove, renderItemActions }) => (
     <HStack
         p={3}
         borderWidth="1px"
@@ -266,7 +267,7 @@ const SelectedItem = ({ product, onRemove }) => (
         bg="white"
         justify="space-between"
     >
-        <HStack gap={3}>
+        <HStack gap={3} flex={1} minW={0}>
             <Image
                 src={product.image_url || null}
                 boxSize="40px"
@@ -274,7 +275,7 @@ const SelectedItem = ({ product, onRemove }) => (
                 borderRadius="sm"
                 fallbackSrc="https://via.placeholder.com/40"
             />
-            <Box>
+            <Box minW={0}>
                 <Text fontSize="sm" fontWeight="medium" lineClamp={1}>
                     {product.name}
                 </Text>
@@ -283,15 +284,18 @@ const SelectedItem = ({ product, onRemove }) => (
                 </Text>
             </Box>
         </HStack>
-        <IconButton
-            aria-label="Удалить"
-            size="sm"
-            variant="ghost"
-            colorPalette="red"
-            onClick={onRemove}
-        >
-            <FaTimes />
-        </IconButton>
+        <HStack gap={2} flexShrink={0}>
+            {renderItemActions && renderItemActions(product)}
+            <IconButton
+                aria-label="Удалить"
+                size="sm"
+                variant="ghost"
+                colorPalette="red"
+                onClick={onRemove}
+            >
+                <FaTimes />
+            </IconButton>
+        </HStack>
     </HStack>
 );
 

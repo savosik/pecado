@@ -4,7 +4,6 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector, MarkdownEditor } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Flex, Text, IconButton } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 
 export default function Edit({ product_selection }) {
@@ -212,35 +211,23 @@ export default function Edit({ product_selection }) {
                                             setData('featured_ids', data.featured_ids.filter(id => ids.includes(id)));
                                         }}
                                         error={errors.product_ids}
+                                        renderItemActions={(product) => (
+                                            <Switch
+                                                size="sm"
+                                                checked={data.featured_ids.includes(product.id)}
+                                                onCheckedChange={(e) => {
+                                                    setData('featured_ids',
+                                                        e.checked
+                                                            ? [...data.featured_ids, product.id]
+                                                            : data.featured_ids.filter(id => id !== product.id)
+                                                    );
+                                                }}
+                                            >
+                                                На главной
+                                            </Switch>
+                                        )}
                                     />
                                 </FormField>
-
-                                {data.products.length > 0 && (
-                                    <Box mt="3" p="3" bg="gray.50" borderRadius="md" _dark={{ bg: 'gray.800' }}>
-                                        <Text fontSize="sm" fontWeight="600" mb="2" color="gray.600">
-                                            Показывать на главной (в табах):
-                                        </Text>
-                                        <Stack gap="1">
-                                            {data.products.map((product) => (
-                                                <Checkbox
-                                                    key={product.id}
-                                                    size="sm"
-                                                    checked={data.featured_ids.includes(product.id)}
-                                                    onCheckedChange={(e) => {
-                                                        const checked = e.checked;
-                                                        setData('featured_ids',
-                                                            checked
-                                                                ? [...data.featured_ids, product.id]
-                                                                : data.featured_ids.filter(id => id !== product.id)
-                                                        );
-                                                    }}
-                                                >
-                                                    {product.name}
-                                                </Checkbox>
-                                            ))}
-                                        </Stack>
-                                    </Box>
-                                )}
                             </Box>
                         </Stack>
                     </Card.Body>
