@@ -201,33 +201,40 @@ export default function Edit({ product_selection }) {
                             </SimpleGrid>
 
                             <Box>
-                                <FormField label="Привязанные товары" error={errors.product_ids}>
-                                    <ProductSelector
-                                        value={data.products}
-                                        onChange={(products) => {
-                                            setData('products', products);
-                                            // Убираем из featured_ids те, что больше не в списке
-                                            const ids = products.map(p => p.id);
-                                            setData('featured_ids', data.featured_ids.filter(id => ids.includes(id)));
-                                        }}
-                                        error={errors.product_ids}
-                                        renderItemActions={(product) => (
-                                            <Switch
-                                                size="sm"
-                                                checked={data.featured_ids.includes(product.id)}
-                                                onCheckedChange={(e) => {
-                                                    setData('featured_ids',
-                                                        e.checked
-                                                            ? [...data.featured_ids, product.id]
-                                                            : data.featured_ids.filter(id => id !== product.id)
-                                                    );
-                                                }}
-                                            >
-                                                На главной
-                                            </Switch>
-                                        )}
-                                    />
-                                </FormField>
+                                <Text fontWeight="medium" fontSize="sm" mb={1}>
+                                    Привязанные товары
+                                </Text>
+                                <ProductSelector
+                                    value={data.products}
+                                    onChange={(products) => {
+                                        const ids = products.map(p => p.id);
+                                        setData(prev => ({
+                                            ...prev,
+                                            products,
+                                            featured_ids: prev.featured_ids.filter(id => ids.includes(id)),
+                                        }));
+                                    }}
+                                    error={errors.product_ids}
+                                    renderItemActions={(product) => (
+                                        <Switch
+                                            id={`featured-switch-${product.id}`}
+                                            size="sm"
+                                            checked={data.featured_ids.includes(product.id)}
+                                            onCheckedChange={(e) => {
+                                                setData('featured_ids',
+                                                    e.checked
+                                                        ? [...data.featured_ids, product.id]
+                                                        : data.featured_ids.filter(id => id !== product.id)
+                                                );
+                                            }}
+                                        >
+                                            На главной
+                                        </Switch>
+                                    )}
+                                />
+                                {errors.product_ids && (
+                                    <Text color="red.500" fontSize="sm" mt={1}>{errors.product_ids}</Text>
+                                )}
                             </Box>
                         </Stack>
                     </Card.Body>

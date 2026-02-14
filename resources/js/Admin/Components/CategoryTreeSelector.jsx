@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { Box, Text, Badge } from '@chakra-ui/react';
+import { Box, HStack, Text, Badge } from '@chakra-ui/react';
 import { LuFolder, LuFolderOpen, LuCircle, LuCircleDot } from 'react-icons/lu';
 
 /**

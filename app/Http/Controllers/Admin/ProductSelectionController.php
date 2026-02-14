@@ -176,7 +176,7 @@ class ProductSelectionController extends AdminController
      */
     public function edit(ProductSelection $productSelection): Response
     {
-        $productSelection->load(['products', 'media']);
+        $productSelection->load(['products.media', 'media']);
 
         return Inertia::render('Admin/Pages/ProductSelections/Edit', [
             'product_selection' => [
@@ -191,6 +191,8 @@ class ProductSelectionController extends AdminController
                 'products' => $productSelection->products->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
+                    'sku' => $p->sku,
+                    'image_url' => $p->getFirstMediaUrl('main'),
                     'featured' => (bool) $p->pivot->featured,
                 ]),
                 'desktop_image_url' => $productSelection->getFirstMediaUrl('desktop'),

@@ -161,6 +161,7 @@ export const ProductSelector = ({
         <Box ref={containerRef} width="100%">
             <Box position="relative" mb={mode === 'search' ? 0 : 4}>
                 <Input
+                    id="product-selector-search"
                     placeholder="Поиск товара по названию, артикулу, штрихкоду..."
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}

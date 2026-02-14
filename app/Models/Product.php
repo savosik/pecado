@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Tags\HasTags;
 
 use Laravel\Scout\Searchable;
@@ -73,6 +74,15 @@ class Product extends Model implements HasMedia
         $this->addMediaCollection('video')
             ->acceptsMimeTypes(['video/mp4', 'video/webm', 'video/quicktime'])
             ->singleFile();
+    }
+
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        $this->addMediaConversion('thumb')
+            ->width(300)
+            ->height(450)
+            ->nonQueued()
+            ->performOnCollections('main', 'additional');
     }
 
     /**
