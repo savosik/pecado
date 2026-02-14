@@ -16,8 +16,8 @@ export default function ProductSelectionTabs({ selections = [] }) {
     const activeSelection = useMemo(() => {
         const sel = selections[activeIndex] || null;
         if (!sel) return null;
-        // Ограничиваем до 6 товаров (делится на 2, 3, 6 — все сетки)
-        const maxProducts = 6;
+        // Ограничиваем до 5 товаров (кратно 5 колонкам на xl)
+        const maxProducts = 5;
         return {
             ...sel,
             products: sel.products?.slice(0, maxProducts) || [],
@@ -161,12 +161,19 @@ export default function ProductSelectionTabs({ selections = [] }) {
                             templateColumns={{
                                 base: 'repeat(2, 1fr)',
                                 md: 'repeat(3, 1fr)',
-                                xl: 'repeat(6, 1fr)',
+                                xl: 'repeat(5, 1fr)',
                             }}
                             gap={{ base: '3', md: '4' }}
                         >
-                            {activeSelection.products.map((product) => (
-                                <GridItem key={product.id}>
+                            {activeSelection.products.map((product, index) => (
+                                <GridItem
+                                    key={product.id}
+                                    h="100%"
+                                    display={index === activeSelection.products.length - 1 && activeSelection.products.length % 2 !== 0
+                                        ? { base: 'none', md: 'block' }
+                                        : undefined
+                                    }
+                                >
                                     <ProductCard product={product} />
                                 </GridItem>
                             ))}

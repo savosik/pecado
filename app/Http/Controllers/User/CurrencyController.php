@@ -4,16 +4,16 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
-use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class CurrencyController extends Controller
 {
     /**
      * Переключить валюту пользователя.
-     * POST /api/currency/switch
+     * POST /api/currency/switch (web-redirect)
      */
-    public function switch(Request $request): JsonResponse
+    public function switch(Request $request): RedirectResponse
     {
         $request->validate([
             'code' => 'required|string|exists:currencies,code',
@@ -25,13 +25,7 @@ class CurrencyController extends Controller
             'currency_id' => $currency->id,
         ]);
 
-        return response()->json([
-            'message' => 'Валюта переключена',
-            'currency' => [
-                'code' => $currency->code,
-                'name' => $currency->name,
-                'symbol' => $currency->symbol,
-            ],
-        ]);
+        return back();
     }
 }
+

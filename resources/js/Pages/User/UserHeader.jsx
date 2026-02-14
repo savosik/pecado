@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import CatalogPanel from './CatalogPanel';
+import CurrencySwitcher from './Components/CurrencySwitcher';
 import {
     Box, Flex, HStack, Text, Input, IconButton, Button,
     Drawer, Portal, CloseButton, VStack, Separator,
@@ -90,6 +91,7 @@ export default function UserHeader() {
 
                         {/* Desktop Actions — lg+ */}
                         <HStack as="nav" gap="2" display={{ base: 'none', lg: 'flex' }} flexShrink="0">
+                            {user && <CurrencySwitcher />}
                             {user && (
                                 <>
                                     <IconButton
@@ -228,10 +230,15 @@ export default function UserHeader() {
                                 <VStack align="stretch" gap="1">
                                     {/* User info */}
                                     {user ? (
-                                        <Box px="3" py="3" bg="gray.50" borderRadius="lg" mb="2" _dark={{ bg: 'gray.800' }}>
-                                            <Text fontWeight="600" fontSize="sm">{user.name}</Text>
-                                            <Text fontSize="xs" color="gray.500">{user.email}</Text>
-                                        </Box>
+                                        <>
+                                            <Box px="3" py="3" bg="gray.50" borderRadius="lg" mb="2" _dark={{ bg: 'gray.800' }}>
+                                                <Text fontWeight="600" fontSize="sm">{user.name}</Text>
+                                                <Text fontSize="xs" color="gray.500">{user.email}</Text>
+                                            </Box>
+                                            <Box mb="2">
+                                                <CurrencySwitcher />
+                                            </Box>
+                                        </>
                                     ) : (
                                         <HStack gap="2" mb="2">
                                             <Button as={Link} href="/login" size="sm" colorPalette="pecado" variant="solid" flex="1" onClick={() => setMobileMenuOpen(false)}>

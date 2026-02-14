@@ -2,7 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Currency;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
@@ -46,6 +48,14 @@ class HandleInertiaRequests extends Middleware
                     'is_admin' => $request->user()->is_admin,
                 ] : null,
             ],
+            'currency' => $request->user() ? fn () => [
+                'code'   => $request->user()->currency?->code ?? 'RUB',
+                'name'   => $request->user()->currency?->name ?? 'Российский рубль',
+                'symbol' => $request->user()->currency?->symbol ?? '₽',
+                'available' => Cache::remember('currencies.list', 3600,
+                    fn () => Currency::select('id', 'code', 'name', 'symbol')->get()
+                ),
+            ] : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error' => fn () => $request->session()->get('error'),
