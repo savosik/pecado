@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { Box, IconButton } from '@chakra-ui/react';
+import { Box, IconButton, Spinner } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight, LuImageOff } from 'react-icons/lu';
 
 /**
@@ -12,13 +12,17 @@ export default function ProductMiniGallery({
     product,
     maxImages = 6,
     showMainImage = true,
+    isHovered = false,
 }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [loadedImages, setLoadedImages] = useState(new Set());
     const [imageErrors, setImageErrors] = useState(new Set());
     const [touchStart, setTouchStart] = useState(null);
     const [touchEnd, setTouchEnd] = useState(null);
+    const [swipeDirection, setSwipeDirection] = useState(null);
     const [isAutoPlaying, setIsAutoPlaying] = useState(false);
+    const swipeTimeoutRef = useRef(null);
+
     const containerRef = useRef(null);
     const observerRef = useRef(null);
     const autoPlayTimerRef = useRef(null);
@@ -93,10 +97,11 @@ export default function ProductMiniGallery({
         return () => {
             if (autoPlayTimerRef.current) clearTimeout(autoPlayTimerRef.current);
             if (autoPlayIntervalRef.current) clearInterval(autoPlayIntervalRef.current);
+            if (swipeTimeoutRef.current) clearTimeout(swipeTimeoutRef.current);
         };
     }, []);
 
-    // Lazy-загрузка первого изображения через IntersectionObserver
+    // Lazy-загрузка первого изображения
     useEffect(() => {
         if (!containerRef.current || images.length === 0) return;
 
@@ -145,8 +150,17 @@ export default function ProductMiniGallery({
     const onTouchEnd = () => {
         if (!touchStart || !touchEnd) return;
         const dist = touchStart - touchEnd;
-        if (dist > 50) goNext();
-        if (dist < -50) goPrev();
+
+        if (dist > 50) {
+            setSwipeDirection('left');
+            goNext();
+            swipeTimeoutRef.current = setTimeout(() => setSwipeDirection(null), 300);
+        }
+        if (dist < -50) {
+            setSwipeDirection('right');
+            goPrev();
+            swipeTimeoutRef.current = setTimeout(() => setSwipeDirection(null), 300);
+        }
     };
 
     const goNext = (e) => {
@@ -209,12 +223,13 @@ export default function ProductMiniGallery({
             ref={containerRef}
             position="relative"
             w="100%"
-            css={{ aspectRatio: '2 / 3' }}
+            css={{ aspectRatio: '2 / 3', touchAction: 'pan-y' }}
             overflow="hidden"
             bg="gray.200"
             _dark={{ bg: 'gray.700' }}
             userSelect="none"
             role="group"
+
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
@@ -224,15 +239,7 @@ export default function ProductMiniGallery({
             {/* Спиннер загрузки */}
             {!isCurrentLoaded && !hasCurrentError && (
                 <Box position="absolute" inset="0" display="flex" alignItems="center" justifyContent="center">
-                    <Box
-                        w="4"
-                        h="4"
-                        borderWidth="2px"
-                        borderColor="gray.300"
-                        borderTopColor="gray.600"
-                        borderRadius="full"
-                        animation="spin 0.8s linear infinite"
-                    />
+                    <Spinner size="sm" color="gray.500" />
                 </Box>
             )}
 
@@ -253,8 +260,13 @@ export default function ProductMiniGallery({
                     h="100%"
                     w="100%"
                     objectFit="cover"
-                    transition="opacity 0.3s"
+                    transition="opacity 0.3s, transform 0.3s"
                     opacity={isCurrentLoaded ? 1 : 0}
+                    transform={
+                        swipeDirection === 'left' ? 'translateX(-8px)' :
+                            swipeDirection === 'right' ? 'translateX(8px)' :
+                                'translateX(0)'
+                    }
                     onLoad={() => setLoadedImages((s) => new Set([...s, currentIndex]))}
                     onError={() => setImageErrors((s) => new Set([...s, currentIndex]))}
                 />
@@ -264,21 +276,21 @@ export default function ProductMiniGallery({
             {hasMultipleImages && (
                 <Box
                     position="absolute"
-                    bottom="1.5"
+                    bottom="2"
                     left="50%"
                     transform="translateX(-50%)"
                     display="flex"
-                    gap="1"
-                    opacity="0"
-                    _groupHover={{ opacity: 1 }}
+                    gap="1.5"
+                    opacity={isHovered ? 1 : 0}
                     transition="opacity 0.2s"
+                    zIndex="2"
                 >
                     {images.map((_, i) => (
                         <Box
                             key={i}
                             as="button"
-                            w="6px"
-                            h="6px"
+                            w="8px"
+                            h="8px"
                             borderRadius="full"
                             bg={i === currentIndex ? 'white' : 'whiteAlpha.600'}
                             boxShadow={i === currentIndex ? 'sm' : 'none'}
@@ -304,16 +316,16 @@ export default function ProductMiniGallery({
                         variant="solid"
                         bg="blackAlpha.500"
                         color="white"
-                        borderRadius="sm"
-                        opacity="0"
-                        _groupHover={{ opacity: 1 }}
+                        borderRadius="md"
+                        opacity={isHovered ? 1 : 0}
                         transition="opacity 0.2s"
                         _hover={{ bg: 'blackAlpha.700' }}
                         onClick={goPrev}
-                        minW="24px"
-                        h="24px"
+                        minW="28px"
+                        h="28px"
+                        zIndex="2"
                     >
-                        <LuChevronLeft size={14} />
+                        <LuChevronLeft size={16} />
                     </IconButton>
                     <IconButton
                         aria-label="Следующее"
@@ -325,16 +337,16 @@ export default function ProductMiniGallery({
                         variant="solid"
                         bg="blackAlpha.500"
                         color="white"
-                        borderRadius="sm"
-                        opacity="0"
-                        _groupHover={{ opacity: 1 }}
+                        borderRadius="md"
+                        opacity={isHovered ? 1 : 0}
                         transition="opacity 0.2s"
                         _hover={{ bg: 'blackAlpha.700' }}
                         onClick={goNext}
-                        minW="24px"
-                        h="24px"
+                        minW="28px"
+                        h="28px"
+                        zIndex="2"
                     >
-                        <LuChevronRight size={14} />
+                        <LuChevronRight size={16} />
                     </IconButton>
                 </>
             )}

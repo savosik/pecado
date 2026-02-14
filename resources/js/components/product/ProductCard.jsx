@@ -19,6 +19,7 @@ export default function ProductCard({ product, loading = false }) {
     const currencySymbol = currency?.symbol || '₽';
 
     const [isFav, setIsFav] = useState(false);
+    const [isImageHovered, setIsImageHovered] = useState(false);
 
     // Подписка на стор избранного
     useEffect(() => {
@@ -110,9 +111,13 @@ export default function ProductCard({ product, loading = false }) {
             flexDirection="column"
         >
             {/* Мини-галерея */}
-            <Box position="relative">
+            <Box
+                position="relative"
+                onMouseEnter={() => setIsImageHovered(true)}
+                onMouseLeave={() => setIsImageHovered(false)}
+            >
                 <Link href={`/products/${product.slug}`}>
-                    <ProductMiniGallery product={product} maxImages={6} showMainImage />
+                    <ProductMiniGallery product={product} maxImages={6} showMainImage isHovered={isImageHovered} />
                 </Link>
 
                 {/* Бейджи */}
