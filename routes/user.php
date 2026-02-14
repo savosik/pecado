@@ -24,14 +24,16 @@ Route::get('/articles', [ArticleController::class, 'index'])->name('articles.ind
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('articles.show');
 Route::get('/pages/{slug}', [PageController::class, 'show'])->name('pages.show');
 
+// Избранное (страница)
+Route::get('/favorites', [FavoriteController::class, 'index'])->middleware('auth')->name('favorites.index');
+
 // ──────────────────────────────────────────────
 // API — Auth-protected endpoints
 // ──────────────────────────────────────────────
 Route::prefix('api')->middleware('auth')->group(function () {
     // Избранное
     Route::get('/favorites/ids', [FavoriteController::class, 'ids']);
-    Route::post('/favorites/{product}', [FavoriteController::class, 'store']);
-    Route::delete('/favorites/{product}', [FavoriteController::class, 'destroy']);
+    Route::post('/favorites/{product}/toggle', [FavoriteController::class, 'toggle']);
 
     // Корзина
     Route::get('/cart/summary', [CartController::class, 'summary']);

@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useFavoritesStore } from '@/stores/useFavoritesStore';
 import CatalogPanel from './CatalogPanel';
 import CurrencySwitcher from './Components/CurrencySwitcher';
 import {
@@ -21,11 +22,44 @@ const navLinks = [
     { href: '/where-to-buy', label: 'Где купить', icon: LuMapPin },
 ];
 
+/**
+ * Бейдж-счётчик избранного (число в красном кружке).
+ */
+function FavBadge({ count }) {
+    if (count <= 0) return null;
+    return (
+        <Box
+            as="span"
+            bg="red.500"
+            color="white"
+            fontSize="10px"
+            fontWeight="500"
+            borderRadius="full"
+            minW="18px"
+            h="18px"
+            lineHeight="18px"
+            textAlign="center"
+            px="4px"
+            boxShadow="sm"
+            pointerEvents="none"
+        >
+            {count > 99 ? '99+' : count}
+        </Box>
+    );
+}
+
 export default function UserHeader() {
     const { auth } = usePage().props;
     const user = auth?.user;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [catalogOpen, setCatalogOpen] = useState(false);
+    const favCount = useFavoritesStore((s) => s.ids.size);
+
+    // Загрузка избранного при наличии пользователя (user?.id — стабильный примитив)
+    useEffect(() => {
+        if (!user) return;
+        useFavoritesStore.getState().loadOnce(user);
+    }, [user?.id]);
 
     const openCatalog = useCallback(() => {
         setMobileMenuOpen(false);
@@ -94,16 +128,14 @@ export default function UserHeader() {
                             {user && <CurrencySwitcher />}
                             {user && (
                                 <>
-                                    <IconButton
-                                        as={Link}
-                                        href="/favorites"
-                                        aria-label="Избранное"
-                                        variant="ghost"
-                                        colorPalette="gray"
-                                        size="sm"
-                                    >
-                                        <LuHeart />
-                                    </IconButton>
+                                    <Link href="/favorites" aria-label="Избранное">
+                                        <Box as="span" position="relative" display="inline-flex" p="2" borderRadius="sm" _hover={{ bg: 'gray.100' }} _dark={{ _hover: { bg: 'gray.800' } }}>
+                                            <LuHeart size={24} />
+                                            <Box as="span" position="absolute" top="0" right="0">
+                                                <FavBadge count={favCount} />
+                                            </Box>
+                                        </Box>
+                                    </Link>
 
                                     <IconButton
                                         as={Link}
@@ -286,6 +318,7 @@ export default function UserHeader() {
                                                 <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
                                                     <LuHeart size={18} />
                                                     <Text fontSize="sm" fontWeight="500">Избранное</Text>
+                                                    <FavBadge count={favCount} />
                                                 </HStack>
                                             </Link>
 

@@ -73,11 +73,7 @@ export const useFavoritesStore = create((set, get) => ({
         });
 
         try {
-            if (was) {
-                await window.axios.delete(`/api/favorites/${pid}`);
-            } else {
-                await window.axios.post(`/api/favorites/${pid}`);
-            }
+            await window.axios.post(`/api/favorites/${pid}/toggle`);
         } catch {
             // Rollback при ошибке
             set((state) => {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3 } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
@@ -86,7 +86,9 @@ export default function ProductCard({ product, loading = false }) {
     const discountPct = product.discount_percentage || null;
     const hasSale = salePrice != null && salePrice < price;
     const stockQty = product.stock_quantity || 0;
+    const preorderQty = product.preorder_quantity || 0;
     const isInStock = stockQty > 0;
+    const isPreorder = !isInStock && preorderQty > 0;
     const brandName = product.brand_name || null;
 
     const formatPrice = (value) => {
@@ -98,6 +100,7 @@ export default function ProductCard({ product, loading = false }) {
         <Box
             border="1px solid"
             borderColor="gray.100"
+            bg="white"
             _dark={{ borderColor: 'gray.700', bg: 'gray.800' }}
             overflow="hidden"
             transition="all 0.2s"
@@ -215,6 +218,11 @@ export default function ProductCard({ product, loading = false }) {
                                         <LuCheck size={14} color="var(--chakra-colors-green-600)" />
                                         <Text color="green.600" lineClamp="1">В наличии</Text>
                                     </>
+                                ) : isPreorder ? (
+                                    <>
+                                        <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
+                                        <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                                    </>
                                 ) : (
                                     <>
                                         <LuCircleX size={14} color="var(--chakra-colors-red-600)" />
@@ -243,10 +251,12 @@ export default function ProductCard({ product, loading = false }) {
                             )}
                         </Flex>
 
-                        {/* Корзина */}
-                        <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                            <CartQuantityControl productId={product.id} disabled={!isInStock} />
-                        </Box>
+                        {/* Корзина — скрываем, если нет в наличии и не предзаказ, или цена 0 */}
+                        {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
+                            <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                <CartQuantityControl productId={product.id} />
+                            </Box>
+                        )}
                     </Box>
                 )}
             </Box>

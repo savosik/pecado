@@ -184,7 +184,7 @@ export default function ProductMiniGallery({
             <Box
                 w="100%"
                 css={{ aspectRatio: '2 / 3' }}
-                bg="gray.100"
+                bg="gray.200"
                 _dark={{ bg: 'gray.700' }}
                 display="flex"
                 alignItems="center"
@@ -211,7 +211,7 @@ export default function ProductMiniGallery({
             w="100%"
             css={{ aspectRatio: '2 / 3' }}
             overflow="hidden"
-            bg="gray.100"
+            bg="gray.200"
             _dark={{ bg: 'gray.700' }}
             userSelect="none"
             role="group"
