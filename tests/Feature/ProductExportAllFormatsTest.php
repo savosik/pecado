@@ -58,9 +58,9 @@ class ProductExportAllFormatsTest extends TestCase
             ['key' => 'model.name', 'label' => 'Модель (название)'],
             ['key' => 'model.code', 'label' => 'Модель (код)'],
 
-            // ─── Категории ───
-            ['key' => 'categories.name', 'label' => 'Категории', 'modifiers' => ['separator' => ', ']],
-            ['key' => 'category_path', 'label' => 'Путь категорий'],
+            // ─── Категория ───
+            ['key' => 'category.name', 'label' => 'Категория'],
+            ['key' => 'category_path', 'label' => 'Путь категории'],
 
             // ─── Сертификаты ───
             ['key' => 'certificates.name', 'label' => 'Сертификаты', 'modifiers' => ['separator' => ', ']],

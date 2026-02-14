@@ -35,7 +35,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         is_marked: product.is_marked || false,
         is_liquidation: product.is_liquidation || false,
         for_marketplaces: product.for_marketplaces || false,
-        categories: product.categories || [],
+        category_id: product.category_id || null,
 
         additional_images: [],
         video: null,
@@ -62,7 +62,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
     // Определяем, в каких табах есть ошибки (мемоизируем)
     const tabErrors = useMemo(() => ({
         general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
-        categories: ['categories'].some(field => errors[field]),
+        categories: ['category_id'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
         descriptions: ['short_description', 'description', 'meta_title', 'meta_description'].some(field => errors[field]),
@@ -347,8 +347,8 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                 <Stack gap={6} mt={6}>
                                     <CategoryTreeSelector
                                         categoryTree={categoryTree}
-                                        value={data.categories}
-                                        onChange={(ids) => setData('categories', ids)}
+                                        value={data.category_id}
+                                        onChange={(id) => setData('category_id', id)}
                                     />
                                 </Stack>
                             </Tabs.Content>
@@ -625,7 +625,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                             <Tabs.Content value="attributes">
                                 <Stack gap={6} mt={6}>
                                     <CategoryAttributesSection
-                                        categoryIds={data.categories}
+                                        categoryId={data.category_id}
                                         value={data.attributes}
                                         onChange={(attrs) => setData('attributes', attrs)}
                                         errors={errors.attributes}

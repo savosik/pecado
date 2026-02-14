@@ -42,6 +42,7 @@ return new class extends Migration
             $table->text('meta_description')->nullable();
 
             // Foreign keys (actual constraints added later due to migration order)
+            $table->unsignedBigInteger('category_id')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('model_id')->nullable();
             $table->unsignedBigInteger('size_chart_id')->nullable();

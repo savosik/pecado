@@ -53,7 +53,7 @@ class ImportCatalogProductJob implements ShouldQueue
 
             // 5. Attach product to leaf category
             if ($leafCategory) {
-                $product->categories()->syncWithoutDetaching([$leafCategory->id]);
+                $product->update(['category_id' => $leafCategory->id]);
             }
 
             // 6. Import barcodes

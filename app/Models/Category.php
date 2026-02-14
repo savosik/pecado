@@ -36,9 +36,9 @@ class Category extends Model implements HasMedia
     /**
      * Get the products for this category.
      */
-    public function products(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function products(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
-        return $this->belongsToMany(Product::class, 'category_product');
+        return $this->hasMany(Product::class);
     }
 
     /**

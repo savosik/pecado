@@ -1,14 +1,27 @@
-import { useCallback } from 'react';
-import { Box, HStack, Text, Badge, Stack, Collapsible } from '@chakra-ui/react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { LuFolder, LuFolderOpen } from 'react-icons/lu';
+import { useCallback, useMemo } from 'react';
+import { Box, Text, Badge } from '@chakra-ui/react';
+import { LuFolder, LuFolderOpen, LuCircle, LuCircleDot } from 'react-icons/lu';
 
 /**
- * Рекурсивный узел дерева категорий с чекбоксом.
+ * Строит карту id → ancestors для быстрого получения пути.
  */
-const CategoryTreeNode = ({ category, level = 0, selectedIds, onToggle }) => {
+function buildAncestorMap(tree, parentPath = []) {
+    const map = {};
+    for (const node of tree) {
+        map[node.id] = parentPath;
+        if (node.children?.length) {
+            Object.assign(map, buildAncestorMap(node.children, [...parentPath, node.name]));
+        }
+    }
+    return map;
+}
+
+/**
+ * Рекурсивный узел дерева категорий с radio-кнопкой (одиночный выбор).
+ */
+const CategoryTreeNode = ({ category, level = 0, selectedId, onSelect }) => {
     const hasChildren = category.children && category.children.length > 0;
-    const isSelected = selectedIds.includes(category.id);
+    const isSelected = selectedId === category.id;
 
     return (
         <Box>
@@ -19,21 +32,18 @@ const CategoryTreeNode = ({ category, level = 0, selectedIds, onToggle }) => {
                 _hover={{ bg: 'bg.subtle' }}
                 borderRadius="md"
                 cursor="pointer"
-                onClick={() => onToggle(category.id)}
+                onClick={() => onSelect(isSelected ? null : category.id)}
+                bg={isSelected ? 'blue.50' : undefined}
             >
                 {/* Category Icon */}
                 <Box color="fg.muted" flexShrink={0}>
                     {hasChildren ? <LuFolderOpen size={18} /> : <LuFolder size={18} />}
                 </Box>
 
-                {/* Checkbox */}
-                <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => onToggle(category.id)}
-                    onClick={(e) => e.stopPropagation()}
-                    colorPalette="blue"
-                    size="sm"
-                />
+                {/* Radio indicator */}
+                <Box color={isSelected ? 'blue.500' : 'fg.muted'} flexShrink={0}>
+                    {isSelected ? <LuCircleDot size={18} /> : <LuCircle size={18} />}
+                </Box>
 
                 {/* Name */}
                 <Text
@@ -58,8 +68,8 @@ const CategoryTreeNode = ({ category, level = 0, selectedIds, onToggle }) => {
                             key={child.id}
                             category={child}
                             level={level + 1}
-                            selectedIds={selectedIds}
-                            onToggle={onToggle}
+                            selectedId={selectedId}
+                            onSelect={onSelect}
                         />
                     ))}
                 </Box>
@@ -69,20 +79,45 @@ const CategoryTreeNode = ({ category, level = 0, selectedIds, onToggle }) => {
 };
 
 /**
- * Компонент выбора категорий в виде иерархического дерева с чекбоксами.
+ * Находит категорию по id в дереве рекурсивно.
+ */
+function findCategoryInTree(tree, id) {
+    for (const node of tree) {
+        if (node.id === id) return node;
+        if (node.children?.length) {
+            const found = findCategoryInTree(node.children, id);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
+/**
+ * Компонент выбора одной категории в виде иерархического дерева с radio-кнопками.
  * Дерево всегда полностью раскрыто.
  *
  * @param {Array} categoryTree - дерево категорий (результат toTree())
- * @param {Array} value - массив выбранных ID категорий
- * @param {Function} onChange - callback(newSelectedIds)
+ * @param {number|null} value - ID выбранной категории или null
+ * @param {Function} onChange - callback(categoryId | null)
  */
-export function CategoryTreeSelector({ categoryTree = [], value = [], onChange }) {
-    const handleToggle = useCallback((id) => {
-        const newSelected = value.includes(id)
-            ? value.filter(v => v !== id)
-            : [...value, id];
-        onChange(newSelected);
-    }, [value, onChange]);
+export function CategoryTreeSelector({ categoryTree = [], value = null, onChange }) {
+    const handleSelect = useCallback((id) => {
+        onChange(id);
+    }, [onChange]);
+
+    // Строим путь для выбранной категории
+    const ancestorMap = useMemo(() => buildAncestorMap(categoryTree), [categoryTree]);
+
+    const selectedCategory = useMemo(() => {
+        if (!value) return null;
+        return findCategoryInTree(categoryTree, value);
+    }, [categoryTree, value]);
+
+    const selectedPath = useMemo(() => {
+        if (!value || !selectedCategory) return null;
+        const ancestors = ancestorMap[value] || [];
+        return [...ancestors, selectedCategory.name].join(' → ');
+    }, [value, selectedCategory, ancestorMap]);
 
     if (!categoryTree || categoryTree.length === 0) {
         return (
@@ -93,15 +128,26 @@ export function CategoryTreeSelector({ categoryTree = [], value = [], onChange }
     }
 
     return (
-        <Box borderWidth="1px" borderRadius="lg" overflow="hidden" bg="bg.panel" maxH="600px" overflowY="auto">
-            {categoryTree.map(category => (
-                <CategoryTreeNode
-                    key={category.id}
-                    category={category}
-                    selectedIds={value}
-                    onToggle={handleToggle}
-                />
-            ))}
+        <Box>
+            {/* Выбранная категория — путь */}
+            {selectedPath && (
+                <Box mb={3} p={3} bg="blue.50" borderRadius="lg" borderWidth="1px" borderColor="blue.200">
+                    <Text fontSize="sm" color="blue.700" fontWeight="medium">
+                        Выбрана: {selectedPath}
+                    </Text>
+                </Box>
+            )}
+
+            <Box borderWidth="1px" borderRadius="lg" overflow="hidden" bg="bg.panel" maxH="600px" overflowY="auto">
+                {categoryTree.map(category => (
+                    <CategoryTreeNode
+                        key={category.id}
+                        category={category}
+                        selectedId={value}
+                        onSelect={handleSelect}
+                    />
+                ))}
+            </Box>
         </Box>
     );
 }

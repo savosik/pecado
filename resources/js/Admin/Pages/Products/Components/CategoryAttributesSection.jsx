@@ -6,17 +6,17 @@ import axios from 'axios';
 import { LuListChecks } from 'react-icons/lu';
 
 /**
- * CategoryAttributesSection — секция динамических атрибутов на основе выбранных категорий.
+ * CategoryAttributesSection — секция динамических атрибутов на основе выбранной категории.
  *
- * При изменении categoryIds делает AJAX-запрос, получает атрибуты категорий,
+ * При изменении categoryId делает AJAX-запрос, получает атрибуты категории,
  * и отображает поля ввода в зависимости от типа атрибута.
  *
- * @param {number[]} categoryIds - Массив ID выбранных категорий
+ * @param {number|null} categoryId - ID выбранной категории
  * @param {Array} value - Текущие значения атрибутов [{ attribute_id, attribute_value_id, text_value, number_value, boolean_value }]
  * @param {Function} onChange - Callback при изменении значений
  * @param {object} errors - Объект ошибок валидации
  */
-export function CategoryAttributesSection({ categoryIds = [], value = [], onChange, errors = {} }) {
+export function CategoryAttributesSection({ categoryId = null, value = [], onChange, errors = {} }) {
     const [categoryAttributes, setCategoryAttributes] = useState([]);
     const [loading, setLoading] = useState(false);
     // Храним введённые значения в ref для сохранения при смене категорий
@@ -38,9 +38,9 @@ export function CategoryAttributesSection({ categoryIds = [], value = [], onChan
         }
     }, []); // Только при монтировании
 
-    // Загрузка атрибутов при изменении категорий
+    // Загрузка атрибутов при изменении категории
     useEffect(() => {
-        if (!categoryIds || categoryIds.length === 0) {
+        if (!categoryId) {
             setCategoryAttributes([]);
             return;
         }
@@ -49,11 +49,11 @@ export function CategoryAttributesSection({ categoryIds = [], value = [], onChan
             setLoading(true);
             try {
                 const response = await axios.get(route('admin.categories.attributes'), {
-                    params: { category_ids: categoryIds },
+                    params: { category_ids: [categoryId] },
                 });
                 setCategoryAttributes(response.data || []);
             } catch (error) {
-                console.error('Ошибка загрузки атрибутов категорий:', error);
+                console.error('Ошибка загрузки атрибутов категории:', error);
                 setCategoryAttributes([]);
             } finally {
                 setLoading(false);
@@ -61,7 +61,7 @@ export function CategoryAttributesSection({ categoryIds = [], value = [], onChan
         };
 
         fetchAttributes();
-    }, [JSON.stringify(categoryIds)]);
+    }, [categoryId]);
 
     // Формируем массив значений для onChange при изменении атрибутов или значений
     const emitChanges = useCallback((attrId, fieldName, fieldValue) => {
@@ -75,7 +75,7 @@ export function CategoryAttributesSection({ categoryIds = [], value = [], onChan
         existing[fieldName] = fieldValue;
         map.set(attrId, existing);
 
-        // Собираем массив для отправки — только для текущих атрибутов в категориях
+        // Собираем массив для отправки — только для текущих атрибутов в категории
         const result = [];
         categoryAttributes.forEach((attr) => {
             const vals = map.get(attr.id);
@@ -189,18 +189,18 @@ export function CategoryAttributesSection({ categoryIds = [], value = [], onChan
                     </Box>
                 )}
 
-                {!loading && categoryIds.length === 0 && (
+                {!loading && !categoryId && (
                     <Box textAlign="center" py={6} color="fg.muted">
                         <Text fontSize="md">
-                            Выберите категории во вкладке <Em>«Связи»</Em>, чтобы увидеть доступные атрибуты
+                            Выберите категорию во вкладке <Em>«Категории»</Em>, чтобы увидеть доступные атрибуты
                         </Text>
                     </Box>
                 )}
 
-                {!loading && categoryIds.length > 0 && categoryAttributes.length === 0 && (
+                {!loading && categoryId && categoryAttributes.length === 0 && (
                     <Box textAlign="center" py={6} color="fg.muted">
                         <Text fontSize="md">
-                            У выбранных категорий нет привязанных атрибутов
+                            У выбранной категории нет привязанных атрибутов
                         </Text>
                     </Box>
                 )}

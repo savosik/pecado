@@ -8,16 +8,16 @@ use App\Services\ProductExport\ExportField;
 
 class CategoriesNameField extends ExportField
 {
-    public function key(): string { return 'categories.name'; }
-    public function name(): string { return 'Категории (имена)'; }
-    public function description(): string { return 'Названия всех категорий товара через запятую'; }
+    public function key(): string { return 'category.name'; }
+    public function name(): string { return 'Категория'; }
+    public function description(): string { return 'Название категории товара'; }
     public function group(): string { return 'Категории'; }
     public function isFilterable(): bool { return false; }
-    public function modifierType(): ?string { return 'multi_value'; }
-    public function eagerLoad(): array { return ['categories']; }
+    public function modifierType(): ?string { return null; }
+    public function eagerLoad(): array { return ['category']; }
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        return $product->categories->pluck('name')->implode(', ');
+        return $product->category?->name;
     }
 }

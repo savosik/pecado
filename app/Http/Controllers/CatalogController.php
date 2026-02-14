@@ -25,13 +25,13 @@ class CatalogController extends Controller
         if ($search) {
             // Полнотекстовый поиск через Meilisearch
             $products = Product::search($search)
-                ->query(fn ($q) => $q->with(['brand', 'categories', 'media']))
+                ->query(fn ($q) => $q->with(['brand', 'category', 'media']))
                 ->paginate($perPage)
                 ->withQueryString();
         } else {
             // Обычная постраничная выдача
             $products = Product::query()
-                ->with(['brand', 'categories', 'media'])
+                ->with(['brand', 'category', 'media'])
                 ->orderBy('id', 'desc')
                 ->paginate($perPage)
                 ->withQueryString();

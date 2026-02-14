@@ -28,7 +28,7 @@ class ProductController extends AdminController
     public function index(Request $request): Response
     {
         $query = Product::query()
-            ->with(['brand', 'model', 'categories', 'media', 'tags']);
+            ->with(['brand', 'model', 'category', 'media', 'tags']);
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -90,6 +90,7 @@ class ProductController extends AdminController
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:products,slug',
             'base_price' => 'required|numeric|min:0',
+            'category_id' => 'nullable|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
             'model_id' => 'nullable|exists:product_models,id',
             'size_chart_id' => 'nullable|exists:size_charts,id',
@@ -109,14 +110,11 @@ class ProductController extends AdminController
             'is_marked' => 'boolean',
             'is_liquidation' => 'boolean',
             'for_marketplaces' => 'boolean',
-            'categories' => 'nullable|array',
-            'categories.*' => 'exists:categories,id',
             'barcodes' => 'nullable|array',
             'barcodes.*' => 'string|max:255',
             'image' => 'nullable|image|max:10240',
             'additional_images' => 'nullable|array',
             'additional_images.*' => 'image|max:10240',
-            'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
             'video' => 'nullable|mimes:mp4,webm,mov|max:51200',
             'tags' => 'nullable|array',
 
@@ -150,11 +148,6 @@ class ProductController extends AdminController
             }
         }
 
-        // Синхронизация категорий
-        if (isset($validated['categories'])) {
-            $product->categories()->sync($validated['categories']);
-        }
-
         // Загрузка главного изображения
         if ($request->hasFile('image')) {
             $product->addMediaFromRequest('image')
@@ -179,8 +172,6 @@ class ProductController extends AdminController
         if ($request->has('tags')) {
             $product->syncTags($request->tags);
         }
-
-
 
         // Сертификаты
         if (isset($validated['certificates'])) {
@@ -211,7 +202,7 @@ class ProductController extends AdminController
         $product->load([
             'brand', 
             'model', 
-            'categories', 
+            'category', 
             'sizeChart', 
             'media', 
             'tags', 
@@ -228,6 +219,7 @@ class ProductController extends AdminController
                 'name' => $product->name,
                 'slug' => $product->slug,
                 'base_price' => $product->base_price,
+                'category_id' => $product->category_id,
                 'brand_id' => $product->brand_id,
                 'model_id' => $product->model_id,
                 'size_chart_id' => $product->size_chart_id,
@@ -247,7 +239,6 @@ class ProductController extends AdminController
                 'is_marked' => $product->is_marked,
                 'is_liquidation' => $product->is_liquidation,
                 'for_marketplaces' => $product->for_marketplaces,
-                'categories' => $product->categories->pluck('id')->toArray(),
                 'brand' => $product->brand,
                 'model' => $product->model,
                 'main_image' => $product->getFirstMediaUrl('main'),
@@ -317,6 +308,7 @@ class ProductController extends AdminController
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
             'base_price' => 'required|numeric|min:0',
+            'category_id' => 'nullable|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
             'model_id' => 'nullable|exists:product_models,id',
             'size_chart_id' => 'nullable|exists:size_charts,id',
@@ -336,8 +328,6 @@ class ProductController extends AdminController
             'is_marked' => 'boolean',
             'is_liquidation' => 'boolean',
             'for_marketplaces' => 'boolean',
-            'categories' => 'nullable|array',
-            'categories.*' => 'exists:categories,id',
             'barcodes' => 'nullable|array',
             'barcodes.*' => 'string|max:255',
             'image' => 'nullable|image|max:10240',
@@ -386,13 +376,6 @@ class ProductController extends AdminController
             }
         }
 
-        // Синхронизация категорий
-        if (isset($validated['categories'])) {
-            $product->categories()->sync($validated['categories']);
-        } else {
-            $product->categories()->detach();
-        }
-
         // Обновление главного изображения
         if ($request->hasFile('image')) {
             $product->clearMediaCollection('main');
@@ -419,8 +402,6 @@ class ProductController extends AdminController
         if ($request->has('tags')) {
             $product->syncTags($request->tags);
         }
-
-
 
         // Синхронизация сертификатов
         if (isset($validated['certificates'])) {
@@ -518,7 +499,6 @@ class ProductController extends AdminController
                     'barcode' => $product->barcode, // Main barcode
                     'barcodes' => $product->barcodes->pluck('barcode')->toArray(), // All barcodes
                     'brand_name' => $product->brand ? $product->brand->name : null,
-                    // Stock could be added if needed, but for now focus on identification
                 ];
             });
 

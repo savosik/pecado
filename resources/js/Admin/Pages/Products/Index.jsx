@@ -75,21 +75,16 @@ export default function Index({ products, filters }) {
             render: (_, product) => product?.brand?.name || '—',
         },
         {
-            key: 'categories',
-            label: 'Категории',
+            key: 'category',
+            label: 'Категория',
             render: (_, product) => (
-                <HStack gap={1} flexWrap="wrap">
-                    {product.categories?.slice(0, 2).map((category) => (
-                        <Badge key={category.id} size="sm" colorPalette="blue">
-                            {category.name}
-                        </Badge>
-                    ))}
-                    {product.categories?.length > 2 && (
-                        <Badge size="sm" colorPalette="gray">
-                            +{product.categories.length - 2}
-                        </Badge>
-                    )}
-                </HStack>
+                product.category?.name ? (
+                    <Badge size="sm" colorPalette="blue">
+                        {product.category.name}
+                    </Badge>
+                ) : (
+                    <Text fontSize="sm" color="fg.muted">—</Text>
+                )
             ),
         },
         {

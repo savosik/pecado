@@ -16,6 +16,7 @@ return new class extends Migration
             $table->nestedSet();
             $table->string('external_id')->nullable();
             $table->string('name');
+            $table->string('slug')->nullable();
             $table->text('short_description')->nullable();
             $table->text('description')->nullable();
             $table->string('meta_title')->nullable();

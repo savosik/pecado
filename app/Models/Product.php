@@ -38,6 +38,7 @@ class Product extends Model implements HasMedia
         'short_description',
         'meta_title',
         'meta_description',
+        'category_id',
         'brand_id',
         'model_id',
         'size_chart_id',
@@ -75,6 +76,14 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * Get the category for the product.
+     */
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
+
+    /**
      * Get the brand for the product.
      */
     public function brand(): BelongsTo
@@ -96,14 +105,6 @@ class Product extends Model implements HasMedia
     public function sizeChart(): BelongsTo
     {
         return $this->belongsTo(SizeChart::class);
-    }
-
-    /**
-     * Get the categories for the product.
-     */
-    public function categories(): BelongsToMany
-    {
-        return $this->belongsToMany(Category::class, 'category_product');
     }
 
     /**
@@ -191,8 +192,6 @@ class Product extends Model implements HasMedia
         return $this->hasMany(OrderItem::class);
     }
 
-
-
     /**
      * Get the promotions that belong to the product.
      */
@@ -226,7 +225,7 @@ class Product extends Model implements HasMedia
             'name_cyrillic' => SearchHelper::transliterateToCyrillic($name),
             'name_layout' => SearchHelper::convertLayout($name),
             'brand' => $this->brand?->name,
-            'category' => $this->categories->first()?->name,
+            'category' => $this->category?->name,
             'description' => $this->description,
             'sku' => $this->sku,
             'code' => $this->code,

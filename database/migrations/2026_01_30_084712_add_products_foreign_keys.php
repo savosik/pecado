@@ -12,6 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('products', function (Blueprint $table) {
+            $table->foreign('category_id')
+                ->references('id')
+                ->on('categories')
+                ->nullOnDelete();
+
             $table->foreign('brand_id')
                 ->references('id')
                 ->on('brands')
@@ -35,6 +40,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('products', function (Blueprint $table) {
+            $table->dropForeign(['category_id']);
             $table->dropForeign(['brand_id']);
             $table->dropForeign(['model_id']);
             $table->dropForeign(['size_chart_id']);
