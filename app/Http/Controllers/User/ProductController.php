@@ -3,18 +3,156 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
+use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductSelection;
 use App\Services\Product\ProductQueryService;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class ProductController extends Controller
 {
-    public function index()
+    /**
+     * Каталог товаров — главная страница.
+     * GET /products
+     */
+    public function index(): Response
     {
-        return Inertia::render('User/Products/Index');
+        $appName = config('app.name');
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title'       => "Каталог товаров — {$appName}",
+                'description' => "Каталог товаров интернет-магазина {$appName}",
+                'h1'          => 'Каталог товаров',
+            ],
+        ]);
     }
 
-    public function show(Product $product)
+    /**
+     * Каталог по бренду.
+     * GET /brands/{brand:slug}
+     */
+    public function byBrand(Brand $brand): Response
+    {
+        $appName = config('app.name');
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title'       => "{$brand->name} — каталог в {$appName}",
+                'description' => "Товары бренда {$brand->name} в интернет-магазине {$appName}",
+                'h1'          => $brand->name,
+            ],
+            'initialFilters' => [
+                'brand_ids' => [$brand->id],
+            ],
+            'brand' => [
+                'id'   => $brand->id,
+                'name' => $brand->name,
+                'slug' => $brand->slug,
+            ],
+            'breadcrumbs' => [
+                ['label' => 'Каталог', 'url' => route('products.index')],
+                ['label' => $brand->name, 'url' => null],
+            ],
+        ]);
+    }
+
+    /**
+     * Каталог по категории.
+     * GET /categories/{category:slug}
+     */
+    public function byCategory(Category $category): Response
+    {
+        $appName = config('app.name');
+
+        // Хлебные крошки: Каталог → предки → текущая категория
+        $ancestors = $category->ancestors()->orderBy('_lft')->get();
+
+        $breadcrumbs = [
+            ['label' => 'Каталог', 'url' => route('products.index')],
+        ];
+        foreach ($ancestors as $ancestor) {
+            $breadcrumbs[] = [
+                'label' => $ancestor->name,
+                'url'   => route('products.category', $ancestor->slug),
+            ];
+        }
+        $breadcrumbs[] = ['label' => $category->name, 'url' => null];
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title'       => "{$category->name} — купить в {$appName}",
+                'description' => "Купить {$category->name} в интернет-магазине {$appName}",
+                'h1'          => $category->name,
+            ],
+            'initialFilters' => [
+                'category_id' => $category->id,
+            ],
+            'category' => [
+                'id'   => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+            ],
+            'breadcrumbs' => $breadcrumbs,
+        ]);
+    }
+
+    /**
+     * Каталог по подборке (коллекции).
+     * GET /collections/{selection:slug}
+     */
+    public function bySelection(ProductSelection $selection): Response
+    {
+        $appName = config('app.name');
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title'       => "{$selection->name} — {$appName}",
+                'description' => "{$selection->name} — подборка товаров в {$appName}",
+                'h1'          => $selection->name,
+            ],
+            'initialFilters' => [
+                'collection_ids' => [$selection->id],
+            ],
+            'selection' => [
+                'id'   => $selection->id,
+                'name' => $selection->name,
+                'slug' => $selection->slug,
+            ],
+            'breadcrumbs' => [
+                ['label' => 'Каталог', 'url' => route('products.index')],
+                ['label' => $selection->name, 'url' => null],
+            ],
+        ]);
+    }
+
+    /**
+     * Каталог избранных товаров.
+     * GET /products/favorites
+     */
+    public function favorites(): Response
+    {
+        $appName = config('app.name');
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title'       => "Избранные товары — {$appName}",
+                'description' => "Ваши избранные товары в {$appName}",
+                'h1'          => 'Избранные товары',
+            ],
+            'initialFilters' => [
+                'in_favourites' => 1,
+            ],
+        ]);
+    }
+
+    /**
+     * Карточка товара.
+     * GET /products/{product:slug}
+     */
+    public function show(Product $product): Response
     {
         // Подгрузка связей
         $product->load([
@@ -192,5 +330,13 @@ class ProductController extends Controller
             'certificates'   => $certificates,
             'specifications' => $specifications,
         ]);
+    }
+
+    /**
+     * Приватный хелпер — рендер единой Inertia-страницы каталога.
+     */
+    private function renderCatalog(array $props): Response
+    {
+        return Inertia::render('User/Products/Index', $props);
     }
 }

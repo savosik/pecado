@@ -17,7 +17,11 @@ use Illuminate\Support\Facades\Route;
 // ──────────────────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/products/favorites', [ProductController::class, 'favorites'])->middleware('auth')->name('products.favorites');
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/brands/{brand:slug}', [ProductController::class, 'byBrand'])->name('products.brand');
+Route::get('/categories/{category:slug}', [ProductController::class, 'byCategory'])->name('products.category');
+Route::get('/collections/{selection:slug}', [ProductController::class, 'bySelection'])->name('products.selection');
 Route::get('/faq', [FaqController::class, 'index'])->name('faq');
 Route::get('/news', [NewsController::class, 'index'])->name('news.index');
 Route::get('/news/{slug}', [NewsController::class, 'show'])->name('news.show');

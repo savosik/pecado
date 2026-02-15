@@ -239,7 +239,7 @@ app/
 | `scopeInBrands` | `int[] $ids` | `whereIn('brand_id', $ids)` |
 | `scopeInCollections` | `int[] $ids` | `whereHas('productSelections', whereIn)` |
 | `scopeByPrice` | `?float $min`, `?float $max` | `where base_price >=` / `<=` (с учётом пользовательских цен) |
-| `scopeInStock` | `string $mode`, `?int $regionId` | Подзапрос к `product_warehouse` через связь с `warehouses.region_id` |
+| `scopeInStock` | `string $mode`, `?int $regionId` | Подзапрос к `product_warehouse` через pivot `region_warehouse` (связь N-N Warehouse↔Region) |
 | `scopeInSale` | `bool $value` | `whereHas('discounts')` или `whereDoesntHave` |
 | `scopeInFavourites` | `int $userId` | `whereHas('favoritedByUsers', where user_id)` |
 | `scopeByAttributes` | `int[] $valueIds`, `bool $any` | `whereHas('attributeValues')` с AND/OR логикой |

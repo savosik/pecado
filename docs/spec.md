@@ -216,7 +216,7 @@
 
 14. **Цена** — `price_min`/`price_max` + ценовые buckets (интервалы с количеством товаров).
 
-15. **Наличие (in_stock)** — три режима (`in_stock_mode`): `instock`, `preorder`, `notavailable`. `scopeInStock()` строит подзапрос к `warehouse_product` с поддержкой `warehouse_id` и `region_id`.
+15. **Наличие (in_stock)** — три режима (`in_stock_mode`): `instock`, `preorder`, `notavailable`. `scopeInStock()` строит подзапрос к `product_warehouse` с JOIN на `region_warehouse` (связь N-N Warehouse↔Region с type `primary`/`preorder`).
 
 16. **Скидка (in_sale)** — три состояния: `1` (только со скидкой), `0` (без), пусто (все).
 

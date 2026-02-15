@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\SearchHelper;
+use App\Models\Traits\ProductQueryScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,7 +18,7 @@ use Laravel\Scout\Searchable;
 
 class Product extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, HasTags, Searchable;
+    use HasFactory, InteractsWithMedia, HasTags, Searchable, ProductQueryScopes;
 
     protected $fillable = [
         'name',

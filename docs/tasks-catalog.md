@@ -10,52 +10,52 @@
 ### [BE-01] Подготовка БД и Моделей
 **Описание**: Создать необходимые индексы и трейты.
 **Детали**:
-- [ ] Добавить индексы в таблицу `products`: `category_id`, `brand_id`, `base_price`, `created_at`, `slug`.
-- [ ] Создать трейт `App\Models\Traits\ProductQueryScopes`.
-- [ ] Реализовать в трейте заготовки скоупов: `scopeActive`, `scopeSearch`, `scopeInCategory`, `scopeInBrands`, `scopeByPrice`, `scopeInStock`, `scopeInSale`.
-- [ ] Подключить трейт к модели `Product`.
+- [x] Добавить индексы в таблицу `products`: `category_id`, `brand_id`, `base_price`, `created_at`, `slug`.
+- [x] Создать трейт `App\Models\Traits\ProductQueryScopes`.
+- [x] Реализовать в трейте заготовки скоупов: `scopeActive`, `scopeSearch`, `scopeInCategory`, `scopeInBrands`, `scopeByPrice`, `scopeInStock`, `scopeInSale`.
+- [x] Подключить трейт к модели `Product`.
 
 ### [BE-02] Enum сортировки и Request валидации
 **Описание**: Создать структуры для управления параметрами каталога.
 **Детали**:
-- [ ] Создать Enum `App\Enums\CatalogSort`:
+- [x] Создать Enum `App\Enums\CatalogSort`:
     - Значения: `newest`, `price_asc`, `price_desc`, `name_asc`, `name_desc`.
     - Метод `apply(Builder $query)`.
     - Метод `label()` (русские названия).
-- [ ] Создать `App\Http\Requests\User\ProductFilterRequest`:
+- [x] Создать `App\Http\Requests\User\ProductFilterRequest`:
     - Правила валидации для всех фильтров (см. п. 6.4 ТЗ).
     - Метод `prepareForValidation` для разворота Compact URL параметров (`fv` -> `attribute_value_ids`, `b` -> `brand_ids` и т.д.).
 
 ### [BE-03] Сервис фасетов (CatalogFacetService)
 **Описание**: Реализовать логику агрегации данных для фильтров.
 **Детали**:
-- [ ] Создать класс `App\Services\Product\CatalogFacetService`.
-- [ ] Метод `getAttributeFacets`: агрегация по `attribute_values` (связь через `product_attribute_values`).
-- [ ] Метод `getBrandFacets`: агрегация по `brand_id`.
-- [ ] Метод `getCategoryFacets`: агрегация по `category_id`.
-- [ ] Метод `getPriceIntervals`: min/max цены + гистограмма (buckets).
+- [x] Создать класс `App\Services\Product\CatalogFacetService`.
+- [x] Метод `getAttributeFacets`: агрегация по `attribute_values` (связь через `product_attribute_values`).
+- [x] Метод `getBrandFacets`: агрегация по `brand_id`.
+- [x] Метод `getCategoryFacets`: агрегация по `category_id`.
+- [x] Метод `getPriceIntervals`: min/max цены + гистограмма (buckets).
 - **Важно**: Использовать `GROUP BY` для оптимизации, избегать N+1.
 
 ### [BE-04] Контроллер API (CatalogApiController)
 **Описание**: Эндпоинты для получения JSON данных каталога.
 **Детали**:
-- [ ] Создать `App\Http\Controllers\User\CatalogApiController`.
-- [ ] Метод `products(ProductFilterRequest $request)`: возвращает список товаров с пагинацией (Resource Collection).
-- [ ] Метод `facets(ProductFilterRequest $request)`: возвращает доступные бренды, категории, атрибуты.
-- [ ] Метод `priceIntervals(...)`: возвращает min/max и бакеты.
-- [ ] Зарегистрировать роуты: `GET /api/catalog/products`, `/facets`, `/price-intervals`.
+- [x] Создать `App\Http\Controllers\User\CatalogApiController`.
+- [x] Метод `products(ProductFilterRequest $request)`: возвращает список товаров с пагинацией (Resource Collection).
+- [x] Метод `facets(ProductFilterRequest $request)`: возвращает доступные бренды, категории, атрибуты.
+- [x] Метод `priceIntervals(...)`: возвращает min/max и бакеты.
+- [x] Зарегистрировать роуты: `GET /api/catalog/products`, `/facets`, `/price-intervals`.
 
 ### [BE-05] Web-контроллер и Роутинг
 **Описание**: Настройка точек входа для Inertia страниц.
 **Детали**:
-- [ ] Обновить `User\ProductController`:
+- [x] Обновить `User\ProductController`:
     - Метод `index`: рендер `User/Products/Index`.
     - Метод `byBrand($slug)`: рендер `Index` с пресетом бренда.
     - Метод `byCategory($slug)`: рендер `Index` с пресетом категории.
     - Метод `bySelection($slug)`: рендер `Index` с пресетом подборки.
     - Метод `favorites()`: рендер `Index` с пресетом `in_favourites=1`.
-- [ ] Зарегистрировать роуты в `web.php`.
-- [ ] Обеспечить передачу базовых props (SEO, начальные фильтры) в Inertia.
+- [x] Зарегистрировать роуты в `web.php`.
+- [x] Обеспечить передачу базовых props (SEO, начальные фильтры) в Inertia.
 
 ---
 
