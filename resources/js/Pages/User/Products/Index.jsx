@@ -1,7 +1,8 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import {
-    Box, Flex,
+    Box, Button, Flex, Icon,
 } from '@chakra-ui/react';
+import { LuSlidersHorizontal } from 'react-icons/lu';
 import { Head, usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -10,6 +11,7 @@ import CatalogControls from './CatalogControls';
 import SelectedFilters from './SelectedFilters';
 import ProductGrid from './ProductGrid';
 import ProductPagination from './ProductPagination';
+import ProductFiltersSheet, { countActiveFilters, FilterBadge } from './ProductFiltersSheet';
 import useCatalogFilters from './hooks/useCatalogFilters';
 import useCatalogProducts from './hooks/useCatalogProducts';
 import usePriceIntervals from './hooks/usePriceIntervals';
@@ -75,6 +77,12 @@ export default function Index() {
             return false;
         }
     });
+
+    // ─── Mobile Filters Drawer ───
+    const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+    const activeFilterCount = useMemo(() => countActiveFilters(filters), [filters]);
+    const openMobileFilters = useCallback(() => setMobileFiltersOpen(true), []);
+    const closeMobileFilters = useCallback(() => setMobileFiltersOpen(false), []);
 
     const handleInfiniteScrollToggle = useCallback((enabled) => {
         setInfiniteScroll(enabled);
@@ -262,15 +270,30 @@ export default function Index() {
                     description={!breadcrumbs ? seo.description : undefined}
                 />
 
-                <CatalogControls
-                    sort={filters.sort}
-                    view={view}
-                    perPage={filters.per_page}
-                    sortOptions={sortOptions}
-                    onSortChange={(value) => updateFilter('sort', value)}
-                    onViewChange={setView}
-                    onPerPageChange={(value) => updateFilter('per_page', value)}
-                />
+                <Flex gap="2" align="center" flexWrap="wrap">
+                    {/* Кнопка «Фильтры» — только мобильные */}
+                    <Button
+                        display={{ base: 'inline-flex', lg: 'none' }}
+                        variant="outline"
+                        size="sm"
+                        onClick={openMobileFilters}
+                        colorPalette="pink"
+                    >
+                        <Icon as={LuSlidersHorizontal} boxSize="4" />
+                        Фильтры
+                        <FilterBadge count={activeFilterCount} ml="1" />
+                    </Button>
+
+                    <CatalogControls
+                        sort={filters.sort}
+                        view={view}
+                        perPage={filters.per_page}
+                        sortOptions={sortOptions}
+                        onSortChange={(value) => updateFilter('sort', value)}
+                        onViewChange={setView}
+                        onPerPageChange={(value) => updateFilter('per_page', value)}
+                    />
+                </Flex>
             </Flex>
 
             {/* Выбранные фильтры (чипы) */}
@@ -315,6 +338,17 @@ export default function Index() {
                     )}
                 </Box>
             </Flex>
+
+            {/* Mobile Filters Drawer */}
+            <ProductFiltersSheet
+                open={mobileFiltersOpen}
+                onClose={closeMobileFilters}
+                totalProducts={meta?.total ?? null}
+                activeCount={activeFilterCount}
+                onResetAll={handleResetAll}
+            >
+                {sidebarContent}
+            </ProductFiltersSheet>
         </UserLayout>
     );
 }
