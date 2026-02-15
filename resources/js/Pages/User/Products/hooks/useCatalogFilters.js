@@ -30,17 +30,31 @@ export default function useCatalogFilters({ initialFilters = {} } = {}) {
     const [view, setView] = useState(urlParsed.view);
 
     // ─── Синхронизация с URL ───
+    // Важно: сохраняем history.state, чтобы не затереть кэш Inertia.
+    // Также обновляем history.state.page.url, потому что при popstate
+    // Inertia использует это значение для определения страницы.
+    // Без этого кнопка «Назад» браузера теряет фильтры.
     useEffect(() => {
         const qs = buildCompactQuery(filters, view);
         const newUrl = qs
             ? `${window.location.pathname}?${qs}`
             : window.location.pathname;
-        window.history.replaceState(null, '', newUrl);
+
+        const state = window.history.state ? { ...window.history.state } : {};
+        if (state.page) {
+            state.page = { ...state.page, url: newUrl };
+        }
+        window.history.replaceState(state, '', newUrl);
     }, [filters, view]);
 
     // ─── Обновить один фильтр (page сбрасывается на 1) ───
     const updateFilter = useCallback((key, value) => {
         setFilters((prev) => ({ ...prev, [key]: value, page: 1 }));
+    }, []);
+
+    // ─── Обновить несколько фильтров (batch, page сбрасывается на 1) ───
+    const updateFilters = useCallback((updates) => {
+        setFilters((prev) => ({ ...prev, ...updates, page: 1 }));
     }, []);
 
     // ─── Сбросить все фильтры к начальным ───
@@ -64,6 +78,7 @@ export default function useCatalogFilters({ initialFilters = {} } = {}) {
         view,
         setView,
         updateFilter,
+        updateFilters,
         resetFilters,
         goToPage,
     };

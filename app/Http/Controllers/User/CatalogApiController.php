@@ -79,8 +79,16 @@ class CatalogApiController extends Controller
                 return $product;
             }, $products);
         } else {
+            // Для гостей: убираем ценовые и складские данные из ответа
             $products = array_map(function ($product) {
                 $product['is_favorited'] = false;
+                unset(
+                    $product['base_price'],
+                    $product['sale_price'],
+                    $product['discount_percentage'],
+                    $product['stock_quantity'],
+                    $product['preorder_quantity'],
+                );
                 return $product;
             }, $products);
         }
@@ -106,12 +114,33 @@ class CatalogApiController extends Controller
     public function facets(ProductFilterRequest $request): JsonResponse
     {
         $validated = $request->validated();
-        $query = $this->buildBaseQuery($validated);
+
+        // Для каждой группы фасетов строим запрос БЕЗ фильтра этой группы.
+        // Это реализует паттерн «OR внутри группы, AND между группами»:
+        // выбрав «Красный», пользователь всё ещё видит «Синий» и «Зелёный»,
+        // но при этом фасеты Материала учитывают выбранный Цвет.
+        $withoutBrands = $validated;
+        unset($withoutBrands['brand_ids']);
+
+        $withoutCategories = $validated;
+        unset($withoutCategories['category_ids']);
+
+        // Для атрибутов — исключаем attribute_value_ids из базового запроса,
+        // но передаём их в getAttributeFacets для per-attribute exclusion.
+        $selectedAttributeValueIds = array_map(
+            'intval',
+            $validated['attribute_value_ids'] ?? [],
+        );
+        $withoutAttributes = $validated;
+        unset($withoutAttributes['attribute_value_ids']);
 
         return response()->json([
-            'brands'     => $this->facetService->getBrandFacets($query),
-            'categories' => $this->facetService->getCategoryFacets($query),
-            'attributes' => $this->facetService->getAttributeFacets($query),
+            'brands'     => $this->facetService->getBrandFacets($this->buildBaseQuery($withoutBrands)),
+            'categories' => $this->facetService->getCategoryFacets($this->buildBaseQuery($withoutCategories)),
+            'attributes' => $this->facetService->getAttributeFacets(
+                $this->buildBaseQuery($withoutAttributes),
+                $selectedAttributeValueIds,
+            ),
         ]);
     }
 

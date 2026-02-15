@@ -1,20 +1,136 @@
-import { Box, Flex, HStack, IconButton, NativeSelect, Text } from '@chakra-ui/react';
-import { LuGrid2X2, LuLayoutList } from 'react-icons/lu';
+import { Box, Flex, HStack, Icon, Text } from '@chakra-ui/react';
+import { LuArrowDownUp, LuGrid2X2, LuLayoutList, LuList, LuChevronDown } from 'react-icons/lu';
+import { useRef } from 'react';
 
 const PER_PAGE_OPTIONS = [10, 20, 40, 60, 100];
 
+const SORT_LABELS = {
+    newest: 'Новинки',
+    popular: 'Популярные',
+    price_asc: 'Цена ↑',
+    price_desc: 'Цена ↓',
+    name_asc: 'А → Я',
+    name_desc: 'Я → А',
+};
+
+const VIEW_LABELS = {
+    grid: 'Сетка',
+    list: 'Список',
+};
+
+/**
+ * Обёртка-кнопка для одного контрола каталога.
+ * Внутри: иконка слева, маленький лейбл + текущее значение, стрелочка справа.
+ * При клике открывается скрытый <select>.
+ */
+function ControlButton({ icon, label, value, children }) {
+    const selectRef = useRef(null);
+
+    const handleClick = () => {
+        if (selectRef.current) {
+            // showPicker — современный API, click — fallback для старых браузеров
+            if (typeof selectRef.current.showPicker === 'function') {
+                try {
+                    selectRef.current.showPicker();
+                } catch {
+                    selectRef.current.click();
+                }
+            } else {
+                selectRef.current.click();
+            }
+        }
+    };
+
+    return (
+        <Box position="relative" flexShrink="0">
+            {/* Видимая кнопка */}
+            <Flex
+                as="button"
+                type="button"
+                onClick={handleClick}
+                align="center"
+                gap="2"
+                px="3"
+                py="1.5"
+                bg="white"
+                border="1px solid"
+                borderColor="gray.200"
+                borderRadius="lg"
+                cursor="pointer"
+                transition="all 0.15s"
+                _hover={{ borderColor: 'gray.300', bg: 'gray.50' }}
+                _dark={{
+                    bg: 'gray.800',
+                    borderColor: 'gray.600',
+                    _hover: { borderColor: 'gray.500', bg: 'gray.700' },
+                }}
+                minH="40px"
+            >
+                {/* Иконка */}
+                <Icon
+                    as={icon}
+                    boxSize="3.5"
+                    color="gray.400"
+                    _dark={{ color: 'gray.500' }}
+                />
+                {/* Лейбл + значение */}
+                <Box textAlign="left" lineHeight="1.2">
+                    <Text
+                        fontSize="10px"
+                        color="gray.400"
+                        _dark={{ color: 'gray.500' }}
+                        fontWeight="normal"
+                    >
+                        {label}
+                    </Text>
+                    <Text
+                        fontSize="13px"
+                        color="gray.800"
+                        _dark={{ color: 'gray.100' }}
+                        fontWeight="medium"
+                        whiteSpace="nowrap"
+                    >
+                        {value}
+                    </Text>
+                </Box>
+                {/* Шеврон */}
+                <Icon
+                    as={LuChevronDown}
+                    boxSize="3.5"
+                    color="gray.400"
+                    _dark={{ color: 'gray.500' }}
+                    ml="0.5"
+                />
+            </Flex>
+
+            {/* Скрытый нативный select, занимает всю область кнопки */}
+            <Box
+                as="span"
+                position="absolute"
+                inset="0"
+                overflow="hidden"
+                opacity="0"
+                css={{
+                    '& select': {
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        opacity: 0,
+                        cursor: 'pointer',
+                        fontSize: '16px', // не даёт iOS зумить
+                    },
+                }}
+            >
+                {children(selectRef)}
+            </Box>
+        </Box>
+    );
+}
+
 /**
  * CatalogControls — панель управления видом, сортировкой и количеством на страницу.
- *
- * @param {{
- *   sort: string,
- *   view: string,
- *   perPage: number,
- *   sortOptions: Array<{value: string, label: string}>,
- *   onSortChange: (value: string) => void,
- *   onViewChange: (value: string) => void,
- *   onPerPageChange: (value: number) => void,
- * }} props
+ * Дизайн: карточки-кнопки с иконками и двухстрочным содержимым (как в референсе).
  */
 export default function CatalogControls({
     sort,
@@ -25,89 +141,90 @@ export default function CatalogControls({
     onViewChange,
     onPerPageChange,
 }) {
+    const currentSortLabel =
+        sortOptions.find((o) => o.value === sort)?.label
+        ?? SORT_LABELS[sort]
+        ?? sort;
+
     return (
         <Flex
-            mb="4"
-            gap="3"
+            gap="2"
             align="center"
-            justify="space-between"
+            justify="flex-end"
             flexWrap="wrap"
         >
-            {/* Левая часть: сортировка + показывать по */}
+            {/* Левая часть: все контролы */}
             <Box
                 overflowX="auto"
-                css={{ '&::-webkit-scrollbar': { display: 'none' }, scrollbarWidth: 'none' }}
+                css={{
+                    '&::-webkit-scrollbar': { display: 'none' },
+                    scrollbarWidth: 'none',
+                }}
             >
-                <HStack gap="3" flexShrink="0" minW="max-content">
+                <HStack gap="2" flexShrink="0" minW="max-content">
                     {/* Сортировка */}
-                    <HStack gap="1.5">
-                        <Text fontSize="sm" color="gray.500" whiteSpace="nowrap">
-                            Сортировка:
-                        </Text>
-                        <NativeSelect.Root size="sm" w="auto">
-                            <NativeSelect.Field
+                    <ControlButton
+                        icon={LuArrowDownUp}
+                        label="Сортировка"
+                        value={currentSortLabel}
+                    >
+                        {(ref) => (
+                            <select
+                                ref={ref}
                                 value={sort}
                                 onChange={(e) => onSortChange(e.target.value)}
-                                borderRadius="md"
-                                fontSize="sm"
                             >
                                 {sortOptions.map((opt) => (
                                     <option key={opt.value} value={opt.value}>
                                         {opt.label}
                                     </option>
                                 ))}
-                            </NativeSelect.Field>
-                            <NativeSelect.Indicator />
-                        </NativeSelect.Root>
-                    </HStack>
+                            </select>
+                        )}
+                    </ControlButton>
 
                     {/* Показывать по */}
-                    <HStack gap="1.5">
-                        <Text fontSize="sm" color="gray.500" whiteSpace="nowrap">
-                            Показать:
-                        </Text>
-                        <NativeSelect.Root size="sm" w="auto">
-                            <NativeSelect.Field
+                    <ControlButton
+                        icon={LuList}
+                        label="Показать"
+                        value={String(perPage)}
+                    >
+                        {(ref) => (
+                            <select
+                                ref={ref}
                                 value={perPage}
-                                onChange={(e) => onPerPageChange(Number(e.target.value))}
-                                borderRadius="md"
-                                fontSize="sm"
+                                onChange={(e) =>
+                                    onPerPageChange(Number(e.target.value))
+                                }
                             >
                                 {PER_PAGE_OPTIONS.map((n) => (
                                     <option key={n} value={n}>
                                         {n}
                                     </option>
                                 ))}
-                            </NativeSelect.Field>
-                            <NativeSelect.Indicator />
-                        </NativeSelect.Root>
-                    </HStack>
+                            </select>
+                        )}
+                    </ControlButton>
+
+                    {/* Вид */}
+                    <ControlButton
+                        icon={view === 'grid' ? LuGrid2X2 : LuLayoutList}
+                        label="Вид"
+                        value={VIEW_LABELS[view] ?? view}
+                    >
+                        {(ref) => (
+                            <select
+                                ref={ref}
+                                value={view}
+                                onChange={(e) => onViewChange(e.target.value)}
+                            >
+                                <option value="grid">Сетка</option>
+                                <option value="list">Список</option>
+                            </select>
+                        )}
+                    </ControlButton>
                 </HStack>
             </Box>
-
-            {/* Переключатель вида */}
-            <HStack gap="0.5" bg="gray.100" borderRadius="lg" p="0.5" flexShrink="0" _dark={{ bg: 'gray.800' }}>
-                <IconButton
-                    aria-label="Сетка"
-                    size="sm"
-                    variant={view === 'grid' ? 'solid' : 'ghost'}
-                    colorPalette={view === 'grid' ? 'pink' : 'gray'}
-                    borderRadius="md"
-                    onClick={() => onViewChange('grid')}
-                >
-                    <LuGrid2X2 size={14} />
-                </IconButton>
-                <IconButton
-                    aria-label="Список"
-                    size="sm"
-                    variant={view === 'list' ? 'solid' : 'ghost'}
-                    colorPalette={view === 'list' ? 'pink' : 'gray'}
-                    borderRadius="md"
-                    onClick={() => onViewChange('list')}
-                >
-                    <LuLayoutList size={14} />
-                </IconButton>
-            </HStack>
         </Flex>
     );
 }

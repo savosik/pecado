@@ -8,7 +8,7 @@ import { pluralGoods } from '@/utils/plural';
  */
 export default function CatalogHeader({ h1, total, description }) {
     return (
-        <Box mb="4">
+        <Box>
             <Flex align="baseline" gap="3" flexWrap="wrap">
                 <Heading as="h1" size="2xl" fontWeight="900">
                     {h1}

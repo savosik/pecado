@@ -29,12 +29,128 @@ class CatalogFacetService
     /**
      * Агрегация фасетов по атрибутам (attribute_values через product_attribute_values).
      *
-     * Один SQL: GROUP BY attribute_id, attribute_value_id.
+     * Один SQL на атрибут (при наличии selectedValueIds) или один общий SQL.
      * Учитываются только атрибуты с is_filterable = 1.
      *
+     * При наличии $selectedValueIds реализуется per-attribute exclusion:
+     * для каждого атрибута считаются фасеты на запросе, где применены
+     * фильтры по ДРУГИМ атрибутам, но НЕ по текущему.
+     * Это позволяет видеть все варианты внутри группы (OR),
+     * при этом учитывая пересечение с другими атрибутами (AND).
+     *
+     * @param  int[]  $selectedValueIds  Текущие выбранные attribute_value_ids
      * @return array<int, array{id: int, name: string, values: array}>
      */
-    public function getAttributeFacets(Builder $baseQuery): array
+    public function getAttributeFacets(Builder $baseQuery, array $selectedValueIds = []): array
+    {
+        // Если ничего не выбрано — один простой запрос для всех атрибутов
+        if (empty($selectedValueIds)) {
+            return $this->computeAttributeFacets($baseQuery);
+        }
+
+        // Группируем выбранные значения по attribute_id
+        $grouped = DB::table('attribute_values')
+            ->whereIn('id', $selectedValueIds)
+            ->get(['id', 'attribute_id'])
+            ->groupBy('attribute_id');
+
+        // Получаем список всех фильтруемых атрибутов
+        $filterableAttributes = DB::table('attributes')
+            ->where('is_filterable', true)
+            ->orderBy('sort_order')
+            ->get(['id', 'name']);
+
+        // Оптимизация: группируем атрибуты по набору «чужих» value_ids,
+        // чтобы вместо N запросов (по 1 на атрибут) делать M запросов,
+        // где M = количество уникальных наборов cross-фильтров (обычно 2-3).
+        $buckets = []; // key = serialized otherValueIds, value = { attrIds: [], otherValueIds: [] }
+        $attrMeta = []; // attribute_id => { id, name }
+
+        foreach ($filterableAttributes as $attribute) {
+            $attrMeta[$attribute->id] = $attribute;
+
+            $otherValueIds = [];
+            foreach ($grouped as $attrId => $values) {
+                if ((int) $attrId !== $attribute->id) {
+                    $otherValueIds = array_merge($otherValueIds, $values->pluck('id')->toArray());
+                }
+            }
+            sort($otherValueIds);
+            $bucketKey = implode(',', $otherValueIds);
+
+            if (!isset($buckets[$bucketKey])) {
+                $buckets[$bucketKey] = [
+                    'attrIds' => [],
+                    'otherValueIds' => $otherValueIds,
+                ];
+            }
+            $buckets[$bucketKey]['attrIds'][] = $attribute->id;
+        }
+
+        // Один SQL-запрос на каждый уникальный набор cross-фильтров
+        $rawResults = []; // attribute_id => rows
+
+        foreach ($buckets as $bucket) {
+            $attrQuery = clone $baseQuery;
+            if (!empty($bucket['otherValueIds'])) {
+                $attrQuery->byAttributes($bucket['otherValueIds']);
+            }
+
+            $productIds = $this->cloneBaseIds($attrQuery);
+
+            $rows = DB::table('product_attribute_values as pav')
+                ->joinSub($productIds, 'filtered', 'filtered.id', '=', 'pav.product_id')
+                ->join('attribute_values as av', 'av.id', '=', 'pav.attribute_value_id')
+                ->whereIn('pav.attribute_id', $bucket['attrIds'])
+                ->select([
+                    'pav.attribute_id',
+                    'av.id as value_id',
+                    'av.value as value_name',
+                    DB::raw('COUNT(DISTINCT pav.product_id) as count'),
+                ])
+                ->groupBy('pav.attribute_id', 'av.id', 'av.value')
+                ->orderBy('av.sort_order')
+                ->get();
+
+            foreach ($rows->groupBy('attribute_id') as $attrId => $attrRows) {
+                $rawResults[(int) $attrId] = $attrRows;
+            }
+        }
+
+        // Собираем результат в порядке sort_order атрибутов
+        $result = [];
+
+        foreach ($filterableAttributes as $attribute) {
+            $rows = $rawResults[$attribute->id] ?? null;
+            if (!$rows || $rows->isEmpty()) {
+                continue;
+            }
+
+            $values = [];
+            foreach ($rows as $row) {
+                $values[] = [
+                    'id' => $row->value_id,
+                    'value' => $row->value_name,
+                    'count' => (int) $row->count,
+                ];
+            }
+
+            $result[] = [
+                'id' => $attribute->id,
+                'name' => $attribute->name,
+                'values' => $values,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Простой расчёт фасетов по всем атрибутам одним SQL-запросом.
+     *
+     * Используется когда нет выбранных attribute_value_ids.
+     */
+    private function computeAttributeFacets(Builder $baseQuery): array
     {
         $productIds = $this->cloneBaseIds($baseQuery);
 

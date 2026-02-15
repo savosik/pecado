@@ -12,8 +12,9 @@ import MobileActionsBar from '@/components/product/MobileActionsBar';
  * Show — детальная страница товара.
  */
 export default function Show() {
-    const { product, media, categoryTrail, variants, certificates, specifications, currency } = usePage().props;
+    const { product, media, categoryTrail, variants, certificates, specifications, currency, auth } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
+    const user = auth?.user || null;
 
     const price = product.sale_price ?? product.base_price;
     const originalPrice = product.sale_price != null && product.sale_price < product.base_price
@@ -24,6 +25,26 @@ export default function Show() {
     const preorderQty = product.preorder_quantity || 0;
     const isInStock = stockQty > 0;
     const isPreorder = !isInStock && preorderQty > 0;
+
+    // Общие props для ProductInfo (mobile + desktop)
+    const productInfoProps = {
+        productId: product.id,
+        name: product.name,
+        price,
+        originalPrice,
+        currencySymbol,
+        sku: product.sku,
+        code: product.code,
+        barcodes: product.barcodes || [],
+        brand: product.brand,
+        category: product.category,
+        isNew: product.is_new,
+        isBestseller: product.is_bestseller,
+        inStock: isInStock,
+        isPreorder,
+        tags: product.tags || [],
+        discountPct: product.discount_percentage,
+    };
 
     return (
         <UserLayout>
@@ -42,24 +63,7 @@ export default function Show() {
             >
                 {/* Mobile: info → варианты → галерея → табы */}
                 <Box display={{ base: 'block', lg: 'none' }} spaceY="6">
-                    <ProductInfo
-                        productId={product.id}
-                        name={product.name}
-                        price={price}
-                        originalPrice={originalPrice}
-                        currencySymbol={currencySymbol}
-                        sku={product.sku}
-                        code={product.code}
-                        barcodes={product.barcodes || []}
-                        brand={product.brand}
-                        category={product.category}
-                        isNew={product.is_new}
-                        isBestseller={product.is_bestseller}
-                        inStock={isInStock}
-                        isPreorder={isPreorder}
-                        tags={product.tags || []}
-                        discountPct={product.discount_percentage}
-                    />
+                    <ProductInfo {...productInfoProps} />
 
                     {variants && variants.length > 0 && (
                         <ProductVariants
@@ -86,24 +90,7 @@ export default function Show() {
                     </GridItem>
 
                     <GridItem colSpan={8} spaceY="6">
-                        <ProductInfo
-                            productId={product.id}
-                            name={product.name}
-                            price={price}
-                            originalPrice={originalPrice}
-                            currencySymbol={currencySymbol}
-                            sku={product.sku}
-                            code={product.code}
-                            barcodes={product.barcodes || []}
-                            brand={product.brand}
-                            category={product.category}
-                            isNew={product.is_new}
-                            isBestseller={product.is_bestseller}
-                            inStock={isInStock}
-                            isPreorder={isPreorder}
-                            tags={product.tags || []}
-                            discountPct={product.discount_percentage}
-                        />
+                        <ProductInfo {...productInfoProps} />
 
                         {variants && variants.length > 0 && (
                             <ProductVariants
@@ -123,14 +110,16 @@ export default function Show() {
                 </Grid>
             </Box>
 
-            {/* Мобильная sticky-панель */}
-            <MobileActionsBar
-                productId={product.id}
-                name={product.name}
-                price={price}
-                isPreorder={isPreorder}
-                inStock={isInStock}
-            />
+            {/* Мобильная sticky-панель — только для авторизованных */}
+            {user && (
+                <MobileActionsBar
+                    productId={product.id}
+                    name={product.name}
+                    price={price}
+                    isPreorder={isPreorder}
+                    inStock={isInStock}
+                />
+            )}
         </UserLayout>
     );
 }

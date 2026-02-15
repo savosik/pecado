@@ -178,46 +178,46 @@ export default function ProductInfo({
                 </Flex>
             </Box>
 
-            {/* Цена и корзина */}
-            <Box data-sticky-anchor="true">
-                {/* Статус наличия */}
-                <Flex align="center" gap="1" fontSize="sm" fontWeight="500" mb="2">
-                    {inStock ? (
-                        <>
-                            <LuCheck size={16} color="var(--chakra-colors-green-600)" />
-                            <Text color="green.600">В наличии</Text>
-                        </>
-                    ) : isPreorder ? (
-                        <>
-                            <LuClock3 size={16} color="var(--chakra-colors-orange-500)" />
-                            <Text color="orange.500">Предзаказ</Text>
-                        </>
-                    ) : (
-                        <>
-                            <LuCircleX size={16} color="var(--chakra-colors-red-600)" />
-                            <Text color="red.600">Нет в наличии</Text>
-                        </>
-                    )}
-                </Flex>
+            {/* Цена, наличие и корзина — только для авторизованных */}
+            {user && (
+                <Box data-sticky-anchor="true">
+                    {/* Статус наличия */}
+                    <Flex align="center" gap="1" fontSize="sm" fontWeight="500" mb="2">
+                        {inStock ? (
+                            <>
+                                <LuCheck size={16} color="var(--chakra-colors-green-600)" />
+                                <Text color="green.600">В наличии</Text>
+                            </>
+                        ) : isPreorder ? (
+                            <>
+                                <LuClock3 size={16} color="var(--chakra-colors-orange-500)" />
+                                <Text color="orange.500">Предзаказ</Text>
+                            </>
+                        ) : (
+                            <>
+                                <LuCircleX size={16} color="var(--chakra-colors-red-600)" />
+                                <Text color="red.600">Нет в наличии</Text>
+                            </>
+                        )}
+                    </Flex>
 
-                {/* Цена */}
-                <Box spaceY="1" mb="4">
-                    {hasSale && (
-                        <Text fontSize="sm" color="gray.400" textDecoration="line-through">
-                            {formatPrice(originalPrice)}
+                    {/* Цена */}
+                    <Box spaceY="1" mb="4">
+                        {hasSale && (
+                            <Text fontSize="sm" color="gray.400" textDecoration="line-through">
+                                {formatPrice(originalPrice)}
+                            </Text>
+                        )}
+                        <Text
+                            fontSize="2xl" fontWeight="600"
+                            color={hasSale ? 'red.600' : undefined}
+                            _dark={{ color: hasSale ? 'red.400' : undefined }}
+                        >
+                            {formatPrice(price)}
                         </Text>
-                    )}
-                    <Text
-                        fontSize="2xl" fontWeight="600"
-                        color={hasSale ? 'red.600' : undefined}
-                        _dark={{ color: hasSale ? 'red.400' : undefined }}
-                    >
-                        {formatPrice(price)}
-                    </Text>
-                </Box>
+                    </Box>
 
-                {/* Корзина + Избранное */}
-                {user && (
+                    {/* Корзина + Избранное */}
                     <Flex align="center" gap="3">
                         {(inStock || isPreorder) && price > 0 && (
                             <Box w="200px">
@@ -236,14 +236,14 @@ export default function ProductInfo({
                             <LuHeart size={20} fill={isFav ? 'currentColor' : 'none'} />
                         </IconButton>
                     </Flex>
-                )}
 
-                {!inStock && !isPreorder && (
-                    <Text fontSize="sm" color="gray.500" mt="2">
-                        Товар временно недоступен
-                    </Text>
-                )}
-            </Box>
+                    {!inStock && !isPreorder && (
+                        <Text fontSize="sm" color="gray.500" mt="2">
+                            Товар временно недоступен
+                        </Text>
+                    )}
+                </Box>
+            )}
         </Box>
     );
 }

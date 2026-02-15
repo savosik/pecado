@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { buildApiParams } from '@/utils/compactFilters';
 
 /**
@@ -27,6 +27,11 @@ export default function useCatalogProducts({ filters }) {
     const abortRef = useRef(null);
     const loadMoreAbortRef = useRef(null);
     const loadingMoreRef = useRef(false);
+    const filtersRef = useRef(filters);
+    filtersRef.current = filters;
+
+    // Стабилизируем зависимость через сериализацию
+    const filtersKey = useMemo(() => JSON.stringify(filters), [filters]);
 
     // ─── Загрузка товаров при смене фильтров ───
     useEffect(() => {
@@ -36,7 +41,7 @@ export default function useCatalogProducts({ filters }) {
         setLoading(true);
         setError(null);
 
-        const params = buildApiParams(filters);
+        const params = buildApiParams(filtersRef.current);
 
         fetch(`/api/catalog/products?${params.toString()}`, {
             signal: abortRef.current.signal,
@@ -62,7 +67,7 @@ export default function useCatalogProducts({ filters }) {
             if (abortRef.current) abortRef.current.abort();
             if (loadMoreAbortRef.current) loadMoreAbortRef.current.abort();
         };
-    }, [filters]);
+    }, [filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps — filtersRef.current используется вместо filters для стабильности
 
     // ─── Загрузить ещё (infinite scroll) ───
     const loadMore = useCallback(() => {
@@ -77,7 +82,7 @@ export default function useCatalogProducts({ filters }) {
         setLoadingMore(true);
 
         const nextPage = meta.current_page + 1;
-        const nextFilters = { ...filters, page: nextPage };
+        const nextFilters = { ...filtersRef.current, page: nextPage };
         const params = buildApiParams(nextFilters);
 
         fetch(`/api/catalog/products?${params.toString()}`, {
@@ -113,7 +118,7 @@ export default function useCatalogProducts({ filters }) {
                     setLoadingMore(false);
                 }
             });
-    }, [meta, filters]);
+    }, [meta, filtersKey]); // eslint-disable-line react-hooks/exhaustive-deps — filtersRef.current используется вместо filters для стабильности
 
     return {
         products,
