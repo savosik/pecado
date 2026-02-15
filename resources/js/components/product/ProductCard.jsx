@@ -1,12 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
-import { Link, usePage } from '@inertiajs/react';
+import { Link } from '@inertiajs/react';
 import { LuHeart, LuCheck, LuCircleX, LuClock3 } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
-import { useFavoritesStore } from '@/stores/useFavoritesStore';
-import { LOGIN_URL } from '@/constants/user';
+import { useProductHelpers } from '@/hooks/useProductHelpers';
 
 /**
  * ProductCard — карточка товара для каталога и подборок (по дизайну референса).
@@ -14,36 +13,13 @@ import { LOGIN_URL } from '@/constants/user';
  * @param {{ product: Object, loading?: boolean }} props
  */
 export default function ProductCard({ product, loading = false }) {
-    const { auth, currency } = usePage().props;
-    const user = auth?.user || null;
-    const currencySymbol = currency?.symbol || '₽';
+    const {
+        user, isFav, toggleFavorite, formatPrice,
+        hasSale, isInStock, isPreorder, brandName,
+        price, salePrice, discountPct,
+    } = useProductHelpers(product);
 
-    const [isFav, setIsFav] = useState(false);
     const [isImageHovered, setIsImageHovered] = useState(false);
-
-    // Подписка на стор избранного
-    useEffect(() => {
-        if (!user || !product?.id) return;
-
-        const store = useFavoritesStore.getState();
-        store.loadOnce(user);
-        setIsFav(store.isFavorite(product.id));
-
-        const unsub = useFavoritesStore.subscribe((state) => {
-            setIsFav(state.ids.has(Number(product.id)));
-        });
-        return unsub;
-    }, [product?.id, user]);
-
-    const toggleFavorite = async (e) => {
-        e?.preventDefault?.();
-        e?.stopPropagation?.();
-        if (!user) {
-            window.location.href = LOGIN_URL;
-            return;
-        }
-        useFavoritesStore.getState().toggle(product.id);
-    };
 
     // Скелетон
     if (loading) {
@@ -81,21 +57,6 @@ export default function ProductCard({ product, loading = false }) {
             </Box>
         );
     }
-
-    const price = product.base_price;
-    const salePrice = product.sale_price || null;
-    const discountPct = product.discount_percentage || null;
-    const hasSale = salePrice != null && salePrice < price;
-    const stockQty = product.stock_quantity || 0;
-    const preorderQty = product.preorder_quantity || 0;
-    const isInStock = stockQty > 0;
-    const isPreorder = !isInStock && preorderQty > 0;
-    const brandName = product.brand_name || null;
-
-    const formatPrice = (value) => {
-        if (value === null || value === undefined) return '';
-        return Number(value).toLocaleString('ru-RU') + ' ' + currencySymbol;
-    };
 
     return (
         <Box
@@ -171,19 +132,21 @@ export default function ProductCard({ product, loading = false }) {
                                 </Text>
                             ) : null}
                         </Box>
-                        <IconButton
-                            aria-label="В избранное"
-                            variant="ghost"
-                            size="xs"
-                            borderRadius="sm"
-                            onClick={toggleFavorite}
-                            color={isFav ? 'red.500' : 'gray.400'}
-                            _hover={{ color: 'red.500' }}
-                            minW="6"
-                            h="6"
-                        >
-                            <LuHeart size={14} fill={isFav ? 'currentColor' : 'none'} />
-                        </IconButton>
+                        {user && (
+                            <IconButton
+                                aria-label="В избранное"
+                                variant="ghost"
+                                size="xs"
+                                borderRadius="sm"
+                                onClick={toggleFavorite}
+                                color={isFav ? 'red.500' : 'gray.400'}
+                                _hover={{ color: 'red.500' }}
+                                minW="6"
+                                h="6"
+                            >
+                                <LuHeart size={14} fill={isFav ? 'currentColor' : 'none'} />
+                            </IconButton>
+                        )}
                     </Flex>
 
                     {/* Название */}

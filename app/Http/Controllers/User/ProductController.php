@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Enums\CatalogSort;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
@@ -337,6 +338,8 @@ class ProductController extends Controller
      */
     private function renderCatalog(array $props): Response
     {
+        $props['sortOptions'] = CatalogSort::options();
+
         return Inertia::render('User/Products/Index', $props);
     }
 }

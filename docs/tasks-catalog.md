@@ -64,47 +64,47 @@
 ### [FE-01] Макет страницы каталога и Хедер
 **Описание**: Создать общую структуру страницы.
 **Детали**:
-- [ ] Компонент `User/Products/Index.jsx`:
+- [x] Компонент `User/Products/Index.jsx`:
     - Layout с сайдбаром (desktop) / без (mobile).
     - Интеграция `CatalogHeader` (Заголовок H1, кол-во товаров).
-- [ ] Компонент `Breadcrumbs.jsx`:
+- [x] Компонент `Breadcrumbs.jsx`:
     - Динамическая генерация на основе текущей категории/бренда.
 
 ### [FE-02] Контролы каталога
 **Описание**: Панель управления видом и сортировкой.
 **Детали**:
-- [ ] Компонент `CatalogControls.jsx`:
+- [x] Компонент `CatalogControls.jsx`:
     - Сортировка (Select): по новизне, цене, имени.
     - Вид (Icon Buttons): Сетка / Список.
-    - Кол-во на страницу (Select): 10, 20, 60...
-- [ ] Синхронизация контролов с URL (через хук фильтров).
+    - Кол-во на страницу (Select): 10, 20, 40, 60, 100.
+- [x] Синхронизация контролов с URL (через `history.replaceState`).
 
 ### [FE-03] Сетка товаров (ProductGrid)
 **Описание**: Отображение списка товаров.
 **Детали**:
-- [ ] Компонент `ProductGrid.jsx`:
+- [x] Компонент `ProductGrid.jsx`:
     - Адаптивная сетка: 2 колонки (mobile), 3 (lg), 4-5 (xl).
-- [ ] Компонент `ProductGridItem.jsx`:
+- [x] Компонент `ProductGridItem.jsx`:
     - Фото, цена (старая/новая), лейблы (скидка/новинка), кнопка "В корзину", "Избранное".
-- [ ] Компонент `ProductListItem.jsx`:
+- [x] Компонент `ProductListItem.jsx`:
     - Горизонтальная верстка карточки.
-- [ ] Skeleton загрузки (заглушки карточек).
+- [x] Skeleton загрузки (заглушки карточек).
 
 ### [FE-04] Пагинация и Infinite Scroll
 **Описание**: Навигация по страницам.
 **Детали**:
-- [ ] Компонент `ProductPagination.jsx`:
+- [x] Компонент `ProductPagination.jsx`:
     - Классическая пагинация (номера страниц).
-- [ ] Логика Infinite Scroll:
+- [x] Логика Infinite Scroll:
     - Кнопка "Загрузить еще" или автоподгрузка.
     - Мердж новых товаров к существующему списку.
 
 ### [FE-05] Хуки управления состоянием
 **Описание**: Логика работы с фильтрами и API.
 **Детали**:
-- [ ] Утилиты Compact URL (`utils/compactFilters.js`): `encode` / `decode` параметров.
-- [ ] Хук `useCatalogFilters`: чтение из URL, обновление URL, debouncing.
-- [ ] Хук `useCatalogProducts`: запрос к API `/products` с поддержкой `AbortController`.
+- [x] Утилиты Compact URL (`utils/compactFilters.js`): `encode` / `decode` параметров.
+- [x] Хук `useCatalogFilters`: чтение из URL, обновление URL, debouncing.
+- [x] Хук `useCatalogProducts`: запрос к API `/products` с поддержкой `AbortController`.
 
 ---
 
