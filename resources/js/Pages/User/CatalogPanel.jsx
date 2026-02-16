@@ -227,43 +227,63 @@ export default function CatalogPanel({ open, onClose }) {
                 maxH={{ base: '100vh', sm: '85vh' }}
             >
                 {/* Header: Tabs + Search + Close */}
-                <Flex
-                    px={{ base: '3', sm: '6' }}
-                    py="3"
-                    align="center"
-                    gap="3"
-                    flexWrap="wrap"
-                >
-                    <Tabs.Root
-                        value={activeTab}
-                        onValueChange={(d) => setActiveTab(d.value)}
-                        flex="1"
-                        variant="line"
-                        size="sm"
-                    >
-                        <Tabs.List>
-                            {tabItems.map((t) => (
-                                <Tabs.Trigger key={t.value} value={t.value}>
-                                    <HStack gap="1.5">
-                                        {t.icon}
-                                        <Text display={{ base: 'none', sm: 'inline' }}>{t.label}</Text>
-                                    </HStack>
-                                </Tabs.Trigger>
-                            ))}
-                        </Tabs.List>
-                    </Tabs.Root>
+                <Box px={{ base: '3', sm: '6' }} pt="3" pb="2">
+                    {/* Row 1: Tabs + Close */}
+                    <Flex align="center" gap="3" mb="2">
+                        <Tabs.Root
+                            value={activeTab}
+                            onValueChange={(d) => setActiveTab(d.value)}
+                            flex="1"
+                            variant="line"
+                            size="sm"
+                        >
+                            <Tabs.List>
+                                {tabItems.map((t) => (
+                                    <Tabs.Trigger key={t.value} value={t.value}>
+                                        <HStack gap="1.5">
+                                            {t.icon}
+                                            <Text display={{ base: 'none', sm: 'inline' }}>{t.label}</Text>
+                                        </HStack>
+                                    </Tabs.Trigger>
+                                ))}
+                            </Tabs.List>
+                        </Tabs.Root>
 
-                    <IconButton
-                        aria-label="Закрыть"
-                        variant="ghost"
-                        colorPalette="gray"
-                        size="sm"
-                        onClick={onClose}
-                    >
-                        <LuX />
-                    </IconButton>
+                        <Flex position="relative" w="100%" maxW="sm" ml="auto" display={{ base: 'none', md: 'flex' }}>
+                            <Input
+                                placeholder={
+                                    activeTab === 'categories'
+                                        ? 'Поиск категорий...'
+                                        : activeTab === 'brands'
+                                            ? 'Поиск брендов...'
+                                            : 'Поиск подборок...'
+                                }
+                                size="sm"
+                                borderRadius="lg"
+                                bg="gray.50"
+                                _dark={{ bg: 'gray.800' }}
+                                pr="9"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                            <Box position="absolute" right="2" top="50%" transform="translateY(-50%)" color="gray.400" pointerEvents="none">
+                                <LuSearch size={16} />
+                            </Box>
+                        </Flex>
 
-                    <Flex position="relative" w="100%" maxW={{ md: 'sm' }} ml={{ md: 'auto' }}>
+                        <IconButton
+                            aria-label="Закрыть"
+                            variant="ghost"
+                            colorPalette="gray"
+                            size="sm"
+                            onClick={onClose}
+                        >
+                            <LuX />
+                        </IconButton>
+                    </Flex>
+
+                    {/* Row 2: Search (mobile only) */}
+                    <Flex position="relative" w="100%" display={{ base: 'flex', md: 'none' }}>
                         <Input
                             placeholder={
                                 activeTab === 'categories'
@@ -284,7 +304,7 @@ export default function CatalogPanel({ open, onClose }) {
                             <LuSearch size={16} />
                         </Box>
                     </Flex>
-                </Flex>
+                </Box>
 
                 {/* Body */}
                 <Box px={{ base: '3', sm: '6' }} py="4" overflowY="auto" flex="1">
