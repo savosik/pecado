@@ -66,6 +66,13 @@ export default function UserHeader() {
         setCatalogOpen(true);
     }, []);
 
+    // Слушатель кастомного события catalog:open (используется MobileNav)
+    useEffect(() => {
+        const handler = () => setCatalogOpen(true);
+        document.addEventListener('catalog:open', handler);
+        return () => document.removeEventListener('catalog:open', handler);
+    }, []);
+
     return (
         <>
             {/* Main Header */}
