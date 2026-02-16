@@ -1,13 +1,13 @@
 <?php
 
-use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\User\CatalogApiController;
 use App\Http\Controllers\User\CatalogController as UserCatalogController;
 use App\Http\Controllers\User\ProductController;
+use App\Http\Controllers\User\SearchController;
 use Illuminate\Support\Facades\Route;
 
 // Поисковые подсказки (Autocomplete)
-Route::get('/search/suggestions', [CatalogController::class, 'suggestions'])->name('api.search.suggestions');
+Route::get('/search/suggestions', [SearchController::class, 'suggestions'])->name('api.search.suggestions');
 
 // Каталог-панель (категории + бренды)
 Route::get('/catalog/categories', [UserCatalogController::class, 'categories'])->name('api.catalog.categories');

@@ -1,8 +1,11 @@
 <?php
 
-use App\Models\Product;
+use App\Models\Article;
+use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Media;
+use App\Models\News;
+use App\Models\Product;
 
 return [
 
@@ -115,6 +118,31 @@ return [
                     'name_translit',
                     'name_cyrillic',
                     'name_layout',
+                ],
+            ],
+            Brand::class => [
+                'searchableAttributes' => [
+                    'name',
+                    'name_translit',
+                    'name_cyrillic',
+                    'name_layout',
+                ],
+            ],
+            Article::class => [
+                'searchableAttributes' => [
+                    'title',
+                    'title_translit',
+                    'title_cyrillic',
+                    'title_layout',
+                    'short_description',
+                ],
+            ],
+            News::class => [
+                'searchableAttributes' => [
+                    'title',
+                    'title_translit',
+                    'title_cyrillic',
+                    'title_layout',
                 ],
             ],
             Media::class => [

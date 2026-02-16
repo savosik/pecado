@@ -43,7 +43,13 @@ export default function Index() {
         sortOptions = [],
         appName = 'Pecado',
         pageDescription = null,
+        auth,
     } = usePage().props;
+
+    // Контекст страницы: скрываем фильтры, заданные контекстом
+    const isAuthenticated = !!auth?.user;
+    const isBrandPage = !!(initialFilters.brand_ids?.length);
+    const isCategoryPage = !!(initialFilters.category_ids?.length || initialFilters.category_id);
 
     // ─── Хуки управления состоянием ───
     const {
@@ -177,10 +183,13 @@ export default function Index() {
                 />
             </FilterBlock>
 
-            <Box h="1px" bg="gray.100" _dark={{ bg: 'gray.700' }} my="1" />
+            {/* Разделитель после «Поиск» — только если далее есть видимый блок */}
+            {((!isCategoryPage && facets?.categories?.length > 0) || (!isBrandPage && facets?.brands?.length > 0) || isAuthenticated) && (
+                <Box h="1px" bg="gray.100" _dark={{ bg: 'gray.700' }} my="1" />
+            )}
 
-            {/* Категории */}
-            {facets?.categories && facets.categories.length > 0 && (
+            {/* Категории — скрываем на страницах конкретной категории */}
+            {!isCategoryPage && facets?.categories && facets.categories.length > 0 && (
                 <>
                     <FilterBlock
                         title="Категории"
@@ -197,8 +206,8 @@ export default function Index() {
                 </>
             )}
 
-            {/* Бренды */}
-            {facets?.brands && facets.brands.length > 0 && (
+            {/* Бренды — скрываем на страницах конкретного бренда */}
+            {!isBrandPage && facets?.brands && facets.brands.length > 0 && (
                 <>
                     <FilterBlock
                         title="Бренды"
@@ -215,33 +224,39 @@ export default function Index() {
                 </>
             )}
 
-            {/* Цена */}
-            <FilterBlock
-                title="Цена"
-                showClear={!!(filters.price_min || filters.price_max)}
-                onClear={() => handlePriceChange('', '')}
-            >
-                <PriceFilter
-                    priceMin={filters.price_min || ''}
-                    priceMax={filters.price_max || ''}
-                    priceData={priceData}
-                    onPriceChange={handlePriceChange}
-                />
-            </FilterBlock>
+            {/* Цена — только для авторизованных */}
+            {isAuthenticated && (
+                <>
+                    <FilterBlock
+                        title="Цена"
+                        showClear={!!(filters.price_min || filters.price_max)}
+                        onClear={() => handlePriceChange('', '')}
+                    >
+                        <PriceFilter
+                            priceMin={filters.price_min || ''}
+                            priceMax={filters.price_max || ''}
+                            priceData={priceData}
+                            onPriceChange={handlePriceChange}
+                        />
+                    </FilterBlock>
 
-            <Box h="1px" bg="gray.100" _dark={{ bg: 'gray.700' }} my="1" />
+                    <Box h="1px" bg="gray.100" _dark={{ bg: 'gray.700' }} my="1" />
+                </>
+            )}
 
-            {/* Наличие */}
-            <FilterBlock
-                title="Наличие"
-                showClear={!!filters.in_stock_mode}
-                onClear={() => handleStockChange('')}
-            >
-                <StockFilter
-                    value={filters.in_stock_mode || ''}
-                    onChange={handleStockChange}
-                />
-            </FilterBlock>
+            {/* Наличие — только для авторизованных */}
+            {isAuthenticated && (
+                <FilterBlock
+                    title="Наличие"
+                    showClear={!!filters.in_stock_mode}
+                    onClear={() => handleStockChange('')}
+                >
+                    <StockFilter
+                        value={filters.in_stock_mode || ''}
+                        onChange={handleStockChange}
+                    />
+                </FilterBlock>
+            )}
 
             {/* Атрибуты (динамические блоки) */}
             {facets?.attributes && facets.attributes.length > 0 && (
@@ -252,7 +267,7 @@ export default function Index() {
                 />
             )}
         </Box>
-    ), [filters, facets, priceData, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange]);
+    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange]);
 
     // ─── Динамический SEO (поисковый запрос → title) ───
     const dynamicSeo = useMemo(() => {
@@ -310,6 +325,7 @@ export default function Index() {
             <SelectedFilters
                 filters={filters}
                 facets={facets}
+                lockedFilters={initialFilters}
                 onRemoveFilter={handleRemoveFilter}
                 onResetAll={handleResetAll}
             />

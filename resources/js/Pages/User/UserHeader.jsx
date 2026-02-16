@@ -2,14 +2,14 @@ import { useState, useCallback, useEffect } from 'react';
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
 import CatalogPanel from './CatalogPanel';
 import CurrencySwitcher from './Components/CurrencySwitcher';
+import Search from '@/shared/Search';
 import {
-    Box, Flex, HStack, Text, Input, IconButton, Button,
+    Box, Flex, HStack, Text, IconButton, Button,
     Drawer, Portal, CloseButton, VStack, Separator,
-    Badge, Image,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    LuSearch, LuHeart, LuShoppingCart, LuUser, LuMenu,
+    LuHeart, LuShoppingCart, LuUser, LuMenu,
     LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
 } from 'react-icons/lu';
 
@@ -100,28 +100,7 @@ export default function UserHeader() {
                         </Button>
 
                         {/* Search — takes remaining space */}
-                        <Flex flex="1" position="relative">
-                            <Input
-                                placeholder="Поиск товаров..."
-                                size="sm"
-                                borderRadius="lg"
-                                bg="gray.50"
-                                _dark={{ bg: 'gray.800' }}
-                                pr="10"
-                            />
-                            <IconButton
-                                aria-label="Поиск"
-                                size="sm"
-                                variant="ghost"
-                                position="absolute"
-                                right="1"
-                                top="50%"
-                                transform="translateY(-50%)"
-                                colorPalette="gray"
-                            >
-                                <LuSearch />
-                            </IconButton>
-                        </Flex>
+                        <Search />
 
                         {/* Desktop Actions — lg+ */}
                         <HStack as="nav" gap="2" display={{ base: 'none', lg: 'flex' }} flexShrink="0">

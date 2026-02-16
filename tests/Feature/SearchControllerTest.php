@@ -1,0 +1,295 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Article;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\News;
+use App\Models\Product;
+use App\Models\SearchHistory;
+use App\Models\User;
+use App\Models\Warehouse;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class SearchControllerTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Используем collection-драйвер Scout для тестирования без Meilisearch
+        config(['scout.driver' => 'collection']);
+    }
+
+    /**
+     * Привязать товар к складу с указанным количеством.
+     */
+    private function addStock(Product $product, int $quantity = 10): void
+    {
+        $warehouse = Warehouse::firstOrCreate(['name' => 'TestWarehouse']);
+        $product->warehouses()->attach($warehouse->id, ['quantity' => $quantity]);
+    }
+
+    // ─── Основной поиск ─────────────────────────────────────
+
+    public function test_search_returns_products_categories_brands_articles(): void
+    {
+        $brand = Brand::factory()->create(['name' => 'TestBrand Alpha']);
+        $category = Category::factory()->create(['name' => 'TestCategory Alpha']);
+        $product = Product::factory()->create([
+            'name'        => 'TestProduct Alpha',
+            'brand_id'    => $brand->id,
+            'category_id' => $category->id,
+        ]);
+
+        // Добавляем склад с остатком, чтобы товар прошёл фильтр наличия
+        $this->addStock($product);
+
+        $article = Article::factory()->create([
+            'title'        => 'TestArticle Alpha',
+            'is_published' => true,
+            'published_at' => now()->subDay(),
+        ]);
+
+        $news = News::factory()->create([
+            'title'        => 'TestNews Alpha',
+            'is_published' => true,
+            'published_at' => now()->subDay(),
+        ]);
+
+        $response = $this->getJson('/search?q=Alpha');
+
+        $response->assertOk()
+            ->assertJsonStructure([
+                'query',
+                'type',
+                'results' => [
+                    'products',
+                    'categories',
+                    'brands',
+                    'articles',
+                    'news',
+                ],
+            ]);
+
+        $this->assertNotEmpty($response->json('results.products'));
+        $this->assertNotEmpty($response->json('results.categories'));
+        $this->assertNotEmpty($response->json('results.brands'));
+        $this->assertNotEmpty($response->json('results.articles'));
+        $this->assertNotEmpty($response->json('results.news'));
+    }
+
+    public function test_search_empty_query_returns_empty_results(): void
+    {
+        Product::factory()->create(['name' => 'Some Product']);
+
+        $response = $this->getJson('/search');
+
+        $response->assertOk()
+            ->assertJsonPath('query', null)
+            ->assertJsonPath('results', []);
+    }
+
+    public function test_search_short_query_fails_validation(): void
+    {
+        $response = $this->getJson('/search?q=a');
+
+        $response->assertStatus(422);
+    }
+
+    // ─── Фильтрация по type ─────────────────────────────────
+
+    public function test_search_filter_by_type_products(): void
+    {
+        $brand = Brand::factory()->create(['name' => 'FilterBrand Beta']);
+        $product = Product::factory()->create(['name' => 'FilterProduct Beta']);
+
+        $this->addStock($product, 5);
+
+        Category::factory()->create(['name' => 'FilterCategory Beta']);
+
+        $response = $this->getJson('/search?q=Beta&type=products');
+
+        $response->assertOk();
+
+        $results = $response->json('results');
+
+        $this->assertArrayHasKey('products', $results);
+        $this->assertArrayNotHasKey('categories', $results);
+        $this->assertArrayNotHasKey('brands', $results);
+        $this->assertArrayNotHasKey('articles', $results);
+    }
+
+    public function test_search_filter_by_type_categories(): void
+    {
+        Category::factory()->create(['name' => 'UniqueCategory Gamma']);
+        Product::factory()->create(['name' => 'UniqueProduct Gamma']);
+
+        $response = $this->getJson('/search?q=Gamma&type=categories');
+
+        $response->assertOk();
+
+        $results = $response->json('results');
+
+        $this->assertArrayHasKey('categories', $results);
+        $this->assertArrayNotHasKey('products', $results);
+        $this->assertArrayNotHasKey('brands', $results);
+    }
+
+    // ─── Фильтрация по наличию ──────────────────────────────
+
+    public function test_search_excludes_unavailable_products_by_default(): void
+    {
+        // Товар БЕЗ остатков на складе
+        $unavailable = Product::factory()->create(['name' => 'Unavailable Delta']);
+
+        // Товар С остатками на складе
+        $available = Product::factory()->create(['name' => 'Available Delta']);
+        $this->addStock($available, 3);
+
+        $response = $this->getJson('/search?q=Delta');
+
+        $response->assertOk();
+
+        $productIds = collect($response->json('results.products'))->pluck('id')->toArray();
+
+        $this->assertContains($available->id, $productIds);
+        $this->assertNotContains($unavailable->id, $productIds);
+    }
+
+    public function test_search_include_unavailable_includes_all(): void
+    {
+        // Товар без остатков
+        $unavailable = Product::factory()->create(['name' => 'NoStock Epsilon']);
+
+        // Товар с остатками
+        $available = Product::factory()->create(['name' => 'InStock Epsilon']);
+        $this->addStock($available, 5);
+
+        $response = $this->getJson('/search?q=Epsilon&include_unavailable=1');
+
+        $response->assertOk();
+
+        $productIds = collect($response->json('results.products'))->pluck('id')->toArray();
+
+        $this->assertContains($available->id, $productIds);
+        $this->assertContains($unavailable->id, $productIds);
+    }
+
+    // ─── Сохранение в историю ───────────────────────────────
+
+    public function test_search_saves_history_for_authenticated_user(): void
+    {
+        $user = User::factory()->create();
+
+        $product = Product::factory()->create(['name' => 'HistoryProduct Zeta']);
+        $this->addStock($product);
+
+        $this->actingAs($user)->getJson('/search?q=Zeta');
+
+        $this->assertDatabaseHas('search_histories', [
+            'user_id' => $user->id,
+            'query'   => 'Zeta',
+        ]);
+    }
+
+    public function test_search_does_not_save_history_for_guest(): void
+    {
+        Product::factory()->create(['name' => 'GuestProduct Eta']);
+
+        $this->getJson('/search?q=Eta');
+
+        $this->assertDatabaseCount('search_histories', 0);
+    }
+
+    // ─── CRUD истории ───────────────────────────────────────
+
+    public function test_history_returns_user_records(): void
+    {
+        $user = User::factory()->create();
+
+        SearchHistory::factory()->count(3)->create(['user_id' => $user->id]);
+        // Чужие записи не должны попадать
+        SearchHistory::factory()->count(2)->create();
+
+        $response = $this->actingAs($user)->getJson('/api/search/history');
+
+        $response->assertOk();
+        $this->assertCount(3, $response->json());
+    }
+
+    public function test_history_requires_auth(): void
+    {
+        $response = $this->getJson('/api/search/history');
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_delete_single_history_record(): void
+    {
+        $user = User::factory()->create();
+        $history = SearchHistory::factory()->create(['user_id' => $user->id]);
+
+        $response = $this->actingAs($user)->deleteJson("/api/search/history/{$history->id}");
+
+        $response->assertStatus(204);
+        $this->assertDatabaseMissing('search_histories', ['id' => $history->id]);
+    }
+
+    public function test_delete_history_forbidden_for_other_user(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create();
+
+        $history = SearchHistory::factory()->create(['user_id' => $owner->id]);
+
+        $response = $this->actingAs($other)->deleteJson("/api/search/history/{$history->id}");
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('search_histories', ['id' => $history->id]);
+    }
+
+    public function test_clear_all_history(): void
+    {
+        $user = User::factory()->create();
+
+        SearchHistory::factory()->count(5)->create(['user_id' => $user->id]);
+        // Чужие записи НЕ должны удаляться
+        $otherHistory = SearchHistory::factory()->create();
+
+        $response = $this->actingAs($user)->deleteJson('/api/search/history');
+
+        $response->assertStatus(204);
+        $this->assertDatabaseCount('search_histories', 1);
+        $this->assertDatabaseHas('search_histories', ['id' => $otherHistory->id]);
+    }
+
+    // ─── Подсказки (suggestions) ────────────────────────────
+
+    public function test_suggestions_returns_products(): void
+    {
+        Product::factory()->create(['name' => 'Suggestion Theta']);
+        Product::factory()->create(['name' => 'Another Theta']);
+
+        $response = $this->getJson('/api/search/suggestions?q=Theta');
+
+        $response->assertOk();
+        $this->assertNotEmpty($response->json());
+
+        // Проверяем структуру первого элемента
+        $response->assertJsonStructure([
+            '*' => ['id', 'name', 'slug', 'price', 'image_url'],
+        ]);
+    }
+
+    public function test_suggestions_requires_min_2_chars(): void
+    {
+        $response = $this->getJson('/api/search/suggestions?q=a');
+
+        $response->assertStatus(422);
+    }
+}

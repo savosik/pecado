@@ -11,7 +11,7 @@
 | Поисковый движок | **Meilisearch v1.5** | Полнотекстовый поиск с ранжированием |
 | Интеграция | **Laravel Scout** | ORM-мост между Eloquent и Meilisearch |
 | Обработка запросов | `SearchHelper` | Транслитерация, конвертация раскладки |
-| Индексируемые модели | `Product`, `Category` | Основные сущности каталога |
+| Индексируемые модели | `Product`, `Category`, `Brand`, `Article`, `News` | Основные сущности каталога и контента |
 
 ---
 
@@ -147,6 +147,45 @@ Meilisearch поддерживает **prefix search** — начните наб
 ]
 ```
 
+### Индексируемые поля бренда (`Brand`)
+
+```php
+// app/Models/Brand.php → toSearchableArray()
+[
+    'name'          => 'Satisfyer',
+    'name_translit' => 'satisfyer',       // RU → Латиница
+    'name_cyrillic' => 'сатисфйер',       // EN → Кириллица
+    'name_layout'   => 'ыфешыагуек',      // Альтернативная раскладка
+]
+```
+
+### Индексируемые поля статьи (`Article`)
+
+```php
+// app/Models/Article.php → toSearchableArray()
+[
+    'title'             => 'Как выбрать подарок',
+    'title_translit'    => 'kak vybrat podarok',
+    'title_cyrillic'    => 'как выбрать подарок',
+    'title_layout'      => 'rfr ds,hfnm gjlfhjr',
+    'short_description' => 'Советы по выбору ...',
+]
+// shouldBeSearchable() — только опубликованные
+```
+
+### Индексируемые поля новости (`News`)
+
+```php
+// app/Models/News.php → toSearchableArray()
+[
+    'title'          => 'Открытие нового сезона',
+    'title_translit' => 'otkrytie novogo sezona',
+    'title_cyrillic' => 'открытие нового сезона',
+    'title_layout'   => 'jnrhsnbt yjdjuj ctpjyf',
+]
+// shouldBeSearchable() — только опубликованные
+```
+
 ### Приоритет поисковых полей
 
 Конфигурация Meilisearch задаёт порядок приоритетов (чем выше — тем важнее совпадение):
@@ -201,6 +240,9 @@ GET /api/search/suggestions?q=виб
 | `app/Helpers/SearchHelper.php` | Транслитерация и конвертация раскладки |
 | `app/Models/Product.php` | Индекс товаров (`toSearchableArray`) |
 | `app/Models/Category.php` | Индекс категорий (`toSearchableArray`) |
+| `app/Models/Brand.php` | Индекс брендов (`toSearchableArray`) |
+| `app/Models/Article.php` | Индекс статей (`toSearchableArray` + `shouldBeSearchable`) |
+| `app/Models/News.php` | Индекс новостей (`toSearchableArray` + `shouldBeSearchable`) |
 | `config/scout.php` | Конфигурация Meilisearch и полей поиска |
 | `app/Http/Controllers/CatalogController.php` | Контроллер каталога и подсказок |
 

@@ -233,4 +233,12 @@ class User extends Authenticatable implements HasMedia
     {
         return $this->hasMany(SocialAccount::class);
     }
+
+    /**
+     * Get the search history for the user.
+     */
+    public function searchHistories(): HasMany
+    {
+        return $this->hasMany(SearchHistory::class);
+    }
 }

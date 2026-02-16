@@ -13,15 +13,19 @@ const STOCK_LABELS = {
  * Каждый чип = текст фильтра + кнопка × для удаления.
  * Кнопка «Сбросить всё» — очищает фильтры, не трогает sort/view/per_page.
  *
+ * lockedFilters — фильтры, заданные контекстом страницы (бренд, категория, подборка).
+ * Они не показываются как чипы и не участвуют в «Сбросить всё».
+ *
  * @param {{
  *   filters: object,
  *   facets: { brands: Array, categories: Array, attributes: Array } | null,
+ *   lockedFilters?: object,
  *   onRemoveFilter: (key: string, value?: any) => void,
  *   onResetAll: () => void,
  * }} props
  */
-export default function SelectedFilters({ filters, facets, onRemoveFilter, onResetAll }) {
-    const chips = buildChips(filters, facets);
+export default function SelectedFilters({ filters, facets, lockedFilters, onRemoveFilter, onResetAll }) {
+    const chips = buildChips(filters, facets, lockedFilters);
 
     if (chips.length === 0) return null;
 
@@ -82,9 +86,18 @@ export default function SelectedFilters({ filters, facets, onRemoveFilter, onRes
 
 /**
  * Построить массив чипов из текущих фильтров.
+ * lockedFilters — фильтры, заданные контекстом страницы, которые не показываются как чипы.
  */
-function buildChips(filters, facets) {
+function buildChips(filters, facets, lockedFilters = {}) {
     const chips = [];
+
+    // Определяем «заблокированные» значения для массивных фильтров
+    const lockedBrandIds = new Set((lockedFilters.brand_ids || []).map(Number));
+    const lockedCategoryIds = new Set((lockedFilters.category_ids || []).map(Number));
+    // Бэкенд byCategory передаёт category_id (singular) — учитываем и его
+    if (lockedFilters.category_id) {
+        lockedCategoryIds.add(Number(lockedFilters.category_id));
+    }
 
     // Поиск
     if (filters.q) {
@@ -136,9 +149,10 @@ function buildChips(filters, facets) {
         });
     }
 
-    // Бренды
+    // Бренды (пропускаем заблокированные — заданные контекстом страницы)
     if (Array.isArray(filters.brand_ids) && filters.brand_ids.length > 0) {
         filters.brand_ids.forEach((brandId) => {
+            if (lockedBrandIds.has(Number(brandId))) return;
             const brand = facets?.brands?.find((b) => b.id === Number(brandId));
             const name = brand ? brand.name : `#${brandId}`;
             chips.push({
@@ -150,9 +164,10 @@ function buildChips(filters, facets) {
         });
     }
 
-    // Категории
+    // Категории (пропускаем заблокированные)
     if (Array.isArray(filters.category_ids) && filters.category_ids.length > 0) {
         filters.category_ids.forEach((catId) => {
+            if (lockedCategoryIds.has(Number(catId))) return;
             const cat = facets?.categories?.find((c) => c.id === Number(catId));
             const name = cat ? cat.name : `#${catId}`;
             chips.push({
@@ -188,3 +203,4 @@ function buildChips(filters, facets) {
 
     return chips;
 }
+

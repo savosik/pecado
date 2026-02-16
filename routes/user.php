@@ -10,12 +10,14 @@ use App\Http\Controllers\User\FaqController;
 use App\Http\Controllers\User\NewsController;
 use App\Http\Controllers\User\ArticleController;
 use App\Http\Controllers\User\PageController;
+use App\Http\Controllers\User\SearchController;
 use Illuminate\Support\Facades\Route;
 
 // ──────────────────────────────────────────────
 // User Public Routes
 // ──────────────────────────────────────────────
 Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/favorites', [ProductController::class, 'favorites'])->middleware('auth')->name('products.favorites');
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
@@ -49,6 +51,11 @@ Route::prefix('api')->middleware('auth')->group(function () {
 
     // Валюта
     Route::post('/currency/switch', [CurrencyController::class, 'switch']);
+
+    // История поиска
+    Route::get('/search/history', [SearchController::class, 'history']);
+    Route::delete('/search/history', [SearchController::class, 'clearHistory']);
+    Route::delete('/search/history/{history}', [SearchController::class, 'deleteHistory']);
 });
 
 // ──────────────────────────────────────────────

@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\BrandCategory;
-
+use App\Helpers\SearchHelper;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Laravel\Scout\Searchable;
 use Spatie\Tags\HasTags;
 
 use Spatie\MediaLibrary\HasMedia;
@@ -17,7 +18,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Brand extends Model implements HasMedia
 {
-    use HasFactory, HasTags, InteractsWithMedia;
+    use HasFactory, HasTags, InteractsWithMedia, Searchable;
 
     protected $fillable = [
         'name',
@@ -39,6 +40,24 @@ class Brand extends Model implements HasMedia
     {
         return [
             'category' => BrandCategory::class,
+        ];
+    }
+
+    /**
+     * Get the indexable data array for the model.
+     *
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        $name = $this->name ?? '';
+
+        return [
+            'id' => (int) $this->id,
+            'name' => $name,
+            'name_translit' => SearchHelper::transliterate($name),
+            'name_cyrillic' => SearchHelper::transliterateToCyrillic($name),
+            'name_layout' => SearchHelper::convertLayout($name),
         ];
     }
 
