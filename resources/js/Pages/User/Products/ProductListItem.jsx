@@ -29,17 +29,17 @@ export default function ProductListItem({ product, loading = false }) {
                 borderColor="gray.100"
                 _dark={{ borderColor: 'gray.700', bg: 'gray.800' }}
                 overflow="hidden"
-                gap={{ base: '3', md: '4' }}
-                direction={{ base: 'column', md: 'row' }}
+                gap={{ base: '2', md: '4' }}
+                direction="row"
             >
                 {/* Изображение */}
                 <Skeleton
-                    w={{ base: '100%', md: '150px' }}
-                    h={{ base: '240px', md: '225px' }}
+                    w={{ base: '100px', md: '150px' }}
+                    h={{ base: '150px', md: '225px' }}
                     flexShrink="0"
                 />
                 {/* Контент */}
-                <Flex flex="1" p="4" direction="column" gap="2" justify="center">
+                <Flex flex="1" p={{ base: '2', md: '4' }} direction="column" gap="2" justify="center" minW="0">
                     <Flex align="center" justify="space-between">
                         <Skeleton h="3" w="16" />
                         <Skeleton h="6" w="6" borderRadius="sm" />
@@ -64,13 +64,13 @@ export default function ProductListItem({ product, loading = false }) {
             overflow="hidden"
             transition="all 0.2s"
             _hover={{ shadow: 'md' }}
-            direction={{ base: 'column', md: 'row' }}
+            direction="row"
         >
             {/* Изображение */}
             <Box
                 position="relative"
                 flexShrink="0"
-                w={{ base: '100%', md: '150px' }}
+                w={{ base: '100px', md: '150px' }}
                 overflow="hidden"
                 onMouseEnter={() => setIsImageHovered(true)}
                 onMouseLeave={() => setIsImageHovered(false)}
@@ -105,7 +105,7 @@ export default function ProductListItem({ product, loading = false }) {
             </Box>
 
             {/* Контент */}
-            <Flex flex="1" p={{ base: '3', md: '4' }} direction="column" gap="1" minW="0">
+            <Flex flex="1" p={{ base: '2', md: '4' }} direction="column" gap="1" minW="0">
                 {/* Верхняя часть: SKU + Бренд + Избранное */}
                 <Flex align="start" justify="space-between">
                     <Box flex="1" minW="0">

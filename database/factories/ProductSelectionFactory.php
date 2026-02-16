@@ -18,10 +18,14 @@ class ProductSelectionFactory extends Factory
     {
         return [
             'name' => $this->faker->words(3, true),
+            'slug' => $this->faker->unique()->slug(),
             'short_description' => $this->faker->sentence(),
             'description' => $this->faker->paragraph(),
             'meta_title' => $this->faker->sentence(),
             'meta_description' => $this->faker->sentence(),
+            'is_active' => true,
+            'show_on_home' => false,
+            'sort_order' => 0,
         ];
     }
 }
