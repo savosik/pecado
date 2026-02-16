@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { router } from '@inertiajs/react';
 
 const ProductQuickViewContext = createContext({
     open: false,
@@ -69,6 +70,13 @@ export function ProductQuickViewProvider({ children }) {
             }
         };
     }, []);
+
+    // Закрывать QuickView при Inertia-навигации (клик по ссылке внутри модалки)
+    useEffect(() => {
+        return router.on('before', () => {
+            if (open) closeQuickView();
+        });
+    }, [open, closeQuickView]);
 
     const openQuickView = useCallback(async (slug) => {
         try {
