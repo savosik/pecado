@@ -15,7 +15,7 @@ export default function ProductBreadcrumbs({ categoryTrail = [], productName = '
     categoryTrail.forEach(cat => {
         items.push({
             label: cat.name,
-            href: `/products?category=${cat.slug}`,
+            href: `/categories/${cat.slug}`,
         });
     });
 

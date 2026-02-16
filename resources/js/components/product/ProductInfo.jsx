@@ -129,7 +129,7 @@ export default function ProductInfo({
                     {brand && category && <Text>/</Text>}
                     {category && (
                         <Text
-                            as={Link} href={`/catalog?category=${category.slug}`}
+                            as={Link} href={`/categories/${category.slug}`}
                             _hover={{ color: 'gray.700', _dark: { color: 'gray.200' } }}
                             transition="color 0.15s"
                         >
