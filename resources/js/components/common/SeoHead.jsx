@@ -3,18 +3,19 @@ import { Head } from '@inertiajs/react';
 /**
  * SEO-компонент с Open Graph, Twitter Card и JSON-LD structured data.
  *
- * @param {{ seo: { title?: string, description?: string, keywords?: string, image?: string, url?: string, type?: string, structured_data?: object|object[] } }} props
+ * @param {{ seo: { title?: string, description?: string, keywords?: string, image?: string, url?: string, canonical?: string, type?: string, structured_data?: object|object[] } }} props
  */
 export default function SeoHead({ seo }) {
     if (!seo) return null;
 
-    const { title, description, keywords, image, url, type = 'website', structured_data } = seo;
+    const { title, description, keywords, image, url, canonical, type = 'website', structured_data } = seo;
 
     return (
         <Head>
             {title && <title>{title}</title>}
             {description && <meta name="description" content={description} />}
             {keywords && <meta name="keywords" content={keywords} />}
+            {canonical && <link rel="canonical" href={canonical} />}
 
             {/* Open Graph */}
             {title && <meta property="og:title" content={title} />}

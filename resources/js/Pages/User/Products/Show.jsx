@@ -7,6 +7,7 @@ import ProductInfo from '@/components/product/ProductInfo';
 import ProductDetailTabs from '@/components/product/ProductDetailTabs';
 import ProductVariants from '@/components/product/ProductVariants';
 import MobileActionsBar from '@/components/product/MobileActionsBar';
+import { buildProductInfoProps } from '@/utils/product';
 
 /**
  * Show — детальная страница товара.
@@ -16,35 +17,8 @@ export default function Show() {
     const currencySymbol = currency?.symbol || '₽';
     const user = auth?.user || null;
 
-    const price = product.sale_price ?? product.base_price;
-    const originalPrice = product.sale_price != null && product.sale_price < product.base_price
-        ? product.base_price
-        : null;
-
-    const stockQty = product.stock_quantity || 0;
-    const preorderQty = product.preorder_quantity || 0;
-    const isInStock = stockQty > 0;
-    const isPreorder = !isInStock && preorderQty > 0;
-
-    // Общие props для ProductInfo (mobile + desktop)
-    const productInfoProps = {
-        productId: product.id,
-        name: product.name,
-        price,
-        originalPrice,
-        currencySymbol,
-        sku: product.sku,
-        code: product.code,
-        barcodes: product.barcodes || [],
-        brand: product.brand,
-        category: product.category,
-        isNew: product.is_new,
-        isBestseller: product.is_bestseller,
-        inStock: isInStock,
-        isPreorder,
-        tags: product.tags || [],
-        discountPct: product.discount_percentage,
-    };
+    const productInfoProps = buildProductInfoProps(product, currencySymbol);
+    const { price, isPreorder, inStock: isInStock } = productInfoProps;
 
     return (
         <UserLayout>

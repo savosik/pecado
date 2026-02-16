@@ -6,7 +6,7 @@ import {
 import { Link } from '@inertiajs/react';
 import {
     LuX, LuSearch, LuGrid2X2, LuTag, LuChevronRight, LuArrowLeft,
-    LuFolder,
+    LuFolder, LuLayoutGrid,
 } from 'react-icons/lu';
 
 /* ─── helpers ─── */
@@ -27,8 +27,9 @@ const sortLetters = (a, b) => {
     return a.localeCompare(b, 'ru-RU');
 };
 
-const buildCategoryUrl = (id) => `/products?category_id=${encodeURIComponent(id)}&include_descendants=1`;
-const buildBrandUrl = (id) => `/products?brand_id=${encodeURIComponent(id)}`;
+const buildCategoryUrl = (slug) => `/categories/${slug}`;
+const buildBrandUrl = (slug) => `/brands/${slug}`;
+const buildSelectionUrl = (slug) => `/collections/${slug}`;
 
 /* ─── CategoryColumn ─── */
 
@@ -39,7 +40,7 @@ function CategoryColumn({ category, onNavigate }) {
     return (
         <Box minW="0">
             {searchMatches.length === 0 && (
-                <Text as={Link} href={buildCategoryUrl(category.id)} onClick={onNavigate}
+                <Text as={Link} href={buildCategoryUrl(category.slug)} onClick={onNavigate}
                     fontSize="sm" fontWeight="600" mb="2" display="block"
                     _hover={{ textDecoration: 'underline' }}
                 >
@@ -49,7 +50,7 @@ function CategoryColumn({ category, onNavigate }) {
             <VStack align="stretch" gap="1">
                 {searchMatches.length > 0
                     ? searchMatches.map((m) => (
-                        <Link key={m.id} href={buildCategoryUrl(m.id)} onClick={onNavigate}>
+                        <Link key={m.id} href={buildCategoryUrl(m.slug)} onClick={onNavigate}>
                             <Box>
                                 {m.searchPath && (
                                     <Text fontSize="xs" color="gray.400" mb="0.5">
@@ -61,7 +62,7 @@ function CategoryColumn({ category, onNavigate }) {
                         </Link>
                     ))
                     : children.map((c) => (
-                        <Link key={c.id} href={buildCategoryUrl(c.id)} onClick={onNavigate}>
+                        <Link key={c.id} href={buildCategoryUrl(c.slug)} onClick={onNavigate}>
                             <Text fontSize="sm" color="gray.600" _hover={{ color: 'pecado.500' }}
                                 _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }}
                                 transition="colors 0.15s" truncate
@@ -83,6 +84,7 @@ export default function CatalogPanel({ open, onClose }) {
     const [searchTerm, setSearchTerm] = useState('');
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [selections, setSelections] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const abortRef = useRef(null);
@@ -108,8 +110,13 @@ export default function CatalogPanel({ open, onClose }) {
             .then((data) => {
                 setBrands(Array.isArray(data) ? data : (data?.data ?? []));
             });
+        const fetchSelections = fetch('/api/catalog/selections', { signal })
+            .then((r) => r.json())
+            .then((data) => {
+                setSelections(Array.isArray(data) ? data : (data?.data ?? []));
+            });
 
-        Promise.allSettled([fetchCats, fetchBrands])
+        Promise.allSettled([fetchCats, fetchBrands, fetchSelections])
             .then(() => setLoading(false))
             .catch(() => setLoading(false));
     }, [open]);
@@ -144,7 +151,7 @@ export default function CatalogPanel({ open, onClose }) {
         const collect = (node, path = []) => {
             const name = (node.name || '').toLowerCase();
             const cur = [...path, node];
-            if (name.includes(q)) matches.push({ ...node, searchPath: cur, isDirectMatch: true });
+            if (name.includes(q)) matches.push({ ...node, slug: node.slug, searchPath: cur, isDirectMatch: true });
             (Array.isArray(node.children) ? node.children : []).forEach((c) => collect(c, cur));
         };
         categories.forEach((cat) => collect(cat));
@@ -182,11 +189,20 @@ export default function CatalogPanel({ open, onClose }) {
         return map;
     }, [filteredBrands]);
 
+    /* ── filtered selections (search) ── */
+    const filteredSelections = useMemo(() => {
+        const list = Array.isArray(selections) ? selections : [];
+        if (!searchTerm.trim()) return list;
+        const q = searchTerm.toLowerCase();
+        return list.filter((s) => (s.name || '').toLowerCase().includes(q));
+    }, [selections, searchTerm]);
+
     if (!open) return null;
 
     const tabItems = [
         { value: 'categories', label: 'Категории', icon: <LuGrid2X2 /> },
         { value: 'brands', label: 'Бренды', icon: <LuTag /> },
+        { value: 'selections', label: 'Подборки', icon: <LuLayoutGrid /> },
     ];
 
     return (
@@ -214,12 +230,9 @@ export default function CatalogPanel({ open, onClose }) {
                 <Flex
                     px={{ base: '3', sm: '6' }}
                     py="3"
-                    borderBottom="1px solid"
-                    borderColor="gray.100"
-                    _dark={{ borderColor: 'gray.700' }}
                     align="center"
                     gap="3"
-                    flexWrap={{ base: 'wrap', md: 'nowrap' }}
+                    flexWrap="wrap"
                 >
                     <Tabs.Root
                         value={activeTab}
@@ -240,9 +253,25 @@ export default function CatalogPanel({ open, onClose }) {
                         </Tabs.List>
                     </Tabs.Root>
 
-                    <Flex position="relative" flex="1" maxW={{ md: 'sm' }} order={{ base: 3, md: 0 }} w={{ base: '100%', md: 'auto' }}>
+                    <IconButton
+                        aria-label="Закрыть"
+                        variant="ghost"
+                        colorPalette="gray"
+                        size="sm"
+                        onClick={onClose}
+                    >
+                        <LuX />
+                    </IconButton>
+
+                    <Flex position="relative" w="100%" maxW={{ md: 'sm' }} ml={{ md: 'auto' }}>
                         <Input
-                            placeholder={activeTab === 'categories' ? 'Поиск категорий...' : 'Поиск брендов...'}
+                            placeholder={
+                                activeTab === 'categories'
+                                    ? 'Поиск категорий...'
+                                    : activeTab === 'brands'
+                                        ? 'Поиск брендов...'
+                                        : 'Поиск подборок...'
+                            }
                             size="sm"
                             borderRadius="lg"
                             bg="gray.50"
@@ -255,17 +284,6 @@ export default function CatalogPanel({ open, onClose }) {
                             <LuSearch size={16} />
                         </Box>
                     </Flex>
-
-                    <IconButton
-                        aria-label="Закрыть"
-                        variant="ghost"
-                        colorPalette="gray"
-                        size="sm"
-                        onClick={onClose}
-                        order={{ base: 2, md: 0 }}
-                    >
-                        <LuX />
-                    </IconButton>
                 </Flex>
 
                 {/* Body */}
@@ -323,7 +341,7 @@ export default function CatalogPanel({ open, onClose }) {
                                                 )}
                                                 <Text
                                                     as={Link}
-                                                    href={buildCategoryUrl(node.id)}
+                                                    href={buildCategoryUrl(node.slug)}
                                                     onClick={onClose}
                                                     fontSize="sm"
                                                     truncate
@@ -421,7 +439,7 @@ export default function CatalogPanel({ open, onClose }) {
                                             <>
                                                 <Text
                                                     as={Link}
-                                                    href={buildCategoryUrl(categories[activeRootIndex].id)}
+                                                    href={buildCategoryUrl(categories[activeRootIndex].slug)}
                                                     onClick={onClose}
                                                     fontSize="md"
                                                     fontWeight="600"
@@ -463,7 +481,7 @@ export default function CatalogPanel({ open, onClose }) {
                                             </Text>
                                             <VStack align="stretch" gap="1">
                                                 {brandsByLetter[letter].map((b) => (
-                                                    <Link key={b.id} href={buildBrandUrl(b.id)} onClick={onClose}>
+                                                    <Link key={b.id} href={buildBrandUrl(b.slug)} onClick={onClose}>
                                                         <Text
                                                             fontSize="sm"
                                                             color="gray.600"
@@ -484,6 +502,47 @@ export default function CatalogPanel({ open, onClose }) {
                                 <Box textAlign="center" py="12">
                                     <Text fontSize="sm" color="gray.400">
                                         {searchTerm.trim() ? 'Ничего не найдено' : 'Нет брендов'}
+                                    </Text>
+                                </Box>
+                            )}
+                        </Box>
+                    )}
+
+                    {!loading && !error && activeTab === 'selections' && (
+                        <Box>
+                            {filteredSelections.length > 0 ? (
+                                <Box
+                                    display="grid"
+                                    gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' }}
+                                    gap="4"
+                                >
+                                    {filteredSelections.map((s) => (
+                                        <Link key={s.id} href={buildSelectionUrl(s.slug)} onClick={onClose}>
+                                            <Box
+                                                p="4"
+                                                borderRadius="lg"
+                                                border="1px solid"
+                                                borderColor="gray.100"
+                                                _dark={{ borderColor: 'gray.700' }}
+                                                _hover={{ borderColor: 'pecado.300', shadow: 'sm' }}
+                                                transition="all 0.15s"
+                                            >
+                                                <Text fontSize="sm" fontWeight="600" mb="1">
+                                                    {s.name}
+                                                </Text>
+                                                {s.short_description && (
+                                                    <Text fontSize="xs" color="gray.500" lineClamp="2">
+                                                        {s.short_description}
+                                                    </Text>
+                                                )}
+                                            </Box>
+                                        </Link>
+                                    ))}
+                                </Box>
+                            ) : (
+                                <Box textAlign="center" py="12">
+                                    <Text fontSize="sm" color="gray.400">
+                                        {searchTerm.trim() ? 'Ничего не найдено' : 'Нет подборок'}
                                     </Text>
                                 </Box>
                             )}

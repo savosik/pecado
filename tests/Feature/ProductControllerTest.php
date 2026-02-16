@@ -27,7 +27,9 @@ class ProductControllerTest extends TestCase
             $page->component('User/Products/Index')
                 ->has('seo')
                 ->where('seo.title', "Каталог товаров — {$appName}")
-                ->where('seo.h1', 'Каталог товаров');
+                ->where('seo.h1', 'Каталог товаров')
+                ->where('seo.canonical', route('products.index'))
+                ->where('seo.url', route('products.index'));
         });
     }
 
@@ -50,6 +52,8 @@ class ProductControllerTest extends TestCase
                 ->where('brand.name', 'TestBrand')
                 ->where('brand.slug', 'testbrand')
                 ->has('breadcrumbs')
+                ->where('seo.canonical', route('products.brand', $brand))
+                ->where('seo.url', route('products.brand', $brand))
         );
     }
 
@@ -86,6 +90,8 @@ class ProductControllerTest extends TestCase
                 ->where('breadcrumbs.1.label', 'Родительская')
                 ->where('breadcrumbs.2.label', 'Дочерняя')
                 ->where('breadcrumbs.2.url', null)
+                ->where('seo.canonical', route('products.category', $child))
+                ->where('seo.url', route('products.category', $child))
         );
     }
 
@@ -116,6 +122,8 @@ class ProductControllerTest extends TestCase
                 ->where('selection.id', $selection->id)
                 ->where('selection.name', 'Тест подборка')
                 ->has('breadcrumbs')
+                ->where('seo.canonical', route('products.selection', $selection))
+                ->where('seo.url', route('products.selection', $selection))
         );
     }
 
@@ -147,6 +155,8 @@ class ProductControllerTest extends TestCase
             $page->component('User/Products/Index')
                 ->has('seo')
                 ->where('seo.title', "Избранные товары — {$appName}")
+                ->where('seo.canonical', route('products.favorites'))
+                ->where('seo.url', route('products.favorites'))
                 ->where('initialFilters.in_favourites', 1);
         });
     }

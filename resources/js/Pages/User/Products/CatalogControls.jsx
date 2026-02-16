@@ -13,10 +13,7 @@ const SORT_LABELS = {
     name_desc: 'Я → А',
 };
 
-const VIEW_LABELS = {
-    grid: 'Сетка',
-    list: 'Список',
-};
+
 
 /**
  * Обёртка-кнопка для одного контрола каталога.
@@ -206,23 +203,64 @@ export default function CatalogControls({
                         )}
                     </ControlButton>
 
-                    {/* Вид */}
-                    <ControlButton
-                        icon={view === 'grid' ? LuGrid2X2 : LuLayoutList}
-                        label="Вид"
-                        value={VIEW_LABELS[view] ?? view}
+                    {/* Вид — toggle-кнопка */}
+                    <Flex
+                        align="center"
+                        bg="white"
+                        border="1px solid"
+                        borderColor="gray.200"
+                        borderRadius="lg"
+                        overflow="hidden"
+                        minH="40px"
+                        flexShrink="0"
+                        _dark={{
+                            bg: 'gray.800',
+                            borderColor: 'gray.600',
+                        }}
                     >
-                        {(ref) => (
-                            <select
-                                ref={ref}
-                                value={view}
-                                onChange={(e) => onViewChange(e.target.value)}
-                            >
-                                <option value="grid">Сетка</option>
-                                <option value="list">Список</option>
-                            </select>
-                        )}
-                    </ControlButton>
+                        {[
+                            { key: 'grid', icon: LuGrid2X2, title: 'Сетка' },
+                            { key: 'list', icon: LuLayoutList, title: 'Список' },
+                        ].map(({ key, icon: ViewIcon, title }) => {
+                            const isActive = view === key;
+                            return (
+                                <Flex
+                                    key={key}
+                                    as="button"
+                                    type="button"
+                                    title={title}
+                                    aria-label={title}
+                                    onClick={() => onViewChange(key)}
+                                    align="center"
+                                    justify="center"
+                                    px="2.5"
+                                    h="100%"
+                                    minH="40px"
+                                    cursor="pointer"
+                                    transition="all 0.15s"
+                                    bg={isActive ? 'gray.100' : 'transparent'}
+                                    _hover={{
+                                        bg: isActive ? 'gray.100' : 'gray.50',
+                                    }}
+                                    _dark={{
+                                        bg: isActive ? 'gray.700' : 'transparent',
+                                        _hover: {
+                                            bg: isActive ? 'gray.700' : 'gray.750',
+                                        },
+                                    }}
+                                >
+                                    <Icon
+                                        as={ViewIcon}
+                                        boxSize="4"
+                                        color={isActive ? 'gray.800' : 'gray.400'}
+                                        _dark={{
+                                            color: isActive ? 'gray.100' : 'gray.500',
+                                        }}
+                                    />
+                                </Flex>
+                            );
+                        })}
+                    </Flex>
                 </HStack>
             </Box>
         </Flex>

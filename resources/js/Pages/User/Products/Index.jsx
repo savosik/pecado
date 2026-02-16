@@ -3,8 +3,9 @@ import {
     Box, Button, Flex, Icon,
 } from '@chakra-ui/react';
 import { LuSlidersHorizontal } from 'react-icons/lu';
-import { Head, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
+import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import CatalogHeader from './CatalogHeader';
 import CatalogControls from './CatalogControls';
@@ -40,6 +41,8 @@ export default function Index() {
         initialFilters = {},
         breadcrumbs = null,
         sortOptions = [],
+        appName = 'Pecado',
+        pageDescription = null,
     } = usePage().props;
 
     // ─── Хуки управления состоянием ───
@@ -251,11 +254,18 @@ export default function Index() {
         </Box>
     ), [filters, facets, priceData, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange]);
 
+    // ─── Динамический SEO (поисковый запрос → title) ───
+    const dynamicSeo = useMemo(() => {
+        const base = { ...seo };
+        if (filters.q) {
+            base.title = `Поиск: ${filters.q} — ${appName}`;
+        }
+        return base;
+    }, [seo, filters.q, appName]);
+
     return (
         <UserLayout>
-            <Head title={seo.title || 'Каталог товаров'}>
-                {seo.description && <meta name="description" content={seo.description} />}
-            </Head>
+            <SeoHead seo={dynamicSeo} />
 
             {/* Хлебные крошки */}
             {breadcrumbs && breadcrumbs.length > 0 && (
@@ -267,7 +277,7 @@ export default function Index() {
                 <CatalogHeader
                     h1={seo.h1 || 'Каталог товаров'}
                     total={meta?.total ?? null}
-                    description={!breadcrumbs ? seo.description : undefined}
+                    description={pageDescription || (!breadcrumbs ? seo.description : undefined)}
                 />
 
                 <Flex gap="2" align="center" flexWrap="wrap">

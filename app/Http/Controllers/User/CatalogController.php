@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\ProductSelection;
 use Illuminate\Http\JsonResponse;
 
 class CatalogController extends Controller
@@ -22,6 +23,7 @@ class CatalogController extends Controller
             return [
                 'id' => $node->id,
                 'name' => $node->name,
+                'slug' => $node->slug,
                 'parent_id' => $node->parent_id,
                 'icon_url' => $iconUrl ?: null,
                 'children' => $node->children->map($mapNode)->values()->toArray(),
@@ -54,6 +56,20 @@ class CatalogController extends Controller
 
         return response()->json([
             'data' => $brands->values()->toArray(),
+        ]);
+    }
+
+    /**
+     * Список активных подборок для каталог-панели.
+     */
+    public function selections(): JsonResponse
+    {
+        $selections = ProductSelection::active()
+            ->ordered()
+            ->get(['id', 'name', 'slug', 'short_description']);
+
+        return response()->json([
+            'data' => $selections,
         ]);
     }
 }

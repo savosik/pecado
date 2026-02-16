@@ -27,7 +27,7 @@ export default function ProductSelectionTabs({ selections = [] }) {
     if (!selections.length) return null;
 
     const hasBanner = activeSelection?.desktop_image || activeSelection?.mobile_image;
-    const catalogUrl = activeSelection?.slug ? `/products?selection=${activeSelection.slug}` : null;
+    const catalogUrl = activeSelection?.slug ? `/collections/${activeSelection.slug}` : null;
 
     return (
         <Box

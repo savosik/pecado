@@ -22,11 +22,15 @@ class ProductController extends Controller
     {
         $appName = config('app.name');
 
+        $canonical = route('products.index');
+
         return $this->renderCatalog([
             'seo' => [
                 'title'       => "Каталог товаров — {$appName}",
                 'description' => "Каталог товаров интернет-магазина {$appName}",
                 'h1'          => 'Каталог товаров',
+                'canonical'   => $canonical,
+                'url'         => $canonical,
             ],
         ]);
     }
@@ -39,12 +43,17 @@ class ProductController extends Controller
     {
         $appName = config('app.name');
 
+        $canonical = route('products.brand', $brand);
+
         return $this->renderCatalog([
             'seo' => [
-                'title'       => "{$brand->name} — каталог в {$appName}",
-                'description' => "Товары бренда {$brand->name} в интернет-магазине {$appName}",
+                'title'       => $brand->meta_title ?: "{$brand->name} — каталог в {$appName}",
+                'description' => $brand->meta_description ?: "Товары бренда {$brand->name} в интернет-магазине {$appName}",
                 'h1'          => $brand->name,
+                'canonical'   => $canonical,
+                'url'         => $canonical,
             ],
+            'pageDescription' => $brand->short_description,
             'initialFilters' => [
                 'brand_ids' => [$brand->id],
             ],
@@ -82,12 +91,17 @@ class ProductController extends Controller
         }
         $breadcrumbs[] = ['label' => $category->name, 'url' => null];
 
+        $canonical = route('products.category', $category);
+
         return $this->renderCatalog([
             'seo' => [
-                'title'       => "{$category->name} — купить в {$appName}",
-                'description' => "Купить {$category->name} в интернет-магазине {$appName}",
+                'title'       => $category->meta_title ?: "{$category->name} — купить в {$appName}",
+                'description' => $category->meta_description ?: "Купить {$category->name} в интернет-магазине {$appName}",
                 'h1'          => $category->name,
+                'canonical'   => $canonical,
+                'url'         => $canonical,
             ],
+            'pageDescription' => $category->description,
             'initialFilters' => [
                 'category_id' => $category->id,
             ],
@@ -108,12 +122,17 @@ class ProductController extends Controller
     {
         $appName = config('app.name');
 
+        $canonical = route('products.selection', $selection);
+
         return $this->renderCatalog([
             'seo' => [
-                'title'       => "{$selection->name} — {$appName}",
-                'description' => "{$selection->name} — подборка товаров в {$appName}",
+                'title'       => $selection->meta_title ?: "{$selection->name} — {$appName}",
+                'description' => $selection->meta_description ?: "{$selection->name} — подборка товаров в {$appName}",
                 'h1'          => $selection->name,
+                'canonical'   => $canonical,
+                'url'         => $canonical,
             ],
+            'pageDescription' => $selection->description,
             'initialFilters' => [
                 'collection_ids' => [$selection->id],
             ],
@@ -137,11 +156,15 @@ class ProductController extends Controller
     {
         $appName = config('app.name');
 
+        $canonical = route('products.favorites');
+
         return $this->renderCatalog([
             'seo' => [
                 'title'       => "Избранные товары — {$appName}",
                 'description' => "Ваши избранные товары в {$appName}",
                 'h1'          => 'Избранные товары',
+                'canonical'   => $canonical,
+                'url'         => $canonical,
             ],
             'initialFilters' => [
                 'in_favourites' => 1,
@@ -154,6 +177,27 @@ class ProductController extends Controller
      * GET /products/{product:slug}
      */
     public function show(Product $product): Response
+    {
+        $data = $this->buildProductShowData($product);
+
+        return Inertia::render('User/Products/Show', $data);
+    }
+
+    /**
+     * JSON-ответ карточки товара (для QuickView диалога).
+     * GET /api/products/{product:slug}
+     */
+    public function showJson(Product $product): \Illuminate\Http\JsonResponse
+    {
+        $data = $this->buildProductShowData($product);
+
+        return response()->json($data);
+    }
+
+    /**
+     * Собирает все данные для детальной страницы товара.
+     */
+    private function buildProductShowData(Product $product): array
     {
         // Подгрузка связей
         $product->load([
@@ -323,14 +367,14 @@ class ProductController extends Controller
         ] : null;
         $productData['model_name'] = $product->model?->name;
 
-        return Inertia::render('User/Products/Show', [
+        return [
             'product'        => $productData,
             'media'          => $media,
             'categoryTrail'  => $categoryTrail,
             'variants'       => $variants,
             'certificates'   => $certificates,
             'specifications' => $specifications,
-        ]);
+        ];
     }
 
     /**
