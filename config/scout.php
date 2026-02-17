@@ -96,11 +96,14 @@ return [
                     'name_cyrillic',   // 3. Обратный транслит
                     'name_layout',     // 4. Альтернативная раскладка
                     'brand',           // 5. Бренд
-                    'category',        // 6. Категория
-                    'description',     // 7. Описание
-                    'sku',             // 8. Артикул
-                    'code',            // 9. Код товара
-                    'barcodes',        // 10. Штрих-коды
+                    'brand_translit',  // 6. Бренд (транслит)
+                    'brand_cyrillic',  // 7. Бренд (кириллица)
+                    'brand_layout',    // 8. Бренд (раскладка)
+                    'category',        // 9. Категория
+                    'description',     // 10. Описание
+                    'sku',             // 11. Артикул
+                    'code',            // 12. Код товара
+                    'barcodes',        // 13. Штрих-коды
                 ],
                 'filterableAttributes' => [
                     'brand',
