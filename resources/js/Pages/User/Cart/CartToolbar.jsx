@@ -5,8 +5,10 @@ import {
 } from '@chakra-ui/react';
 import {
     LuSearch, LuX, LuChevronDown, LuRefreshCw, LuTrash2,
-    LuHash, LuFileSpreadsheet, LuListChecks,
+    LuHash, LuFileSpreadsheet, LuListChecks, LuArrowRightLeft, LuScanBarcode,
 } from 'react-icons/lu';
+import MoveToCartDialog from './MoveToCartDialog';
+import BarcodeScannerDialog from './BarcodeScannerDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 /**
@@ -19,8 +21,11 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
  *   onBulkSetQty: (qty: number) => void,
  *   onBulkDelete: () => void,
  *   onBulkExport: () => void,
+ *   onBulkMove: (targetCartId: number) => void,
  *   onClearCart: () => void,
  *   onRefresh: () => void,
+ *   userCarts: Array<{ id: number, name: string, is_active: boolean, items_count: number }>,
+ *   currentCartId: number,
  * }} props
  */
 export default function CartToolbar({
@@ -30,14 +35,20 @@ export default function CartToolbar({
     onBulkSetQty,
     onBulkDelete,
     onBulkExport,
+    onBulkMove,
     onClearCart,
     onRefresh,
+    userCarts = [],
+    currentCartId,
 }) {
+    const [scannerOpen, setScannerOpen] = useState(false);
     const [qtyDialogOpen, setQtyDialogOpen] = useState(false);
     const [qtyValue, setQtyValue] = useState('');
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
+    const [moveDialogOpen, setMoveDialogOpen] = useState(false);
 
     const bulkEnabled = bulkSelectedCount > 0;
+    const hasOtherCarts = userCarts.filter((c) => c.id !== currentCartId).length > 0;
 
     const handleConfirmQty = useCallback(() => {
         const n = parseInt(qtyValue, 10);
@@ -126,6 +137,14 @@ export default function CartToolbar({
                                     Удалить выбранные
                                 </Menu.Item>
                                 <Menu.Item
+                                    value="move"
+                                    disabled={!bulkEnabled || !hasOtherCarts}
+                                    onClick={() => setMoveDialogOpen(true)}
+                                >
+                                    <LuArrowRightLeft size={14} />
+                                    Перенести в другую корзину…
+                                </Menu.Item>
+                                <Menu.Item
                                     value="export"
                                     disabled={!bulkEnabled}
                                     onClick={() => onBulkExport?.()}
@@ -145,6 +164,12 @@ export default function CartToolbar({
                             </Menu.Content>
                         </Menu.Positioner>
                     </Menu.Root>
+
+                    {/* Сканер штрихкода */}
+                    <Button variant="outline" size="sm" onClick={() => setScannerOpen(true)}>
+                        <LuScanBarcode size={14} />
+                        <Text display={{ base: 'none', sm: 'inline' }}>Сканер</Text>
+                    </Button>
 
                     {/* Обновить */}
                     <Button variant="outline" size="sm" onClick={onRefresh}>
@@ -209,6 +234,26 @@ export default function CartToolbar({
                 description="Все товары будут удалены из корзины. Это действие нельзя отменить."
                 confirmLabel="Очистить"
                 colorPalette="red"
+            />
+
+            {/* Диалог переноса товаров */}
+            <MoveToCartDialog
+                open={moveDialogOpen}
+                onClose={() => setMoveDialogOpen(false)}
+                onConfirm={(targetCartId) => {
+                    setMoveDialogOpen(false);
+                    onBulkMove?.(targetCartId);
+                }}
+                carts={userCarts}
+                currentCartId={currentCartId}
+                selectedCount={bulkSelectedCount}
+            />
+
+            {/* Диалог сканера штрихкодов */}
+            <BarcodeScannerDialog
+                open={scannerOpen}
+                onClose={() => setScannerOpen(false)}
+                onSuccess={() => onRefresh?.()}
             />
         </Box>
     );

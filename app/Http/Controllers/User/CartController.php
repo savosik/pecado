@@ -254,7 +254,38 @@ class CartController extends Controller
         $product = $productBarcode->product;
         $qty = $validated['quantity'] ?? 1;
 
+        // Remember previous quantity to detect if anything was actually added
+        $previousQty = $cart->items()
+            ->where('product_id', $product->id)
+            ->sum('quantity');
+
         $result = $this->cartService->addProduct($user, $cart, $product, $qty);
+
+        $actualTotal = $result['instock'] + $result['preorder'];
+
+        // Nothing was added — max stock already reached
+        if ($actualTotal <= $previousQty) {
+            return response()->json([
+                'status' => 'warning',
+                'message' => "Достигнут максимум для «{$product->name}» ({$result['max_total']} шт.)",
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                ...$result,
+            ]);
+        }
+
+        $addedQty = $actualTotal - $previousQty;
+
+        // Partially added (was clamped)
+        if ($addedQty < $qty) {
+            return response()->json([
+                'status' => 'partial',
+                'message' => "Добавлено {$addedQty} из {$qty} шт. «{$product->name}» (макс. {$result['max_total']} шт.)",
+                'product_id' => $product->id,
+                'product_name' => $product->name,
+                ...$result,
+            ], 201);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -311,6 +342,53 @@ class CartController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Товар удалён из корзины.',
+        ]);
+    }
+
+    /**
+     * Move selected products to another cart.
+     * POST /api/cart/move-items
+     */
+    public function moveItems(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'target_cart_id' => 'required|integer|exists:carts,id',
+            'product_ids' => 'required|array|min:1',
+            'product_ids.*' => 'integer',
+        ], [
+            'target_cart_id.required' => 'Укажите целевую корзину.',
+            'target_cart_id.exists' => 'Целевая корзина не найдена.',
+            'product_ids.required' => 'Выберите товары для переноса.',
+            'product_ids.min' => 'Выберите хотя бы один товар.',
+        ]);
+
+        $user = $request->user();
+        $sourceCart = $this->cartService->getOrCreateActiveCart($user);
+        $targetCart = Cart::findOrFail($validated['target_cart_id']);
+
+        // Both carts must belong to the user
+        if ($targetCart->user_id !== $user->id) {
+            abort(403, 'Доступ запрещён.');
+        }
+
+        // Cannot move to the same cart
+        if ($sourceCart->id === $targetCart->id) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Нельзя перенести товары в ту же корзину.',
+            ], 422);
+        }
+
+        $this->cartService->moveItems($sourceCart, $targetCart, $validated['product_ids']);
+
+        $movedCount = count($validated['product_ids']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "Перенесено {$movedCount} товаров в корзину «{$targetCart->name}».",
+            'moved_count' => $movedCount,
+            'target_cart_id' => $targetCart->id,
+            'target_cart_name' => $targetCart->name,
         ]);
     }
 

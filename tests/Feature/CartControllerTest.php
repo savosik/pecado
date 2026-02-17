@@ -336,6 +336,75 @@ class CartControllerTest extends TestCase
         $this->assertDatabaseHas('cart_items', ['id' => $item->id]);
     }
 
+    // ─── API: Move Items ───────────────────────────────────
+
+    public function test_move_items_between_carts(): void
+    {
+        $cart1 = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $cart2 = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => false]);
+        $product = Product::factory()->create();
+
+        CartItem::factory()->create([
+            'cart_id' => $cart1->id,
+            'product_id' => $product->id,
+            'quantity' => 5,
+            'item_type' => 'instock',
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/cart/move-items', [
+            'target_cart_id' => $cart2->id,
+            'product_ids' => [$product->id],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath('moved_count', 1);
+
+        // Item should now be in cart2
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart2->id,
+            'product_id' => $product->id,
+            'quantity' => 5,
+        ]);
+
+        // Item should no longer be in cart1
+        $this->assertDatabaseMissing('cart_items', [
+            'cart_id' => $cart1->id,
+            'product_id' => $product->id,
+        ]);
+    }
+
+    public function test_move_items_requires_auth(): void
+    {
+        $response = $this->postJson('/api/cart/move-items', [
+            'target_cart_id' => 1,
+            'product_ids' => [1],
+        ]);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_move_items_forbidden_for_other_users_cart(): void
+    {
+        $otherUser = User::factory()->create();
+        $myCart = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $otherCart = Cart::factory()->create(['user_id' => $otherUser->id]);
+        $product = Product::factory()->create();
+
+        CartItem::factory()->create([
+            'cart_id' => $myCart->id,
+            'product_id' => $product->id,
+            'quantity' => 3,
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/cart/move-items', [
+            'target_cart_id' => $otherCart->id,
+            'product_ids' => [$product->id],
+        ]);
+
+        $response->assertForbidden();
+    }
+
     // ─── API: Clear Cart ───────────────────────────────────
 
     public function test_clear_cart(): void

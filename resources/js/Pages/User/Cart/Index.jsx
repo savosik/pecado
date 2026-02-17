@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import { Box } from '@chakra-ui/react';
 import { LuShoppingCart } from 'react-icons/lu';
 import UserLayout from '../UserLayout';
@@ -10,7 +11,7 @@ import CartToolbar from './CartToolbar';
 import CartTable from './CartTable';
 import CartSummary from './CartSummary';
 import { useCartStore } from '@/stores/useCartStore';
-import { toastSuccess, toastInfo } from '@/utils/toast';
+import { toastSuccess, toastInfo, toastError } from '@/utils/toast';
 
 /**
  * Страница корзины — Inertia-страница (GET /cart/{cart}).
@@ -221,6 +222,24 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
         }
     }, [items, selected]);
 
+    const handleBulkMove = useCallback(async (targetCartId) => {
+        const productIds = Array.from(selected);
+        try {
+            const { data } = await axios.post('/api/cart/move-items', {
+                target_cart_id: targetCartId,
+                product_ids: productIds,
+            });
+            setSelected(new Set());
+            toastSuccess('Товары перенесены', data.message);
+            // Reload cart data
+            useCartStore.getState()._serverSync();
+            router.reload({ only: ['cartDetails', 'userCarts'], preserveScroll: true });
+        } catch (err) {
+            const msg = err.response?.data?.message || 'Не удалось перенести товары.';
+            toastError('Ошибка', msg);
+        }
+    }, [selected]);
+
     // FIX #7: use Inertia router.reload + server sync instead of full page reload
     const handleRefresh = useCallback(() => {
         useCartStore.getState()._serverSync();
@@ -258,8 +277,11 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
                                 onBulkSetQty={handleBulkSetQty}
                                 onBulkDelete={handleBulkDelete}
                                 onBulkExport={handleBulkExport}
+                                onBulkMove={handleBulkMove}
                                 onClearCart={handleClearCart}
                                 onRefresh={handleRefresh}
+                                userCarts={userCarts}
+                                currentCartId={cart?.id}
                             />
 
                             <CartTable
