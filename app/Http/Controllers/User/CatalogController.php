@@ -40,7 +40,8 @@ class CatalogController extends Controller
      */
     public function brands(): JsonResponse
     {
-        $brands = Brand::orderBy('name')
+        $brands = Brand::with('tags')
+            ->orderBy('name')
             ->get()
             ->map(function (Brand $brand) {
                 $logoUrl = $brand->getFirstMediaUrl('logo');
@@ -50,7 +51,12 @@ class CatalogController extends Controller
                     'name' => $brand->name,
                     'slug' => $brand->slug,
                     'category' => $brand->category?->value,
+                    'is_featured' => $brand->is_featured,
                     'logo_url' => $logoUrl ?: null,
+                    'tags' => $brand->tags->map(fn ($tag) => [
+                        'name' => $tag->getTranslation('name', 'en'),
+                        'color' => $tag->type,
+                    ])->values()->toArray(),
                 ];
             });
 

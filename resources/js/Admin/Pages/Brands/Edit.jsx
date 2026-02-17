@@ -5,6 +5,7 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, MarkdownEditor } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
+import { Switch } from '@/components/ui/switch';
 import { LuFileText, LuAlignLeft, LuImage, LuTag, LuSearch } from 'react-icons/lu';
 
 export default function Edit({ brand, brands, categories }) {
@@ -19,6 +20,7 @@ export default function Edit({ brand, brands, categories }) {
         description: brand.description || '',
         meta_title: brand.meta_title || '',
         meta_description: brand.meta_description || '',
+        is_featured: brand.is_featured || false,
         logo: null,
         tags: brand.tags || [],
     });
@@ -195,6 +197,13 @@ export default function Edit({ brand, brands, categories }) {
                                             />
                                         </FormField>
                                     </SimpleGrid>
+
+                                    <Switch
+                                        checked={data.is_featured}
+                                        onCheckedChange={(e) => setData('is_featured', e.checked)}
+                                    >
+                                        Рекомендуемый бренд
+                                    </Switch>
                                 </Stack>
                             </Tabs.Content>
 

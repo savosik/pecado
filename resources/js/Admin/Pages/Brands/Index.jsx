@@ -62,7 +62,12 @@ export default function Index({ brands, filters }) {
             sortable: true,
             render: (_, brand) => (
                 <Box>
-                    <Text fontWeight="medium">{brand.name}</Text>
+                    <HStack gap={2}>
+                        <Text fontWeight="medium">{brand.name}</Text>
+                        {brand.is_featured && (
+                            <Badge size="xs" colorPalette="yellow" variant="solid">⭐ Рекомендуемый</Badge>
+                        )}
+                    </HStack>
                     {brand.external_id && (
                         <Text fontSize="sm" color="fg.muted">ID: {brand.external_id}</Text>
                     )}

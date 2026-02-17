@@ -26,6 +26,7 @@ class Brand extends Model implements HasMedia
         'slug',
         'short_description',
         'category',
+        'is_featured',
         'meta_title',
         'meta_description',
         'parent_id',
@@ -40,6 +41,7 @@ class Brand extends Model implements HasMedia
     {
         return [
             'category' => BrandCategory::class,
+            'is_featured' => 'boolean',
         ];
     }
 

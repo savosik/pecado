@@ -86,6 +86,7 @@ class BrandController extends AdminController
             'logo' => 'nullable|image|max:20480',
             'tags' => 'nullable|array',
             'category' => ['required', Rule::enum(BrandCategory::class)],
+            'is_featured' => 'boolean',
         ]);
 
         if (empty($validated['slug'])) {
@@ -133,6 +134,7 @@ class BrandController extends AdminController
                 'parent_id' => $brand->parent_id,
                 'category' => $brand->category->value,
                 'external_id' => $brand->external_id,
+                'is_featured' => (bool) $brand->is_featured,
                 'short_description' => $brand->short_description,
                 'description' => $brand->description,
                 'meta_title' => $brand->meta_title,
@@ -166,6 +168,7 @@ class BrandController extends AdminController
             'logo' => 'nullable|image|max:20480',
             'tags' => 'nullable|array',
             'category' => ['required', Rule::enum(BrandCategory::class)],
+            'is_featured' => 'boolean',
         ]);
 
          if (isset($validated['parent_id']) && $validated['parent_id'] == $brand->id) {

@@ -1,14 +1,15 @@
-import { useMemo , useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, MarkdownEditor } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
+import { Switch } from '@/components/ui/switch';
 import { LuFileText, LuAlignLeft, LuImage, LuTag, LuSearch } from 'react-icons/lu';
 
 export default function Create({ brands, categories }) {
-    const { data, setData, post, processing, errors , transform } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         parent_id: '',
         category: 'other',
@@ -18,6 +19,7 @@ export default function Create({ brands, categories }) {
         description: '',
         meta_title: '',
         meta_description: '',
+        is_featured: false,
         logo: null,
         tags: [],
     });
@@ -172,6 +174,13 @@ export default function Create({ brands, categories }) {
                                             />
                                         </FormField>
                                     </SimpleGrid>
+
+                                    <Switch
+                                        checked={data.is_featured}
+                                        onCheckedChange={(e) => setData('is_featured', e.checked)}
+                                    >
+                                        Рекомендуемый бренд
+                                    </Switch>
                                 </Stack>
                             </Tabs.Content>
 

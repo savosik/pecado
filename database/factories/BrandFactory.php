@@ -21,6 +21,7 @@ class BrandFactory extends Factory
             'slug' => $this->faker->slug,
             'short_description' => $this->faker->sentence,
             'category' => \App\Enums\BrandCategory::Own,
+            'is_featured' => false,
             'meta_title' => $this->faker->sentence,
             'meta_description' => $this->faker->paragraph,
         ];

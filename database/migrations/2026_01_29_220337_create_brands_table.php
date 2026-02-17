@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->text('short_description')->nullable();
             $table->string('category')->default('other');
+            $table->boolean('is_featured')->default(false);
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('brands')->nullOnDelete();

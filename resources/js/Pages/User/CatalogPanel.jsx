@@ -11,6 +11,118 @@ import {
 
 /* ─── helpers ─── */
 
+const darkenColor = (hex, percent = 30) => {
+    if (!hex) return hex;
+    hex = hex.replace('#', '');
+    if (hex.length !== 6) return hex;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    const f = 1 - percent / 100;
+    return `#${Math.max(0, Math.floor(r * f)).toString(16).padStart(2, '0')}${Math.max(0, Math.floor(g * f)).toString(16).padStart(2, '0')}${Math.max(0, Math.floor(b * f)).toString(16).padStart(2, '0')}`;
+};
+
+const TagBadge = ({ tag }) => {
+    const textColor = tag.color ? darkenColor(tag.color, 35) : undefined;
+    return (
+        <Text
+            as="sup"
+            fontSize="0.6rem"
+            fontWeight="400"
+            ml="1"
+            px="1"
+            py="0.5"
+            borderRadius="sm"
+            style={{
+                color: textColor || tag.color || 'var(--chakra-colors-gray-500)',
+                backgroundColor: tag.color ? `${tag.color}20` : 'var(--chakra-colors-gray-100)',
+            }}
+        >
+            {tag.name}
+        </Text>
+    );
+};
+
+const BrandName = ({ name, tags }) => {
+    if (!tags || !Array.isArray(tags) || tags.length === 0) return name;
+    return (<>{name}<TagBadge tag={tags[0]} /></>);
+};
+
+const getBrandGradient = (name) => {
+    const gradients = [
+        'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+        'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+        'linear-gradient(135deg, #fa709a 0%, #fee140 100%)',
+        'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+        'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+        'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+        'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)',
+        'linear-gradient(135deg, #ff8a80 0%, #ffb74d 100%)',
+    ];
+    const hash = (name || '').split('').reduce((a, c) => { a = ((a << 5) - a) + c.charCodeAt(0); return a & a; }, 0);
+    return gradients[Math.abs(hash) % gradients.length];
+};
+
+const FeaturedBrandCard = ({ brand }) => {
+    const hasLogo = !!brand.logo_url;
+    const initials = (brand.name || '??').slice(0, 2).toUpperCase();
+    return (
+        <Box
+            borderRadius="lg"
+            border="1px solid"
+            borderColor="gray.100"
+            _dark={{ borderColor: 'gray.700' }}
+            overflow="hidden"
+            _hover={{ shadow: 'lg' }}
+            transition="all 0.2s"
+            h="100%"
+            display="flex"
+            flexDirection="column"
+        >
+            {hasLogo ? (
+                <Flex
+                    aspectRatio="1"
+                    w="100%"
+                    align="center"
+                    justify="center"
+                    bg="gray.50"
+                    _dark={{ bg: 'gray.800' }}
+                    overflow="hidden"
+                    borderBottom="1px solid"
+                    borderColor="gray.100"
+                    _darkBorder={{ borderColor: 'gray.700' }}
+                >
+                    <Box as="img" src={brand.logo_url} alt="" maxH="100%" maxW="100%" objectFit="contain" />
+                </Flex>
+            ) : (
+                <Flex
+                    aspectRatio="1"
+                    w="100%"
+                    align="center"
+                    justify="center"
+                    position="relative"
+                    overflow="hidden"
+                    style={{ background: getBrandGradient(brand.name) }}
+                >
+                    {/* subtle pattern */}
+                    <Box position="absolute" inset="0" opacity="0.1">
+                        <Box position="absolute" top="2" right="2" w="8" h="8" border="2px solid white" borderRadius="md" />
+                        <Box position="absolute" bottom="2" left="2" w="4" h="4" border="2px solid white" borderRadius="md" />
+                    </Box>
+                    <Text color="white" fontWeight="bold" fontSize="2xl" textShadow="0 2px 4px rgba(0,0,0,0.2)">
+                        {initials}
+                    </Text>
+                </Flex>
+            )}
+            <Flex p="3" justify="center" align="center" flex="1">
+                <Text fontSize="xs" fontWeight="500" textAlign="center" truncate>{brand.name}</Text>
+            </Flex>
+        </Box>
+    );
+};
+
 const getFirstLetter = (name) => {
     if (!name || !name[0]) return '#';
     const ch = name[0];
@@ -173,10 +285,15 @@ export default function CatalogPanel({ open, onClose }) {
         return list.filter((b) => (b.name || '').toLowerCase().includes(q));
     }, [brands, searchTerm]);
 
-    /* ── brands grouped by letter ── */
-    const brandsByLetter = useMemo(() => {
+    /* ── featured brands ── */
+    const featuredBrands = useMemo(() =>
+        filteredBrands.filter((b) => b.is_featured).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+        [filteredBrands]);
+
+    /* ── own brands grouped by letter ── */
+    const groupByLetter = (list) => {
         const map = {};
-        for (const b of filteredBrands) {
+        for (const b of list) {
             const name = (b.name || '').trim();
             if (!name) continue;
             const letter = getFirstLetter(name);
@@ -187,7 +304,15 @@ export default function CatalogPanel({ open, onClose }) {
             map[k].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         }
         return map;
-    }, [filteredBrands]);
+    };
+
+    const ownBrandsByLetter = useMemo(() =>
+        groupByLetter(filteredBrands.filter((b) => b.category === 'own')),
+        [filteredBrands]);
+
+    const otherBrandsByLetter = useMemo(() =>
+        groupByLetter(filteredBrands.filter((b) => b.category !== 'own')),
+        [filteredBrands]);
 
     /* ── filtered selections (search) ── */
     const filteredSelections = useMemo(() => {
@@ -487,44 +612,86 @@ export default function CatalogPanel({ open, onClose }) {
                     )}
 
                     {!loading && !error && activeTab === 'brands' && (
-                        <Box>
-                            {Object.keys(brandsByLetter).length > 0 ? (
-                                <Box
-                                    display="grid"
-                                    gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)', xl: 'repeat(5, 1fr)' }}
-                                    gap="6"
-                                >
-                                    {Object.keys(brandsByLetter).sort(sortLetters).map((letter) => (
-                                        <Box key={letter}>
-                                            <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase" letterSpacing="wide" mb="2">
-                                                {letter}
-                                            </Text>
-                                            <VStack align="stretch" gap="1">
-                                                {brandsByLetter[letter].map((b) => (
-                                                    <Link key={b.id} href={buildBrandUrl(b.slug)} onClick={onClose}>
-                                                        <Text
-                                                            fontSize="sm"
-                                                            color="gray.600"
-                                                            _hover={{ color: 'pecado.500' }}
-                                                            _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }}
-                                                            transition="colors 0.15s"
-                                                            truncate
-                                                        >
-                                                            {b.name}
-                                                        </Text>
-                                                    </Link>
-                                                ))}
-                                            </VStack>
-                                        </Box>
-                                    ))}
-                                </Box>
-                            ) : (
-                                <Box textAlign="center" py="12">
-                                    <Text fontSize="sm" color="gray.400">
-                                        {searchTerm.trim() ? 'Ничего не найдено' : 'Нет брендов'}
-                                    </Text>
+                        <Box spaceY="8">
+                            {/* Featured brands cards */}
+                            {featuredBrands.length > 0 && (
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="600" mb="3">Популярные бренды</Text>
+                                    <Box
+                                        display="grid"
+                                        gridTemplateColumns={{ base: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(6, 1fr)', xl: 'repeat(8, 1fr)' }}
+                                        gap="4"
+                                    >
+                                        {featuredBrands.map((b) => (
+                                            <Link key={b.id} href={buildBrandUrl(b.slug)} onClick={onClose}>
+                                                <FeaturedBrandCard brand={b} />
+                                            </Link>
+                                        ))}
+                                    </Box>
                                 </Box>
                             )}
+
+                            {/* Own brands */}
+                            {Object.keys(ownBrandsByLetter).length > 0 && (
+                                <Box>
+                                    <Text fontSize="md" fontWeight="600" mb="4">Собственные бренды</Text>
+                                    <Box
+                                        display="grid"
+                                        gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)', xl: 'repeat(5, 1fr)' }}
+                                        gap="6"
+                                    >
+                                        {Object.keys(ownBrandsByLetter).sort(sortLetters).map((letter) => (
+                                            <Box key={letter}>
+                                                <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase" letterSpacing="wide" mb="2">{letter}</Text>
+                                                <VStack align="stretch" gap="1">
+                                                    {ownBrandsByLetter[letter].map((b) => (
+                                                        <Link key={b.id} href={buildBrandUrl(b.slug)} onClick={onClose}>
+                                                            <Text fontSize="sm" color="gray.600" _hover={{ color: 'pecado.500' }} _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }} transition="colors 0.15s" truncate>
+                                                                <BrandName name={b.name} tags={b.tags} />
+                                                            </Text>
+                                                        </Link>
+                                                    ))}
+                                                </VStack>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </Box>
+                            )}
+
+                            {/* Other brands */}
+                            <Box>
+                                {Object.keys(ownBrandsByLetter).length > 0 && (
+                                    <Text fontSize="md" fontWeight="600" mb="4">Прочие бренды</Text>
+                                )}
+                                {Object.keys(otherBrandsByLetter).length > 0 ? (
+                                    <Box
+                                        display="grid"
+                                        gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)', xl: 'repeat(5, 1fr)' }}
+                                        gap="6"
+                                    >
+                                        {Object.keys(otherBrandsByLetter).sort(sortLetters).map((letter) => (
+                                            <Box key={letter}>
+                                                <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase" letterSpacing="wide" mb="2">{letter}</Text>
+                                                <VStack align="stretch" gap="1">
+                                                    {otherBrandsByLetter[letter].map((b) => (
+                                                        <Link key={b.id} href={buildBrandUrl(b.slug)} onClick={onClose}>
+                                                            <Text fontSize="sm" color="gray.600" _hover={{ color: 'pecado.500' }} _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }} transition="colors 0.15s" truncate>
+                                                                <BrandName name={b.name} tags={b.tags} />
+                                                            </Text>
+                                                        </Link>
+                                                    ))}
+                                                </VStack>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                ) : (
+                                    <Box textAlign="center" py="12">
+                                        <Text fontSize="sm" color="gray.400">
+                                            {searchTerm.trim() ? 'Ничего не найдено' : 'Нет брендов'}
+                                        </Text>
+                                    </Box>
+                                )}
+                            </Box>
                         </Box>
                     )}
 
