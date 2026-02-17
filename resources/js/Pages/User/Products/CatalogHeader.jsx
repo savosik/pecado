@@ -10,7 +10,7 @@ export default function CatalogHeader({ h1, total, description }) {
     return (
         <Box>
             <Flex align="baseline" gap="3" flexWrap="wrap">
-                <Heading as="h1" size="2xl" fontWeight="900">
+                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg">
                     {h1}
                 </Heading>
                 {total != null && (

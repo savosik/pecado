@@ -105,7 +105,7 @@ export default function CabinetLayout({ title, children }) {
             <Flex gap="6" direction={{ base: 'column', lg: 'row' }}>
                 {/* Mobile header */}
                 <Flex display={{ base: 'flex', lg: 'none' }} align="center" justify="space-between" mb="2">
-                    <Heading size="lg" fontWeight="800">{title}</Heading>
+                    <Heading size="xl" fontWeight="bold" color="fg">{title}</Heading>
                     <IconButton
                         aria-label="Меню кабинета"
                         variant="ghost"
@@ -154,7 +154,7 @@ export default function CabinetLayout({ title, children }) {
 
                 {/* Content */}
                 <Box flex="1" minW="0">
-                    <Heading display={{ base: 'none', lg: 'block' }} size="xl" fontWeight="800" mb="5">
+                    <Heading display={{ base: 'none', lg: 'block' }} size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" mb="5">
                         {title}
                     </Heading>
                     {children}

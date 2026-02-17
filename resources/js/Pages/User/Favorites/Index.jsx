@@ -23,7 +23,7 @@ export default function FavoritesIndex({ favorites }) {
                 {/* Заголовок */}
                 <Box>
                     <Flex align="baseline" gap="2">
-                        <Heading as="h1" fontSize={{ base: 'xl', md: '2xl' }} fontWeight="700">
+                        <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg">
                             Избранное
                         </Heading>
                         {total > 0 && (

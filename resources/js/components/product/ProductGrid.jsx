@@ -34,7 +34,7 @@ export default function ProductGrid({
                 pt={{ base: '4', md: '5' }}
                 pb={{ base: '2', md: '3' }}
             >
-                <Heading as="h2" fontSize={{ base: 'lg', md: 'xl' }} fontWeight="700">
+                <Heading as="h2" size={{ base: 'md', md: 'lg' }} fontWeight="bold" color="fg">
                     {title}
                 </Heading>
             </Box>

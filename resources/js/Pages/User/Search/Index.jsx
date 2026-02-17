@@ -132,7 +132,7 @@ export default function SearchIndex({ query, results }) {
 function SearchSection({ title, children }) {
     return (
         <Box mb="8">
-            <Heading as="h2" size="lg" fontWeight="semibold" mb="4" color="fg">
+            <Heading as="h2" size={{ base: 'md', md: 'lg' }} fontWeight="bold" mb="4" color="fg">
                 {title}
             </Heading>
             {children}

@@ -138,7 +138,7 @@ export default function ProductInfo({
                     )}
                 </Flex>
 
-                <Heading as="h1" size="2xl" mb="3" lineHeight="1.2" css={{ wordBreak: 'break-word' }}>
+                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" mb="3" lineHeight="1.2" css={{ wordBreak: 'break-word' }}>
                     {name}
                 </Heading>
 
@@ -221,7 +221,7 @@ export default function ProductInfo({
                     <Flex align="center" gap="3">
                         {(inStock || isPreorder) && price > 0 && (
                             <Box w="200px">
-                                <CartQuantityControl productId={productId} />
+                                <CartQuantityControl productId={productId} size="lg" />
                             </Box>
                         )}
                         <IconButton

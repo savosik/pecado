@@ -41,7 +41,7 @@ export default function ProductSelectionTabs({ selections = [] }) {
         >
             {/* Заголовок */}
             <Box px={{ base: '4', md: '6' }} pt={{ base: '4', md: '5' }}>
-                <Heading size="xl" fontWeight="800" mb="3">
+                <Heading size={{ base: 'md', md: 'lg' }} fontWeight="bold" color="fg" mb="3">
                     Подборки
                 </Heading>
             </Box>
