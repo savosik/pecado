@@ -44,7 +44,11 @@ export default function Index() {
         appName = 'Pecado',
         pageDescription = null,
         auth,
+        currency,
     } = usePage().props;
+
+    const currencySymbol = currency?.symbol || '₽';
+    const currencyCode = currency?.code || 'RUB';
 
     // Контекст страницы: скрываем фильтры, заданные контекстом
     const isAuthenticated = !!auth?.user;
@@ -53,7 +57,7 @@ export default function Index() {
 
     // ─── Хуки управления состоянием ───
     const {
-        filters,
+        filters: rawFilters,
         view,
         setView,
         updateFilter,
@@ -61,6 +65,9 @@ export default function Index() {
         resetFilters,
         goToPage,
     } = useCatalogFilters({ initialFilters });
+
+    // Добавляем currency_code в фильтры, чтобы API-хуки перезапрашивали данные при смене валюты
+    const filters = useMemo(() => ({ ...rawFilters, currency_code: currencyCode }), [rawFilters, currencyCode]);
 
     // Ref для доступа к актуальным фильтрам без пересоздания коллбэков
     const filtersRef = useRef(filters);
@@ -236,6 +243,7 @@ export default function Index() {
                             priceMin={filters.price_min || ''}
                             priceMax={filters.price_max || ''}
                             priceData={priceData}
+                            currencySymbol={currencySymbol}
                             onPriceChange={handlePriceChange}
                         />
                     </FilterBlock>
@@ -267,7 +275,7 @@ export default function Index() {
                 />
             )}
         </Box>
-    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange]);
+    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange]);
 
     // ─── Динамический SEO (поисковый запрос → title) ───
     const dynamicSeo = useMemo(() => {
@@ -326,6 +334,7 @@ export default function Index() {
                 filters={filters}
                 facets={facets}
                 lockedFilters={initialFilters}
+                currencySymbol={currencySymbol}
                 onRemoveFilter={handleRemoveFilter}
                 onResetAll={handleResetAll}
             />

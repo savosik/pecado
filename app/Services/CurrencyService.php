@@ -31,6 +31,30 @@ class CurrencyService
     }
 
     /**
+     * Конвертировать цену из пользовательской валюты обратно в базовую.
+     *
+     * Обратная операция к convertFromBase.
+     * Формула: basePrice = convertedPrice * (exchange_rate * correction_factor)
+     */
+    public function convertToBase(float $price, Currency $currency): float
+    {
+        if ($currency->is_base) {
+            return $price;
+        }
+
+        $rate = (float) ($currency->exchange_rate ?: 1.0);
+        $factor = (float) ($currency->correction_factor ?: 1.0);
+
+        $effectiveRate = $rate * $factor;
+
+        if ($effectiveRate <= 0) {
+            return $price;
+        }
+
+        return round($price * $effectiveRate, 2);
+    }
+
+    /**
      * Конвертировать массив цен товаров из базовой валюты.
      *
      * Обрабатывает поля base_price и sale_price.

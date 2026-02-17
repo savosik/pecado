@@ -24,8 +24,8 @@ const STOCK_LABELS = {
  *   onResetAll: () => void,
  * }} props
  */
-export default function SelectedFilters({ filters, facets, lockedFilters, onRemoveFilter, onResetAll }) {
-    const chips = buildChips(filters, facets, lockedFilters);
+export default function SelectedFilters({ filters, facets, lockedFilters, currencySymbol = '₽', onRemoveFilter, onResetAll }) {
+    const chips = buildChips(filters, facets, lockedFilters, currencySymbol);
 
     if (chips.length === 0) return null;
 
@@ -88,7 +88,7 @@ export default function SelectedFilters({ filters, facets, lockedFilters, onRemo
  * Построить массив чипов из текущих фильтров.
  * lockedFilters — фильтры, заданные контекстом страницы, которые не показываются как чипы.
  */
-function buildChips(filters, facets, lockedFilters = {}) {
+function buildChips(filters, facets, lockedFilters = {}, currencySymbol = '₽') {
     const chips = [];
 
     // Определяем «заблокированные» значения для массивных фильтров
@@ -115,19 +115,19 @@ function buildChips(filters, facets, lockedFilters = {}) {
         chips.push({
             key: 'price_range',
             filterKey: 'price_range',
-            label: `${Number(filters.price_min).toLocaleString('ru-RU')} – ${Number(filters.price_max).toLocaleString('ru-RU')} ₽`,
+            label: `${Number(filters.price_min).toLocaleString('ru-RU')} – ${Number(filters.price_max).toLocaleString('ru-RU')} ${currencySymbol}`,
         });
     } else if (hasMin) {
         chips.push({
             key: 'price_min',
             filterKey: 'price_min',
-            label: `от ${Number(filters.price_min).toLocaleString('ru-RU')} ₽`,
+            label: `от ${Number(filters.price_min).toLocaleString('ru-RU')} ${currencySymbol}`,
         });
     } else if (hasMax) {
         chips.push({
             key: 'price_max',
             filterKey: 'price_max',
-            label: `до ${Number(filters.price_max).toLocaleString('ru-RU')} ₽`,
+            label: `до ${Number(filters.price_max).toLocaleString('ru-RU')} ${currencySymbol}`,
         });
     }
 

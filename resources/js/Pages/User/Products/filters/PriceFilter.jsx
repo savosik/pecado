@@ -37,6 +37,7 @@ export default function PriceFilter({
     priceMin = '',
     priceMax = '',
     priceData = null,
+    currencySymbol = '₽',
     onPriceChange,
 }) {
     const [localMin, setLocalMin] = useState(priceMin);
@@ -170,7 +171,7 @@ export default function PriceFilter({
                                     onClick={() => handleBucketClick(bucket.from, bucket.to)}
                                 >
                                     <Text>
-                                        {formatPrice(bucket.from)} – {formatPrice(bucket.to)} ₽
+                                        {formatPrice(bucket.from)} – {formatPrice(bucket.to)} {currencySymbol}
                                     </Text>
                                     <Text color="gray.400" _dark={{ color: 'gray.500' }}>
                                         {bucket.count}

@@ -159,9 +159,25 @@ class CatalogApiController extends Controller
 
         $query = $this->buildBaseQuery($validated);
 
-        return response()->json(
-            $this->facetService->getPriceIntervals($query),
-        );
+        $intervals = $this->facetService->getPriceIntervals($query);
+
+        // Конвертируем цены в валюту пользователя
+        $user = Auth::user();
+        if ($user && $user->currency && !$user->currency->is_base) {
+            $currencyService = app(\App\Services\CurrencyService::class);
+            $currency = $user->currency;
+
+            $intervals['min'] = $currencyService->convertFromBase($intervals['min'], $currency);
+            $intervals['max'] = $currencyService->convertFromBase($intervals['max'], $currency);
+
+            foreach ($intervals['buckets'] as &$bucket) {
+                $bucket['from'] = $currencyService->convertFromBase($bucket['from'], $currency);
+                $bucket['to'] = $currencyService->convertFromBase($bucket['to'], $currency);
+            }
+            unset($bucket);
+        }
+
+        return response()->json($intervals);
     }
 
     /**
@@ -202,14 +218,25 @@ class CatalogApiController extends Controller
             $query->inCollections(array_map('intval', $validated['collection_ids']));
         }
 
-        // Цена
+        // Цена (конвертируем из валюты пользователя в базовую для запроса к base_price)
         $priceMin = $validated['price_min'] ?? null;
         $priceMax = $validated['price_max'] ?? null;
         if ($priceMin !== null || $priceMax !== null) {
-            $query->byPrice(
-                $priceMin !== null ? (float) $priceMin : null,
-                $priceMax !== null ? (float) $priceMax : null,
-            );
+            $minVal = $priceMin !== null ? (float) $priceMin : null;
+            $maxVal = $priceMax !== null ? (float) $priceMax : null;
+
+            // Если у пользователя не базовая валюта — конвертируем обратно в базовую
+            if ($user && $user->currency && !$user->currency->is_base) {
+                $currencyService = app(\App\Services\CurrencyService::class);
+                if ($minVal !== null) {
+                    $minVal = $currencyService->convertToBase($minVal, $user->currency);
+                }
+                if ($maxVal !== null) {
+                    $maxVal = $currencyService->convertToBase($maxVal, $user->currency);
+                }
+            }
+
+            $query->byPrice($minVal, $maxVal);
         }
 
         // Наличие
