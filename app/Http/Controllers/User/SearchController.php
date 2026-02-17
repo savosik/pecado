@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\News;
 use App\Models\Product;
 use App\Models\SearchHistory;
+use App\Services\Product\ProductQueryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -37,6 +38,7 @@ class SearchController extends Controller
             'q'                    => ['nullable', 'string', 'min:2', 'max:255'],
             'type'                 => ['sometimes', 'string', 'in:all,products,categories,brands,articles'],
             'limit'                => ['sometimes', 'integer', 'min:1', 'max:50'],
+            'page'                 => ['sometimes', 'integer', 'min:1'],
             'include_unavailable'  => ['sometimes', 'boolean'],
         ], [
             'q.min'  => 'Минимум 2 символа для поиска.',
@@ -46,18 +48,35 @@ class SearchController extends Controller
         $query              = $validated['q'] ?? null;
         $type               = $validated['type'] ?? 'all';
         $limit              = $validated['limit'] ?? null;
-        $includeUnavailable = (bool) ($validated['include_unavailable'] ?? false);
+        $page               = (int) ($validated['page'] ?? 1);
+        $includeUnavailable = (bool) ($validated['include_unavailable'] ?? true);
 
         // Без запроса — пустые результаты (страница /search без параметров)
-        $results    = [];
-        $totalCount = 0;
+        $results      = [];
+        $productsMeta = null;
+        $totalCount   = 0;
 
         if ($query) {
-            $results = $this->performSearch($query, $type, $limit, $includeUnavailable);
+            $results = $this->performSearch($query, $type, $limit, $page, $includeUnavailable);
+
+            // Извлекаем мета-данные пагинации товаров
+            if (isset($results['_products_meta'])) {
+                $productsMeta = $results['_products_meta'];
+                unset($results['_products_meta']);
+            }
+
             $totalCount = collect($results)->flatten(1)->count();
+            if ($productsMeta) {
+                $totalCount += $productsMeta['total'] - count($results['products'] ?? []);
+            }
 
             // Сохранение запроса в историю для авторизованных пользователей
-            if ($request->user()) {
+            // Удаляем предыдущие дубликаты, чтобы запрос не повторялся в списке
+            if ($request->user() && $page === 1) {
+                SearchHistory::where('user_id', $request->user()->id)
+                    ->where('query', $query)
+                    ->delete();
+
                 SearchHistory::create([
                     'user_id'       => $request->user()->id,
                     'query'         => $query,
@@ -68,9 +87,10 @@ class SearchController extends Controller
         }
 
         $responseData = [
-            'query'   => $query,
-            'type'    => $type,
-            'results' => $results,
+            'query'        => $query,
+            'type'         => $type,
+            'results'      => $results,
+            'productsMeta' => $productsMeta,
         ];
 
         if ($request->wantsJson()) {
@@ -155,51 +175,53 @@ class SearchController extends Controller
      *
      * @return array<string, array>
      */
-    private function performSearch(string $query, string $type, ?int $limit, bool $includeUnavailable): array
+    private function performSearch(string $query, string $type, ?int $limit, int $page, bool $includeUnavailable): array
     {
         $results = [];
         $searchAll = $type === 'all';
 
         // ── Товары ────────────────────────────────────────────────
         if ($searchAll || $type === 'products') {
-            $productLimit = $limit ?? 10;
+            $perPage = $limit ?? 20;
 
-            // Запрашиваем с запасом ×3, чтобы после фильтрации по наличию
-            // осталось достаточно результатов
-            $fetchLimit = $includeUnavailable ? $productLimit : $productLimit * 3;
+            $paginated = Product::search($query)
+                ->query(function ($q) {
+                    $q->select('products.*');
+                    $q->with(ProductQueryService::productEagerLoads());
+                    ProductQueryService::withRegionStockSums($q);
+                })
+                ->paginate($perPage, 'page', $page);
 
-            $products = Product::search($query)
-                ->query(fn ($q) => $q->with(['brand', 'category', 'media', 'warehouses']))
-                ->take($fetchLimit)
-                ->get();
+            $products = $paginated->getCollection();
 
             // Фильтрация по наличию (если не include_unavailable)
             if (! $includeUnavailable) {
                 $products = $products->filter(function (Product $product) {
-                    return $product->warehouses->sum('pivot.quantity') > 0;
+                    return ($product->primary_stock ?? 0) > 0;
                 })->values();
             }
 
-            $results['products'] = $products->take($productLimit)->map(fn (Product $product) => [
-                'id'                 => $product->id,
-                'name'               => $product->name,
-                'slug'               => $product->slug,
-                'price'              => (float) $product->base_price,
-                'available_quantity' => $product->warehouses->sum('pivot.quantity'),
-                // TODO: реализовать логику предзаказа, когда добавятся типы складов
-                'is_preorder'        => false,
-                'image_url'          => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
-                'brand'              => $product->brand ? [
-                    'id'   => $product->brand->id,
-                    'name' => $product->brand->name,
-                    'slug' => $product->brand->slug,
-                ] : null,
-                'category'           => $product->category ? [
-                    'id'   => $product->category->id,
-                    'name' => $product->category->name,
-                    'slug' => $product->category->slug,
-                ] : null,
-            ])->toArray();
+            // Преобразование через ProductQueryService (полный формат, как в каталоге)
+            $productArray = $products
+                ->map(fn (Product $product) => ProductQueryService::productToArray($product))
+                ->values()
+                ->toArray();
+
+            // Обогащение скидками и конвертация валют
+            $productArray = ProductQueryService::enrichProductsWithDiscounts($productArray);
+            $productArray = ProductQueryService::convertProductsPrices($productArray);
+
+            $results['products'] = $productArray;
+
+            // Мета-данные пагинации
+            $results['_products_meta'] = [
+                'current_page' => $paginated->currentPage(),
+                'last_page'    => $paginated->lastPage(),
+                'per_page'     => $paginated->perPage(),
+                'total'        => $paginated->total(),
+                'from'         => $paginated->firstItem(),
+                'to'           => $paginated->lastItem(),
+            ];
         }
 
         // ── Категории ─────────────────────────────────────────────

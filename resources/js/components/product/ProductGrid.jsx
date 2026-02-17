@@ -43,9 +43,9 @@ export default function ProductGrid({
             <Box px={{ base: '4', md: '6' }} pb={{ base: '4', md: '5' }}>
                 <Grid
                     templateColumns={{
-                        base: 'repeat(2, 1fr)',
-                        md: 'repeat(3, 1fr)',
-                        xl: `repeat(${columns}, 1fr)`,
+                        base: 'repeat(2, minmax(0, 1fr))',
+                        md: 'repeat(3, minmax(0, 1fr))',
+                        xl: `repeat(${columns}, minmax(0, 1fr))`,
                     }}
                     gap={{ base: '3', md: '4' }}
                 >
@@ -53,6 +53,7 @@ export default function ProductGrid({
                         <GridItem
                             key={product.id}
                             h="100%"
+                            overflow="hidden"
                             display={
                                 isOdd && index === visible.length - 1
                                     ? { base: 'none', md: 'block' }

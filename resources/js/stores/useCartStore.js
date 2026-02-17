@@ -1,59 +1,123 @@
 /**
  * Zustand-стор для управления корзиной.
  *
+ * Возможности:
+ *   - localStorage-кеш (мгновенная загрузка UI до ответа сервера)
+ *   - Cross-tab sync через Storage API
+ *   - Debounced sync через POST /api/cart/set-product-quantity (spillover)
+ *   - Clamping: при ответе `clamped < requested` → коррекция
+ *   - Server re-sync на Inertia navigate и кастомном событии cart:server-synced
+ *   - Custom events: cart:changed, cart:clamped, cart:server-synced
+ *
  * Использование:
  *   import { useCartStore } from '@/stores/useCartStore';
  *
- *   const { init, getQuantity, getTotalQuantity, setQuantity, clear } = useCartStore();
- *   await init(); // вызвать один раз при монтировании (проверяет auth)
+ *   const qty = useCartStore((s) => s.quantities[productId] || 0);
+ *   const total = useCartStore((s) => s.getTotalQuantity());
+ *   useCartStore.getState().setQuantity(productId, 5);
  */
 
 import { create } from 'zustand';
+import { router } from '@inertiajs/react';
+import { toastError } from '@/utils/toast';
+
+const STORAGE_KEY = 'cart:qty:v1';
+const DEBOUNCE_MS = 500;
 
 /** Таймеры debounce для каждого product_id */
 const debounceTimers = {};
-const DEBOUNCE_MS = 500;
+
+// ────────────────────────────────────────────
+// localStorage helpers
+// ────────────────────────────────────────────
+
+function loadFromCache() {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return {};
+        return parseQuantitiesMap(JSON.parse(raw));
+    } catch {
+        return {};
+    }
+}
+
+function saveToCache(quantities) {
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(quantities));
+    } catch {
+        // quota exceeded — ignore
+    }
+}
+
+/**
+ * Нормализация объекта {stringKey: value} → {numericKey: positiveInt}.
+ * Используется при парсинге ответа API и localStorage.
+ */
+function parseQuantitiesMap(data) {
+    const result = {};
+    if (data && typeof data === 'object') {
+        for (const [k, v] of Object.entries(data)) {
+            const num = Number(v);
+            if (num > 0) result[Number(k)] = num;
+        }
+    }
+    return result;
+}
+
+// ────────────────────────────────────────────
+// Store
+// ────────────────────────────────────────────
 
 export const useCartStore = create((set, get) => ({
     /**
-     * Элементы корзины: { [productId]: { cartItemId, quantity } }
-     * @type {Object<number, { cartItemId: number, quantity: number }>}
+     * Карта количеств: { [productId]: totalQty }
+     * @type {Object<number, number>}
      */
-    items: {},
+    quantities: {},
 
-    /** Флаг, что данные загружены */
+    /** Флаг, что данные загружены с сервера */
     loaded: false,
 
     /** Флаг загрузки */
     loading: false,
 
     /**
-     * Инициализация корзины — загрузка текущего состояния с сервера.
-     * Не делает ничего для гостей и если уже загружено.
+     * Set product_id, для которых идёт API-запрос.
+     * @type {Set<number>}
+     */
+    syncing: new Set(),
+
+    /**
+     * Инициализация корзины.
+     * 1. Мгновенно загружает из localStorage
+     * 2. Запрашивает сервер (GET /api/cart/active-quantities)
+     * 3. Синхронизирует стор
      *
-     * @param {object|null} user — объект auth.user из Inertia props (null для гостей)
+     * @param {object|null} user — auth.user из Inertia props (null для гостей)
      */
     init: async (user) => {
-        if (!user || get().loaded || get().loading) return;
+        if (!user || get().loading) return;
+
+        // Если уже загружено — не повторять, но re-sync допускается через _serverSync
+        if (get().loaded) return;
+
+        // Мгновенная загрузка из кеша
+        const cached = loadFromCache();
+        if (Object.keys(cached).length > 0) {
+            set({ quantities: cached });
+        }
 
         set({ loading: true });
 
         try {
-            const { data } = await window.axios.get('/api/cart/summary');
-            const items = {};
+            const { data } = await window.axios.get('/api/cart/active-quantities');
+            const quantities = parseQuantitiesMap(data);
 
-            if (data?.items && Array.isArray(data.items)) {
-                data.items.forEach((item) => {
-                    items[item.product_id] = {
-                        cartItemId: item.id,
-                        quantity: item.quantity,
-                    };
-                });
-            }
-
-            set({ items, loaded: true, loading: false });
+            set({ quantities, loaded: true, loading: false });
+            saveToCache(quantities);
         } catch {
-            set({ loading: false });
+            // При ошибке оставляем кешированные данные
+            set({ loaded: true, loading: false });
         }
     },
 
@@ -63,8 +127,7 @@ export const useCartStore = create((set, get) => ({
      * @returns {number}
      */
     getQuantity: (productId) => {
-        const item = get().items[Number(productId)];
-        return item ? item.quantity : 0;
+        return get().quantities[Number(productId)] || 0;
     },
 
     /**
@@ -72,10 +135,7 @@ export const useCartStore = create((set, get) => ({
      * @returns {number}
      */
     getTotalQuantity: () => {
-        return Object.values(get().items).reduce(
-            (sum, item) => sum + item.quantity,
-            0
-        );
+        return Object.values(get().quantities).reduce((sum, qty) => sum + qty, 0);
     },
 
     /**
@@ -83,12 +143,22 @@ export const useCartStore = create((set, get) => ({
      * @returns {number}
      */
     getTotalItems: () => {
-        return Object.keys(get().items).length;
+        return Object.keys(get().quantities).length;
+    },
+
+    /**
+     * Проверить, синхронизируется ли товар с сервером.
+     * @param {number} productId
+     * @returns {boolean}
+     */
+    isSyncing: (productId) => {
+        return get().syncing.has(Number(productId));
     },
 
     /**
      * Установить количество товара в корзине с debounced API-синхронизацией.
-     * Если qty = 0, товар удаляется из корзины.
+     * Использует POST /api/cart/set-product-quantity (spillover API).
+     *
      * @param {number} productId
      * @param {number} qty
      */
@@ -98,19 +168,20 @@ export const useCartStore = create((set, get) => ({
 
         // Optimistic update
         set((state) => {
-            const next = { ...state.items };
+            const next = { ...state.quantities };
 
             if (quantity <= 0) {
                 delete next[pid];
             } else {
-                next[pid] = {
-                    cartItemId: state.items[pid]?.cartItemId || null,
-                    quantity,
-                };
+                next[pid] = quantity;
             }
 
-            return { items: next };
+            saveToCache(next);
+            return { quantities: next };
         });
+
+        // Dispatch cart:changed event
+        window.dispatchEvent(new CustomEvent('cart:changed'));
 
         // Debounced API sync
         if (debounceTimers[pid]) {
@@ -120,43 +191,76 @@ export const useCartStore = create((set, get) => ({
         debounceTimers[pid] = setTimeout(async () => {
             delete debounceTimers[pid];
 
-            try {
-                const currentItem = get().items[pid];
+            // Добавить в syncing
+            set((state) => {
+                const next = new Set(state.syncing);
+                next.add(pid);
+                return { syncing: next };
+            });
 
-                if (quantity <= 0) {
-                    // Удаление: если был cartItemId — DELETE
-                    const cartItemId = currentItem?.cartItemId;
-                    if (cartItemId) {
-                        await window.axios.delete(`/api/cart/items/${cartItemId}`);
-                    }
-                } else if (currentItem?.cartItemId) {
-                    // Обновление существующего элемента
-                    await window.axios.patch(
-                        `/api/cart/items/${currentItem.cartItemId}`,
-                        { quantity }
-                    );
-                } else {
-                    // Добавление нового элемента
-                    const { data } = await window.axios.post('/api/cart/items', {
-                        product_id: pid,
-                        quantity,
+            try {
+                const { data } = await window.axios.post('/api/cart/set-product-quantity', {
+                    product_id: pid,
+                    quantity,
+                });
+
+                // Clamping: сервер может вернуть меньше, чем запрошено
+                if (data && typeof data.clamped === 'number') {
+                    const clamped = data.clamped;
+
+                    set((state) => {
+                        const next = { ...state.quantities };
+
+                        if (clamped <= 0) {
+                            delete next[pid];
+                        } else {
+                            next[pid] = clamped;
+                        }
+
+                        saveToCache(next);
+                        return { quantities: next };
                     });
 
-                    // Сохраняем cartItemId из ответа сервера
-                    if (data?.id) {
-                        set((state) => {
-                            const next = { ...state.items };
-                            if (next[pid]) {
-                                next[pid] = { ...next[pid], cartItemId: data.id };
-                            }
-                            return { items: next };
-                        });
+                    // Если clamped < requested — уведомить UI о коррекции
+                    if (clamped < quantity) {
+                        window.dispatchEvent(new CustomEvent('cart:clamped', {
+                            detail: {
+                                productId: pid,
+                                requested: quantity,
+                                clamped,
+                                maxTotal: data.max_total,
+                                instock: data.instock,
+                                preorder: data.preorder,
+                            },
+                        }));
+                    }
+                    // Если всё поместилось, но часть товаров ушла в предзаказ — уведомить
+                    else if (data.preorder > 0) {
+                        window.dispatchEvent(new CustomEvent('cart:spillover', {
+                            detail: {
+                                productId: pid,
+                                requested: quantity,
+                                instock: data.instock,
+                                preorder: data.preorder,
+                            },
+                        }));
                     }
                 }
+
+                // Dispatch cart:changed и cart:server-synced
+                window.dispatchEvent(new CustomEvent('cart:changed'));
+                window.dispatchEvent(new CustomEvent('cart:server-synced'));
             } catch {
                 // При ошибке — перезагрузка корзины с сервера
-                set({ loaded: false });
-                get().init();
+                toastError('Ошибка синхронизации', 'Не удалось сохранить изменения. Данные обновлены с сервера.');
+                get()._serverSync();
+            } finally {
+                // Убрать из syncing
+                set((state) => {
+                    const next = new Set(state.syncing);
+                    next.delete(pid);
+                    return { syncing: next };
+                });
             }
         }, DEBOUNCE_MS);
     },
@@ -171,16 +275,22 @@ export const useCartStore = create((set, get) => ({
             delete debounceTimers[key];
         });
 
-        const previousItems = { ...get().items };
+        const previousQuantities = { ...get().quantities };
 
         // Optimistic update
-        set({ items: {} });
+        set({ quantities: {}, syncing: new Set() });
+        saveToCache({});
+        window.dispatchEvent(new CustomEvent('cart:changed'));
 
         try {
             await window.axios.delete('/api/cart/clear');
+            window.dispatchEvent(new CustomEvent('cart:server-synced'));
         } catch {
             // Rollback
-            set({ items: previousItems });
+            toastError('Ошибка', 'Не удалось очистить корзину.');
+            set({ quantities: previousQuantities });
+            saveToCache(previousQuantities);
+            window.dispatchEvent(new CustomEvent('cart:changed'));
         }
     },
 
@@ -192,6 +302,56 @@ export const useCartStore = create((set, get) => ({
             clearTimeout(debounceTimers[key]);
             delete debounceTimers[key];
         });
-        set({ items: {}, loaded: false, loading: false });
+        set({ quantities: {}, loaded: false, loading: false, syncing: new Set() });
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch {
+            // ignore
+        }
+    },
+
+    /**
+     * Принудительная синхронизация с сервером.
+     * @private
+     */
+    _serverSync: async () => {
+        try {
+            const { data } = await window.axios.get('/api/cart/active-quantities');
+            const quantities = parseQuantitiesMap(data);
+
+            set({ quantities, loaded: true });
+            saveToCache(quantities);
+            window.dispatchEvent(new CustomEvent('cart:changed'));
+        } catch {
+            // ignore
+        }
     },
 }));
+
+// ────────────────────────────────────────────
+// Cross-tab sync
+// ────────────────────────────────────────────
+
+if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+        if (e.key !== STORAGE_KEY) return;
+
+        let quantities;
+        try {
+            quantities = parseQuantitiesMap(JSON.parse(e.newValue || '{}'));
+        } catch {
+            return;
+        }
+
+        useCartStore.setState({ quantities });
+        window.dispatchEvent(new CustomEvent('cart:changed'));
+    });
+
+    // Server re-sync на Inertia navigate
+    router.on('navigate', () => {
+        const state = useCartStore.getState();
+        if (state.loaded) {
+            state._serverSync();
+        }
+    });
+}

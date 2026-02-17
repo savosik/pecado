@@ -83,13 +83,29 @@ class ProductController extends Controller
         $breadcrumbs = [
             ['label' => 'Каталог', 'url' => route('products.index')],
         ];
+
+        // categoryTrail для ProductBreadcrumbs (с parent_id для siblings)
+        $categoryTrail = [];
+
         foreach ($ancestors as $ancestor) {
             $breadcrumbs[] = [
                 'label' => $ancestor->name,
                 'url'   => route('products.category', $ancestor->slug),
             ];
+            $categoryTrail[] = [
+                'id'        => $ancestor->id,
+                'name'      => $ancestor->name,
+                'slug'      => $ancestor->slug,
+                'parent_id' => $ancestor->parent_id,
+            ];
         }
         $breadcrumbs[] = ['label' => $category->name, 'url' => null];
+        $categoryTrail[] = [
+            'id'        => $category->id,
+            'name'      => $category->name,
+            'slug'      => $category->slug,
+            'parent_id' => $category->parent_id,
+        ];
 
         $canonical = route('products.category', $category);
 
@@ -110,7 +126,8 @@ class ProductController extends Controller
                 'name' => $category->name,
                 'slug' => $category->slug,
             ],
-            'breadcrumbs' => $breadcrumbs,
+            'categoryTrail'  => $categoryTrail,
+            'breadcrumbs'    => $breadcrumbs,
         ]);
     }
 
@@ -236,13 +253,12 @@ class ProductController extends Controller
         $variants = [];
         if ($product->model_id) {
             $variantProducts = Product::where('model_id', $product->model_id)
-                ->where('id', '!=', $product->id)
                 ->with(['brand', 'media', 'tags', 'attributeValues.attribute', 'attributeValues.attributeValue'])
                 ->get();
 
-            // Собираем атрибуты ВСЕХ товаров модели (включая текущий) для сравнения.
+            // Собираем атрибуты ВСЕХ товаров модели для сравнения.
             // Исключаем технические атрибуты (number/boolean типы, упаковка, весá и т.д.)
-            $allProducts = $variantProducts->push($product);
+            $allProducts = $variantProducts;
             $excludedTypes = ['number', 'boolean'];
             $excludedNames = [
                 'Composition', 'Классификация для отчетности',
@@ -294,6 +310,11 @@ class ProductController extends Controller
                 }
             }
             unset($va);
+
+            // Сортируем варианты по артикулу (SKU)
+            usort($variantArrays, function ($a, $b) {
+                return strnatcasecmp($a['sku'] ?? '', $b['sku'] ?? '');
+            });
 
             $variants = $variantArrays;
         }
@@ -375,6 +396,35 @@ class ProductController extends Controller
             'certificates'   => $certificates,
             'specifications' => $specifications,
         ];
+    }
+
+    /**
+     * JSON: корневые категории (для breadcrumbs siblings).
+     * GET /api/categories
+     */
+    public function categoriesRoot(): \Illuminate\Http\JsonResponse
+    {
+        $categories = Category::whereIsRoot()
+            ->orderBy('_lft')
+            ->get(['id', 'name', 'slug', 'parent_id']);
+
+        return response()->json(['categories' => $categories]);
+    }
+
+    /**
+     * JSON: категория с дочерними (для breadcrumbs siblings).
+     * GET /api/categories/{category}
+     */
+    public function categoryShow(Category $category): \Illuminate\Http\JsonResponse
+    {
+        $children = $category->children()
+            ->orderBy('_lft')
+            ->get(['id', 'name', 'slug', 'parent_id']);
+
+        return response()->json([
+            'category' => $category->only(['id', 'name', 'slug', 'parent_id']),
+            'children' => $children,
+        ]);
     }
 
     /**

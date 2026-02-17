@@ -16,9 +16,13 @@ return new class extends Migration
             $table->foreignId('cart_id')->constrained()->cascadeOnDelete();
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->unsignedInteger('quantity')->default(1);
+            $table->decimal('price', 10, 2)->nullable();
+            $table->enum('item_type', ['instock', 'preorder'])->default('instock');
+            $table->foreignId('warehouse_id')->nullable()->constrained()->nullOnDelete();
             $table->timestamps();
 
-            $table->unique(['cart_id', 'product_id']);
+            $table->unique(['cart_id', 'product_id', 'item_type', 'warehouse_id'], 'cart_items_unique');
+            $table->index(['cart_id', 'item_type']);
         });
     }
 

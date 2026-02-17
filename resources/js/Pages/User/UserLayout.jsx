@@ -3,6 +3,7 @@ import UserHeader from './UserHeader';
 import UserFooter from './UserFooter';
 import MobileNav from './MobileNav';
 import ScrollToTop from '@/components/common/ScrollToTop';
+import { Toaster } from '@/components/ui/toaster';
 import { ProductQuickViewProvider } from '@/contexts/ProductQuickViewContext';
 import ProductQuickViewMount from '@/components/product/ProductQuickViewMount';
 
@@ -27,6 +28,7 @@ export default function UserLayout({ children }) {
                 <MobileNav />
                 <ScrollToTop />
                 <ProductQuickViewMount />
+                <Toaster />
             </Box>
         </ProductQuickViewProvider>
     );

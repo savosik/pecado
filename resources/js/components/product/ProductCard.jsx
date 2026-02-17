@@ -222,7 +222,7 @@ export default function ProductCard({ product, loading = false }) {
                         {/* Корзина — скрываем, если нет в наличии и не предзаказ, или цена 0 */}
                         {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
                             <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                                <CartQuantityControl productId={product.id} />
+                                <CartQuantityControl productId={product.id} size="sm" fullWidth />
                             </Box>
                         )}
                     </Box>

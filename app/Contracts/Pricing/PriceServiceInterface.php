@@ -14,6 +14,11 @@ interface PriceServiceInterface
     public function getBasePrice(Product $product): float;
 
     /**
+     * Get the base price of the product converted to the user's preferred currency (no discounts).
+     */
+    public function getBasePriceForUser(Product $product, ?User $user = null): float;
+
+    /**
      * Get the price of the product for a specific user in their preferred currency (or base if none).
      */
     public function getUserPrice(Product $product, ?User $user = null): float;

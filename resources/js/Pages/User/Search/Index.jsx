@@ -1,27 +1,62 @@
-import { Head, Link } from '@inertiajs/react';
+import { useState, useCallback } from 'react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Box, Flex, Text, Badge, SimpleGrid, Heading } from '@chakra-ui/react';
 import { LuSearch } from 'react-icons/lu';
 import UserLayout from '@/Pages/User/UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageHeader from '@/components/common/PageHeader';
 import EmptyState from '@/components/common/EmptyState';
-import ProductCard from '@/components/product/ProductCard';
+import ProductGrid from '@/Pages/User/Products/ProductGrid';
 import ContentCard from '@/components/common/ContentCard';
+import ProductPagination from '@/Pages/User/Products/ProductPagination';
+
+const LS_INFINITE_SCROLL_KEY = 'search_infinite_scroll';
 
 /**
  * Страница результатов поиска /search?q=...
  *
  * Секции: Категории (бейджи), Бренды (бейджи), Товары (ProductCard),
  * Статьи (ContentCard), Новости (ContentCard).
+ *
+ * Поддерживает два режима пагинации: классическую и бесконечную прокрутку.
  */
-export default function SearchIndex({ query, results }) {
+export default function SearchIndex({ query, results, productsMeta }) {
     const q = query || '';
     const res = results || {};
-    const products = res.products || [];
+    const initialProducts = res.products || [];
     const categories = res.categories || [];
     const brands = res.brands || [];
     const articles = res.articles || [];
     const news = res.news || [];
+
+    // ─── Состояние для бесконечной прокрутки ───
+    const [accumulatedProducts, setAccumulatedProducts] = useState(initialProducts);
+    const [currentMeta, setCurrentMeta] = useState(productsMeta);
+    const [loadingMore, setLoadingMore] = useState(false);
+
+    const [infiniteScroll, setInfiniteScroll] = useState(() => {
+        try {
+            return localStorage.getItem(LS_INFINITE_SCROLL_KEY) === '1';
+        } catch {
+            return false;
+        }
+    });
+
+    // Сброс накопленных товаров при смене серверных данных (новый поисковый запрос)
+    // React автоматически вызовет ре-рендер при смене props
+    const [prevQuery, setPrevQuery] = useState(q);
+    const [prevInitialProducts, setPrevInitialProducts] = useState(initialProducts);
+    if (q !== prevQuery || initialProducts !== prevInitialProducts) {
+        setPrevQuery(q);
+        setPrevInitialProducts(initialProducts);
+        setAccumulatedProducts(initialProducts);
+        setCurrentMeta(productsMeta);
+    }
+
+    // Фактические товары: в режиме infinite scroll — накопленные, иначе — серверные
+    const products = infiniteScroll ? accumulatedProducts : initialProducts;
+    const meta = infiniteScroll ? currentMeta : productsMeta;
+
     const hasAny = !!(products.length || categories.length || brands.length || articles.length || news.length);
 
     const breadcrumbs = [
@@ -29,6 +64,80 @@ export default function SearchIndex({ query, results }) {
         { label: 'Поиск', url: '/search' },
         ...(q ? [{ label: `«${q}»` }] : []),
     ];
+
+    /** Переход на другую страницу (классическая пагинация) */
+    const handlePageChange = useCallback((page) => {
+        router.get('/search', { q, page }, {
+            preserveState: false,
+            preserveScroll: false,
+        });
+    }, [q]);
+
+    /** Загрузить ещё (бесконечная прокрутка) */
+    const handleLoadMore = useCallback(() => {
+        if (!currentMeta || currentMeta.current_page >= currentMeta.last_page || loadingMore) {
+            return;
+        }
+
+        setLoadingMore(true);
+        const nextPage = currentMeta.current_page + 1;
+
+        fetch(`/search?q=${encodeURIComponent(q)}&page=${nextPage}&type=products`, {
+            headers: { Accept: 'application/json' },
+        })
+            .then((r) => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then((data) => {
+                const newProducts = data.results?.products || [];
+
+                // Мердж с дедупликацией по id
+                setAccumulatedProducts((prev) => {
+                    const existingIds = new Set(prev.map((p) => p.id));
+                    const unique = newProducts.filter((p) => !existingIds.has(p.id));
+                    return [...prev, ...unique];
+                });
+
+                // Обновляем meta
+                if (data.productsMeta) {
+                    setCurrentMeta((prevMeta) => ({
+                        ...data.productsMeta,
+                        from: prevMeta?.from ?? 1,
+                    }));
+                }
+
+                setLoadingMore(false);
+            })
+            .catch((err) => {
+                console.error('Ошибка загрузки товаров:', err);
+                setLoadingMore(false);
+            });
+    }, [q, currentMeta, loadingMore]);
+
+    /** Переключение режима бесконечной прокрутки */
+    const handleInfiniteScrollToggle = useCallback((enabled) => {
+        setInfiniteScroll(enabled);
+        try {
+            if (enabled) {
+                localStorage.setItem(LS_INFINITE_SCROLL_KEY, '1');
+            } else {
+                localStorage.removeItem(LS_INFINITE_SCROLL_KEY);
+            }
+        } catch {
+            // localStorage недоступен
+        }
+
+        // При выключении infinite scroll — сбросить к серверным данным
+        if (!enabled) {
+            setAccumulatedProducts(initialProducts);
+            setCurrentMeta(productsMeta);
+        }
+    }, [initialProducts, productsMeta]);
+
+    // Общее количество (с учётом pagination total)
+    const totalProducts = meta?.total ?? products.length;
+    const totalResults = totalProducts + categories.length + brands.length + articles.length + news.length;
 
     return (
         <UserLayout>
@@ -41,7 +150,7 @@ export default function SearchIndex({ query, results }) {
 
             <PageHeader
                 title={q ? (<>Результаты поиска: <Text as="span" color="pecado.500">«{q}»</Text></>) : 'Поиск'}
-                subtitle={q && hasAny ? formatTotal(products.length + categories.length + brands.length + articles.length + news.length) : undefined}
+                subtitle={q && hasAny ? formatTotal(totalResults) : undefined}
             />
 
             {/* Empty state */}
@@ -77,14 +186,22 @@ export default function SearchIndex({ query, results }) {
                 </SearchSection>
             )}
 
-            {/* Товары — ProductCard */}
+            {/* Товары — ProductGrid (идентично каталогу) */}
             {products.length > 0 && (
                 <SearchSection title="Товары">
-                    <SimpleGrid columns={{ base: 1, sm: 2, md: 3 }} gap="4">
-                        {products.map((product) => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
-                    </SimpleGrid>
+                    <ProductGrid products={products} />
+
+                    {/* Пагинация товаров */}
+                    {meta && (
+                        <ProductPagination
+                            meta={meta}
+                            onPageChange={handlePageChange}
+                            onLoadMore={handleLoadMore}
+                            loadingMore={loadingMore}
+                            infiniteScroll={infiniteScroll}
+                            onInfiniteScrollToggle={handleInfiniteScrollToggle}
+                        />
+                    )}
                 </SearchSection>
             )}
 

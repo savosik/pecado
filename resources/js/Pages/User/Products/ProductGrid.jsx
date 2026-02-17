@@ -41,14 +41,14 @@ export default function ProductGrid({
         return (
             <Grid
                 templateColumns={{
-                    base: 'repeat(2, 1fr)',
-                    md: 'repeat(3, 1fr)',
-                    xl: 'repeat(4, 1fr)',
+                    base: 'repeat(2, minmax(0, 1fr))',
+                    md: 'repeat(3, minmax(0, 1fr))',
+                    xl: 'repeat(4, minmax(0, 1fr))',
                 }}
                 gap={{ base: '3', md: '4' }}
             >
                 {Array.from({ length: count }).map((_, i) => (
-                    <GridItem key={`skeleton-grid-${i}`}>
+                    <GridItem key={`skeleton-grid-${i}`} overflow="hidden">
                         <ProductGridItem loading />
                     </GridItem>
                 ))}
@@ -113,14 +113,14 @@ export default function ProductGrid({
     return (
         <Grid
             templateColumns={{
-                base: 'repeat(2, 1fr)',
-                md: 'repeat(3, 1fr)',
-                xl: 'repeat(4, 1fr)',
+                base: 'repeat(2, minmax(0, 1fr))',
+                md: 'repeat(3, minmax(0, 1fr))',
+                xl: 'repeat(4, minmax(0, 1fr))',
             }}
             gap={{ base: '3', md: '4' }}
         >
             {products.map((product) => (
-                <GridItem key={product.id}>
+                <GridItem key={product.id} overflow="hidden">
                     <ProductGridItem product={product} />
                 </GridItem>
             ))}

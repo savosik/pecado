@@ -5,12 +5,17 @@ import { LuCheck, LuClock3, LuCircleX } from 'react-icons/lu';
 /**
  * ProductVariants — варианты товара из той же ProductModel.
  * Показывает только отличительные характеристики вместо полного названия.
+ * Скрывается, если единственный вариант — сам текущий товар.
+ * Текущий вариант выделяется рамкой.
  */
 export default function ProductVariants({ variants = [], currentProductId, modelName = '' }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
 
     if (!variants || variants.length === 0) return null;
+
+    // Не показываем блок, если единственный вариант — текущий товар
+    if (variants.length === 1 && variants[0].id === currentProductId) return null;
 
     const formatPrice = (value) => {
         if (value === null || value === undefined) return '';
@@ -38,8 +43,8 @@ export default function ProductVariants({ variants = [], currentProductId, model
         <Box mb="4">
             <Text fontSize="sm" fontWeight="500" mb="2" color="gray.600" _dark={{ color: 'gray.400' }}>
                 {modelName
-                    ? `Другие варианты «${modelName}»`
-                    : 'Другие варианты товара'
+                    ? `Варианты «${modelName}»`
+                    : 'Варианты товара'
                 }
             </Text>
 
@@ -53,20 +58,24 @@ export default function ProductVariants({ variants = [], currentProductId, model
                     const StatusIcon = status.icon;
                     const hasSale = variant.sale_price != null && variant.sale_price < variant.base_price;
                     const label = getVariantLabel(variant);
+                    const isCurrent = variant.id === currentProductId;
 
                     return (
                         <Box
-                            as={Link}
+                            as={isCurrent ? 'div' : Link}
                             key={variant.id}
-                            href={`/products/${variant.slug}`}
+                            href={isCurrent ? undefined : `/products/${variant.slug}`}
                             p="2"
                             rounded="md"
-                            borderWidth="1px"
-                            borderColor="gray.200"
-                            _dark={{ borderColor: 'gray.700' }}
-                            _hover={{ shadow: 'sm', borderColor: 'gray.400' }}
+                            borderWidth={isCurrent ? '2px' : '1px'}
+                            borderColor={isCurrent ? 'blue.500' : 'gray.200'}
+                            _dark={{
+                                borderColor: isCurrent ? 'blue.400' : 'gray.700',
+                            }}
+                            _hover={isCurrent ? {} : { shadow: 'sm', borderColor: 'gray.400' }}
                             transition="all 0.15s"
                             display="block"
+                            cursor={isCurrent ? 'default' : 'pointer'}
                         >
                             <Flex align="center" gap="2">
                                 {/* Миниатюра */}
@@ -103,25 +112,32 @@ export default function ProductVariants({ variants = [], currentProductId, model
                                         {label}
                                     </Text>
                                     <Flex align="center" justify="space-between" mt="0.5">
-                                        <Box>
+                                        {/* Цена — фиксированная высота для выравнивания */}
+                                        <Flex direction="column" align="flex-start" minW="0" gap="0">
                                             {hasSale ? (
                                                 <>
-                                                    <Text as="span" fontSize="2xs" color="gray.400" textDecoration="line-through" mr="1">
+                                                    <Text as="span" fontSize="2xs" lineHeight="1.2" color="gray.400" textDecoration="line-through">
                                                         {formatPrice(variant.base_price)}
                                                     </Text>
-                                                    <Text as="span" fontSize="xs" fontWeight="500" color="red.600" _dark={{ color: 'red.400' }}>
+                                                    <Text as="span" fontSize="xs" lineHeight="1.2" fontWeight="500" color="red.600" _dark={{ color: 'red.400' }}>
                                                         {formatPrice(variant.sale_price)}
                                                     </Text>
                                                 </>
                                             ) : (
-                                                <Text fontSize="xs" fontWeight="500">
-                                                    {formatPrice(variant.base_price)}
-                                                </Text>
+                                                <>
+                                                    <Text as="span" fontSize="2xs" lineHeight="1.2" visibility="hidden">
+                                                        &nbsp;
+                                                    </Text>
+                                                    <Text as="span" fontSize="xs" lineHeight="1.2" fontWeight="500">
+                                                        {formatPrice(variant.base_price)}
+                                                    </Text>
+                                                </>
                                             )}
-                                        </Box>
-                                        <Flex align="center" gap="1">
+                                        </Flex>
+                                        {/* Статус наличия — фиксированная ширина для выравнивания */}
+                                        <Flex align="center" gap="1" flexShrink={0}>
                                             <StatusIcon size={12} color={status.iconColor} />
-                                            <Text fontSize="2xs" fontWeight="500" color={status.color}>
+                                            <Text fontSize="2xs" fontWeight="500" color={status.color} whiteSpace="nowrap">
                                                 {status.text}
                                             </Text>
                                         </Flex>

@@ -31,7 +31,7 @@ function ProductItem({ product, onClick }) {
             {imageUrl && (
                 <Box
                     w="40px"
-                    h="40px"
+                    h="60px"
                     flexShrink="0"
                     borderRadius="md"
                     overflow="hidden"

@@ -23,6 +23,24 @@ class CartFactory extends Factory
         return [
             'user_id' => User::factory(),
             'name' => fake()->words(2, true),
+            'is_active' => true,
+            'description' => null,
         ];
+    }
+
+    /**
+     * Indicate the cart is active.
+     */
+    public function active(): static
+    {
+        return $this->state(fn () => ['is_active' => true]);
+    }
+
+    /**
+     * Indicate the cart is inactive.
+     */
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
     }
 }

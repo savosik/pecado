@@ -5,6 +5,7 @@ use App\Http\Controllers\User\ProductController;
 use App\Http\Controllers\User\CabinetController;
 use App\Http\Controllers\User\FavoriteController;
 use App\Http\Controllers\User\CartController;
+use App\Http\Controllers\User\CheckoutController;
 use App\Http\Controllers\User\CurrencyController;
 use App\Http\Controllers\User\FaqController;
 use App\Http\Controllers\User\NewsController;
@@ -35,6 +36,21 @@ Route::get('/pages/{slug}', [PageController::class, 'show'])->name('pages.show')
 Route::get('/favorites', [FavoriteController::class, 'index'])->middleware('auth')->name('favorites.index');
 
 // ──────────────────────────────────────────────
+// Корзина — Web Routes (Inertia)
+// ──────────────────────────────────────────────
+Route::middleware('auth')->group(function () {
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart', [CartController::class, 'store'])->name('cart.store');
+    Route::get('/cart/{cart}', [CartController::class, 'show'])->name('cart.show');
+    Route::post('/cart/{cart}/switch', [CartController::class, 'switch'])->name('cart.switch');
+    Route::patch('/cart/{cart}', [CartController::class, 'update'])->name('cart.update');
+    Route::delete('/cart/{cart}', [CartController::class, 'destroy'])->name('cart.destroy');
+
+    // Оформление заказа
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+});
+
+// ──────────────────────────────────────────────
 // API — Auth-protected endpoints
 // ──────────────────────────────────────────────
 Route::prefix('api')->middleware('auth')->group(function () {
@@ -44,10 +60,20 @@ Route::prefix('api')->middleware('auth')->group(function () {
 
     // Корзина
     Route::get('/cart/summary', [CartController::class, 'summary']);
-    Route::post('/cart/items', [CartController::class, 'addItem']);
+    Route::get('/cart/active-quantities', [CartController::class, 'activeQuantities']);
+    Route::post('/cart/set-product-quantity', [CartController::class, 'setProductQuantity']);
+    Route::post('/cart/add-product', [CartController::class, 'addProduct']);
+    Route::post('/cart/add-by-barcode', [CartController::class, 'addByBarcode']);
     Route::patch('/cart/items/{item}', [CartController::class, 'updateItem']);
     Route::delete('/cart/items/{item}', [CartController::class, 'removeItem']);
     Route::delete('/cart/clear', [CartController::class, 'clear']);
+
+    // Корзина — управление (JSON, для header dropdown)
+    Route::get('/cart/user-carts', [CartController::class, 'userCarts']);
+    Route::post('/cart/carts', [CartController::class, 'apiStore']);
+    Route::post('/cart/carts/{cart}/switch', [CartController::class, 'apiSwitch']);
+    Route::patch('/cart/carts/{cart}', [CartController::class, 'apiUpdate']);
+    Route::delete('/cart/carts/{cart}', [CartController::class, 'apiDestroy']);
 
     // Валюта
     Route::post('/currency/switch', [CurrencyController::class, 'switch']);
@@ -56,6 +82,10 @@ Route::prefix('api')->middleware('auth')->group(function () {
     Route::get('/search/history', [SearchController::class, 'history']);
     Route::delete('/search/history', [SearchController::class, 'clearHistory']);
     Route::delete('/search/history/{history}', [SearchController::class, 'deleteHistory']);
+
+    // Категории (для breadcrumbs siblings)
+    Route::get('/categories', [ProductController::class, 'categoriesRoot']);
+    Route::get('/categories/{category}', [ProductController::class, 'categoryShow']);
 });
 
 // ──────────────────────────────────────────────

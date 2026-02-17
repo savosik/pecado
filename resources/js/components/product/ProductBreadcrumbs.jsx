@@ -1,76 +1,125 @@
-import { Box, Flex, Text } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
-import { LuChevronRight } from 'react-icons/lu';
+import { useEffect, useMemo, useState } from 'react';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
 
 /**
  * ProductBreadcrumbs — хлебные крошки: Каталог → Категория → ... → Товар.
+ * С lazy-загрузкой siblings для каждой категории.
  *
  * @param {{ categoryTrail: Array<{id, name, slug, parent_id}>, productName: string }} props
  */
 export default function ProductBreadcrumbs({ categoryTrail = [], productName = '' }) {
-    const items = [
-        { label: 'Каталог', href: '/products' },
-    ];
+    const buildItems = () => {
+        const items = [
+            { label: 'Каталог', url: '/products' },
+        ];
 
-    categoryTrail.forEach(cat => {
-        items.push({
-            label: cat.name,
-            href: `/categories/${cat.slug}`,
-        });
-    });
+        for (let i = 0; i < categoryTrail.length; i++) {
+            const current = categoryTrail[i];
+            items.push({
+                label: current.name,
+                url: `/categories/${current.slug}`,
+                siblings: [],
+            });
+        }
 
-    // Последний элемент — имя товара (без ссылки)
-    if (productName) {
-        items.push({ label: productName });
-    }
+        // Последний элемент — имя товара (без ссылки), если не совпадает с последней категорией
+        const lastCategoryName = categoryTrail.length > 0
+            ? categoryTrail[categoryTrail.length - 1]?.name
+            : '';
+        const shouldAppendProduct = !!productName
+            && productName.trim() !== ''
+            && productName.trim() !== lastCategoryName?.trim();
 
-    return (
-        <Box
-            as="nav"
-            fontSize="sm"
-            color="gray.500"
-            _dark={{ color: 'gray.400' }}
-            mb="4"
-            overflowX="auto"
-            css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}
-            mx="-2" px="2"
-        >
-            <Flex align="center" gap="1" minW="max-content">
-                {items.map((item, index) => (
-                    <Flex key={index} align="center" flexShrink={0}>
-                        {index > 0 && (
-                            <Box mx={{ base: '0.5', sm: '1' }} flexShrink={0} color="gray.400">
-                                <LuChevronRight size={14} />
-                            </Box>
-                        )}
-                        {item.href ? (
-                            <Text
-                                as={Link}
-                                href={item.href}
-                                _hover={{ color: 'gray.700', _dark: { color: 'gray.200' } }}
-                                transition="color 0.15s"
-                                truncate
-                                maxW={{ base: '80px', sm: '150px', md: '200px', lg: '250px' }}
-                                whiteSpace="nowrap"
-                                title={item.label}
-                            >
-                                {item.label}
-                            </Text>
-                        ) : (
-                            <Text
-                                color={index === items.length - 1 ? 'gray.700' : undefined}
-                                _dark={{ color: index === items.length - 1 ? 'gray.200' : undefined }}
-                                truncate
-                                maxW={{ base: '100px', sm: '150px', md: '200px', lg: '300px' }}
-                                whiteSpace="nowrap"
-                                title={item.label}
-                            >
-                                {item.label}
-                            </Text>
-                        )}
-                    </Flex>
-                ))}
-            </Flex>
-        </Box>
-    );
+        if (shouldAppendProduct) {
+            items.push({ label: productName });
+        }
+
+        return items;
+    };
+
+    const initialItems = useMemo(() => buildItems(), [categoryTrail, productName]);
+    const [items, setItems] = useState(initialItems);
+
+    useEffect(() => {
+        setItems(initialItems);
+    }, [initialItems]);
+
+    // Lazy-загрузка siblings для каждой категории в trail
+    useEffect(() => {
+        if (categoryTrail.length === 0) return;
+
+        const parentIds = Array.from(
+            new Set(
+                categoryTrail
+                    .map(c => c?.parent_id)
+                    .filter(pid => pid !== null && pid !== undefined)
+            )
+        );
+
+        const needRoots = categoryTrail.some(c => c?.parent_id == null);
+        let aborted = false;
+
+        (async () => {
+            try {
+                // Загружаем children для каждого parent_id
+                const results = parentIds.length > 0
+                    ? await Promise.all(
+                        parentIds.map(async (pid) => {
+                            const res = await fetch(`/api/categories/${pid}`);
+                            const data = await res.json();
+                            const children = (data && data.children) ? data.children : [];
+                            return [pid, children];
+                        })
+                    )
+                    : [];
+
+                // Загружаем корневые категории для узлов с parent_id = null
+                let rootCategories = [];
+                if (needRoots) {
+                    const resRoots = await fetch('/api/categories');
+                    const dataRoots = await resRoots.json();
+                    rootCategories = Array.isArray(dataRoots.categories) ? dataRoots.categories : [];
+                }
+
+                if (aborted) return;
+
+                const byParent = {};
+                for (const [pid, children] of results) {
+                    byParent[pid] = children;
+                }
+
+                setItems(prev =>
+                    prev.map(it => {
+                        if (!('siblings' in it)) return it;
+
+                        // Находим узел в trail по href
+                        const node = categoryTrail.find(c => `/categories/${c.slug}` === it.url);
+                        const parentId = node?.parent_id;
+
+                        let children = [];
+                        if (parentId == null) {
+                            children = rootCategories;
+                        } else {
+                            children = byParent[parentId] || [];
+                        }
+
+                        const sibs = children
+                            .filter(c => `/categories/${c.slug}` !== it.url)
+                            .map(c => ({ label: c.name, href: `/categories/${c.slug}` }));
+
+                        if (sibs.length === 0) return it;
+                        return { ...it, siblings: sibs };
+                    })
+                );
+            } catch {
+                // Игнорируем ошибки — siblings просто не покажутся
+            }
+        })();
+
+        return () => {
+            aborted = true;
+        };
+    }, [categoryTrail]);
+
+    return <Breadcrumbs items={items} />;
 }

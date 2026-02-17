@@ -37,8 +37,10 @@ class CartServiceTest extends TestCase
         $item->method('__get')->willReturnCallback(fn($key) => match($key) {
             'product' => $product,
             'quantity' => 3,
+            'item_type' => 'instock',
             default => null
         });
+        $item->method('isInstock')->willReturn(true);
 
         $items = new Collection([$item]);
 
@@ -47,7 +49,6 @@ class CartServiceTest extends TestCase
         $cart->method('__get')->willReturnCallback(fn($key) => $key === 'items' ? $items : null);
 
         $this->priceService->method('getUserPrice')->with($product, $user)->willReturn(100.0);
-        $this->stockService->method('getStock')->with($product, $user)->willReturn(['available' => 10, 'preorder' => 5]);
 
         $result = $this->service->getCartSummary($cart, $user);
 
@@ -65,8 +66,10 @@ class CartServiceTest extends TestCase
         $item->method('__get')->willReturnCallback(fn($key) => match($key) {
             'product' => $product,
             'quantity' => 5,
+            'item_type' => 'instock',
             default => null
         });
+        $item->method('isInstock')->willReturn(true);
 
         $items = new Collection([$item]);
 
@@ -75,7 +78,6 @@ class CartServiceTest extends TestCase
         $cart->method('__get')->willReturnCallback(fn($key) => $key === 'items' ? $items : null);
 
         $this->priceService->method('getUserPrice')->willReturn(100.0);
-        $this->stockService->method('getStock')->with($product, $user)->willReturn(['available' => 10, 'preorder' => 5]);
 
         $result = $this->service->getCartSummary($cart, $user);
 
@@ -89,27 +91,36 @@ class CartServiceTest extends TestCase
         $user = $this->createMock(User::class);
         $product = $this->createMock(Product::class);
 
-        $item = $this->createMock(CartItem::class);
-        $item->method('__get')->willReturnCallback(fn($key) => match($key) {
+        $instockItem = $this->createMock(CartItem::class);
+        $instockItem->method('__get')->willReturnCallback(fn($key) => match($key) {
             'product' => $product,
-            'quantity' => 8,
+            'quantity' => 3,
+            'item_type' => 'instock',
             default => null
         });
+        $instockItem->method('isInstock')->willReturn(true);
 
-        $items = new Collection([$item]);
+        $preorderItem = $this->createMock(CartItem::class);
+        $preorderItem->method('__get')->willReturnCallback(fn($key) => match($key) {
+            'product' => $product,
+            'quantity' => 5,
+            'item_type' => 'preorder',
+            default => null
+        });
+        $preorderItem->method('isInstock')->willReturn(false);
+
+        $items = new Collection([$instockItem, $preorderItem]);
 
         $cart = $this->createMock(Cart::class);
         $cart->method('loadMissing')->willReturnSelf();
         $cart->method('__get')->willReturnCallback(fn($key) => $key === 'items' ? $items : null);
 
         $this->priceService->method('getUserPrice')->willReturn(100.0);
-        // Only 3 available, so 5 should be preorder (but only 2 preorder stock available)
-        $this->stockService->method('getStock')->with($product, $user)->willReturn(['available' => 3, 'preorder' => 2]);
 
         $result = $this->service->getCartSummary($cart, $user);
 
         $this->assertEquals(3, $result['available_count']);
-        $this->assertEquals(2, $result['preorder_count']);
+        $this->assertEquals(5, $result['preorder_count']);
     }
 
     #[Test]

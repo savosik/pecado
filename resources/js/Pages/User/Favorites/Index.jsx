@@ -39,15 +39,15 @@ export default function FavoritesIndex({ favorites }) {
                     <>
                         <Grid
                             templateColumns={{
-                                base: 'repeat(2, 1fr)',
-                                md: 'repeat(3, 1fr)',
-                                lg: 'repeat(4, 1fr)',
-                                xl: 'repeat(5, 1fr)',
+                                base: 'repeat(2, minmax(0, 1fr))',
+                                md: 'repeat(3, minmax(0, 1fr))',
+                                lg: 'repeat(4, minmax(0, 1fr))',
+                                xl: 'repeat(5, minmax(0, 1fr))',
                             }}
                             gap={{ base: '3', md: '4' }}
                         >
                             {items.map((product) => (
-                                <GridItem key={product.id} h="100%">
+                                <GridItem key={product.id} h="100%" overflow="hidden">
                                     <ProductCard product={product} />
                                 </GridItem>
                             ))}

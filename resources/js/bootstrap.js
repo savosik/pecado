@@ -26,8 +26,12 @@ window.axios.interceptors.response.use(
 if (typeof document !== 'undefined') {
     document.addEventListener('click', (event) => {
         try {
+            // Если клик по кнопке внутри ссылки (стрелки галереи, точки) — не перехватываем
+            const clickedButton = event.target.closest('button, [role="button"]');
             const target = event.target.closest('a');
             if (!target) return;
+            if (clickedButton && target.contains(clickedButton)) return;
+
             const href = target.getAttribute('href') || '';
             const url = new URL(href, window.location.origin);
             if (url.origin !== window.location.origin) return;

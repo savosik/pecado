@@ -1,15 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
+import { useCartStore } from '@/stores/useCartStore';
 import CatalogPanel from './CatalogPanel';
 import CurrencySwitcher from './Components/CurrencySwitcher';
+import CartDropdown from '@/shared/CartDropdown';
 import Search from '@/shared/Search';
+import HeaderIconButton from '@/components/common/HeaderIconButton';
 import {
-    Box, Flex, HStack, Text, IconButton, Button,
+    Box, Flex, HStack, Text, IconButton, Button, Badge,
     Drawer, Portal, CloseButton, VStack, Separator,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    LuHeart, LuShoppingCart, LuUser, LuMenu,
+    LuHeart, LuUser, LuMenu, LuShoppingCart,
     LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
 } from 'react-icons/lu';
 
@@ -22,31 +25,7 @@ const navLinks = [
     { href: '/where-to-buy', label: 'Где купить', icon: LuMapPin },
 ];
 
-/**
- * Бейдж-счётчик избранного (число в красном кружке).
- */
-function FavBadge({ count }) {
-    if (count <= 0) return null;
-    return (
-        <Box
-            as="span"
-            bg="red.500"
-            color="white"
-            fontSize="10px"
-            fontWeight="500"
-            borderRadius="full"
-            minW="18px"
-            h="18px"
-            lineHeight="18px"
-            textAlign="center"
-            px="4px"
-            boxShadow="sm"
-            pointerEvents="none"
-        >
-            {count > 99 ? '99+' : count}
-        </Box>
-    );
-}
+
 
 export default function UserHeader() {
     const { auth } = usePage().props;
@@ -55,10 +34,11 @@ export default function UserHeader() {
     const [catalogOpen, setCatalogOpen] = useState(false);
     const favCount = useFavoritesStore((s) => s.ids.size);
 
-    // Загрузка избранного при наличии пользователя (user?.id — стабильный примитив)
+    // Загрузка избранного и корзины при наличии пользователя
     useEffect(() => {
         if (!user) return;
         useFavoritesStore.getState().loadOnce(user);
+        useCartStore.getState().init(user);
     }, [user?.id]);
 
     const openCatalog = useCallback(() => {
@@ -115,24 +95,10 @@ export default function UserHeader() {
                             {user && (
                                 <>
                                     <Link href="/favorites" aria-label="Избранное">
-                                        <Box as="span" position="relative" display="inline-flex" p="2" borderRadius="sm" _hover={{ bg: 'gray.100' }} _dark={{ _hover: { bg: 'gray.800' } }}>
-                                            <LuHeart size={24} />
-                                            <Box as="span" position="absolute" top="0" right="0">
-                                                <FavBadge count={favCount} />
-                                            </Box>
-                                        </Box>
+                                        <HeaderIconButton icon={LuHeart} count={favCount} badgeColor="pecado.solid" aria-label="Избранное" />
                                     </Link>
 
-                                    <IconButton
-                                        as={Link}
-                                        href="/cart"
-                                        aria-label="Корзина"
-                                        variant="ghost"
-                                        colorPalette="gray"
-                                        size="sm"
-                                    >
-                                        <LuShoppingCart />
-                                    </IconButton>
+                                    <CartDropdown />
                                 </>
                             )}
 
@@ -143,9 +109,30 @@ export default function UserHeader() {
                                     variant="ghost"
                                     colorPalette="gray"
                                     size="sm"
+                                    title={user.name}
                                 >
-                                    <LuUser />
-                                    {user.name?.split(' ')[0] || 'Кабинет'}
+                                    <Flex
+                                        align="center"
+                                        justify="center"
+                                        w="7"
+                                        h="7"
+                                        borderRadius="full"
+                                        bg="gray.200"
+                                        _dark={{ bg: 'gray.600' }}
+                                        flexShrink="0"
+                                    >
+                                        <Text fontSize="xs" fontWeight="600" color="gray.700" _dark={{ color: 'gray.200' }}>
+                                            {(() => {
+                                                const parts = (user.name || '').trim().split(/\s+/);
+                                                const first = parts[0]?.[0] ?? '';
+                                                const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : '';
+                                                return (first + last).toUpperCase() || '?';
+                                            })()}
+                                        </Text>
+                                    </Flex>
+                                    <Text display={{ base: 'none', xl: 'inline' }} fontSize="xs" maxW="120px" truncate>
+                                        {user.name}
+                                    </Text>
                                 </Button>
                             ) : (
                                 <HStack gap="1">
@@ -304,7 +291,11 @@ export default function UserHeader() {
                                                 <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
                                                     <LuHeart size={18} />
                                                     <Text fontSize="sm" fontWeight="500">Избранное</Text>
-                                                    <FavBadge count={favCount} />
+                                                    {favCount > 0 && (
+                                                        <Badge colorPalette="red" variant="solid" size="xs" borderRadius="full">
+                                                            {favCount > 99 ? '99+' : favCount}
+                                                        </Badge>
+                                                    )}
                                                 </HStack>
                                             </Link>
 

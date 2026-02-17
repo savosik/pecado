@@ -35,6 +35,14 @@ export default function Index({ productModels, filters }) {
             )
         },
         {
+            key: 'products_count',
+            label: 'Товаров',
+            width: '100px',
+            render: (value) => (
+                <Text fontSize="sm">{value ?? 0}</Text>
+            ),
+        },
+        {
             key: 'created_at',
             label: 'Создана',
             sortable: true,

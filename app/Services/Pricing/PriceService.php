@@ -25,6 +25,23 @@ class PriceService implements PriceServiceInterface
     }
 
     /**
+     * Get the base price of the product converted to the user's preferred currency (no discounts).
+     */
+    public function getBasePriceForUser(Product $product, ?User $user = null): float
+    {
+        $basePrice = $this->getBasePrice($product);
+
+        if ($user) {
+            $currency = $this->currencyResolver->resolve($user);
+            if ($currency) {
+                return $this->convertPrice($basePrice, $currency);
+            }
+        }
+
+        return $basePrice;
+    }
+
+    /**
      * Get the price of the product for a specific user in their preferred currency (or base if none).
      * Applies the maximum active discount for the user/product combination.
      */

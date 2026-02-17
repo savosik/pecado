@@ -11,10 +11,11 @@ import { LuMinus, LuPlus } from 'react-icons/lu';
  *   onChange: (value: number) => void,
  *   min?: number,
  *   max?: number,
- *   size?: 'sm' | 'md' | 'lg',
+ *   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl',
+ *   fullWidth?: boolean,
  * }} props
  */
-export default function QuantityControl({ value, onChange, min = 1, max = 999, size = 'md' }) {
+export default function QuantityControl({ value, onChange, min = 1, max = 999, size = 'md', fullWidth = false }) {
     const clamp = useCallback((v) => Math.max(min, Math.min(max, Math.floor(Number(v) || min))), [min, max]);
 
     const handleDecrement = useCallback(() => {
@@ -35,9 +36,11 @@ export default function QuantityControl({ value, onChange, min = 1, max = 999, s
     }, [onChange, clamp, min]);
 
     const sizeMap = {
-        sm: { btn: 'xs', inputW: '10', h: '7', fontSize: 'xs' },
-        md: { btn: 'sm', inputW: '12', h: '9', fontSize: 'sm' },
-        lg: { btn: 'md', inputW: '14', h: '10', fontSize: 'md' },
+        xs: { btn: '2xs', inputW: '8', h: '6', fontSize: '2xs', iconSize: 12 },
+        sm: { btn: 'xs', inputW: '10', h: '8', fontSize: 'xs', iconSize: 14 },
+        md: { btn: 'sm', inputW: '12', h: '10', fontSize: 'sm', iconSize: 16 },
+        lg: { btn: 'md', inputW: '14', h: '11', fontSize: 'md', iconSize: 16 },
+        xl: { btn: 'lg', inputW: '16', h: '12', fontSize: 'lg', iconSize: 18 },
     };
 
     const s = sizeMap[size] || sizeMap.md;
@@ -49,7 +52,8 @@ export default function QuantityControl({ value, onChange, min = 1, max = 999, s
             borderColor="border"
             rounded="md"
             overflow="hidden"
-            display="inline-flex"
+            display={fullWidth ? 'flex' : 'inline-flex'}
+            w={fullWidth ? '100%' : undefined}
         >
             <IconButton
                 aria-label="Уменьшить"
@@ -61,13 +65,14 @@ export default function QuantityControl({ value, onChange, min = 1, max = 999, s
                 minW={s.h}
                 h={s.h}
             >
-                <LuMinus size={14} />
+                <LuMinus size={s.iconSize || 14} />
             </IconButton>
             <Input
                 value={String(value)}
                 onChange={handleInputChange}
                 textAlign="center"
-                w={s.inputW}
+                w={fullWidth ? undefined : s.inputW}
+                flex={fullWidth ? '1' : undefined}
                 h={s.h}
                 fontSize={s.fontSize}
                 border="none"
@@ -87,7 +92,7 @@ export default function QuantityControl({ value, onChange, min = 1, max = 999, s
                 minW={s.h}
                 h={s.h}
             >
-                <LuPlus size={14} />
+                <LuPlus size={s.iconSize || 14} />
             </IconButton>
         </HStack>
     );

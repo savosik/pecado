@@ -43,7 +43,13 @@ class AuthController extends Controller
             // Админы — в админку, обычные пользователи — на главную
             $redirectTo = $user->is_admin ? '/admin' : '/';
 
-            return redirect()->intended($redirectTo)->with('success', 'Вы успешно вошли в систему');
+            // Если intended URL — API-маршрут, сбрасываем, чтобы не отдавать JSON вместо Inertia-страницы
+            $intended = $request->session()->pull('url.intended', $redirectTo);
+            if (str_starts_with(parse_url($intended, PHP_URL_PATH) ?? '', '/api/')) {
+                $intended = $redirectTo;
+            }
+
+            return redirect()->to($intended)->with('success', 'Вы успешно вошли в систему');
         }
 
         return back()->withErrors([

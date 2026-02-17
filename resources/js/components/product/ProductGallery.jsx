@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Box, Flex, IconButton, Text } from '@chakra-ui/react';
 import { LuChevronLeft, LuChevronRight, LuZoomIn, LuPlay, LuX } from 'react-icons/lu';
 
@@ -452,9 +453,9 @@ export default function ProductGallery({ media = [], productName = '' }) {
             </Box>
 
             {/* ═══ Лайтбокс ═══ */}
-            {isLightboxOpen && (
+            {isLightboxOpen && createPortal(
                 <Box
-                    position="fixed" inset="0" zIndex="50"
+                    position="fixed" inset="0" zIndex="2000"
                     bg="blackAlpha.900"
                     display="flex" flexDirection="column"
                 >
@@ -564,7 +565,8 @@ export default function ProductGallery({ media = [], productName = '' }) {
                             </Flex>
                         </Box>
                     )}
-                </Box>
+                </Box>,
+                document.body
             )}
         </>
     );

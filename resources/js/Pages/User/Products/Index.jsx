@@ -7,6 +7,7 @@ import { usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
 import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
+import ProductBreadcrumbs from '@/components/product/ProductBreadcrumbs';
 import CatalogHeader from './CatalogHeader';
 import CatalogControls from './CatalogControls';
 import SelectedFilters from './SelectedFilters';
@@ -40,6 +41,7 @@ export default function Index() {
         seo = {},
         initialFilters = {},
         breadcrumbs = null,
+        categoryTrail = null,
         sortOptions = [],
         appName = 'Pecado',
         pageDescription = null,
@@ -290,10 +292,15 @@ export default function Index() {
         <UserLayout>
             <SeoHead seo={dynamicSeo} />
 
-            {/* Хлебные крошки */}
-            {breadcrumbs && breadcrumbs.length > 0 && (
+            {/* Хлебные крошки: на страницах категорий — с siblings dropdown */}
+            {categoryTrail && categoryTrail.length > 0 ? (
+                <ProductBreadcrumbs
+                    categoryTrail={categoryTrail}
+                    productName={seo.h1 || ''}
+                />
+            ) : breadcrumbs && breadcrumbs.length > 0 ? (
                 <Breadcrumbs items={breadcrumbs} />
-            )}
+            ) : null}
 
             {/* Заголовок + Контролы в одну строку */}
             <Flex align="center" justify="space-between" gap="4" flexWrap="wrap" mb="4">

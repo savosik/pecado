@@ -1,0 +1,292 @@
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { Box } from '@chakra-ui/react';
+import { LuShoppingCart } from 'react-icons/lu';
+import UserLayout from '../UserLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
+import EmptyState from '@/components/common/EmptyState';
+import CartHeader from './CartHeader';
+import CartToolbar from './CartToolbar';
+import CartTable from './CartTable';
+import CartSummary from './CartSummary';
+import { useCartStore } from '@/stores/useCartStore';
+import { toastSuccess, toastInfo } from '@/utils/toast';
+
+/**
+ * Страница корзины — Inertia-страница (GET /cart/{cart}).
+ *
+ * Props от CartController@show:
+ *   - cart: { id, name, is_active, description }
+ *   - cartDetails: { items, total_quantity, instock_quantity, preorder_quantity, total_amount_regular, total_amount_discounted }
+ *   - userCarts: [{ id, name, is_active, items_count }]
+ */
+export default function CartIndex({ cart, cartDetails, userCarts }) {
+    const { auth } = usePage().props;
+    const items = cartDetails?.items ?? [];
+    const hasPreorderItems = (cartDetails?.preorder_quantity ?? 0) > 0;
+
+    // ── Search (client-side filtering) ──
+    const [searchQuery, setSearchQuery] = useState('');
+    const normalizedQuery = (searchQuery || '').trim().toLowerCase();
+
+    const filteredItems = useMemo(() => {
+        if (!normalizedQuery) return items;
+        return items.filter((it) => {
+            const name = String(it.product?.name || '').toLowerCase();
+            const brand = String(it.product?.brand?.name || '').toLowerCase();
+            const sku = String(it.product?.sku || '').toLowerCase();
+            const barcodes = (it.product?.barcodes || []).map((b) => String(b).toLowerCase());
+            return (
+                name.includes(normalizedQuery) ||
+                brand.includes(normalizedQuery) ||
+                sku.includes(normalizedQuery) ||
+                barcodes.some((b) => b.includes(normalizedQuery))
+            );
+        });
+    }, [items, normalizedQuery]);
+
+    // ── Sorting ──
+    const [sortKey, setSortKey] = useState('name');
+    const [sortDir, setSortDir] = useState('asc');
+    const handleSort = useCallback((key) => {
+        setSortDir((prev) => (sortKey === key ? (prev === 'asc' ? 'desc' : 'asc') : 'asc'));
+        setSortKey(key);
+    }, [sortKey]);
+
+    // ── Selection (bulk) — FIX #9: use filteredItems ──
+    const [selected, setSelected] = useState(() => new Set());
+
+    const toggleAll = useCallback(
+        (checked) => {
+            if (checked) {
+                const allIds = new Set(
+                    filteredItems.map((it) => Number(it.product?.id)).filter(Boolean),
+                );
+                setSelected(allIds);
+            } else {
+                setSelected(new Set());
+            }
+        },
+        [filteredItems],
+    );
+
+    const toggleOne = useCallback((id, checked) => {
+        setSelected((prev) => {
+            const next = new Set(prev);
+            if (checked) next.add(id);
+            else next.delete(id);
+            return next;
+        });
+    }, []);
+
+    // ── Cart store integration ──
+    useEffect(() => {
+        if (!auth?.user) return;
+        const store = useCartStore.getState();
+        store.init(auth.user);
+    }, [auth?.user]);
+
+    // Refresh page data when server syncs
+    useEffect(() => {
+        const refresh = () =>
+            router.reload({ only: ['cartDetails'], preserveScroll: true });
+        window.addEventListener('cart:server-synced', refresh);
+        return () => window.removeEventListener('cart:server-synced', refresh);
+    }, []);
+
+    // ── Spillover / clamping toasts ──
+    useEffect(() => {
+        // Количество скорректировано (запрошено больше, чем доступно)
+        const onClamped = (e) => {
+            const { requested, clamped, instock, preorder } = e.detail;
+            const excess = requested - clamped;
+            const parts = [];
+
+            if (instock > 0) parts.push(`${instock} со склада`);
+            if (preorder > 0) parts.push(`${preorder} по предзаказу`);
+            if (excess > 0) parts.push(`${excess} недоступно`);
+
+            toastInfo(
+                'Количество скорректировано',
+                `Запрошено ${requested}. Установлено ${clamped}: ${parts.join(', ')}.`,
+            );
+        };
+
+        // Часть товаров ушла в предзаказ (без коррекции)
+        const onSpillover = (e) => {
+            const { instock, preorder } = e.detail;
+            const parts = [];
+
+            if (instock > 0) parts.push(`${instock} со склада`);
+            parts.push(`${preorder} по предзаказу`);
+
+            toastInfo(
+                'Распределение товара',
+                `Будет ${parts.join(' и ')}.`,
+            );
+        };
+
+        window.addEventListener('cart:clamped', onClamped);
+        window.addEventListener('cart:spillover', onSpillover);
+        return () => {
+            window.removeEventListener('cart:clamped', onClamped);
+            window.removeEventListener('cart:spillover', onSpillover);
+        };
+    }, []);
+
+    // ── Handlers ──
+    const clampDesired = (n) =>
+        Math.max(0, Math.min(999, Math.floor(Number(n) || 0)));
+
+    const handleSetProductQuantity = useCallback((productId, newQuantity) => {
+        useCartStore.getState().setQuantity(productId, clampDesired(newQuantity));
+    }, []);
+
+    const handleRemoveItem = useCallback((productId) => {
+        handleSetProductQuantity(productId, 0);
+    }, [handleSetProductQuantity]);
+
+    // FIX #1: use store.clear() instead of N×setQuantity
+    const handleClearCart = useCallback(() => {
+        useCartStore.getState().clear();
+        toastSuccess('Корзина очищена');
+    }, []);
+
+    // FIX #2: removed router.reload — data refreshes via cart:server-synced event
+    const handleBulkSetQty = useCallback(
+        (qty) => {
+            const n = clampDesired(qty);
+            const { setQuantity } = useCartStore.getState();
+            selected.forEach((pid) => setQuantity(pid, n));
+            toastInfo('Количество обновлено', `Установлено ${n} для ${selected.size} товаров.`);
+        },
+        [selected],
+    );
+
+    const handleBulkDelete = useCallback(() => {
+        const count = selected.size;
+        const { setQuantity } = useCartStore.getState();
+        selected.forEach((pid) => setQuantity(pid, 0));
+        setSelected(new Set());
+        toastSuccess('Товары удалены', `Удалено ${count} позиций из корзины.`);
+    }, [selected]);
+
+    const handleBulkExport = useCallback(async () => {
+        try {
+            // FIX #6: pinned CDN version instead of unpredictable xlsx-latest
+            const mod = await import('https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs');
+            const XLSX = mod.default || mod;
+
+            const header = ['Название', 'Бренд', 'Артикул', 'Заказано, шт', 'В наличии', 'Предзаказ', 'Цена', 'Сумма'];
+            const aoa = [header];
+
+            // Build per-product map
+            const byProduct = new Map();
+            for (const it of items) {
+                const pid = Number(it.product?.id);
+                if (!pid) continue;
+                if (!byProduct.has(pid)) byProduct.set(pid, { product: it.product, instock: null, preorder: null });
+                if (it.item_type === 'instock') byProduct.get(pid).instock = it;
+                if (it.item_type === 'preorder') byProduct.get(pid).preorder = it;
+            }
+
+            for (const pid of selected) {
+                const row = byProduct.get(pid);
+                if (!row) continue;
+                const name = row.product?.name || '';
+                const brand = row.product?.brand?.name || '';
+                const sku = row.product?.sku || '';
+                const instock = Number(row.instock?.quantity || 0);
+                const preorder = Number(row.preorder?.quantity || 0);
+                const qty = instock + preorder;
+                const item = row.instock || row.preorder;
+                const price = Number(item?.price_discounted ?? item?.price ?? 0);
+                const sum =
+                    Number(row.instock?.total_amount_discounted ?? row.instock?.total_amount ?? 0) +
+                    Number(row.preorder?.total_amount_discounted ?? row.preorder?.total_amount ?? 0);
+                aoa.push([name, brand, sku, qty, instock, preorder, price, sum]);
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Корзина');
+            if (XLSX.writeFileXLSX) {
+                XLSX.writeFileXLSX(wb, 'cart_selected.xlsx');
+            } else {
+                XLSX.writeFile(wb, 'cart_selected.xlsx');
+            }
+            toastInfo('Экспорт завершён', 'Файл cart_selected.xlsx скачан.');
+        } catch {
+            toastError('Ошибка экспорта', 'Не удалось экспортировать в Excel.');
+        }
+    }, [items, selected]);
+
+    // FIX #7: use Inertia router.reload + server sync instead of full page reload
+    const handleRefresh = useCallback(() => {
+        useCartStore.getState()._serverSync();
+        router.reload({ only: ['cartDetails'], preserveScroll: true });
+    }, []);
+
+    // Breadcrumbs
+    const breadcrumbs = [
+        { label: 'Главная', url: '/' },
+        { label: 'Корзина' },
+    ];
+
+    return (
+        <UserLayout>
+            <Head title="Корзина" />
+            <Breadcrumbs items={breadcrumbs} />
+
+            <Box spaceY="3">
+                <CartHeader cart={cart} cartDetails={cartDetails} userCarts={userCarts} />
+
+                {items.length > 0 ? (
+                    <>
+                        {/* Единая карточка: тулбар + таблица */}
+                        <Box
+                            borderWidth={{ base: '0', lg: '1px' }}
+                            borderColor="border"
+                            rounded={{ base: 'none', lg: 'lg' }}
+                            bg={{ base: 'transparent', lg: 'bg' }}
+                            overflow={{ base: 'visible', lg: 'hidden' }}
+                        >
+                            <CartToolbar
+                                searchQuery={searchQuery}
+                                onSearchChange={setSearchQuery}
+                                bulkSelectedCount={selected.size}
+                                onBulkSetQty={handleBulkSetQty}
+                                onBulkDelete={handleBulkDelete}
+                                onBulkExport={handleBulkExport}
+                                onClearCart={handleClearCart}
+                                onRefresh={handleRefresh}
+                            />
+
+                            <CartTable
+                                items={filteredItems}
+                                selected={selected}
+                                onToggleAll={toggleAll}
+                                onToggleOne={toggleOne}
+                                sortKey={sortKey}
+                                sortDir={sortDir}
+                                onSort={handleSort}
+                                onSetProductQuantity={handleSetProductQuantity}
+                                onRemove={handleRemoveItem}
+                                hasPreorderItems={hasPreorderItems}
+                            />
+                        </Box>
+
+                        <CartSummary cartDetails={cartDetails} hasItems={items.length > 0} />
+                    </>
+                ) : (
+                    <EmptyState
+                        icon={LuShoppingCart}
+                        title="Корзина пуста"
+                        description="Добавьте товары в корзину, чтобы оформить заказ"
+                        action={{ label: 'Перейти в каталог', href: '/products' }}
+                    />
+                )}
+            </Box>
+        </UserLayout>
+    );
+}

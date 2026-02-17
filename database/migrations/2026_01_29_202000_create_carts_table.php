@@ -15,7 +15,11 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('name')->default('Корзина');
+            $table->boolean('is_active')->default(true);
+            $table->text('description')->nullable();
             $table->timestamps();
+
+            $table->index(['user_id', 'is_active']);
         });
     }
 

@@ -160,7 +160,7 @@ class DiscountController extends AdminController
      */
     public function edit(Discount $discount): Response
     {
-        $discount->load(['products', 'users']);
+        $discount->load(['products.media', 'products.brand', 'users']);
 
         return Inertia::render('Admin/Pages/Discounts/Edit', [
             'discount' => [
@@ -173,6 +173,9 @@ class DiscountController extends AdminController
                 'products' => $discount->products->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
+                    'sku' => $p->sku,
+                    'brand_name' => $p->brand?->name,
+                    'image_url' => $p->getFirstMediaUrl('main'),
                 ]),
                 'users' => $discount->users->map(fn ($u) => [
                     'id' => $u->id,

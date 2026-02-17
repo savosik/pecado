@@ -19,7 +19,7 @@ class ProductModelController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = ProductModel::query();
+        $query = ProductModel::query()->withCount('products');
 
         // Поиск
         if ($search = $request->input('search')) {
