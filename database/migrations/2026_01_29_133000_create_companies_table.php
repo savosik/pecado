@@ -16,12 +16,12 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->enum('country', ['RU', 'BY', 'KZ']);
             $table->string('name'); // Краткое название
-            $table->string('legal_name'); // Юридическое наименование
-            $table->string('tax_id'); // ИНН (RU) / УНП (BY) / БИН (KZ)
+            $table->string('legal_name')->nullable(); // Юридическое наименование
+            $table->string('tax_id')->nullable(); // ИНН (RU) / УНП (BY) / БИН (KZ)
             $table->string('registration_number')->nullable(); // ОГРН (только RU)
             $table->string('tax_code')->nullable(); // КПП (только RU)
             $table->string('okpo_code')->nullable(); // ОКПО (RU/BY)
-            $table->text('legal_address'); // Юридический адрес
+            $table->text('legal_address')->nullable(); // Юридический адрес
             $table->text('actual_address')->nullable(); // Фактический адрес
             $table->string('phone')->nullable();
             $table->string('email')->nullable();

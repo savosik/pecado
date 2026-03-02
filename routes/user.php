@@ -3,6 +3,9 @@
 use App\Http\Controllers\User\HomeController;
 use App\Http\Controllers\User\ProductController;
 use App\Http\Controllers\User\CabinetController;
+use App\Http\Controllers\User\CabinetCartController;
+use App\Http\Controllers\User\CompanyController;
+use App\Http\Controllers\User\BankAccountController;
 use App\Http\Controllers\User\FavoriteController;
 use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CheckoutController;
@@ -99,4 +102,29 @@ Route::prefix('api')->middleware('auth')->group(function () {
 // ──────────────────────────────────────────────
 Route::middleware('auth')->prefix('cabinet')->name('cabinet.')->group(function () {
     Route::get('/dashboard', [CabinetController::class, 'dashboard'])->name('dashboard');
+    Route::get('/profile', [CabinetController::class, 'profile'])->name('profile');
+    Route::put('/profile', [CabinetController::class, 'updateProfile'])->name('profile.update');
+    Route::get('/change-password', [CabinetController::class, 'changePassword'])->name('password.change');
+    Route::put('/change-password', [CabinetController::class, 'updatePassword'])->name('password.update');
+
+    // Companies
+    Route::get('/companies', [CompanyController::class, 'index'])->name('companies.index');
+    Route::get('/companies/create', [CompanyController::class, 'create'])->name('companies.create');
+    Route::post('/companies', [CompanyController::class, 'store'])->name('companies.store');
+    Route::get('/companies/{company}/edit', [CompanyController::class, 'edit'])->name('companies.edit');
+    Route::put('/companies/{company}', [CompanyController::class, 'update'])->name('companies.update');
+    Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])->name('companies.destroy');
+
+    // Bank Accounts (JSON API)
+    Route::post('/bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');
+    Route::put('/bank-accounts/{bankAccount}', [BankAccountController::class, 'update'])->name('bank-accounts.update');
+    Route::delete('/bank-accounts/{bankAccount}', [BankAccountController::class, 'destroy'])->name('bank-accounts.destroy');
+
+    // Carts
+    Route::get('/carts', [CabinetCartController::class, 'index'])->name('carts.index');
+    Route::get('/carts/search-products', [CabinetCartController::class, 'searchProducts'])->name('carts.search-products');
+    Route::get('/carts/{cart}', [CabinetCartController::class, 'show'])->name('carts.show');
+    Route::patch('/carts/{cart}/rename', [CabinetCartController::class, 'rename'])->name('carts.rename');
+    Route::delete('/carts/{cart}', [CabinetCartController::class, 'destroy'])->name('carts.destroy');
+    Route::post('/carts/{cart}/switch', [CabinetCartController::class, 'switchCart'])->name('carts.switch');
 });

@@ -1,42 +1,46 @@
+import { useState } from 'react';
 import {
     Box, Flex, VStack, Text, HStack, Heading, Separator,
-    IconButton, Accordion, Span, Button,
+    Accordion, Span, Button, IconButton, Drawer, Portal, CloseButton,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
 import {
-    LuLayoutDashboard, LuShoppingBag, LuHeart, LuMessageCircle,
-    LuUser, LuSettings, LuLogOut, LuWallet, LuFileText,
-    LuShield, LuBell, LuMenu,
+    LuLayoutDashboard, LuShoppingBag, LuHeart, LuShoppingCart,
+    LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu,
 } from 'react-icons/lu';
-import { useState } from 'react';
 
 const menuGroups = [
     {
         title: 'Обзор',
         items: [
             { href: '/cabinet/dashboard', label: 'Дашборд', icon: LuLayoutDashboard },
-            { href: '/cabinet/notifications', label: 'Уведомления', icon: LuBell },
         ],
     },
     {
         title: 'Покупки',
         items: [
             { href: '/cabinet/orders', label: 'Мои заказы', icon: LuShoppingBag },
-            { href: '/cabinet/favorites', label: 'Избранное', icon: LuHeart },
-            { href: '/cabinet/wallet', label: 'Кошелёк', icon: LuWallet },
+            { href: '/cabinet/carts', label: 'Мои корзины', icon: LuShoppingCart },
+            { href: '/favorites', label: 'Избранное', icon: LuHeart },
+        ],
+    },
+    {
+        title: 'Компании',
+        items: [
+            { href: '/cabinet/companies', label: 'Мои компании', icon: LuBuilding2 },
         ],
     },
     {
         title: 'Профиль',
         items: [
             { href: '/cabinet/profile', label: 'Мои данные', icon: LuUser },
-            { href: '/cabinet/addresses', label: 'Адреса', icon: LuFileText },
-            { href: '/cabinet/security', label: 'Безопасность', icon: LuShield },
-            { href: '/cabinet/settings', label: 'Настройки', icon: LuSettings },
+            { href: '/cabinet/change-password', label: 'Смена пароля', icon: LuLock },
         ],
     },
 ];
+
+const allMenuItems = menuGroups.flatMap(g => g.items);
 
 function SidebarContent({ currentPath }) {
     return (
@@ -54,7 +58,8 @@ function SidebarContent({ currentPath }) {
                             <Accordion.ItemBody px="0" pb="2">
                                 <VStack align="stretch" gap="0.5">
                                     {group.items.map((item) => {
-                                        const isActive = currentPath === item.href;
+                                        const isActive = currentPath === item.href
+                                            || (item.href !== '/' && currentPath.startsWith(item.href));
                                         return (
                                             <Link key={item.href} href={item.href}>
                                                 <HStack
@@ -95,43 +100,42 @@ function SidebarContent({ currentPath }) {
     );
 }
 
-export default function CabinetLayout({ title, children }) {
+function MobileMenuDrawer({ open, onClose, currentPath }) {
+    return (
+        <Drawer.Root open={open} onOpenChange={({ open: o }) => !o && onClose()} placement="start" size="xs">
+            <Portal>
+                <Drawer.Backdrop />
+                <Drawer.Positioner>
+                    <Drawer.Content>
+                        <Drawer.Header borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                            <Drawer.Title fontSize="lg" fontWeight="700">Личный кабинет</Drawer.Title>
+                            <Drawer.CloseTrigger asChild position="absolute" top="3" right="3">
+                                <CloseButton size="sm" />
+                            </Drawer.CloseTrigger>
+                        </Drawer.Header>
+                        <Drawer.Body p="3" onClick={onClose}>
+                            <SidebarContent currentPath={currentPath} />
+                        </Drawer.Body>
+                    </Drawer.Content>
+                </Drawer.Positioner>
+            </Portal>
+        </Drawer.Root>
+    );
+}
+
+export default function CabinetLayout({ title, children, actions }) {
     const { url } = usePage();
     const currentPath = url.split('?')[0];
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [drawerOpen, setDrawerOpen] = useState(false);
+
+    // Find current page label
+    const currentItem = allMenuItems.find(
+        i => currentPath === i.href || (i.href !== '/' && currentPath.startsWith(i.href))
+    );
 
     return (
         <UserLayout>
             <Flex gap="6" direction={{ base: 'column', lg: 'row' }}>
-                {/* Mobile header */}
-                <Flex display={{ base: 'flex', lg: 'none' }} align="center" justify="space-between" mb="2">
-                    <Heading size="xl" fontWeight="bold" color="fg">{title}</Heading>
-                    <IconButton
-                        aria-label="Меню кабинета"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSidebarOpen(!sidebarOpen)}
-                    >
-                        <LuMenu />
-                    </IconButton>
-                </Flex>
-
-                {/* Mobile Sidebar (collapsible) */}
-                {sidebarOpen && (
-                    <Box display={{ base: 'block', lg: 'none' }} mb="4">
-                        <Box
-                            bg="white"
-                            borderRadius="xl"
-                            border="1px solid"
-                            borderColor="gray.100"
-                            p="3"
-                            _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
-                        >
-                            <SidebarContent currentPath={currentPath} />
-                        </Box>
-                    </Box>
-                )}
-
                 {/* Desktop Sidebar */}
                 <Box
                     display={{ base: 'none', lg: 'block' }}
@@ -152,14 +156,51 @@ export default function CabinetLayout({ title, children }) {
                     </Box>
                 </Box>
 
+                {/* Mobile Navigation Bar */}
+                <Box display={{ base: 'block', lg: 'none' }}>
+                    <Button
+                        w="100%"
+                        variant="outline"
+                        size="lg"
+                        borderRadius="xl"
+                        borderColor="gray.200"
+                        bg="white"
+                        _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
+                        _hover={{ bg: 'gray.50', _dark: { bg: 'gray.750' } }}
+                        onClick={() => setDrawerOpen(true)}
+                        justifyContent="flex-start"
+                        px="4"
+                    >
+                        <HStack gap="3" flex="1">
+                            <LuMenu size={20} />
+                            <Text fontSize="sm" fontWeight="600">Меню личного кабинета</Text>
+                        </HStack>
+                        {currentItem && (
+                            <Text fontSize="xs" color="pink.500" fontWeight="500">{currentItem.label}</Text>
+                        )}
+                    </Button>
+                </Box>
+
                 {/* Content */}
                 <Box flex="1" minW="0">
-                    <Heading display={{ base: 'none', lg: 'block' }} size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" mb="5">
-                        {title}
-                    </Heading>
+                    <Flex align="center" justify="space-between" mb="5">
+                        <Heading size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg">
+                            {title}
+                        </Heading>
+                        {actions && <Box>{actions}</Box>}
+                    </Flex>
                     {children}
                 </Box>
             </Flex>
+
+            {/* Mobile Drawer */}
+            <MobileMenuDrawer
+                open={drawerOpen}
+                onClose={() => setDrawerOpen(false)}
+                currentPath={currentPath}
+            />
         </UserLayout>
     );
 }
+
+export { menuGroups, SidebarContent };

@@ -8,12 +8,13 @@ import Search from '@/shared/Search';
 import HeaderIconButton from '@/components/common/HeaderIconButton';
 import {
     Box, Flex, HStack, Text, IconButton, Button, Badge,
-    Drawer, Portal, CloseButton, VStack, Separator,
+    Drawer, Portal, CloseButton, VStack, Separator, Menu,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import {
     LuHeart, LuUser, LuMenu, LuShoppingCart,
     LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
+    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock,
 } from 'react-icons/lu';
 
 const navLinks = [
@@ -103,37 +104,83 @@ export default function UserHeader() {
                             )}
 
                             {user ? (
-                                <Button
-                                    as={Link}
-                                    href="/cabinet/dashboard"
-                                    variant="ghost"
-                                    colorPalette="gray"
-                                    size="sm"
-                                    title={user.name}
-                                >
-                                    <Flex
-                                        align="center"
-                                        justify="center"
-                                        w="7"
-                                        h="7"
-                                        borderRadius="full"
-                                        bg="gray.200"
-                                        _dark={{ bg: 'gray.600' }}
-                                        flexShrink="0"
-                                    >
-                                        <Text fontSize="xs" fontWeight="600" color="gray.700" _dark={{ color: 'gray.200' }}>
-                                            {(() => {
-                                                const parts = (user.name || '').trim().split(/\s+/);
-                                                const first = parts[0]?.[0] ?? '';
-                                                const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : '';
-                                                return (first + last).toUpperCase() || '?';
-                                            })()}
-                                        </Text>
-                                    </Flex>
-                                    <Text display={{ base: 'none', xl: 'inline' }} fontSize="xs" maxW="120px" truncate>
-                                        {user.name}
-                                    </Text>
-                                </Button>
+                                <Menu.Root positioning={{ placement: 'bottom-end' }}>
+                                    <Menu.Trigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            colorPalette="gray"
+                                            size="sm"
+                                            title={user.name}
+                                        >
+                                            <Flex
+                                                align="center"
+                                                justify="center"
+                                                w="7"
+                                                h="7"
+                                                borderRadius="full"
+                                                bg="gray.200"
+                                                _dark={{ bg: 'gray.600' }}
+                                                flexShrink="0"
+                                            >
+                                                <Text fontSize="xs" fontWeight="600" color="gray.700" _dark={{ color: 'gray.200' }}>
+                                                    {(() => {
+                                                        const parts = (user.name || '').trim().split(/\s+/);
+                                                        const first = parts[0]?.[0] ?? '';
+                                                        const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : '';
+                                                        return (first + last).toUpperCase() || '?';
+                                                    })()}
+                                                </Text>
+                                            </Flex>
+                                            <Text display={{ base: 'none', xl: 'inline' }} fontSize="xs" maxW="120px" truncate>
+                                                {user.name}
+                                            </Text>
+                                        </Button>
+                                    </Menu.Trigger>
+                                    <Portal>
+                                        <Menu.Positioner>
+                                            <Menu.Content minW="200px">
+                                                <Menu.Item value="dashboard" asChild>
+                                                    <Link href="/cabinet/dashboard">
+                                                        <LuLayoutDashboard />
+                                                        Личный кабинет
+                                                    </Link>
+                                                </Menu.Item>
+                                                <Menu.Item value="orders" asChild>
+                                                    <Link href="/cabinet/orders">
+                                                        <LuShoppingBag />
+                                                        Мои заказы
+                                                    </Link>
+                                                </Menu.Item>
+                                                <Menu.Item value="favorites" asChild>
+                                                    <Link href="/favorites">
+                                                        <LuHeart />
+                                                        Избранное
+                                                    </Link>
+                                                </Menu.Item>
+                                                <Menu.Separator />
+                                                <Menu.Item value="profile" asChild>
+                                                    <Link href="/cabinet/profile">
+                                                        <LuUser />
+                                                        Мои данные
+                                                    </Link>
+                                                </Menu.Item>
+                                                <Menu.Item value="password" asChild>
+                                                    <Link href="/cabinet/change-password">
+                                                        <LuLock />
+                                                        Смена пароля
+                                                    </Link>
+                                                </Menu.Item>
+                                                <Menu.Separator />
+                                                <Menu.Item value="logout" color="fg.error" asChild>
+                                                    <Link href="/logout" method="post" as="button" style={{ width: '100%' }}>
+                                                        <LuLogOut />
+                                                        Выйти
+                                                    </Link>
+                                                </Menu.Item>
+                                            </Menu.Content>
+                                        </Menu.Positioner>
+                                    </Portal>
+                                </Menu.Root>
                             ) : (
                                 <HStack gap="1">
                                     <Button
@@ -313,8 +360,21 @@ export default function UserHeader() {
                                             <Separator />
                                             <Link href="/cabinet/dashboard" onClick={() => setMobileMenuOpen(false)}>
                                                 <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
-                                                    <LuUser size={18} />
+                                                    <LuLayoutDashboard size={18} />
                                                     <Text fontSize="sm" fontWeight="500">Личный кабинет</Text>
+                                                </HStack>
+                                            </Link>
+                                            <Link href="/cabinet/orders" onClick={() => setMobileMenuOpen(false)}>
+                                                <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
+                                                    <LuShoppingBag size={18} />
+                                                    <Text fontSize="sm" fontWeight="500">Мои заказы</Text>
+                                                </HStack>
+                                            </Link>
+                                            <Separator />
+                                            <Link href="/logout" method="post" as="button" onClick={() => setMobileMenuOpen(false)} style={{ width: '100%' }}>
+                                                <HStack px="3" py="2.5" borderRadius="md" color="red.500" _hover={{ bg: 'red.50' }} _dark={{ _hover: { bg: 'red.900/20' } }}>
+                                                    <LuLogOut size={18} />
+                                                    <Text fontSize="sm" fontWeight="500">Выйти</Text>
                                                 </HStack>
                                             </Link>
                                         </>
