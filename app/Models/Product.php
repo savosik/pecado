@@ -60,6 +60,7 @@ class Product extends Model implements HasMedia
             'is_marked' => 'boolean',
             'is_liquidation' => 'boolean',
             'for_marketplaces' => 'boolean',
+            'pros_cons' => 'array',
         ];
     }
 

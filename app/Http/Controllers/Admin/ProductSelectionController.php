@@ -11,6 +11,7 @@ use Inertia\Response;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Http\Controllers\User\ProductSelectionController as UserProductSelectionController;
 
 class ProductSelectionController extends AdminController
 {
@@ -124,6 +125,7 @@ class ProductSelectionController extends AdminController
             }
 
             DB::commit();
+            UserProductSelectionController::clearHomeCache();
 
             return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно создана');
         } catch (\Exception $e) {
@@ -270,6 +272,7 @@ class ProductSelectionController extends AdminController
             }
 
             DB::commit();
+            UserProductSelectionController::clearHomeCache();
 
             return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно обновлена');
         } catch (\Exception $e) {
@@ -288,6 +291,7 @@ class ProductSelectionController extends AdminController
     {
         try {
             $productSelection->delete();
+            UserProductSelectionController::clearHomeCache();
 
             return redirect()->route('admin.product-selections.index')->with('success', 'Подборка успешно удалена');
         } catch (\Exception $e) {
@@ -310,6 +314,7 @@ class ProductSelectionController extends AdminController
         
         if ($media) {
             $media->delete();
+            UserProductSelectionController::clearHomeCache();
             return redirect()->back()->with('success', 'Медиафайл успешно удалён');
         }
 

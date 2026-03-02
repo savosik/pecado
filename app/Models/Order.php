@@ -28,7 +28,7 @@ class Order extends Model
         'cart_id',
         'status',
         'comment',
-        'delivery_address',
+        'delivery_address_id',
         'total_amount',
         'exchange_rate',
         'correction_factor',
@@ -85,6 +85,11 @@ class Order extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function deliveryAddress(): BelongsTo
+    {
+        return $this->belongsTo(DeliveryAddress::class);
     }
 
     public function cart(): BelongsTo

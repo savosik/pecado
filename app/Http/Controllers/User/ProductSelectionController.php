@@ -10,6 +10,11 @@ use Illuminate\Support\Facades\Cache;
 
 class ProductSelectionController extends Controller
 {
+    /** Ключи кеша подборок главной страницы. */
+    public const CACHE_KEY_SELECTIONS  = 'user.product_selections.active';
+    public const CACHE_KEY_NEW         = 'user.products.new';
+    public const CACHE_KEY_BESTSELLERS = 'user.products.bestsellers';
+
     /**
      * Получить подборки товаров с кешированием (10 мин).
      *
@@ -18,7 +23,7 @@ class ProductSelectionController extends Controller
      */
     public static function getCachedSelections(): array
     {
-        return Cache::remember('user.product_selections.active', 600, function () {
+        return Cache::remember(self::CACHE_KEY_SELECTIONS, 600, function () {
             return ProductSelection::active()
                 ->showOnHome()
                 ->ordered()
@@ -51,13 +56,12 @@ class ProductSelectionController extends Controller
      */
     public static function getCachedNewProducts(int $limit = 10): array
     {
-        return Cache::remember("user.products.new.{$limit}", 600, function () use ($limit) {
-            $query = Product::where('is_new', true)
+        return Cache::remember(self::CACHE_KEY_NEW . ".{$limit}", 600, function () use ($limit) {
+            return Product::where('is_new', true)
                 ->with(ProductQueryService::productEagerLoads())
                 ->latest()
-                ->limit($limit);
-
-            return $query->get()
+                ->limit($limit)
+                ->get()
                 ->map(fn ($p) => ProductQueryService::productToArray($p))
                 ->values()
                 ->toArray();
@@ -71,16 +75,25 @@ class ProductSelectionController extends Controller
      */
     public static function getCachedBestsellerProducts(int $limit = 10): array
     {
-        return Cache::remember("user.products.bestsellers.{$limit}", 600, function () use ($limit) {
-            $query = Product::where('is_bestseller', true)
+        return Cache::remember(self::CACHE_KEY_BESTSELLERS . ".{$limit}", 600, function () use ($limit) {
+            return Product::where('is_bestseller', true)
                 ->with(ProductQueryService::productEagerLoads())
                 ->latest()
-                ->limit($limit);
-
-            return $query->get()
+                ->limit($limit)
+                ->get()
                 ->map(fn ($p) => ProductQueryService::productToArray($p))
                 ->values()
                 ->toArray();
         });
+    }
+
+    /**
+     * Сбросить все кеши подборок главной страницы.
+     */
+    public static function clearHomeCache(): void
+    {
+        Cache::forget(self::CACHE_KEY_SELECTIONS);
+        Cache::forget(self::CACHE_KEY_NEW . '.10');
+        Cache::forget(self::CACHE_KEY_BESTSELLERS . '.10');
     }
 }
