@@ -138,7 +138,7 @@ export default function UserHeader() {
                                     </Menu.Trigger>
                                     <Portal>
                                         <Menu.Positioner>
-                                            <Menu.Content minW="200px">
+                                            <Menu.Content minW="200px" css={{ '& a, & button': { cursor: 'pointer' } }}>
                                                 <Menu.Item value="dashboard" asChild>
                                                     <Link href="/cabinet/dashboard">
                                                         <LuLayoutDashboard />
@@ -226,12 +226,9 @@ export default function UserHeader() {
                 >
                     <Box maxW="1360px" mx="auto" px="6" py="1.5">
                         <HStack gap="6">
-                            {navLinks.map((item) =>
-                                item.href === '/products' ? (
+                            {navLinks.map((item) => (
+                                <Link key={item.href} href={item.href}>
                                     <Text
-                                        key={item.href}
-                                        as="button"
-                                        onClick={openCatalog}
                                         fontSize="xs"
                                         fontWeight="500"
                                         textTransform="uppercase"
@@ -240,27 +237,11 @@ export default function UserHeader() {
                                         _hover={{ color: 'pecado.500' }}
                                         _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }}
                                         transition="colors 0.2s"
-                                        cursor="pointer"
                                     >
                                         {item.label}
                                     </Text>
-                                ) : (
-                                    <Link key={item.href} href={item.href}>
-                                        <Text
-                                            fontSize="xs"
-                                            fontWeight="500"
-                                            textTransform="uppercase"
-                                            letterSpacing="0.04em"
-                                            color="gray.600"
-                                            _hover={{ color: 'pecado.500' }}
-                                            _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }}
-                                            transition="colors 0.2s"
-                                        >
-                                            {item.label}
-                                        </Text>
-                                    </Link>
-                                )
-                            )}
+                                </Link>
+                            ))}
                         </HStack>
                     </Box>
                 </Box>
@@ -313,21 +294,12 @@ export default function UserHeader() {
                                     </Link>
 
                                     {navLinks.map((item) => (
-                                        item.href === '/products' ? (
-                                            <Box key={item.href} onClick={openCatalog} cursor="pointer">
-                                                <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
-                                                    {item.icon && <item.icon size={18} />}
-                                                    <Text fontSize="sm" fontWeight="500">{item.label}</Text>
-                                                </HStack>
-                                            </Box>
-                                        ) : (
-                                            <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                                                <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
-                                                    {item.icon && <item.icon size={18} />}
-                                                    <Text fontSize="sm" fontWeight="500">{item.label}</Text>
-                                                </HStack>
-                                            </Link>
-                                        )
+                                        <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
+                                            <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
+                                                {item.icon && <item.icon size={18} />}
+                                                <Text fontSize="sm" fontWeight="500">{item.label}</Text>
+                                            </HStack>
+                                        </Link>
                                     ))}
 
                                     {user && (

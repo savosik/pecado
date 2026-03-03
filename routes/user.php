@@ -127,4 +127,8 @@ Route::middleware('auth')->prefix('cabinet')->name('cabinet.')->group(function (
     Route::patch('/carts/{cart}/rename', [CabinetCartController::class, 'rename'])->name('carts.rename');
     Route::delete('/carts/{cart}', [CabinetCartController::class, 'destroy'])->name('carts.destroy');
     Route::post('/carts/{cart}/switch', [CabinetCartController::class, 'switchCart'])->name('carts.switch');
+
+    // Orders
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 });
