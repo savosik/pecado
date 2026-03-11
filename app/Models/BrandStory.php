@@ -21,10 +21,26 @@ class BrandStory extends Model implements HasMedia
         'slug',
         'short_description',
         'detailed_description',
+        'is_published',
+        'published_at',
         'meta_title',
         'meta_description',
         'brand_id',
     ];
+
+    protected $casts = [
+        'is_published' => 'boolean',
+        'published_at' => 'datetime',
+    ];
+
+    /**
+     * Scope: только опубликованные статьи о брендах.
+     */
+    public function scopePublished($query)
+    {
+        return $query->where('is_published', true)
+                     ->where('published_at', '<=', now());
+    }
 
     public function brand(): BelongsTo
     {

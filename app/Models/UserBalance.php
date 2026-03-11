@@ -13,7 +13,20 @@ class UserBalance extends Model
         'currency_id',
         'balance',
         'overdue_debt',
+        'balance_erp_updated_at',
     ];
+
+    protected $casts = [
+        'balance_erp_updated_at' => 'datetime',
+    ];
+
+    /**
+     * Get the currency for this balance.
+     */
+    public function currency(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
+    }
 
     /**
      * Get the user that owns the balance.
@@ -21,13 +34,5 @@ class UserBalance extends Model
     public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Get the currency of the balance.
-     */
-    public function currency(): \Illuminate\Database\Eloquent\Relations\BelongsTo
-    {
-        return $this->belongsTo(Currency::class);
     }
 }

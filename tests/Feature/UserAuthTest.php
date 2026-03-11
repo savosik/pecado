@@ -54,7 +54,7 @@ class UserAuthTest extends TestCase
             'terms_accepted' => true,
         ]);
 
-        $response->assertRedirect('/');
+        $response->assertRedirect('/onboarding');
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
             'is_admin' => false,

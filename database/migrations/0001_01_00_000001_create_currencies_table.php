@@ -17,8 +17,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('symbol');
             $table->boolean('is_base')->default(false);
+            $table->decimal('official_rate', 20, 10)->nullable();
+            $table->decimal('rate_coefficient', 10, 4)->default(1);
             $table->decimal('exchange_rate', 20, 10)->default(1);
-            $table->decimal('correction_factor', 10, 4)->default(1);
+            $table->date('exchange_rate_date')->nullable();
             $table->timestamps();
         });
     }

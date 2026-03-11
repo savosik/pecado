@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->uuid('uuid')->unique();
+            $table->string('number')->nullable()->unique();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('company_id')->constrained()->onDelete('cascade');
             $table->foreignId('delivery_address_id')->nullable()->constrained('delivery_addresses')->nullOnDelete();
@@ -22,10 +23,10 @@ return new class extends Migration
             $table->text('comment')->nullable();
             $table->decimal('total_amount', 15, 2);
             $table->decimal('exchange_rate', 20, 10)->default(1);
-            $table->decimal('correction_factor', 10, 4)->default(1);
+            $table->decimal('rate_coefficient', 10, 4)->default(1);
             $table->string('currency_code')->nullable();
             $table->foreignId('parent_id')->nullable()->constrained('orders')->onDelete('cascade');
-            $table->string('type')->default(\App\Enums\OrderType::STANDARD->value);
+            $table->string('type')->default(\App\Enums\OrderType::ORDER->value);
             $table->softDeletes();
             $table->timestamps();
         });

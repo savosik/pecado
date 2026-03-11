@@ -13,7 +13,7 @@ export default function Create() {
         symbol: '',
         is_base: false,
         exchange_rate: '1.00',
-        correction_factor: '1.0000',
+        rate_coefficient: '1.0000',
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -94,12 +94,12 @@ export default function Create() {
                                     />
                                 </FormField>
 
-                                <FormField label="Коррекционный фактор" error={errors.correction_factor}>
+                                <FormField label="Коррекционный фактор" error={errors.rate_coefficient}>
                                     <Input
                                         type="number"
                                         step="0.0001"
-                                        value={data.correction_factor}
-                                        onChange={(e) => setData('correction_factor', e.target.value)}
+                                        value={data.rate_coefficient}
+                                        onChange={(e) => setData('rate_coefficient', e.target.value)}
                                         placeholder="1.0000"
                                     />
                                 </FormField>

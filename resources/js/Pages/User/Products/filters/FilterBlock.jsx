@@ -44,8 +44,8 @@ export default function FilterBlock({
                                 as="button"
                                 type="button"
                                 fontSize="xs"
-                                color="pink.500"
-                                _hover={{ color: 'pink.600' }}
+                                color="pecado.500"
+                                _hover={{ color: 'pecado.600' }}
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     e.preventDefault();

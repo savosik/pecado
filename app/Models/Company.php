@@ -98,4 +98,12 @@ class Company extends Model
     {
         return $this->hasMany(Order::class);
     }
+
+    /**
+     * Баланс контрагента (US-10).
+     */
+    public function contractorBalance(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(ContractorBalance::class);
+    }
 }

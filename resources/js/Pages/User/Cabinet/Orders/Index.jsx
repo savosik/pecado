@@ -21,7 +21,8 @@ const STATUS_COLORS = {
 };
 
 export default function OrdersIndex({ filters, statuses }) {
-    const { orders } = usePage().props;
+    const { orders, currency } = usePage().props;
+    const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
     const [localFilters, setLocalFilters] = useState({
@@ -76,7 +77,7 @@ export default function OrdersIndex({ filters, statuses }) {
         <Table.ColumnHeader
             cursor="pointer"
             onClick={() => handleSort(field)}
-            _hover={{ color: 'pink.500' }}
+            _hover={{ color: 'pecado.500' }}
             transition="color 0.15s"
             {...props}
         >
@@ -192,7 +193,7 @@ export default function OrdersIndex({ filters, statuses }) {
                                 </Field>
 
                                 <HStack gap="2" flexShrink="0">
-                                    <Button onClick={handleApplyFilters} colorPalette="pink" size="sm">
+                                    <Button onClick={handleApplyFilters} colorPalette="pecado" size="sm">
                                         Применить
                                     </Button>
                                     <Button onClick={handleResetFilters} variant="outline" size="sm">
@@ -248,7 +249,7 @@ export default function OrdersIndex({ filters, statuses }) {
                                         <SortableHeader field="status">Статус</SortableHeader>
                                         <Table.ColumnHeader>Компания</Table.ColumnHeader>
                                         <Table.ColumnHeader textAlign="center">Позиций</Table.ColumnHeader>
-                                        <SortableHeader field="total_amount" textAlign="right">Сумма</SortableHeader>
+                                        <SortableHeader field="total_amount" textAlign="right">Сумма ({currencySymbol})</SortableHeader>
                                         <SortableHeader field="created_at">Дата</SortableHeader>
                                         <Table.ColumnHeader w="60px" />
                                     </Table.Row>
@@ -261,7 +262,14 @@ export default function OrdersIndex({ filters, statuses }) {
                                             transition="background 0.15s"
                                         >
                                             <Table.Cell>
-                                                <Text fontWeight="600">#{order.id}</Text>
+                                                <VStack gap="1" align="start">
+                                                    <Text fontWeight="600">#{order.id}</Text>
+                                                    {order.type === 'preorder' ? (
+                                                        <Badge colorPalette="purple" variant="subtle" fontSize="2xs" px="1.5">Предзаказ</Badge>
+                                                    ) : (
+                                                        <Badge colorPalette="gray" variant="subtle" fontSize="2xs" px="1.5">Заказ</Badge>
+                                                    )}
+                                                </VStack>
                                             </Table.Cell>
                                             <Table.Cell>
                                                 <Badge
@@ -281,7 +289,16 @@ export default function OrdersIndex({ filters, statuses }) {
                                                 <Text fontSize="sm">{order.items_count}</Text>
                                             </Table.Cell>
                                             <Table.Cell textAlign="right">
-                                                <Text fontWeight="600">{fmt(order.total_amount)} {order.currency_code}</Text>
+                                                <VStack gap="0" align="end">
+                                                    <Text fontWeight="600">
+                                                        {fmt(order.total_converted)} {currencySymbol}
+                                                    </Text>
+                                                    {order.currency_code && order.currency_code !== currency?.code && (
+                                                        <Text fontSize="xs" color="gray.400">
+                                                            {fmt(order.total_amount)} {order.currency_code}
+                                                        </Text>
+                                                    )}
+                                                </VStack>
                                             </Table.Cell>
                                             <Table.Cell>
                                                 <Text fontSize="sm" color="fg.muted">{order.created_at}</Text>
@@ -292,7 +309,7 @@ export default function OrdersIndex({ filters, statuses }) {
                                                         variant="ghost"
                                                         size="xs"
                                                         aria-label="Просмотр"
-                                                        colorPalette="pink"
+                                                        colorPalette="pecado"
                                                     >
                                                         <LuEye size={16} />
                                                     </IconButton>
@@ -320,7 +337,12 @@ export default function OrdersIndex({ filters, statuses }) {
                                 >
                                     <Card.Body p="4">
                                         <Flex justify="space-between" align="center" mb="2">
-                                            <Text fontWeight="700" fontSize="md">Заказ #{order.id}</Text>
+                                            <HStack gap="2">
+                                                <Text fontWeight="700" fontSize="md">Заказ #{order.id}</Text>
+                                                {order.type === 'preorder' && (
+                                                    <Badge colorPalette="purple" variant="subtle" fontSize="2xs">Предзаказ</Badge>
+                                                )}
+                                            </HStack>
                                             <Badge
                                                 colorPalette={STATUS_COLORS[order.status] || 'gray'}
                                                 variant="subtle"
@@ -338,9 +360,16 @@ export default function OrdersIndex({ filters, statuses }) {
                                                 )}
                                                 <Text fontSize="xs" color="fg.muted">{order.created_at}</Text>
                                             </VStack>
-                                            <Text fontWeight="700" fontSize="md">
-                                                {fmt(order.total_amount)} {order.currency_code}
-                                            </Text>
+                                            <VStack gap="0" align="end">
+                                                <Text fontWeight="700" fontSize="md">
+                                                    {fmt(order.total_converted)} {currencySymbol}
+                                                </Text>
+                                                {order.currency_code && order.currency_code !== currency?.code && (
+                                                    <Text fontSize="xs" color="gray.400">
+                                                        {fmt(order.total_amount)} {order.currency_code}
+                                                    </Text>
+                                                )}
+                                            </VStack>
                                         </Flex>
                                     </Card.Body>
                                 </Card.Root>
@@ -383,7 +412,7 @@ export default function OrdersIndex({ filters, statuses }) {
                                             key={page}
                                             size="sm"
                                             variant={page === orders.current_page ? 'solid' : 'outline'}
-                                            colorPalette={page === orders.current_page ? 'pink' : 'gray'}
+                                            colorPalette={page === orders.current_page ? 'pecado' : 'gray'}
                                             onClick={() => handlePageChange(page)}
                                             minW="9"
                                         >

@@ -26,7 +26,7 @@ class ReturnController extends AdminController
     public function index(Request $request): Response
     {
         $query = ProductReturn::query()
-            ->with(['user', 'items']);
+            ->with(['user', 'items', 'order']);
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -97,6 +97,11 @@ class ReturnController extends AdminController
                     'name' => $return->user->full_name,
                     'email' => $return->user->email,
                 ] : null,
+                'order' => $return->order ? [
+                    'id' => $return->order->id,
+                    'uuid' => $return->order->uuid,
+                    'number' => $return->order->number,
+                ] : null,
                 'items_count' => $return->items->count(),
                 'primary_reason' => $return->items->first()?->reason?->value,
                 'primary_reason_label' => $this->getReasonLabel($return->items->first()?->reason),
@@ -153,6 +158,7 @@ class ReturnController extends AdminController
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
+            'order_id' => 'nullable|exists:orders,id',
             'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'admin_comment' => 'nullable|string',
@@ -175,6 +181,7 @@ class ReturnController extends AdminController
             // Создание возврата
             $return = ProductReturn::create([
                 'user_id' => $validated['user_id'],
+                'order_id' => $validated['order_id'] ?? null,
                 'status' => $validated['status'],
                 'comment' => $validated['comment'] ?? null,
                 'admin_comment' => $validated['admin_comment'] ?? null,
@@ -196,6 +203,9 @@ class ReturnController extends AdminController
 
             DB::commit();
 
+            // Отправка возврата в 1С через RabbitMQ
+            event(new \App\Events\ReturnCreated($return));
+
             return $this->redirectAfterSave($request, 'admin.returns.index', 'admin.returns.edit', $return, 'Возврат успешно создан');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -211,13 +221,14 @@ class ReturnController extends AdminController
      */
     public function edit(ProductReturn $return): Response
     {
-        $return->load(['user', 'items.product', 'items.order']);
+        $return->load(['user', 'order', 'items.product', 'items.order']);
 
         return Inertia::render('Admin/Pages/Returns/Edit', [
             'return' => [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
                 'user_id' => $return->user_id,
+                'order_id' => $return->order_id,
                 'status' => $return->status?->value,
                 'comment' => $return->comment,
                 'admin_comment' => $return->admin_comment,
@@ -258,6 +269,7 @@ class ReturnController extends AdminController
     {
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
+            'order_id' => 'nullable|exists:orders,id',
             'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'admin_comment' => 'nullable|string',
@@ -281,6 +293,7 @@ class ReturnController extends AdminController
             // Обновление возврата
             $return->update([
                 'user_id' => $validated['user_id'],
+                'order_id' => $validated['order_id'] ?? null,
                 'status' => $validated['status'],
                 'comment' => $validated['comment'] ?? null,
                 'admin_comment' => $validated['admin_comment'] ?? null,
@@ -340,12 +353,13 @@ class ReturnController extends AdminController
      */
     public function show(ProductReturn $return): Response
     {
-        $return->load(['user', 'items.product', 'items.order']);
+        $return->load(['user', 'order', 'items.product', 'items.order']);
 
         return Inertia::render('Admin/Pages/Returns/Show', [
             'return' => [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
+                'order_id' => $return->order_id,
                 'status' => $return->status?->value,
                 'status_label' => $this->getStatusLabel($return->status),
                 'total_amount' => $return->total_amount,

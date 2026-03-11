@@ -128,6 +128,9 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::post('/returns/bulk-status', [\App\Http\Controllers\Admin\ReturnController::class, 'bulkUpdateStatus'])->name('returns.bulk-status');
     Route::resource('returns', \App\Http\Controllers\Admin\ReturnController::class);
     
+    // Реализации (отгрузки из 1С)
+    Route::resource('shipments', \App\Http\Controllers\Admin\ShipmentController::class)->only(['index', 'show', 'destroy']);
+    
     // Избранное
     Route::post('/favorites/bulk-delete', [\App\Http\Controllers\Admin\FavoriteController::class, 'bulkDelete'])->name('favorites.bulk-delete');
     Route::get('/favorites/search-users', [\App\Http\Controllers\Admin\FavoriteController::class, 'searchUsers'])->name('favorites.search-users');
@@ -149,7 +152,18 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
 
     // Скидки
     Route::get('/discounts/search-users', [\App\Http\Controllers\Admin\DiscountController::class, 'searchUsers'])->name('discounts.search-users');
+    Route::get('/discounts/search-product-segments', [\App\Http\Controllers\Admin\DiscountController::class, 'searchProductSegments'])->name('discounts.search-product-segments');
+    Route::get('/discounts/search-partner-segments', [\App\Http\Controllers\Admin\DiscountController::class, 'searchPartnerSegments'])->name('discounts.search-partner-segments');
     Route::resource('discounts', \App\Http\Controllers\Admin\DiscountController::class);
+
+    // Сегменты номенклатуры (US-11)
+    Route::get('/product-segments/search-products', [\App\Http\Controllers\Admin\ProductSegmentController::class, 'searchProducts'])->name('product-segments.search-products');
+    Route::resource('product-segments', \App\Http\Controllers\Admin\ProductSegmentController::class);
+
+    // Сегменты партнёров (US-12)
+    Route::get('/partner-segments/search-users', [\App\Http\Controllers\Admin\PartnerSegmentController::class, 'searchUsers'])->name('partner-segments.search-users');
+    Route::resource('partner-segments', \App\Http\Controllers\Admin\PartnerSegmentController::class);
+
 
     // Подборки товаров
     Route::delete('/product-selections/{product_selection}/media', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'deleteMedia'])->name('product-selections.media.delete');
@@ -175,6 +189,9 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::get('/delivery-addresses/search', [\App\Http\Controllers\Admin\DeliveryAddressController::class, 'search'])->name('delivery-addresses.search');
     Route::resource('delivery-addresses', \App\Http\Controllers\Admin\DeliveryAddressController::class);
 
+    // Анкеты пользователей
+    Route::resource('user-questionnaires', \App\Http\Controllers\Admin\UserQuestionnaireController::class)->only(['index', 'edit', 'update', 'destroy']);
+
     // --------------------
     // Финансы (Finance)
     // --------------------
@@ -184,9 +201,9 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::post('/currencies/update-rates', [\App\Http\Controllers\Admin\CurrencyController::class, 'updateRates'])->name('currencies.update-rates');
     Route::resource('currencies', \App\Http\Controllers\Admin\CurrencyController::class);
 
-    // Балансы пользователей
-    Route::get('/user-balances/search', [\App\Http\Controllers\Admin\UserBalanceController::class, 'search'])->name('user-balances.search');
-    Route::resource('user-balances', \App\Http\Controllers\Admin\UserBalanceController::class);
+    // Балансы контрагентов (US-10)
+    Route::get('/contractor-balances/search', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'search'])->name('contractor-balances.search');
+    Route::resource('contractor-balances', \App\Http\Controllers\Admin\ContractorBalanceController::class)->only(['index', 'show', 'destroy']);
 
     // --------------------
     // Контент (Content)
@@ -195,6 +212,10 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Статьи
     Route::get('/articles/search', [\App\Http\Controllers\Admin\ArticleController::class, 'search'])->name('articles.search');
     Route::resource('articles', \App\Http\Controllers\Admin\ArticleController::class);
+
+    // О брендах
+    Route::get('/brand-stories/search', [\App\Http\Controllers\Admin\BrandStoryController::class, 'search'])->name('brand-stories.search');
+    Route::resource('brand-stories', \App\Http\Controllers\Admin\BrandStoryController::class);
 
     // Новости
     Route::get('/news/search', [\App\Http\Controllers\Admin\NewsController::class, 'search'])->name('news.search');

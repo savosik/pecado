@@ -14,7 +14,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     LuHeart, LuUser, LuMenu, LuShoppingCart,
     LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
-    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock,
+    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge,
 } from 'react-icons/lu';
 
 const navLinks = [
@@ -22,6 +22,7 @@ const navLinks = [
     { href: '/promotions', label: 'Акции' },
     { href: '/news', label: 'Новости', icon: LuNewspaper },
     { href: '/articles', label: 'Статьи', icon: LuFileText },
+    { href: '/brand-stories', label: 'О брендах', icon: LuBadge },
     { href: '/faq', label: 'FAQ', icon: LuCircleHelp },
     { href: '/where-to-buy', label: 'Где купить', icon: LuMapPin },
 ];

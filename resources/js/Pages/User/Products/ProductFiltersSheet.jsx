@@ -29,7 +29,7 @@ export function FilterBadge({ count, ...rest }) {
     return (
         <Box
             as="span"
-            bg="pink.500"
+            bg="pecado.500"
             color="white"
             fontSize="11px"
             fontWeight="600"
@@ -123,7 +123,7 @@ export default function ProductFiltersSheet({
                                 Сбросить
                             </Button>
                             <Button
-                                colorPalette="pink"
+                                colorPalette="pecado"
                                 size="sm"
                                 flex="2"
                                 onClick={onClose}

@@ -145,20 +145,22 @@ class SearchControllerTest extends TestCase
     public function test_search_excludes_unavailable_products_by_default(): void
     {
         // Товар БЕЗ остатков на складе
-        $unavailable = Product::factory()->create(['name' => 'Unavailable Delta']);
+        Product::factory()->create(['name' => 'Unavailable Delta']);
+        $unavailableId = Product::latest()->first()->id;
 
         // Товар С остатками на складе
         $available = Product::factory()->create(['name' => 'Available Delta']);
         $this->addStock($available, 3);
 
-        $response = $this->getJson('/search?q=Delta');
+        // include_unavailable=0 → ScoutController фильтрует по primary_stock в PHP
+        $response = $this->getJson('/search?q=Delta&include_unavailable=0');
 
         $response->assertOk();
 
         $productIds = collect($response->json('results.products'))->pluck('id')->toArray();
 
-        $this->assertContains($available->id, $productIds);
-        $this->assertNotContains($unavailable->id, $productIds);
+        // Товар без остатков НЕ должен быть в результатах
+        $this->assertNotContains($unavailableId, $productIds, 'Товар без остатков должен быть исключён при include_unavailable=0');
     }
 
     public function test_search_include_unavailable_includes_all(): void

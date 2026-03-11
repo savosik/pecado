@@ -74,7 +74,7 @@ return [
 
         'rabbitmq-erp-incoming' => [
             'driver' => 'rabbitmq',
-            'queue' => env('RABBITMQ_ERP_INCOMING_QUEUE', 'erp_incoming'),
+            'queue' => env('RABBITMQ_ERP_INCOMING_QUEUE', 'erp_in.partners'),
             'connection' => PhpAmqpLib\Connection\AMQPLazyConnection::class,
             'hosts' => [
                 [

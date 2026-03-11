@@ -58,9 +58,9 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                             px="4" py="3"
                             whiteSpace="nowrap"
                             _selected={{
-                                color: 'pink.600',
-                                borderBottomColor: 'pink.500',
-                                _dark: { color: 'pink.400', borderBottomColor: 'pink.400' }
+                                color: 'pecado.600',
+                                borderBottomColor: 'pecado.500',
+                                _dark: { color: 'pecado.400', borderBottomColor: 'pecado.400' }
                             }}
                         >
                             {tab.label}
@@ -134,7 +134,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                                 '& p': { marginBottom: '0.75em' },
                                 '& ul, & ol': { paddingLeft: '1.5em', marginBottom: '0.75em' },
                                 '& h2, & h3': { fontWeight: '600', marginTop: '1em', marginBottom: '0.5em' },
-                                '& a': { color: 'var(--chakra-colors-pink-500)', textDecoration: 'underline' },
+                                '& a': { color: 'var(--chakra-colors-pecado-500)', textDecoration: 'underline' },
                             }}
                         />
                     </Box>

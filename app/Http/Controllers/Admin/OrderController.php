@@ -91,6 +91,8 @@ class OrderController extends AdminController
             return [
                 'id' => $order->id,
                 'uuid' => $order->uuid,
+                'number' => $order->number,
+                'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
                 'total_amount' => $order->total_amount,
@@ -216,6 +218,8 @@ class OrderController extends AdminController
             'order' => [
                 'id' => $order->id,
                 'uuid' => $order->uuid,
+                'number' => $order->number,
+                'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
                 'total_amount' => $order->total_amount,
@@ -283,6 +287,8 @@ class OrderController extends AdminController
             'order' => [
                 'id' => $order->id,
                 'uuid' => $order->uuid,
+                'number' => $order->number,
+                'type' => $order->type?->value,
                 'user_id' => $order->user_id,
                 'company_id' => $order->company_id,
                 'delivery_address' => $order->delivery_address,
@@ -580,6 +586,7 @@ class OrderController extends AdminController
     {
         return match ($status) {
             OrderStatus::PENDING => 'Ожидает',
+            OrderStatus::CONFIRMED => 'Подтверждён',
             OrderStatus::PROCESSING => 'В обработке',
             OrderStatus::SHIPPED => 'Отправлен',
             OrderStatus::DELIVERED => 'Доставлен',

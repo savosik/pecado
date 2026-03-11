@@ -70,8 +70,8 @@ export default function BrandFilter({ brands = [], selectedIds = [], onChange })
                         pl="8"
                         borderRadius="md"
                         _focus={{
-                            borderColor: 'pink.400',
-                            boxShadow: '0 0 0 1px var(--chakra-colors-pink-400)',
+                            borderColor: 'pecado.400',
+                            boxShadow: '0 0 0 1px var(--chakra-colors-pecado-400)',
                         }}
                     />
                 </Box>
@@ -111,11 +111,11 @@ export default function BrandFilter({ brands = [], selectedIds = [], onChange })
                                 borderRadius="md"
                                 cursor="pointer"
                                 transition="all 0.15s"
-                                bg={isChecked ? 'pink.50' : 'transparent'}
-                                _dark={{ bg: isChecked ? 'pink.900/30' : 'transparent' }}
+                                bg={isChecked ? 'pecado.50' : 'transparent'}
+                                _dark={{ bg: isChecked ? 'pecado.900/30' : 'transparent' }}
                                 _hover={{
-                                    bg: isChecked ? 'pink.100' : 'gray.50',
-                                    _dark: { bg: isChecked ? 'pink.900/40' : 'gray.700' },
+                                    bg: isChecked ? 'pecado.100' : 'gray.50',
+                                    _dark: { bg: isChecked ? 'pecado.900/40' : 'gray.700' },
                                 }}
                                 onClick={() => handleToggle(brand.id)}
                             >
@@ -125,9 +125,9 @@ export default function BrandFilter({ brands = [], selectedIds = [], onChange })
                                     h="16px"
                                     borderRadius="sm"
                                     border="2px solid"
-                                    borderColor={isChecked ? 'pink.500' : 'gray.300'}
-                                    _dark={{ borderColor: isChecked ? 'pink.400' : 'gray.600' }}
-                                    bg={isChecked ? 'pink.500' : 'transparent'}
+                                    borderColor={isChecked ? 'pecado.500' : 'gray.300'}
+                                    _dark={{ borderColor: isChecked ? 'pecado.400' : 'gray.600' }}
+                                    bg={isChecked ? 'pecado.500' : 'transparent'}
                                     display="flex"
                                     alignItems="center"
                                     justifyContent="center"
@@ -140,8 +140,8 @@ export default function BrandFilter({ brands = [], selectedIds = [], onChange })
                                 <Flex flex="1" justify="space-between" align="center" gap="1">
                                     <Text
                                         fontSize="sm"
-                                        color={isChecked ? 'pink.600' : 'gray.700'}
-                                        _dark={{ color: isChecked ? 'pink.300' : 'gray.300' }}
+                                        color={isChecked ? 'pecado.600' : 'gray.700'}
+                                        _dark={{ color: isChecked ? 'pecado.300' : 'gray.300' }}
                                         fontWeight={isChecked ? '500' : '400'}
                                         textAlign="left"
                                     >

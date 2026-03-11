@@ -6,6 +6,7 @@ use App\Enums\ExportFormat;
 use App\Models\ProductExport;
 use App\Models\User;
 use App\Services\ProductExportService;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
@@ -17,6 +18,17 @@ use Tests\TestCase;
  */
 class ProductExportAllFormatsTest extends TestCase
 {
+    use RefreshDatabase;
+
+    protected User $adminUser;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->adminUser = User::factory()->create(['is_admin' => true]);
+        // Создаём несколько товаров для тестирования форматов экспорта
+        \App\Models\Product::factory()->count(3)->create();
+    }
     /**
      * Все доступные поля для экспорта (статические + динамические атрибуты).
      */
@@ -139,11 +151,9 @@ class ProductExportAllFormatsTest extends TestCase
      */
     protected function createExport(ExportFormat $format, string $name): ProductExport
     {
-        $user = User::where('is_admin', true)->first();
-
         return ProductExport::create([
-            'user_id' => $user->id,
-            'client_user_id' => $user->id,
+            'user_id' => $this->adminUser->id,
+            'client_user_id' => $this->adminUser->id,
             'name' => $name,
             'format' => $format,
             'fields' => $this->getAllFields(),
@@ -349,14 +359,16 @@ class ProductExportAllFormatsTest extends TestCase
     public function test_download_endpoint_works_for_all_formats(): void
     {
         $formats = [
-            ExportFormat::JSON => 'application/json',
-            ExportFormat::CSV => 'text/csv',
-            ExportFormat::XML => 'application/xml',
-            ExportFormat::XLS => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            ExportFormat::JSON->value => ['format' => ExportFormat::JSON, 'contentType' => 'application/json'],
+            ExportFormat::CSV->value  => ['format' => ExportFormat::CSV,  'contentType' => 'text/csv'],
+            ExportFormat::XML->value  => ['format' => ExportFormat::XML,  'contentType' => 'application/xml'],
+            ExportFormat::XLS->value  => ['format' => ExportFormat::XLS,  'contentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
         ];
 
-        foreach ($formats as $format => $expectedContentType) {
-            $export = $this->createExport($format, "HTTP Test {$format->value}");
+        foreach ($formats as $formatValue => $config) {
+            $format = $config['format'];
+            $expectedContentType = $config['contentType'];
+            $export = $this->createExport($format, "HTTP Test {$formatValue}");
 
             $response = $this->get("/export/{$export->hash}");
 
@@ -364,15 +376,15 @@ class ProductExportAllFormatsTest extends TestCase
             $this->assertStringContainsString(
                 $expectedContentType,
                 $response->headers->get('Content-Type'),
-                "Неверный Content-Type для формата {$format->value}"
+                "Неверный Content-Type для формата {$formatValue}"
             );
             $this->assertStringContainsString(
                 'attachment',
                 $response->headers->get('Content-Disposition'),
-                "Отсутствует Content-Disposition для формата {$format->value}"
+                "Отсутствует Content-Disposition для формата {$formatValue}"
             );
 
-            echo "  ✅ HTTP {$format->value}: OK\n";
+            echo "  ✅ HTTP {$formatValue}: OK\n";
         }
     }
 

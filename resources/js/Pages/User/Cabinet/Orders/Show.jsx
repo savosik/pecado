@@ -5,7 +5,7 @@ import {
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     LuArrowLeft, LuPackage, LuWarehouse, LuShoppingBag,
-    LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin,
+    LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 
@@ -34,7 +34,6 @@ const TYPE_LABELS = {
 export default function OrderShow({ order }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
-
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const instockChild = (order.children || []).find(c => c.type === 'in_stock');
@@ -65,6 +64,15 @@ export default function OrderShow({ order }) {
             <Stack gap="5">
                 {/* ═══ Статус ═══ */}
                 <Flex align="center" gap="3" flexWrap="wrap">
+                    {order.type === 'preorder' ? (
+                        <Badge colorPalette="purple" variant="subtle" fontSize="sm" px="3" py="1" borderRadius="full">
+                            Предзаказ
+                        </Badge>
+                    ) : (
+                        <Badge colorPalette="gray" variant="outline" fontSize="sm" px="3" py="1" borderRadius="full">
+                            Заказ
+                        </Badge>
+                    )}
                     <Badge
                         colorPalette={STATUS_COLORS[order.status] ?? 'gray'}
                         variant="subtle"
@@ -89,7 +97,20 @@ export default function OrderShow({ order }) {
                         <Card.Body p="4" pt="0">
                             <VStack align="stretch" gap="3">
                                 <InfoRow label="Дата" value={createdAt} />
-                                <InfoRow label="Сумма" value={`${fmt(order.total_amount)} ${currencySymbol}`} bold />
+                                <InfoRow
+                                    label="Сумма"
+                                    value={
+                                        <>
+                                            {fmt(order.total_converted)} {currencySymbol}
+                                            {order.currency_code && order.currency_code !== currency?.code && (
+                                                <Text as="span" fontSize="xs" color="gray.400" ml="1">
+                                                    ({fmt(order.total_amount)} {order.currency_code})
+                                                </Text>
+                                            )}
+                                        </>
+                                    }
+                                    bold
+                                />
                                 {order.comment && <InfoRow label="Комментарий" value={order.comment} />}
                             </VStack>
                         </Card.Body>
@@ -198,7 +219,7 @@ export default function OrderShow({ order }) {
                                                         <Box>
                                                             {item.product?.slug ? (
                                                                 <Link href={`/products/${item.product.slug}`}>
-                                                                    <Text fontWeight="500" fontSize="sm" _hover={{ color: 'pink.500' }} transition="color 0.15s">
+                                                                    <Text fontWeight="500" fontSize="sm" _hover={{ color: 'pecado.500' }} transition="color 0.15s">
                                                                         {item.product?.name || item.name}
                                                                     </Text>
                                                                 </Link>
@@ -242,9 +263,16 @@ export default function OrderShow({ order }) {
                                 <LuShoppingBag size={20} />
                                 <Text fontWeight="700" fontSize="lg">Итого</Text>
                             </Flex>
-                            <Text fontSize="xl" fontWeight="800">
-                                {fmt(order.total_amount)} {currencySymbol}
-                            </Text>
+                            <VStack gap="0" align="end">
+                                <Text fontSize="xl" fontWeight="800">
+                                    {fmt(order.total_converted)} {currencySymbol}
+                                </Text>
+                                {order.currency_code && order.currency_code !== currency?.code && (
+                                    <Text fontSize="xs" color="gray.400">
+                                        {fmt(order.total_amount)} {order.currency_code}
+                                    </Text>
+                                )}
+                            </VStack>
                         </Flex>
                     </Card.Body>
                 </Card.Root>
@@ -252,6 +280,73 @@ export default function OrderShow({ order }) {
                 {/* ═══ История статусов ═══ */}
                 {order.status_histories && order.status_histories.length > 0 && (
                     <StatusHistoryTimeline histories={order.status_histories} />
+                )}
+
+                {/* ═══ Отгрузки по заказу ═══ */}
+                {order.shipments && order.shipments.length > 0 && (
+                    <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                        <Card.Header p="4" pb="2">
+                            <HStack gap="2">
+                                <LuTruck size={20} />
+                                <Text fontWeight="700" fontSize="md">
+                                    Отгрузки по заказу ({order.shipments.length})
+                                </Text>
+                            </HStack>
+                        </Card.Header>
+                        <Card.Body p={0}>
+                            <Table.Root size="sm">
+                                <Table.Header>
+                                    <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                        <Table.ColumnHeader>Дата</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Статус</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="center">Позиций</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
+                                        <Table.ColumnHeader w="60px" />
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {order.shipments.map((shipment) => (
+                                        <Table.Row
+                                            key={shipment.id}
+                                            _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
+                                        >
+                                            <Table.Cell>
+                                                <Text fontSize="sm">
+                                                    {shipment.date
+                                                        ? new Date(shipment.date).toLocaleDateString('ru-RU')
+                                                        : '—'}
+                                                </Text>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Badge variant="subtle" fontSize="xs">
+                                                    {shipment.status_label}
+                                                </Badge>
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="center">
+                                                <Text fontSize="sm">{shipment.items_count}</Text>
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="right">
+                                                <Text fontFamily="mono" fontWeight="600" fontSize="sm">
+                                                    {fmt(shipment.total_amount)} {shipment.currency_code}
+                                                </Text>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Link href={`/cabinet/shipments/${shipment.id}`}>
+                                                    <Text
+                                                        color="pecado.600"
+                                                        fontSize="xs"
+                                                        _hover={{ textDecoration: 'underline' }}
+                                                    >
+                                                        Открыть
+                                                    </Text>
+                                                </Link>
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
+                        </Card.Body>
+                    </Card.Root>
                 )}
             </Stack>
         </CabinetLayout>
@@ -309,7 +404,7 @@ function ChildOrderTable({ title, icon, childOrder, currencySymbol, colorPalette
                                     <Table.Cell>
                                         {item.product?.slug ? (
                                             <Link href={`/products/${item.product.slug}`}>
-                                                <Text fontWeight="500" lineClamp={1} _hover={{ color: 'pink.500' }} transition="color 0.15s">
+                                                <Text fontWeight="500" lineClamp={1} _hover={{ color: 'pecado.500' }} transition="color 0.15s">
                                                     {item.product?.name || item.name || 'Товар'}
                                                 </Text>
                                             </Link>
@@ -387,7 +482,7 @@ function StatusHistoryTimeline({ histories = [] }) {
                                     width="18px"
                                     height="18px"
                                     borderRadius="full"
-                                    bg={index === 0 ? 'pink.500' : 'gray.300'}
+                                    bg={index === 0 ? 'pecado.500' : 'gray.300'}
                                     border="3px solid"
                                     borderColor="white"
                                     _dark={{ borderColor: 'gray.800' }}
@@ -431,7 +526,7 @@ function StatusHistoryTimeline({ histories = [] }) {
                                             p={3}
                                             borderRadius="md"
                                             borderLeftWidth="3px"
-                                            borderLeftColor="pink.400"
+                                            borderLeftColor="pecado.400"
                                             mt={1}
                                         >
                                             <HStack align="start" gap={2}>

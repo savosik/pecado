@@ -33,18 +33,19 @@ export default function Index({ carts = [], cartsCount = 0 }) {
         setShowCreate(true);
     };
 
-    const confirmCreate = () => {
+    const confirmCreate = async () => {
         if (!newCartName.trim()) {
             toaster.create({ title: 'Введите название корзины', type: 'warning' });
             return;
         }
         setShowCreate(false);
-        router.post('/cart', { name: newCartName.trim() }, {
-            onSuccess: () => {
-                toaster.create({ title: 'Корзина создана', type: 'success' });
-                router.visit('/cabinet/carts');
-            },
-        });
+        try {
+            await axios.post('/api/cart/carts', { name: newCartName.trim() });
+            toaster.create({ title: 'Корзина создана', type: 'success' });
+            router.reload();
+        } catch (e) {
+            toaster.create({ title: e.response?.data?.message || 'Ошибка создания', type: 'error' });
+        }
     };
 
     // === Delete ===
@@ -54,7 +55,7 @@ export default function Index({ carts = [], cartsCount = 0 }) {
             await axios.delete(`/cabinet/carts/${deleteCart.id}`);
             toaster.create({ title: 'Корзина удалена', type: 'success' });
             setDeleteCart(null);
-            router.visit('/cabinet/carts');
+            router.reload();
         } catch (e) {
             toaster.create({ title: e.response?.data?.message || 'Ошибка удаления', type: 'error' });
             setDeleteCart(null);

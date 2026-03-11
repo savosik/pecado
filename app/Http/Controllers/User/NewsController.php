@@ -15,11 +15,25 @@ class NewsController extends Controller
      */
     public function index(Request $request)
     {
-        $news = News::published()
-            ->with('tags')
-            ->orderByDesc('published_at')
-            ->paginate(12)
-            ->withQueryString();
+        $selectedTags = $request->input('tags', []);
+
+        $query = News::published()->with('tags')->orderByDesc('published_at');
+
+        if (!empty($selectedTags)) {
+            $query->withAnyTags($selectedTags);
+        }
+
+        $news = $query->paginate(12)->withQueryString();
+
+        // Все теги раздела (из опубликованных записей)
+        $availableTags = \Spatie\Tags\Tag::query()
+            ->join('taggables', 'tags.id', '=', 'taggables.tag_id')
+            ->where('taggables.taggable_type', \App\Models\News::class)
+            ->whereIn('taggables.taggable_id', News::published()->select('id'))
+            ->distinct()
+            ->orderBy('tags.name')
+            ->pluck('tags.name')
+            ->toArray();
 
         // Подгружаем медиа для каждого элемента
         $news->getCollection()->transform(function ($item) {
@@ -36,6 +50,8 @@ class NewsController extends Controller
 
         return Inertia::render('User/News/Index', [
             'news' => $news,
+            'availableTags' => $availableTags,
+            'selectedTags' => $selectedTags,
             'seo' => [
                 'title' => 'Новости',
                 'description' => 'Последние новости и обновления нашего магазина.',

@@ -15,7 +15,9 @@ return new class extends Migration
             $table->id();
             $table->nestedSet();
             $table->string('external_id')->nullable();
+            $table->string('uuid')->nullable()->unique()->comment('UUID из 1С (US-13)');
             $table->string('name');
+            $table->boolean('is_group')->default(false)->comment('Признак узла-группы из 1С (US-13)');
             $table->string('slug')->nullable();
             $table->text('short_description')->nullable();
             $table->text('description')->nullable();

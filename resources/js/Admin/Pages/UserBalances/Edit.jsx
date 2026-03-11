@@ -5,11 +5,10 @@ import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Comp
 import { Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ balance, currencies }) {
+export default function Edit({ balance }) {
     const [selectedUser, setSelectedUser] = useState(balance.user || null);
     const { data, setData, put, processing, errors, transform } = useForm({
         user_id: balance.user_id || '',
-        currency_id: balance.currency_id || '',
         balance: balance.balance || '0.00',
         overdue_debt: balance.overdue_debt || '0.00',
     });
@@ -47,7 +46,7 @@ export default function Edit({ balance, currencies }) {
 
     return (
         <>
-            <PageHeader title={`Редактировать баланс: ${balance.user.full_name} (${balance.currency.code})`} />
+            <PageHeader title={`Редактировать баланс: ${balance.user.full_name}`} />
 
             <Card.Root>
                 <Card.Body>
@@ -64,26 +63,6 @@ export default function Edit({ balance, currencies }) {
                                     placeholder="Выберите пользователя"
                                     displayField="full_name"
                                 />
-                            </FormField>
-
-                            <FormField label="Валюта" error={errors.currency_id} required>
-                                <select
-                                    value={data.currency_id}
-                                    onChange={(e) => setData('currency_id', e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        borderRadius: '0.375rem',
-                                        border: '1px solid var(--chakra-colors-border)'
-                                    }}
-                                >
-                                    <option value="">Выберите валюту</option>
-                                    {currencies.map((currency) => (
-                                        <option key={currency.id} value={currency.id}>
-                                            {currency.code} - {currency.name} ({currency.symbol})
-                                        </option>
-                                    ))}
-                                </select>
                             </FormField>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
@@ -108,15 +87,27 @@ export default function Edit({ balance, currencies }) {
                                 </FormField>
                             </SimpleGrid>
 
-                            <FormField label="Дата обновления">
-                                <Input
-                                    value={balance.updated_at ? new Date(balance.updated_at).toLocaleString('ru-RU') : '—'}
-                                    readOnly
-                                    variant="flushed"
-                                    bg="gray.50"
-                                    _dark={{ bg: 'gray.800' }}
-                                />
-                            </FormField>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Обновлено в 1С">
+                                    <Input
+                                        value={balance.balance_erp_updated_at ? new Date(balance.balance_erp_updated_at).toLocaleString('ru-RU') : '—'}
+                                        readOnly
+                                        variant="flushed"
+                                        bg="gray.50"
+                                        _dark={{ bg: 'gray.800' }}
+                                    />
+                                </FormField>
+
+                                <FormField label="Дата обновления">
+                                    <Input
+                                        value={balance.updated_at ? new Date(balance.updated_at).toLocaleString('ru-RU') : '—'}
+                                        readOnly
+                                        variant="flushed"
+                                        bg="gray.50"
+                                        _dark={{ bg: 'gray.800' }}
+                                    />
+                                </FormField>
+                            </SimpleGrid>
 
                             <FormActions
                                 onSaveAndClose={handleSaveAndClose}

@@ -14,6 +14,7 @@ class CompanyController extends Controller
     public function index()
     {
         $companies = Company::withCount('bankAccounts')
+            ->with(['contractorBalance.overdueDetails'])
             ->orderBy('created_at', 'desc')
             ->get();
 

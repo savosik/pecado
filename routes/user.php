@@ -13,9 +13,15 @@ use App\Http\Controllers\User\CurrencyController;
 use App\Http\Controllers\User\FaqController;
 use App\Http\Controllers\User\NewsController;
 use App\Http\Controllers\User\ArticleController;
+use App\Http\Controllers\User\PromotionController;
 use App\Http\Controllers\User\PageController;
 use App\Http\Controllers\User\SearchController;
 use App\Http\Controllers\User\OrderController;
+use App\Http\Controllers\User\DeliveryAddressController;
+use App\Http\Controllers\User\ProductExportController;
+use App\Http\Controllers\User\MediaController;
+use App\Http\Controllers\User\ReturnController;
+use App\Http\Controllers\User\ShipmentController;
 use Illuminate\Support\Facades\Route;
 
 // ──────────────────────────────────────────────
@@ -34,6 +40,10 @@ Route::get('/news', [NewsController::class, 'index'])->name('news.index');
 Route::get('/news/{slug}', [NewsController::class, 'show'])->name('news.show');
 Route::get('/articles', [ArticleController::class, 'index'])->name('articles.index');
 Route::get('/articles/{slug}', [ArticleController::class, 'show'])->name('articles.show');
+Route::get('/brand-stories', [App\Http\Controllers\User\BrandStoryController::class, 'index'])->name('brand-stories.index');
+Route::get('/brand-stories/{slug}', [App\Http\Controllers\User\BrandStoryController::class, 'show'])->name('brand-stories.show');
+Route::get('/promotions', [PromotionController::class, 'index'])->name('promotions.index');
+Route::get('/promotions/{slug}', [PromotionController::class, 'show'])->name('promotions.show');
 Route::get('/pages/{slug}', [PageController::class, 'show'])->name('pages.show');
 
 // Избранное (страница)
@@ -131,4 +141,40 @@ Route::middleware('auth')->prefix('cabinet')->name('cabinet.')->group(function (
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+    // Delivery Addresses
+    Route::get('/delivery-addresses', [DeliveryAddressController::class, 'index'])->name('delivery-addresses.index');
+    Route::get('/delivery-addresses/create', [DeliveryAddressController::class, 'create'])->name('delivery-addresses.create');
+    Route::post('/delivery-addresses', [DeliveryAddressController::class, 'store'])->name('delivery-addresses.store');
+    Route::get('/delivery-addresses/{deliveryAddress}/edit', [DeliveryAddressController::class, 'edit'])->name('delivery-addresses.edit');
+    Route::put('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'update'])->name('delivery-addresses.update');
+    Route::delete('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'destroy'])->name('delivery-addresses.destroy');
+
+    // Product Exports
+    Route::post('/product-exports/preview', [ProductExportController::class, 'preview'])->name('product-exports.preview');
+    Route::get('/product-exports/filter-options', [ProductExportController::class, 'filterOptions'])->name('product-exports.filter-options');
+    Route::get('/product-exports', [ProductExportController::class, 'index'])->name('product-exports.index');
+    Route::get('/product-exports/create', [ProductExportController::class, 'create'])->name('product-exports.create');
+    Route::post('/product-exports', [ProductExportController::class, 'store'])->name('product-exports.store');
+    Route::get('/product-exports/{productExport}/edit', [ProductExportController::class, 'edit'])->name('product-exports.edit');
+    Route::put('/product-exports/{productExport}', [ProductExportController::class, 'update'])->name('product-exports.update');
+    Route::delete('/product-exports/{productExport}', [ProductExportController::class, 'destroy'])->name('product-exports.destroy');
+
+    // Возвраты
+    Route::get('/returns/search-products', [ReturnController::class, 'searchProducts'])->name('returns.search-products');
+    Route::get('/returns/product-orders', [ReturnController::class, 'getProductOrders'])->name('returns.product-orders');
+    Route::get('/returns', [ReturnController::class, 'index'])->name('returns.index');
+    Route::get('/returns/create', [ReturnController::class, 'create'])->name('returns.create');
+    Route::post('/returns', [ReturnController::class, 'store'])->name('returns.store');
+    Route::get('/returns/{return}', [ReturnController::class, 'show'])->name('returns.show');
+
+    // Отгрузки (реализации из 1С)
+    Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+    Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
+
+    // Медиатека
+    Route::get('/media', [MediaController::class, 'index'])->name('media.index');
+    Route::get('/media/api', [MediaController::class, 'api'])->name('media.api');
+    Route::get('/media/{media}/download', [MediaController::class, 'download'])->name('media.download');
+    Route::post('/media/download-batch', [MediaController::class, 'downloadBatch'])->name('media.download-batch');
 });

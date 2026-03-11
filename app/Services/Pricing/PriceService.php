@@ -78,12 +78,34 @@ class PriceService implements PriceServiceInterface
 
     /**
      * Get the maximum active discount percentage for a user and product.
+     *
+     * US-03 v2: Партнёр подходит под скидку если привязан напрямую ИЛИ через сегмент партнёров.
+     * Товар подходит если привязан напрямую ИЛИ через сегмент номенклатуры.
+     * Из всех применимых скидок берётся один максимальный процент (без суммирования).
+     * Акции (promotion) учитываются только если текущая дата входит в [starts_at, ends_at].
      */
     protected function getMaxDiscountPercentage(User $user, Product $product): float
     {
         return Discount::where('is_posted', true)
-            ->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
-            ->whereHas('products', fn ($q) => $q->where('products.id', $product->id))
+            // Партнёр: прямая привязка ИЛИ через сегмент партнёров
+            ->where(function ($q) use ($user) {
+                $q->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
+                  ->orWhereHas('partnerSegments.users', fn ($q) => $q->where('users.id', $user->id));
+            })
+            // Товар: прямая привязка ИЛИ через сегмент номенклатуры
+            ->where(function ($q) use ($product) {
+                $q->whereHas('products', fn ($q) => $q->where('products.id', $product->id))
+                  ->orWhereHas('productSegments.products', fn ($q) => $q->where('products.id', $product->id));
+            })
+            // Временные акции (promotion) действуют только в своём диапазоне дат
+            ->where(function ($q) {
+                $q->where('type', 'agreement')
+                  ->orWhere(function ($q) {
+                      $q->where('type', 'promotion')
+                        ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+                        ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
+                  });
+            })
             ->max('percentage') ?? 0.0;
     }
 

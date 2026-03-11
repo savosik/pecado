@@ -72,7 +72,7 @@ export default function ProductPagination({
                     checked={infiniteScroll}
                     onCheckedChange={(e) => onInfiniteScrollToggle(e.checked)}
                     size="sm"
-                    colorPalette="pink"
+                    colorPalette="pecado"
                 >
                     <Switch.HiddenInput />
                     <Switch.Control>
@@ -125,7 +125,7 @@ function ClassicPagination({ currentPage, lastPage, onPageChange }) {
                             key={page}
                             size="sm"
                             variant={page === currentPage ? 'solid' : 'ghost'}
-                            colorPalette={page === currentPage ? 'pink' : 'gray'}
+                            colorPalette={page === currentPage ? 'pecado' : 'gray'}
                             borderRadius="lg"
                             minW="9"
                             fontWeight="600"
@@ -223,7 +223,7 @@ function InfiniteScrollControls({ currentPage, lastPage, onLoadMore, loadingMore
         <Flex direction="column" align="center" gap="3">
             <Button
                 variant="outline"
-                colorPalette="pink"
+                colorPalette="pecado"
                 size="md"
                 onClick={onLoadMore}
                 disabled={loadingMore}

@@ -19,7 +19,7 @@ class CurrencySeeder extends Seeder
                 'symbol' => '₽',
                 'is_base' => true,
                 'exchange_rate' => 1.0000000000,
-                'correction_factor' => 1.0000,
+                'rate_coefficient' => 1.0000,
             ],
             [
                 'code' => 'BYN',
@@ -27,7 +27,7 @@ class CurrencySeeder extends Seeder
                 'symbol' => 'Br',
                 'is_base' => false,
                 'exchange_rate' => 1.0000000000, 
-                'correction_factor' => 1.0000,
+                'rate_coefficient' => 1.0000,
             ],
             [
                 'code' => 'KZT',
@@ -35,7 +35,7 @@ class CurrencySeeder extends Seeder
                 'symbol' => '₸',
                 'is_base' => false,
                 'exchange_rate' => 1.0000000000,
-                'correction_factor' => 1.0000,
+                'rate_coefficient' => 1.0000,
             ],
         ];
 

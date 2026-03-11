@@ -9,8 +9,9 @@ class CurrencyService
     /**
      * Конвертировать цену из базовой валюты в указанную.
      *
-     * Формула: convertedPrice = basePrice / (exchange_rate * correction_factor)
-     * Пример: 1000 RUB → BYN при exchange_rate=27.16, correction_factor=1.0 → 1000/27.16 ≈ 36.82 Br
+     * По US-04, exchange_rate — уже итоговый курс (official_rate × rate_coefficient из 1С).
+     * Формула: convertedPrice = basePrice / exchange_rate
+     * Пример: 1000 RUB → BYN при exchange_rate=28.5 → 1000/28.5 ≈ 35.09 Br
      */
     public function convertFromBase(float $price, Currency $currency): float
     {
@@ -19,22 +20,19 @@ class CurrencyService
         }
 
         $rate = (float) ($currency->exchange_rate ?: 1.0);
-        $factor = (float) ($currency->correction_factor ?: 1.0);
 
-        $effectiveRate = $rate * $factor;
-
-        if ($effectiveRate <= 0) {
+        if ($rate <= 0) {
             return $price;
         }
 
-        return round($price / $effectiveRate, 2);
+        return round($price / $rate, 2);
     }
 
     /**
      * Конвертировать цену из пользовательской валюты обратно в базовую.
      *
      * Обратная операция к convertFromBase.
-     * Формула: basePrice = convertedPrice * (exchange_rate * correction_factor)
+     * По US-04: basePrice = convertedPrice × exchange_rate
      */
     public function convertToBase(float $price, Currency $currency): float
     {
@@ -43,15 +41,12 @@ class CurrencyService
         }
 
         $rate = (float) ($currency->exchange_rate ?: 1.0);
-        $factor = (float) ($currency->correction_factor ?: 1.0);
 
-        $effectiveRate = $rate * $factor;
-
-        if ($effectiveRate <= 0) {
+        if ($rate <= 0) {
             return $price;
         }
 
-        return round($price * $effectiveRate, 2);
+        return round($price * $rate, 2);
     }
 
     /**

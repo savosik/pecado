@@ -1,5 +1,7 @@
+import { useState, useCallback } from 'react';
 import { SimpleGrid } from '@chakra-ui/react';
 import { LuFileText } from 'react-icons/lu';
+import { router } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
 import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -8,18 +10,42 @@ import ContentCard from '@/components/common/ContentCard';
 import Pagination from '@/components/common/Pagination';
 import EmptyState from '@/components/common/EmptyState';
 import ContentSwitcher from '@/components/common/ContentSwitcher';
+import ContentTagFilter from '@/components/common/ContentTagFilter';
 import usePagination from '@/hooks/usePagination';
 
 /**
  * Страница списка статей с пагинацией.
- *
- * @param {{ articles: object, seo: object, breadcrumbs: Array }} props
  */
-export default function ArticlesIndex({ articles: paginationData, seo, breadcrumbs }) {
+export default function ArticlesIndex({ articles: paginationData, availableTags = [], selectedTags: initialSelectedTags = [], seo, breadcrumbs }) {
     const pagination = usePagination(paginationData, {
         only: 'articles',
         preserveScroll: false,
     });
+
+    const [selectedTags, setSelectedTags] = useState(initialSelectedTags);
+
+    const handleTagToggle = useCallback((tag) => {
+        const newTags = selectedTags.includes(tag)
+            ? selectedTags.filter((t) => t !== tag)
+            : [...selectedTags, tag];
+
+        setSelectedTags(newTags);
+
+        router.get('/articles', { tags: newTags }, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['articles', 'selectedTags'],
+        });
+    }, [selectedTags]);
+
+    const handleReset = useCallback(() => {
+        setSelectedTags([]);
+        router.get('/articles', {}, {
+            preserveState: true,
+            preserveScroll: true,
+            only: ['articles', 'selectedTags'],
+        });
+    }, []);
 
     return (
         <UserLayout>
@@ -28,8 +54,14 @@ export default function ArticlesIndex({ articles: paginationData, seo, breadcrum
             <PageHeader
                 title="Статьи"
                 subtitle="Полезные статьи и материалы"
+                actions={<ContentSwitcher />}
             />
-            <ContentSwitcher />
+            <ContentTagFilter
+                tags={availableTags}
+                selectedTags={selectedTags}
+                onToggle={handleTagToggle}
+                onReset={handleReset}
+            />
 
             {pagination.items.length === 0 ? (
                 <EmptyState
@@ -40,7 +72,7 @@ export default function ArticlesIndex({ articles: paginationData, seo, breadcrum
                 />
             ) : (
                 <>
-                    <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap="6">
+                    <SimpleGrid columns={{ base: 1, sm: 2, lg: 4 }} gap="6">
                         {pagination.items.map((item) => (
                             <ContentCard
                                 key={item.id}

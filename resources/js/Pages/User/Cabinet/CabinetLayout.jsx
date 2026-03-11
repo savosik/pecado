@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import {
-    Box, Flex, VStack, Text, HStack, Heading, Separator,
+    Box, Flex, VStack, Text, HStack, Heading,
     Accordion, Span, Button, IconButton, Drawer, Portal, CloseButton,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
 import {
-    LuLayoutDashboard, LuShoppingBag, LuHeart, LuShoppingCart,
-    LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu,
+    LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
+    LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
+    LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck,
 } from 'react-icons/lu';
 
 const menuGroups = [
@@ -18,21 +19,30 @@ const menuGroups = [
         ],
     },
     {
-        title: 'Покупки',
+        title: 'Заказы',
         items: [
             { href: '/cabinet/orders', label: 'Мои заказы', icon: LuShoppingBag },
+            { href: '/cabinet/shipments', label: 'Отгрузки', icon: LuTruck },
+            { href: '/cabinet/returns', label: 'Возвраты', icon: LuRotateCcw },
             { href: '/cabinet/carts', label: 'Мои корзины', icon: LuShoppingCart },
-            { href: '/favorites', label: 'Избранное', icon: LuHeart },
         ],
     },
     {
-        title: 'Компании',
+        title: 'Организация',
         items: [
             { href: '/cabinet/companies', label: 'Мои компании', icon: LuBuilding2 },
+            { href: '/cabinet/delivery-addresses', label: 'Адреса доставки', icon: LuMapPin },
         ],
     },
     {
-        title: 'Профиль',
+        title: 'Инструменты',
+        items: [
+            { href: '/cabinet/product-exports', label: 'Выгрузки товаров', icon: LuFileDown },
+            { href: '/cabinet/media', label: 'Медиатека', icon: LuImage },
+        ],
+    },
+    {
+        title: 'Настройки',
         items: [
             { href: '/cabinet/profile', label: 'Мои данные', icon: LuUser },
             { href: '/cabinet/change-password', label: 'Смена пароля', icon: LuLock },
@@ -66,12 +76,12 @@ function SidebarContent({ currentPath }) {
                                                     px="3"
                                                     py="2"
                                                     borderRadius="lg"
-                                                    bg={isActive ? 'pink.50' : 'transparent'}
-                                                    color={isActive ? 'pink.600' : undefined}
-                                                    _hover={{ bg: isActive ? 'pink.50' : 'gray.50' }}
+                                                    bg={isActive ? 'pecado.50' : 'transparent'}
+                                                    color={isActive ? 'pecado.600' : undefined}
+                                                    _hover={{ bg: isActive ? 'pecado.50' : 'gray.50' }}
                                                     _dark={{
-                                                        bg: isActive ? 'pink.900/20' : 'transparent',
-                                                        _hover: { bg: isActive ? 'pink.900/20' : 'gray.800' },
+                                                        bg: isActive ? 'pecado.900/20' : 'transparent',
+                                                        _hover: { bg: isActive ? 'pecado.900/20' : 'gray.800' },
                                                     }}
                                                     transition="all 0.15s"
                                                 >
@@ -87,8 +97,6 @@ function SidebarContent({ currentPath }) {
                     </Accordion.Item>
                 ))}
             </Accordion.Root>
-
-            <Separator my="2" />
 
             <Link href="/logout" method="post" as="button" style={{ width: '100%' }}>
                 <HStack px="3" py="2" borderRadius="lg" _hover={{ bg: 'red.50' }} _dark={{ _hover: { bg: 'red.900/20' } }} color="red.500">
@@ -176,7 +184,7 @@ export default function CabinetLayout({ title, children, actions }) {
                             <Text fontSize="sm" fontWeight="600">Меню личного кабинета</Text>
                         </HStack>
                         {currentItem && (
-                            <Text fontSize="xs" color="pink.500" fontWeight="500">{currentItem.label}</Text>
+                            <Text fontSize="xs" color="pecado.500" fontWeight="500">{currentItem.label}</Text>
                         )}
                     </Button>
                 </Box>

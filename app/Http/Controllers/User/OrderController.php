@@ -4,13 +4,18 @@ namespace App\Http\Controllers\User;
 
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
+use App\Models\Currency;
 use App\Models\Order;
+use App\Services\CurrencyService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 class OrderController extends Controller
 {
+    public function __construct(
+        protected CurrencyService $currencyService
+    ) {}
     /**
      * Список заказов текущего пользователя.
      * GET /cabinet/orders
@@ -68,21 +73,29 @@ class OrderController extends Controller
 
         $orders = $query->paginate($perPage)->withQueryString();
 
+        // Валюта пользователя для конвертации
+        $currency = $this->getUserCurrency($request);
+
         // Трансформация данных
-        $orders->getCollection()->transform(function ($order) {
+        $orders->getCollection()->transform(function ($order) use ($currency) {
+            $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
             return [
-                'id' => $order->id,
-                'uuid' => $order->uuid,
-                'status' => $order->status?->value,
-                'status_label' => $this->getStatusLabel($order->status),
-                'total_amount' => $order->total_amount,
-                'currency_code' => $order->currency_code ?? '₽',
-                'created_at' => $order->created_at?->format('d.m.Y H:i'),
-                'company' => $order->company ? [
-                    'id' => $order->company->id,
+                'id'              => $order->id,
+                'number'          => $order->number ?? ('#' . $order->id),
+                'uuid'            => $order->uuid,
+                'status'          => $order->status?->value,
+                'status_label'    => $this->getStatusLabel($order->status),
+                'type'            => $order->type?->value,
+                'total_amount'    => $order->total_amount,
+                'total_converted' => $totalConverted,
+                'currency_code'   => $order->currency_code,
+                'created_at'      => $order->created_at?->format('d.m.Y H:i'),
+                'updated_at'      => $order->updated_at?->format('d.m.Y H:i'),
+                'company'         => $order->company ? [
+                    'id'   => $order->company->id,
                     'name' => $order->company->name,
                 ] : null,
-                'items_count' => $order->items->count(),
+                'items_count'     => $order->items->count(),
             ];
         });
 
@@ -160,16 +173,17 @@ class OrderController extends Controller
 
         return Inertia::render('User/Cabinet/Orders/Show', [
             'order' => [
-                'id' => $order->id,
-                'uuid' => $order->uuid,
-                'status' => $order->status?->value,
-                'status_label' => $this->getStatusLabel($order->status),
-                'type' => $order->type?->value,
-                'comment' => $order->comment,
-                'total_amount' => $order->total_amount,
-                'currency_code' => $order->currency_code,
-                'created_at' => $order->created_at?->toISOString(),
-                'created_at_formatted' => $order->created_at?->format('d.m.Y H:i'),
+                'id'                  => $order->id,
+                'uuid'                => $order->uuid,
+                'status'              => $order->status?->value,
+                'status_label'        => $this->getStatusLabel($order->status),
+                'type'                => $order->type?->value,
+                'comment'             => $order->comment,
+                'total_amount'        => $order->total_amount,
+                'total_converted'     => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
+                'currency_code'       => $order->currency_code,
+                'created_at'          => $order->created_at?->toISOString(),
+                'created_at_formatted'=> $order->created_at?->format('d.m.Y H:i'),
                 'company' => $order->company ? [
                     'id' => $order->company->id,
                     'name' => $order->company->name,
@@ -201,6 +215,24 @@ class OrderController extends Controller
                     ];
                 }),
                 'children' => $childOrders,
+                'shipments' => $order->shipments()->map(function ($shipment) {
+                    return [
+                        'id'            => $shipment->id,
+                        'uuid'          => $shipment->uuid,
+                        'date'          => $shipment->date?->format('Y-m-d'),
+                        'status'        => $shipment->status,
+                        'status_label'  => match ($shipment->status) {
+                            'completed'   => 'Выполнена',
+                            'in_progress' => 'В обработке',
+                            'new'         => 'Новая',
+                            'cancelled'   => 'Отменена',
+                            default       => $shipment->status,
+                        },
+                        'total_amount'  => $shipment->total_amount,
+                        'currency_code' => $shipment->currency_code,
+                        'items_count'   => $shipment->items()->count(),
+                    ];
+                }),
                 'status_histories' => $order->statusHistories->map(function ($history) {
                     return [
                         'id' => $history->id,
@@ -228,12 +260,49 @@ class OrderController extends Controller
     protected function getStatusLabel(?OrderStatus $status): string
     {
         return match ($status) {
-            OrderStatus::PENDING => 'Ожидает',
+            OrderStatus::PENDING    => 'Ожидает',
+            OrderStatus::CONFIRMED  => 'Подтверждён',
             OrderStatus::PROCESSING => 'В обработке',
-            OrderStatus::SHIPPED => 'Отправлен',
-            OrderStatus::DELIVERED => 'Доставлен',
-            OrderStatus::CANCELLED => 'Отменён',
-            default => 'Неизвестно',
+            OrderStatus::SHIPPED    => 'Отправлен',
+            OrderStatus::DELIVERED  => 'Доставлен',
+            OrderStatus::CANCELLED  => 'Отменён',
+            default                 => 'Неизвестно',
         };
+    }
+
+    /**
+     * Получить текущую валюту пользователя из сессии.
+     */
+    private function getUserCurrency(Request $request): ?Currency
+    {
+        $currencyCode = session('currency_code', 'RUB');
+        return Currency::where('code', $currencyCode)->first();
+    }
+
+    /**
+     * Конвертировать сумму из валюты заказа в валюту пользователя.
+     */
+    private function convertAmount(float $amount, ?string $sourceCurrencyCode, ?Currency $targetCurrency): float
+    {
+        if (!$targetCurrency || $targetCurrency->is_base) {
+            if ($sourceCurrencyCode && $sourceCurrencyCode !== 'RUB') {
+                $src = Currency::where('code', $sourceCurrencyCode)->first();
+                if ($src) {
+                    return round($amount * (float) $src->exchange_rate, 2);
+                }
+            }
+            return $amount;
+        }
+
+        // Сначала в RUB, потом в целевую валюту
+        $amountInRub = $amount;
+        if ($sourceCurrencyCode && $sourceCurrencyCode !== 'RUB') {
+            $src = Currency::where('code', $sourceCurrencyCode)->first();
+            if ($src) {
+                $amountInRub = round($amount * (float) $src->exchange_rate, 2);
+            }
+        }
+
+        return $this->currencyService->convertFromBase($amountInRub, $targetCurrency);
     }
 }

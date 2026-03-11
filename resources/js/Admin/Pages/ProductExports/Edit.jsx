@@ -140,8 +140,11 @@ export default function Edit({ export: exportData, availableFilters, availableFi
             <form onSubmit={handleSubmit} noValidate>
                 <Card.Root>
                     <Card.Body>
-                        <Tabs.Root defaultValue="filters" colorPalette="blue">
+                        <Tabs.Root defaultValue="settings" colorPalette="blue">
                             <Tabs.List>
+                                <Tabs.Trigger value="settings">
+                                    <LuSettings /> Настройки
+                                </Tabs.Trigger>
                                 <Tabs.Trigger value="filters">
                                     <LuFilter /> Условия отбора
                                 </Tabs.Trigger>
@@ -152,9 +155,6 @@ export default function Edit({ export: exportData, availableFilters, availableFi
                                             {data.fields.length}
                                         </Badge>
                                     }
-                                </Tabs.Trigger>
-                                <Tabs.Trigger value="settings">
-                                    <LuSettings /> Настройки
                                 </Tabs.Trigger>
                             </Tabs.List>
 

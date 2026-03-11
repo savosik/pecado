@@ -487,6 +487,7 @@ sequenceDiagram
   "status": "new",
   "type": "order | preorder",
   "partner_uuid": "p1a2b3c4-...",
+  "warehouse_uuid": "w1a2b3c4-...", (!!! UPDATED)
   "contractor": {
     "country": "KZ",
     "name": "Компания",
@@ -684,11 +685,18 @@ sequenceDiagram
   "date": "2026-02-16",
   "status": "completed",
   "currency_code": "KZT",
+  "tracking_number": "1234567890", (!UPDATED)
+  "transport_company": "Курьерская служба", (!UPDATED)
   "items": [
     {
+      "order_uuid": "o1a2b3c4-...",
       "product_uuid": "a1b2c3d4-...",
       "quantity": 10,
       "price": 3000.00
+      "automated_discount": 5,
+      "manual_discount": 4,
+      "vat": 22,
+      "total": 29500.00
     }
   ]
 }
@@ -737,9 +745,21 @@ sequenceDiagram
 {
   "event": "balance.updated",
   "partner_uuid": "p1a2b3c4-...",
-  "current_balance": -125000.00,
-  "overdue_debt": 50000.00,
-  "updated_at": "2026-02-16T10:00:00"
+  "data":[
+    {
+      "contractor_uuid": "p1a2b3c4-...",
+      "current_balance": -125000.00,
+      "overdue_debt": [
+        {
+          "shipment_uuid": "s1a2b3c4-...",
+          "orverdue_debt": 50000.00,
+          "overdue_days": 30,
+          "overdue_date": "2026-02-16"
+        }
+      ]
+      "updated_at": "2026-02-16T10:00:00"
+    }
+  ]
 }
 ```
 

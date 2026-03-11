@@ -18,15 +18,16 @@ class OrderFactory extends Factory
     {
         return [
             'uuid' => $this->faker->uuid(),
+            'number' => 'ORD-' . now()->format('Y') . '-' . str_pad($this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
             'user_id' => \App\Models\User::factory(),
             'company_id' => \App\Models\Company::factory(),
             'delivery_address_id' => \App\Models\DeliveryAddress::factory(),
             'status' => \App\Enums\OrderStatus::PENDING,
             'total_amount' => $this->faker->randomFloat(2, 100, 1000),
             'exchange_rate' => 1.0,
-            'correction_factor' => 1.0,
+            'rate_coefficient' => 1.0,
             'currency_code' => 'RUB',
-            'type' => \App\Enums\OrderType::STANDARD,
+            'type' => \App\Enums\OrderType::ORDER,
         ];
     }
 }

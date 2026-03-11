@@ -33,11 +33,11 @@ export default function StockFilter({ value = '', onChange }) {
                         borderRadius="md"
                         cursor="pointer"
                         transition="all 0.15s"
-                        bg={isActive ? 'pink.50' : 'transparent'}
-                        _dark={{ bg: isActive ? 'pink.900/30' : 'transparent' }}
+                        bg={isActive ? 'pecado.50' : 'transparent'}
+                        _dark={{ bg: isActive ? 'pecado.900/30' : 'transparent' }}
                         _hover={{
-                            bg: isActive ? 'pink.100' : 'gray.50',
-                            _dark: { bg: isActive ? 'pink.900/40' : 'gray.700' },
+                            bg: isActive ? 'pecado.100' : 'gray.50',
+                            _dark: { bg: isActive ? 'pecado.900/40' : 'gray.700' },
                         }}
                         onClick={() => onChange(opt.value)}
                     >
@@ -47,8 +47,8 @@ export default function StockFilter({ value = '', onChange }) {
                             h="16px"
                             borderRadius="full"
                             border="2px solid"
-                            borderColor={isActive ? 'pink.500' : 'gray.300'}
-                            _dark={{ borderColor: isActive ? 'pink.400' : 'gray.600' }}
+                            borderColor={isActive ? 'pecado.500' : 'gray.300'}
+                            _dark={{ borderColor: isActive ? 'pecado.400' : 'gray.600' }}
                             display="flex"
                             alignItems="center"
                             justifyContent="center"
@@ -60,16 +60,16 @@ export default function StockFilter({ value = '', onChange }) {
                                     w="8px"
                                     h="8px"
                                     borderRadius="full"
-                                    bg="pink.500"
-                                    _dark={{ bg: 'pink.400' }}
+                                    bg="pecado.500"
+                                    _dark={{ bg: 'pecado.400' }}
                                 />
                             )}
                         </Box>
 
                         <Text
                             fontSize="sm"
-                            color={isActive ? 'pink.600' : 'gray.700'}
-                            _dark={{ color: isActive ? 'pink.300' : 'gray.300' }}
+                            color={isActive ? 'pecado.600' : 'gray.700'}
+                            _dark={{ color: isActive ? 'pecado.300' : 'gray.300' }}
                             fontWeight={isActive ? '500' : '400'}
                         >
                             {opt.label}

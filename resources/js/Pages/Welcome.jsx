@@ -66,7 +66,7 @@ export default function Welcome({ laravelVersion, phpVersion }) {
                                 <Text
                                     as="span"
                                     bgGradient="to-r"
-                                    gradientFrom="pink.400"
+                                    gradientFrom="pecado.400"
                                     gradientVia="purple.400"
                                     gradientTo="indigo.400"
                                     bgClip="text"
@@ -128,7 +128,7 @@ export default function Welcome({ laravelVersion, phpVersion }) {
                         </HStack>
 
                         <Flex gap="3" flexWrap="wrap" justify="center">
-                            <FeatureBadge icon={LuZap} color="pink.400">Chakra UI v3</FeatureBadge>
+                            <FeatureBadge icon={LuZap} color="pecado.400">Chakra UI v3</FeatureBadge>
                             <FeatureBadge icon={LuRocket} color="cyan.400">Inertia.js</FeatureBadge>
                             <FeatureBadge icon={LuBox} color="purple.400">Tailwind CSS</FeatureBadge>
                             <FeatureBadge icon={LuDatabase} color="blue.400">Meilisearch</FeatureBadge>

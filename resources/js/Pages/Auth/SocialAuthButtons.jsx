@@ -50,11 +50,11 @@ export default function SocialAuthButtons({ label = 'Или войдите че�
     return (
         <Box mt={6}>
             <Box display="flex" alignItems="center" gap={3} mb={4}>
-                <Separator flex={1} borderColor="rgba(255, 255, 255, 0.15)" />
-                <Text fontSize="sm" color="rgba(255, 255, 255, 0.5)" whiteSpace="nowrap">
+                <Separator flex={1} borderColor="gray.200" />
+                <Text fontSize="sm" color="gray.400" whiteSpace="nowrap">
                     {label}
                 </Text>
-                <Separator flex={1} borderColor="rgba(255, 255, 255, 0.15)" />
+                <Separator flex={1} borderColor="gray.200" />
             </Box>
 
             <SimpleGrid columns={2} gap={3}>
@@ -65,13 +65,14 @@ export default function SocialAuthButtons({ label = 'Или войдите че�
                         onClick={() => handleSocialAuth(provider.id)}
                         w="full"
                         size="lg"
-                        bg="rgba(255, 255, 255, 0.06)"
-                        borderColor="rgba(255, 255, 255, 0.15)"
-                        color="white"
+                        bg="white"
+                        borderColor="gray.200"
+                        color="gray.700"
                         _hover={{
-                            bg: "rgba(255, 255, 255, 0.12)",
-                            borderColor: "rgba(255, 255, 255, 0.3)",
+                            bg: "gray.50",
+                            borderColor: "gray.300",
                             transform: "translateY(-1px)",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
                         }}
                         transition="all 0.2s ease"
                     >

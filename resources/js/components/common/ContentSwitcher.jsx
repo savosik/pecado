@@ -1,21 +1,24 @@
 import { HStack, Button } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
-import { LuNewspaper, LuFileText } from 'react-icons/lu';
+import { LuNewspaper, LuFileText, LuTicket, LuBadge } from 'react-icons/lu';
 
 const sections = [
     { label: 'Новости', href: '/news', icon: LuNewspaper },
     { label: 'Статьи', href: '/articles', icon: LuFileText },
+    { label: 'О брендах', href: '/brand-stories', icon: LuBadge },
+    { label: 'Акции', href: '/promotions', icon: LuTicket },
 ];
 
 /**
- * Переключатель между разделами «Новости» и «Статьи».
+ * Переключатель между разделами контента.
+ * Используется как actions в PageHeader (выровнен вправо).
  */
 export default function ContentSwitcher() {
     const { url } = usePage();
     const currentPath = url.split('?')[0];
 
     return (
-        <HStack gap="2" mb="6">
+        <HStack gap="2" flexWrap="wrap">
             {sections.map(({ label, href, icon: Icon }) => {
                 const isActive = currentPath.startsWith(href);
                 return (

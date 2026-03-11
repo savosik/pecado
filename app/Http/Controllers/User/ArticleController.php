@@ -15,11 +15,24 @@ class ArticleController extends Controller
      */
     public function index(Request $request)
     {
-        $articles = Article::published()
-            ->with('tags')
-            ->orderByDesc('published_at')
-            ->paginate(12)
-            ->withQueryString();
+        $selectedTags = $request->input('tags', []);
+
+        $query = Article::published()->with('tags')->orderByDesc('published_at');
+
+        if (!empty($selectedTags)) {
+            $query->withAnyTags($selectedTags);
+        }
+
+        $articles = $query->paginate(12)->withQueryString();
+
+        $availableTags = \Spatie\Tags\Tag::query()
+            ->join('taggables', 'tags.id', '=', 'taggables.tag_id')
+            ->where('taggables.taggable_type', \App\Models\Article::class)
+            ->whereIn('taggables.taggable_id', Article::published()->select('id'))
+            ->distinct()
+            ->orderBy('tags.name')
+            ->pluck('tags.name')
+            ->toArray();
 
         // Подгружаем медиа для каждого элемента
         $articles->getCollection()->transform(function ($item) {
@@ -36,6 +49,8 @@ class ArticleController extends Controller
 
         return Inertia::render('User/Articles/Index', [
             'articles' => $articles,
+            'availableTags' => $availableTags,
+            'selectedTags' => $selectedTags,
             'seo' => [
                 'title' => 'Статьи',
                 'description' => 'Полезные статьи и материалы нашего магазина.',

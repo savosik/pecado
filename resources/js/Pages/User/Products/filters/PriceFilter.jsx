@@ -92,8 +92,8 @@ export default function PriceFilter({
                         type="text"
                         inputMode="decimal"
                         _focus={{
-                            borderColor: 'pink.400',
-                            boxShadow: '0 0 0 1px var(--chakra-colors-pink-400)',
+                            borderColor: 'pecado.400',
+                            boxShadow: '0 0 0 1px var(--chakra-colors-pecado-400)',
                         }}
                     />
                 </Box>
@@ -107,8 +107,8 @@ export default function PriceFilter({
                         type="text"
                         inputMode="decimal"
                         _focus={{
-                            borderColor: 'pink.400',
-                            boxShadow: '0 0 0 1px var(--chakra-colors-pink-400)',
+                            borderColor: 'pecado.400',
+                            boxShadow: '0 0 0 1px var(--chakra-colors-pecado-400)',
                         }}
                     />
                 </Box>
@@ -128,12 +128,12 @@ export default function PriceFilter({
                                     key={i}
                                     flex="1"
                                     h={`${heightPct}%`}
-                                    bg={isActive ? 'pink.400' : 'gray.200'}
-                                    _dark={{ bg: isActive ? 'pink.500' : 'gray.600' }}
+                                    bg={isActive ? 'pecado.400' : 'gray.200'}
+                                    _dark={{ bg: isActive ? 'pecado.500' : 'gray.600' }}
                                     borderRadius="sm"
                                     cursor="pointer"
                                     transition="background 0.15s"
-                                    _hover={{ bg: isActive ? 'pink.500' : 'gray.300', _dark: { bg: isActive ? 'pink.600' : 'gray.500' } }}
+                                    _hover={{ bg: isActive ? 'pecado.500' : 'gray.300', _dark: { bg: isActive ? 'pecado.600' : 'gray.500' } }}
                                     onClick={() => handleBucketClick(bucket.from, bucket.to)}
                                     title={`${formatPrice(bucket.from)} – ${formatPrice(bucket.to)} (${bucket.count})`}
                                 />
@@ -157,15 +157,15 @@ export default function PriceFilter({
                                     py="1"
                                     borderRadius="md"
                                     fontSize="xs"
-                                    bg={isActive ? 'pink.50' : 'transparent'}
-                                    color={isActive ? 'pink.600' : 'gray.600'}
+                                    bg={isActive ? 'pecado.50' : 'transparent'}
+                                    color={isActive ? 'pecado.600' : 'gray.600'}
                                     _dark={{
-                                        bg: isActive ? 'pink.900/30' : 'transparent',
-                                        color: isActive ? 'pink.300' : 'gray.400',
+                                        bg: isActive ? 'pecado.900/30' : 'transparent',
+                                        color: isActive ? 'pecado.300' : 'gray.400',
                                     }}
                                     _hover={{
-                                        bg: isActive ? 'pink.100' : 'gray.50',
-                                        _dark: { bg: isActive ? 'pink.900/40' : 'gray.700' },
+                                        bg: isActive ? 'pecado.100' : 'gray.50',
+                                        _dark: { bg: isActive ? 'pecado.900/40' : 'gray.700' },
                                     }}
                                     transition="all 0.15s"
                                     onClick={() => handleBucketClick(bucket.from, bucket.to)}

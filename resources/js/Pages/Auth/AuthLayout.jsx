@@ -1,82 +1,48 @@
-import { Box, Container, Heading, VStack, Text, Separator } from '@chakra-ui/react';
+import { Box, Container, Heading, VStack, Text, Flex } from '@chakra-ui/react';
+import { Link } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/toaster';
 
 export default function AuthLayout({ children, title, subtitle }) {
     return (
         <>
             <Toaster />
+            <Flex minH="100vh">
+                {/* Left — Form */}
+                <Flex
+                    flex="1"
+                    direction="column"
+                    justify="center"
+                    bg="white"
+                    px={{ base: 6, sm: 10, lg: 16 }}
+                    py={10}
+                    overflowY="auto"
+                >
+                    <Box maxW="420px" w="100%" mx="auto">
+                        {/* Logo */}
+                        <Box mb={8}>
+                            <Link href="/">
+                                <Box
+                                    as="img"
+                                    src="/images/logo.png"
+                                    alt="Pecado"
+                                    h="36px"
+                                    objectFit="contain"
+                                />
+                            </Link>
+                        </Box>
 
-            <Box
-                minH="100vh"
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                position="relative"
-                overflow="hidden"
-                bg="linear-gradient(135deg, #1a0508 0%, #4a0d19 50%, #2a0810 100%)"
-            >
-                {/* Animated gradient orbs */}
-                <Box
-                    position="absolute"
-                    top="-20%"
-                    left="-10%"
-                    w="500px"
-                    h="500px"
-                    borderRadius="full"
-                    bg="linear-gradient(135deg, rgba(158, 27, 50, 0.4), rgba(226, 88, 88, 0.25))"
-                    filter="blur(80px)"
-                    animation="float 8s ease-in-out infinite"
-                />
-                <Box
-                    position="absolute"
-                    bottom="-15%"
-                    right="-10%"
-                    w="400px"
-                    h="400px"
-                    borderRadius="full"
-                    bg="linear-gradient(135deg, rgba(226, 88, 88, 0.3), rgba(176, 176, 176, 0.2))"
-                    filter="blur(80px)"
-                    animation="float 6s ease-in-out infinite reverse"
-                />
-                <Box
-                    position="absolute"
-                    top="40%"
-                    left="60%"
-                    w="300px"
-                    h="300px"
-                    borderRadius="full"
-                    bg="linear-gradient(135deg, rgba(158, 27, 50, 0.2), rgba(226, 88, 88, 0.15))"
-                    filter="blur(60px)"
-                    animation="float 10s ease-in-out infinite"
-                />
-
-                <Container maxW="md" position="relative" zIndex={1} py={8}>
-                    {/* Glass card */}
-                    <Box
-                        bg="rgba(255, 255, 255, 0.08)"
-                        backdropFilter="blur(20px) saturate(180%)"
-                        borderRadius="2xl"
-                        border="1px solid rgba(255, 255, 255, 0.15)"
-                        p={{ base: 6, sm: 10 }}
-                        boxShadow="0 8px 32px rgba(0, 0, 0, 0.37)"
-                        transition="all 0.3s ease"
-                        _hover={{
-                            boxShadow: "0 12px 40px rgba(0, 0, 0, 0.45)",
-                            border: "1px solid rgba(255, 255, 255, 0.2)",
-                        }}
-                    >
                         {/* Header */}
-                        <VStack gap={2} align="start" mb={6}>
+                        <VStack gap={1} align="start" mb={8}>
                             <Heading
                                 size="2xl"
-                                color="white"
+                                color="gray.900"
                                 fontWeight="bold"
                                 letterSpacing="-0.02em"
                             >
                                 {title}
                             </Heading>
                             {subtitle && (
-                                <Text color="rgba(255, 255, 255, 0.7)" fontSize="md">
+                                <Text color="gray.500" fontSize="md" mt={1}>
                                     {subtitle}
                                 </Text>
                             )}
@@ -84,24 +50,33 @@ export default function AuthLayout({ children, title, subtitle }) {
 
                         {children}
                     </Box>
+                </Flex>
 
-                    {/* Brand footer */}
-                    <Box mt={6} textAlign="center">
-                        <Text fontSize="sm" color="rgba(255, 255, 255, 0.4)" fontWeight="medium">
-                            Pecado
-                        </Text>
-                    </Box>
-                </Container>
-            </Box>
-
-            {/* Keyframe animation */}
-            <style>{`
-                @keyframes float {
-                    0%, 100% { transform: translate(0, 0) scale(1); }
-                    33% { transform: translate(30px, -30px) scale(1.05); }
-                    66% { transform: translate(-20px, 20px) scale(0.95); }
-                }
-            `}</style>
+                {/* Right — Image (hidden on mobile) */}
+                <Box
+                    display={{ base: 'none', lg: 'block' }}
+                    flex="1"
+                    position="relative"
+                    overflow="hidden"
+                >
+                    <Box
+                        as="img"
+                        src="/images/auth-hero-v2.png"
+                        alt=""
+                        position="absolute"
+                        inset="0"
+                        w="100%"
+                        h="100%"
+                        objectFit="cover"
+                    />
+                    {/* Subtle brand overlay */}
+                    <Box
+                        position="absolute"
+                        inset="0"
+                        bg="linear-gradient(180deg, rgba(158,27,50,0.08) 0%, rgba(158,27,50,0.15) 100%)"
+                    />
+                </Box>
+            </Flex>
         </>
     );
 }

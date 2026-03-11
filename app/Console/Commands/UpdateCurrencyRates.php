@@ -7,41 +7,37 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Команда обновления курсов валют из ЦБ РФ.
+ *
+ * Используется только для ручного обновления через кнопку в AdminPanel.
+ * По расписанию НЕ запускается (курсы в prod приходят из 1С через RabbitMQ, US-04).
+ */
 class UpdateCurrencyRates extends Command
 {
-    /**
-     * The name and signature of the console command.
-     *
-     * @var string
-     */
     protected $signature = 'currency:update';
 
-    /**
-     * The console command description.
-     *
-     * @var string
-     */
-    protected $description = 'Update currency exchange rates from the Central Bank of Russia';
+    protected $description = 'Обновить курсы валют из ЦБ РФ (только для ручного тестирования)';
 
-    /**
-     * Execute the console command.
-     */
-    public function handle()
+    public function handle(): int
     {
-        $this->info('Starting currency rates update...');
+        $this->info('Запрос курсов валют из ЦБ РФ...');
 
         try {
-            $response = Http::get('https://www.cbr.ru/scripts/XML_daily.asp');
+            $response = Http::timeout(10)->get('https://www.cbr.ru/scripts/XML_daily.asp');
 
             if ($response->failed()) {
-                $this->error('Failed to fetch data from CBR.');
+                $this->error('Не удалось получить данные от ЦБ РФ.');
                 Log::error('Currency update failed: Could not fetch data from CBR.');
                 return Command::FAILURE;
             }
 
-            $xml = simplexml_load_string($response->body());
+            // ЦБ РФ возвращает XML в windows-1251 — конвертируем в UTF-8
+            $body = mb_convert_encoding($response->body(), 'UTF-8', 'Windows-1251');
+
+            $xml = simplexml_load_string($body);
             if ($xml === false) {
-                $this->error('Failed to parse XML response.');
+                $this->error('Не удалось разобрать XML-ответ ЦБ РФ.');
                 Log::error('Currency update failed: Invalid XML.');
                 return Command::FAILURE;
             }
@@ -50,47 +46,48 @@ class UpdateCurrencyRates extends Command
             $updatedCount = 0;
 
             foreach ($currencies as $currency) {
-                // Find the currency in XML by CharCode
                 $rateNode = null;
                 foreach ($xml->Valute as $valute) {
-                    if ((string)$valute->CharCode === $currency->code) {
+                    if ((string) $valute->CharCode === $currency->code) {
                         $rateNode = $valute;
                         break;
                     }
                 }
 
                 if ($rateNode) {
-                    $valueStr = (string)$rateNode->Value;
-                    $nominal = (float)$rateNode->Nominal;
-                    
-                    // Replace comma with dot for float parsing
-                    $valueStr = str_replace(',', '.', $valueStr);
-                    $value = (float)$valueStr;
+                    $valueStr = str_replace(',', '.', (string) $rateNode->Value);
+                    $nominal  = (float) $rateNode->Nominal;
+                    $value    = (float) $valueStr;
 
                     if ($nominal > 0) {
-                        // CBR gives rate for Nominal amount (e.g., 100 KZT = 20 RUB)
-                        // We need rate for 1 unit of foreign currency in RUB: 1 KZT = 0.2 RUB
-                        // But wait, our base is RUB.
-                        // If 1 KZT = 0.2 RUB, then our exchange_rate should probably be 0.2 
-                        // if we convert FROM KZT TO RUB by multiplying?
-                        // Let's assume exchange_rate is "How many Base Units (RUB) is 1 Foreign Unit".
-                        
-                        $rate = $value / $nominal;
+                        // official_rate = курс ЦБ РФ за 1 единицу иностранной валюты в RUB
+                        $officialRate = $value / $nominal;
 
-                        $currency->update(['exchange_rate' => $rate]);
-                        $this->info("Updated {$currency->code}: 1 {$currency->code} = {$rate} RUB");
+                        // Применяем rate_coefficient из БД (был установлен из 1С или по умолчанию 1.0)
+                        $rateCoefficient = (float) ($currency->rate_coefficient ?: 1.0);
+
+                        // exchange_rate = итоговый курс = official_rate × rate_coefficient (по US-04)
+                        $exchangeRate = $officialRate * $rateCoefficient;
+
+                        $currency->update([
+                            'official_rate'      => $officialRate,
+                            'exchange_rate'      => $exchangeRate,
+                            'exchange_rate_date' => now(),
+                        ]);
+
+                        $this->info("✓ {$currency->code}: official={$officialRate}, factor={$rateCoefficient}, exchange={$exchangeRate} RUB");
                         $updatedCount++;
                     }
                 } else {
-                    $this->warn("Rate for {$currency->code} not found in CBR data.");
+                    $this->warn("✗ Курс для {$currency->code} не найден в данных ЦБ РФ.");
                 }
             }
 
-            $this->info("Currency rates updated successfully. Updated: {$updatedCount}");
+            $this->info("Обновлено валют: {$updatedCount}.");
             return Command::SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('An error occurred: ' . $e->getMessage());
+            $this->error('Ошибка: ' . $e->getMessage());
             Log::error('Currency update exception: ' . $e->getMessage());
             return Command::FAILURE;
         }

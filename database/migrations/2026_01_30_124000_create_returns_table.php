@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('order_id')->nullable()->constrained()->onDelete('set null');
             $table->string('status')->default(\App\Enums\ReturnStatus::PENDING->value);
             $table->text('comment')->nullable();
             $table->text('admin_comment')->nullable();

@@ -412,8 +412,8 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                     rounded="sm"
                                     overflow="hidden"
                                     borderWidth="2px"
-                                    borderColor={index === currentIndex ? 'pink.500' : 'gray.200'}
-                                    _dark={{ borderColor: index === currentIndex ? 'pink.400' : 'gray.600' }}
+                                    borderColor={index === currentIndex ? 'pecado.500' : 'gray.200'}
+                                    _dark={{ borderColor: index === currentIndex ? 'pecado.400' : 'gray.600' }}
                                     _hover={{ borderColor: index === currentIndex ? undefined : 'gray.300' }}
                                     transition="border-color 0.15s"
                                     position="relative"

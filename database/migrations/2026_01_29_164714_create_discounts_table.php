@@ -14,9 +14,12 @@ return new class extends Migration
         Schema::create('discounts', function (Blueprint $table) {
             $table->id();
             $table->string('name')->nullable();
+            $table->string('type')->nullable()->comment('agreement | promotion');
             $table->decimal('percentage', 5, 2);
             $table->uuid('external_id')->nullable()->unique();
             $table->boolean('is_posted')->default(false);
+            $table->timestamp('starts_at')->nullable();
+            $table->timestamp('ends_at')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });
@@ -34,6 +37,10 @@ return new class extends Migration
             $table->foreignId('product_id')->constrained()->cascadeOnDelete();
             $table->unique(['discount_id', 'product_id']);
         });
+
+        // Примечание: сводные таблицы discount_product_segment и discount_partner_segment
+        // создаются в миграции 2026_03_11_000001_create_product_segments_table.php
+        // (после создания самих таблиц сегментов)
     }
 
     /**

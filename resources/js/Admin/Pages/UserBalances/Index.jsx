@@ -2,14 +2,11 @@ import { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
-import { Box, HStack, Text } from '@chakra-ui/react';
-import { LuPlus } from 'react-icons/lu';
+import { Box, Text } from '@chakra-ui/react';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
-export default function Index({ balances, currencies, filters }) {
-    const [currencyFilter, setCurrencyFilter] = useState(filters.currency_id || '');
-
+export default function Index({ balances, filters }) {
     const {
         searchQuery,
         handleSearch,
@@ -22,18 +19,6 @@ export default function Index({ balances, currencies, filters }) {
     } = useResourceIndex('admin.user-balances', filters, {
         entityLabel: 'Баланс',
     });
-
-    const handleCurrencyFilter = (e) => {
-        const value = e.target.value;
-        setCurrencyFilter(value);
-        router.get(route('admin.user-balances.index'), {
-            search: searchQuery,
-            currency_id: value
-        }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
 
     const columns = [
         {
@@ -54,34 +39,34 @@ export default function Index({ balances, currencies, filters }) {
             ),
         },
         {
-            key: 'currency',
-            label: 'Валюта',
-            render: (_, row) => (
-                <Box>
-                    <Text fontWeight="semibold">{row.currency.code}</Text>
-                    <Text fontSize="sm" color="gray.600">{row.currency.symbol}</Text>
-                </Box>
-            ),
-        },
-        {
             key: 'balance',
             label: 'Баланс',
             sortable: true,
             render: (_, row) => (
                 <Box fontFamily="mono" fontWeight="medium">
-                    {parseFloat(row.balance).toFixed(2)} {row.currency.symbol}
+                    {parseFloat(row.balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
                 </Box>
             ),
         },
         {
             key: 'overdue_debt',
             label: 'Просроченная задолженность',
-            render: (_, row) => row.overdue_debt ? (
+            render: (_, row) => parseFloat(row.overdue_debt) > 0 ? (
                 <Box fontFamily="mono" color="red.600" fontWeight="medium">
-                    {parseFloat(row.overdue_debt).toFixed(2)} {row.currency.symbol}
+                    {parseFloat(row.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
                 </Box>
             ) : (
                 <Text color="gray.500">—</Text>
+            ),
+        },
+        {
+            key: 'balance_erp_updated_at',
+            label: 'Обновлено в 1С',
+            sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.balance_erp_updated_at ? new Date(row.balance_erp_updated_at).toLocaleString('ru-RU') : '—'}
+                </Text>
             ),
         },
         {
@@ -106,34 +91,11 @@ export default function Index({ balances, currencies, filters }) {
             />
 
             <Box mb={4}>
-                <HStack gap={4}>
-                    <Box flex={1}>
-                        <SearchInput
-                            value={searchQuery}
-                            onChange={handleSearch}
-                            placeholder="Поиск по имени или email пользователя..."
-                        />
-                    </Box>
-                    <Box w="200px">
-                        <select
-                            value={currencyFilter}
-                            onChange={handleCurrencyFilter}
-                            style={{
-                                width: '100%',
-                                padding: '0.5rem',
-                                borderRadius: '0.375rem',
-                                border: '1px solid var(--chakra-colors-border)'
-                            }}
-                        >
-                            <option value="">Все валюты</option>
-                            {currencies.map((currency) => (
-                                <option key={currency.id} value={currency.id}>
-                                    {currency.code} - {currency.name}
-                                </option>
-                            ))}
-                        </select>
-                    </Box>
-                </HStack>
+                <SearchInput
+                    value={searchQuery}
+                    onChange={handleSearch}
+                    placeholder="Поиск по имени или email пользователя..."
+                />
             </Box>
 
             <DataTable

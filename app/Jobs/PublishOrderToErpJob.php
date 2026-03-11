@@ -33,7 +33,7 @@ class PublishOrderToErpJob implements ShouldQueue
         try {
             Queue::connection('rabbitmq')->pushRaw(
                 json_encode($this->payload),
-                'erp_orders'
+                'erp_out.orders'
             );
         } catch (\Exception $e) {
             Log::error('Failed to publish order to ERP: ' . $e->getMessage(), [

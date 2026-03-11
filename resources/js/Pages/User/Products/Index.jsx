@@ -317,7 +317,7 @@ export default function Index() {
                         variant="outline"
                         size="sm"
                         onClick={openMobileFilters}
-                        colorPalette="pink"
+                        colorPalette="pecado"
                     >
                         <Icon as={LuSlidersHorizontal} boxSize="4" />
                         Фильтры

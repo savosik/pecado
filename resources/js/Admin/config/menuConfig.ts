@@ -15,6 +15,7 @@ import {
     LuShoppingCart,
     LuShoppingBag,
     LuUndo2,
+    LuTruck,
     LuHeart,
     LuBookmark,
     LuTicket,
@@ -90,6 +91,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Заказы", icon: LuShoppingCart, path: "/admin/orders" },
             { label: "Корзины", icon: LuShoppingBag, path: "/admin/carts" },
             { label: "Возвраты", icon: LuUndo2, path: "/admin/returns" },
+            { label: "Реализации", icon: LuTruck, path: "/admin/shipments" },
             { label: "Избранное", icon: LuHeart, path: "/admin/favorites" },
             { label: "Список желаний", icon: LuBookmark, path: "/admin/wishlist" },
         ],
@@ -100,9 +102,12 @@ export const menuConfig: MenuGroup[] = [
         items: [
             { label: "Акции", icon: LuTicket, path: "/admin/promotions" },
             { label: "Скидки", icon: LuPercent, path: "/admin/discounts" },
+            { label: "Сегменты товаров", icon: LuSlice, path: "/admin/product-segments" },
+            { label: "Сегменты партнёров", icon: LuUsers, path: "/admin/partner-segments" },
             { label: "Подборки", icon: LuLayoutGrid, path: "/admin/product-selections" },
         ],
     },
+
     {
         title: "Пользователи",
         icon: LuUsers,
@@ -118,7 +123,7 @@ export const menuConfig: MenuGroup[] = [
         icon: LuBanknote,
         items: [
             { label: "Валюты", icon: LuBanknote, path: "/admin/currencies" },
-            { label: "Балансы", icon: LuWallet, path: "/admin/user-balances" },
+            { label: "Балансы контрагентов", icon: LuWallet, path: "/admin/contractor-balances" },
         ],
     },
     {
@@ -126,6 +131,7 @@ export const menuConfig: MenuGroup[] = [
         icon: LuFileText,
         items: [
             { label: "Статьи", icon: LuFileText, path: "/admin/articles" },
+            { label: "О брендах", icon: LuBadge, path: "/admin/brand-stories" },
             { label: "Новости", icon: LuNewspaper, path: "/admin/news" },
             { label: "FAQ", icon: LuCircleHelp, path: "/admin/faqs" },
             { label: "Баннеры", icon: LuImage, path: "/admin/banners" },

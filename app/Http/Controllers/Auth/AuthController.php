@@ -113,7 +113,7 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect('/')->with('success', 'Регистрация прошла успешно! Добро пожаловать!');
+        return redirect('/onboarding')->with('success', 'Регистрация прошла успешно! Расскажите нам о вашем бизнесе.');
     }
 
     /**

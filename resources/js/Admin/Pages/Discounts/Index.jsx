@@ -48,6 +48,19 @@ export default function Index({ discounts, filters }) {
             ),
         },
         {
+            key: 'type',
+            label: 'Тип',
+            render: (type) => {
+                const labels = { agreement: 'Соглашение', promotion: 'Акция' };
+                const colors = { agreement: 'blue', promotion: 'orange' };
+                return type ? (
+                    <Badge colorPalette={colors[type] || 'gray'}>{labels[type] || type}</Badge>
+                ) : (
+                    <Text fontSize="sm" color="fg.muted">—</Text>
+                );
+            },
+        },
+        {
             key: 'products_count',
             label: 'Товаров',
             render: (count) => (
@@ -56,9 +69,23 @@ export default function Index({ discounts, filters }) {
         },
         {
             key: 'users_count',
-            label: 'Пользователей',
+            label: 'Партнёров',
             render: (count) => (
                 <Badge colorPalette="purple">{count || 0}</Badge>
+            ),
+        },
+        {
+            key: 'product_segments_count',
+            label: 'Сег. товаров',
+            render: (count) => (
+                <Badge colorPalette="teal">{count || 0}</Badge>
+            ),
+        },
+        {
+            key: 'partner_segments_count',
+            label: 'Сег. партнёров',
+            render: (count) => (
+                <Badge colorPalette="cyan">{count || 0}</Badge>
             ),
         },
         {
@@ -69,6 +96,26 @@ export default function Index({ discounts, filters }) {
                 <Badge colorPalette={isPosted ? 'green' : 'gray'}>
                     {isPosted ? 'Да' : 'Нет'}
                 </Badge>
+            ),
+        },
+        {
+            key: 'starts_at',
+            label: 'Начало',
+            sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.starts_at ? new Date(row.starts_at).toLocaleString('ru-RU') : '—'}
+                </Text>
+            ),
+        },
+        {
+            key: 'ends_at',
+            label: 'Окончание',
+            sortable: true,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">
+                    {row.ends_at ? new Date(row.ends_at).toLocaleString('ru-RU') : '—'}
+                </Text>
             ),
         },
         {
@@ -88,7 +135,7 @@ export default function Index({ discounts, filters }) {
         <>
             <PageHeader
                 title="Скидки"
-                description="Управление скидками для товаров и пользователей"
+                description="Управление скидками для товаров и партнёров"
                 actions={
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.discounts.create'))}>
                         <LuPlus /> Создать скидку

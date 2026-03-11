@@ -44,13 +44,13 @@ class CheckoutService implements CheckoutServiceInterface
                 'comment' => $comment,
                 'total_amount' => 0,
                 'exchange_rate' => $currency?->exchange_rate ?? 1.0,
-                'correction_factor' => $currency?->correction_factor ?? 1.0,
+                'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
                 'currency_code' => $currency?->code ?? 'RUB',
             ];
 
             // Create parent order
             $parentOrder = Order::create(array_merge($baseOrderData, [
-                'type' => OrderType::STANDARD,
+                'type' => OrderType::ORDER,
             ]));
 
             // Validate stock availability before proceeding
@@ -111,7 +111,7 @@ class CheckoutService implements CheckoutServiceInterface
             // Create in-stock child order
             if (!empty($inStockItems)) {
                 $childOrder = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::IN_STOCK,
+                    'type' => OrderType::ORDER,
                     'parent_id' => $parentOrder->id,
                 ]));
                 $childTotal = $this->createOrderItems($childOrder, $inStockItems, $user);

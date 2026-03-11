@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('promotions', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('slug')->unique();
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
             $table->text('description')->nullable();

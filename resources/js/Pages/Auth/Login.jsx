@@ -18,29 +18,29 @@ export default function Login({ errors }) {
     };
 
     const inputStyles = {
-        bg: "rgba(255, 255, 255, 0.08)",
-        borderColor: "rgba(255, 255, 255, 0.15)",
-        color: "white",
-        _placeholder: { color: "rgba(255, 255, 255, 0.4)" },
-        _hover: { borderColor: "rgba(255, 255, 255, 0.3)" },
+        bg: "white",
+        borderColor: "gray.300",
+        color: "gray.900",
+        _placeholder: { color: "gray.400" },
+        _hover: { borderColor: "gray.400" },
         _focus: {
-            borderColor: "rgba(139, 92, 246, 0.6)",
-            boxShadow: "0 0 0 1px rgba(139, 92, 246, 0.3)",
-            bg: "rgba(255, 255, 255, 0.1)",
+            borderColor: "#9e1b32",
+            boxShadow: "0 0 0 1px rgba(158, 27, 50, 0.15)",
         },
-        borderRadius: "xl",
-        h: "12",
+        borderRadius: "lg",
+        h: "11",
+        fontSize: "sm",
     };
 
     return (
         <>
             <Head title="Вход" />
 
-            <AuthLayout title="Вход в систему" subtitle="Добро пожаловать в Pecado">
+            <AuthLayout title="Вход в аккаунт" subtitle="Добро пожаловать в Pecado">
                 <form onSubmit={handleSubmit}>
-                    <Stack gap={4}>
+                    <Stack gap={5}>
                         <Field
-                            label={<Text color="rgba(255,255,255,0.85)" fontWeight="medium">Email</Text>}
+                            label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Email</Text>}
                             invalid={!!errors.email}
                             errorText={errors.email}
                         >
@@ -55,7 +55,7 @@ export default function Login({ errors }) {
                         </Field>
 
                         <Field
-                            label={<Text color="rgba(255,255,255,0.85)" fontWeight="medium">Пароль</Text>}
+                            label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Пароль</Text>}
                             invalid={!!errors.password}
                             errorText={errors.password}
                         >
@@ -72,9 +72,10 @@ export default function Login({ errors }) {
                             <Checkbox
                                 checked={data.remember}
                                 onCheckedChange={(e) => setData('remember', e.checked)}
-                                colorPalette="purple"
+                                colorPalette="red"
+                                size="sm"
                             >
-                                <Text color="rgba(255,255,255,0.7)" fontSize="sm">
+                                <Text color="gray.600" fontSize="sm">
                                     Запомнить меня
                                 </Text>
                             </Checkbox>
@@ -82,8 +83,9 @@ export default function Login({ errors }) {
                             <Link href="/forgot-password">
                                 <Text
                                     fontSize="sm"
-                                    color="rgba(139, 92, 246, 0.9)"
-                                    _hover={{ color: "rgba(167, 139, 250, 1)" }}
+                                    color="#9e1b32"
+                                    fontWeight="semibold"
+                                    _hover={{ color: "#7a1527" }}
                                     transition="color 0.2s"
                                     cursor="pointer"
                                 >
@@ -97,16 +99,15 @@ export default function Login({ errors }) {
                             width="full"
                             size="lg"
                             loading={processing}
-                            bg="linear-gradient(135deg, #8B5CF6, #EC4899)"
+                            bg="#9e1b32"
                             color="white"
-                            borderRadius="xl"
-                            fontWeight="bold"
+                            borderRadius="lg"
+                            fontWeight="semibold"
+                            fontSize="sm"
                             _hover={{
-                                bg: "linear-gradient(135deg, #7C3AED, #DB2777)",
-                                transform: "translateY(-2px)",
-                                boxShadow: "0 8px 25px rgba(139, 92, 246, 0.4)",
+                                bg: "#7a1527",
                             }}
-                            transition="all 0.3s ease"
+                            transition="all 0.2s ease"
                         >
                             Войти
                         </Button>
@@ -116,14 +117,14 @@ export default function Login({ errors }) {
                 <SocialAuthButtons label="Или войдите через" />
 
                 <Box mt={6} textAlign="center">
-                    <Text color="rgba(255, 255, 255, 0.6)" fontSize="sm">
+                    <Text color="gray.500" fontSize="sm">
                         Нет аккаунта?{' '}
                         <Link href="/register">
                             <Text
                                 as="span"
-                                color="rgba(139, 92, 246, 0.9)"
+                                color="#9e1b32"
                                 fontWeight="semibold"
-                                _hover={{ color: "rgba(167, 139, 250, 1)" }}
+                                _hover={{ color: "#7a1527", textDecoration: "underline" }}
                                 transition="color 0.2s"
                             >
                                 Зарегистрироваться

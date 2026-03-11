@@ -63,21 +63,6 @@ class AppServiceProvider extends ServiceProvider
         );
 
         \Illuminate\Support\Facades\Event::listen(
-            \App\Events\CompanyCreated::class,
-            \App\Listeners\PublishCompanyToErp::class,
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\CompanyUpdated::class,
-            \App\Listeners\PublishCompanyToErp::class,
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
-            \App\Events\CompanyDeleted::class,
-            \App\Listeners\PublishCompanyToErp::class,
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderCreated::class,
             \App\Listeners\PublishOrderToErp::class,
         );
@@ -90,6 +75,11 @@ class AppServiceProvider extends ServiceProvider
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderDeleted::class,
             \App\Listeners\PublishOrderToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\ReturnCreated::class,
+            \App\Listeners\PublishReturnToErp::class,
         );
     }
 }

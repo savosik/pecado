@@ -14,8 +14,8 @@ class PublishUserToErpJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
-    public int $backoff = 10;
+    public int $tries = 5;
+    public int $backoff = 30;
 
     /**
      * Create a new job instance.
@@ -27,16 +27,22 @@ class PublishUserToErpJob implements ShouldQueue
 
     /**
      * Execute the job.
+     * Публикует событие partner.created в очередь erp_out.partners (US-01 v2, Сайт → 1С).
      */
     public function handle(): void
     {
         try {
             Queue::connection('rabbitmq')->pushRaw(
                 json_encode($this->payload),
-                'erp_users'
+                'erp_out.partners'
             );
+
+            Log::info('partner.created опубликован в erp_out.partners', [
+                'uuid' => $this->payload['uuid'] ?? null,
+                'login' => $this->payload['login'] ?? null,
+            ]);
         } catch (\Exception $e) {
-            Log::error('Failed to publish user to ERP: ' . $e->getMessage(), [
+            Log::error('Не удалось опубликовать partner.created в ERP: ' . $e->getMessage(), [
                 'payload' => $this->payload,
             ]);
             throw $e;

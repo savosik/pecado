@@ -1,0 +1,229 @@
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Enums\ExportFormat;
+use App\Http\Controllers\Controller;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Certificate;
+use App\Models\Currency;
+use App\Models\ProductExport;
+use App\Models\Warehouse;
+use App\Services\ProductExportService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
+
+class ProductExportController extends Controller
+{
+    protected ProductExportService $exportService;
+
+    public function __construct(ProductExportService $exportService)
+    {
+        $this->exportService = $exportService;
+    }
+
+    public function index(Request $request)
+    {
+        $query = ProductExport::query()
+            ->where('user_id', Auth::id())
+            ->latest();
+
+        if ($search = $request->input('search')) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $perPage = $request->input('per_page', 15);
+        $exports = $query->paginate($perPage)->withQueryString();
+
+        return Inertia::render('User/Cabinet/ProductExports/Index', [
+            'exports' => $exports,
+            'filters' => $request->only(['search', 'per_page']),
+        ]);
+    }
+
+    public function create()
+    {
+        return Inertia::render('User/Cabinet/ProductExports/Form', [
+            'export' => null,
+            'availableFilters' => $this->rewriteFilterUrls($this->exportService->getAvailableFilters()),
+            'availableFields' => $this->exportService->getAvailableFields(),
+            'currencies' => Currency::select('id', 'code', 'name', 'symbol', 'is_base')
+                ->orderByDesc('is_base')
+                ->orderBy('code')
+                ->get(),
+            'formats' => collect(ExportFormat::cases())->map(fn ($f) => [
+                'value' => $f->value,
+                'label' => $f->label(),
+            ]),
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $this->validateExport($request);
+        $validated['user_id'] = Auth::id();
+        $validated['client_user_id'] = Auth::id();
+
+        $export = ProductExport::create($validated);
+
+        return redirect()->route('cabinet.product-exports.edit', $export)
+            ->with('success', 'Выгрузка успешно создана');
+    }
+
+    public function edit(ProductExport $productExport)
+    {
+        $this->authorizeExport($productExport);
+
+        return Inertia::render('User/Cabinet/ProductExports/Form', [
+            'export' => $productExport,
+            'availableFilters' => $this->rewriteFilterUrls($this->exportService->getAvailableFilters()),
+            'availableFields' => $this->exportService->getAvailableFields(),
+            'currencies' => Currency::select('id', 'code', 'name', 'symbol', 'is_base')
+                ->orderByDesc('is_base')
+                ->orderBy('code')
+                ->get(),
+            'formats' => collect(ExportFormat::cases())->map(fn ($f) => [
+                'value' => $f->value,
+                'label' => $f->label(),
+            ]),
+        ]);
+    }
+
+    public function update(Request $request, ProductExport $productExport)
+    {
+        $this->authorizeExport($productExport);
+
+        $validated = $this->validateExport($request);
+        $productExport->update($validated);
+
+        return redirect()->route('cabinet.product-exports.edit', $productExport)
+            ->with('success', 'Выгрузка успешно обновлена');
+    }
+
+    public function destroy(ProductExport $productExport)
+    {
+        $this->authorizeExport($productExport);
+        $productExport->delete();
+
+        return redirect()->route('cabinet.product-exports.index')
+            ->with('success', 'Выгрузка успешно удалена');
+    }
+
+    public function preview(Request $request)
+    {
+        $request->validate([
+            'filters' => 'nullable|array',
+            'fields' => 'required|array|min:1',
+            'fields.*.key' => 'required|string',
+            'fields.*.label' => 'nullable|string|max:255',
+            'fields.*.modifiers' => 'nullable|array',
+            'fields.*.modifiers.currency_id' => 'nullable|integer|exists:currencies,id',
+            'fields.*.modifiers.true_value' => 'nullable|string|max:50',
+            'fields.*.modifiers.false_value' => 'nullable|string|max:50',
+            'fields.*.modifiers.separator' => 'nullable|string|max:20',
+        ]);
+
+        $result = $this->exportService->preview(
+            $request->input('filters', []),
+            $request->input('fields', []),
+            Auth::id(),
+            20
+        );
+
+        return response()->json($result);
+    }
+
+    public function filterOptions(Request $request)
+    {
+        $type = $request->input('type');
+        $search = $request->input('search', $request->input('query', ''));
+
+        $data = match ($type) {
+            'brands' => Brand::query()
+                ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->limit(50)
+                ->get(),
+            'categories' => Category::query()
+                ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->limit(50)
+                ->get(),
+            'warehouses' => Warehouse::query()
+                ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->limit(50)
+                ->get(),
+            'certificates' => Certificate::query()
+                ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
+                ->select('id', 'name')
+                ->orderBy('name')
+                ->limit(50)
+                ->get(),
+            default => collect(),
+        };
+
+        return response()->json($data);
+    }
+
+    private function authorizeExport(ProductExport $export): void
+    {
+        abort_if($export->user_id !== Auth::id(), 403, 'Доступ запрещён.');
+    }
+
+    private function validateExport(Request $request): array
+    {
+        return $request->validate([
+            'name' => 'required|string|max:255',
+            'format' => 'required|string|in:json,csv,xml,xls',
+            'filters' => 'nullable|array',
+            'fields' => 'required|array|min:1',
+            'fields.*.key' => 'required|string',
+            'fields.*.label' => 'nullable|string|max:255',
+            'fields.*.modifiers' => 'nullable|array',
+            'fields.*.modifiers.currency_id' => 'nullable|integer|exists:currencies,id',
+            'fields.*.modifiers.true_value' => 'nullable|string|max:50',
+            'fields.*.modifiers.false_value' => 'nullable|string|max:50',
+            'fields.*.modifiers.separator' => 'nullable|string|max:20',
+            'is_active' => 'boolean',
+        ], [
+            'name.required' => 'Название обязательно',
+            'name.max' => 'Название не должно превышать 255 символов',
+            'format.required' => 'Формат обязателен',
+            'format.in' => 'Недопустимый формат выгрузки',
+            'fields.required' => 'Выберите хотя бы одно поле',
+            'fields.min' => 'Выберите хотя бы одно поле',
+        ]);
+    }
+
+    /**
+     * Rewrite admin search_url in filter definitions to use the cabinet's filterOptions endpoint.
+     */
+    private function rewriteFilterUrls(array $filters): array
+    {
+        $urlMap = [
+            '/admin/brands/search' => '/cabinet/product-exports/filter-options?type=brands',
+            '/admin/categories/search' => '/cabinet/product-exports/filter-options?type=categories',
+            '/admin/warehouses/search' => '/cabinet/product-exports/filter-options?type=warehouses',
+            '/admin/certificates/search' => '/cabinet/product-exports/filter-options?type=certificates',
+            '/admin/product-models/search' => '/cabinet/product-exports/filter-options?type=models',
+        ];
+
+        foreach ($filters as &$group) {
+            if (isset($group['fields'])) {
+                foreach ($group['fields'] as &$field) {
+                    if (isset($field['search_url']) && isset($urlMap[$field['search_url']])) {
+                        $field['search_url'] = $urlMap[$field['search_url']];
+                    }
+                }
+            }
+        }
+
+        return $filters;
+    }
+}

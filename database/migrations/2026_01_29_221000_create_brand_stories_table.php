@@ -19,6 +19,8 @@ return new class extends Migration
             $table->text('detailed_description');
             $table->string('meta_title')->nullable();
             $table->text('meta_description')->nullable();
+            $table->boolean('is_published')->default(false);
+            $table->timestamp('published_at')->nullable();
             $table->foreignId('brand_id')->nullable()->constrained('brands')->nullOnDelete();
             $table->timestamps();
         });

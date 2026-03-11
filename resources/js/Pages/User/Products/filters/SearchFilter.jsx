@@ -66,8 +66,8 @@ export default function SearchFilter({ value = '', onChange }) {
                     pr={localValue ? '9' : '3'}
                     borderRadius="lg"
                     _focus={{
-                        borderColor: 'pink.400',
-                        boxShadow: '0 0 0 1px var(--chakra-colors-pink-400)',
+                        borderColor: 'pecado.400',
+                        boxShadow: '0 0 0 1px var(--chakra-colors-pecado-400)',
                     }}
                 />
 

@@ -23,6 +23,7 @@ class Order extends Model
 
     protected $fillable = [
         'uuid',
+        'number',
         'user_id',
         'company_id',
         'cart_id',
@@ -31,7 +32,7 @@ class Order extends Model
         'delivery_address_id',
         'total_amount',
         'exchange_rate',
-        'correction_factor',
+        'rate_coefficient',
         'currency_code',
         'parent_id',
         'type',
@@ -48,7 +49,7 @@ class Order extends Model
             'status' => OrderStatus::class,
             'total_amount' => 'decimal:2',
             'exchange_rate' => 'decimal:10',
-            'correction_factor' => 'decimal:4',
+            'rate_coefficient' => 'decimal:4',
             'type' => \App\Enums\OrderType::class,
         ];
     }
@@ -61,6 +62,14 @@ class Order extends Model
         static::creating(function ($order) {
             if (empty($order->uuid)) {
                 $order->uuid = (string) Str::uuid();
+            }
+            if (empty($order->number)) {
+                $order->number = 'ORD-' . now()->format('Y') . '-' . str_pad(
+                    (string) (static::withTrashed()->max('id') + 1),
+                    4,
+                    '0',
+                    STR_PAD_LEFT
+                );
             }
         });
 
@@ -126,5 +135,18 @@ class Order extends Model
     public function statusHistories(): HasMany
     {
         return $this->hasMany(OrderStatusHistory::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Реализации (отгрузки) по этому заказу — через shipment_items.order_uuid.
+     */
+    public function shipments(): \Illuminate\Database\Eloquent\Collection
+    {
+        $shipmentIds = ShipmentItem::where('order_uuid', $this->uuid)
+            ->pluck('shipment_id')
+            ->unique()
+            ->values();
+
+        return Shipment::whereIn('id', $shipmentIds)->get();
     }
 }

@@ -1,11 +1,11 @@
 import { router } from '@inertiajs/react';
+import { useState } from 'react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
 import { Box, Badge, Button } from '@chakra-ui/react';
 import { LuPlus, LuRefreshCw } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
-import { useState } from 'react';
 
 export default function Index({ currencies, filters }) {
     const [updatingRates, setUpdatingRates] = useState(false);
@@ -62,16 +62,36 @@ export default function Index({ currencies, filters }) {
             ),
         },
         {
+            key: 'official_rate',
+            label: 'Офиц. курс (НБ)',
+            sortable: true,
+            render: (_, row) => row.official_rate ? (
+                <Box fontFamily="mono">{row.official_rate}</Box>
+            ) : (
+                <Box fontSize="sm" color="fg.muted">—</Box>
+            ),
+        },
+        {
+            key: 'rate_coefficient',
+            label: 'Коэфф. (1С)',
+            sortable: true,
+            render: (_, row) => <Box fontFamily="mono">{row.rate_coefficient}</Box>,
+        },
+        {
             key: 'exchange_rate',
-            label: 'Курс',
+            label: 'Итог. курс',
             sortable: true,
             render: (_, row) => <Box fontFamily="mono">{row.exchange_rate}</Box>,
         },
         {
-            key: 'correction_factor',
-            label: 'Коэфф. коррекции',
+            key: 'exchange_rate_date',
+            label: 'Дата курса',
             sortable: true,
-            render: (_, row) => <Box fontFamily="mono">{row.correction_factor}</Box>,
+            render: (_, row) => row.exchange_rate_date ? (
+                <Box fontSize="sm">{new Date(row.exchange_rate_date).toLocaleDateString('ru-RU')}</Box>
+            ) : (
+                <Box fontSize="sm" color="fg.muted">—</Box>
+            ),
         },
         createActionsColumn('admin.currencies', openDeleteDialog),
     ];

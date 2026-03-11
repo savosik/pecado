@@ -222,6 +222,14 @@ class Product extends Model implements HasMedia
 
 
     /**
+     * Get the product segments for the product (US-11).
+     */
+    public function productSegments(): BelongsToMany
+    {
+        return $this->belongsToMany(ProductSegment::class, 'product_product_segment');
+    }
+
+    /**
      * Get the indexable data array for the model.
      *
      * @return array<string, mixed>

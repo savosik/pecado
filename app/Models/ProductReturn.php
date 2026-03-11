@@ -22,6 +22,7 @@ class ProductReturn extends Model
     protected $fillable = [
         'uuid',
         'user_id',
+        'order_id',
         'status',
         'comment',
         'admin_comment',
@@ -51,6 +52,14 @@ class ProductReturn extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Get the order associated with this return.
+     */
+    public function order(): BelongsTo
+    {
+        return $this->belongsTo(Order::class);
     }
 
     /**

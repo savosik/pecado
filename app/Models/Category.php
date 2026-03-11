@@ -27,6 +27,8 @@ class Category extends Model implements HasMedia
         'slug',
         'parent_id',
         'external_id',
+        'uuid',
+        'is_group',
         'short_description',
         'description',
         'meta_title',

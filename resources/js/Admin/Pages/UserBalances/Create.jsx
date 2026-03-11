@@ -5,12 +5,11 @@ import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Comp
 import { Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ currencies }) {
+export default function Create() {
     const [selectedUser, setSelectedUser] = useState(null);
 
     const { data, setData, post, processing, errors, transform } = useForm({
         user_id: '',
-        currency_id: '',
         balance: '0.00',
         overdue_debt: '0.00',
     });
@@ -65,26 +64,6 @@ export default function Create({ currencies }) {
                                     placeholder="Выберите пользователя"
                                     displayField="full_name"
                                 />
-                            </FormField>
-
-                            <FormField label="Валюта" error={errors.currency_id} required>
-                                <select
-                                    value={data.currency_id}
-                                    onChange={(e) => setData('currency_id', e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.5rem',
-                                        borderRadius: '0.375rem',
-                                        border: '1px solid var(--chakra-colors-border)'
-                                    }}
-                                >
-                                    <option value="">Выберите валюту</option>
-                                    {currencies.map((currency) => (
-                                        <option key={currency.id} value={currency.id}>
-                                            {currency.code} - {currency.name} ({currency.symbol})
-                                        </option>
-                                    ))}
-                                </select>
                             </FormField>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>

@@ -20,9 +20,11 @@ class CurrencyFactory extends Factory
             'name' => $this->faker->currencyCode(),
             'code' => $this->faker->unique()->currencyCode(),
             'symbol' => $this->faker->currencyCode(),
+            'official_rate' => null,
+            'rate_coefficient' => 1.0,
             'exchange_rate' => 1.0,
-            'correction_factor' => 1.0,
             'is_base' => false,
+            'exchange_rate_date' => null,
         ];
     }
 }

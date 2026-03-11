@@ -16,13 +16,21 @@ class CatalogApiControllerTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $user;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->user = User::factory()->create(['is_admin' => false]);
+    }
+
     // ─── products ───────────────────────────────────────────
 
     public function test_products_returns_paginated_json(): void
     {
         Product::factory()->count(3)->create();
 
-        $response = $this->getJson('/api/catalog/products');
+        $response = $this->actingAs($this->user)->getJson('/api/catalog/products');
 
         $response->assertOk()
             ->assertJsonStructure([

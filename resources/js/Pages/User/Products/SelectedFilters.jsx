@@ -41,16 +41,16 @@ export default function SelectedFilters({ filters, facets, lockedFilters, curren
                     key={chip.key}
                     align="center"
                     gap="1"
-                    bg="pink.50"
-                    _dark={{ bg: 'pink.900/30', color: 'pink.200' }}
-                    color="pink.700"
+                    bg="pecado.50"
+                    _dark={{ bg: 'pecado.900/30', color: 'pecado.200' }}
+                    color="pecado.700"
                     borderRadius="full"
                     px="3"
                     py="1"
                     fontSize="xs"
                     fontWeight="500"
                     transition="all 0.15s"
-                    _hover={{ bg: 'pink.100', _dark: { bg: 'pink.900/50' } }}
+                    _hover={{ bg: 'pecado.100', _dark: { bg: 'pecado.900/50' } }}
                 >
                     <Text>{chip.label}</Text>
                     <Box
@@ -58,8 +58,8 @@ export default function SelectedFilters({ filters, facets, lockedFilters, curren
                         display="flex"
                         alignItems="center"
                         cursor="pointer"
-                        color="pink.400"
-                        _hover={{ color: 'pink.600' }}
+                        color="pecado.400"
+                        _hover={{ color: 'pecado.600' }}
                         onClick={() => onRemoveFilter(chip.filterKey, chip.value)}
                         ml="0.5"
                         type="button"
@@ -73,7 +73,7 @@ export default function SelectedFilters({ filters, facets, lockedFilters, curren
                 as="button"
                 fontSize="xs"
                 color="gray.500"
-                _hover={{ color: 'pink.500' }}
+                _hover={{ color: 'pecado.500' }}
                 cursor="pointer"
                 ml="1"
                 onClick={onResetAll}

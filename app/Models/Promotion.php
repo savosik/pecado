@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -14,10 +15,27 @@ class Promotion extends Model implements HasMedia
 
     protected $fillable = [
         'name',
+        'slug',
         'meta_title',
         'meta_description',
         'description',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Promotion $promotion) {
+            if (empty($promotion->slug)) {
+                $promotion->slug = Str::slug($promotion->name);
+
+                // Ensure uniqueness
+                $original = $promotion->slug;
+                $counter = 1;
+                while (static::where('slug', $promotion->slug)->exists()) {
+                    $promotion->slug = $original . '-' . $counter++;
+                }
+            }
+        });
+    }
 
     public function registerMediaCollections(): void
     {

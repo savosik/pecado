@@ -18,9 +18,10 @@ class UserBalanceFactory extends Factory
     {
         return [
             'user_id' => \App\Models\User::factory(),
-            'currency_id' => \App\Models\Currency::factory(),
+            'currency_id' => null,
             'balance' => $this->faker->randomFloat(2, -1000, 1000),
             'overdue_debt' => $this->faker->randomFloat(2, 0, 500),
+            'balance_erp_updated_at' => $this->faker->optional()->dateTimeBetween('-1 month'),
         ];
     }
 }

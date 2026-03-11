@@ -5,9 +5,11 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
-import { LuPlus, LuPencil, LuTrash2, LuBuilding2 } from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTrash2, LuBuilding2, LuWallet } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
+
+const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function Index({ companies = [] }) {
     const [deleteCompany, setDeleteCompany] = useState(null);
@@ -78,6 +80,8 @@ export default function Index({ companies = [] }) {
                                     <Table.ColumnHeader>ИНН</Table.ColumnHeader>
                                     <Table.ColumnHeader>Страна</Table.ColumnHeader>
                                     <Table.ColumnHeader>Счетов</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Баланс (₽)</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Просрочка (₽)</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
@@ -96,6 +100,26 @@ export default function Index({ companies = [] }) {
                                         <Table.Cell fontSize="sm">{c.country || '—'}</Table.Cell>
                                         <Table.Cell>
                                             <Badge colorPalette="blue" variant="subtle">{c.bank_accounts_count || 0}</Badge>
+                                        </Table.Cell>
+                                        <Table.Cell textAlign="right">
+                                            {c.contractor_balance ? (
+                                                <Text
+                                                    fontFamily="mono"
+                                                    fontWeight="medium"
+                                                    fontSize="sm"
+                                                    color={parseFloat(c.contractor_balance.current_balance) < 0 ? 'red.600' : 'green.600'}
+                                                    _dark={{ color: parseFloat(c.contractor_balance.current_balance) < 0 ? 'red.400' : 'green.400' }}
+                                                >
+                                                    {fmt(c.contractor_balance.current_balance)}
+                                                </Text>
+                                            ) : <Text color="gray.400" fontSize="sm">—</Text>}
+                                        </Table.Cell>
+                                        <Table.Cell textAlign="right">
+                                            {c.contractor_balance && parseFloat(c.contractor_balance.overdue_debt) > 0 ? (
+                                                <Badge colorPalette="red" variant="subtle" fontFamily="mono">
+                                                    {fmt(c.contractor_balance.overdue_debt)}
+                                                </Badge>
+                                            ) : <Text color="gray.400" fontSize="sm">—</Text>}
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <HStack gap="1" justify="flex-end">
@@ -128,8 +152,8 @@ export default function Index({ companies = [] }) {
 
                     {/* Mobile Cards */}
                     <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} />}>
-                        {companies.map((c) => (
-                            <Flex key={c.id} p="4" align="center" justify="space-between">
+                        {companies.map((c) => (<Flex key={c.id} p="4" align="start" justify="space-between" direction="column" gap="2">
+                            <Flex w="100%" align="center" justify="space-between">
                                 <Box flex="1" minW="0">
                                     <Text fontWeight="600" fontSize="sm" noOfLines={1}>{c.name}</Text>
                                     <HStack gap="2" mt="1">
@@ -159,6 +183,27 @@ export default function Index({ companies = [] }) {
                                     </IconButton>
                                 </HStack>
                             </Flex>
+                            {c.contractor_balance && (
+                                <HStack gap="4" px="0" pt="1">
+                                    <HStack gap="1">
+                                        <LuWallet size={14} opacity={0.5} />
+                                        <Text
+                                            fontSize="xs"
+                                            fontFamily="mono"
+                                            fontWeight="medium"
+                                            color={parseFloat(c.contractor_balance.current_balance) < 0 ? 'red.500' : 'green.500'}
+                                        >
+                                            {fmt(c.contractor_balance.current_balance)} ₽
+                                        </Text>
+                                    </HStack>
+                                    {parseFloat(c.contractor_balance.overdue_debt) > 0 && (
+                                        <Badge colorPalette="red" variant="subtle" fontSize="xs">
+                                            Просрочка: {fmt(c.contractor_balance.overdue_debt)} ₽
+                                        </Badge>
+                                    )}
+                                </HStack>
+                            )}
+                        </Flex>
                         ))}
                     </VStack>
                 </Card.Root>

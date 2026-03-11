@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Artisan;
 use Inertia\Inertia;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
@@ -53,8 +52,10 @@ class CurrencyController extends Controller
             'name' => 'required|string|max:255',
             'symbol' => 'required|string|max:10',
             'is_base' => 'boolean',
+            'official_rate' => 'nullable|numeric|min:0',
+            'rate_coefficient' => 'nullable|numeric|min:0',
             'exchange_rate' => 'required|numeric|min:0',
-            'correction_factor' => 'nullable|numeric|min:0',
+            'exchange_rate_date' => 'nullable|date',
         ]);
 
         // Если это базовая валюта, сбросить флаг у всех других
@@ -81,8 +82,10 @@ class CurrencyController extends Controller
             'name' => 'required|string|max:255',
             'symbol' => 'required|string|max:10',
             'is_base' => 'boolean',
+            'official_rate' => 'nullable|numeric|min:0',
+            'rate_coefficient' => 'nullable|numeric|min:0',
             'exchange_rate' => 'required|numeric|min:0',
-            'correction_factor' => 'nullable|numeric|min:0',
+            'exchange_rate_date' => 'nullable|date',
         ]);
 
         // Если это базовая валюта, сбросить флаг у всех других
@@ -102,6 +105,34 @@ class CurrencyController extends Controller
         $currency->delete();
 
         return redirect()->route('admin.currencies.index')->with('success', 'Валюта успешно удалена');
+    }
+
+    /**
+     * Обновить курсы валют из ЦБ РФ вручную (для ручного тестирования).
+     *
+     * Примечание: в production курсы поступают из 1С через RabbitMQ (US-04).
+     * Эта кнопка позволяет обновить курсы вручную из ЦБ РФ без ожидания события из 1С.
+     */
+    public function updateRates(Request $request)
+    {
+        try {
+            $exitCode = \Artisan::call('currency:update');
+
+            if ($exitCode === 0) {
+                return redirect()
+                    ->route('admin.currencies.index')
+                    ->with('success', 'Курсы валют успешно обновлены из ЦБ РФ.');
+            }
+
+            return redirect()
+                ->route('admin.currencies.index')
+                ->with('error', 'Не удалось обновить курсы. Проверьте доступность ЦБ РФ и логи.');
+
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.currencies.index')
+                ->with('error', 'Ошибка при обновлении курсов: ' . $e->getMessage());
+        }
     }
 
     public function search(Request $request)
@@ -130,18 +161,5 @@ class CurrencyController extends Controller
 
         return response()->json($currencies);
     }
-
-    public function updateRates()
-    {
-        try {
-            Artisan::call('currency:update');
-            $output = Artisan::output();
-
-            return redirect()->route('admin.currencies.index')->with('success', 'Курсы валют успешно обновлены');
-        } catch (\Exception $e) {
-            return redirect()
-                ->route('admin.currencies.index')
-                ->with('error', 'Ошибка обновления курсов: ' . $e->getMessage());
-        }
-    }
 }
+

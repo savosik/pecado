@@ -35,6 +35,11 @@ Route::middleware('guest')->group(function () {
 // ──────────────────────────────────────────────
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+    // Onboarding
+    Route::get('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'show'])->name('onboarding');
+    Route::post('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'store'])->name('onboarding.store');
+    Route::post('/onboarding/skip', [\App\Http\Controllers\User\OnboardingController::class, 'skip'])->name('onboarding.skip');
 });
 
 // ──────────────────────────────────────────────

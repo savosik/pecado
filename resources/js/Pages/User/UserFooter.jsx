@@ -1,8 +1,7 @@
 import {
-    Box, Flex, Grid, GridItem, HStack, Text, VStack, IconButton,
+    Box, Grid, GridItem, Text, VStack,
 } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuFacebook, LuInstagram, LuTwitter } from 'react-icons/lu';
 
 const companyLinks = [
     { href: '/about', label: 'О компании' },
@@ -29,35 +28,32 @@ export default function UserFooter() {
     const year = new Date().getFullYear();
 
     return (
-        <Box as="footer">
-            {/* Золотая полоска сверху */}
+        <Box as="footer" mt="auto">
             <Box
-                h="3px"
-                bg="linear-gradient(90deg, #8B6914 0%, #C5A028 20%, #FFD700 40%, #FAEBD7 50%, #FFD700 60%, #C5A028 80%, #8B6914 100%)"
-                boxShadow="0 0 8px rgba(255, 215, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3)"
-            />
-            <Box
-                bg="linear-gradient(135deg, #1a0508 0%, #4a0d19 50%, #2a0810 100%)"
-                color="white"
+                bg="white"
+                borderTop="1px solid"
+                borderColor="gray.200"
+                color="gray.700"
+                _dark={{ bg: 'gray.900', borderColor: 'gray.800', color: 'gray.300' }}
             >
-                <Box maxW="1360px" mx="auto" px={{ base: '4', md: '6' }} py="10">
+                <Box maxW="1360px" mx="auto" px={{ base: '4', md: '6' }} py={{ base: '8', md: '10' }}>
                     {/* Four Columns */}
                     <Grid
                         templateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }}
-                        gap="8"
+                        gap={{ base: '6', md: '8' }}
                         mb="8"
                     >
                         {/* Logo & Description */}
                         <GridItem>
-                            <Box as="img" src="/images/logo.png" alt="Pecado" h="16" objectFit="contain" mb="4" filter="brightness(0) invert(1)" />
-                            <Text fontSize="sm" color="rgba(255,255,255,0.7)" lineHeight="relaxed">
+                            <Box as="img" src="/images/logo.png" alt="Pecado" h="12" objectFit="contain" mb="4" />
+                            <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }} lineHeight="relaxed">
                                 Зарабатывать на удовольствии — это не грех, это Pecado. Мы отобрали товары, перед которыми не устоит ваш клиент, и создали условия, от которых невозможно отказаться партнеру.
                             </Text>
                         </GridItem>
 
                         {/* Company */}
                         <GridItem>
-                            <Text fontSize="sm" fontWeight="700" mb="4" textTransform="uppercase" letterSpacing="0.05em">
+                            <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
                                 О компании
                             </Text>
                             <VStack align="start" gap="2">
@@ -65,8 +61,9 @@ export default function UserFooter() {
                                     <Link key={item.href} href={item.href}>
                                         <Text
                                             fontSize="sm"
-                                            color="rgba(255,255,255,0.7)"
-                                            _hover={{ color: 'white' }}
+                                            color="gray.600"
+                                            _dark={{ color: 'gray.400' }}
+                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
                                             transition="colors 0.2s"
                                         >
                                             {item.label}
@@ -78,7 +75,7 @@ export default function UserFooter() {
 
                         {/* For Buyers */}
                         <GridItem>
-                            <Text fontSize="sm" fontWeight="700" mb="4" textTransform="uppercase" letterSpacing="0.05em">
+                            <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
                                 Покупателям
                             </Text>
                             <VStack align="start" gap="2">
@@ -86,8 +83,9 @@ export default function UserFooter() {
                                     <Link key={item.href} href={item.href}>
                                         <Text
                                             fontSize="sm"
-                                            color="gray.400"
-                                            _hover={{ color: 'white' }}
+                                            color="gray.600"
+                                            _dark={{ color: 'gray.400' }}
+                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
                                             transition="colors 0.2s"
                                         >
                                             {item.label}
@@ -99,7 +97,7 @@ export default function UserFooter() {
 
                         {/* Categories */}
                         <GridItem>
-                            <Text fontSize="sm" fontWeight="700" mb="4" textTransform="uppercase" letterSpacing="0.05em">
+                            <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
                                 Категории
                             </Text>
                             <VStack align="start" gap="2">
@@ -107,8 +105,9 @@ export default function UserFooter() {
                                     <Link key={item.href} href={item.href}>
                                         <Text
                                             fontSize="sm"
-                                            color="gray.400"
-                                            _hover={{ color: 'white' }}
+                                            color="gray.600"
+                                            _dark={{ color: 'gray.400' }}
+                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
                                             transition="colors 0.2s"
                                         >
                                             {item.label}
@@ -120,57 +119,17 @@ export default function UserFooter() {
                     </Grid>
 
                     {/* Bottom Row */}
-                    <Flex
+                    <Box
                         pt="6"
                         borderTop="1px solid"
-                        borderColor="rgba(255,255,255,0.15)"
-                        direction={{ base: 'column', sm: 'row' }}
-                        align="center"
-                        justify="space-between"
-                        gap="4"
+                        borderColor="gray.200"
+                        _dark={{ borderColor: 'gray.800' }}
+                        textAlign={{ base: 'center', sm: 'left' }}
                     >
-                        <Text fontSize="sm" color="rgba(255,255,255,0.5)">
+                        <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }}>
                             © {year} Pecado. Все права защищены.
                         </Text>
-                        <HStack gap="2">
-                            <IconButton
-                                as="a"
-                                href="#"
-                                aria-label="Facebook"
-                                variant="ghost"
-                                colorPalette="gray"
-                                color="#b0b0b0"
-                                _hover={{ color: 'white' }}
-                                size="sm"
-                            >
-                                <LuFacebook />
-                            </IconButton>
-                            <IconButton
-                                as="a"
-                                href="#"
-                                aria-label="Instagram"
-                                variant="ghost"
-                                colorPalette="gray"
-                                color="gray.400"
-                                _hover={{ color: 'white' }}
-                                size="sm"
-                            >
-                                <LuInstagram />
-                            </IconButton>
-                            <IconButton
-                                as="a"
-                                href="#"
-                                aria-label="Twitter"
-                                variant="ghost"
-                                colorPalette="gray"
-                                color="gray.400"
-                                _hover={{ color: 'white' }}
-                                size="sm"
-                            >
-                                <LuTwitter />
-                            </IconButton>
-                        </HStack>
-                    </Flex>
+                    </Box>
                 </Box>
             </Box>
         </Box>

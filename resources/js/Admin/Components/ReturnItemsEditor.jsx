@@ -26,7 +26,7 @@ import { ProductSelector } from "@/Admin/Components/ProductSelector";
  * 
  * Workflow (inline-форма): Товар → Заказ → Цена (автозаполнение) → Причина
  */
-const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId }) => {
+const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, productOrdersRoute = 'admin.returns.product-orders', searchRoute = 'admin.returns.search-products', accentColor = 'blue' }) => {
     const [localItems, setLocalItems] = useState(items);
     const [isAdding, setIsAdding] = useState(false);
 
@@ -77,7 +77,7 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId }) => {
                         {userId ? "Поиск товаров из заказов пользователя" : "Сначала выберите пользователя"}
                     </Text>
                     <Button
-                        colorPalette="blue"
+                        colorPalette={accentColor}
                         onClick={() => setIsAdding(true)}
                         disabled={!userId}
                     >
@@ -90,6 +90,9 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId }) => {
                     onCancel={() => setIsAdding(false)}
                     reasons={reasons}
                     userId={userId}
+                    productOrdersRoute={productOrdersRoute}
+                    searchRoute={searchRoute}
+                    accentColor={accentColor}
                 />
             )}
 
@@ -217,7 +220,7 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId }) => {
                     <Card.Footer>
                         <HStack justify="space-between" w="full">
                             <Text fontWeight="medium">Итого:</Text>
-                            <Text fontSize="xl" fontWeight="bold" color="blue.600">
+                            <Text fontSize="xl" fontWeight="bold" color={`${accentColor}.600`}>
                                 {totalAmount.toFixed(2)} ₽
                             </Text>
                         </HStack>
@@ -246,7 +249,7 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId }) => {
 /**
  * Inline-форма добавления позиции (пошаговая)
  */
-const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
+const AddItemForm = ({ onSave, onCancel, reasons, userId, productOrdersRoute, searchRoute, accentColor = 'blue' }) => {
     const [step, setStep] = useState(1);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [selectedOrder, setSelectedOrder] = useState(null);
@@ -270,7 +273,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
         // Загружаем заказы для этого товара
         setOrdersLoading(true);
         try {
-            const response = await axios.get(route("admin.returns.product-orders"), {
+            const response = await axios.get(route(productOrdersRoute), {
                 params: { product_id: product.id, user_id: userId },
             });
             setOrders(response.data);
@@ -315,11 +318,11 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                 </HStack>
                 {/* Улучшенный Stepper */}
                 <HStack w="full" px={2}>
-                    <StepIndicator step={1} currentStep={step} label="Товар" isMobile={false} />
-                    <Box flex={1} h="2px" bg={step >= 2 ? "blue.500" : "gray.200"} mx={2} />
-                    <StepIndicator step={2} currentStep={step} label="Заказ" isMobile={false} />
-                    <Box flex={1} h="2px" bg={step >= 3 ? "blue.500" : "gray.200"} mx={2} />
-                    <StepIndicator step={3} currentStep={step} label="Детали" isMobile={false} />
+                    <StepIndicator step={1} currentStep={step} label="Товар" isMobile={false} accentColor={accentColor} />
+                    <Box flex={1} h="2px" bg={step >= 2 ? `${accentColor}.500` : "gray.200"} mx={2} />
+                    <StepIndicator step={2} currentStep={step} label="Заказ" isMobile={false} accentColor={accentColor} />
+                    <Box flex={1} h="2px" bg={step >= 3 ? `${accentColor}.500` : "gray.200"} mx={2} />
+                    <StepIndicator step={3} currentStep={step} label="Детали" isMobile={false} accentColor={accentColor} />
                 </HStack>
             </Box>
 
@@ -331,7 +334,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                             <ProductSelector
                                 mode="search"
                                 onSelect={handleSelectProduct}
-                                searchRoute="admin.returns.search-products"
+                                searchRoute={searchRoute}
                                 searchParams={{ user_id: userId }}
                             />
                         </Field>
@@ -342,7 +345,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                 {step === 2 && (
                     <VStack align="stretch" gap={6}>
                         {/* Selected Product Summary */}
-                        <HStack p={4} bg="blue.50/50" borderRadius="lg" borderWidth="1px" borderColor="blue.100">
+                        <HStack p={4} bg={`${accentColor}.50/50`} borderRadius="lg" borderWidth="1px" borderColor={`${accentColor}.100`}>
                             <Image
                                 src={selectedProduct?.image_url}
                                 boxSize="56px"
@@ -354,7 +357,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                                 <Text fontWeight="bold" color="gray.800">{selectedProduct?.name}</Text>
                                 <Text fontSize="sm" color="gray.500">{selectedProduct?.sku}</Text>
                             </VStack>
-                            <Button size="sm" variant="ghost" colorPalette="blue" onClick={() => { setSelectedProduct(null); setStep(1); }}>
+                            <Button size="sm" variant="ghost" colorPalette={accentColor} onClick={() => { setSelectedProduct(null); setStep(1); }}>
                                 Изменить товар
                             </Button>
                         </HStack>
@@ -362,7 +365,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                         <Field label="В каком заказе был куплен товар?">
                             {ordersLoading ? (
                                 <Box p={8} textAlign="center">
-                                    <Spinner size="md" color="blue.500" />
+                                    <Spinner size="md" color={`${accentColor}.500`} />
                                     <Text fontSize="sm" color="gray.500" mt={3}>Поиск заказов...</Text>
                                 </Box>
                             ) : orders.length > 0 ? (
@@ -376,7 +379,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                                             cursor="pointer"
                                             bg="white"
                                             transition="all 0.2s"
-                                            _hover={{ borderColor: "blue.400", shadow: "sm", transform: "translateY(-1px)" }}
+                                            _hover={{ borderColor: `${accentColor}.400`, shadow: "sm", transform: "translateY(-1px)" }}
                                             onClick={() => handleSelectOrder(order)}
                                         >
                                             <HStack justify="space-between">
@@ -487,7 +490,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                         <HStack justify="flex-end" pt={2}>
                             <VStack align="end" gap={0}>
                                 <Text fontSize="sm" color="gray.500">Итоговая сумма</Text>
-                                <Text fontSize="2xl" fontWeight="bold" color="blue.600">
+                                <Text fontSize="2xl" fontWeight="bold" color={`${accentColor}.600`}>
                                     {(quantity * price).toFixed(2)} ₽
                                 </Text>
                             </VStack>
@@ -503,7 +506,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
                     </Button>
                     {step === 3 && (
                         <Button
-                            colorPalette="blue"
+                            colorPalette={accentColor}
                             size="md"
                             onClick={handleSave}
                             disabled={!selectedProduct || !selectedOrder || !reason}
@@ -520,7 +523,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId }) => {
 /**
  * Индикатор шага
  */
-const StepIndicator = ({ step, currentStep, label }) => {
+const StepIndicator = ({ step, currentStep, label, accentColor = 'blue' }) => {
     const isActive = currentStep === step;
     const isCompleted = currentStep > step;
     const isPending = currentStep < step;
@@ -531,8 +534,8 @@ const StepIndicator = ({ step, currentStep, label }) => {
                 w="28px"
                 h="28px"
                 borderRadius="full"
-                bg={isCompleted ? "green.500" : isActive ? "blue.600" : "white"}
-                borderColor={isCompleted ? "green.500" : isActive ? "blue.600" : "gray.300"}
+                bg={isCompleted ? "green.500" : isActive ? `${accentColor}.600` : "white"}
+                borderColor={isCompleted ? "green.500" : isActive ? `${accentColor}.600` : "gray.300"}
                 borderWidth={isPending ? "2px" : "0px"}
                 color={isCompleted || isActive ? "white" : "gray.400"}
                 display="flex"

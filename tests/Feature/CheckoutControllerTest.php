@@ -164,9 +164,9 @@ class CheckoutControllerTest extends TestCase
             'status' => \App\Enums\OrderStatus::PENDING,
             'total_amount' => 200.00,
             'exchange_rate' => 1,
-            'correction_factor' => 1,
+            'rate_coefficient' => 1,
             'currency_code' => 'RUB',
-            'type' => \App\Enums\OrderType::STANDARD,
+            'type' => \App\Enums\OrderType::ORDER,
         ]);
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
         $checkoutMock->expects($this->once())
@@ -209,9 +209,9 @@ class CheckoutControllerTest extends TestCase
             'status' => \App\Enums\OrderStatus::PENDING,
             'total_amount' => 100.00,
             'exchange_rate' => 1,
-            'correction_factor' => 1,
+            'rate_coefficient' => 1,
             'currency_code' => 'RUB',
-            'type' => \App\Enums\OrderType::STANDARD,
+            'type' => \App\Enums\OrderType::ORDER,
         ]);
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
         $checkoutMock->expects($this->once())

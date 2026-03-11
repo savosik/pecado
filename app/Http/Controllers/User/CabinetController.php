@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\ContractorBalance;
 use App\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,9 +17,15 @@ class CabinetController extends Controller
     {
         $user = Auth::user();
 
-        $ordersCount = Order::where('user_id', $user->id)->count();
+        $ordersCount    = Order::where('user_id', $user->id)->count();
         $favoritesCount = $user->favorites()->count();
-        $cartsCount = $user->carts()->count();
+        $cartsCount     = $user->carts()->count();
+
+        // Агрегируем баланс по всем контрагентам пользователя
+        $balances = ContractorBalance::where('user_id', $user->id)->get();
+        $totalBalance  = $balances->sum('current_balance');
+        $totalOverdue  = $balances->sum('overdue_debt');
+        $hasBalance    = $balances->count() > 0;
 
         $recentOrders = Order::where('user_id', $user->id)
             ->latest()
@@ -36,6 +43,11 @@ class CabinetController extends Controller
             'ordersCount'    => $ordersCount,
             'favoritesCount' => $favoritesCount,
             'cartsCount'     => $cartsCount,
+            'balance'        => $hasBalance ? [
+                'current_balance' => $totalBalance,
+                'overdue_debt'    => $totalOverdue,
+                'contractors_count' => $balances->count(),
+            ] : null,
             'recentOrders'   => $recentOrders,
         ]);
     }

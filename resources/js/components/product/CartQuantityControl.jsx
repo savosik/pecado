@@ -157,7 +157,7 @@ export default function CartQuantityControl({ productId, disabled = false, size 
                     right="-6"
                     transform="translateY(-50%)"
                 >
-                    <Spinner size="xs" color="pink.500" />
+                    <Spinner size="xs" color="pecado.500" />
                 </Box>
             )}
         </Box>

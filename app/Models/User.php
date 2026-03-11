@@ -203,11 +203,11 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
-     * Get the balances for the user.
+     * Балансы контрагентов пользователя (по ИНН).
      */
-    public function balances(): HasMany
+    public function contractorBalances(): HasMany
     {
-        return $this->hasMany(UserBalance::class);
+        return $this->hasMany(ContractorBalance::class);
     }
 
     /**
@@ -240,5 +240,21 @@ class User extends Authenticatable implements HasMedia
     public function searchHistories(): HasMany
     {
         return $this->hasMany(SearchHistory::class);
+    }
+
+    /**
+     * Get the questionnaire for the user.
+     */
+    public function questionnaire(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(UserQuestionnaire::class);
+    }
+
+    /**
+     * US-12: Get the partner segments for the user.
+     */
+    public function partnerSegments(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(PartnerSegment::class, 'partner_user');
     }
 }
