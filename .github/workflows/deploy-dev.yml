@@ -152,7 +152,7 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   deploy:
     name: "🚀 Deploy to Dev"
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, dev-server]
     needs: [test, build-frontend]
     timeout-minutes: 20
     environment: dev
@@ -160,33 +160,19 @@ jobs:
     steps:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
+        with:
+          path: /srv/pecado-deploy-tmp
+          clean: true
 
       - name: "📥 Download frontend build"
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: public/build
+          path: /srv/pecado-deploy-tmp/public/build
 
-      - name: "🔑 Setup SSH agent"
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
-
-      - name: "🛡️ Add server to known_hosts"
+      - name: "📤 Sync code to production dir"
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          # Получаем ключ для всех типов, игнорируем предупреждения
-          ssh-keyscan -t ed25519,rsa,ecdsa -H ${{ secrets.DEV_SERVER_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
-          # Fallback: SSH config с StrictHostKeyChecking=no
-          echo "Host ${{ secrets.DEV_SERVER_HOST }}" >> ~/.ssh/config
-          echo "  StrictHostKeyChecking no" >> ~/.ssh/config
-          echo "  UserKnownHostsFile ~/.ssh/known_hosts" >> ~/.ssh/config
-          chmod 600 ~/.ssh/config
-
-      - name: "📤 Sync code via rsync"
-        run: |
-          rsync -az --delete \
+          rsync -a --delete \
             --exclude='.git' \
             --exclude='.env' \
             --exclude='vendor' \
@@ -196,60 +182,41 @@ jobs:
             --exclude='storage/framework/cache' \
             --exclude='storage/framework/sessions' \
             --exclude='storage/framework/views' \
-            ./ ${{ secrets.DEV_SSH_USER }}@${{ secrets.DEV_SERVER_HOST }}:/srv/pecado/
+            /srv/pecado-deploy-tmp/ /srv/pecado/
+          rm -rf /srv/pecado-deploy-tmp
 
-      - name: "🐳 Deploy on server"
-        env:
-          HOST: ${{ secrets.DEV_SERVER_HOST }}
-          USER: ${{ secrets.DEV_SSH_USER }}
+      - name: "🐳 Deploy"
         run: |
-          ssh $USER@$HOST 'bash -s' << 'ENDSSH'
-            set -euo pipefail
-            cd /srv/pecado
+          set -euo pipefail
+          cd /srv/pecado
 
-            echo "==> [1/7] Проверка изменений в Dockerfile..."
-            DOCKERFILE_CHANGED=$(git diff HEAD@{1} HEAD --name-only 2>/dev/null | grep -c "^docker/" || echo "0")
+          echo "==> [1/5] Установка PHP зависимостей..."
+          sg docker -c 'docker compose exec -T app composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev'
 
-            echo "==> [2/7] Установка PHP зависимостей..."
-            docker compose exec -T app composer install \
-              --no-interaction --prefer-dist --optimize-autoloader --no-dev
+          echo "==> [2/5] Очистка и прогрев кешей Laravel..."
+          sg docker -c 'docker compose exec -T app php artisan optimize:clear'
+          sg docker -c 'docker compose exec -T app php artisan config:cache'
+          sg docker -c 'docker compose exec -T app php artisan route:cache'
+          sg docker -c 'docker compose exec -T app php artisan view:cache'
+          sg docker -c 'docker compose exec -T app php artisan optimize'
 
-            echo "==> [3/7] Очистка и прогрев кешей Laravel..."
-            docker compose exec -T app php artisan optimize:clear
-            docker compose exec -T app php artisan config:cache
-            docker compose exec -T app php artisan route:cache
-            docker compose exec -T app php artisan view:cache
-            docker compose exec -T app php artisan optimize
+          echo "==> [3/5] Выполнение миграций..."
+          sg docker -c 'docker compose exec -T app php artisan migrate --force'
 
-            echo "==> [4/7] Выполнение миграций..."
-            docker compose exec -T app php artisan migrate --force
+          echo "==> [4/5] Перезапуск очередей..."
+          sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
-            echo "==> [5/7] Перезапуск очередей (workers)..."
-            docker compose exec -T app php artisan queue:restart
+          echo "==> [5/5] Graceful reload FPM..."
+          sg docker -c 'docker compose exec -T app kill -USR2 1'
+          sg docker -c 'docker compose restart worker'
 
-            echo "==> [6/7] Перезагрузка FPM..."
-            if [ "$DOCKERFILE_CHANGED" -gt "0" ]; then
-              echo "     Dockerfile изменился — полная пересборка образов..."
-              docker compose build app worker
-              docker compose up -d --no-deps app worker
-            else
-              echo "     Graceful reload FPM (SIGUSR2)..."
-              docker compose exec -T app kill -USR2 1
-              docker compose restart worker
-            fi
-
-            echo "==> [7/7] Очистка устаревших Docker образов..."
-            docker image prune -f
-
-            echo ""
-            echo "✅ Деплой завершён успешно!"
-          ENDSSH
+          echo ""
+          echo "✅ Деплой завершён успешно!"
 
       - name: "🏥 Health Check"
         run: |
-          echo "Ожидаем запуск приложения (15 сек)..."
-          sleep 15
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://${{ secrets.DEV_SERVER_HOST }}/up)
+          sleep 5
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/up)
           if [ "$HTTP_CODE" = "200" ]; then
             echo "✅ Health check прошёл (HTTP $HTTP_CODE)"
           else
@@ -260,7 +227,7 @@ jobs:
       - name: "📢 Notify on success"
         if: success()
         run: |
-          echo "✅ Деплой ветки dev на dev-сервер выполнен успешно!"
+          echo "✅ Деплой ветки dev выполнен успешно!"
           echo "   Commit: ${{ github.sha }}"
           echo "   Author: ${{ github.actor }}"
 
