@@ -39,4 +39,4 @@ CLAUDE.md
 AGENTS.md
 boost.json
 /.claude/skills/
-/reference/
+/reference/\n# Dev server credentials (local only)\ndocs/DEV_SERVER_CREDENTIALS.md
