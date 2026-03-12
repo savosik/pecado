@@ -45,6 +45,19 @@ jobs:
           --health-timeout=3s
           --health-retries=3
 
+      rabbitmq:
+        image: rabbitmq:3.13-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        ports:
+          - "5672:5672"
+        options: >-
+          --health-cmd="rabbitmq-diagnostics ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
@@ -83,6 +96,10 @@ jobs:
           CACHE_STORE=array
           MAIL_MAILER=log
           SCOUT_DRIVER=null
+          RABBITMQ_HOST=127.0.0.1
+          RABBITMQ_PORT=5672
+          RABBITMQ_USER=guest
+          RABBITMQ_PASSWORD=guest
           EOF
           php artisan key:generate
           # Создаём необходимые директории storage
