@@ -19,6 +19,9 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Доверяем reverse-proxy (nginx на хосте) — нужно для корректного определения HTTPS
+        $middleware->trustProxies(at: '*');
+
         $middleware->statefulApi();
 
         $middleware->web(append: [
