@@ -127,7 +127,7 @@ services:
       MINIO_ROOT_USER: 'sail'
       MINIO_ROOT_PASSWORD: 'password'
     volumes:
-      - minio-data:/data
+      - /media/minio-data:/data
     networks:
       - pecado-network
     command: minio server /data --console-address ":9001"
@@ -176,4 +176,3 @@ volumes:
   mysql-data:
   meilisearch-data:
   redis-data:
-  minio-data:
