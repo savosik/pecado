@@ -187,7 +187,7 @@ jobs:
           cd /srv/pecado
 
           echo "==> [1/5] Установка PHP зависимостей..."
-          sg docker -c 'docker compose exec -T app composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev'
+          sg docker -c 'docker compose exec -T app composer install --no-interaction --prefer-dist --optimize-autoloader'
 
           echo "==> [2/5] Очистка и прогрев кешей Laravel..."
           sg docker -c 'docker compose exec -T app php artisan optimize:clear'
