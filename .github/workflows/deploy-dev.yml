@@ -82,8 +82,12 @@ jobs:
           QUEUE_CONNECTION=sync
           CACHE_STORE=array
           MAIL_MAILER=log
+          SCOUT_DRIVER=null
           EOF
           php artisan key:generate
+          # Создаём необходимые директории storage
+          mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions
+          mkdir -p bootstrap/cache
 
       - name: "🗃️ Run migrations"
         run: php artisan migrate --force
