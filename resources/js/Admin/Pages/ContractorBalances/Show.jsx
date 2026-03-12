@@ -1,9 +1,10 @@
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from '@/Admin/Components';
 import {
-    Box, Text, Badge, Card, Stack, SimpleGrid, Table, HStack, VStack,
+    Box, Text, Badge, Card, Stack, SimpleGrid, Table, HStack, VStack, Button,
 } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
+import { LuPencil } from 'react-icons/lu';
 
 const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -15,6 +16,15 @@ export default function Show({ balance }) {
             <PageHeader
                 title={`Баланс контрагента: ${balance.contractor_inn}`}
                 backUrl={route('admin.contractor-balances.index')}
+                actions={
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => router.visit(route('admin.contractor-balances.edit', balance.id))}
+                    >
+                        <LuPencil /> Редактировать
+                    </Button>
+                }
             />
 
             <Stack gap={6}>

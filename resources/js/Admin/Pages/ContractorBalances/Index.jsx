@@ -3,7 +3,7 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
 import { Box, Text, Badge, IconButton, HStack } from '@chakra-ui/react';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
-import { LuEye, LuTrash2 } from 'react-icons/lu';
+import { LuEye, LuPencil, LuTrash2 } from 'react-icons/lu';
 
 export default function Index({ balances, filters }) {
     const {
@@ -106,6 +106,15 @@ export default function Index({ balances, filters }) {
                     <IconButton
                         size="sm"
                         variant="ghost"
+                        colorPalette="yellow"
+                        aria-label="Редактировать"
+                        onClick={() => router.visit(route('admin.contractor-balances.edit', row.id))}
+                    >
+                        <LuPencil />
+                    </IconButton>
+                    <IconButton
+                        size="sm"
+                        variant="ghost"
                         colorPalette="red"
                         aria-label="Удалить"
                         onClick={() => openDeleteDialog(row)}
@@ -119,7 +128,11 @@ export default function Index({ balances, filters }) {
 
     return (
         <>
-            <PageHeader title="Балансы контрагентов" />
+            <PageHeader
+                title="Балансы контрагентов"
+                createHref={route('admin.contractor-balances.create')}
+                createLabel="Создать баланс"
+            />
 
             <Box mb={4}>
                 <SearchInput

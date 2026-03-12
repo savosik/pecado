@@ -203,7 +203,8 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
 
     // Балансы контрагентов (US-10)
     Route::get('/contractor-balances/search', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'search'])->name('contractor-balances.search');
-    Route::resource('contractor-balances', \App\Http\Controllers\Admin\ContractorBalanceController::class)->only(['index', 'show', 'destroy']);
+    Route::resource('contractor-balances', \App\Http\Controllers\Admin\ContractorBalanceController::class);
+
 
     // --------------------
     // Контент (Content)

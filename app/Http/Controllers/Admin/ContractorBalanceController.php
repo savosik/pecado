@@ -6,6 +6,8 @@ use App\Models\ContractorBalance;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class ContractorBalanceController extends Controller
@@ -54,6 +56,69 @@ class ContractorBalanceController extends Controller
         ]);
     }
 
+    public function create()
+    {
+        return Inertia::render('Admin/Pages/ContractorBalances/Create');
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id'                => 'required|exists:users,id',
+            'contractor_inn'         => [
+                'required', 'string', 'max:50',
+                Rule::unique('contractor_balances')->where(fn ($q) => $q->where('user_id', $request->user_id)),
+            ],
+            'contractor_uuid'        => 'nullable|string|max:255',
+            'current_balance'        => 'required|numeric',
+            'overdue_debt'           => 'nullable|numeric|min:0',
+            'balance_erp_updated_at' => 'nullable|date',
+            'overdue_details'        => 'nullable|array',
+            'overdue_details.*.shipment_uuid' => 'required|string|max:255',
+            'overdue_details.*.amount'        => 'required|numeric|min:0',
+            'overdue_details.*.due_date'      => 'required|date',
+        ], [
+            'user_id.required'                         => 'Необходимо выбрать пользователя.',
+            'user_id.exists'                           => 'Пользователь не найден.',
+            'contractor_inn.required'                  => 'ИНН контрагента обязателен.',
+            'contractor_inn.unique'                    => 'У этого пользователя уже есть баланс с таким ИНН.',
+            'current_balance.required'                 => 'Текущий баланс обязателен.',
+            'current_balance.numeric'                  => 'Баланс должен быть числом.',
+            'overdue_debt.numeric'                     => 'Просроченная задолженность должна быть числом.',
+            'overdue_debt.min'                         => 'Просроченная задолженность не может быть отрицательной.',
+            'overdue_details.*.shipment_uuid.required' => 'UUID реализации обязателен.',
+            'overdue_details.*.amount.required'        => 'Сумма просрочки обязательна.',
+            'overdue_details.*.amount.min'             => 'Сумма просрочки не может быть отрицательной.',
+            'overdue_details.*.due_date.required'      => 'Дата оплаты обязательна.',
+            'overdue_details.*.due_date.date'          => 'Неверный формат даты оплаты.',
+        ]);
+
+        $balance = DB::transaction(function () use ($validated) {
+            $balance = ContractorBalance::create([
+                'user_id'                => $validated['user_id'],
+                'contractor_inn'         => $validated['contractor_inn'],
+                'contractor_uuid'        => $validated['contractor_uuid'] ?? null,
+                'current_balance'        => $validated['current_balance'],
+                'overdue_debt'           => $validated['overdue_debt'] ?? 0,
+                'balance_erp_updated_at' => $validated['balance_erp_updated_at'] ?? null,
+            ]);
+
+            foreach ($validated['overdue_details'] ?? [] as $detail) {
+                $balance->overdueDetails()->create([
+                    'shipment_uuid' => $detail['shipment_uuid'],
+                    'amount'        => $detail['amount'],
+                    'due_date'      => $detail['due_date'],
+                ]);
+            }
+
+            return $balance;
+        });
+
+        return redirect()
+            ->route('admin.contractor-balances.show', $balance)
+            ->with('success', 'Баланс контрагента успешно создан');
+    }
+
     public function show(ContractorBalance $contractorBalance)
     {
         $contractorBalance->load(['user', 'company', 'overdueDetails']);
@@ -61,6 +126,75 @@ class ContractorBalanceController extends Controller
         return Inertia::render('Admin/Pages/ContractorBalances/Show', [
             'balance' => $contractorBalance,
         ]);
+    }
+
+    public function edit(ContractorBalance $contractorBalance)
+    {
+        $contractorBalance->load(['user', 'company', 'overdueDetails']);
+
+        return Inertia::render('Admin/Pages/ContractorBalances/Edit', [
+            'balance' => $contractorBalance,
+        ]);
+    }
+
+    public function update(Request $request, ContractorBalance $contractorBalance)
+    {
+        $validated = $request->validate([
+            'user_id'                => 'required|exists:users,id',
+            'contractor_inn'         => [
+                'required', 'string', 'max:50',
+                Rule::unique('contractor_balances')
+                    ->where(fn ($q) => $q->where('user_id', $request->user_id))
+                    ->ignore($contractorBalance->id),
+            ],
+            'contractor_uuid'        => 'nullable|string|max:255',
+            'current_balance'        => 'required|numeric',
+            'overdue_debt'           => 'nullable|numeric|min:0',
+            'balance_erp_updated_at' => 'nullable|date',
+            'overdue_details'        => 'nullable|array',
+            'overdue_details.*.shipment_uuid' => 'required|string|max:255',
+            'overdue_details.*.amount'        => 'required|numeric|min:0',
+            'overdue_details.*.due_date'      => 'required|date',
+        ], [
+            'user_id.required'                         => 'Необходимо выбрать пользователя.',
+            'user_id.exists'                           => 'Пользователь не найден.',
+            'contractor_inn.required'                  => 'ИНН контрагента обязателен.',
+            'contractor_inn.unique'                    => 'У этого пользователя уже есть баланс с таким ИНН.',
+            'current_balance.required'                 => 'Текущий баланс обязателен.',
+            'current_balance.numeric'                  => 'Баланс должен быть числом.',
+            'overdue_debt.numeric'                     => 'Просроченная задолженность должна быть числом.',
+            'overdue_debt.min'                         => 'Просроченная задолженность не может быть отрицательной.',
+            'overdue_details.*.shipment_uuid.required' => 'UUID реализации обязателен.',
+            'overdue_details.*.amount.required'        => 'Сумма просрочки обязательна.',
+            'overdue_details.*.amount.min'             => 'Сумма просрочки не может быть отрицательной.',
+            'overdue_details.*.due_date.required'      => 'Дата оплаты обязательна.',
+            'overdue_details.*.due_date.date'          => 'Неверный формат даты оплаты.',
+        ]);
+
+        DB::transaction(function () use ($validated, $contractorBalance) {
+            $contractorBalance->update([
+                'user_id'                => $validated['user_id'],
+                'contractor_inn'         => $validated['contractor_inn'],
+                'contractor_uuid'        => $validated['contractor_uuid'] ?? null,
+                'current_balance'        => $validated['current_balance'],
+                'overdue_debt'           => $validated['overdue_debt'] ?? 0,
+                'balance_erp_updated_at' => $validated['balance_erp_updated_at'] ?? null,
+            ]);
+
+            // Полная замена overdue_details
+            $contractorBalance->overdueDetails()->delete();
+            foreach ($validated['overdue_details'] ?? [] as $detail) {
+                $contractorBalance->overdueDetails()->create([
+                    'shipment_uuid' => $detail['shipment_uuid'],
+                    'amount'        => $detail['amount'],
+                    'due_date'      => $detail['due_date'],
+                ]);
+            }
+        });
+
+        return redirect()
+            ->route('admin.contractor-balances.show', $contractorBalance)
+            ->with('success', 'Баланс контрагента успешно обновлён');
     }
 
     public function destroy(ContractorBalance $contractorBalance)
@@ -88,9 +222,9 @@ class ContractorBalanceController extends Controller
 
         $balances = $query->limit(20)->get()->map(function ($balance) {
             return [
-                'id'             => $balance->id,
-                'name'           => $balance->user->full_name . ' (' . $balance->contractor_inn . ')',
-                'contractor_inn' => $balance->contractor_inn,
+                'id'              => $balance->id,
+                'name'            => $balance->user->full_name . ' (' . $balance->contractor_inn . ')',
+                'contractor_inn'  => $balance->contractor_inn,
                 'current_balance' => $balance->current_balance,
             ];
         });
