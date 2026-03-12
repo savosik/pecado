@@ -160,15 +160,12 @@ jobs:
     steps:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
-        with:
-          path: /srv/pecado-deploy-tmp
-          clean: true
 
       - name: "📥 Download frontend build"
         uses: actions/download-artifact@v4
         with:
           name: frontend-build
-          path: /srv/pecado-deploy-tmp/public/build
+          path: public/build
 
       - name: "📤 Sync code to production dir"
         run: |
@@ -182,8 +179,7 @@ jobs:
             --exclude='storage/framework/cache' \
             --exclude='storage/framework/sessions' \
             --exclude='storage/framework/views' \
-            /srv/pecado-deploy-tmp/ /srv/pecado/
-          rm -rf /srv/pecado-deploy-tmp
+            ./ /srv/pecado/
 
       - name: "🐳 Deploy"
         run: |
