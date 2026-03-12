@@ -34,6 +34,8 @@ class UpdateCurrencyRates extends Command
 
             // ЦБ РФ возвращает XML в windows-1251 — конвертируем в UTF-8
             $body = mb_convert_encoding($response->body(), 'UTF-8', 'Windows-1251');
+            // Заменяем объявление кодировки в XML header (иначе simplexml конфликт)
+            $body = preg_replace('/encoding=["\']windows-1251["\']/i', 'encoding="UTF-8"', $body);
 
             $xml = simplexml_load_string($body);
             if ($xml === false) {
