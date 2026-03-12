@@ -202,9 +202,8 @@ jobs:
           echo "==> [4/5] Перезапуск очередей..."
           sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
-          echo "==> [5/5] Graceful reload FPM..."
-          sg docker -c 'docker compose exec -T app kill -USR2 1'
-          sg docker -c 'docker compose restart worker'
+          echo "==> [5/5] Перезагрузка PHP-FPM и workers..."
+          sg docker -c 'docker compose restart app worker'
 
           echo ""
           echo "✅ Деплой завершён успешно!"
