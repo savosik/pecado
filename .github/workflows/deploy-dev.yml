@@ -186,23 +186,26 @@ jobs:
           set -euo pipefail
           cd /srv/pecado
 
-          echo "==> [1/5] Установка PHP зависимостей..."
-          sg docker -c 'docker compose exec -T app composer install --no-interaction --prefer-dist --optimize-autoloader'
+          echo "==> [1/6] Установка PHP зависимостей..."
+          sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
 
-          echo "==> [2/5] Очистка и прогрев кешей Laravel..."
+          echo "==> [2/6] Очистка и прогрев кешей Laravel..."
           sg docker -c 'docker compose exec -T app php artisan optimize:clear'
           sg docker -c 'docker compose exec -T app php artisan config:cache'
           sg docker -c 'docker compose exec -T app php artisan route:cache'
           sg docker -c 'docker compose exec -T app php artisan view:cache'
           sg docker -c 'docker compose exec -T app php artisan optimize'
 
-          echo "==> [3/5] Выполнение миграций..."
+          echo "==> [3/6] Выполнение миграций..."
           sg docker -c 'docker compose exec -T app php artisan migrate --force'
 
-          echo "==> [4/5] Перезапуск очередей..."
+          echo "==> [4/6] Настройка топологии RabbitMQ..."
+          sg docker -c 'docker compose exec -T app php artisan rabbitmq:setup' || true
+
+          echo "==> [5/6] Перезапуск очередей..."
           sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
-          echo "==> [5/5] Перезагрузка PHP-FPM и workers..."
+          echo "==> [6/6] Перезагрузка PHP-FPM и workers..."
           sg docker -c 'docker compose restart app worker'
 
           echo ""
