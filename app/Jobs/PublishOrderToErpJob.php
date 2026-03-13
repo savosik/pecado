@@ -2,13 +2,13 @@
 
 namespace App\Jobs;
 
+use App\Services\ErpPublisher;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Queue;
 
 class PublishOrderToErpJob implements ShouldQueue
 {
@@ -17,26 +17,20 @@ class PublishOrderToErpJob implements ShouldQueue
     public int $tries = 3;
     public int $backoff = 10;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(public array $payload)
     {
         //
     }
 
     /**
-     * Execute the job.
+     * Публикует order.created напрямую через AMQP в site.events exchange.
      */
-    public function handle(): void
+    public function handle(ErpPublisher $publisher): void
     {
         try {
-            Queue::connection('rabbitmq')->pushRaw(
-                json_encode($this->payload),
-                'erp_out.orders'
-            );
+            $publisher->publish('order.created', $this->payload);
         } catch (\Exception $e) {
-            Log::error('Failed to publish order to ERP: ' . $e->getMessage(), [
+            Log::error('Не удалось опубликовать order.created в ERP: ' . $e->getMessage(), [
                 'payload' => $this->payload,
             ]);
             throw $e;
