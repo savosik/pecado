@@ -75,9 +75,9 @@ class RabbitMQStatus extends Command
     private function fetchQueues(): array
     {
         $host = config('queue.connections.rabbitmq.hosts.0.host', 'rabbitmq');
-        $user = env('RABBITMQ_MANAGEMENT_USER', config('queue.connections.rabbitmq.hosts.0.user', 'guest'));
-        $password = env('RABBITMQ_MANAGEMENT_PASSWORD', config('queue.connections.rabbitmq.hosts.0.password', 'guest'));
-        $port = env('RABBITMQ_MANAGEMENT_PORT', 15672);
+        $user = config('queue.connections.rabbitmq.management.user', 'guest');
+        $password = config('queue.connections.rabbitmq.management.password', 'guest');
+        $port = config('queue.connections.rabbitmq.management.port', 15672);
 
         try {
             $response = Http::withBasicAuth($user, $password)

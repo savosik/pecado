@@ -70,6 +70,12 @@ return [
                 ],
             ],
             'worker' => env('RABBITMQ_WORKER', 'default'),
+            // Management HTTP API (может отличаться от AMQP-кредов)
+            'management' => [
+                'user' => env('RABBITMQ_MANAGEMENT_USER', env('RABBITMQ_USER', 'guest')),
+                'password' => env('RABBITMQ_MANAGEMENT_PASSWORD', env('RABBITMQ_PASSWORD', 'guest')),
+                'port' => env('RABBITMQ_MANAGEMENT_PORT', 15672),
+            ],
         ],
 
         'rabbitmq-erp-incoming' => [

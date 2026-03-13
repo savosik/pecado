@@ -106,9 +106,9 @@ class ErpBusController extends AdminController
     private function fetchQueuesFromApi(): array
     {
         $host = config('queue.connections.rabbitmq.hosts.0.host', 'rabbitmq');
-        $mgmtUser = env('RABBITMQ_MANAGEMENT_USER', config('queue.connections.rabbitmq.hosts.0.user', 'guest'));
-        $mgmtPassword = env('RABBITMQ_MANAGEMENT_PASSWORD', config('queue.connections.rabbitmq.hosts.0.password', 'guest'));
-        $mgmtPort = env('RABBITMQ_MANAGEMENT_PORT', 15672);
+        $mgmtUser = config('queue.connections.rabbitmq.management.user', 'guest');
+        $mgmtPassword = config('queue.connections.rabbitmq.management.password', 'guest');
+        $mgmtPort = config('queue.connections.rabbitmq.management.port', 15672);
 
         try {
             $response = Http::withBasicAuth($mgmtUser, $mgmtPassword)
