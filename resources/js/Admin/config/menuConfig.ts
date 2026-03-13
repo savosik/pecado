@@ -37,6 +37,7 @@ import {
     LuImagePlay,
     LuSettings,
     LuDownload,
+    LuRadio,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -150,6 +151,7 @@ export const menuConfig: MenuGroup[] = [
         title: "Система",
         icon: LuSettings,
         items: [
+            { label: "Шина ERP", icon: LuRadio, path: "/admin/erp-bus" },
             { label: "Медиа", icon: LuImagePlay, path: "/admin/media" },
             { label: "Настройки", icon: LuSettings, path: "/admin/settings" },
         ],

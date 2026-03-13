@@ -225,4 +225,11 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // FAQ
     Route::get('/faqs/search', [\App\Http\Controllers\Admin\FaqController::class, 'search'])->name('faqs.search');
     Route::resource('faqs', \App\Http\Controllers\Admin\FaqController::class);
+
+    // --------------------
+    // Система (System)
+    // --------------------
+
+    // Шина ERP — диагностика RabbitMQ
+    Route::get('/erp-bus', [\App\Http\Controllers\Admin\ErpBusController::class, 'index'])->name('erp-bus.index');
 });
