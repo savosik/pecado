@@ -170,7 +170,10 @@ jobs:
       - name: "🔧 Fix Docker file ownership"
         run: |
           # Docker создаёт файлы от root — rsync не может их перезаписать
-          sg docker -c 'docker compose exec -T app chown -R 1000:1000 /var/www/public/build/ 2>/dev/null' || true
+          # Используем docker run для chown на хостовой FS через bind mount
+          CURRENT_UID=$(id -u)
+          CURRENT_GID=$(id -g)
+          sg docker -c "docker run --rm -v /srv/pecado/public/build:/build alpine chown -R ${CURRENT_UID}:${CURRENT_GID} /build" 2>/dev/null || true
 
       - name: "📤 Sync code to production dir"
         run: |
