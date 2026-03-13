@@ -113,6 +113,9 @@ jobs:
       - name: "🗃️ Run migrations"
         run: php artisan migrate --force
 
+      - name: "🐰 Setup RabbitMQ topology"
+        run: php artisan rabbitmq:setup
+
       - name: "✅ Run tests"
         run: php artisan test
 
