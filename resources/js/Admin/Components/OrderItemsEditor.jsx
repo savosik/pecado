@@ -126,7 +126,7 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
     };
 
     // Подсчёт общей суммы
-    const totalAmount = value.reduce((sum, item) => sum + (item.subtotal || 0), 0);
+    const totalAmount = value.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
 
     // Global error for the items array itself (e.g. required|min:1)
     const itemsError = errors.items;
@@ -201,7 +201,7 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
                                                     <Input
                                                         type="number"
                                                         step="0.01"
-                                                        value={item.price}
+                                                        value={Number(item.price) || 0}
                                                         onChange={(e) => handleUpdatePrice(index, e.target.value)}
                                                         size="sm"
                                                         invalid={!!priceError}
