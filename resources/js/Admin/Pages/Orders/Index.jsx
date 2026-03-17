@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { HStack, Badge, Button, Input, Box, VStack } from "@chakra-ui/react";
+import { HStack, Badge, Button, Input, Box, VStack, Text } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuPlus, LuFilter, LuX } from "react-icons/lu";
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
@@ -143,11 +143,11 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
             ),
         },
         { label: "ID", key: "id", sortable: true },
-        { label: "UUID", key: "uuid", sortable: true, render: (value) => value?.substring(0, 8) + "..." },
+        { label: "UUID", key: "uuid", sortable: true, render: (value) => value ? value.substring(0, 8) + "..." : "—" },
         {
             label: "Пользователь",
             key: "user",
-            render: (_, order) => order.user?.full_name || order.user?.email || "—",
+            render: (_, order) => order.user?.name || order.user?.email || "—",
         },
         {
             label: "Компания",
