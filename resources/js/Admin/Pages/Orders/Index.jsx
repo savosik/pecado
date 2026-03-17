@@ -176,7 +176,7 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
             sortable: true,
             render: (_, order) => (
                 <Text fontSize="sm" color="gray.600">
-                    {order.created_at ? new Date(order.created_at).toLocaleString('ru-RU') : '—'}
+                    {order.created_at || '—'}
                 </Text>
             ),
         },
