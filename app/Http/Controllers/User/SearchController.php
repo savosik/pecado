@@ -114,11 +114,15 @@ class SearchController extends Controller
             'q.min'      => 'Минимум 2 символа для поиска.',
         ]);
 
-        $products = Product::search($validated['q'])
-            ->query(fn ($q) => $q->with(['brand', 'media']))
-            ->take(8)
-            ->get()
-            ->map(fn (Product $product) => $this->formatProductCompact($product));
+        try {
+            $products = Product::search($validated['q'])
+                ->query(fn ($q) => $q->with(['brand', 'media']))
+                ->take(8)
+                ->get()
+                ->map(fn (Product $product) => $this->formatProductCompact($product));
+        } catch (\Throwable) {
+            $products = collect();
+        }
 
         return response()->json($products);
     }
@@ -184,106 +188,127 @@ class SearchController extends Controller
         if ($searchAll || $type === 'products') {
             $perPage = $limit ?? 20;
 
-            $paginated = Product::search($query)
-                ->query(function ($q) {
-                    $q->select('products.*');
-                    $q->with(ProductQueryService::productEagerLoads());
-                    ProductQueryService::withRegionStockSums($q);
-                })
-                ->paginate($perPage, 'page', $page);
+            try {
+                $paginated = Product::search($query)
+                    ->query(function ($q) {
+                        $q->select('products.*');
+                        $q->with(ProductQueryService::productEagerLoads());
+                        ProductQueryService::withRegionStockSums($q);
+                    })
+                    ->paginate($perPage, 'page', $page);
 
-            $products = $paginated->getCollection();
+                $products = $paginated->getCollection();
 
-            // Фильтрация по наличию (если не include_unavailable)
-            if (! $includeUnavailable) {
-                $products = $products->filter(function (Product $product) {
-                    return ($product->primary_stock ?? 0) > 0;
-                })->values();
+                // Фильтрация по наличию (если не include_unavailable)
+                if (! $includeUnavailable) {
+                    $products = $products->filter(function (Product $product) {
+                        return ($product->primary_stock ?? 0) > 0;
+                    })->values();
+                }
+
+                // Преобразование через ProductQueryService (полный формат, как в каталоге)
+                $productArray = $products
+                    ->map(fn (Product $product) => ProductQueryService::productToArray($product))
+                    ->values()
+                    ->toArray();
+
+                // Обогащение скидками и конвертация валют
+                $productArray = ProductQueryService::enrichProductsWithDiscounts($productArray);
+                $productArray = ProductQueryService::convertProductsPrices($productArray);
+
+                $results['products'] = $productArray;
+
+                // Мета-данные пагинации
+                $results['_products_meta'] = [
+                    'current_page' => $paginated->currentPage(),
+                    'last_page'    => $paginated->lastPage(),
+                    'per_page'     => $paginated->perPage(),
+                    'total'        => $paginated->total(),
+                    'from'         => $paginated->firstItem(),
+                    'to'           => $paginated->lastItem(),
+                ];
+            } catch (\Throwable) {
+                $results['products']      = [];
+                $results['_products_meta'] = null;
             }
-
-            // Преобразование через ProductQueryService (полный формат, как в каталоге)
-            $productArray = $products
-                ->map(fn (Product $product) => ProductQueryService::productToArray($product))
-                ->values()
-                ->toArray();
-
-            // Обогащение скидками и конвертация валют
-            $productArray = ProductQueryService::enrichProductsWithDiscounts($productArray);
-            $productArray = ProductQueryService::convertProductsPrices($productArray);
-
-            $results['products'] = $productArray;
-
-            // Мета-данные пагинации
-            $results['_products_meta'] = [
-                'current_page' => $paginated->currentPage(),
-                'last_page'    => $paginated->lastPage(),
-                'per_page'     => $paginated->perPage(),
-                'total'        => $paginated->total(),
-                'from'         => $paginated->firstItem(),
-                'to'           => $paginated->lastItem(),
-            ];
         }
 
         // ── Категории ─────────────────────────────────────────────
         if ($searchAll || $type === 'categories') {
             $categoryLimit = $limit ?? 5;
 
-            $results['categories'] = Category::search($query)
-                ->take($categoryLimit)
-                ->get()
-                ->map(fn (Category $category) => [
-                    'id'   => $category->id,
-                    'name' => $category->name,
-                    'slug' => $category->slug,
-                ])->toArray();
+            try {
+                $results['categories'] = Category::search($query)
+                    ->take($categoryLimit)
+                    ->get()
+                    ->map(fn (Category $category) => [
+                        'id'   => $category->id,
+                        'name' => $category->name,
+                        'slug' => $category->slug,
+                    ])->toArray();
+            } catch (\Throwable) {
+                $results['categories'] = [];
+            }
         }
 
         // ── Бренды ────────────────────────────────────────────────
         if ($searchAll || $type === 'brands') {
             $brandLimit = $limit ?? 5;
 
-            $results['brands'] = Brand::search($query)
-                ->take($brandLimit)
-                ->get()
-                ->map(fn (Brand $brand) => [
-                    'id'   => $brand->id,
-                    'name' => $brand->name,
-                    'slug' => $brand->slug,
-                ])->toArray();
+            try {
+                $results['brands'] = Brand::search($query)
+                    ->take($brandLimit)
+                    ->get()
+                    ->map(fn (Brand $brand) => [
+                        'id'   => $brand->id,
+                        'name' => $brand->name,
+                        'slug' => $brand->slug,
+                    ])->toArray();
+            } catch (\Throwable) {
+                $results['brands'] = [];
+            }
         }
 
         // ── Статьи и Новости ──────────────────────────────────────
         if ($searchAll || $type === 'articles') {
             $contentLimit = $limit ?? 5;
 
-            $articles = Article::search($query)
-                ->query(fn ($q) => $q->published())
-                ->take($contentLimit)
-                ->get()
-                ->map(fn (Article $article) => [
-                    'id'           => $article->id,
-                    'title'        => $article->title,
-                    'slug'         => $article->slug,
-                    'excerpt'      => $article->short_description,
-                    'image_url'    => $article->getFirstMediaUrl('cover', 'thumb') ?: $article->getFirstMediaUrl('cover'),
-                    'published_at' => $article->published_at?->format('d.m.Y'),
-                    'type'         => 'article',
-                    'type_label'   => 'Статья',
-                ])->toArray();
+            try {
+                $articles = Article::search($query)
+                    ->query(fn ($q) => $q->published())
+                    ->take($contentLimit)
+                    ->get()
+                    ->map(fn (Article $article) => [
+                        'id'           => $article->id,
+                        'title'        => $article->title,
+                        'slug'         => $article->slug,
+                        'excerpt'      => $article->short_description,
+                        'image_url'    => $article->getFirstMediaUrl('cover', 'thumb') ?: $article->getFirstMediaUrl('cover'),
+                        'published_at' => $article->published_at?->format('d.m.Y'),
+                        'type'         => 'article',
+                        'type_label'   => 'Статья',
+                    ])->toArray();
+            } catch (\Throwable) {
+                $articles = [];
+            }
 
-            $news = News::search($query)
-                ->query(fn ($q) => $q->published())
-                ->take($contentLimit)
-                ->get()
-                ->map(fn (News $newsItem) => [
-                    'id'           => $newsItem->id,
-                    'title'        => $newsItem->title,
-                    'slug'         => $newsItem->slug,
-                    'excerpt'      => $this->truncateText($newsItem->detailed_description),
-                    'published_at' => $newsItem->published_at?->format('d.m.Y'),
-                    'type'         => 'news',
-                    'type_label'   => 'Новость',
-                ])->toArray();
+            try {
+                $news = News::search($query)
+                    ->query(fn ($q) => $q->published())
+                    ->take($contentLimit)
+                    ->get()
+                    ->map(fn (News $newsItem) => [
+                        'id'           => $newsItem->id,
+                        'title'        => $newsItem->title,
+                        'slug'         => $newsItem->slug,
+                        'excerpt'      => $this->truncateText($newsItem->detailed_description),
+                        'published_at' => $newsItem->published_at?->format('d.m.Y'),
+                        'type'         => 'news',
+                        'type_label'   => 'Новость',
+                    ])->toArray();
+            } catch (\Throwable) {
+                $news = [];
+            }
 
             $results['articles'] = $articles;
             $results['news']     = $news;
