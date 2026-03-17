@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\ProductExport;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ProductExportSeeder extends Seeder
 {
@@ -155,6 +156,9 @@ class ProductExportSeeder extends Seeder
                     'fields' => $profile['fields'],
                     'filters' => $profile['filters'],
                     'is_active' => true,
+                    // hash генерируется вручную, т.к. DatabaseSeeder использует
+                    // WithoutModelEvents и boot()-событие creating не срабатывает
+                    'hash' => hash('sha256', $adminUser->id . $profile['name'] . Str::random(32)),
                 ]
             );
         }

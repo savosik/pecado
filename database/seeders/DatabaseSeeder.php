@@ -25,12 +25,14 @@ class DatabaseSeeder extends Seeder
             ProductSelectionSeeder::class,
         ]);
 
-        // Создание администратора
-        User::create([
-            'name' => 'Admin',
-            'email' => 'admin@pecado.test',
-            'password' => 'password', // будет автоматически хешировано
-            'is_admin' => true,
-        ]);
+        // Создание администратора (DEV_SERVER_CREDENTIALS.md)
+        User::updateOrCreate(
+            ['email' => 'admin@pecado.ru'],
+            [
+                'name'     => 'Admin',
+                'password' => 'Admin2024!',
+                'is_admin' => true,
+            ]
+        );
     }
 }
