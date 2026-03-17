@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('number')->nullable()->unique();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('company_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('company_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('delivery_address_id')->nullable()->constrained('delivery_addresses')->nullOnDelete();
             $table->foreignId('cart_id')->nullable()->constrained()->onDelete('set null');
             $table->string('status')->default(\App\Enums\OrderStatus::PENDING->value);

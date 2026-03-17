@@ -11,7 +11,8 @@ class HandleShipmentCreated
 {
     /**
      * Обработка события shipment.created из 1С.
-     * Создаёт или обновляет реализацию по UUID.
+     * v3: отправляется при первом проведении реализации.
+     * Создаёт или обновляет реализацию по UUID (идемпотентно).
      */
     public function handle(array $payload): void
     {

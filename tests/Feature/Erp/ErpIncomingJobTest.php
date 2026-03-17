@@ -2119,9 +2119,27 @@ class ErpIncomingJobTest extends TestCase
             'uuid'       => 'prod-attrs-001',
             'name'       => 'Товар с атрибутами',
             'attributes' => [
-                'weight'   => '150г',
-                'color'    => 'розовый',
-                'material' => 'силикон',
+                [
+                    'property_uuid'  => 'prop-weight-uuid',
+                    'property_label' => 'weight',
+                    'value_type'     => 'string',
+                    'value_uuid'     => null,
+                    'value_label'    => '150г',
+                ],
+                [
+                    'property_uuid'  => 'prop-color-uuid',
+                    'property_label' => 'color',
+                    'value_type'     => 'string',
+                    'value_uuid'     => 'val-pink-uuid',
+                    'value_label'    => 'розовый',
+                ],
+                [
+                    'property_uuid'  => 'prop-material-uuid',
+                    'property_label' => 'material',
+                    'value_type'     => 'string',
+                    'value_uuid'     => null,
+                    'value_label'    => 'силикон',
+                ],
             ],
             'message_id' => 'msg-prod-attrs-001',
         ]);

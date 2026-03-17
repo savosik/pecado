@@ -10,6 +10,7 @@ use App\Services\Erp\Handlers\HandleDiscountCreated;
 use App\Services\Erp\Handlers\HandleDiscountDeleted;
 use App\Services\Erp\Handlers\HandleDiscountUpdated;
 use App\Services\Erp\Handlers\HandleExchangeRateUpdated;
+use App\Services\Erp\Handlers\HandleOrderCreated;
 use App\Services\Erp\Handlers\HandleOrderDeleted;
 use App\Services\Erp\Handlers\HandleOrderUpdated;
 use App\Services\Erp\Handlers\HandlePartnerDeleted;
@@ -59,6 +60,7 @@ class ErpIncomingJob extends BaseJob
         // US-05
         'stock.updated'             => HandleStockUpdated::class,
         // US-07
+        'order.created'             => HandleOrderCreated::class, // v3: заказ от менеджера (1С → Сайт)
         'order.updated'             => HandleOrderUpdated::class,
         'order.deleted'             => HandleOrderDeleted::class,
         // US-08 (отложено, обработчики сохранены)

@@ -10,6 +10,7 @@ class HandleShipmentUpdated
 {
     /**
      * Обработка события shipment.updated из 1С.
+     * v3: отправляется при перепроведении или изменении реализации.
      * Обновляет статус реализации и позиции по UUID.
      */
     public function handle(array $payload): void

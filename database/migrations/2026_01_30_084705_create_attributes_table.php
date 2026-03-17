@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('attributes', function (Blueprint $table) {
             $table->id();
+            $table->string('external_id')->nullable()->unique(); // property_uuid из 1С
             $table->string('name');
             $table->string('slug')->unique();
             $table->string('type')->default('string'); // string, number, boolean, select

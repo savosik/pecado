@@ -2,16 +2,206 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use App\Models\ProductBarcode;
+use App\Models\ProductModel;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+
 /**
- * US-13: Обработка события product.updated из 1С.
- * Делегирует в HandleProductCreated — логика upsert идентична.
+ * US-13 v3: Обработка события product.updated из 1С.
+ * Частичное обновление — обновляет только поля, переданные в payload.
+ * Не затрагивает поля, отсутствующие в сообщении.
+ * base_price не обновляется (используйте price.updated).
  */
 class HandleProductUpdated
 {
-    public function __construct(private readonly HandleProductCreated $inner) {}
-
     public function handle(array $payload): void
     {
-        $this->inner->handle($payload);
+        $uuid = $payload['uuid'] ?? null;
+
+        if (!$uuid) {
+            Log::warning('product.updated: отсутствует обязательное поле uuid', [
+                'payload' => $payload,
+            ]);
+            return;
+        }
+
+        $product = Product::where('external_id', $uuid)->first();
+
+        if (!$product) {
+            Log::warning('product.updated: товар не найден', ['uuid' => $uuid]);
+            return;
+        }
+
+        DB::transaction(function () use ($product, $payload, $uuid) {
+            $updateData = [];
+
+            // --- Название ---
+            if (array_key_exists('name', $payload)) {
+                $updateData['name'] = $payload['name'];
+            }
+
+            // --- Код ---
+            if (array_key_exists('code', $payload)) {
+                $updateData['code'] = $payload['code'];
+            }
+
+            // --- Артикул ---
+            if (array_key_exists('sku', $payload)) {
+                $updateData['sku'] = $payload['sku'];
+            }
+
+            // --- Описание ---
+            if (array_key_exists('description', $payload)) {
+                $updateData['description'] = $payload['description'];
+            }
+
+            // --- Категория ---
+            if (array_key_exists('category_uuid', $payload)) {
+                $categoryUuid = $payload['category_uuid'];
+                if ($categoryUuid) {
+                    $category = Category::where('uuid', $categoryUuid)->first();
+                    $updateData['category_id'] = $category?->id;
+                } else {
+                    $updateData['category_id'] = null;
+                }
+            }
+
+            // --- Бренд ---
+            if (array_key_exists('brand', $payload)) {
+                $brandName = $payload['brand'];
+                if ($brandName) {
+                    $brand = Brand::where('name', $brandName)->first();
+                    if (!$brand) {
+                        $baseSlug = Str::slug($brandName) ?: 'brand-' . Str::uuid();
+                        $slug = $baseSlug;
+                        $counter = 1;
+                        while (Brand::where('slug', $slug)->exists()) {
+                            $slug = $baseSlug . '-' . $counter++;
+                        }
+                        $brand = Brand::create(['name' => $brandName, 'slug' => $slug]);
+                    }
+                    $updateData['brand_id'] = $brand->id;
+                } else {
+                    $updateData['brand_id'] = null;
+                }
+            }
+
+            // --- Модель товара ---
+            if (array_key_exists('model', $payload)) {
+                $modelData = $payload['model'];
+                if (!empty($modelData['uuid'])) {
+                    $productModel = ProductModel::updateOrCreate(
+                        ['external_id' => $modelData['uuid']],
+                        ['name' => $modelData['name'] ?? $modelData['uuid']]
+                    );
+                    $updateData['model_id'] = $productModel->id;
+                } else {
+                    $updateData['model_id'] = null;
+                }
+            }
+
+            // Применяем обновление полей (без base_price!)
+            if (!empty($updateData)) {
+                $product->update($updateData);
+            }
+
+            // --- Штрих-коды (полная замена, только если поле передано) ---
+            if (array_key_exists('barcodes', $payload)) {
+                $barcodes = $payload['barcodes'] ?? [];
+                $product->barcodes()->delete();
+                foreach ($barcodes as $barcodeValue) {
+                    $barcodeValue = trim((string) $barcodeValue);
+                    if ($barcodeValue !== '') {
+                        ProductBarcode::create([
+                            'product_id' => $product->id,
+                            'barcode'    => $barcodeValue,
+                        ]);
+                    }
+                }
+            }
+
+            // --- Атрибуты (v3 формат, полная замена, только если поле передано) ---
+            if (array_key_exists('attributes', $payload)) {
+                $attributes = $payload['attributes'] ?? [];
+                $product->attributeValues()->delete();
+
+                foreach ($attributes as $attrData) {
+                    if (!is_array($attrData)) {
+                        continue;
+                    }
+
+                    $propertyUuid  = $attrData['property_uuid']  ?? null;
+                    $propertyLabel = $attrData['property_label'] ?? null;
+                    $valueType     = $attrData['value_type']     ?? 'string';
+                    $valueUuid     = $attrData['value_uuid']     ?? null;
+                    $valueLabel    = $attrData['value_label']    ?? null;
+
+                    if (!$propertyUuid || !$propertyLabel) {
+                        continue;
+                    }
+
+                    $siteType = match ($valueType) {
+                        'number'    => 'number',
+                        'boolean'   => 'boolean',
+                        'reference' => 'select',
+                        default     => 'string',
+                    };
+
+                    $slug = Str::slug($propertyLabel) ?: 'attr-' . Str::slug($propertyUuid);
+
+                    $attribute = \App\Models\Attribute::updateOrCreate(
+                        ['external_id' => $propertyUuid],
+                        [
+                            'name' => $propertyLabel,
+                            'slug' => $slug,
+                            'type' => $siteType,
+                        ]
+                    );
+
+                    $attributeValueId = null;
+                    if ($valueUuid) {
+                        $attrValue = \App\Models\AttributeValue::updateOrCreate(
+                            ['external_id' => $valueUuid],
+                            [
+                                'attribute_id' => $attribute->id,
+                                'value'        => $valueLabel ?? $valueUuid,
+                            ]
+                        );
+                        $attributeValueId = $attrValue->id;
+                    }
+
+                    $pivotData = [
+                        'attribute_value_id' => $attributeValueId,
+                        'text_value'         => (string) ($valueLabel ?? ''),
+                    ];
+
+                    if ($siteType === 'number' && is_numeric($valueLabel)) {
+                        $pivotData['number_value'] = (float) $valueLabel;
+                    } elseif ($siteType === 'boolean') {
+                        $pivotData['boolean_value'] = filter_var($valueLabel, FILTER_VALIDATE_BOOLEAN);
+                    }
+
+                    \App\Models\ProductAttributeValue::updateOrCreate(
+                        [
+                            'product_id'   => $product->id,
+                            'attribute_id' => $attribute->id,
+                        ],
+                        $pivotData
+                    );
+                }
+            }
+
+            Log::info('product.updated: товар обновлён (частичное)', [
+                'uuid'           => $uuid,
+                'updated_fields' => array_keys($updateData),
+                'has_barcodes'   => array_key_exists('barcodes', $payload),
+                'has_attributes' => array_key_exists('attributes', $payload),
+            ]);
+        });
     }
 }

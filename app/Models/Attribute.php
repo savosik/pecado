@@ -13,6 +13,7 @@ class Attribute extends Model
     use HasFactory;
 
     protected $fillable = [
+        'external_id',
         'name',
         'slug',
         'type',

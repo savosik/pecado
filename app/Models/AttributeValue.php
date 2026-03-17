@@ -11,6 +11,7 @@ class AttributeValue extends Model
     use HasFactory;
 
     protected $fillable = [
+        'external_id',
         'attribute_id',
         'value',
         'sort_order',

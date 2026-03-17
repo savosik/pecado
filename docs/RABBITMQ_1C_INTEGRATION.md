@@ -60,7 +60,7 @@
 | `erp_in.partners` | `partner.*` | Управление партнёрами (деактивация) |
 | `erp_in.prices` | `price.*`, `discount.*`, `exchange_rate.*` | Цены, скидки, курсы валют |
 | `erp_in.stock` | `stock.*` | Остатки товаров по складам |
-| `erp_in.orders` | `order.*` | Обновление/удаление заказов |
+| `erp_in.orders` | `order.*` | Создание (от менеджера), обновление, удаление заказов |
 | `erp_in.returns` | `return.*` | Обновление/удаление возвратов |
 | `erp_in.documents` | `shipment.*` | Реализации (создание, обновление, удаление) |
 | `erp_in.balance` | `balance.*` | Балансы контрагентов |
@@ -266,6 +266,14 @@
 
 ### 6.6 Заказы
 
+#### `order.created` — Создание заказа менеджером (v3)
+
+**Routing key**: `order.created`  
+**Очередь**: `erp_in.orders`  
+**Действие**: Создаёт заказ на сайте, когда менеджер вручную оформляет заказ в 1С. Если контрагент не найден на сайте — заказ всё равно создаётся (контрагент `null`).
+
+> ℹ️ Формат сообщения идентичен `order.created` от сайта (см. раздел [7.1](#71-новый-заказ--ordercreated)). 1С должна генерировать UUID заказа и отправлять его в exchange `erp.events` с routing key `order.created`.
+
 #### `order.updated` — Обновление статуса заказа
 
 **Routing key**: `order.updated`  
@@ -352,11 +360,13 @@
 
 ### 6.8 Реализации (Shipments)
 
-#### `shipment.created` — Создание реализации
+#### `shipment.created` — Создание реализации (первое проведение)
 
 **Routing key**: `shipment.created`  
 **Очередь**: `erp_in.documents`  
-**Действие**: Создаёт или обновляет реализацию. Привязывает к контрагенту по ИНН.
+**Действие**: Создаёт реализацию при **первом проведении** в 1С. Привязывает к контрагенту по ИНН.
+
+> ℹ️ **v3 уточнение**: `shipment.created` отправляется при **первом проведении** реализации. При перепроведении или изменении используйте `shipment.updated`.
 
 ```json
 {
@@ -399,9 +409,10 @@
 | `items[].vat_rate` | `number` | нет | Ставка НДС (%) |
 | `items[].order_uuid` | `string` | нет | UUID связанного заказа |
 
-#### `shipment.updated` — Обновление реализации
+#### `shipment.updated` — Обновление реализации (перепроведение)
 
 **Routing key**: `shipment.updated`  
+**Действие**: Обновляет реализацию при **перепроведении** или изменении в 1С.  
 Формат аналогичен `shipment.created`.
 
 #### `shipment.deleted` — Удаление реализации
@@ -590,7 +601,7 @@
 **Очередь**: `erp_in.catalog`  
 **Действие**: Создаёт или обновляет товар с привязкой к категории, бренду, модели. Синхронизирует штрих-коды и атрибуты. Идемпотентно.
 
-> ⚠️ **Важно**: Цена товара (`base_price`) **не перезаписывается** через `product.created`. Для обновления цены используйте событие `price.updated`.
+> ⚠️ **Важно**: Цена товара (`base_price`) **не перезаписывается** через `product.created` или `product.updated`. Для обновления цены используйте событие `price.updated`.
 
 ```json
 {
@@ -608,11 +619,29 @@
     "uuid": "uuid-модели-в-1с",
     "name": "XYZ Pro"
   },
-  "attributes": {
-    "Цвет": "Чёрный",
-    "Размер": "128GB",
-    "Материал": "Алюминий"
-  }
+  "attributes": [
+    {
+      "property_uuid": "uuid-свойства-цвет",
+      "property_label": "Цвет",
+      "value_type": "string",
+      "value_uuid": "uuid-значения-чёрный",
+      "value_label": "Чёрный"
+    },
+    {
+      "property_uuid": "uuid-свойства-размер",
+      "property_label": "Размер",
+      "value_type": "string",
+      "value_uuid": "uuid-значения-128gb",
+      "value_label": "128GB"
+    },
+    {
+      "property_uuid": "uuid-свойства-материал",
+      "property_label": "Материал",
+      "value_type": "string",
+      "value_uuid": null,
+      "value_label": "Алюминий"
+    }
+  ]
 }
 ```
 
@@ -626,12 +655,40 @@
 | `category_uuid` | `string` | нет | UUID категории (создаётся через `category.created`) |
 | `brand` | `string` | нет | Название бренда (будет найден или создан автоматически) |
 | `barcodes` | `string[]` | нет | Массив штрих-кодов (полная замена при обновлении) |
+| `model` | `object\|null` | нет | Модель товара. Nullable. Если в 1С значение строковое — маппится в объект `{ uuid, name }` |
 | `model.uuid` | `string` | нет | UUID модели товара в 1С |
 | `model.name` | `string` | нет | Название модели |
-| `attributes` | `object` | нет | Пары «Название атрибута: Значение» в свободном формате |
+| `attributes` | `array` | нет | Массив атрибутов товара (см. формат ниже) |
+| `attributes[].property_uuid` | `string` | ✅* | UUID свойства в 1С |
+| `attributes[].property_label` | `string` | ✅* | Читаемое название свойства (для отображения) |
+| `attributes[].value_type` | `string` | ✅* | Тип значения: `string`, `number`, `boolean`, `reference` |
+| `attributes[].value_uuid` | `string\|null` | нет | UUID значения в 1С (`null` для скалярных типов) |
+| `attributes[].value_label` | `string` | ✅* | Читаемое представление значения |
 
-#### `product.updated` — Обновление товара  
-Формат аналогичен `product.created`.
+#### `product.updated` — Частичное обновление товара (v3)
+
+**Routing key**: `product.updated`  
+**Действие**: Обновляет **только переданные поля** товара (частичное обновление). Сайт мержит полученные поля с существующими, не затирая остальные. Обязательны только `event`, `message_id`, `uuid`.
+
+```json
+{
+  "event": "product.updated",
+  "message_id": "msg-prod-upd-001",
+  "uuid": "uuid-товара-в-1с",
+  "name": "Смартфон XYZ Pro Max",
+  "attributes": [
+    {
+      "property_uuid": "uuid-свойства-цвет",
+      "property_label": "Цвет",
+      "value_type": "string",
+      "value_uuid": "uuid-значения-белый",
+      "value_label": "Белый"
+    }
+  ]
+}
+```
+
+> ⚠️ **Важно**: В отличие от `product.created`, `product.updated` выполняет **частичное обновление** — передавайте только те поля, которые изменились. Не переданные поля остаются без изменений.
 
 ---
 
@@ -796,7 +853,7 @@
 | `erp_in.stock` | `erp_dlq.stock` | 3 | 5 сек |
 | `erp_in.orders` | `erp_dlq.orders` | 5 | 15 сек |
 | `erp_in.returns` | `erp_dlq.returns` | 3 | 15 сек |
-| `erp_in.documents` | `erp_dlq.documents` | 3 | 15 сек |
+| `erp_in.documents` | `erp_dlq.documents` | 3 | 30 сек |
 | `erp_in.balance` | `erp_dlq.balance` | 3 | 30 сек |
 | `erp_in.segments` | `erp_dlq.segments` | 3 | 15 сек |
 | `erp_in.catalog` | `erp_dlq.catalog` | 3 | 15 сек |
@@ -958,7 +1015,25 @@ curl -u pecado_admin:SecurePass2024! \
   "http://10.2.2.100:15672/api/exchanges/%2F/erp.events/publish" \
   -d '{
     "routing_key": "product.created",
-    "payload": "{\"event\":\"product.created\",\"message_id\":\"msg-test-prod-001\",\"uuid\":\"uuid-товара\",\"name\":\"Тестовый товар\",\"code\":\"ТСТ-001\",\"sku\":\"ART001\",\"category_uuid\":\"uuid-категории\",\"brand\":\"TestBrand\",\"barcodes\":[\"4607001234567\"],\"attributes\":{\"Цвет\":\"Красный\"}}",
+    "payload": "{\"event\":\"product.created\",\"message_id\":\"msg-test-prod-001\",\"uuid\":\"uuid-товара\",\"name\":\"Тестовый товар\",\"code\":\"ТСТ-001\",\"sku\":\"ART001\",\"category_uuid\":\"uuid-категории\",\"brand\":\"TestBrand\",\"barcodes\":[\"4607001234567\"],\"attributes\":[{\"property_uuid\":\"uuid-свойства-цвет\",\"property_label\":\"Цвет\",\"value_type\":\"string\",\"value_uuid\":\"uuid-значения-красный\",\"value_label\":\"Красный\"}]}",
+    "payload_encoding": "string",
+    "properties": {
+      "content_type": "application/json",
+      "delivery_mode": 2
+    }
+  }'
+```
+
+#### Публикация сообщения — создание заказа менеджером (order.created от 1С)
+
+```bash
+curl -u pecado_admin:SecurePass2024! \
+  -H "Content-Type: application/json" \
+  -X POST \
+  "http://10.2.2.100:15672/api/exchanges/%2F/erp.events/publish" \
+  -d '{
+    "routing_key": "order.created",
+    "payload": "{\"event\":\"order.created\",\"message_id\":\"msg-test-order-from-erp-001\",\"uuid\":\"uuid-заказа-от-менеджера\",\"number\":\"ORD-2026-0100\",\"date\":\"2026-03-17T14:00:00+03:00\",\"status\":\"pending\",\"type\":\"order\",\"partner_uuid\":\"erp-id-партнёра\",\"warehouse_uuids\":[\"uuid-склада-1\"],\"contractor\":{\"country\":\"RU\",\"name\":\"ООО Тест\",\"tax_id\":\"7710140679\"},\"currency_code\":\"RUB\",\"exchange_rate\":1.0,\"rate_coefficient\":1.0,\"items\":[{\"product_uuid\":\"uuid-товара\",\"quantity\":3,\"price\":1500.00}]}",
     "payload_encoding": "string",
     "properties": {
       "content_type": "application/json",
@@ -1099,6 +1174,7 @@ rabbitmqadmin get queue=erp_out.orders count=1 ackmode=ack_requeue_true
 | `discount.deleted` | `erp_in.prices` | Удаление скидки |
 | `exchange_rate.updated` | `erp_in.prices` | Обновление курса |
 | `stock.updated` | `erp_in.stock` | Обновление остатков |
+| `order.created` | `erp_in.orders` | Создание заказа менеджером (v3) |
 | `order.updated` | `erp_in.orders` | Обновление заказа |
 | `order.deleted` | `erp_in.orders` | Удаление заказа |
 | `return.updated` | `erp_in.returns` | Обновление возврата |

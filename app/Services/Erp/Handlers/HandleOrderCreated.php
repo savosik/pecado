@@ -1,0 +1,155 @@
+<?php
+
+namespace App\Services\Erp\Handlers;
+
+use App\Models\Company;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * US-07 v3: Обработка события order.created из 1С (заказ от менеджера).
+ *
+ * Менеджер создаёт заказ вручную в 1С — данные передаются на сайт.
+ * Если контрагент не найден — создаётся автоматически из данных заказа.
+ * Если товар для позиции не найден — OrderItem создаётся с name, но без product_id.
+ *
+ * Заказ создаётся через Model::withoutEvents() чтобы не публиковать
+ * его обратно в 1С через PublishOrderToErp listener.
+ */
+class HandleOrderCreated
+{
+    public function handle(array $payload): void
+    {
+        $uuid = $payload['uuid'] ?? null;
+
+        if (!$uuid) {
+            Log::warning('HandleOrderCreated: отсутствует обязательное поле uuid', [
+                'payload' => $payload,
+            ]);
+            return;
+        }
+
+        // Идемпотентность: проверяем, что заказ ещё не существует
+        $existingOrder = Order::where('uuid', $uuid)->first();
+        if ($existingOrder) {
+            Log::info('HandleOrderCreated: заказ уже существует, пропускаем', ['uuid' => $uuid]);
+            return;
+        }
+
+        DB::transaction(function () use ($payload, $uuid) {
+            $partnerUuid    = $payload['partner_uuid']    ?? null;
+            $contractorData = $payload['contractor']      ?? null;
+            $items          = $payload['items']           ?? [];
+            $status         = $payload['status']          ?? 'pending';
+            $type           = $payload['type']            ?? 'order';
+
+            // --- Пользователь ---
+            $userId = null;
+            if ($partnerUuid) {
+                $user = User::where('erp_id', $partnerUuid)->first();
+                $userId = $user?->id;
+            }
+
+            // --- Контрагент (компания) ---
+            $companyId = null;
+            if ($contractorData && !empty($contractorData['tax_id'])) {
+                $company = Company::withoutGlobalScopes()
+                    ->where('tax_id', $contractorData['tax_id'])
+                    ->first();
+
+                if (!$company) {
+                    // Авто-создание компании из данных контрагента
+                    $company = Company::withoutEvents(function () use ($contractorData, $userId) {
+                        return Company::create([
+                            'user_id'             => $userId,
+                            'country'             => $contractorData['country'] ?? null,
+                            'name'                => $contractorData['name'] ?? null,
+                            'legal_name'          => $contractorData['legal_name'] ?? $contractorData['name'] ?? null,
+                            'tax_id'              => $contractorData['tax_id'],
+                            'registration_number' => $contractorData['registration_number'] ?? null,
+                            'tax_code'            => $contractorData['tax_code'] ?? null,
+                            'okpo_code'           => $contractorData['okpo_code'] ?? null,
+                            'legal_address'       => $contractorData['legal_address'] ?? null,
+                            'actual_address'      => $contractorData['actual_address'] ?? null,
+                            'phone'               => $contractorData['phone'] ?? null,
+                            'email'               => $contractorData['email'] ?? null,
+                        ]);
+                    });
+
+                    Log::info('HandleOrderCreated: контрагент создан автоматически', [
+                        'tax_id'     => $contractorData['tax_id'],
+                        'company_id' => $company->id,
+                    ]);
+                }
+
+                $companyId = $company->id;
+
+                // Если пользователь не найден по partner_uuid, берём владельца компании
+                if (!$userId && $company->user_id) {
+                    $userId = $company->user_id;
+                }
+            }
+
+            // --- Создание заказа (без диспатча событий — не публикуем обратно в ERP) ---
+            $order = Order::withoutEvents(function () use ($uuid, $payload, $userId, $companyId, $status, $type) {
+                return Order::create([
+                    'uuid'             => $uuid,
+                    'number'           => $payload['number'] ?? null,
+                    'user_id'          => $userId,
+                    'company_id'       => $companyId,
+                    'status'           => $status,
+                    'type'             => $type,
+                    'currency_code'    => $payload['currency_code'] ?? 'RUB',
+                    'exchange_rate'    => $payload['exchange_rate'] ?? 1.0,
+                    'rate_coefficient' => $payload['rate_coefficient'] ?? 1.0,
+                    'total_amount'     => 0,
+                    'comment'          => $payload['comment'] ?? null,
+                ]);
+            });
+
+            // --- Позиции заказа ---
+            $totalAmount = 0;
+
+            foreach ($items as $item) {
+                $productUuid = $item['product_uuid'] ?? null;
+                $product     = $productUuid
+                    ? Product::where('external_id', $productUuid)->first()
+                    : null;
+
+                $quantity = $item['quantity'] ?? 0;
+                $price    = $item['price']    ?? 0;
+                $subtotal = round($quantity * $price, 2);
+
+                // Если товар не найден — сохраняем название (товара может уже не быть)
+                $name = $product
+                    ? $product->name
+                    : ($item['name'] ?? $productUuid ?? 'Неизвестный товар');
+
+                $order->items()->create([
+                    'product_id' => $product?->id,
+                    'name'       => $name,
+                    'quantity'   => $quantity,
+                    'price'      => $price,
+                    'subtotal'   => $subtotal,
+                ]);
+
+                $totalAmount += $subtotal;
+            }
+
+            // Обновляем сумму заказа
+            $order->updateQuietly(['total_amount' => $totalAmount]);
+
+            Log::info('HandleOrderCreated: заказ создан от менеджера', [
+                'uuid'       => $uuid,
+                'number'     => $order->number,
+                'user_id'    => $userId,
+                'company_id' => $companyId,
+                'items_count' => count($items),
+                'total_amount' => $totalAmount,
+            ]);
+        });
+    }
+}

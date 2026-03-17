@@ -119,34 +119,78 @@ class HandleProductCreated
                 }
             }
 
-            // --- Атрибуты (текстовые значения из 1С) ---
-            // Атрибуты хранятся как text_value в product_attribute_values.
-            // Ищем или создаём атрибут по slug (имя атрибута), записываем text_value.
+            // --- Атрибуты (v3: массив структур из 1С) ---
+            // Формат: [{ property_uuid, property_label, value_type, value_uuid, value_label }]
             if (!empty($attributes) && is_array($attributes)) {
-                // Удаляем все старые значения атрибутов товара
                 $product->attributeValues()->delete();
 
-                foreach ($attributes as $attrName => $attrValue) {
-                    if ($attrValue === null || $attrValue === '') {
+                foreach ($attributes as $attrData) {
+                    if (!is_array($attrData)) {
                         continue;
                     }
 
-                    $slug = Str::slug($attrName);
-                    if (!$slug) {
+                    $propertyUuid  = $attrData['property_uuid']  ?? null;
+                    $propertyLabel = $attrData['property_label'] ?? null;
+                    $valueType     = $attrData['value_type']     ?? 'string';
+                    $valueUuid     = $attrData['value_uuid']     ?? null;
+                    $valueLabel    = $attrData['value_label']    ?? null;
+
+                    if (!$propertyUuid || !$propertyLabel) {
                         continue;
                     }
 
-                    $attribute = \App\Models\Attribute::firstOrCreate(
-                        ['slug' => $slug],
-                        ['name' => $attrName, 'type' => 'string']
+                    // Маппинг value_type из 1С в тип атрибута на сайте
+                    $siteType = match ($valueType) {
+                        'number'    => 'number',
+                        'boolean'   => 'boolean',
+                        'reference' => 'select',
+                        default     => 'string',
+                    };
+
+                    $slug = Str::slug($propertyLabel) ?: 'attr-' . Str::slug($propertyUuid);
+
+                    // Найти или создать атрибут по external_id (property_uuid)
+                    $attribute = \App\Models\Attribute::updateOrCreate(
+                        ['external_id' => $propertyUuid],
+                        [
+                            'name' => $propertyLabel,
+                            'slug' => $slug,
+                            'type' => $siteType,
+                        ]
                     );
+
+                    // Найти или создать значение атрибута (если есть value_uuid)
+                    $attributeValueId = null;
+                    if ($valueUuid) {
+                        $attrValue = \App\Models\AttributeValue::updateOrCreate(
+                            ['external_id' => $valueUuid],
+                            [
+                                'attribute_id' => $attribute->id,
+                                'value'        => $valueLabel ?? $valueUuid,
+                            ]
+                        );
+                        $attributeValueId = $attrValue->id;
+                    }
+
+                    // Записываем значение атрибута для товара
+                    $pivotData = [
+                        'attribute_value_id' => $attributeValueId,
+                        'text_value'         => (string) ($valueLabel ?? ''),
+                    ];
+
+                    // Для числовых и булевых типов заполняем соответствующие поля
+                    if ($siteType === 'number' && is_numeric($valueLabel)) {
+                        $pivotData['number_value'] = (float) $valueLabel;
+                    } elseif ($siteType === 'boolean') {
+                        $pivotData['boolean_value'] = filter_var($valueLabel, FILTER_VALIDATE_BOOLEAN);
+                    }
 
                     \App\Models\ProductAttributeValue::updateOrCreate(
                         [
                             'product_id'   => $product->id,
                             'attribute_id' => $attribute->id,
                         ],
-                        ['text_value' => (string) $attrValue]
+                        $pivotData
                     );
                 }
             }
