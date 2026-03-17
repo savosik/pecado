@@ -231,7 +231,7 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
                                                 </VStack>
                                             </Table.Cell>
                                             <Table.Cell>
-                                                <Text fontWeight="medium">{item.subtotal?.toFixed(2)} </Text>
+                                                <Text fontWeight="medium">{Number(item.subtotal || 0).toFixed(2)} </Text>
                                             </Table.Cell>
                                             <Table.Cell>
                                                 <IconButton
