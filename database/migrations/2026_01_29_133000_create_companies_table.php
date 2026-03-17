@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('companies', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->nullable()->constrained()->nullOnDelete();
             $table->enum('country', ['RU', 'BY', 'KZ']);
             $table->string('name'); // Краткое название
             $table->string('legal_name')->nullable(); // Юридическое наименование
