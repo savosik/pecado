@@ -7,6 +7,7 @@ use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\OrderType;
+use App\Events\OrderCreated;
 use App\Models\Cart;
 use App\Models\Company;
 use App\Models\DeliveryAddress;
@@ -117,6 +118,7 @@ class CheckoutService implements CheckoutServiceInterface
                 $childTotal = $this->createOrderItems($childOrder, $inStockItems, $user);
                 $childOrder->update(['total_amount' => $childTotal]);
                 $parentTotal += $childTotal;
+                OrderCreated::dispatch($childOrder);
             }
 
             // Create preorder child order
@@ -128,6 +130,7 @@ class CheckoutService implements CheckoutServiceInterface
                 $childTotal = $this->createOrderItems($childOrder, $preorderItems, $user);
                 $childOrder->update(['total_amount' => $childTotal]);
                 $parentTotal += $childTotal;
+                OrderCreated::dispatch($childOrder);
             }
 
             // Update parent total

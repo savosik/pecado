@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
+use App\Events\OrderCreated;
 use App\Models\Order;
 use App\Models\User;
 use App\Models\Company;
@@ -194,6 +195,9 @@ class OrderController extends AdminController
                     'subtotal' => $item['price'] * $item['quantity'],
                 ]);
             }
+
+            // Диспатчим событие после создания items, чтобы payload содержал позиции
+            OrderCreated::dispatch($order);
 
             DB::commit();
 
