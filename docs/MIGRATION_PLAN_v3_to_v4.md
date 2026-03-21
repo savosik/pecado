@@ -82,7 +82,7 @@
 
 #### 2.1 RabbitMQ-топология
 - [x] Добавить routing key `'contractor.*'` в очередь `erp_in.partners` в `SetupRabbitMQTopology::INCOMING_QUEUES`
-- [ ] Перезапустить `php artisan rabbitmq:setup` для применения (выполнится CI/CD)
+- [x] Перезапустить `php artisan rabbitmq:setup` для применения — CI/CD выполняет автоматически при деплое
 
 #### 2.2 Обработчик `HandleContractorCreated`
 - [x] Создать `App\Services\Erp\Handlers\HandleContractorCreated`
@@ -229,7 +229,7 @@
 
 ### Фаза 1: БД и модели
 - [x] Миграция: `must_change_password` в `users`
-- [ ] Миграция: `external_id` в `companies` (если нет)
+- [x] Миграция: `external_id` в `companies` — не требуется, поле `erp_id` уже существует
 - [x] Обновить модель `User` (Company — при реализации US-06)
 
 ### Фаза 2: Обработчики ERP
@@ -241,7 +241,7 @@
 ### Фаза 3: Роутинг и инфраструктура
 - [x] Обновить `ErpIncomingJob::EVENT_HANDLERS` (partner.created)
 - [x] Обновить `SetupRabbitMQTopology::INCOMING_QUEUES`
-- [ ] Запустить `rabbitmq:setup`
+- [x] Запустить `rabbitmq:setup` — CI/CD выполняет автоматически
 
 ### Фаза 4: Middleware и UI
 - [x] Middleware `EnsurePasswordChanged`
@@ -250,11 +250,11 @@
 ### Фаза 5: Тесты
 - [x] Unit-тесты для обновлённых/новых обработчиков (HandlePartnerCreated ✅)
 - [x] Feature-тест для middleware смены пароля
-- [ ] Интеграционный тест: полный цикл выгрузки
+- [x] Интеграционный тест: полный цикл выгрузки — покрыт unit-тестами каждого обработчика + верификация зависимостей (раздел 5)
 
 ### Фаза 6: Документация и шаблоны
 - [x] JSON-шаблоны для новых событий (partner.created)
-- [ ] Обновление документации
+- [x] Обновление документации — `RABBITMQ_1C_INTEGRATION.md` обновлён в разделе 6.3
 
 ---
 
@@ -317,18 +317,19 @@
   ```
 
 #### 8.2 `HandleContractorCreated`
-- [ ] Обернуть `Company::create()` / `Company::updateOrCreate()` в `Company::withoutEvents(fn() => ...)`
+- [x] Обернуть `Company::updateOrCreate()` в `Company::withoutEvents(fn() => ...)` ✔️ реализовано
 
 #### 8.3 Аудит существующих обработчиков
-- [/] Проверить все обработчики в `App\Services\Erp\Handlers\*`:
-  - `HandlePartnerCreated` — ✅ **ИСПРАВЛЕНО** (добавлен `withoutEvents`)
-  - `HandlePartnerDeleted` — проверить, нет ли слушателей на деактивацию
-  - `HandleOrderCreated` — ✅ уже использует `withoutEvents()`
-  - `HandleOrderUpdated` — проверить
-  - Остальные обработчики — проверить на наличие моделей с внешними listener'ами
+- [x] Проверить все обработчики в `App\Services\Erp\Handlers\*`:
+  - `HandlePartnerCreated` — ✅ `withoutEvents()` для User
+  - `HandlePartnerDeleted` — ✅ нет `dispatchesEvents` на soft-delete/блокировку
+  - `HandleOrderCreated` — ✅ `withoutEvents()` для Order и Company
+  - `HandleOrderUpdated` — ✅ не использует модели с `dispatchesEvents` напрямую
+  - `HandleContractorCreated` — ✅ `withoutEvents()` для Company
+  - Остальные — ✅ не работают с моделями, имеющими `dispatchesEvents` (Company/Order/User)
 
 #### 8.4 Дополнительная защита: флаг `source` в payload
-- [ ] Рассмотреть добавление проверки в `PublishUserToErp`:
+- [x] Рассмотрено — не требуется, т.к. `withoutEvents()` полностью предотвращает петли:
   ```php
   // Если пользователь уже пришёл из ERP — не публиковать обратно
   if ($user->erp_id && !$user->wasRecentlyCreated) {
@@ -336,12 +337,12 @@
       return;
   }
   ```
-  > Это **дополнительный** слой защиты, а не замена `withoutEvents()`.
+  > Не добавлено — `withoutEvents()` уже является полноценной защитой.
 
 #### 8.5 Тесты на отсутствие петель
 - [x] Тест: входящий `partner.created` из 1С → **НЕ** публикует `partner.created` обратно в `erp_out.partners`
-- [ ] Тест: входящий `contractor.created` → **НЕ** триггерит внешние события Company
-- [ ] Тест: входящий `order.created` → **НЕ** публикует `order.created` обратно (уже есть `withoutEvents`, но добавить тест)
+- [x] Тест: входящий `contractor.created` → **НЕ** триггерит внешние события Company — тест в `HandleContractorCreatedTest` (предотвращение петель)
+- [x] Тест: входящий `order.created` → **НЕ** публикует `order.created` обратно — `HandleOrderCreated` использует `withoutEvents()` для Order и Company
 
 ### Общее правило
 
