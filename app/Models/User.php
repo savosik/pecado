@@ -73,6 +73,7 @@ class User extends Authenticatable implements HasMedia
         'status',
         'email',
         'password',
+        'must_change_password',
         'is_admin',
         'erp_id',
         'region_id',
@@ -99,6 +100,7 @@ class User extends Authenticatable implements HasMedia
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'must_change_password' => 'boolean',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
             'is_admin' => 'boolean',

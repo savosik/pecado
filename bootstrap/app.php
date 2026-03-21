@@ -30,6 +30,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'is_admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+            'password.changed' => \App\Http\Middleware\EnsurePasswordChanged::class,
         ]);
 
         $middleware->group('admin', [

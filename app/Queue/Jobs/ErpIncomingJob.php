@@ -13,6 +13,7 @@ use App\Services\Erp\Handlers\HandleExchangeRateUpdated;
 use App\Services\Erp\Handlers\HandleOrderCreated;
 use App\Services\Erp\Handlers\HandleOrderDeleted;
 use App\Services\Erp\Handlers\HandleOrderUpdated;
+use App\Services\Erp\Handlers\HandlePartnerCreated;
 use App\Services\Erp\Handlers\HandlePartnerDeleted;
 use App\Services\Erp\Handlers\HandlePartnerSegmentCreated;
 use App\Services\Erp\Handlers\HandlePartnerSegmentDeleted;
@@ -43,11 +44,12 @@ class ErpIncomingJob extends BaseJob
     /**
      * Карта маршрутизации событий на обработчики.
      *
-     * Примечание v2: partner.created удалён — теперь это исходящее событие
-     * (Сайт → 1С через erp_out.partners). Входящий partner.deleted остаётся.
+     * partner.created: v2 — исходящее (Сайт → 1С через erp_out.partners).
+     * v4 — также входящее (1С → Сайт через erp_in.partners) для выгрузки партнёров.
      */
     private const EVENT_HANDLERS = [
         // US-01
+        'partner.created'           => HandlePartnerCreated::class, // v4: выгрузка партнёров 1С → Сайт
         'partner.deleted'           => HandlePartnerDeleted::class,
         // US-02
         'price.updated'             => HandlePriceUpdated::class,
