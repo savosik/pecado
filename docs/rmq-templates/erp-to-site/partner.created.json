@@ -1,0 +1,11 @@
+{
+  "event": "partner.created",
+  "message_id": "msg-partner-erp-550e8400-e29b-41d4-a716-446655440000",
+  "timestamp": "2026-03-20T10:00:00+03:00",
+  "uuid": "550e8400-e29b-41d4-a716-446655440000",
+  "login": "ivanov@example.com",
+  "name": "Иванов Иван Иванович",
+  "phone": "+77001234567",
+  "email": "ivanov@example.com",
+  "password": "a1b2c3d4"
+}

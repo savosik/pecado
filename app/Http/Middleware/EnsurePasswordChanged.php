@@ -18,8 +18,8 @@ class EnsurePasswordChanged
      * Маршруты, которые разрешены без смены пароля.
      */
     private const ALLOWED_ROUTES = [
-        'password.change',
-        'password.change.update',
+        'cabinet.password.change',
+        'cabinet.password.update',
         'logout',
     ];
 
@@ -37,11 +37,11 @@ class EnsurePasswordChanged
             if ($request->expectsJson()) {
                 return response()->json([
                     'message' => 'Необходимо сменить пароль.',
-                    'redirect' => route('password.change'),
+                    'redirect' => route('cabinet.password.change'),
                 ], 403);
             }
 
-            return redirect()->route('password.change')
+            return redirect()->route('cabinet.password.change')
                 ->with('warning', 'Необходимо сменить пароль для продолжения работы.');
         }
 

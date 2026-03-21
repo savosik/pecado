@@ -110,7 +110,7 @@ Route::prefix('api')->middleware('auth')->group(function () {
 // ──────────────────────────────────────────────
 // User Cabinet Routes (authenticated)
 // ──────────────────────────────────────────────
-Route::middleware('auth')->prefix('cabinet')->name('cabinet.')->group(function () {
+Route::middleware(['auth', 'password.changed'])->prefix('cabinet')->name('cabinet.')->group(function () {
     Route::get('/dashboard', [CabinetController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [CabinetController::class, 'profile'])->name('profile');
     Route::put('/profile', [CabinetController::class, 'updateProfile'])->name('profile.update');

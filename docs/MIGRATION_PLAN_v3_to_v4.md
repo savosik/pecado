@@ -28,14 +28,14 @@
 ### Что нужно сделать
 
 #### 1.1 Миграция БД
-- [ ] Добавить поле `must_change_password` (boolean, default `false`) в миграцию таблицы `users`
+- [x] Добавить поле `must_change_password` (boolean, default `false`) в миграцию таблицы `users`
 
 #### 1.2 Модель User
-- [ ] Добавить `must_change_password` в `$fillable` модели `User`
-- [ ] Добавить `must_change_password` в `$casts` (boolean)
+- [x] Добавить `must_change_password` в `$fillable` модели `User`
+- [x] Добавить `must_change_password` в `$casts` (boolean)
 
 #### 1.3 Обработчик `HandlePartnerCreated`
-- [ ] Переписать `HandlePartnerCreated`, чтобы он обрабатывал **два сценария**:
+- [x] Переписать `HandlePartnerCreated`, чтобы он обрабатывал **два сценария**:
   - **Пользователь существует** (найден по email) → обновляет `erp_id`, статус `ACTIVE` (текущая логика)
   - **Пользователь НЕ существует** → создаёт нового пользователя:
     - `email` = `login` из payload
@@ -45,29 +45,29 @@
     - `erp_id` = `uuid` из payload
     - `status` = `ACTIVE`
     - `must_change_password` = `true`
-- [ ] Валидация: пропускать сообщения без `email`/`login` (партнёры без email не выгружаются)
+- [x] Валидация: пропускать сообщения без `email`/`login` (партнёры без email не выгружаются)
 
 #### 1.4 Роутинг событий
-- [ ] Добавить `'partner.created' => HandlePartnerCreated::class` в `ErpIncomingJob::EVENT_HANDLERS`
-- [ ] ⚠️ **ВАЖНО:** Убедиться, что входящий `partner.created` (из `erp_in.partners`) не конфликтует с исходящим `partner.created` (из `erp_out.partners`). Это разные очереди — конфликта нет, но проверить, что `HandlePartnerCreated` правильно обрабатывает оба контекста.
+- [x] Добавить `'partner.created' => HandlePartnerCreated::class` в `ErpIncomingJob::EVENT_HANDLERS`
+- [x] ⚠️ **ВАЖНО:** Убедиться, что входящий `partner.created` (из `erp_in.partners`) не конфликтует с исходящим `partner.created` (из `erp_out.partners`). Это разные очереди — конфликта нет. Петля предотвращена через `withoutEvents()`.
 
 #### 1.5 Middleware принудительной смены пароля
-- [ ] Создать middleware `EnsurePasswordChanged` (или аналог), который:
+- [x] Создать middleware `EnsurePasswordChanged` (или аналог), который:
   - Проверяет `auth()->user()->must_change_password`
   - Если `true` — редиректит на страницу смены пароля
-- [ ] Применить middleware к защищённым маршрутам (кабинет, заказы и т.п.)
-- [ ] Создать (или обновить) страницу смены пароля
-- [ ] После успешной смены пароля сбрасывать `must_change_password = false`
+- [x] Применить middleware к защищённым маршрутам (кабинет, заказы и т.п.)
+- [x] Создать (или обновить) страницу смены пароля
+- [x] После успешной смены пароля сбрасывать `must_change_password = false`
 
 #### 1.6 Шаблон RMQ
-- [ ] Создать файл `docs/rmq-templates/erp-to-site/partner.created.json`
+- [x] Создать файл `docs/rmq-templates/erp-to-site/partner.created.json`
 
 #### 1.7 Тесты
-- [ ] Тест: `partner.created` с полем `password` → создаёт нового пользователя
-- [ ] Тест: `partner.created` для существующего email → обновляет `erp_id`, активирует
-- [ ] Тест: `partner.created` без email → пропускается
-- [ ] Тест: middleware блокирует доступ при `must_change_password = true`
-- [ ] Тест: после смены пароля `must_change_password` сбрасывается
+- [x] Тест: `partner.created` с полем `password` → создаёт нового пользователя
+- [x] Тест: `partner.created` для существующего email → обновляет `erp_id`, активирует
+- [x] Тест: `partner.created` без email → пропускается
+- [x] Тест: middleware блокирует доступ при `must_change_password = true`
+- [x] Тест: после смены пароля `must_change_password` сбрасывается
 
 ---
 
@@ -228,32 +228,32 @@
 ## 7. Сводный чеклист (порядок выполнения)
 
 ### Фаза 1: БД и модели
-- [ ] Миграция: `must_change_password` в `users`
+- [x] Миграция: `must_change_password` в `users`
 - [ ] Миграция: `external_id` в `companies` (если нет)
-- [ ] Обновить модели `User`, `Company`
+- [x] Обновить модель `User` (Company — при реализации US-06)
 
 ### Фаза 2: Обработчики ERP
-- [ ] Переписать `HandlePartnerCreated` (создание + активация)
+- [x] Переписать `HandlePartnerCreated` (создание + активация)
 - [ ] Создать `HandleContractorCreated`
 - [ ] Обновить `HandleProductCreated` (`brand` → объект)
 - [ ] Обновить `HandleProductUpdated` (`brand` → объект, атрибуты → мерж)
 
 ### Фаза 3: Роутинг и инфраструктура
-- [ ] Обновить `ErpIncomingJob::EVENT_HANDLERS`
+- [x] Обновить `ErpIncomingJob::EVENT_HANDLERS` (partner.created)
 - [ ] Обновить `SetupRabbitMQTopology::INCOMING_QUEUES`
 - [ ] Запустить `rabbitmq:setup`
 
 ### Фаза 4: Middleware и UI
-- [ ] Middleware `EnsurePasswordChanged`
-- [ ] Страница принудительной смены пароля
+- [x] Middleware `EnsurePasswordChanged`
+- [x] Страница принудительной смены пароля
 
 ### Фаза 5: Тесты
-- [ ] Unit-тесты для всех обновлённых/новых обработчиков
-- [ ] Feature-тест для middleware смены пароля
+- [x] Unit-тесты для обновлённых/новых обработчиков (HandlePartnerCreated ✅)
+- [x] Feature-тест для middleware смены пароля
 - [ ] Интеграционный тест: полный цикл выгрузки
 
 ### Фаза 6: Документация и шаблоны
-- [ ] JSON-шаблоны для новых событий
+- [x] JSON-шаблоны для новых событий (partner.created)
 - [ ] Обновление документации
 
 ---
@@ -299,7 +299,7 @@
 ### Чеклист
 
 #### 8.1 `HandlePartnerCreated`
-- [ ] Обернуть `User::update()` / `User::create()` в `User::withoutEvents(fn() => ...)`:
+- [x] Обернуть `User::update()` / `User::create()` в `User::withoutEvents(fn() => ...)`:
   ```php
   // ❌ Опасно — стреляет UserUpdated → PublishUserToErp → LOOP
   $user->update(['erp_id' => $uuid, 'status' => UserStatus::ACTIVE]);
@@ -309,7 +309,7 @@
       $user->update(['erp_id' => $uuid, 'status' => UserStatus::ACTIVE]);
   });
   ```
-- [ ] То же самое для создания нового пользователя (v4):
+- [x] То же самое для создания нового пользователя (v4):
   ```php
   User::withoutEvents(function () use ($payload) {
       return User::create([...]);
@@ -320,8 +320,8 @@
 - [ ] Обернуть `Company::create()` / `Company::updateOrCreate()` в `Company::withoutEvents(fn() => ...)`
 
 #### 8.3 Аудит существующих обработчиков
-- [ ] Проверить все обработчики в `App\Services\Erp\Handlers\*`:
-  - `HandlePartnerCreated` — **ТРЕБУЕТ ИСПРАВЛЕНИЯ** (нет `withoutEvents`)
+- [/] Проверить все обработчики в `App\Services\Erp\Handlers\*`:
+  - `HandlePartnerCreated` — ✅ **ИСПРАВЛЕНО** (добавлен `withoutEvents`)
   - `HandlePartnerDeleted` — проверить, нет ли слушателей на деактивацию
   - `HandleOrderCreated` — ✅ уже использует `withoutEvents()`
   - `HandleOrderUpdated` — проверить
@@ -339,7 +339,7 @@
   > Это **дополнительный** слой защиты, а не замена `withoutEvents()`.
 
 #### 8.5 Тесты на отсутствие петель
-- [ ] Тест: входящий `partner.created` из 1С → **НЕ** публикует `partner.created` обратно в `erp_out.partners`
+- [x] Тест: входящий `partner.created` из 1С → **НЕ** публикует `partner.created` обратно в `erp_out.partners`
 - [ ] Тест: входящий `contractor.created` → **НЕ** триггерит внешние события Company
 - [ ] Тест: входящий `order.created` → **НЕ** публикует `order.created` обратно (уже есть `withoutEvents`, но добавить тест)
 
