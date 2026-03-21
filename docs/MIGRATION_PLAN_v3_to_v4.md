@@ -81,38 +81,38 @@
 ### Что нужно сделать
 
 #### 2.1 RabbitMQ-топология
-- [ ] Добавить routing key `'contractor.*'` в очередь `erp_in.partners` в `SetupRabbitMQTopology::INCOMING_QUEUES`
-- [ ] Перезапустить `php artisan rabbitmq:setup` для применения
+- [x] Добавить routing key `'contractor.*'` в очередь `erp_in.partners` в `SetupRabbitMQTopology::INCOMING_QUEUES`
+- [ ] Перезапустить `php artisan rabbitmq:setup` для применения (выполнится CI/CD)
 
 #### 2.2 Обработчик `HandleContractorCreated`
-- [ ] Создать `App\Services\Erp\Handlers\HandleContractorCreated`
-- [ ] Логика:
+- [x] Создать `App\Services\Erp\Handlers\HandleContractorCreated`
+- [x] Логика:
   - Найти пользователя по `partner_uuid` (`User::where('erp_id', $partnerUuid)`)
-  - Если пользователь не найден — логировать warning, но **не** пропускать (создать контрагента без привязки к пользователю, или пропустить — решить)
-  - `Company::updateOrCreate` по UUID (`external_id`):
+  - Если пользователь не найден — логировать warning и пропустить
+  - `Company::updateOrCreate` по `erp_id`:
     - `user_id` = найденный пользователь
     - `country`, `name`, `legal_name`, `tax_id`, `registration_number`, `legal_address`, `actual_address`, `phone`, `email` — из payload
-- [ ] Идемпотентность: повторная обработка обновляет, а не дублирует
+- [x] Идемпотентность: повторная обработка обновляет, а не дублирует
 
 #### 2.3 Роутинг событий
-- [ ] Добавить `'contractor.created' => HandleContractorCreated::class` в `ErpIncomingJob::EVENT_HANDLERS`
+- [x] Добавить `'contractor.created' => HandleContractorCreated::class` в `ErpIncomingJob::EVENT_HANDLERS`
 
 #### 2.4 Модель Company
-- [ ] Убедиться, что в модели `Company` есть поле `external_id` (uuid контрагента из 1С)
-- [ ] Если нет — добавить `external_id` в миграцию таблицы `companies`
-- [ ] Добавить `external_id` в `$fillable`
+- [x] Убедиться, что в модели `Company` есть поле `erp_id` (uuid контрагента из 1С) — уже есть
+- [x] Миграция не нужна — `erp_id` уже в таблице и модели
+- [x] `erp_id` уже в `$fillable`
 
 #### 2.5 Шаблон RMQ
-- [ ] Создать файл `docs/rmq-templates/erp-to-site/contractor.created.json`
+- [x] Создать файл `docs/rmq-templates/erp-to-site/contractor.created.json`
 
 #### 2.6 Критерии приёмки (обновление)
 - [ ] Обновить критерий US-06: убрать «~150 партнёров предзаполняются вручную», заменить на автоматическую выгрузку
 
 #### 2.7 Тесты
-- [ ] Тест: `contractor.created` → создаёт компанию с привязкой к пользователю
-- [ ] Тест: `contractor.created` с неизвестным `partner_uuid` → корректная обработка
-- [ ] Тест: повторный `contractor.created` → обновление, не дублирование
-- [ ] Тест: все поля контрагента корректно маппятся
+- [x] Тест: `contractor.created` → создаёт компанию с привязкой к пользователю
+- [x] Тест: `contractor.created` с неизвестным `partner_uuid` → корректная обработка
+- [x] Тест: повторный `contractor.created` → обновление, не дублирование
+- [x] Тест: все поля контрагента корректно маппятся
 
 ---
 
@@ -234,13 +234,13 @@
 
 ### Фаза 2: Обработчики ERP
 - [x] Переписать `HandlePartnerCreated` (создание + активация)
-- [ ] Создать `HandleContractorCreated`
+- [x] Создать `HandleContractorCreated`
 - [ ] Обновить `HandleProductCreated` (`brand` → объект)
 - [ ] Обновить `HandleProductUpdated` (`brand` → объект, атрибуты → мерж)
 
 ### Фаза 3: Роутинг и инфраструктура
 - [x] Обновить `ErpIncomingJob::EVENT_HANDLERS` (partner.created)
-- [ ] Обновить `SetupRabbitMQTopology::INCOMING_QUEUES`
+- [x] Обновить `SetupRabbitMQTopology::INCOMING_QUEUES`
 - [ ] Запустить `rabbitmq:setup`
 
 ### Фаза 4: Middleware и UI

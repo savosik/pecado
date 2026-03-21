@@ -17,7 +17,7 @@ class SetupRabbitMQTopology extends Command
      * Входящие очереди (1С → Сайт) с routing keys.
      */
     private const INCOMING_QUEUES = [
-        'erp_in.partners'  => ['partner.*'],
+        'erp_in.partners'  => ['partner.*', 'contractor.*'],
         'erp_in.prices'    => ['price.*', 'discount.*', 'exchange_rate.*'],
         'erp_in.stock'     => ['stock.*'],
         'erp_in.orders'    => ['order.*'],
