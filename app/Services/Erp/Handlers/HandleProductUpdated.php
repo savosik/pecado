@@ -71,21 +71,11 @@ class HandleProductUpdated
                 }
             }
 
-            // --- Бренд ---
+            // --- Бренд (v4: объект {uuid, name} | v3: строка | null) ---
             if (array_key_exists('brand', $payload)) {
-                $brandName = $payload['brand'];
-                if ($brandName) {
-                    $brand = Brand::where('name', $brandName)->first();
-                    if (!$brand) {
-                        $baseSlug = Str::slug($brandName) ?: 'brand-' . Str::uuid();
-                        $slug = $baseSlug;
-                        $counter = 1;
-                        while (Brand::where('slug', $slug)->exists()) {
-                            $slug = $baseSlug . '-' . $counter++;
-                        }
-                        $brand = Brand::create(['name' => $brandName, 'slug' => $slug]);
-                    }
-                    $updateData['brand_id'] = $brand->id;
+                $brandData = $payload['brand'];
+                if ($brandData) {
+                    $updateData['brand_id'] = $this->resolveBrandId($brandData);
                 } else {
                     $updateData['brand_id'] = null;
                 }
@@ -125,10 +115,9 @@ class HandleProductUpdated
                 }
             }
 
-            // --- Атрибуты (v3 формат, полная замена, только если поле передано) ---
+            // --- Атрибуты (v4: мерж, не полная замена) ---
             if (array_key_exists('attributes', $payload)) {
                 $attributes = $payload['attributes'] ?? [];
-                $product->attributeValues()->delete();
 
                 foreach ($attributes as $attrData) {
                     if (!is_array($attrData)) {
@@ -203,5 +192,49 @@ class HandleProductUpdated
                 'has_attributes' => array_key_exists('attributes', $payload),
             ]);
         });
+    }
+
+    /**
+     * Поиск/создание бренда.
+     * v4: объект {uuid, name} → updateOrCreate по external_id
+     * v3 (обратная совместимость): строка → поиск по name
+     */
+    private function resolveBrandId(mixed $brandData): ?int
+    {
+        // v4: объект {uuid, name}
+        if (is_array($brandData)) {
+            $uuid = $brandData['uuid'] ?? null;
+            $name = $brandData['name'] ?? null;
+
+            if (!$uuid || !$name) {
+                return null;
+            }
+
+            $slug = Str::slug($name) ?: 'brand-' . Str::slug($uuid);
+            $brand = Brand::updateOrCreate(
+                ['external_id' => $uuid],
+                ['name' => $name, 'slug' => $slug]
+            );
+
+            return $brand->id;
+        }
+
+        // v3: строка (обратная совместимость)
+        if (is_string($brandData) && $brandData !== '') {
+            $brand = Brand::where('name', $brandData)->first();
+            if (!$brand) {
+                $baseSlug = Str::slug($brandData) ?: 'brand-' . Str::uuid();
+                $slug = $baseSlug;
+                $counter = 1;
+                while (Brand::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter++;
+                }
+                $brand = Brand::create(['name' => $brandData, 'slug' => $slug]);
+            }
+
+            return $brand->id;
+        }
+
+        return null;
     }
 }

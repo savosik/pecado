@@ -101,13 +101,21 @@ class HandleProductUpdatedTest extends TestCase
             ],
         ]);
 
-        // Старый атрибут удалён, новый добавлен (полная замена)
-        $this->assertEquals(1, $product->attributeValues()->count());
-        $pav = $product->attributeValues()->first();
-        $this->assertEquals('новое значение', $pav->text_value);
+        // v4: мерж — старый атрибут сохраняется, новый добавляется
+        $this->assertEquals(2, $product->attributeValues()->count());
 
         $newAttr = Attribute::where('external_id', 'new-prop-uuid')->first();
         $this->assertNotNull($newAttr);
+
+        // Проверяем что новый атрибут добавлен
+        $newPav = $product->attributeValues()->where('attribute_id', $newAttr->id)->first();
+        $this->assertNotNull($newPav);
+        $this->assertEquals('новое значение', $newPav->text_value);
+
+        // Старый атрибут тоже на месте
+        $oldPav = $product->attributeValues()->where('attribute_id', $oldAttr->id)->first();
+        $this->assertNotNull($oldPav);
+        $this->assertEquals('старое значение', $oldPav->text_value);
     }
 
     #[Test]
@@ -177,5 +185,117 @@ class HandleProductUpdatedTest extends TestCase
         $this->assertEquals(2, $product->barcodes()->count());
         $this->assertDatabaseMissing('product_barcodes', ['barcode' => 'OLD-BARCODE']);
         $this->assertDatabaseHas('product_barcodes', ['barcode' => 'NEW-BARCODE-1']);
+    }
+
+    // ──────────────────────────────────────────────
+    // US-13 v4: brand как объект {uuid, name}
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function updates_brand_from_object_format(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'brand-obj-upd-001',
+            'brand_id'    => null,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid'  => 'brand-obj-upd-001',
+            'brand' => ['uuid' => 'brand-uuid-v4', 'name' => 'Бренд V4'],
+        ]);
+
+        $product->refresh();
+        $this->assertNotNull($product->brand_id);
+
+        $brand = Brand::find($product->brand_id);
+        $this->assertEquals('brand-uuid-v4', $brand->external_id);
+        $this->assertEquals('Бренд V4', $brand->name);
+    }
+
+    #[Test]
+    public function does_not_duplicate_brand_on_repeated_update(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'brand-obj-upd-002',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid'  => 'brand-obj-upd-002',
+            'brand' => ['uuid' => 'same-brand-uuid', 'name' => 'Тот же бренд'],
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid'  => 'brand-obj-upd-002',
+            'brand' => ['uuid' => 'same-brand-uuid', 'name' => 'Тот же бренд обновлённый'],
+        ]);
+
+        $this->assertEquals(1, Brand::where('external_id', 'same-brand-uuid')->count());
+        $brand = Brand::where('external_id', 'same-brand-uuid')->first();
+        $this->assertEquals('Тот же бренд обновлённый', $brand->name);
+    }
+
+    #[Test]
+    public function sets_null_brand_when_brand_is_null(): void
+    {
+        $brand = Brand::create(['name' => 'Удаляемый', 'slug' => 'udalyaemiy']);
+        $product = Product::factory()->create([
+            'external_id' => 'brand-null-upd',
+            'brand_id'    => $brand->id,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid'  => 'brand-null-upd',
+            'brand' => null,
+        ]);
+
+        $product->refresh();
+        $this->assertNull($product->brand_id);
+    }
+
+    // ──────────────────────────────────────────────
+    // US-13 v4: мерж — обновление существующего атрибута
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function updates_existing_attribute_value_via_merge(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'attr-merge-upd-001',
+        ]);
+
+        $attr = Attribute::create([
+            'external_id' => 'merge-prop-uuid',
+            'name'        => 'Цвет',
+            'slug'        => 'tsvet',
+            'type'        => 'string',
+        ]);
+        $product->attributeValues()->create([
+            'attribute_id' => $attr->id,
+            'text_value'   => 'Красный',
+        ]);
+
+        // Обновляем тот же атрибут через product.updated
+        $this->handler->handle([
+            'event'      => 'product.updated',
+            'uuid'       => 'attr-merge-upd-001',
+            'attributes' => [
+                [
+                    'property_uuid'  => 'merge-prop-uuid',
+                    'property_label' => 'Цвет',
+                    'value_type'     => 'string',
+                    'value_uuid'     => null,
+                    'value_label'    => 'Синий',
+                ],
+            ],
+        ]);
+
+        // Только 1 атрибут (обновлён, не добавлен дубль)
+        $this->assertEquals(1, $product->attributeValues()->count());
+        $pav = $product->attributeValues()->first();
+        $this->assertEquals('Синий', $pav->text_value);
     }
 }

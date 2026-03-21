@@ -146,4 +146,62 @@ class HandleProductCreatedTest extends TestCase
         $this->assertEquals(5000.00, (float) $product->base_price);
         $this->assertEquals('Обновлённое название', $product->name);
     }
+
+    // ──────────────────────────────────────────────
+    // US-13 v4: brand как объект {uuid, name}
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function creates_product_with_brand_object_format(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-brand-obj-001',
+            'name'  => 'Товар с v4 брендом',
+            'brand' => ['uuid' => 'brand-v4-uuid-001', 'name' => 'Nike'],
+        ]);
+
+        $product = Product::where('external_id', 'prod-brand-obj-001')->first();
+        $this->assertNotNull($product);
+        $this->assertNotNull($product->brand_id);
+
+        $brand = \App\Models\Brand::find($product->brand_id);
+        $this->assertEquals('brand-v4-uuid-001', $brand->external_id);
+        $this->assertEquals('Nike', $brand->name);
+    }
+
+    #[Test]
+    public function creates_product_with_null_brand(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-brand-null-001',
+            'name'  => 'Товар без бренда',
+            'brand' => null,
+        ]);
+
+        $product = Product::where('external_id', 'prod-brand-null-001')->first();
+        $this->assertNotNull($product);
+        $this->assertNull($product->brand_id);
+    }
+
+    #[Test]
+    public function does_not_duplicate_brand_on_repeated_product_created(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-brand-dup-001',
+            'name'  => 'Товар 1',
+            'brand' => ['uuid' => 'shared-brand-uuid', 'name' => 'Общий бренд'],
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-brand-dup-002',
+            'name'  => 'Товар 2',
+            'brand' => ['uuid' => 'shared-brand-uuid', 'name' => 'Общий бренд'],
+        ]);
+
+        $this->assertEquals(1, \App\Models\Brand::where('external_id', 'shared-brand-uuid')->count());
+    }
 }

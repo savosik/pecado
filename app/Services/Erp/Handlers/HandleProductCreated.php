@@ -26,7 +26,7 @@ class HandleProductCreated
         $code         = $payload['code']          ?? null;
         $sku          = $payload['sku']           ?? null;
         $categoryUuid = $payload['category_uuid'] ?? null;
-        $brandName    = $payload['brand']         ?? null;
+        $brandData    = $payload['brand']         ?? null;
         $description  = $payload['description']   ?? null;
         $barcodes     = $payload['barcodes']      ?? [];
         $modelData    = $payload['model']         ?? null;
@@ -40,7 +40,7 @@ class HandleProductCreated
         }
 
         DB::transaction(function () use (
-            $uuid, $name, $code, $sku, $categoryUuid, $brandName,
+            $uuid, $name, $code, $sku, $categoryUuid, $brandData,
             $description, $barcodes, $modelData, $attributes
         ) {
             // --- Категория ---
@@ -57,21 +57,10 @@ class HandleProductCreated
                 }
             }
 
-            // --- Бренд (найти по имени или создать с авто-slug) ---
+            // --- Бренд (v4: объект {uuid, name} | v3: строка | null) ---
             $brandId = null;
-            if ($brandName) {
-                $brand = Brand::where('name', $brandName)->first();
-                if (!$brand) {
-                    // Генерируем уникальный slug для бренда
-                    $baseSlug = Str::slug($brandName) ?: 'brand-' . Str::uuid();
-                    $slug = $baseSlug;
-                    $counter = 1;
-                    while (Brand::where('slug', $slug)->exists()) {
-                        $slug = $baseSlug . '-' . $counter++;
-                    }
-                    $brand = Brand::create(['name' => $brandName, 'slug' => $slug]);
-                }
-                $brandId = $brand->id;
+            if ($brandData) {
+                $brandId = $this->resolveBrandId($brandData);
             }
 
             // --- Модель товара ---
@@ -119,10 +108,9 @@ class HandleProductCreated
                 }
             }
 
-            // --- Атрибуты (v3: массив структур из 1С) ---
+            // --- Атрибуты (v4: мерж, не полная замена) ---
             // Формат: [{ property_uuid, property_label, value_type, value_uuid, value_label }]
             if (!empty($attributes) && is_array($attributes)) {
-                $product->attributeValues()->delete();
 
                 foreach ($attributes as $attrData) {
                     if (!is_array($attrData)) {
@@ -205,5 +193,49 @@ class HandleProductCreated
                 'attributes'  => count($attributes),
             ]);
         });
+    }
+
+    /**
+     * Поиск/создание бренда.
+     * v4: объект {uuid, name} → updateOrCreate по external_id
+     * v3 (обратная совместимость): строка → поиск по name
+     */
+    private function resolveBrandId(mixed $brandData): ?int
+    {
+        // v4: объект {uuid, name}
+        if (is_array($brandData)) {
+            $uuid = $brandData['uuid'] ?? null;
+            $name = $brandData['name'] ?? null;
+
+            if (!$uuid || !$name) {
+                return null;
+            }
+
+            $slug = Str::slug($name) ?: 'brand-' . Str::slug($uuid);
+            $brand = Brand::updateOrCreate(
+                ['external_id' => $uuid],
+                ['name' => $name, 'slug' => $slug]
+            );
+
+            return $brand->id;
+        }
+
+        // v3: строка (обратная совместимость)
+        if (is_string($brandData) && $brandData !== '') {
+            $brand = Brand::where('name', $brandData)->first();
+            if (!$brand) {
+                $baseSlug = Str::slug($brandData) ?: 'brand-' . Str::uuid();
+                $slug = $baseSlug;
+                $counter = 1;
+                while (Brand::where('slug', $slug)->exists()) {
+                    $slug = $baseSlug . '-' . $counter++;
+                }
+                $brand = Brand::create(['name' => $brandData, 'slug' => $slug]);
+            }
+
+            return $brand->id;
+        }
+
+        return null;
     }
 }

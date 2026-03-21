@@ -127,7 +127,7 @@
 ### Что нужно сделать
 
 #### 3.1 `HandleProductCreated`
-- [ ] Изменить парсинг `brand`:
+- [x] Изменить парсинг `brand`:
   ```php
   // Было (v3):
   $brandName = $payload['brand'] ?? null; // строка
@@ -135,21 +135,21 @@
   // Стало (v4):
   $brandData = $payload['brand'] ?? null; // объект {uuid, name} | null
   ```
-- [ ] Обновить логику поиска/создания бренда:
+- [x] Обновить логику поиска/создания бренда:
   - Если `$brandData` — это объект (массив с `uuid` и `name`):
     - `Brand::updateOrCreate(['external_id' => $brandData['uuid']], ['name' => $brandData['name'], 'slug' => ...])`
   - Если `$brandData` — строка (обратная совместимость): обрабатывать как раньше
   - Если `null` → `brand_id = null`
 
 #### 3.2 `HandleProductUpdated`
-- [ ] Аналогичные изменения: парсинг `brand` как объекта `{uuid, name}`
-- [ ] Обновить поиск/создание бренда по `external_id` (uuid)
+- [x] Аналогичные изменения: парсинг `brand` как объекта `{uuid, name}`
+- [x] Обновить поиск/создание бренда по `external_id` (uuid)
 
 #### 3.3 Тесты
-- [ ] Тест: `product.created` с `brand: {uuid, name}` → создаёт бренд с `external_id`
-- [ ] Тест: `product.created` с `brand: null` → `brand_id = null`
-- [ ] Тест: `product.updated` с `brand: {uuid, name}` → обновляет привязку
-- [ ] Тест: повторный `product.created` с тем же `brand.uuid` → не дублирует бренд
+- [x] Тест: `product.created` с `brand: {uuid, name}` → создаёт бренд с `external_id`
+- [x] Тест: `product.created` с `brand: null` → `brand_id = null`
+- [x] Тест: `product.updated` с `brand: {uuid, name}` → обновляет привязку
+- [x] Тест: повторный `product.created` с тем же `brand.uuid` → не дублирует бренд
 
 ---
 
@@ -162,8 +162,8 @@
 ### Что нужно сделать
 
 #### 4.1 `HandleProductUpdated`
-- [ ] Убрать строку `$product->attributeValues()->delete()` из блока обработки атрибутов
-- [ ] Заменить на логику мержа:
+- [x] Убрать строку `$product->attributeValues()->delete()` из блока обработки атрибутов
+- [x] Заменить на логику мержа:
   ```php
   // Для каждого атрибута из payload:
   // 1. Найти или создать Attribute по external_id (property_uuid)
@@ -171,13 +171,13 @@
   // 3. ProductAttributeValue::updateOrCreate по [product_id, attribute_id]
   //    (это уже делается — нужно просто убрать delete() перед циклом)
   ```
-- [ ] Фактически: **просто удалить строку `$product->attributeValues()->delete()`** — остальная логика `updateOrCreate` уже обеспечивает мерж
+- [x] Фактически: **просто удалена строка `$product->attributeValues()->delete()`** — остальная логика `updateOrCreate` уже обеспечивает мерж
 
 #### 4.2 Тесты
-- [ ] Тест: `product.updated` с одним атрибутом → не удаляет другие существующие атрибуты
-- [ ] Тест: `product.updated` с обновлённым значением атрибута → значение обновлено
-- [ ] Тест: `product.updated` с новым атрибутом → добавлен к существующим
-- [ ] Тест: `product.updated` без поля `attributes` → атрибуты не затронуты
+- [x] Тест: `product.updated` с одним атрибутом → не удаляет другие существующие атрибуты
+- [x] Тест: `product.updated` с обновлённым значением атрибута → значение обновлено
+- [x] Тест: `product.updated` с новым атрибутом → добавлен к существующим
+- [x] Тест: `product.updated` без поля `attributes` → атрибуты не затронуты
 
 ---
 
@@ -235,8 +235,8 @@
 ### Фаза 2: Обработчики ERP
 - [x] Переписать `HandlePartnerCreated` (создание + активация)
 - [x] Создать `HandleContractorCreated`
-- [ ] Обновить `HandleProductCreated` (`brand` → объект)
-- [ ] Обновить `HandleProductUpdated` (`brand` → объект, атрибуты → мерж)
+- [x] Обновить `HandleProductCreated` (`brand` → объект)
+- [x] Обновить `HandleProductUpdated` (`brand` → объект, атрибуты → мерж)
 
 ### Фаза 3: Роутинг и инфраструктура
 - [x] Обновить `ErpIncomingJob::EVENT_HANDLERS` (partner.created)
