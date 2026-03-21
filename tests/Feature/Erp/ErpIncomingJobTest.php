@@ -51,22 +51,15 @@ class ErpIncomingJobTest extends TestCase
     }
 
     #[Test]
-    public function partner_created_via_incoming_queue_is_ignored_in_v2(): void
+    public function partner_created_via_incoming_queue_activates_user_in_v4(): void
     {
-        // v2: partner.created теперь исходящее событие (Сайт → 1С).
-        // Входящее сообщение с event="partner.created" должно быть проигнорировано как неизвестное.
+        // v4: partner.created — входящее событие (1С → Сайт).
+        // HandlePartnerCreated активирует пользователя по email и привязывает erp_id.
         $user = User::factory()->create([
             'email'  => 'partner-test@example.com',
             'status' => UserStatus::PROCESSING,
             'erp_id' => null,
         ]);
-
-        Log::shouldReceive('info')->atLeast()->once();
-        Log::shouldReceive('warning')
-            ->once()
-            ->withArgs(function ($msg) {
-                return str_contains($msg, 'неизвестный тип события');
-            });
 
         $job = $this->makeJob([
             'event'      => 'partner.created',
@@ -80,11 +73,12 @@ class ErpIncomingJobTest extends TestCase
 
         $user->refresh();
 
-        // Пользователь НЕ активирован — входящий partner.created игнорируется
-        $this->assertEquals(UserStatus::PROCESSING, $user->status);
-        $this->assertNull($user->erp_id);
-        $this->assertDatabaseMissing('erp_processed_messages', [
+        // v4: Пользователь активирован и привязан к ERP
+        $this->assertEquals(UserStatus::ACTIVE, $user->status);
+        $this->assertEquals('test-uuid-001', $user->erp_id);
+        $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-001',
+            'event'      => 'partner.created',
         ]);
     }
 
