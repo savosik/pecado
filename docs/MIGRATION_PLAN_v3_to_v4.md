@@ -212,16 +212,16 @@
 ## 6. Инфраструктура и документация
 
 ### 6.1 RabbitMQ-топология
-- [ ] Добавить `contractor.*` в routing keys для `erp_in.partners`
-- [ ] Выполнить `php artisan rabbitmq:setup` после обновления
+- [x] Добавить `contractor.*` в routing keys для `erp_in.partners` — сделано в US-06
+- [x] Выполнить `php artisan rabbitmq:setup` после обновления — CI/CD выполняет автоматически
 
 ### 6.2 JSON-шаблоны
-- [ ] Создать `docs/rmq-templates/erp-to-site/partner.created.json`
-- [ ] Создать `docs/rmq-templates/erp-to-site/contractor.created.json`
+- [x] Создать `docs/rmq-templates/erp-to-site/partner.created.json` ✔️
+- [x] Создать `docs/rmq-templates/erp-to-site/contractor.created.json` ✔️
 
 ### 6.3 Документация
-- [ ] Обновить `docs/RABBITMQ_1C_INTEGRATION.md` (если есть) — отразить новые события
-- [ ] Обновить таблицу EVENT_HANDLERS в комментариях `ErpIncomingJob`
+- [x] Обновить `docs/RABBITMQ_1C_INTEGRATION.md` — добавлены события `partner.created`, `contractor.created`, обновлён `brand` и атрибуты
+- [x] Обновить таблицу EVENT_HANDLERS в `ErpIncomingJob` — уже актуальна (группировка по US, v4 аннотации)
 
 ---
 
