@@ -298,4 +298,34 @@ class HandleProductUpdatedTest extends TestCase
         $pav = $product->attributeValues()->first();
         $this->assertEquals('Синий', $pav->text_value);
     }
+
+    #[Test]
+    public function binds_attributes_to_product_category_on_update(): void
+    {
+        $category = Category::factory()->create(['uuid' => 'cat-upd-bind-001']);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-upd-bind-001',
+            'category_id' => $category->id,
+        ]);
+
+        $this->handler->handle([
+            'event'      => 'product.updated',
+            'uuid'       => 'prod-upd-bind-001',
+            'attributes' => [
+                [
+                    'property_uuid'  => 'prop-color-upd-bind',
+                    'property_label' => 'Цвет',
+                    'value_type'     => 'string',
+                    'value_uuid'     => 'val-blue-upd-bind',
+                    'value_label'    => 'Синий',
+                ],
+            ],
+        ]);
+
+        $category->refresh();
+        $this->assertEquals(1, $category->attributes()->count());
+
+        $colorAttr = Attribute::where('external_id', 'prop-color-upd-bind')->first();
+        $this->assertTrue($category->attributes->contains($colorAttr));
+    }
 }

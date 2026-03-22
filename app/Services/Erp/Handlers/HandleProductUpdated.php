@@ -116,6 +116,8 @@ class HandleProductUpdated
             }
 
             // --- Атрибуты (v4: мерж, не полная замена) ---
+            $processedAttributeIds = [];
+
             if (array_key_exists('attributes', $payload)) {
                 $attributes = $payload['attributes'] ?? [];
 
@@ -152,6 +154,8 @@ class HandleProductUpdated
                         ]
                     );
 
+                    $processedAttributeIds[] = $attribute->id;
+
                     $attributeValueId = null;
                     if ($valueUuid) {
                         $attrValue = \App\Models\AttributeValue::updateOrCreate(
@@ -182,6 +186,14 @@ class HandleProductUpdated
                         ],
                         $pivotData
                     );
+                }
+            }
+
+            // --- Привязка атрибутов к категории товара ---
+            if (!empty($processedAttributeIds) && $product->category_id) {
+                $category = Category::find($product->category_id);
+                if ($category) {
+                    $category->attributes()->syncWithoutDetaching($processedAttributeIds);
                 }
             }
 

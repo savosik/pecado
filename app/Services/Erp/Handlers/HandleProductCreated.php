@@ -110,6 +110,8 @@ class HandleProductCreated
 
             // --- Атрибуты (v4: мерж, не полная замена) ---
             // Формат: [{ property_uuid, property_label, value_type, value_uuid, value_label }]
+            $processedAttributeIds = [];
+
             if (!empty($attributes) && is_array($attributes)) {
 
                 foreach ($attributes as $attrData) {
@@ -147,6 +149,8 @@ class HandleProductCreated
                         ]
                     );
 
+                    $processedAttributeIds[] = $attribute->id;
+
                     // Найти или создать значение атрибута (если есть value_uuid)
                     $attributeValueId = null;
                     if ($valueUuid) {
@@ -180,6 +184,14 @@ class HandleProductCreated
                         ],
                         $pivotData
                     );
+                }
+            }
+
+            // --- Привязка атрибутов к категории товара ---
+            if ($categoryId && !empty($processedAttributeIds)) {
+                $category = $category ?? Category::find($categoryId);
+                if ($category) {
+                    $category->attributes()->syncWithoutDetaching($processedAttributeIds);
                 }
             }
 

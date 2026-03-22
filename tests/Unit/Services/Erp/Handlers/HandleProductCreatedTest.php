@@ -204,4 +204,67 @@ class HandleProductCreatedTest extends TestCase
 
         $this->assertEquals(1, \App\Models\Brand::where('external_id', 'shared-brand-uuid')->count());
     }
+
+    #[Test]
+    public function binds_attributes_to_product_category(): void
+    {
+        $category = Category::factory()->create(['uuid' => 'cat-bind-001']);
+
+        $this->handler->handle([
+            'event'         => 'product.created',
+            'message_id'    => 'msg-bind-001',
+            'uuid'          => 'prod-bind-001',
+            'name'          => 'Товар с привязкой атрибутов',
+            'category_uuid' => 'cat-bind-001',
+            'attributes'    => [
+                [
+                    'property_uuid'  => 'prop-color-bind',
+                    'property_label' => 'Цвет',
+                    'value_type'     => 'string',
+                    'value_uuid'     => 'val-red-bind',
+                    'value_label'    => 'Красный',
+                ],
+                [
+                    'property_uuid'  => 'prop-size-bind',
+                    'property_label' => 'Размер',
+                    'value_type'     => 'string',
+                    'value_uuid'     => 'val-m-bind',
+                    'value_label'    => 'M',
+                ],
+            ],
+        ]);
+
+        // Проверяем привязку атрибутов к категории
+        $category->refresh();
+        $this->assertEquals(2, $category->attributes()->count());
+
+        $colorAttr = Attribute::where('external_id', 'prop-color-bind')->first();
+        $sizeAttr = Attribute::where('external_id', 'prop-size-bind')->first();
+
+        $this->assertTrue($category->attributes->contains($colorAttr));
+        $this->assertTrue($category->attributes->contains($sizeAttr));
+    }
+
+    #[Test]
+    public function does_not_bind_attributes_when_no_category(): void
+    {
+        $this->handler->handle([
+            'event'      => 'product.created',
+            'message_id' => 'msg-bind-002',
+            'uuid'       => 'prod-bind-no-cat',
+            'name'       => 'Товар без категории',
+            'attributes' => [
+                [
+                    'property_uuid'  => 'prop-nocat-bind',
+                    'property_label' => 'Материал',
+                    'value_type'     => 'string',
+                    'value_uuid'     => null,
+                    'value_label'    => 'Хлопок',
+                ],
+            ],
+        ]);
+
+        // Нет связей в attribute_category
+        $this->assertEquals(0, \Illuminate\Support\Facades\DB::table('attribute_category')->count());
+    }
 }
