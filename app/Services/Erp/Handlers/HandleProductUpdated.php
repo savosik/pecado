@@ -144,27 +144,35 @@ class HandleProductUpdated
                     };
 
                     // Найти или создать атрибут по external_id (property_uuid)
+                    // 1С — мастер-каталог. При конфликте slug с данными из sex-opt.ru
+                    // перезаписываем external_id на значение из 1С.
                     $attribute = \App\Models\Attribute::where('external_id', $propertyUuid)->first();
 
-                    if ($attribute) {
+                    if (!$attribute) {
+                        $baseSlug = Str::slug($propertyLabel) ?: 'attr-' . Str::slug($propertyUuid);
+
+                        // Ищем по slug — возможно сущность пришла из sex-opt.ru с другим external_id
+                        $attribute = \App\Models\Attribute::where('slug', $baseSlug)->first();
+
+                        if ($attribute) {
+                            // Перезаписываем external_id на значение из 1С (1С — мастер)
+                            $attribute->update([
+                                'external_id' => $propertyUuid,
+                                'name'        => $propertyLabel,
+                                'type'        => $siteType,
+                            ]);
+                        } else {
+                            $attribute = \App\Models\Attribute::create([
+                                'external_id' => $propertyUuid,
+                                'name'        => $propertyLabel,
+                                'slug'        => $baseSlug,
+                                'type'        => $siteType,
+                            ]);
+                        }
+                    } else {
                         $attribute->update([
                             'name' => $propertyLabel,
                             'type' => $siteType,
-                        ]);
-                    } else {
-                        // Генерируем уникальный slug (разные external_id могут иметь одинаковый label)
-                        $baseSlug = Str::slug($propertyLabel) ?: 'attr-' . Str::slug($propertyUuid);
-                        $slug = $baseSlug;
-                        $counter = 1;
-                        while (\App\Models\Attribute::where('slug', $slug)->exists()) {
-                            $slug = $baseSlug . '-' . $counter++;
-                        }
-
-                        $attribute = \App\Models\Attribute::create([
-                            'external_id' => $propertyUuid,
-                            'name'        => $propertyLabel,
-                            'slug'        => $slug,
-                            'type'        => $siteType,
                         ]);
                     }
 
@@ -237,10 +245,29 @@ class HandleProductUpdated
             }
 
             $slug = Str::slug($name) ?: 'brand-' . Str::slug($uuid);
-            $brand = Brand::updateOrCreate(
-                ['external_id' => $uuid],
-                ['name' => $name, 'slug' => $slug]
-            );
+
+            // 1С — мастер. При конфликте slug перезаписываем external_id.
+            $brand = Brand::where('external_id', $uuid)->first();
+
+            if (!$brand) {
+                // Ищем по slug — возможно бренд пришёл из sex-opt.ru с другим external_id
+                $brand = Brand::where('slug', $slug)->first();
+
+                if ($brand) {
+                    $brand->update([
+                        'external_id' => $uuid,
+                        'name'        => $name,
+                    ]);
+                } else {
+                    $brand = Brand::create([
+                        'external_id' => $uuid,
+                        'name'        => $name,
+                        'slug'        => $slug,
+                    ]);
+                }
+            } else {
+                $brand->update(['name' => $name]);
+            }
 
             return $brand->id;
         }
