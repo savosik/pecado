@@ -212,7 +212,8 @@ export default function CartDropdown() {
                                                             value={editName}
                                                             onChange={(e) => setEditName(e.target.value)}
                                                             onKeyDown={(e) => {
-                                                                if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleRename(); }
+                                                                e.stopPropagation();
+                                                                if (e.key === 'Enter') { e.preventDefault(); handleRename(); }
                                                                 if (e.key === 'Escape') { setEditingId(null); setEditName(''); }
                                                             }}
                                                             onClick={(e) => e.stopPropagation()}
@@ -291,7 +292,8 @@ export default function CartDropdown() {
                                             value={newCartName}
                                             onChange={(e) => setNewCartName(e.target.value)}
                                             onKeyDown={(e) => {
-                                                if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); handleCreate(); }
+                                                e.stopPropagation();
+                                                if (e.key === 'Enter') { e.preventDefault(); handleCreate(); }
                                                 if (e.key === 'Escape') { setShowNewInput(false); setNewCartName(''); }
                                             }}
                                             onClick={(e) => e.stopPropagation()}
