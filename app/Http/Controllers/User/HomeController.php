@@ -19,6 +19,10 @@ class HomeController extends Controller
         $newProducts = ProductQueryService::enrichProductsWithStock($newProducts);
         $bestsellers = ProductQueryService::enrichProductsWithStock($bestsellers);
 
+        // Убираем товары «нет в наличии» с главной — показываем только «в наличии» и «предзаказ»
+        $newProducts = array_values(array_filter($newProducts, fn ($p) => ($p['stock_status'] ?? '') !== 'notavailable'));
+        $bestsellers = array_values(array_filter($bestsellers, fn ($p) => ($p['stock_status'] ?? '') !== 'notavailable'));
+
         // Обогащаем скидками (enrichSelectionsWithDiscounts загружает скидки одним запросом)
         $selections  = ProductQueryService::enrichSelectionsWithDiscounts($selections);
         $newProducts = ProductQueryService::enrichProductsWithDiscounts($newProducts);
