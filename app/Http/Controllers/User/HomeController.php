@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\Product;
 use App\Services\Product\ProductQueryService;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class HomeController extends Controller
@@ -11,24 +13,20 @@ class HomeController extends Controller
     public function index()
     {
         $selections  = ProductSelectionController::getCachedSelections();
-        // Загружаем больше кандидатов из кеша, чтобы после фильтрации по остаткам региона осталось достаточно
-        $newProducts = ProductSelectionController::getCachedNewProducts(50);
-        $bestsellers = ProductSelectionController::getCachedBestsellerProducts(50);
 
-        // Обогащаем остатками по региону текущего пользователя
+        // Новинки и бестселлеры — запрос с фильтрацией по остаткам региона пользователя
+        $wh = ProductQueryService::getRegionWarehouseIds();
+        $allWarehouseIds = array_merge($wh['primary'], $wh['preorder']);
+
+        $newProducts = $this->getProductsWithStock('is_new', $allWarehouseIds, 10);
+        $bestsellers = $this->getProductsWithStock('is_bestseller', $allWarehouseIds, 10);
+
+        // Обогащаем остатками (для отображения stock_quantity/preorder_quantity на карточках)
         $selections  = ProductQueryService::enrichSelectionsWithStock($selections);
         $newProducts = ProductQueryService::enrichProductsWithStock($newProducts);
         $bestsellers = ProductQueryService::enrichProductsWithStock($bestsellers);
 
-        // Убираем товары «нет в наличии» с главной — показываем только те, у которых stock_quantity > 0 или preorder_quantity > 0
-        $newProducts = array_values(array_filter($newProducts, fn ($p) => ($p['stock_quantity'] ?? 0) > 0 || ($p['preorder_quantity'] ?? 0) > 0));
-        $bestsellers = array_values(array_filter($bestsellers, fn ($p) => ($p['stock_quantity'] ?? 0) > 0 || ($p['preorder_quantity'] ?? 0) > 0));
-
-        // Ограничиваем до 10 после фильтрации
-        $newProducts = array_slice($newProducts, 0, 10);
-        $bestsellers = array_slice($bestsellers, 0, 10);
-
-        // Обогащаем скидками (enrichSelectionsWithDiscounts загружает скидки одним запросом)
+        // Обогащаем скидками
         $selections  = ProductQueryService::enrichSelectionsWithDiscounts($selections);
         $newProducts = ProductQueryService::enrichProductsWithDiscounts($newProducts);
         $bestsellers = ProductQueryService::enrichProductsWithDiscounts($bestsellers);
@@ -51,5 +49,39 @@ class HomeController extends Controller
                 'type'        => 'website',
             ],
         ]);
+    }
+
+    /**
+     * Загрузить товары с флагом ($flag = is_new / is_bestseller),
+     * у которых есть остатки на складах региона пользователя.
+     *
+     * @param  string  $flag           Название boolean-столбца (is_new, is_bestseller)
+     * @param  int[]   $warehouseIds   Все склады региона (primary + preorder)
+     * @param  int     $limit
+     * @return array
+     */
+    private function getProductsWithStock(string $flag, array $warehouseIds, int $limit): array
+    {
+        $query = Product::where($flag, true)
+            ->with(ProductQueryService::productEagerLoads())
+            ->latest();
+
+        // Если есть склады региона — оставляем только товары с остатками > 0
+        if (!empty($warehouseIds)) {
+            $query->whereExists(function ($sub) use ($warehouseIds) {
+                $sub->select(DB::raw(1))
+                    ->from('product_warehouse')
+                    ->whereColumn('product_warehouse.product_id', 'products.id')
+                    ->whereIn('product_warehouse.warehouse_id', $warehouseIds)
+                    ->where('product_warehouse.quantity', '>', 0);
+            });
+        }
+
+        return $query
+            ->limit($limit)
+            ->get()
+            ->map(fn ($p) => ProductQueryService::productToArray($p))
+            ->values()
+            ->toArray();
     }
 }
