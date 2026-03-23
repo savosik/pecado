@@ -151,6 +151,10 @@ class ImportCatalogProductJob implements ShouldQueue
 
     private function importProduct(array $data, ?Brand $brand, ?ProductModel $productModel): Product
     {
+        // Сохраняем существующую base_price — она управляется через price.updated (1С)
+        $existing = Product::where('external_id', $data['uid'])->first();
+        $basePrice = $existing?->base_price ?? 0;
+
         return Product::updateOrCreate(
             ['external_id' => $data['uid']],
             [
@@ -170,7 +174,7 @@ class ImportCatalogProductJob implements ShouldQueue
                 'short_description' => $data['short_description'] ?: null,
                 'brand_id' => $brand?->id,
                 'model_id' => $productModel?->id,
-                'base_price' => 0,
+                'base_price' => $basePrice,
             ]
         );
     }
