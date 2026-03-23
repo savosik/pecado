@@ -154,6 +154,7 @@ class CatalogFacetService
     {
         $productIds = $this->cloneBaseIds($baseQuery);
 
+        // 1. Фасеты для select-атрибутов (через attribute_values)
         $rows = DB::table('product_attribute_values as pav')
             ->joinSub($productIds, 'filtered', 'filtered.id', '=', 'pav.product_id')
             ->join('attributes as a', 'a.id', '=', 'pav.attribute_id')
@@ -162,11 +163,12 @@ class CatalogFacetService
             ->select([
                 'a.id as attribute_id',
                 'a.name as attribute_name',
+                'a.sort_order as attr_sort',
                 'av.id as value_id',
                 'av.value as value_name',
                 DB::raw('COUNT(DISTINCT pav.product_id) as count'),
             ])
-            ->groupBy('a.id', 'a.name', 'av.id', 'av.value')
+            ->groupBy('a.id', 'a.name', 'a.sort_order', 'av.id', 'av.value')
             ->orderBy('a.sort_order')
             ->orderBy('av.sort_order')
             ->get();
@@ -180,6 +182,8 @@ class CatalogFacetService
                 $grouped[$attrId] = [
                     'id' => $attrId,
                     'name' => $row->attribute_name,
+                    'sort_order' => $row->attr_sort,
+                    'type' => 'select',
                     'values' => [],
                 ];
             }
@@ -190,6 +194,76 @@ class CatalogFacetService
                 'count' => (int) $row->count,
             ];
         }
+
+        // 2. Фасеты для inline-атрибутов (number/text/boolean без attribute_value_id)
+        $inlineRows = DB::table('product_attribute_values as pav')
+            ->joinSub($this->cloneBaseIds($baseQuery), 'filtered', 'filtered.id', '=', 'pav.product_id')
+            ->join('attributes as a', 'a.id', '=', 'pav.attribute_id')
+            ->where('a.is_filterable', true)
+            ->whereNull('pav.attribute_value_id')
+            ->where(function ($q) {
+                $q->whereNotNull('pav.number_value')
+                  ->orWhereNotNull('pav.text_value')
+                  ->orWhereNotNull('pav.boolean_value');
+            })
+            ->select([
+                'a.id as attribute_id',
+                'a.name as attribute_name',
+                'a.type as attribute_type',
+                'a.sort_order as attr_sort',
+                'pav.number_value',
+                'pav.text_value',
+                'pav.boolean_value',
+                DB::raw('COUNT(DISTINCT pav.product_id) as count'),
+            ])
+            ->groupBy('a.id', 'a.name', 'a.type', 'a.sort_order', 'pav.number_value', 'pav.text_value', 'pav.boolean_value')
+            ->orderBy('a.sort_order')
+            ->get();
+
+        foreach ($inlineRows as $row) {
+            $attrId = $row->attribute_id;
+
+            if (! isset($grouped[$attrId])) {
+                $grouped[$attrId] = [
+                    'id' => $attrId,
+                    'name' => $row->attribute_name,
+                    'sort_order' => $row->attr_sort,
+                    'type' => 'inline',
+                    'values' => [],
+                ];
+            } else {
+                $grouped[$attrId]['type'] = 'inline';
+            }
+
+            $rawValue = $row->text_value
+                ?? ($row->number_value !== null ? rtrim(rtrim((string) $row->number_value, '0'), '.') : null)
+                ?? ($row->boolean_value !== null ? ($row->boolean_value ? 'Да' : 'Нет') : null);
+
+            if ($rawValue === null || $rawValue === '') {
+                continue;
+            }
+
+            $grouped[$attrId]['values'][] = [
+                'id' => "inline:{$attrId}:{$rawValue}",
+                'value' => $rawValue,
+                'raw_value' => $rawValue,
+                'count' => (int) $row->count,
+            ];
+        }
+
+        // Сортируем по sort_order и убираем вспомогательное поле
+        usort($grouped, fn ($a, $b) => ($a['sort_order'] ?? 0) <=> ($b['sort_order'] ?? 0));
+
+        // Для inline number-атрибутов сортируем значения по числовому значению
+        foreach ($grouped as &$attr) {
+            if ($attr['type'] === 'inline') {
+                usort($attr['values'], function ($a, $b) {
+                    return floatval($a['raw_value']) <=> floatval($b['raw_value']);
+                });
+            }
+            unset($attr['sort_order']);
+        }
+        unset($attr);
 
         return array_values($grouped);
     }

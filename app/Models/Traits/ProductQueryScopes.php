@@ -276,4 +276,53 @@ trait ProductQueryScopes
 
         return $query;
     }
+
+    /**
+     * Фильтр по inline-значениям атрибутов (number, text, boolean).
+     *
+     * Формат: [attribute_id => [value1, value2, ...], ...]
+     * AND между атрибутами, OR внутри одного атрибута.
+     */
+    public function scopeByInlineAttributes(Builder $query, array $filters): Builder
+    {
+        if (empty($filters)) {
+            return $query;
+        }
+
+        // Определяем тип атрибута для каждого attribute_id
+        $attrTypes = DB::table('attributes')
+            ->whereIn('id', array_keys($filters))
+            ->pluck('type', 'id');
+
+        foreach ($filters as $attributeId => $values) {
+            if (empty($values)) {
+                continue;
+            }
+
+            $attributeId = (int) $attributeId;
+            $type = $attrTypes[$attributeId] ?? 'text';
+
+            $query->whereHas('attributeValues', function (Builder $q) use ($attributeId, $values, $type) {
+                $q->where('attribute_id', $attributeId);
+
+                $column = match ($type) {
+                    'number' => 'number_value',
+                    'boolean' => 'boolean_value',
+                    default => 'text_value',
+                };
+
+                if ($type === 'boolean') {
+                    $boolValues = array_map(fn ($v) => $v === 'Да' || $v === '1' || $v === 'true' ? 1 : 0, $values);
+                    $q->whereIn($column, $boolValues);
+                } elseif ($type === 'number') {
+                    $numValues = array_map('floatval', $values);
+                    $q->whereIn($column, $numValues);
+                } else {
+                    $q->whereIn($column, $values);
+                }
+            });
+        }
+
+        return $query;
+    }
 }

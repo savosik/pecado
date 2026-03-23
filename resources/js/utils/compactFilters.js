@@ -68,6 +68,16 @@ export function buildCompactQuery(filters, view) {
         }
     }
 
+    // Inline attribute filters → fi[attr_id][]=value
+    const inlineFilters = filters.attribute_inline_filters;
+    if (inlineFilters && typeof inlineFilters === 'object') {
+        for (const [attrId, values] of Object.entries(inlineFilters)) {
+            if (Array.isArray(values) && values.length > 0) {
+                values.forEach((val) => params.append(`fi[${attrId}][]`, val));
+            }
+        }
+    }
+
     // Passthrough-параметры (без alias)
     for (const key of PASSTHROUGH_PARAMS) {
         const val = filters[key];
@@ -116,6 +126,20 @@ export function parseCompactQuery(search) {
         if (values.length > 0) {
             filters[fullName] = values.map(Number).filter((n) => !isNaN(n));
         }
+    }
+
+    // Inline attribute filters: fi[attr_id][] → attribute_inline_filters
+    const inlineFilters = {};
+    for (const [key, val] of params.entries()) {
+        const match = key.match(/^fi\[(\d+)\]\[\]$/);
+        if (match) {
+            const attrId = match[1];
+            if (!inlineFilters[attrId]) inlineFilters[attrId] = [];
+            inlineFilters[attrId].push(val);
+        }
+    }
+    if (Object.keys(inlineFilters).length > 0) {
+        filters.attribute_inline_filters = inlineFilters;
     }
 
     // Passthrough-параметры
@@ -172,6 +196,16 @@ export function buildApiParams(filters) {
         const arr = filters[key];
         if (Array.isArray(arr) && arr.length > 0) {
             arr.forEach((val) => params.append(`${key}[]`, val));
+        }
+    }
+
+    // Inline attribute filters → attribute_inline_filters[attr_id][]=value
+    const inlineFilters = filters.attribute_inline_filters;
+    if (inlineFilters && typeof inlineFilters === 'object') {
+        for (const [attrId, values] of Object.entries(inlineFilters)) {
+            if (Array.isArray(values) && values.length > 0) {
+                values.forEach((val) => params.append(`attribute_inline_filters[${attrId}][]`, val));
+            }
         }
     }
 

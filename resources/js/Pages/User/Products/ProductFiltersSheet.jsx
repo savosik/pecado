@@ -17,6 +17,11 @@ export function countActiveFilters(filters) {
     if (Array.isArray(filters.brand_ids)) count += filters.brand_ids.length;
     if (Array.isArray(filters.category_ids)) count += filters.category_ids.length;
     if (Array.isArray(filters.attribute_value_ids)) count += filters.attribute_value_ids.length;
+    if (filters.attribute_inline_filters && typeof filters.attribute_inline_filters === 'object') {
+        for (const values of Object.values(filters.attribute_inline_filters)) {
+            if (Array.isArray(values)) count += values.length;
+        }
+    }
 
     return count;
 }

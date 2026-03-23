@@ -125,14 +125,15 @@ class CatalogApiController extends Controller
         $withoutCategories = $validated;
         unset($withoutCategories['category_ids']);
 
-        // Для атрибутов — исключаем attribute_value_ids из базового запроса,
-        // но передаём их в getAttributeFacets для per-attribute exclusion.
+        // Для атрибутов — исключаем attribute_value_ids и attribute_inline_filters
+        // из базового запроса, но передаём их в getAttributeFacets для per-attribute exclusion.
         $selectedAttributeValueIds = array_map(
             'intval',
             $validated['attribute_value_ids'] ?? [],
         );
         $withoutAttributes = $validated;
         unset($withoutAttributes['attribute_value_ids']);
+        unset($withoutAttributes['attribute_inline_filters']);
 
         return response()->json([
             'brands'     => $this->facetService->getBrandFacets($this->buildBaseQuery($withoutBrands)),
@@ -266,13 +267,18 @@ class CatalogApiController extends Controller
             $query->inFavourites($user->id);
         }
 
-        // Атрибуты
+        // Атрибуты (select — через attribute_values)
         if (!empty($validated['attribute_value_ids'])) {
             $any = (bool) ($validated['attribute_any'] ?? false);
             $query->byAttributes(
                 array_map('intval', $validated['attribute_value_ids']),
                 $any,
             );
+        }
+
+        // Атрибуты (inline — number/text/boolean)
+        if (!empty($validated['attribute_inline_filters'])) {
+            $query->byInlineAttributes($validated['attribute_inline_filters']);
         }
 
         return $query;

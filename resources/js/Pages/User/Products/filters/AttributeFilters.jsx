@@ -12,33 +12,92 @@ const SEARCH_THRESHOLD = 10;
  * Поиск внутри блока при ≥10 значений.
  * Значения с count=0 скрываются, кроме уже выбранных.
  *
+ * Поддерживает два типа атрибутов:
+ * - select: значения с integer id → onChange (attribute_value_ids)
+ * - inline: значения с string id (inline:attr_id:raw_value) → onInlineChange (attribute_inline_filters)
+ *
  * @param {{
- *   attributes: Array<{ id: number, name: string, values: Array<{ id: number, value: string, count: number }> }>,
+ *   attributes: Array<{ id: number, name: string, type?: string, values: Array<{ id: number|string, value: string, raw_value?: string, count: number }> }>,
  *   selectedValueIds: number[],
+ *   selectedInlineFilters: object,
  *   onChange: (valueIds: number[]) => void,
+ *   onInlineChange: (filters: object) => void,
  * }} props
  */
-export default function AttributeFilters({ attributes = [], selectedValueIds = [], onChange }) {
+export default function AttributeFilters({ attributes = [], selectedValueIds = [], selectedInlineFilters = {}, onChange, onInlineChange }) {
     if (!attributes || attributes.length === 0) return null;
 
     const selectedSet = new Set(selectedValueIds.map(Number));
 
-    const handleToggle = (valueId) => {
-        const numId = Number(valueId);
-        if (selectedSet.has(numId)) {
-            onChange(selectedValueIds.filter((v) => Number(v) !== numId));
+    // Собираем выбранные inline значения в Set для быстрого доступа
+    const selectedInlineSet = new Set();
+    if (selectedInlineFilters && typeof selectedInlineFilters === 'object') {
+        for (const [attrId, values] of Object.entries(selectedInlineFilters)) {
+            if (Array.isArray(values)) {
+                values.forEach((v) => selectedInlineSet.add(`inline:${attrId}:${v}`));
+            }
+        }
+    }
+
+    const handleToggle = (attr, valueId) => {
+        const isInline = attr.type === 'inline';
+
+        if (isInline) {
+            // Значение типа "inline:3:15" → извлекаем attrId и rawValue
+            const parts = String(valueId).match(/^inline:(\d+):(.+)$/);
+            if (!parts) return;
+            const attrId = parts[1];
+            const rawValue = parts[2];
+
+            const current = { ...selectedInlineFilters };
+            const currentValues = [...(current[attrId] || [])];
+
+            if (currentValues.includes(rawValue)) {
+                const newValues = currentValues.filter((v) => v !== rawValue);
+                if (newValues.length > 0) {
+                    current[attrId] = newValues;
+                } else {
+                    delete current[attrId];
+                }
+            } else {
+                current[attrId] = [...currentValues, rawValue];
+            }
+
+            onInlineChange(Object.keys(current).length > 0 ? current : undefined);
         } else {
-            onChange([...selectedValueIds, numId]);
+            const numId = Number(valueId);
+            if (selectedSet.has(numId)) {
+                onChange(selectedValueIds.filter((v) => Number(v) !== numId));
+            } else {
+                onChange([...selectedValueIds, numId]);
+            }
         }
     };
 
     // Проверяем, есть ли выбранные значения у атрибута — для кнопки «Очистить»
-    const getSelectedForAttr = (attr) =>
-        attr.values.filter((v) => selectedSet.has(v.id)).map((v) => v.id);
+    const getSelectedForAttr = (attr) => {
+        if (attr.type === 'inline') {
+            return attr.values.filter((v) => selectedInlineSet.has(v.id));
+        }
+        return attr.values.filter((v) => selectedSet.has(v.id)).map((v) => v.id);
+    };
 
     const handleClearAttr = (attr) => {
-        const attrValueIds = new Set(attr.values.map((v) => v.id));
-        onChange(selectedValueIds.filter((id) => !attrValueIds.has(Number(id))));
+        if (attr.type === 'inline') {
+            const current = { ...selectedInlineFilters };
+            delete current[attr.id];
+            onInlineChange(Object.keys(current).length > 0 ? current : undefined);
+        } else {
+            const attrValueIds = new Set(attr.values.map((v) => v.id));
+            onChange(selectedValueIds.filter((id) => !attrValueIds.has(Number(id))));
+        }
+    };
+
+    const isValueSelected = (attr, val) => {
+        if (attr.type === 'inline') {
+            return selectedInlineSet.has(val.id);
+        }
+        return selectedSet.has(val.id);
     };
 
     return (
@@ -56,9 +115,10 @@ export default function AttributeFilters({ attributes = [], selectedValueIds = [
                             defaultOpen={selectedForAttr.length > 0}
                         >
                             <AttributeValueList
+                                attr={attr}
                                 values={attr.values}
-                                selectedSet={selectedSet}
-                                onToggle={handleToggle}
+                                isValueSelected={(val) => isValueSelected(attr, val)}
+                                onToggle={(valId) => handleToggle(attr, valId)}
                             />
                         </FilterBlock>
                     </Box>
@@ -71,23 +131,23 @@ export default function AttributeFilters({ attributes = [], selectedValueIds = [
 /**
  * Список значений одного атрибута с поиском и чекбоксами.
  */
-function AttributeValueList({ values, selectedSet, onToggle }) {
+function AttributeValueList({ attr, values, isValueSelected, onToggle }) {
     const [search, setSearch] = useState('');
 
     const visible = useMemo(() => {
         let filtered = values.filter(
-            (v) => v.count > 0 || selectedSet.has(v.id)
+            (v) => v.count > 0 || isValueSelected(v)
         );
 
         if (search.trim()) {
             const q = search.trim().toLowerCase();
             filtered = filtered.filter((v) =>
-                v.value.toLowerCase().includes(q)
+                String(v.value).toLowerCase().includes(q)
             );
         }
 
         return filtered;
-    }, [values, search, selectedSet.size]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [values, search, isValueSelected]);
 
     const showSearch = values.length >= SEARCH_THRESHOLD;
 
@@ -140,7 +200,7 @@ function AttributeValueList({ values, selectedSet, onToggle }) {
                     </Text>
                 ) : (
                     visible.map((val) => {
-                        const isChecked = selectedSet.has(val.id);
+                        const isChecked = isValueSelected(val);
 
                         return (
                             <Flex

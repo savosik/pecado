@@ -179,7 +179,7 @@ function buildChips(filters, facets, lockedFilters = {}, currencySymbol = '₽')
         });
     }
 
-    // Атрибуты
+    // Атрибуты (select)
     if (Array.isArray(filters.attribute_value_ids) && filters.attribute_value_ids.length > 0) {
         filters.attribute_value_ids.forEach((valueId) => {
             let label = `#${valueId}`;
@@ -199,6 +199,24 @@ function buildChips(filters, facets, lockedFilters = {}, currencySymbol = '₽')
                 label,
             });
         });
+    }
+
+    // Атрибуты (inline — number/text/boolean)
+    if (filters.attribute_inline_filters && typeof filters.attribute_inline_filters === 'object') {
+        for (const [attrId, values] of Object.entries(filters.attribute_inline_filters)) {
+            if (!Array.isArray(values)) continue;
+            // Находим название атрибута из фасетов
+            const attrFacet = facets?.attributes?.find((a) => a.id === Number(attrId));
+            const attrName = attrFacet?.name || `Атрибут #${attrId}`;
+            values.forEach((rawValue) => {
+                chips.push({
+                    key: `inline_${attrId}_${rawValue}`,
+                    filterKey: 'attribute_inline_filters',
+                    value: { attrId, rawValue },
+                    label: `${attrName}: ${rawValue}`,
+                });
+            });
+        }
     }
 
     return chips;

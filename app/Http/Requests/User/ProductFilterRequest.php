@@ -19,6 +19,7 @@ class ProductFilterRequest extends FormRequest
      */
     private const COMPACT_MAP = [
         'fv' => 'attribute_value_ids',
+        'fi' => 'attribute_inline_filters',
         'b' => 'brand_ids',
         'c' => 'category_ids',
         'cl' => 'collection_ids',
@@ -76,6 +77,9 @@ class ProductFilterRequest extends FormRequest
             'in_favourites' => 'nullable|boolean',
             'attribute_value_ids' => 'nullable|array',
             'attribute_value_ids.*' => 'integer|exists:attribute_values,id',
+            'attribute_inline_filters' => 'nullable|array',
+            'attribute_inline_filters.*' => 'nullable|array',
+            'attribute_inline_filters.*.*' => 'string|max:100',
             'attribute_any' => 'nullable|in:0,1',
             'sort' => ['nullable', Rule::enum(CatalogSort::class)],
             'view' => 'nullable|in:grid,list',
@@ -119,7 +123,7 @@ class ProductFilterRequest extends FormRequest
             'q', 'category_id', 'category_ids', 'brand_ids',
             'collection_ids', 'price_min', 'price_max', 'in_stock',
             'in_stock_mode', 'in_sale', 'in_favourites',
-            'attribute_value_ids', 'attribute_any',
+            'attribute_value_ids', 'attribute_inline_filters', 'attribute_any',
         ];
 
         foreach ($filterKeys as $key) {

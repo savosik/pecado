@@ -145,6 +145,10 @@ export default function Index() {
         updateFilter('attribute_value_ids', ids.length > 0 ? ids : undefined);
     }, [updateFilter]);
 
+    const handleInlineAttributeChange = useCallback((inlineFilters) => {
+        updateFilter('attribute_inline_filters', inlineFilters);
+    }, [updateFilter]);
+
     const handleRemoveFilter = useCallback((key, value) => {
         const f = filtersRef.current;
         if (key === 'price_range') {
@@ -158,6 +162,14 @@ export default function Index() {
         } else if (key === 'attribute_value_ids' && value != null) {
             const newIds = (f.attribute_value_ids || []).filter((id) => Number(id) !== Number(value));
             updateFilter('attribute_value_ids', newIds.length > 0 ? newIds : undefined);
+        } else if (key === 'attribute_inline_filters' && value != null) {
+            const { attrId, rawValue } = value;
+            const current = { ...(f.attribute_inline_filters || {}) };
+            if (current[attrId]) {
+                current[attrId] = current[attrId].filter((v) => v !== rawValue);
+                if (current[attrId].length === 0) delete current[attrId];
+            }
+            updateFilter('attribute_inline_filters', Object.keys(current).length > 0 ? current : undefined);
         } else {
             updateFilter(key, undefined);
         }
@@ -273,11 +285,13 @@ export default function Index() {
                 <AttributeFilters
                     attributes={facets.attributes}
                     selectedValueIds={filters.attribute_value_ids || []}
+                    selectedInlineFilters={filters.attribute_inline_filters || {}}
                     onChange={handleAttributeValuesChange}
+                    onInlineChange={handleInlineAttributeChange}
                 />
             )}
         </Box>
-    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange]);
+    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange, handleInlineAttributeChange]);
 
     // ─── Динамический SEO (поисковый запрос → title) ───
     const dynamicSeo = useMemo(() => {
