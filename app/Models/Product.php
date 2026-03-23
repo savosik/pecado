@@ -20,6 +20,21 @@ class Product extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia, HasTags, Searchable, ProductQueryScopes;
 
+    /**
+     * Автоматическая очистка HTML-сущностей при сохранении.
+     * 1С отправляет названия с &amp;quot; &amp;amp; и т.п. — декодируем перед записью.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product) {
+            foreach (['name', 'description', 'short_description'] as $field) {
+                if ($product->isDirty($field) && is_string($product->{$field})) {
+                    $product->{$field} = html_entity_decode($product->{$field}, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                }
+            }
+        });
+    }
+
     protected $fillable = [
         'name',
         'base_price',
