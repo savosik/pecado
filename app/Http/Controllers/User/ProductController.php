@@ -319,6 +319,15 @@ class ProductController extends Controller
                 return strnatcasecmp($a['sku'] ?? '', $b['sku'] ?? '');
             });
 
+            // Скрываем варианты «нет в наличии» (stock=0 и preorder=0),
+            // но текущий товар всегда остаётся видимым
+            $variantArrays = array_values(array_filter($variantArrays, function ($va) use ($product) {
+                if ($va['id'] === $product->id) {
+                    return true;
+                }
+                return ($va['stock_quantity'] ?? 0) > 0 || ($va['preorder_quantity'] ?? 0) > 0;
+            }));
+
             $variants = $variantArrays;
         }
 
