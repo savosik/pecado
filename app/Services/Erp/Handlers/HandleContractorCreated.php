@@ -30,7 +30,7 @@ class HandleContractorCreated
         $actualAddr  = $payload['actual_address']  ?? null;
         $phone       = $payload['phone']           ?? null;
         $email       = $payload['email']           ?? null;
-        $country     = $payload['country']         ?? 'BY'; // default: Беларусь
+        $country     = $payload['country']         ?? 'RU'; // default: Россия
         $bankAccounts = $payload['bank_accounts']  ?? null;
 
         if (!$uuid) {
