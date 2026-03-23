@@ -137,17 +137,30 @@ class HandleProductCreated
                         default     => 'string',
                     };
 
-                    $slug = Str::slug($propertyLabel) ?: 'attr-' . Str::slug($propertyUuid);
-
                     // Найти или создать атрибут по external_id (property_uuid)
-                    $attribute = \App\Models\Attribute::updateOrCreate(
-                        ['external_id' => $propertyUuid],
-                        [
+                    $attribute = \App\Models\Attribute::where('external_id', $propertyUuid)->first();
+
+                    if ($attribute) {
+                        $attribute->update([
                             'name' => $propertyLabel,
-                            'slug' => $slug,
                             'type' => $siteType,
-                        ]
-                    );
+                        ]);
+                    } else {
+                        // Генерируем уникальный slug (разные external_id могут иметь одинаковый label)
+                        $baseSlug = Str::slug($propertyLabel) ?: 'attr-' . Str::slug($propertyUuid);
+                        $slug = $baseSlug;
+                        $counter = 1;
+                        while (\App\Models\Attribute::where('slug', $slug)->exists()) {
+                            $slug = $baseSlug . '-' . $counter++;
+                        }
+
+                        $attribute = \App\Models\Attribute::create([
+                            'external_id' => $propertyUuid,
+                            'name'        => $propertyLabel,
+                            'slug'        => $slug,
+                            'type'        => $siteType,
+                        ]);
+                    }
 
                     $processedAttributeIds[] = $attribute->id;
 
