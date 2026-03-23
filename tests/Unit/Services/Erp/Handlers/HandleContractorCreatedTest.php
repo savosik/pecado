@@ -6,6 +6,7 @@ use App\Enums\UserStatus;
 use App\Events\CompanyCreated;
 use App\Events\CompanyUpdated;
 use App\Models\Company;
+use App\Models\CompanyBankAccount;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandleContractorCreated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -39,10 +40,21 @@ class HandleContractorCreatedTest extends TestCase
             'legal_name'          => 'Общество с ограниченной ответственностью «Тест»',
             'tax_id'              => '7701234567',
             'registration_number' => '770101001',
+            'tax_code'            => '770101001',
+            'okpo_code'           => '12345678',
             'legal_address'       => 'г. Москва, ул. Пушкина, д. 10',
             'actual_address'      => 'г. Москва, ул. Лермонтова, д. 5',
             'phone'               => '+74951234567',
             'email'               => 'info@test.ru',
+            'bank_accounts'       => [
+                [
+                    'bank_name'             => 'АО «Сбербанк»',
+                    'bank_bik'              => '044525225',
+                    'correspondent_account' => '30101810400000000225',
+                    'account_number'        => '40702810938000012345',
+                    'is_primary'            => true,
+                ],
+            ],
         ]);
 
         $this->assertDatabaseHas('companies', [
@@ -52,10 +64,22 @@ class HandleContractorCreatedTest extends TestCase
             'legal_name'          => 'Общество с ограниченной ответственностью «Тест»',
             'tax_id'              => '7701234567',
             'registration_number' => '770101001',
+            'tax_code'            => '770101001',
+            'okpo_code'           => '12345678',
             'legal_address'       => 'г. Москва, ул. Пушкина, д. 10',
             'actual_address'      => 'г. Москва, ул. Лермонтова, д. 5',
             'phone'               => '+74951234567',
             'email'               => 'info@test.ru',
+        ]);
+
+        $company = Company::withoutGlobalScopes()->where('erp_id', 'contractor-uuid-456')->first();
+        $this->assertCount(1, $company->bankAccounts);
+        $this->assertDatabaseHas('company_bank_accounts', [
+            'company_id'     => $company->id,
+            'bank_name'      => 'АО «Сбербанк»',
+            'bank_bik'       => '044525225',
+            'account_number' => '40702810938000012345',
+            'is_primary'     => true,
         ]);
     }
 
@@ -179,5 +203,86 @@ class HandleContractorCreatedTest extends TestCase
 
         Event::assertNotDispatched(CompanyCreated::class);
         Event::assertNotDispatched(CompanyUpdated::class);
+    }
+
+    // ──────────────────────────────────────────────
+    // v5: Банковские счета
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_replaces_bank_accounts_on_update(): void
+    {
+        $user = User::factory()->create([
+            'erp_id' => 'partner-uuid-bank-replace',
+            'status' => UserStatus::ACTIVE,
+        ]);
+
+        $handler = new HandleContractorCreated();
+
+        // Первый вызов — создаём с одним счётом
+        $handler->handle([
+            'event'        => 'contractor.created',
+            'uuid'         => 'contractor-uuid-bank-replace',
+            'partner_uuid' => 'partner-uuid-bank-replace',
+            'name'         => 'Компания',
+            'bank_accounts' => [
+                ['bank_name' => 'Банк 1', 'account_number' => '111', 'is_primary' => true],
+            ],
+        ]);
+
+        $this->assertDatabaseCount('company_bank_accounts', 1);
+
+        // Второй вызов — заменяем на два новых счёта
+        $handler->handle([
+            'event'        => 'contractor.created',
+            'uuid'         => 'contractor-uuid-bank-replace',
+            'partner_uuid' => 'partner-uuid-bank-replace',
+            'name'         => 'Компания',
+            'bank_accounts' => [
+                ['bank_name' => 'Банк 2', 'account_number' => '222', 'is_primary' => true],
+                ['bank_name' => 'Банк 3', 'account_number' => '333', 'is_primary' => false],
+            ],
+        ]);
+
+        $this->assertDatabaseCount('company_bank_accounts', 2);
+        $this->assertDatabaseMissing('company_bank_accounts', ['bank_name' => 'Банк 1']);
+        $this->assertDatabaseHas('company_bank_accounts', ['bank_name' => 'Банк 2']);
+        $this->assertDatabaseHas('company_bank_accounts', ['bank_name' => 'Банк 3']);
+    }
+
+    #[Test]
+    public function it_handles_null_bank_accounts_without_deleting_existing(): void
+    {
+        $user = User::factory()->create([
+            'erp_id' => 'partner-uuid-bank-null',
+            'status' => UserStatus::ACTIVE,
+        ]);
+
+        $handler = new HandleContractorCreated();
+
+        // Создаём с банковскими счетами
+        $handler->handle([
+            'event'        => 'contractor.created',
+            'uuid'         => 'contractor-uuid-bank-null',
+            'partner_uuid' => 'partner-uuid-bank-null',
+            'name'         => 'Компания',
+            'bank_accounts' => [
+                ['bank_name' => 'Банк', 'account_number' => '444', 'is_primary' => true],
+            ],
+        ]);
+
+        $this->assertDatabaseCount('company_bank_accounts', 1);
+
+        // Повторный вызов без bank_accounts — счета не трогаем
+        $handler->handle([
+            'event'        => 'contractor.created',
+            'uuid'         => 'contractor-uuid-bank-null',
+            'partner_uuid' => 'partner-uuid-bank-null',
+            'name'         => 'Компания обновлённая',
+            'bank_accounts' => null,
+        ]);
+
+        $this->assertDatabaseCount('company_bank_accounts', 1);
+        $this->assertDatabaseHas('company_bank_accounts', ['bank_name' => 'Банк']);
     }
 }
