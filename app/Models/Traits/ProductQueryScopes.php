@@ -188,6 +188,39 @@ trait ProductQueryScopes
     }
 
     /**
+     * Исключить товары, которых «нет в наличии» в регионе.
+     *
+     * Показывает только товары, у которых есть остатки хотя бы на одном
+     * складе региона (primary или preorder). Используется по умолчанию,
+     * когда пользователь не выбрал явный фильтр наличия.
+     *
+     * @param int|null $regionId ID региона пользователя
+     */
+    public function scopeAvailable(Builder $query, ?int $regionId = null): Builder
+    {
+        if ($regionId === null) {
+            return $query; // без региона фильтрация невозможна
+        }
+
+        $allWarehouseIds = DB::table('region_warehouse')
+            ->where('region_id', $regionId)
+            ->pluck('warehouse_id')
+            ->toArray();
+
+        if (empty($allWarehouseIds)) {
+            return $query;
+        }
+
+        return $query->whereExists(function ($sub) use ($allWarehouseIds) {
+            $sub->select(DB::raw(1))
+                ->from('product_warehouse')
+                ->whereColumn('product_warehouse.product_id', 'products.id')
+                ->where('product_warehouse.quantity', '>', 0)
+                ->whereIn('product_warehouse.warehouse_id', $allWarehouseIds);
+        });
+    }
+
+    /**
      * Фильтр по наличию скидки.
      */
     public function scopeInSale(Builder $query, bool $value = true): Builder

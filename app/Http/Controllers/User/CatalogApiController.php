@@ -250,6 +250,10 @@ class CatalogApiController extends Controller
             $query->inStock($validated['in_stock_mode'], $user?->region_id);
         } elseif (!empty($validated['in_stock'])) {
             $query->inStock('instock', $user?->region_id);
+        } else {
+            // По умолчанию скрываем товары «нет в наличии» —
+            // показываем только «в наличии» и «предзаказ»
+            $query->available($user?->region_id);
         }
 
         // Скидка (in_sale=1 → только со скидкой; in_sale=0 или отсутствует → без фильтра)
