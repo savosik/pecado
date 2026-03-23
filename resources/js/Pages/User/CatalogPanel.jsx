@@ -599,7 +599,9 @@ export default function CatalogPanel({ open, onClose }) {
                                                     gridTemplateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }}
                                                     gap="6"
                                                 >
-                                                    {(categories[activeRootIndex].children || []).map((second) => (
+                                                    {[...(categories[activeRootIndex].children || [])]
+                                                        .sort((a, b) => (b.children?.length || 0) - (a.children?.length || 0))
+                                                        .map((second) => (
                                                         <CategoryColumn key={second.id} category={second} onNavigate={onClose} />
                                                     ))}
                                                 </Box>
