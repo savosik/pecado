@@ -42,6 +42,7 @@ services:
     command: ["/usr/bin/supervisord", "-c", "/etc/supervisor/supervisord.conf"]
     volumes:
       - ./:/var/www
+      - ./docker/php/uploads.ini:/usr/local/etc/php/conf.d/uploads.ini
       - ./docker/supervisor/supervisord.conf:/etc/supervisor/supervisord.conf
       - ./docker/supervisor/conf.d:/etc/supervisor/conf.d
     networks:
