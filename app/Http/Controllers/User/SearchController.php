@@ -241,11 +241,12 @@ class SearchController extends Controller
                 $results['categories'] = Category::search($query)
                     ->take($categoryLimit)
                     ->get()
+                    ->filter(fn (Category $category) => $category->is_active)
                     ->map(fn (Category $category) => [
                         'id'   => $category->id,
                         'name' => $category->name,
                         'slug' => $category->slug,
-                    ])->toArray();
+                    ])->values()->toArray();
             } catch (\Throwable) {
                 $results['categories'] = [];
             }

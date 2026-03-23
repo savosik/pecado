@@ -15,7 +15,7 @@ class CatalogController extends Controller
      */
     public function categories(): JsonResponse
     {
-        $tree = Category::defaultOrder()->get()->toTree();
+        $tree = Category::active()->defaultOrder()->get()->toTree();
 
         $mapNode = function ($node) use (&$mapNode) {
             $iconUrl = $node->getFirstMediaUrl('icon');

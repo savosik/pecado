@@ -188,6 +188,12 @@ class CatalogApiController extends Controller
         $query = Product::query();
         $user = Auth::user();
 
+        // Исключаем товары из неактивных категорий
+        $query->where(function ($q) {
+            $q->whereNull('category_id')
+                ->orWhereHas('category', fn ($cq) => $cq->where('is_active', true));
+        });
+
         // Поиск
         if (!empty($validated['q'])) {
             $query->search($validated['q']);

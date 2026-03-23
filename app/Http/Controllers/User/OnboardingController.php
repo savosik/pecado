@@ -23,8 +23,9 @@ class OnboardingController extends Controller
             return redirect('/');
         }
 
-        // Корневые категории товаров
+        // Корневые категории товаров (только активные)
         $rootCategories = \App\Models\Category::whereNull('parent_id')
+            ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name'])
             ->toArray();

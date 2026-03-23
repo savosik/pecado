@@ -148,6 +148,7 @@ class ProductExportController extends Controller
                 ->limit(50)
                 ->get(),
             'categories' => Category::query()
+                ->where('is_active', true)
                 ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
                 ->select('id', 'name')
                 ->orderBy('name')

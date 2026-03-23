@@ -82,6 +82,7 @@ class CatalogController extends Controller
         $categories = Category::search($query)
             ->take(4)
             ->get()
+            ->filter(fn (Category $category) => $category->is_active)
             ->map(fn (Category $category) => [
                 'id' => $category->id,
                 'name' => $category->name,

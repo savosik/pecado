@@ -309,7 +309,7 @@ class CatalogFacetService
         $productIds = $this->cloneBaseIds($baseQuery);
         $alias = $table[0]; // 'b' для brands, 'c' для categories
 
-        return DB::table("products as p")
+        $query = DB::table("products as p")
             ->joinSub($productIds, 'filtered', 'filtered.id', '=', 'p.id')
             ->join("{$table} as {$alias}", "{$alias}.id", '=', "p.{$fkColumn}")
             ->select([
@@ -319,7 +319,14 @@ class CatalogFacetService
                 DB::raw('COUNT(*) as count'),
             ])
             ->groupBy("{$alias}.id", "{$alias}.name", "{$alias}.slug")
-            ->orderBy("{$alias}.name")
+            ->orderBy("{$alias}.name");
+
+        // Для категорий — показываем только активные
+        if ($table === 'categories') {
+            $query->where("{$alias}.is_active", true);
+        }
+
+        return $query
             ->get()
             ->map(fn ($row) => [
                 'id' => $row->id,

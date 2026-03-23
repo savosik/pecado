@@ -29,11 +29,24 @@ class Category extends Model implements HasMedia
         'external_id',
         'uuid',
         'is_group',
+        'is_active',
         'short_description',
         'description',
         'meta_title',
         'meta_description',
     ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    /**
+     * Scope: только активные категории.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 
     /**
      * Get the products for this category.

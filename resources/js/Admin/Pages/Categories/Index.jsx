@@ -114,6 +114,20 @@ export default function Index({ categories, filters }) {
                 </Text>
             ),
         },
+        {
+            key: 'is_active',
+            label: 'Активна',
+            width: '100px',
+            render: (_, category) => (
+                <Badge
+                    size="sm"
+                    colorPalette={category.is_active ? 'green' : 'red'}
+                    variant="subtle"
+                >
+                    {category.is_active ? 'Да' : 'Нет'}
+                </Badge>
+            ),
+        },
         createActionsColumn('admin.categories', openDeleteDialog),
     ];
 

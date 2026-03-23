@@ -16,6 +16,7 @@ export default function Create({ categories, availableAttributes }) {
         slug: '',
         parent_id: '',
         external_id: '',
+        is_active: true,
         short_description: '',
         description: '',
         meta_title: '',
@@ -60,7 +61,7 @@ export default function Create({ categories, availableAttributes }) {
 
     // Определяем, в каких табах есть ошибки
     const tabErrors = useMemo(() => ({
-        general: ['name', 'slug', 'parent_id', 'external_id'].some(field => errors[field]),
+        general: ['name', 'slug', 'parent_id', 'external_id', 'is_active'].some(field => errors[field]),
         descriptions: ['short_description', 'description'].some(field => errors[field]),
         seo: ['meta_title', 'meta_description'].some(field => errors[field]),
         media: ['icon', 'tags'].some(field => errors[field]),
@@ -205,6 +206,17 @@ export default function Create({ categories, availableAttributes }) {
                                                 onChange={(e) => setData('external_id', e.target.value)}
                                                 placeholder="Внешний идентификатор"
                                             />
+                                        </FormField>
+
+                                        <FormField label="Активность" error={errors.is_active}>
+                                            <Checkbox
+                                                id="is_active"
+                                                checked={data.is_active}
+                                                onCheckedChange={(e) => setData('is_active', e.checked)}
+                                                colorPalette="green"
+                                            >
+                                                Категория активна (отображается на сайте)
+                                            </Checkbox>
                                         </FormField>
                                     </SimpleGrid>
                                 </Stack>

@@ -75,6 +75,9 @@ class ProductController extends Controller
      */
     public function byCategory(Category $category): Response
     {
+        // Неактивная категория — 404 для пользователя
+        abort_if(!$category->is_active, 404);
+
         $appName = config('app.name');
 
         // Хлебные крошки: Каталог → предки → текущая категория
@@ -404,7 +407,7 @@ class ProductController extends Controller
      */
     public function categoriesRoot(): \Illuminate\Http\JsonResponse
     {
-        $categories = Category::whereIsRoot()
+        $categories = Category::active()->whereIsRoot()
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', 'parent_id']);
 
@@ -417,7 +420,10 @@ class ProductController extends Controller
      */
     public function categoryShow(Category $category): \Illuminate\Http\JsonResponse
     {
+        abort_if(!$category->is_active, 404);
+
         $children = $category->children()
+            ->where('is_active', true)
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', 'parent_id']);
 
