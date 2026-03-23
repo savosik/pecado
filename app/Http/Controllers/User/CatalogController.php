@@ -20,13 +20,18 @@ class CatalogController extends Controller
         $mapNode = function ($node) use (&$mapNode) {
             $iconUrl = $node->getFirstMediaUrl('icon');
 
+            // Сортируем подкатегории: те, у которых больше потомков — первыми
+            $sortedChildren = $node->children
+                ->sortByDesc(fn ($child) => $child->children->count())
+                ->values();
+
             return [
                 'id' => $node->id,
                 'name' => $node->name,
                 'slug' => $node->slug,
                 'parent_id' => $node->parent_id,
                 'icon_url' => $iconUrl ?: null,
-                'children' => $node->children->map($mapNode)->values()->toArray(),
+                'children' => $sortedChildren->map($mapNode)->toArray(),
             ];
         };
 
