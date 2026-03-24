@@ -13,7 +13,7 @@ import { buildProductInfoProps } from '@/utils/product';
  * Show — детальная страница товара.
  */
 export default function Show() {
-    const { product, media, categoryTrail, variants, certificates, specifications, currency, auth } = usePage().props;
+    const { product, media, categoryTrail, variants, certificates, specifications, sizeChart, currency, auth } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
     const user = auth?.user || null;
 
@@ -54,6 +54,7 @@ export default function Show() {
                         description={product.description_html || product.description}
                         media={media}
                         certificates={certificates}
+                        sizeChart={sizeChart}
                     />
                 </Box>
 
@@ -79,6 +80,7 @@ export default function Show() {
                             description={product.description_html || product.description}
                             media={media}
                             certificates={certificates}
+                            sizeChart={sizeChart}
                         />
                     </GridItem>
                 </Grid>

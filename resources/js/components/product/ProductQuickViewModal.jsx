@@ -50,6 +50,7 @@ export default function ProductQuickViewModal() {
     const variants = data?.variants ?? [];
     const certificates = data?.certificates ?? [];
     const specifications = data?.specifications ?? {};
+    const sizeChart = data?.sizeChart ?? null;
 
     const productInfoProps = product ? buildProductInfoProps(product, currencySymbol) : {};
 
@@ -155,6 +156,7 @@ export default function ProductQuickViewModal() {
                                             description={product.description_html || product.description}
                                             media={media}
                                             certificates={certificates}
+                                            sizeChart={sizeChart}
                                         />
                                     </Box>
 
@@ -180,6 +182,7 @@ export default function ProductQuickViewModal() {
                                                 description={product.description_html || product.description}
                                                 media={media}
                                                 certificates={certificates}
+                                                sizeChart={sizeChart}
                                             />
                                         </GridItem>
                                     </Grid>

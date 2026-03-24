@@ -1,20 +1,21 @@
 import { useState, useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import { Box, Flex, Text, Button } from '@chakra-ui/react';
+import { Box, Flex, Text, Button, Table } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
 import { LuDownload, LuFileText } from 'react-icons/lu';
 
 /**
- * ProductDetailTabs — табы с описанием, характеристиками, сертификатами и медиа.
+ * ProductDetailTabs — табы с описанием, характеристиками, размерной сеткой, сертификатами и медиа.
  *
  * @param {{
  *   specifications: Object,
  *   description: string,
  *   media: Array<{url: string, type: string}>,
- *   certificates: Array<{id: number, name: string, url: string}>
+ *   certificates: Array<{id: number, name: string, url: string}>,
+ *   sizeChart: {name: string, values: Array<Array<string>>} | null
  * }} props
  */
-export default function ProductDetailTabs({ specifications = {}, description = '', media = [], certificates = [] }) {
+export default function ProductDetailTabs({ specifications = {}, description = '', media = [], certificates = [], sizeChart = null }) {
     const [expandedSpecs, setExpandedSpecs] = useState(new Set());
 
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
@@ -22,11 +23,13 @@ export default function ProductDetailTabs({ specifications = {}, description = '
     const hasDesc = sanitizedDescription.trim().length > 0;
     const hasMedia = Array.isArray(media) && media.filter(m => m.type === 'image' || m.type === 'video').length > 0;
     const hasCerts = Array.isArray(certificates) && certificates.length > 0;
+    const hasSizeChart = sizeChart && Array.isArray(sizeChart.values) && sizeChart.values.length > 1;
 
     // Собираем доступные табы
     const tabs = [];
     if (hasSpecs) tabs.push({ key: 'specs', label: 'Характеристики' });
     if (hasDesc) tabs.push({ key: 'description', label: 'Описание' });
+    if (hasSizeChart) tabs.push({ key: 'sizeChart', label: 'Размерная сетка' });
     if (hasCerts) tabs.push({ key: 'certificates', label: 'Сертификаты' });
     if (hasMedia) tabs.push({ key: 'media', label: 'Медиа' });
 
@@ -137,6 +140,56 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                                 '& a': { color: 'var(--chakra-colors-pecado-500)', textDecoration: 'underline' },
                             }}
                         />
+                    </Box>
+                </Tabs.Content>
+            )}
+
+            {/* Размерная сетка */}
+            {hasSizeChart && (
+                <Tabs.Content value="sizeChart" pt="4">
+                    <Box spaceY="3">
+                        {sizeChart.name && (
+                            <Text fontSize="sm" fontWeight="600" color="gray.600" _dark={{ color: 'gray.300' }}>
+                                {sizeChart.name}
+                            </Text>
+                        )}
+                        <Box overflowX="auto">
+                            <Table.Root size="sm" variant="outline">
+                                <Table.Header>
+                                    <Table.Row>
+                                        {sizeChart.values[0].map((header, i) => (
+                                            <Table.ColumnHeader
+                                                key={i}
+                                                fontSize="xs"
+                                                fontWeight="600"
+                                                textAlign="center"
+                                                whiteSpace="nowrap"
+                                                bg="gray.50"
+                                                _dark={{ bg: 'gray.700' }}
+                                            >
+                                                {header}
+                                            </Table.ColumnHeader>
+                                        ))}
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {sizeChart.values.slice(1).map((row, rowIdx) => (
+                                        <Table.Row key={rowIdx}>
+                                            {row.map((cell, cellIdx) => (
+                                                <Table.Cell
+                                                    key={cellIdx}
+                                                    fontSize="sm"
+                                                    textAlign="center"
+                                                    whiteSpace="nowrap"
+                                                >
+                                                    {cell}
+                                                </Table.Cell>
+                                            ))}
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
+                        </Box>
                     </Box>
                 </Tabs.Content>
             )}

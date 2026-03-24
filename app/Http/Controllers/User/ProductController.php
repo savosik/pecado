@@ -230,6 +230,7 @@ class ProductController extends Controller
             'media',
             'barcodes',
             'tags',
+            'sizeChart',
         ]);
 
         // Хлебные крошки — цепочка категорий от корня до текущей
@@ -400,6 +401,15 @@ class ProductController extends Controller
         ] : null;
         $productData['model_name'] = $product->model?->name;
 
+        // Размерная сетка
+        $sizeChart = null;
+        if ($product->sizeChart) {
+            $sizeChart = [
+                'name'   => $product->sizeChart->name,
+                'values' => $product->sizeChart->values,
+            ];
+        }
+
         return [
             'product'        => $productData,
             'media'          => $media,
@@ -407,6 +417,7 @@ class ProductController extends Controller
             'variants'       => $variants,
             'certificates'   => $certificates,
             'specifications' => $specifications,
+            'sizeChart'      => $sizeChart,
         ];
     }
 
