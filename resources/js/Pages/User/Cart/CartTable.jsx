@@ -264,20 +264,13 @@ export default function CartTable({
                                                         <Text lineClamp={2}>{row.product?.name || 'Товар недоступен'}</Text>
                                                     )}
                                                 </Box>
-                                                <Flex gap="1" fontSize="xs" color="fg.muted" lineClamp={1}>
-                                                    {row.product?.brand?.slug ? (
-                                                        <Link href={`/brands/${row.product.brand.slug}`}>
-                                                            <Text _hover={{ textDecoration: 'underline' }}>
-                                                                {row.product.brand.name}
-                                                            </Text>
-                                                        </Link>
-                                                    ) : (
-                                                        <Text>{row.product?.brand?.name || '—'}</Text>
-                                                    )}
-                                                    {row.product?.sku && (
-                                                        <Text> • {row.product.sku}</Text>
-                                                    )}
-                                                </Flex>
+                                                <Text fontSize="xs" color="fg.muted" lineClamp={1}>
+                                                    {row.product?.brand?.name
+                                                        ? (row.product?.sku
+                                                            ? `${row.product.brand.name} • ${row.product.sku}`
+                                                            : row.product.brand.name)
+                                                        : (row.product?.sku || '—')}
+                                                </Text>
                                                 {data.isUnavailable && (
                                                     <Badge colorPalette="red" variant="subtle" fontSize="2xs" mt="1">Недоступен</Badge>
                                                 )}
