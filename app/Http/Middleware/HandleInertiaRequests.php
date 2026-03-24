@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Currency;
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -65,6 +66,9 @@ class HandleInertiaRequests extends Middleware
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
             ],
+            'footerCategories' => Cache::remember('footer.categories', 3600, fn () =>
+                Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
+            ),
         ];
     }
 }

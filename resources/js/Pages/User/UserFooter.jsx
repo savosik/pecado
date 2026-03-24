@@ -1,7 +1,7 @@
 import {
     Box, Grid, GridItem, Text, VStack,
 } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 
 const companyLinks = [
     { href: '/about', label: 'О компании' },
@@ -16,15 +16,8 @@ const buyerLinks = [
     { href: '/promotions', label: 'Акции' },
 ];
 
-const categoryLinks = [
-    { href: '/products?category=1', label: 'Вибраторы' },
-    { href: '/products?category=2', label: 'Фаллоимитаторы' },
-    { href: '/products?category=3', label: 'Белье' },
-    { href: '/products?category=4', label: 'Косметика' },
-    { href: '/products?category=5', label: 'Аксессуары' },
-];
-
 export default function UserFooter() {
+    const { footerCategories = [] } = usePage().props;
     const year = new Date().getFullYear();
 
     return (
@@ -101,8 +94,8 @@ export default function UserFooter() {
                                 Категории
                             </Text>
                             <VStack align="start" gap="2">
-                                {categoryLinks.map((item) => (
-                                    <Link key={item.href} href={item.href}>
+                                {footerCategories.map((item) => (
+                                    <Link key={item.id} href={`/categories/${item.slug}`}>
                                         <Text
                                             fontSize="sm"
                                             color="gray.600"
@@ -110,7 +103,7 @@ export default function UserFooter() {
                                             _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
                                             transition="colors 0.2s"
                                         >
-                                            {item.label}
+                                            {item.name}
                                         </Text>
                                     </Link>
                                 ))}
