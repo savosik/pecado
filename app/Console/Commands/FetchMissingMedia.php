@@ -120,7 +120,7 @@ class FetchMissingMedia extends Command
                     continue;
                 }
 
-                $detail = $response->json();
+                $detail = $response->json('payload', []);
                 $images = $detail['images'] ?? [];
 
                 if (empty($images)) {
