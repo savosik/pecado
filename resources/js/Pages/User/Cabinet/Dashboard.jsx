@@ -33,6 +33,15 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
         cancelled: 'Отменён',
     };
 
+    const statusColors = {
+        pending: 'yellow',
+        processing: 'blue',
+        shipped: 'purple',
+        delivered: 'teal',
+        completed: 'green',
+        cancelled: 'red',
+    };
+
     return (
         <CabinetLayout title="Дашборд">
             <Head title="Личный кабинет — Pecado" />
@@ -190,34 +199,43 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                             Заказов пока нет
                         </Text>
                     ) : (
-                        <VStack gap="3" align="stretch">
+                        <VStack gap="2" align="stretch">
                             {recentOrders.map((order) => (
-                                <Link key={order.id} href={`/orders/${order.id}`}>
+                                <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
                                     <Flex
                                         align="center"
                                         justify="space-between"
                                         p="3"
                                         borderRadius="lg"
                                         bg="gray.50"
-                                        _dark={{ bg: 'gray.800' }}
-                                        _hover={{ bg: 'gray.100', _dark: { bg: 'gray.700' } }}
+                                        _dark={{ bg: 'gray.750' }}
+                                        _hover={{ bg: 'pecado.50', _dark: { bg: 'gray.700' } }}
                                         transition="background 0.15s"
                                         cursor="pointer"
+                                        borderLeft="3px solid"
+                                        borderLeftColor={`${statusColors[order.status] || 'gray'}.400`}
                                     >
-                                        <VStack align="start" gap="0">
-                                            <Text fontSize="sm" fontWeight="600">#{order.order_number}</Text>
-                                            <Text fontSize="xs" color="gray.400">{order.created_at}</Text>
+                                        <VStack align="start" gap="0" flex="1" minW="0">
+                                            <Text fontSize="sm" fontWeight="700" color="gray.800" _dark={{ color: 'gray.100' }}>
+                                                №{order.order_number || order.id}
+                                            </Text>
+                                            <Text fontSize="xs" color="gray.400">
+                                                {order.created_at}
+                                                {order.items_count > 0 && ` · ${order.items_count} ${order.items_count === 1 ? 'позиция' : order.items_count < 5 ? 'позиции' : 'позиций'}`}
+                                            </Text>
                                         </VStack>
                                         <Badge
-                                            colorPalette="gray"
+                                            colorPalette={statusColors[order.status] || 'gray'}
                                             variant="subtle"
                                             borderRadius="full"
                                             px="2.5"
                                             fontSize="xs"
+                                            flexShrink="0"
+                                            mx="3"
                                         >
                                             {statusLabels[order.status] || order.status}
                                         </Badge>
-                                        <Text fontSize="sm" fontWeight="700">
+                                        <Text fontSize="sm" fontWeight="700" flexShrink="0" color="gray.800" _dark={{ color: 'gray.100' }}>
                                             {Number(order.total || 0).toLocaleString('ru-RU')} ₽
                                         </Text>
                                     </Flex>

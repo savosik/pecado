@@ -28,14 +28,16 @@ class CabinetController extends Controller
         $hasBalance    = $balances->count() > 0;
 
         $recentOrders = Order::where('user_id', $user->id)
+            ->withCount('items')
             ->latest()
             ->limit(5)
             ->get()
             ->map(fn ($order) => [
                 'id'           => $order->id,
-                'order_number' => $order->order_number,
-                'status'       => $order->status,
-                'total'        => $order->total,
+                'order_number' => $order->number,
+                'status'       => $order->status instanceof \BackedEnum ? $order->status->value : (string) $order->status,
+                'total'        => $order->total_amount,
+                'items_count'  => $order->items_count,
                 'created_at'   => $order->created_at->format('d.m.Y'),
             ]);
 
