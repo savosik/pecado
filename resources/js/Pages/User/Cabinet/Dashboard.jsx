@@ -212,13 +212,22 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                         _hover={{ bg: 'pecado.50', _dark: { bg: 'gray.700' } }}
                                         transition="background 0.15s"
                                         cursor="pointer"
-                                        borderLeft="3px solid"
-                                        borderLeftColor={`${statusColors[order.status] || 'gray'}.400`}
                                     >
-                                        <VStack align="start" gap="0" flex="1" minW="0">
-                                            <Text fontSize="sm" fontWeight="700" color="gray.800" _dark={{ color: 'gray.100' }}>
-                                                №{order.order_number || order.id}
-                                            </Text>
+                                        <VStack align="start" gap="0.5" flex="1" minW="0">
+                                            <HStack gap="1.5">
+                                                <Text fontSize="sm" fontWeight="700" color="gray.800" _dark={{ color: 'gray.100' }}>
+                                                    №{order.order_number || order.id}
+                                                </Text>
+                                                <Badge
+                                                    colorPalette={order.type === 'preorder' ? 'orange' : 'gray'}
+                                                    variant="subtle"
+                                                    borderRadius="full"
+                                                    px="2"
+                                                    fontSize="2xs"
+                                                >
+                                                    {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                </Badge>
+                                            </HStack>
                                             <Text fontSize="xs" color="gray.400">
                                                 {order.created_at}
                                                 {order.items_count > 0 && ` · ${order.items_count} ${order.items_count === 1 ? 'позиция' : order.items_count < 5 ? 'позиции' : 'позиций'}`}

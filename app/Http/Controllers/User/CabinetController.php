@@ -36,6 +36,7 @@ class CabinetController extends Controller
                 'id'           => $order->id,
                 'order_number' => $order->number,
                 'status'       => $order->status instanceof \BackedEnum ? $order->status->value : (string) $order->status,
+                'type'         => $order->type instanceof \BackedEnum ? $order->type->value : (string) $order->type,
                 'total'        => $order->total_amount,
                 'items_count'  => $order->items_count,
                 'created_at'   => $order->created_at->format('d.m.Y'),
