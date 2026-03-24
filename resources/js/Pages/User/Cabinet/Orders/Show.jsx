@@ -5,7 +5,7 @@ import {
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     LuArrowLeft, LuPackage, LuWarehouse,
-    LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck,
+    LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 
