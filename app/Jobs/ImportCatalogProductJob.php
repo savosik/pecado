@@ -211,10 +211,7 @@ class ImportCatalogProductJob implements ShouldQueue
                 $attribute->categories()->syncWithoutDetaching([$leafCategory->id]);
             }
 
-            $pav = new ProductAttributeValue([
-                'product_id' => $product->id,
-                'attribute_id' => $attribute->id,
-            ]);
+            $fillData = [];
 
             if ($attribute->type === 'select') {
                 // Для справочников: находим или создаём значение в справочнике
@@ -227,18 +224,24 @@ class ImportCatalogProductJob implements ShouldQueue
                         'sort_order' => $attribute->values()->count(),
                     ]
                 );
-                $pav->attribute_value_id = $attributeValue->id;
+                $fillData['attribute_value_id'] = $attributeValue->id;
             } elseif ($attribute->type === 'boolean') {
                 // Для булевых: конвертируем текст в boolean
                 $trueValues = ['да', 'yes', 'true', '1', 'on'];
-                $pav->boolean_value = in_array(mb_strtolower(trim($attrValue)), $trueValues);
+                $fillData['boolean_value'] = in_array(mb_strtolower(trim($attrValue)), $trueValues);
             } elseif ($attribute->type === 'number' && is_numeric($attrValue)) {
-                $pav->number_value = (float) $attrValue;
+                $fillData['number_value'] = (float) $attrValue;
             } else {
-                $pav->text_value = $attrValue;
+                $fillData['text_value'] = $attrValue;
             }
 
-            $pav->save();
+            ProductAttributeValue::updateOrCreate(
+                [
+                    'product_id' => $product->id,
+                    'attribute_id' => $attribute->id,
+                ],
+                $fillData,
+            );
         }
     }
 

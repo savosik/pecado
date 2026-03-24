@@ -222,4 +222,21 @@ class HandleOrderCreatedTest extends TestCase
 
         Bus::assertNotDispatched(\App\Jobs\PublishOrderToErpJob::class);
     }
+
+    #[Test]
+    public function creates_order_with_erp_russian_status(): void
+    {
+        $this->handler->handle([
+            'event'        => 'order.created',
+            'message_id'   => 'msg-test-008',
+            'uuid'         => 'order-erp-status-001',
+            'status'       => 'к_отгрузке',
+            'type'         => 'order',
+            'items'        => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-erp-status-001')->first();
+        $this->assertNotNull($order);
+        $this->assertEquals('к_отгрузке', $order->status->value);
+    }
 }
