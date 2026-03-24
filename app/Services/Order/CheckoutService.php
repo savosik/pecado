@@ -13,6 +13,7 @@ use App\Models\Company;
 use App\Models\DeliveryAddress;
 use App\Models\Order;
 use App\Models\OrderItem;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutService implements CheckoutServiceInterface
@@ -24,45 +25,43 @@ class CheckoutService implements CheckoutServiceInterface
     ) {}
 
     /**
-     * Create an order from a cart, splitting by stock availability.
+     * Create order(s) from a cart, splitting by stock availability.
+     * Returns a Collection of created Orders (1 or 2).
+     *
+     * @return Collection<int, Order>
      */
     public function checkout(
         Cart $cart,
         Company $company,
         DeliveryAddress $address,
         ?string $comment = null
-    ): Order {
+    ): Collection {
         return DB::transaction(function () use ($cart, $company, $address, $comment) {
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);
 
             $baseOrderData = [
-                'user_id' => $user->id,
-                'company_id' => $company->id,
+                'user_id'             => $user->id,
+                'company_id'          => $company->id,
                 'delivery_address_id' => $address->id,
-                'cart_id' => $cart->id,
-                'status' => \App\Enums\OrderStatus::PENDING,
-                'comment' => $comment,
-                'total_amount' => 0,
-                'exchange_rate' => $currency?->exchange_rate ?? 1.0,
-                'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
-                'currency_code' => $currency?->code ?? 'RUB',
+                'cart_id'             => $cart->id,
+                'status'              => \App\Enums\OrderStatus::PENDING,
+                'comment'             => $comment,
+                'total_amount'        => 0,
+                'exchange_rate'       => $currency?->exchange_rate ?? 1.0,
+                'rate_coefficient'    => $currency?->rate_coefficient ?? 1.0,
+                'currency_code'       => $currency?->code ?? 'RUB',
             ];
-
-            // Create parent order
-            $parentOrder = Order::create(array_merge($baseOrderData, [
-                'type' => OrderType::ORDER,
-            ]));
 
             // Validate stock availability before proceeding
             $insufficientStockItems = [];
             foreach ($cart->items as $item) {
                 $stock = $this->stockService->getStock($item->product, $user);
                 $totalAvailable = $stock['available'] + $stock['preorder'];
-                
+
                 if ($item->quantity > $totalAvailable) {
                     $insufficientStockItems[] = [
-                        'product' => $item->product->name,
+                        'product'   => $item->product->name,
                         'requested' => $item->quantity,
                         'available' => $totalAvailable,
                     ];
@@ -76,91 +75,56 @@ class CheckoutService implements CheckoutServiceInterface
                 );
             }
 
-            // Separate items by stock availability
-            $inStockItems = [];
-            $preorderItems = [];
+            // Separate cart items by item_type (already split by CartService at add-to-cart time)
+            $inStockCartItems = $cart->items->filter(fn($item) => $item->item_type === 'instock')->values();
+            $preorderCartItems = $cart->items->filter(fn($item) => $item->item_type === 'preorder')->values();
 
-            foreach ($cart->items as $item) {
-                $stock = $this->stockService->getStock($item->product, $user);
-                $availableQty = $stock['available'];
-                $preorderQty = $stock['preorder'];
+            $orders = collect();
 
-                $requestedQty = $item->quantity;
-
-                // Allocate to in-stock first
-                $inStockAlloc = min($requestedQty, $availableQty);
-                if ($inStockAlloc > 0) {
-                    $inStockItems[] = [
-                        'item' => $item,
-                        'quantity' => $inStockAlloc,
-                    ];
-                }
-
-                // Remaining goes to preorder
-                $remainingQty = $requestedQty - $inStockAlloc;
-                if ($remainingQty > 0 && $preorderQty > 0) {
-                    $preorderAlloc = min($remainingQty, $preorderQty);
-                    $preorderItems[] = [
-                        'item' => $item,
-                        'quantity' => $preorderAlloc,
-                    ];
-                }
-            }
-
-            $parentTotal = 0;
-
-            // Create in-stock child order
-            if (!empty($inStockItems)) {
-                $childOrder = Order::create(array_merge($baseOrderData, [
+            // Create instock order
+            if ($inStockCartItems->isNotEmpty()) {
+                $instockOrder = Order::create(array_merge($baseOrderData, [
                     'type' => OrderType::ORDER,
-                    'parent_id' => $parentOrder->id,
                 ]));
-                $childTotal = $this->createOrderItems($childOrder, $inStockItems, $user);
-                $childOrder->update(['total_amount' => $childTotal]);
-                $parentTotal += $childTotal;
-                OrderCreated::dispatch($childOrder);
+                $total = $this->createOrderItems($instockOrder, $inStockCartItems, $user);
+                $instockOrder->update(['total_amount' => $total]);
+                OrderCreated::dispatch($instockOrder);
+                $orders->push($instockOrder);
             }
 
-            // Create preorder child order
-            if (!empty($preorderItems)) {
-                $childOrder = Order::create(array_merge($baseOrderData, [
+            // Create preorder order
+            if ($preorderCartItems->isNotEmpty()) {
+                $preorderOrder = Order::create(array_merge($baseOrderData, [
                     'type' => OrderType::PREORDER,
-                    'parent_id' => $parentOrder->id,
                 ]));
-                $childTotal = $this->createOrderItems($childOrder, $preorderItems, $user);
-                $childOrder->update(['total_amount' => $childTotal]);
-                $parentTotal += $childTotal;
-                OrderCreated::dispatch($childOrder);
+                $total = $this->createOrderItems($preorderOrder, $preorderCartItems, $user);
+                $preorderOrder->update(['total_amount' => $total]);
+                OrderCreated::dispatch($preorderOrder);
+                $orders->push($preorderOrder);
             }
 
-            // Update parent total
-            $parentOrder->update(['total_amount' => $parentTotal]);
-
-            return $parentOrder;
+            return $orders;
         });
     }
 
     /**
-     * Create order items for a given order.
+     * Create order items for a given order from cart items.
      */
-    protected function createOrderItems(Order $order, array $allocatedItems, $user): float
+    protected function createOrderItems(Order $order, Collection $cartItems, $user): float
     {
         $total = 0;
-        foreach ($allocatedItems as $alloc) {
-            $item = $alloc['item'];
-            $quantity = $alloc['quantity'];
-
-            $price = $this->priceService->getDiscountedPrice($item->product, $user);
-            $subtotal = $price * $quantity;
-            $total += $subtotal;
+        foreach ($cartItems as $item) {
+            $price    = $this->priceService->getDiscountedPrice($item->product, $user);
+            $subtotal = $price * $item->quantity;
+            $total   += $subtotal;
 
             OrderItem::create([
-                'order_id' => $order->id,
+                'order_id'   => $order->id,
                 'product_id' => $item->product_id,
-                'name' => $item->product->name,
-                'price' => $price,
-                'quantity' => $quantity,
-                'subtotal' => $subtotal,
+                'name'       => $item->product->name,
+                'price'      => $price,
+                'quantity'   => $item->quantity,
+                'subtotal'   => $subtotal,
             ]);
         }
         return $total;

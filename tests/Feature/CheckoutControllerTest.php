@@ -171,7 +171,7 @@ class CheckoutControllerTest extends TestCase
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
         $checkoutMock->expects($this->once())
             ->method('checkout')
-            ->willReturn($order);
+            ->willReturn(collect([$order]));
         $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
 
         $response = $this->actingAs($this->user)->post('/checkout', [
@@ -216,7 +216,7 @@ class CheckoutControllerTest extends TestCase
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
         $checkoutMock->expects($this->once())
             ->method('checkout')
-            ->willReturn($order);
+            ->willReturn(collect([$order]));
         $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
 
         $response = $this->actingAs($this->user)->post('/checkout', [

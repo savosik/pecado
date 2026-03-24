@@ -20,13 +20,14 @@ const STATUS_COLORS = {
     cancelled: 'red',
 };
 
-export default function OrdersIndex({ filters, statuses }) {
+export default function OrdersIndex({ filters, statuses, types }) {
     const { orders, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
     const [localFilters, setLocalFilters] = useState({
         status: filters?.status || '',
+        type: filters?.type || '',
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
@@ -58,7 +59,7 @@ export default function OrdersIndex({ filters, statuses }) {
     };
 
     const handleResetFilters = () => {
-        const reset = { status: '', date_from: '', date_to: '', amount_from: '', amount_to: '' };
+        const reset = { status: '', type: '', date_from: '', date_to: '', amount_from: '', amount_to: '' };
         setLocalFilters(reset);
         navigateWithParams({ ...reset, search: '', page: 1 });
         setSearch('');
@@ -144,6 +145,25 @@ export default function OrdersIndex({ filters, statuses }) {
                                             {statuses?.map((s) => (
                                                 <Select.Item key={s.value} item={s.value}>
                                                     {s.label}
+                                                </Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Field>
+
+                                <Field label="Тип" flex="1">
+                                    <Select.Root
+                                        value={localFilters.type ? [localFilters.type] : []}
+                                        onValueChange={(e) => setLocalFilters({ ...localFilters, type: e.value[0] || '' })}
+                                    >
+                                        <Select.Trigger>
+                                            <Select.ValueText placeholder="Все типы" />
+                                        </Select.Trigger>
+                                        <Select.Content>
+                                            <Select.Item item="">Все типы</Select.Item>
+                                            {types?.map((t) => (
+                                                <Select.Item key={t.value} item={t.value}>
+                                                    {t.label}
                                                 </Select.Item>
                                             ))}
                                         </Select.Content>

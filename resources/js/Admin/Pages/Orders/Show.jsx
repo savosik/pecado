@@ -30,6 +30,9 @@ const getStatusColor = (status) => {
     return colors[status] || "gray";
 };
 
+const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Заказ со склада';
+const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';
+
 const OrderShow = () => {
     const { order, statuses } = usePage().props;
 
@@ -52,7 +55,14 @@ const OrderShow = () => {
             <Head title={`Заказ #${order.id}`} />
 
             <PageHeader
-                title={`Заказ #${order.id}`}
+                title={
+                    <HStack gap={2}>
+                        <span>{`Заказ #${order.id}`}</span>
+                        <Badge colorPalette={getTypeColor(order.type)} variant="subtle" fontSize="sm">
+                            {getTypeLabel(order.type)}
+                        </Badge>
+                    </HStack>
+                }
                 actions={
                     <HStack>
                         <Button
@@ -82,6 +92,12 @@ const OrderShow = () => {
                             <HStack justify="space-between">
                                 <Text color="fg.muted">UUID:</Text>
                                 <Text fontFamily="mono" fontSize="sm">{order.uuid}</Text>
+                            </HStack>
+                            <HStack justify="space-between">
+                                <Text color="fg.muted">Тип:</Text>
+                                <Badge colorPalette={getTypeColor(order.type)} variant="subtle">
+                                    {getTypeLabel(order.type)}
+                                </Badge>
                             </HStack>
                             <HStack justify="space-between">
                                 <Text color="fg.muted">Статус:</Text>

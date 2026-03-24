@@ -26,7 +26,6 @@ class OrderController extends Controller
 
         $query = Order::query()
             ->where('user_id', $user->id)
-            ->whereNull('parent_id')
             ->with(['company', 'items']);
 
         // Поиск по UUID или ID
@@ -35,6 +34,11 @@ class OrderController extends Controller
                 $q->where('uuid', 'like', "%{$search}%")
                   ->orWhere('id', $search);
             });
+        }
+
+        // Фильтрация по типу
+        if ($type = $request->input('type')) {
+            $query->where('type', $type);
         }
 
         // Фильтрация по статусу
@@ -102,20 +106,25 @@ class OrderController extends Controller
         return Inertia::render('User/Cabinet/Orders/Index', [
             'orders' => $orders,
             'filters' => [
-                'search' => $search,
-                'status' => $status,
-                'date_from' => $dateFrom,
-                'date_to' => $dateTo,
+                'search'      => $search,
+                'status'      => $status,
+                'type'        => $request->input('type', ''),
+                'date_from'   => $dateFrom,
+                'date_to'     => $dateTo,
                 'amount_from' => $amountFrom,
-                'amount_to' => $amountTo,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-                'per_page' => $perPage,
+                'amount_to'   => $amountTo,
+                'sort_by'     => $sortBy,
+                'sort_order'  => $sortOrder,
+                'per_page'    => $perPage,
             ],
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
             ]),
+            'types' => [
+                ['value' => 'order',    'label' => 'Заказ со склада'],
+                ['value' => 'preorder', 'label' => 'Предзаказ'],
+            ],
         ]);
     }
 
@@ -137,39 +146,10 @@ class OrderController extends Controller
             'items.product:id,name,sku,slug',
             'items.product.brand:id,name',
             'items.product.media',
-            'children.items.product:id,name,sku,slug',
-            'children.items.product.brand:id,name',
             'statusHistories.user',
         ]);
 
-        // Подготовить данные дочерних заказов
-        $childOrders = $order->children->map(function ($child) {
-            return [
-                'id' => $child->id,
-                'type' => $child->type?->value,
-                'status' => $child->status?->value,
-                'status_label' => $this->getStatusLabel($child->status),
-                'total_amount' => $child->total_amount,
-                'items' => $child->items->map(function ($item) {
-                    return [
-                        'id' => $item->id,
-                        'name' => $item->name,
-                        'price' => $item->price,
-                        'quantity' => $item->quantity,
-                        'subtotal' => $item->subtotal,
-                        'product' => $item->product ? [
-                            'id' => $item->product->id,
-                            'name' => $item->product->name,
-                            'sku' => $item->product->sku,
-                            'slug' => $item->product->slug,
-                            'brand' => $item->product->brand ? [
-                                'name' => $item->product->brand->name,
-                            ] : null,
-                        ] : null,
-                    ];
-                }),
-            ];
-        });
+
 
         return Inertia::render('User/Cabinet/Orders/Show', [
             'order' => [
@@ -214,7 +194,7 @@ class OrderController extends Controller
                         ] : null,
                     ];
                 }),
-                'children' => $childOrders,
+
                 'shipments' => $order->shipments()->map(function ($shipment) {
                     return [
                         'id'            => $shipment->id,

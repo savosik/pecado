@@ -106,7 +106,7 @@ class CheckoutController extends Controller
         }
 
         try {
-            $order = $this->checkoutService->checkout(
+            $orders = $this->checkoutService->checkout(
                 $cart,
                 $company,
                 $address,
@@ -116,8 +116,16 @@ class CheckoutController extends Controller
             // Очистить корзину после успешного заказа
             $cart->items()->delete();
 
+            // Если создано два заказа (обычный + предзаказ) — редиректим в список заказов
+            if ($orders->count() > 1) {
+                return redirect()
+                    ->route('orders.index')
+                    ->with('success', 'Заказы успешно оформлены!');
+            }
+
+            // Один заказ — редиректим на его страницу
             return redirect()
-                ->route('orders.show', $order)
+                ->route('orders.show', $orders->first())
                 ->with('success', 'Заказ успешно оформлен!');
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return back()->withErrors([

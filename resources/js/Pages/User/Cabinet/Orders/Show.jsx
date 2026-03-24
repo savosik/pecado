@@ -4,7 +4,7 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
-    LuArrowLeft, LuPackage, LuWarehouse, LuShoppingBag,
+    LuArrowLeft, LuPackage, LuWarehouse,
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
@@ -36,9 +36,11 @@ export default function OrderShow({ order }) {
     const currencySymbol = currency?.symbol ?? '₽';
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const instockChild = (order.children || []).find(c => c.type === 'in_stock');
-    const preorderChild = (order.children || []).find(c => c.type === 'preorder');
-    const hasChildren = instockChild || preorderChild;
+    const isPreorder = order.type === 'preorder';
+    const typeLabel  = isPreorder ? 'Предзаказ' : 'Заказ со склада';
+    const typeIcon   = isPreorder ? <LuPackage size={20} /> : <LuWarehouse size={20} />;
+    const typeColor  = isPreorder ? 'orange' : 'green';
+    const typeBadgeScheme = isPreorder ? 'purple' : 'teal';
 
     const createdAt = order.created_at
         ? new Date(order.created_at).toLocaleDateString('ru-RU', {
@@ -62,17 +64,18 @@ export default function OrderShow({ order }) {
             <Head title={`Заказ #${order.id} — Pecado`} />
 
             <Stack gap="5">
-                {/* ═══ Статус ═══ */}
+                {/* ═══ Тип заказа + статус ═══ */}
                 <Flex align="center" gap="3" flexWrap="wrap">
-                    {order.type === 'preorder' ? (
-                        <Badge colorPalette="purple" variant="subtle" fontSize="sm" px="3" py="1" borderRadius="full">
-                            Предзаказ
-                        </Badge>
-                    ) : (
-                        <Badge colorPalette="gray" variant="outline" fontSize="sm" px="3" py="1" borderRadius="full">
-                            Заказ
-                        </Badge>
-                    )}
+                    <Badge
+                        colorPalette={typeBadgeScheme}
+                        variant="subtle"
+                        fontSize="sm"
+                        px="3"
+                        py="1"
+                        borderRadius="full"
+                    >
+                        {typeLabel}
+                    </Badge>
                     <Badge
                         colorPalette={STATUS_COLORS[order.status] ?? 'gray'}
                         variant="subtle"
@@ -155,38 +158,17 @@ export default function OrderShow({ order }) {
                     </Card.Root>
                 </SimpleGrid>
 
-                {/* ═══ Товары со склада ═══ */}
-                {instockChild && instockChild.items?.length > 0 && (
-                    <ChildOrderTable
-                        title="Товары со склада"
-                        icon={<LuWarehouse size={20} />}
-                        childOrder={instockChild}
-                        currencySymbol={currencySymbol}
-                        colorPalette="green"
-                        fmt={fmt}
-                    />
-                )}
-
-                {/* ═══ Товары по предзаказу ═══ */}
-                {preorderChild && preorderChild.items?.length > 0 && (
-                    <ChildOrderTable
-                        title="Товары по предзаказу"
-                        icon={<LuPackage size={20} />}
-                        childOrder={preorderChild}
-                        currencySymbol={currencySymbol}
-                        colorPalette="orange"
-                        fmt={fmt}
-                    />
-                )}
-
-                {/* ═══ Все позиции (если нет children) ═══ */}
-                {!hasChildren && order.items?.length > 0 && (
+                {/* ═══ Позиции заказа ═══ */}
+                {order.items?.length > 0 && (
                     <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
-                            <HStack gap="2">
-                                <LuShoppingBag size={20} />
-                                <Text fontWeight="700" fontSize="md">Позиции заказа ({order.items.length})</Text>
-                            </HStack>
+                            <Flex align="center" gap="2" flexWrap="wrap">
+                                {typeIcon}
+                                <Text fontWeight="700" fontSize="md">Позиции ({order.items.length})</Text>
+                                <Badge colorPalette={typeColor} variant="subtle" ml="1">
+                                    {order.items.reduce((s, it) => s + Number(it.quantity || 0), 0)} шт.
+                                </Badge>
+                            </Flex>
                         </Card.Header>
                         <Card.Body p="0">
                             <Box overflowX="auto">
@@ -195,8 +177,8 @@ export default function OrderShow({ order }) {
                                         <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                             <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Цена</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Сумма</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
                                         </Table.Row>
                                     </Table.Header>
                                     <Table.Body>
@@ -224,9 +206,7 @@ export default function OrderShow({ order }) {
                                                                     </Text>
                                                                 </Link>
                                                             ) : (
-                                                                <Text fontWeight="500" fontSize="sm">
-                                                                    {item.name}
-                                                                </Text>
+                                                                <Text fontWeight="500" fontSize="sm">{item.name}</Text>
                                                             )}
                                                             <Flex gap="1" mt="0.5">
                                                                 {item.product?.brand?.name && (
@@ -241,10 +221,10 @@ export default function OrderShow({ order }) {
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="center">{item.quantity}</Table.Cell>
                                                 <Table.Cell textAlign="right">
-                                                    <Text fontWeight="500">{fmt(item.price)} {currencySymbol}</Text>
+                                                    <Text fontWeight="500">{fmt(item.price)}</Text>
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="right">
-                                                    <Text fontWeight="600">{fmt(item.subtotal)} {currencySymbol}</Text>
+                                                    <Text fontWeight="600">{fmt(item.subtotal)}</Text>
                                                 </Table.Cell>
                                             </Table.Row>
                                         ))}

@@ -23,19 +23,23 @@ const getStatusColor = (status) => {
     return colors[status] || "gray";
 };
 
-const OrdersIndex = ({ filters, statuses, companies }) => {
+const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Со склада';
+const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';
+
+const OrdersIndex = ({ filters, statuses, types, companies }) => {
     const { orders } = usePage().props;
     const [deleteId, setDeleteId] = useState(null);
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
     const [bulkStatus, setBulkStatus] = useState("");
     const [localFilters, setLocalFilters] = useState({
-        status: filters?.status || "",
-        company_id: filters?.company_id || "",
-        date_from: filters?.date_from || "",
-        date_to: filters?.date_to || "",
+        status:      filters?.status || "",
+        type:        filters?.type || "",
+        company_id:  filters?.company_id || "",
+        date_from:   filters?.date_from || "",
+        date_to:     filters?.date_to || "",
         amount_from: filters?.amount_from || "",
-        amount_to: filters?.amount_to || "",
+        amount_to:   filters?.amount_to || "",
     });
 
     const handleSort = (field, direction) => {
@@ -61,21 +65,14 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
 
     const handleResetFilters = () => {
         setLocalFilters({
-            status: "",
-            company_id: "",
-            date_from: "",
-            date_to: "",
-            amount_from: "",
-            amount_to: "",
+            status: "", type: "", company_id: "",
+            date_from: "", date_to: "", amount_from: "", amount_to: "",
         });
         router.get(route("admin.orders.index"), {
             search: filters?.search,
             sort_by: filters?.sort_by,
             sort_order: filters?.sort_order,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
+        }, { preserveState: true, replace: true });
     };
 
     const handleBulkStatusUpdate = () => {
@@ -153,6 +150,15 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
             label: "Компания",
             key: "company",
             render: (_, order) => order.company?.name || "—",
+        },
+        {
+            label: "Тип",
+            key: "type",
+            render: (_, order) => (
+                <Badge colorPalette={getTypeColor(order.type)} variant="subtle" size="sm">
+                    {getTypeLabel(order.type)}
+                </Badge>
+            ),
         },
         {
             label: "Статус",
@@ -239,6 +245,25 @@ const OrdersIndex = ({ filters, statuses, companies }) => {
                                         {statuses?.map((status) => (
                                             <Select.Item key={status.value} item={status.value}>
                                                 {status.label}
+                                            </Select.Item>
+                                        ))}
+                                    </Select.Content>
+                                </Select.Root>
+                            </Field>
+
+                            <Field label="Тип">
+                                <Select.Root
+                                    value={localFilters.type ? [localFilters.type] : []}
+                                    onValueChange={(e) => setLocalFilters({ ...localFilters, type: e.value[0] || "" })}
+                                >
+                                    <Select.Trigger>
+                                        <Select.ValueText placeholder="Все типы" />
+                                    </Select.Trigger>
+                                    <Select.Content>
+                                        <Select.Item item="">Все типы</Select.Item>
+                                        {types?.map((t) => (
+                                            <Select.Item key={t.value} item={t.value}>
+                                                {t.label}
                                             </Select.Item>
                                         ))}
                                     </Select.Content>

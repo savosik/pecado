@@ -51,6 +51,11 @@ class OrderController extends AdminController
             $query->where('status', $status);
         }
 
+        // Фильтрация по типу
+        if ($type = $request->input('type')) {
+            $query->where('type', $type);
+        }
+
         // Фильтрация по компании
         if ($companyId = $request->input('company_id')) {
             $query->where('company_id', $companyId);
@@ -115,21 +120,26 @@ class OrderController extends AdminController
         return Inertia::render('Admin/Pages/Orders/Index', [
             'orders' => $orders,
             'filters' => [
-                'search' => $search,
-                'status' => $status,
-                'company_id' => $companyId,
-                'date_from' => $dateFrom,
-                'date_to' => $dateTo,
+                'search'      => $search,
+                'status'      => $status,
+                'type'        => $request->input('type', ''),
+                'company_id'  => $companyId,
+                'date_from'   => $dateFrom,
+                'date_to'     => $dateTo,
                 'amount_from' => $amountFrom,
-                'amount_to' => $amountTo,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-                'per_page' => $perPage,
+                'amount_to'   => $amountTo,
+                'sort_by'     => $sortBy,
+                'sort_order'  => $sortOrder,
+                'per_page'    => $perPage,
             ],
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
             ]),
+            'types' => [
+                ['value' => 'order',    'label' => 'Заказ со склада'],
+                ['value' => 'preorder', 'label' => 'Предзаказ'],
+            ],
             'companies' => Company::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
