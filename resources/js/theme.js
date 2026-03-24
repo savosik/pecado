@@ -1,6 +1,12 @@
 import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react';
 
 const config = defineConfig({
+    globalCss: {
+        // Белый фон для заголовков таблиц в light mode
+        'th': {
+            bg: { _light: 'white !important', _dark: 'gray.900 !important' },
+        },
+    },
     theme: {
         tokens: {
             fonts: {
