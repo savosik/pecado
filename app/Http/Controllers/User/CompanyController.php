@@ -16,7 +16,7 @@ class CompanyController extends Controller
         $companies = Company::withCount('bankAccounts')
             ->with(['contractorBalance.overdueDetails'])
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->paginate(15);
 
         return Inertia::render('User/Cabinet/Companies/Index', [
             'companies' => $companies,

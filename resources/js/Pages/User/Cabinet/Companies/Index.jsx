@@ -5,14 +5,18 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
-import { LuPlus, LuPencil, LuTrash2, LuBuilding2, LuWallet } from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTrash2, LuBuilding2, LuWallet, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
 
 const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-export default function Index({ companies = [] }) {
+export default function Index({ companies = { data: [], current_page: 1, last_page: 1 } }) {
     const [deleteCompany, setDeleteCompany] = useState(null);
+
+    const handlePageChange = (page) => {
+        router.get('/cabinet/companies', { page }, { preserveState: true, replace: true });
+    };
 
     const confirmDelete = async () => {
         if (!deleteCompany) return;
@@ -45,7 +49,7 @@ export default function Index({ companies = [] }) {
         >
             <Head title="Мои компании — Pecado" />
 
-            {companies.length === 0 ? (
+            {companies.data.length === 0 ? (
                 <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
@@ -70,6 +74,7 @@ export default function Index({ companies = [] }) {
                     </Card.Body>
                 </Card.Root>
             ) : (
+                <>
                 <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
                     {/* Desktop Table */}
                     <Box display={{ base: 'none', md: 'block' }}>
@@ -86,7 +91,7 @@ export default function Index({ companies = [] }) {
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {companies.map((c) => (
+                                {companies.data.map((c) => (
                                     <Table.Row key={c.id}>
                                         <Table.Cell>
                                             <Box>
@@ -152,7 +157,7 @@ export default function Index({ companies = [] }) {
 
                     {/* Mobile Cards */}
                     <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} />}>
-                        {companies.map((c) => (<Flex key={c.id} p="4" align="start" justify="space-between" direction="column" gap="2">
+                        {companies.data.map((c) => (<Flex key={c.id} p="4" align="start" justify="space-between" direction="column" gap="2">
                             <Flex w="100%" align="center" justify="space-between">
                                 <Box flex="1" minW="0">
                                     <Text fontWeight="600" fontSize="sm" noOfLines={1}>{c.name}</Text>
@@ -207,6 +212,67 @@ export default function Index({ companies = [] }) {
                         ))}
                     </VStack>
                 </Card.Root>
+
+                    {/* Пагинация */}
+                    {companies.last_page > 1 && (
+                        <Flex justify="center" align="center" gap="2" mt="6">
+                            <IconButton
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(companies.current_page - 1)}
+                                disabled={companies.current_page <= 1}
+                                aria-label="Предыдущая страница"
+                            >
+                                <LuChevronLeft size={16} />
+                            </IconButton>
+
+                            {Array.from({ length: companies.last_page }, (_, i) => i + 1)
+                                .filter(page => {
+                                    const current = companies.current_page;
+                                    return page === 1 || page === companies.last_page ||
+                                        (page >= current - 2 && page <= current + 2);
+                                })
+                                .reduce((acc, page, idx, arr) => {
+                                    if (idx > 0 && page - arr[idx - 1] > 1) {
+                                        acc.push('...' + page);
+                                    }
+                                    acc.push(page);
+                                    return acc;
+                                }, [])
+                                .map((page) => {
+                                    if (typeof page === 'string') {
+                                        return <Text key={page} px="1" color="fg.muted">…</Text>;
+                                    }
+                                    return (
+                                        <Button
+                                            key={page}
+                                            size="sm"
+                                            variant={page === companies.current_page ? 'solid' : 'outline'}
+                                            colorPalette={page === companies.current_page ? 'pecado' : 'gray'}
+                                            onClick={() => handlePageChange(page)}
+                                            minW="9"
+                                        >
+                                            {page}
+                                        </Button>
+                                    );
+                                })}
+
+                            <IconButton
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(companies.current_page + 1)}
+                                disabled={companies.current_page >= companies.last_page}
+                                aria-label="Следующая страница"
+                            >
+                                <LuChevronRight size={16} />
+                            </IconButton>
+
+                            <Text fontSize="xs" color="fg.muted" ml="2">
+                                Стр. {companies.current_page} из {companies.last_page}
+                            </Text>
+                        </Flex>
+                    )}
+                </>
             )}
 
             {/* Delete Confirm Dialog */}
