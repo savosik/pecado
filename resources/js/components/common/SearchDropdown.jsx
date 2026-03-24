@@ -11,7 +11,21 @@ import SearchSection from './SearchSection';
 function ProductItem({ product, onClick }) {
     const price = product.price ?? product.base_price;
     const imageUrl = product.thumbnail || product.image_url || product.thumb_url || product.main_image;
-    const isAvailable = (product.available_quantity ?? product.stock_quantity ?? 0) > 0 || product.is_preorder;
+    const inStock = (product.stock_quantity ?? 0) > 0;
+    const inPreorder = (product.preorder_quantity ?? 0) > 0;
+
+    // Статус наличия в регионе пользователя
+    let stockLabel, stockColor;
+    if (inStock) {
+        stockLabel = 'В наличии';
+        stockColor = 'green.500';
+    } else if (inPreorder) {
+        stockLabel = 'Предзаказ';
+        stockColor = 'orange.500';
+    } else {
+        stockLabel = 'Нет в наличии';
+        stockColor = 'red.500';
+    }
 
     return (
         <Flex
@@ -41,7 +55,7 @@ function ProductItem({ product, onClick }) {
                     <Box as="img" src={imageUrl} alt={product.name} w="100%" h="100%" objectFit="cover" />
                 </Box>
             )}
-            {/* Название + бренд/артикул + цена */}
+            {/* Название + бренд/артикул + цена + статус */}
             <Box flex="1" minW="0">
                 <Text fontSize="sm" lineClamp="1" fontWeight="400">
                     {product.name}
@@ -51,13 +65,11 @@ function ProductItem({ product, onClick }) {
                 </Text>
                 <Flex align="center" gap="2">
                     {price != null && (
-                        <Text fontSize="xs" fontWeight="600" color={isAvailable ? undefined : 'gray.400'}>
+                        <Text fontSize="xs" fontWeight="600" color={inStock ? undefined : 'gray.400'}>
                             {Number(price).toLocaleString('ru-RU')} ₽
                         </Text>
                     )}
-                    {!isAvailable && (
-                        <Text fontSize="2xs" color="red.500">Нет в наличии</Text>
-                    )}
+                    <Text fontSize="2xs" color={stockColor}>{stockLabel}</Text>
                 </Flex>
             </Box>
         </Flex>
