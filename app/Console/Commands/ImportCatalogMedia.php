@@ -11,7 +11,8 @@ use Illuminate\Support\Str;
 class ImportCatalogMedia extends Command
 {
     protected $signature = 'catalog:import-media
-        {--url= : URL эндпоинта экспорта}';
+        {--url= : URL эндпоинта экспорта}
+        {--missing-only : Загружать медиа только для товаров без главного изображения}';
 
     protected $description = 'Импорт только медиа (изображения, видео) для существующих товаров из XML-эндпоинта';
 
@@ -20,7 +21,12 @@ class ImportCatalogMedia extends Command
         $url = $this->option('url')
             ?: 'https://customers.sex-opt.ru/api/public/export/651?auth_token=kqQKCZA73oORObUK3ApLy7xKJ7FYnYajFRekGsqp';
 
+        $missingOnly = $this->option('missing-only');
+
         $this->info('Загрузка XML-файла каталога...');
+        if ($missingOnly) {
+            $this->info('Режим: только товары без главного изображения');
+        }
 
         $response = Http::timeout(120)->get($url);
 
@@ -47,6 +53,16 @@ class ImportCatalogMedia extends Command
             return self::SUCCESS;
         }
 
+        // Если --missing-only, заранее собираем ID товаров без главного изображения
+        $productIdsWithoutMainImage = null;
+        if ($missingOnly) {
+            $productIdsWithoutMainImage = Product::whereDoesntHave('media', function ($q) {
+                $q->where('collection_name', 'main');
+            })->pluck('external_id')->flip()->toArray();
+
+            $this->info("Товаров без главного изображения: " . count($productIdsWithoutMainImage));
+        }
+
         $this->info("Найдено товаров в XML: {$totalItems}");
 
         $bar = $this->output->createProgressBar($totalItems);
@@ -56,6 +72,7 @@ class ImportCatalogMedia extends Command
 
         $dispatched = 0;
         $skipped = 0;
+        $skippedHasMedia = 0;
 
         foreach ($items as $item) {
             $uid = (string) $item->uid;
@@ -63,6 +80,13 @@ class ImportCatalogMedia extends Command
             $code = (string) $item->code;
 
             $bar->setMessage(Str::limit($name, 50));
+
+            // Если --missing-only и товар уже имеет главное изображение — пропускаем
+            if ($missingOnly && !isset($productIdsWithoutMainImage[$uid])) {
+                $skippedHasMedia++;
+                $bar->advance();
+                continue;
+            }
 
             $product = Product::where('external_id', $uid)->first();
 
@@ -88,6 +112,9 @@ class ImportCatalogMedia extends Command
         $this->info('═══════════════════════════════════════');
         $this->line("  Отправлено в очередь:  {$dispatched}");
         $this->line("  Пропущено (нет в БД): {$skipped}");
+        if ($missingOnly) {
+            $this->line("  Пропущено (есть медиа): {$skippedHasMedia}");
+        }
         $this->line("  Очередь:               catalog-media");
         $this->info('═══════════════════════════════════════');
         $this->newLine();
