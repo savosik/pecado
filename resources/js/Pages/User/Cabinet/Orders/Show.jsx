@@ -174,7 +174,7 @@ export default function OrderShow({ order }) {
                             <Box overflowX="auto">
                                 <Table.Root size="sm">
                                     <Table.Header>
-                                        <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                        <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                             <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
                                             <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
@@ -276,7 +276,7 @@ export default function OrderShow({ order }) {
                         <Card.Body p={0}>
                             <Table.Root size="sm">
                                 <Table.Header>
-                                    <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                    <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                         <Table.ColumnHeader>Дата</Table.ColumnHeader>
                                         <Table.ColumnHeader>Статус</Table.ColumnHeader>
                                         <Table.ColumnHeader textAlign="center">Позиций</Table.ColumnHeader>
@@ -288,7 +288,7 @@ export default function OrderShow({ order }) {
                                     {order.shipments.map((shipment) => (
                                         <Table.Row
                                             key={shipment.id}
-                                            _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
+                                            _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}
                                         >
                                             <Table.Cell>
                                                 <Text fontSize="sm">
@@ -371,7 +371,7 @@ function ChildOrderTable({ title, icon, childOrder, currencySymbol, colorPalette
                 <Box overflowX="auto">
                     <Table.Root size="sm">
                         <Table.Header>
-                            <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                            <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                 <Table.ColumnHeader>Название</Table.ColumnHeader>
                                 <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
                                 <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>

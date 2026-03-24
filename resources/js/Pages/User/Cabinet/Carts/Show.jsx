@@ -255,7 +255,7 @@ export default function Show({ cart, cartDetails }) {
                                         key={p.id}
                                         p="2" gap="3" align="center"
                                         cursor="pointer"
-                                        _hover={{ bg: 'gray.50', _dark: { bg: 'gray.700' } }}
+                                        _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.700/50' } }}
                                         onClick={() => handleAddProduct(p)}
                                     >
                                         {p.image_url ? (

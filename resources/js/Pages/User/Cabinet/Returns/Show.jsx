@@ -107,7 +107,7 @@ export default function ReturnShow() {
                             <Box overflowX="auto" display={{ base: 'none', md: 'block' }}>
                                 <Table.Root size="sm">
                                     <Table.Header>
-                                        <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                        <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                             <Table.ColumnHeader>Заказ</Table.ColumnHeader>
                                             <Table.ColumnHeader>Причина</Table.ColumnHeader>

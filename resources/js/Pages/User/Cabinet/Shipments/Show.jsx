@@ -101,7 +101,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                     <Card.Body p={0}>
                         <Table.Root size="sm">
                             <Table.Header>
-                                <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                     <Table.ColumnHeader>Номер заказа</Table.ColumnHeader>
                                     <Table.ColumnHeader>UUID</Table.ColumnHeader>
                                     <Table.ColumnHeader>Статус</Table.ColumnHeader>
@@ -109,7 +109,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                             </Table.Header>
                             <Table.Body>
                                 {related_orders.map((order) => (
-                                    <Table.Row key={order.id} _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}>
+                                    <Table.Row key={order.id} _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}>
                                         <Table.Cell>
                                             <Link href={`/cabinet/orders/${order.id}`}>
                                                 <Text color="pecado.600" _hover={{ textDecoration: 'underline' }} fontWeight="600">
@@ -179,7 +179,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                     <Box overflowX="auto" display={{ base: 'none', md: 'block' }}>
                         <Table.Root size="sm">
                             <Table.Header>
-                                <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                     <Table.ColumnHeader>Заказ</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
@@ -192,7 +192,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                             </Table.Header>
                             <Table.Body>
                                 {shipment.items?.map((item, idx) => (
-                                    <Table.Row key={item.id || idx} _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}>
+                                    <Table.Row key={item.id || idx} _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}>
                                         <Table.Cell>
                                             {item.product ? (
                                                 <Link href={`/products/${item.product.slug}`}>

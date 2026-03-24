@@ -264,7 +264,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
                         <Box overflowX="auto">
                             <Table.Root size="sm">
                                 <Table.Header>
-                                    <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                    <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                         <SortableHeader field="id" w="80px">№</SortableHeader>
                                         <SortableHeader field="status">Статус</SortableHeader>
                                         <Table.ColumnHeader>Компания</Table.ColumnHeader>
@@ -278,7 +278,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
                                     {orders.data.map((order) => (
                                         <Table.Row
                                             key={order.id}
-                                            _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
+                                            _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}
                                             transition="background 0.15s"
                                         >
                                             <Table.Cell>

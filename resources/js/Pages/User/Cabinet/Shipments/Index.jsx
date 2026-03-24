@@ -215,7 +215,7 @@ export default function ShipmentsIndex({ filters, statuses }) {
                         <Box overflowX="auto">
                             <Table.Root size="sm">
                                 <Table.Header>
-                                    <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                    <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                         <SortableHeader field="id" w="80px">№</SortableHeader>
                                         <SortableHeader field="date">Дата</SortableHeader>
                                         <SortableHeader field="status">Статус</SortableHeader>
@@ -231,7 +231,7 @@ export default function ShipmentsIndex({ filters, statuses }) {
                                     {shipments.data.map((shipment) => (
                                         <Table.Row
                                             key={shipment.id}
-                                            _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
+                                            _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}
                                             transition="background 0.15s"
                                         >
                                             <Table.Cell>
