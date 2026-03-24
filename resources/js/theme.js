@@ -1,12 +1,6 @@
 import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react';
 
 const config = defineConfig({
-    globalCss: {
-        // Белый фон для всех элементов таблиц
-        'th, td, tr, thead, tbody, table': {
-            bg: { _light: 'white !important', _dark: 'gray.900 !important' },
-        },
-    },
     theme: {
         tokens: {
             fonts: {
