@@ -23,7 +23,45 @@ export default function ProductDetailTabs({ specifications = {}, description = '
     const hasDesc = sanitizedDescription.trim().length > 0;
     const hasMedia = Array.isArray(media) && media.filter(m => m.type === 'image' || m.type === 'video').length > 0;
     const hasCerts = Array.isArray(certificates) && certificates.length > 0;
-    const hasSizeChart = sizeChart && Array.isArray(sizeChart.values) && sizeChart.values.length > 1;
+
+    // Перевод ключей размерной сетки
+    const sizeChartKeyLabels = {
+        size: 'Размер', bust: 'Обхват груди', underbust: 'Под грудью',
+        waist: 'Обхват талии', hips: 'Обхват бёдер',
+        height: 'Рост', weight: 'Вес', length: 'Длина',
+        chest: 'Грудь', shoulder: 'Плечо', sleeve: 'Рукав',
+        inseam: 'Шаговый шов', thigh: 'Бедро', knee: 'Колено',
+        foot: 'Стопа', palm: 'Ладонь', finger: 'Палец',
+    };
+
+    // Нормализация values: если [{key: val, ...}, ...] → [["header", ...], ["val", ...]]
+    const normalizedSizeChart = useMemo(() => {
+        if (!sizeChart || !Array.isArray(sizeChart.values) || sizeChart.values.length === 0) return null;
+
+        const vals = sizeChart.values;
+
+        // Если уже 2D-массив — оставляем как есть
+        if (Array.isArray(vals[0])) {
+            return vals.length > 1 ? { name: sizeChart.name, values: vals } : null;
+        }
+
+        // Формат объектов — конвертируем
+        if (typeof vals[0] === 'object' && vals[0] !== null) {
+            const keys = Object.keys(vals[0]);
+            if (keys.length === 0) return null;
+            // Ставим 'size' первым, если есть
+            const orderedKeys = keys.includes('size')
+                ? ['size', ...keys.filter(k => k !== 'size')]
+                : keys;
+            const headers = orderedKeys.map(k => sizeChartKeyLabels[k] || k);
+            const rows = vals.map(row => orderedKeys.map(k => row[k] ?? ''));
+            return { name: sizeChart.name, values: [headers, ...rows] };
+        }
+
+        return null;
+    }, [sizeChart]);
+
+    const hasSizeChart = normalizedSizeChart && normalizedSizeChart.values.length > 1;
 
     // Собираем доступные табы
     const tabs = [];
@@ -148,16 +186,16 @@ export default function ProductDetailTabs({ specifications = {}, description = '
             {hasSizeChart && (
                 <Tabs.Content value="sizeChart" pt="4">
                     <Box spaceY="3">
-                        {sizeChart.name && (
+                        {normalizedSizeChart.name && (
                             <Text fontSize="sm" fontWeight="600" color="gray.600" _dark={{ color: 'gray.300' }}>
-                                {sizeChart.name}
+                                {normalizedSizeChart.name}
                             </Text>
                         )}
                         <Box overflowX="auto">
                             <Table.Root size="sm" variant="outline">
                                 <Table.Header>
                                     <Table.Row>
-                                        {sizeChart.values[0].map((header, i) => (
+                                        {normalizedSizeChart.values[0].map((header, i) => (
                                             <Table.ColumnHeader
                                                 key={i}
                                                 fontSize="xs"
@@ -173,7 +211,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                                     </Table.Row>
                                 </Table.Header>
                                 <Table.Body>
-                                    {sizeChart.values.slice(1).map((row, rowIdx) => (
+                                    {normalizedSizeChart.values.slice(1).map((row, rowIdx) => (
                                         <Table.Row key={rowIdx}>
                                             {row.map((cell, cellIdx) => (
                                                 <Table.Cell
