@@ -35,14 +35,28 @@ export default function ProductDetailTabs({ specifications = {}, description = '
     };
 
     // Нормализация values: если [{key: val, ...}, ...] → [["header", ...], ["val", ...]]
+    // Также убираем колонки, где все значения пусты
     const normalizedSizeChart = useMemo(() => {
         if (!sizeChart || !Array.isArray(sizeChart.values) || sizeChart.values.length === 0) return null;
 
         const vals = sizeChart.values;
 
-        // Если уже 2D-массив — оставляем как есть
+        // Убрать пустые колонки из 2D-массива
+        const filterEmptyColumns = (table) => {
+            if (table.length < 2) return table;
+            const dataRows = table.slice(1);
+            const keepIdx = table[0].map((_, colIdx) =>
+                dataRows.some(row => row[colIdx] !== undefined && row[colIdx] !== null && String(row[colIdx]).trim() !== '')
+            );
+            return table.map(row => row.filter((_, colIdx) => keepIdx[colIdx]));
+        };
+
+        // Если уже 2D-массив — фильтруем пустые колонки
         if (Array.isArray(vals[0])) {
-            return vals.length > 1 ? { name: sizeChart.name, values: vals } : null;
+            const filtered = filterEmptyColumns(vals);
+            return filtered.length > 1 && filtered[0].length > 0
+                ? { name: sizeChart.name, values: filtered }
+                : null;
         }
 
         // Формат объектов — конвертируем
@@ -50,9 +64,14 @@ export default function ProductDetailTabs({ specifications = {}, description = '
             const keys = Object.keys(vals[0]);
             if (keys.length === 0) return null;
             // Ставим 'size' первым, если есть
-            const orderedKeys = keys.includes('size')
+            const allKeys = keys.includes('size')
                 ? ['size', ...keys.filter(k => k !== 'size')]
                 : keys;
+            // Убираем ключи, где у всех строк значение пусто
+            const orderedKeys = allKeys.filter(k =>
+                vals.some(row => row[k] !== undefined && row[k] !== null && String(row[k]).trim() !== '')
+            );
+            if (orderedKeys.length === 0) return null;
             const headers = orderedKeys.map(k => sizeChartKeyLabels[k] || k);
             const rows = vals.map(row => orderedKeys.map(k => row[k] ?? ''));
             return { name: sizeChart.name, values: [headers, ...rows] };
