@@ -46,6 +46,8 @@ const PASSTHROUGH_PARAMS = [
     'in_stock_mode',
     'in_sale',
     'in_favourites',
+    'is_new',
+    'is_bestseller',
     'attribute_any',
 ];
 

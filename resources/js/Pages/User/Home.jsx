@@ -34,7 +34,7 @@ export default function Home({
                     <ProductGrid
                         title="Новинки"
                         products={newProducts}
-                        linkUrl="/products?s=newest"
+                        linkUrl="/products/novinki"
                         linkText="Смотреть все новинки"
                         maxItems={5}
                     />
@@ -46,7 +46,7 @@ export default function Home({
                     <ProductGrid
                         title="Бестселлеры"
                         products={bestsellerProducts}
-                        linkUrl="/products"
+                        linkUrl="/products/bestsellery"
                         linkText="Смотреть все бестселлеры"
                         maxItems={5}
                     />

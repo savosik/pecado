@@ -193,6 +193,62 @@ class ProductController extends Controller
     }
 
     /**
+     * Каталог новинок.
+     * GET /products/novinki
+     */
+    public function novelties(): Response
+    {
+        $appName = config('app.name');
+
+        $canonical = route('products.novelties');
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title'       => "Новинки — {$appName}",
+                'description' => "Новинки интернет-магазина {$appName}",
+                'h1'          => 'Новинки',
+                'canonical'   => $canonical,
+                'url'         => $canonical,
+            ],
+            'initialFilters' => [
+                'is_new' => 1,
+            ],
+            'breadcrumbs' => [
+                ['label' => 'Каталог', 'url' => route('products.index')],
+                ['label' => 'Новинки', 'url' => null],
+            ],
+        ]);
+    }
+
+    /**
+     * Каталог бестселлеров.
+     * GET /products/bestsellery
+     */
+    public function bestsellers(): Response
+    {
+        $appName = config('app.name');
+
+        $canonical = route('products.bestsellers');
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title'       => "Бестселлеры — {$appName}",
+                'description' => "Бестселлеры интернет-магазина {$appName}",
+                'h1'          => 'Бестселлеры',
+                'canonical'   => $canonical,
+                'url'         => $canonical,
+            ],
+            'initialFilters' => [
+                'is_bestseller' => 1,
+            ],
+            'breadcrumbs' => [
+                ['label' => 'Каталог', 'url' => route('products.index')],
+                ['label' => 'Бестселлеры', 'url' => null],
+            ],
+        ]);
+    }
+
+    /**
      * Карточка товара.
      * GET /products/{product:slug}
      */

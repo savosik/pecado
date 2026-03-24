@@ -267,6 +267,16 @@ class CatalogApiController extends Controller
             $query->inFavourites($user->id);
         }
 
+        // Новинки
+        if (!empty($validated['is_new'])) {
+            $query->where('is_new', true);
+        }
+
+        // Бестселлеры
+        if (!empty($validated['is_bestseller'])) {
+            $query->where('is_bestseller', true);
+        }
+
         // Атрибуты (select — через attribute_values)
         if (!empty($validated['attribute_value_ids'])) {
             $any = (bool) ($validated['attribute_any'] ?? false);
