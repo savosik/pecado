@@ -109,6 +109,35 @@ class ImportSizeCharts extends Command
 
         $this->info("Успешно импортировано размерных сеток: {$imported}");
 
+        // Назначаем size_chart_id товарам по связи бренд → размерная сетка
+        $this->info('Назначение размерных сеток товарам по брендам...');
+
+        $assignedCount = 0;
+
+        // Собираем бренды и их размерные сетки
+        $brands = Brand::whereHas('sizeCharts')->with('sizeCharts')->get();
+
+        foreach ($brands as $brand) {
+            $chartIds = $brand->sizeCharts->pluck('id');
+
+            if ($chartIds->count() === 1) {
+                // Бренд имеет одну сетку — назначаем всем товарам бренда
+                $updated = Product::where('brand_id', $brand->id)
+                    ->whereNull('size_chart_id')
+                    ->update(['size_chart_id' => $chartIds->first()]);
+                $assignedCount += $updated;
+
+                if ($updated > 0) {
+                    $this->line("  {$brand->name}: назначено {$updated} товарам");
+                }
+            } else {
+                // Несколько сеток — пропускаем (требуется ручное назначение)
+                $this->warn("  {$brand->name}: {$chartIds->count()} сеток — пропущено (требуется ручное назначение)");
+            }
+        }
+
+        $this->info("Размерные сетки назначены {$assignedCount} товарам.");
+
         return self::SUCCESS;
     }
 }
