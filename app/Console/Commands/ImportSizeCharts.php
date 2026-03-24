@@ -132,13 +132,125 @@ class ImportSizeCharts extends Command
                     $this->line("  {$brand->name}: назначено {$updated} товарам");
                 }
             } else {
-                // Несколько сеток — пропускаем (требуется ручное назначение)
-                $this->warn("  {$brand->name}: {$chartIds->count()} сеток — пропущено (требуется ручное назначение)");
+                // Несколько сеток — пробуем сопоставить по ключевым словам в названии категории
+                $matched = $this->assignByCategory($brand, $charts);
+                $assignedCount += $matched;
+
+                if ($matched > 0) {
+                    $this->line("  {$brand->name}: назначено {$matched} товарам (по категориям)");
+                }
+
+                $remaining = Product::where('brand_id', $brand->id)->whereNull('size_chart_id')->count();
+                if ($remaining > 0) {
+                    $this->warn("  {$brand->name}: {$remaining} товаров без сопоставления");
+                }
             }
         }
 
         $this->info("Размерные сетки назначены {$assignedCount} товарам.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Сопоставить товары бренда с несколькими сетками по ключевым словам категорий.
+     *
+     * Алгоритм:
+     * 1. Извлекаем корни слов (первые 4 символа) из названия каждой сетки.
+     * 2. Для каждой категории товаров бренда считаем совпадения корней с названием категории.
+     * 3. Назначаем сетку с наибольшим числом совпадений.
+     * 4. Фоллбэк: если нет совпадений и среди сеток есть «женское»/«мужское» —
+     *    назначаем «женское» всем, кто не в мужских категориях.
+     */
+    private function assignByCategory(Brand $brand, $charts): int
+    {
+        // Строим карту ключевых слов для каждой сетки
+        $chartKeywords = [];
+        foreach ($charts as $chart) {
+            $words = preg_split('/[\s,]+/u', mb_strtolower($chart->name));
+            $words = array_filter($words, fn ($w) => mb_strlen($w) >= 3);
+            // Корни (первые 4 символа) для толерантности к падежам
+            $stems = array_map(fn ($w) => mb_substr($w, 0, 4), $words);
+            $chartKeywords[$chart->id] = array_values($stems);
+        }
+
+        // Получаем категории товаров бренда без size_chart_id
+        $categoryIds = Product::where('brand_id', $brand->id)
+            ->whereNull('size_chart_id')
+            ->distinct()
+            ->pluck('category_id')
+            ->filter();
+
+        if ($categoryIds->isEmpty()) {
+            return 0;
+        }
+
+        $categories = \App\Models\Category::whereIn('id', $categoryIds)->get()->keyBy('id');
+
+        $totalAssigned = 0;
+
+        // Фаза 1: Сопоставление по ключевым словам
+        foreach ($categories as $catId => $category) {
+            $catName = mb_strtolower($category->name);
+
+            $bestChartId = null;
+            $bestScore = 0;
+
+            foreach ($chartKeywords as $chartId => $stems) {
+                $score = 0;
+                foreach ($stems as $stem) {
+                    if (mb_strpos($catName, $stem) !== false) {
+                        $score++;
+                    }
+                }
+                if ($score > $bestScore) {
+                    $bestScore = $score;
+                    $bestChartId = $chartId;
+                }
+            }
+
+            if ($bestChartId) {
+                $updated = Product::where('brand_id', $brand->id)
+                    ->where('category_id', $catId)
+                    ->whereNull('size_chart_id')
+                    ->update(['size_chart_id' => $bestChartId]);
+                $totalAssigned += $updated;
+            }
+        }
+
+        // Фаза 2: Фоллбэк для «женское/мужское» пар
+        $remaining = Product::where('brand_id', $brand->id)->whereNull('size_chart_id')->count();
+        if ($remaining > 0) {
+            $femaleChart = $charts->first(fn ($c) => mb_strpos(mb_strtolower($c->name), 'женс') !== false);
+            $maleChart = $charts->first(fn ($c) => mb_strpos(mb_strtolower($c->name), 'мужс') !== false);
+
+            if ($femaleChart && $maleChart) {
+                // Мужские категории определяем по маркерам: " М", "Муж", "мужск"
+                $malePatterns = [' м', 'муж'];
+
+                // Оставшиеся без назначения — проверяем категорию
+                $unassigned = Product::where('brand_id', $brand->id)
+                    ->whereNull('size_chart_id')
+                    ->with('category')
+                    ->get();
+
+                foreach ($unassigned as $product) {
+                    $catName = mb_strtolower($product->category?->name ?? '');
+                    $isMale = false;
+                    foreach ($malePatterns as $pattern) {
+                        if (mb_strpos($catName, $pattern) !== false) {
+                            $isMale = true;
+                            break;
+                        }
+                    }
+                    $product->update([
+                        'size_chart_id' => $isMale ? $maleChart->id : $femaleChart->id,
+                    ]);
+                    $totalAssigned++;
+                }
+            }
+        }
+
+        return $totalAssigned;
     }
 }
