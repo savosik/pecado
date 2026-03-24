@@ -199,14 +199,8 @@ export default function CabinetLayout({ title, children, actions }) {
                     </Flex>
                     <Box
                         css={{
-                            '& th, & td, & tr, & thead, & tbody': {
-                                background: 'white !important',
-                            },
-                            _dark: {
-                                '& th, & td, & tr, & thead, & tbody': {
-                                    background: 'var(--chakra-colors-gray-900) !important',
-                                },
-                            },
+                            '--chakra-colors-bg': 'white',
+                            '--chakra-colors-bg-muted': 'white',
                         }}
                     >
                         {children}
