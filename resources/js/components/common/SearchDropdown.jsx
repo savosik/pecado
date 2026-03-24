@@ -10,7 +10,7 @@ import SearchSection from './SearchSection';
  */
 function ProductItem({ product, onClick }) {
     const price = product.price ?? product.base_price;
-    const imageUrl = product.image_url || product.thumb_url;
+    const imageUrl = product.thumbnail || product.image_url || product.thumb_url || product.main_image;
     const isAvailable = (product.available_quantity ?? product.stock_quantity ?? 0) > 0 || product.is_preorder;
 
     return (
