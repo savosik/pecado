@@ -6,24 +6,23 @@ use App\Jobs\DownloadProductMediaJob;
 use App\Models\Product;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Str;
 
 class ImportCatalogMedia extends Command
 {
     protected $signature = 'catalog:import-media
-        {--url= : URL эндпоинта экспорта}
+        {--url= : URL эндпоинта экспорта (JSON)}
         {--missing-only : Загружать медиа только для товаров без главного изображения}';
 
-    protected $description = 'Импорт только медиа (изображения, видео) для существующих товаров из XML-эндпоинта';
+    protected $description = 'Импорт медиа (изображения, видео) для существующих товаров из JSON-эндпоинта';
 
     public function handle(): int
     {
         $url = $this->option('url')
-            ?: 'https://customers.sex-opt.ru/api/public/export/651?auth_token=kqQKCZA73oORObUK3ApLy7xKJ7FYnYajFRekGsqp';
+            ?: 'https://customers.sex-opt.ru/api/public/export/660?auth_token=kqQKCZA73oORObUK3ApLy7xKJ7FYnYajFRekGsqp';
 
         $missingOnly = $this->option('missing-only');
 
-        $this->info('Загрузка XML-файла каталога...');
+        $this->info('Загрузка JSON-файла каталога...');
         if ($missingOnly) {
             $this->info('Режим: только товары без главного изображения');
         }
@@ -35,25 +34,17 @@ class ImportCatalogMedia extends Command
             return self::FAILURE;
         }
 
-        $xmlString = $response->body();
-        $this->info('XML загружен (' . number_format(strlen($xmlString)) . ' байт)');
+        $items = $response->json();
 
-        try {
-            $xml = new \SimpleXMLElement($xmlString);
-        } catch (\Exception $e) {
-            $this->error("Ошибка парсинга XML: {$e->getMessage()}");
-            return self::FAILURE;
-        }
-
-        $items = $xml->items->item ?? [];
-        $totalItems = count($items);
-
-        if ($totalItems === 0) {
-            $this->warn('XML не содержит товаров.');
+        if (!is_array($items) || count($items) === 0) {
+            $this->warn('JSON не содержит товаров.');
             return self::SUCCESS;
         }
 
-        // Если --missing-only, заранее собираем ID товаров без главного изображения
+        $totalItems = count($items);
+        $this->info("Найдено товаров в JSON: {$totalItems}");
+
+        // Если --missing-only, заранее собираем external_id товаров без главного изображения
         $productIdsWithoutMainImage = null;
         if ($missingOnly) {
             $productIdsWithoutMainImage = Product::whereDoesntHave('media', function ($q) {
@@ -62,8 +53,6 @@ class ImportCatalogMedia extends Command
 
             $this->info("Товаров без главного изображения: " . count($productIdsWithoutMainImage));
         }
-
-        $this->info("Найдено товаров в XML: {$totalItems}");
 
         $bar = $this->output->createProgressBar($totalItems);
         $bar->setFormat(' %current%/%max% [%bar%] %percent:3s%% — %message%');
@@ -75,11 +64,15 @@ class ImportCatalogMedia extends Command
         $skippedHasMedia = 0;
 
         foreach ($items as $item) {
-            $uid = (string) $item->uid;
-            $name = (string) $item->name;
-            $code = (string) $item->code;
+            $uid = $item['uid'] ?? '';
 
-            $bar->setMessage(Str::limit($name, 50));
+            $bar->setMessage($uid);
+
+            if (empty($uid)) {
+                $skipped++;
+                $bar->advance();
+                continue;
+            }
 
             // Если --missing-only и товар уже имеет главное изображение — пропускаем
             if ($missingOnly && !isset($productIdsWithoutMainImage[$uid])) {
@@ -96,7 +89,11 @@ class ImportCatalogMedia extends Command
                 continue;
             }
 
-            $itemData = $this->parseMediaData($item);
+            $itemData = [
+                'image_main' => $item['image_main'] ?? '',
+                'additional_images' => $item['additional_images'] ?? [],
+                'product_videos' => $item['videos'] ?? [],
+            ];
 
             DownloadProductMediaJob::dispatch($product->id, $itemData);
 
@@ -121,33 +118,5 @@ class ImportCatalogMedia extends Command
         $this->info('Обработка выполняется воркерами в фоне.');
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Parse only media-related data from a SimpleXMLElement item.
-     */
-    private function parseMediaData(\SimpleXMLElement $item): array
-    {
-        $data = [
-            'code' => (string) $item->code,
-            'name' => (string) $item->name,
-            'image_main' => (string) $item->image_main,
-        ];
-
-        $data['additional_images'] = [];
-        if (isset($item->additional_images->additional_image)) {
-            foreach ($item->additional_images->additional_image as $img) {
-                $data['additional_images'][] = (string) $img;
-            }
-        }
-
-        $data['product_videos'] = [];
-        if (isset($item->product_videos->product_video)) {
-            foreach ($item->product_videos->product_video as $video) {
-                $data['product_videos'][] = (string) $video;
-            }
-        }
-
-        return $data;
     }
 }
