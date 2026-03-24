@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Box, Flex, Text, Input, IconButton, Spinner } from '@chakra-ui/react';
+import { Box, Flex, Text, Input, IconButton, Spinner, Badge } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuX, LuClock3, LuSearch, LuArrowRight } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -41,11 +41,19 @@ function ProductItem({ product, onClick }) {
                     <Box as="img" src={imageUrl} alt={product.name} w="100%" h="100%" objectFit="cover" />
                 </Box>
             )}
-            {/* Название + цена */}
+            {/* Название + бренд/артикул + цена */}
             <Box flex="1" minW="0">
                 <Text fontSize="sm" lineClamp="1" fontWeight="400">
                     {product.name}
                 </Text>
+                <Flex align="center" gap="2" flexWrap="wrap">
+                    {product.sku && (
+                        <Text fontSize="xs" color="gray.400">Арт: {product.sku}</Text>
+                    )}
+                    {product.brand_name && (
+                        <Badge size="sm" colorPalette="purple" variant="subtle">{product.brand_name}</Badge>
+                    )}
+                </Flex>
                 <Flex align="center" gap="2">
                     {price != null && (
                         <Text fontSize="xs" fontWeight="600" color={isAvailable ? undefined : 'gray.400'}>
