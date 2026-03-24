@@ -9,6 +9,7 @@ import { Switch } from '@/components/ui/switch';
 export default function Create() {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
+        short_description: '',
         meta_title: '',
         meta_description: '',
         description: '',
@@ -33,6 +34,7 @@ export default function Create() {
         formData.append('show_on_home', data.show_on_home ? '1' : '0');
         if (data.meta_title) formData.append('meta_title', data.meta_title);
         if (data.meta_description) formData.append('meta_description', data.meta_description);
+        if (data.short_description) formData.append('short_description', data.short_description);
         if (data.description) formData.append('description', data.description);
 
         // Привязка товаров
@@ -110,6 +112,15 @@ export default function Create() {
                                     onChange={(e) => setData('meta_description', e.target.value)}
                                     placeholder="SEO описание"
                                     rows={2}
+                                />
+                            </FormField>
+
+                            <FormField label="Краткое описание (на главной)" error={errors.short_description}>
+                                <Textarea
+                                    value={data.short_description}
+                                    onChange={(e) => setData('short_description', e.target.value)}
+                                    placeholder="Краткое описание подборки..."
+                                    rows={3}
                                 />
                             </FormField>
 
