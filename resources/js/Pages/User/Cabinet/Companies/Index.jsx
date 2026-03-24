@@ -50,7 +50,7 @@ export default function Index({ companies = { data: [], current_page: 1, last_pa
             <Head title="Мои компании — Pecado" />
 
             {companies.data.length === 0 ? (
-                <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+                <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
                             <Flex
@@ -75,10 +75,10 @@ export default function Index({ companies = { data: [], current_page: 1, last_pa
                 </Card.Root>
             ) : (
                 <>
-                <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
+                <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
                     {/* Desktop Table */}
                     <Box display={{ base: 'none', md: 'block' }}>
-                        <Table.Root size="sm">
+                        <Table.Root bg="white" size="sm">
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Название</Table.ColumnHeader>

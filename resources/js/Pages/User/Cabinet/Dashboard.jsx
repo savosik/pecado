@@ -47,7 +47,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
             <Head title="Личный кабинет — Pecado" />
 
             {/* Welcome Card */}
-            <Card.Root mb="6" borderRadius="xl" overflow="hidden" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" mb="6" borderRadius="xl" overflow="hidden" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="6">
                     <Flex align="center" gap="4">
                         <Flex
@@ -86,7 +86,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                 {stats.map((stat) => (
                     <GridItem key={stat.label}>
                         <Link href={stat.href}>
-                            <Card.Root
+                            <Card.Root bg="white"
                                 borderRadius="xl"
                                 border="1px solid"
                                 borderColor="gray.100"
@@ -129,7 +129,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                 {/* Balance Card */}
                 {balance && (
                     <GridItem>
-                        <Card.Root
+                        <Card.Root bg="white"
                             borderRadius="xl"
                             border="1px solid"
                             borderColor="gray.100"
@@ -180,7 +180,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
             </Grid>
 
             {/* Recent Orders */}
-            <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Header p="5" pb="3">
                     <Flex align="center" justify="space-between">
                         <Text fontSize="md" fontWeight="700">Последние заказы</Text>

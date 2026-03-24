@@ -222,7 +222,7 @@ export default function Show({ cart, cartDetails }) {
             </Flex>
 
             {/* Product Search */}
-            <Card.Root borderRadius="xl" mb="4" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" borderRadius="xl" mb="4" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="4">
                     <Text fontWeight="600" mb="2" fontSize="sm">Добавить товар</Text>
                     <Box ref={searchRef} position="relative">
@@ -294,19 +294,19 @@ export default function Show({ cart, cartDetails }) {
 
             {/* Stats */}
             <HStack gap="4" mb="4" flexWrap="wrap">
-                <Card.Root borderRadius="lg" flex="1" minW="120px">
+                <Card.Root bg="white" borderRadius="lg" flex="1" minW="120px">
                     <Card.Body p="3" textAlign="center">
                         <Text fontSize="xs" color="gray.400">Позиций</Text>
                         <Text fontSize="xl" fontWeight="800">{items.length}</Text>
                     </Card.Body>
                 </Card.Root>
-                <Card.Root borderRadius="lg" flex="1" minW="120px">
+                <Card.Root bg="white" borderRadius="lg" flex="1" minW="120px">
                     <Card.Body p="3" textAlign="center">
                         <Text fontSize="xs" color="gray.400">Единиц</Text>
                         <Text fontSize="xl" fontWeight="800">{totalQuantity}</Text>
                     </Card.Body>
                 </Card.Root>
-                <Card.Root borderRadius="lg" flex="1" minW="120px">
+                <Card.Root bg="white" borderRadius="lg" flex="1" minW="120px">
                     <Card.Body p="3" textAlign="center">
                         <Text fontSize="xs" color="gray.400">Итого</Text>
                         {hasDiscount ? (
@@ -322,7 +322,7 @@ export default function Show({ cart, cartDetails }) {
             </HStack>
 
             {/* Items */}
-            <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
+            <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
                 {items.length === 0 ? (
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
@@ -335,7 +335,7 @@ export default function Show({ cart, cartDetails }) {
                     <>
                         {/* Desktop Table */}
                         <Box display={{ base: 'none', md: 'block' }}>
-                            <Table.Root size="sm">
+                            <Table.Root bg="white" size="sm">
                                 <Table.Header>
                                     <Table.Row>
                                         <Table.ColumnHeader w="60px">Фото</Table.ColumnHeader>

@@ -35,7 +35,7 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
     };
 
     return (
-        <Card.Root
+        <Card.Root bg="white"
             overflow="hidden"
             borderWidth={selected ? '2px' : '1px'}
             borderColor={selected ? 'blue.500' : 'gray.200'}

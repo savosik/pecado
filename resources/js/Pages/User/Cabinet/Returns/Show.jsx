@@ -62,7 +62,7 @@ export default function ReturnShow() {
 
                 {/* Информация о возврате */}
                 <SimpleGrid columns={{ base: 1, lg: 2 }} gap="4">
-                    <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                    <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">Информация о возврате</Text>
                         </Card.Header>
@@ -77,7 +77,7 @@ export default function ReturnShow() {
                     </Card.Root>
 
                     {returnData.comment && (
-                        <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                        <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                             <Card.Header p="4" pb="2">
                                 <HStack gap="2">
                                     <LuMessageSquare size={18} />
@@ -93,7 +93,7 @@ export default function ReturnShow() {
 
                 {/* Позиции возврата */}
                 {returnData.items?.length > 0 && (
-                    <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                    <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <HStack gap="2">
                                 <LuPackage size={20} />
@@ -105,7 +105,7 @@ export default function ReturnShow() {
                         <Card.Body p="0">
                             {/* Desktop table */}
                             <Box overflowX="auto" display={{ base: 'none', md: 'block' }}>
-                                <Table.Root size="sm">
+                                <Table.Root bg="white" size="sm">
                                     <Table.Header>
                                         <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
@@ -248,7 +248,7 @@ export default function ReturnShow() {
                 )}
 
                 {/* Итого */}
-                <Card.Root borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                     <Card.Body p="4">
                         <Flex justify="space-between" align="center">
                             <Flex align="center" gap="2">
