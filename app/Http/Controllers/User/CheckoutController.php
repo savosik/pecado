@@ -119,13 +119,13 @@ class CheckoutController extends Controller
             // Если создано два заказа (обычный + предзаказ) — редиректим в список заказов
             if ($orders->count() > 1) {
                 return redirect()
-                    ->route('orders.index')
+                    ->route('cabinet.orders.index')
                     ->with('success', 'Заказы успешно оформлены!');
             }
 
             // Один заказ — редиректим на его страницу
             return redirect()
-                ->route('orders.show', $orders->first())
+                ->route('cabinet.orders.show', $orders->first())
                 ->with('success', 'Заказ успешно оформлен!');
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return back()->withErrors([

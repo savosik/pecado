@@ -180,7 +180,7 @@ class CheckoutControllerTest extends TestCase
             'comment' => 'Тестовый комментарий',
         ]);
 
-        $response->assertRedirect(route('orders.show', $order));
+        $response->assertRedirect(route('cabinet.orders.show', $order));
     }
 
     public function test_checkout_store_with_new_address(): void
@@ -225,11 +225,70 @@ class CheckoutControllerTest extends TestCase
             'comment' => '',
         ]);
 
-        $response->assertRedirect(route('orders.show', $order));
+        $response->assertRedirect(route('cabinet.orders.show', $order));
 
         $this->assertDatabaseHas('delivery_addresses', [
             'user_id' => $this->user->id,
             'address' => 'Москва, ул. Тестовая, д. 1',
         ]);
+    }
+
+    public function test_checkout_store_with_two_order_types_redirects_to_orders_index(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        $company = Company::factory()->create(['user_id' => $this->user->id]);
+        $address = DeliveryAddress::factory()->create(['user_id' => $this->user->id]);
+
+        // Мок возвращает два заказа (instock + preorder)
+        $order1 = Order::create([
+            'uuid'                => \Illuminate\Support\Str::uuid(),
+            'user_id'             => $this->user->id,
+            'company_id'          => $company->id,
+            'delivery_address_id' => $address->id,
+            'status'              => \App\Enums\OrderStatus::PENDING,
+            'total_amount'        => 100.00,
+            'exchange_rate'       => 1,
+            'rate_coefficient'    => 1,
+            'currency_code'       => 'RUB',
+            'type'                => \App\Enums\OrderType::ORDER,
+        ]);
+        $order2 = Order::create([
+            'uuid'                => \Illuminate\Support\Str::uuid(),
+            'user_id'             => $this->user->id,
+            'company_id'          => $company->id,
+            'delivery_address_id' => $address->id,
+            'status'              => \App\Enums\OrderStatus::PENDING,
+            'total_amount'        => 200.00,
+            'exchange_rate'       => 1,
+            'rate_coefficient'    => 1,
+            'currency_code'       => 'RUB',
+            'type'                => \App\Enums\OrderType::PREORDER,
+        ]);
+
+        $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
+        $checkoutMock->expects($this->once())
+            ->method('checkout')
+            ->willReturn(collect([$order1, $order2]));
+        $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
+
+        $response = $this->actingAs($this->user)->post('/checkout', [
+            'company_id'          => $company->id,
+            'delivery_address_id' => $address->id,
+        ]);
+
+        // Два заказа → редирект на список заказов, а не на один заказ
+        $response->assertRedirect(route('cabinet.orders.index'));
+        $response->assertSessionHas('success');
     }
 }
