@@ -55,15 +55,15 @@ class FetchMissingMedia extends Command
 
         // Batch search requests in chunks of 10
         $remoteIds = []; // productId => remoteId
-        $chunks = array_chunk($searchTerms, 10, true);
+        $chunks = array_chunk($searchTerms, 5, true);
 
         foreach ($chunks as $chunk) {
             $responses = Http::pool(function ($pool) use ($chunk) {
                 foreach ($chunk as $productId => $info) {
                     $pool->as("search_{$productId}")
                         ->withToken($this->token)
-                        ->timeout(10)
-                        ->connectTimeout(5)
+                        ->timeout(5)
+                        ->connectTimeout(3)
                         ->get($this->baseUrl, [
                             'search' => $info['term'],
                             'force_flat' => 'true',
@@ -100,15 +100,15 @@ class FetchMissingMedia extends Command
 
         $dispatched = 0;
         $noImages = 0;
-        $detailChunks = array_chunk($remoteIds, 10, true);
+        $detailChunks = array_chunk($remoteIds, 5, true);
 
         foreach ($detailChunks as $chunk) {
             $responses = Http::pool(function ($pool) use ($chunk) {
                 foreach ($chunk as $productId => $info) {
                     $pool->as("detail_{$productId}")
                         ->withToken($this->token)
-                        ->timeout(10)
-                        ->connectTimeout(5)
+                        ->timeout(5)
+                        ->connectTimeout(3)
                         ->get("{$this->baseUrl}/{$info['remoteId']}");
                 }
             });
