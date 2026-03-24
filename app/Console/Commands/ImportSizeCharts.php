@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Brand;
+use App\Models\Product;
 use App\Models\SizeChart;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
