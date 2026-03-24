@@ -39,79 +39,95 @@ class FetchMissingMedia extends Command
             $this->warn('Режим dry-run: джобы не будут отправлены');
         }
 
-        $bar = $this->output->createProgressBar($total);
-        $bar->setFormat(' %current%/%max% [%bar%] %percent:3s%% — %message%');
-        $bar->setMessage('Обработка...');
-        $bar->start();
+        // ═══ ШАГ 1: Параллельный поиск по SKU/code ═══
+        $this->info('Шаг 1/2: Поиск товаров на sex-opt.ru (параллельно)...');
+
+        $searchTerms = [];
+        foreach ($products as $product) {
+            $term = $product->sku ?: $product->code;
+            if (!empty($term)) {
+                $searchTerms[$product->id] = [
+                    'term' => $term,
+                    'product' => $product,
+                ];
+            }
+        }
+
+        // Batch search requests in chunks of 10
+        $remoteIds = []; // productId => remoteId
+        $chunks = array_chunk($searchTerms, 10, true);
+
+        foreach ($chunks as $chunk) {
+            $responses = Http::pool(function ($pool) use ($chunk) {
+                foreach ($chunk as $productId => $info) {
+                    $pool->as("search_{$productId}")
+                        ->withToken($this->token)
+                        ->timeout(10)
+                        ->connectTimeout(5)
+                        ->get($this->baseUrl, [
+                            'search' => $info['term'],
+                            'force_flat' => 'true',
+                            'search_availability' => 'any',
+                        ]);
+                }
+            });
+
+            foreach ($chunk as $productId => $info) {
+                $response = $responses["search_{$productId}"] ?? null;
+
+                if ($response && !($response instanceof \Exception) && $response->successful()) {
+                    $payload = $response->json('payload', []);
+                    if (!empty($payload) && isset($payload[0]['id'])) {
+                        $remoteIds[$productId] = [
+                            'remoteId' => $payload[0]['id'],
+                            'product' => $info['product'],
+                            'term' => $info['term'],
+                        ];
+                    }
+                }
+            }
+        }
+
+        $this->info("  Найдено на sex-opt.ru: " . count($remoteIds) . " из " . count($searchTerms));
+
+        if (empty($remoteIds)) {
+            $this->warn('Ни один товар не найден на sex-opt.ru');
+            return self::SUCCESS;
+        }
+
+        // ═══ ШАГ 2: Параллельное получение деталей с картинками ═══
+        $this->info('Шаг 2/2: Загрузка информации о картинках (параллельно)...');
 
         $dispatched = 0;
-        $notFound = 0;
-        $errors = 0;
+        $noImages = 0;
+        $detailChunks = array_chunk($remoteIds, 10, true);
 
-        foreach ($products as $product) {
-            $searchTerm = $product->sku ?: $product->code;
-            $bar->setMessage("{$searchTerm}");
+        foreach ($detailChunks as $chunk) {
+            $responses = Http::pool(function ($pool) use ($chunk) {
+                foreach ($chunk as $productId => $info) {
+                    $pool->as("detail_{$productId}")
+                        ->withToken($this->token)
+                        ->timeout(10)
+                        ->connectTimeout(5)
+                        ->get("{$this->baseUrl}/{$info['remoteId']}");
+                }
+            });
 
-            if (empty($searchTerm)) {
-                $notFound++;
-                $bar->advance();
-                continue;
-            }
+            foreach ($chunk as $productId => $info) {
+                $response = $responses["detail_{$productId}"] ?? null;
 
-            try {
-                // Шаг 1: Поиск товара по артикулу
-                $searchResponse = Http::timeout(15)
-                    ->withToken($this->token)
-                    ->get($this->baseUrl, [
-                        'search' => $searchTerm,
-                        'force_flat' => 'true',
-                        'search_availability' => 'any',
-                    ]);
-
-                if (!$searchResponse->successful()) {
-                    $errors++;
-                    $bar->advance();
+                if (!$response || ($response instanceof \Exception) || !$response->successful()) {
                     continue;
                 }
 
-                $payload = $searchResponse->json('payload', []);
-
-                if (empty($payload)) {
-                    $notFound++;
-                    $bar->advance();
-                    continue;
-                }
-
-                $remoteProductId = $payload[0]['id'] ?? null;
-
-                if (!$remoteProductId) {
-                    $notFound++;
-                    $bar->advance();
-                    continue;
-                }
-
-                // Шаг 2: Получить детали товара с изображениями
-                $detailResponse = Http::timeout(15)
-                    ->withToken($this->token)
-                    ->get("{$this->baseUrl}/{$remoteProductId}");
-
-                if (!$detailResponse->successful()) {
-                    $errors++;
-                    $bar->advance();
-                    continue;
-                }
-
-                $detail = $detailResponse->json();
+                $detail = $response->json();
                 $images = $detail['images'] ?? [];
-                $videos = $detail['videos'] ?? [];
 
                 if (empty($images)) {
-                    $notFound++;
-                    $bar->advance();
+                    $noImages++;
                     continue;
                 }
 
-                // Первое изображение — главное, остальные — дополнительные
                 $mainImage = $images[0]['url'] ?? '';
                 $additionalImages = collect(array_slice($images, 1))
                     ->pluck('url')
@@ -119,44 +135,35 @@ class FetchMissingMedia extends Command
                     ->values()
                     ->toArray();
 
-                $videoUrls = collect($videos)->pluck('url')->filter()->values()->toArray();
+                $videoUrls = collect($detail['videos'] ?? [])
+                    ->pluck('url')
+                    ->filter()
+                    ->values()
+                    ->toArray();
 
                 if ($dryRun) {
-                    $this->newLine();
-                    $this->line("  [{$searchTerm}] → ID {$remoteProductId}: главная + " . count($additionalImages) . " доп.");
+                    $this->line("  ✓ [{$info['term']}] → ID {$info['remoteId']}: главная + " . count($additionalImages) . " доп.");
                 } else {
-                    $itemData = [
+                    DownloadProductMediaJob::dispatch($info['product']->id, [
                         'image_main' => $mainImage,
                         'additional_images' => $additionalImages,
                         'product_videos' => $videoUrls,
-                    ];
-
-                    DownloadProductMediaJob::dispatch($product->id, $itemData);
+                    ]);
                 }
 
                 $dispatched++;
-
-                // Пауза между запросами чтобы не превысить rate limit (250/мин)
-                usleep(200000); // 200мс
-
-            } catch (\Exception $e) {
-                Log::warning("FetchMissingMedia: ошибка для {$searchTerm}: {$e->getMessage()}");
-                $errors++;
             }
-
-            $bar->advance();
         }
 
-        $bar->finish();
-        $this->newLine(2);
-
+        $this->newLine();
         $this->info('═══════════════════════════════════════');
         $this->info('      Поиск медиа завершён');
         $this->info('═══════════════════════════════════════');
+        $this->line("  Всего без медиа:       {$total}");
         $this->line("  Найдено и отправлено:  {$dispatched}");
-        $this->line("  Не найдено:            {$notFound}");
-        $this->line("  Ошибки:                {$errors}");
-        if (!$dryRun) {
+        $this->line("  Без изображений:       {$noImages}");
+        $this->line("  Не найдено:            " . ($total - $dispatched - $noImages));
+        if (!$dryRun && $dispatched > 0) {
             $this->line("  Очередь:               catalog-media");
         }
         $this->info('═══════════════════════════════════════');
