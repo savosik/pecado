@@ -19,7 +19,19 @@ export default function ProductDetailTabs({ specifications = {}, description = '
     const [expandedSpecs, setExpandedSpecs] = useState(new Set());
 
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
-    const hasSpecs = Object.keys(specifications || {}).length > 0;
+    
+    // Фильтруем характеристики, убирая те, у которых значение "нет"
+    const validSpecifications = useMemo(() => {
+        const specs = {};
+        for (const [k, v] of Object.entries(specifications || {})) {
+            if (String(v ?? '').trim().toLowerCase() !== 'нет') {
+                specs[k] = v;
+            }
+        }
+        return specs;
+    }, [specifications]);
+
+    const hasSpecs = Object.keys(validSpecifications).length > 0;
     const hasDesc = sanitizedDescription.trim().length > 0;
     const hasMedia = Array.isArray(media) && media.filter(m => m.type === 'image' || m.type === 'video').length > 0;
     const hasCerts = Array.isArray(certificates) && certificates.length > 0;
@@ -137,7 +149,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                         gridTemplateColumns={{ base: '1fr', md: '1fr 1fr' }}
                         gapX="8" gapY="2"
                     >
-                        {Object.entries(specifications).map(([key, value]) => {
+                        {Object.entries(validSpecifications).map(([key, value]) => {
                             const valStr = String(value ?? '');
                             const isExpanded = expandedSpecs.has(key);
                             const showToggle = valStr.length > 80;
