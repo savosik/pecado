@@ -1,15 +1,29 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
+namespace App\Console\Commands;
 
-return new class extends Migration
+use Illuminate\Console\Command;
+
+class UpdateOwnBrands extends Command
 {
     /**
-     * Run the migrations.
+     * The name and signature of the console command.
+     *
+     * @var string
      */
-    public function up(): void
+    protected $signature = 'brands:update-own';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Set specific brands as "own" and group them by first word';
+
+    /**
+     * Execute the console command.
+     */
+    public function handle()
     {
         $brandsList = [
             'A-Toys by TOYFA', 'Anonymo by TOYFA', 'Beyond by Toyfa', 'Black&Red by TOYFA',
@@ -24,6 +38,8 @@ return new class extends Migration
             'Waname Apparel', 'Waname D-splash', 'Waname Lubricant', 'XLover by TOYFA', 'Yovee', 'Штучки-Дрючки'
         ];
 
+        $this->info("Starting brand updates...");
+
         // 1. Устанавливаем категорию own для всех этих брендов
         foreach ($brandsList as $name) {
             $brand = \App\Models\Brand::where('name', $name)->first();
@@ -31,6 +47,7 @@ return new class extends Migration
                 $brand->update(['category' => \App\Enums\BrandCategory::Own]);
             }
         }
+        $this->info("Categories updated to Own.");
 
         // 2. Группируем те, что начинаются с одного и того же первого слова
         $groupByFirstWord = [];
@@ -41,7 +58,7 @@ return new class extends Migration
         }
 
         foreach ($groupByFirstWord as $firstWord => $names) {
-            // Если брендов, начинающихся с этого слова, больше одного (например, RealStick ...)
+            // Если брендов, начинающихся с этого слова, больше одного 
             if (count($names) > 1) {
                 // Создаем или находим родительский бренд по первому слову
                 $parent = \App\Models\Brand::firstOrCreate(
@@ -62,17 +79,10 @@ return new class extends Migration
                         }
                     }
                 }
+                $this->info("Grouped {$firstWord} brands under parent ID {$parent->id}.");
             }
         }
-    }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        // Не требуется обязательный откат, так как это просто установка полей в БД.
-        // При желании можно только удалить созданные родительские бренды без продуктов, 
-        // но безопаснее оставить down пустой.
+        $this->info("Brand updates completed.");
     }
-};
+}
