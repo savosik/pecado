@@ -4,6 +4,7 @@ import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
 import AuthLayout from './AuthLayout';
 import SocialAuthButtons from './SocialAuthButtons';
+import { PhoneInput } from '@/components/common/PhoneInput';
 
 const countries = [
     { value: 'RU', label: 'Россия' },
@@ -99,10 +100,9 @@ export default function Register({ errors }) {
                         </Field>
 
                         <Field label={labelEl('Телефон')} invalid={!!errors.phone} errorText={errors.phone} required>
-                            <Input
-                                type="tel"
+                            <PhoneInput
                                 value={data.phone}
-                                onChange={(e) => setData('phone', e.target.value)}
+                                onChange={(val) => setData('phone', val)}
                                 placeholder="+7 (999) 123-45-67"
                                 {...inputStyles}
                             />
