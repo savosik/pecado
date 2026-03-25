@@ -114,6 +114,14 @@ return [
                     'created_at',
                     'name',
                 ],
+                'typoTolerance' => [
+                    'enabled' => true,
+                    'disableOnAttributes' => [
+                        'sku',
+                        'code',
+                        'barcodes',
+                    ],
+                ],
             ],
             Category::class => [
                 'searchableAttributes' => [
