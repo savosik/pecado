@@ -36,6 +36,7 @@ class PublishOrderToErp
             'type' => $order->type?->value ?? $order->type ?? 'order',
             'partner_uuid' => $order->user?->erp_id,
             'warehouse_uuids' => $this->resolveWarehouseUuids($order),
+            'comment' => $order->comment,
             'timestamp' => now()->toIso8601String(),
         ];
 

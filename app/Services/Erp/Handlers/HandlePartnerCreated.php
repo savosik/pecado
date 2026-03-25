@@ -4,6 +4,8 @@ namespace App\Services\Erp\Handlers;
 
 use App\Enums\UserStatus;
 use App\Models\User;
+use App\Models\Region;
+use App\Models\Currency;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -23,9 +25,28 @@ class HandlePartnerCreated
         $uuid     = $payload['uuid']     ?? null;
         $login    = $payload['login']    ?? null;
         $email    = $payload['email']    ?? $login;
-        $name     = $payload['name']     ?? null;
+        $name     = $payload['first_name'] ?? $payload['name'] ?? null;
+        $surname  = $payload['last_name'] ?? null;
+        $patronymic = $payload['middle_name'] ?? null;
+        
         $phone    = $payload['phone']    ?? null;
         $password = $payload['password'] ?? null;
+        
+        $city     = $payload['city'] ?? null;
+        $country  = $payload['country'] ?? null;
+        
+        $regionName = $payload['region'] ?? null;
+        $currencyCode = $payload['currency'] ?? null;
+        
+        $regionId = null;
+        if ($regionName) {
+            $regionId = Region::where('name', $regionName)->value('id');
+        }
+        
+        $currencyId = null;
+        if ($currencyCode) {
+            $currencyId = Currency::where('code', $currencyCode)->value('id');
+        }
 
         if (!$uuid || !$login) {
             Log::warning('partner.created: отсутствует uuid или login', ['payload' => $payload]);
@@ -63,9 +84,15 @@ class HandlePartnerCreated
             return;
         }
 
-        $newUser = User::withoutEvents(function () use ($uuid, $login, $email, $name, $phone, $password) {
+        $newUser = User::withoutEvents(function () use ($uuid, $login, $email, $name, $surname, $patronymic, $city, $country, $regionId, $currencyId, $phone, $password) {
             return User::create([
                 'name'                 => $name ?? $login,
+                'surname'              => $surname,
+                'patronymic'           => $patronymic,
+                'city'                 => $city,
+                'country'              => $country,
+                'region_id'            => $regionId,
+                'currency_id'          => $currencyId,
                 'email'                => $email,
                 'phone'                => $phone,
                 'password'             => $password, // auto-hashed через cast 'hashed'
