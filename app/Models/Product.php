@@ -32,6 +32,29 @@ class Product extends Model implements HasMedia
                     $product->{$field} = html_entity_decode($product->{$field}, ENT_QUOTES | ENT_HTML5, 'UTF-8');
                 }
             }
+
+            // Автогенерация slug, если не задан
+            if (empty($product->slug) && !empty($product->name)) {
+                $transliterated = \App\Helpers\SearchHelper::transliterate($product->name);
+                $baseSlug = \Illuminate\Support\Str::slug($transliterated);
+
+                if (empty($baseSlug)) {
+                    $baseSlug = 'product-' . ($product->sku ?: \Illuminate\Support\Str::random(8));
+                }
+
+                // Добавляем суффикс из внутреннего кода для уникальности
+                if ($product->sku) {
+                    $baseSlug .= '-' . \Illuminate\Support\Str::slug($product->sku);
+                }
+
+                // Гарантируем уникальность
+                $slug = $baseSlug;
+                $counter = 1;
+                while (static::where('slug', $slug)->where('id', '!=', $product->id ?? 0)->exists()) {
+                    $slug = $baseSlug . '-' . $counter++;
+                }
+                $product->slug = $slug;
+            }
         });
     }
 
