@@ -91,19 +91,19 @@ return [
         'index-settings' => [
             Product::class => [
                 'searchableAttributes' => [
-                    'name',            // 1. Название (высший приоритет)
-                    'name_translit',   // 2. Транслит
-                    'name_cyrillic',   // 3. Обратный транслит
-                    'name_layout',     // 4. Альтернативная раскладка
+                    'sku',             // 1. Артикул (высший приоритет)
+                    'code',            // 2. Код товара
+                    'barcodes',        // 3. Штрих-коды
+                    'name',            // 4. Название (точный матч)
                     'brand',           // 5. Бренд
-                    'brand_translit',  // 6. Бренд (транслит)
-                    'brand_cyrillic',  // 7. Бренд (кириллица)
-                    'brand_layout',    // 8. Бренд (раскладка)
-                    'category',        // 9. Категория
-                    'description',     // 10. Описание
-                    'sku',             // 11. Артикул
-                    'code',            // 12. Код товара
-                    'barcodes',        // 13. Штрих-коды
+                    'category',        // 6. Категория
+                    'name_translit',   // 7. Транслит
+                    'name_cyrillic',   // 8. Обратный транслит
+                    'name_layout',     // 9. Альтернативная раскладка
+                    'brand_translit',  // 10. Бренд (транслит)
+                    'brand_cyrillic',  // 11. Бренд (кириллица)
+                    'brand_layout',    // 12. Бренд (раскладка)
+                    'description',     // 13. Описание (самый низкий приоритет)
                 ],
                 'filterableAttributes' => [
                     'brand',
