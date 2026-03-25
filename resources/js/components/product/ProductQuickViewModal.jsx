@@ -88,7 +88,7 @@ export default function ProductQuickViewModal() {
                     w="100%"
                     maxW="1360px"
                     mx={{ base: '2', md: '4' }}
-                    mt={{ base: '2', md: '6', lg: '85px' }}
+                    mt={{ base: '2', md: '6', lg: '52px' }}
                     mb={{ base: '2', md: '6' }}
                 >
                     <Box
@@ -98,7 +98,7 @@ export default function ProductQuickViewModal() {
                         borderRadius={{ base: 'lg', md: 'xl' }}
                         boxShadow="xl"
                         overflow="hidden"
-                        maxH={{ base: 'calc(100vh - 1rem)', md: 'calc(100vh - 3rem)', lg: 'calc(100vh - 85px - 1.5rem)' }}
+                        maxH={{ base: 'calc(100vh - 1rem)', md: 'calc(100vh - 3rem)', lg: 'calc(100vh - 52px - 1.5rem)' }}
                         display="flex"
                         flexDirection="column"
                         transform={visible ? 'scale(1)' : 'scale(0.96)'}
