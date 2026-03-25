@@ -181,7 +181,8 @@ trait ProductQueryScopes
 
         return match ($mode) {
             'instock'      => $query->whereExists(fn ($sub) => $existsWithStock($sub, $primaryIds)),
-            'preorder'     => $query->whereExists(fn ($sub) => $existsWithStock($sub, $preorderIds)),
+            'preorder'     => $query->whereExists(fn ($sub) => $existsWithStock($sub, $preorderIds))
+                                      ->whereNotExists(fn ($sub) => $existsWithStock($sub, $primaryIds)),
             'notavailable' => $query->whereNotExists(fn ($sub) => $existsWithStock($sub, $allIds)),
             default        => $query,
         };
