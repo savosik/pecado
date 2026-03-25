@@ -121,7 +121,7 @@ export default function Index({ agreements, filters }) {
             <PageHeader
                 title="Индивидуальные соглашения"
                 description="Индивидуальные соглашения и их кастомные скидки для партнёров."
-                createUrl={route('admin.agreements.create')}
+                createHref={route('admin.agreements.create')}
             />
 
             <Box mb={4} display="flex" gap={4} alignItems="center">
