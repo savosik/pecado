@@ -86,7 +86,8 @@ class PriceService implements PriceServiceInterface
      */
     protected function getMaxDiscountPercentage(User $user, Product $product): float
     {
-        return Discount::where('is_posted', true)
+        // 1. Обычные акции/скидки (Discounts)
+        $promotionDiscount = Discount::where('is_posted', true)
             // Партнёр: прямая привязка ИЛИ через сегмент партнёров
             ->where(function ($q) use ($user) {
                 $q->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
@@ -107,6 +108,27 @@ class PriceService implements PriceServiceInterface
                   });
             })
             ->max('percentage') ?? 0.0;
+
+        // 2. Индивидуальные соглашения (Agreements -> AgreementDiscount)
+        $agreementDiscount = \App\Models\AgreementDiscount::whereHas('agreement', function ($q) use ($user) {
+                $q->where('is_active', true)
+                  ->where('partner_uuid', $user->erp_id)
+                  ->where(function ($q) {
+                      $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
+                  })
+                  ->where(function ($q) {
+                      $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
+                  });
+            })
+            ->where(function ($q) use ($product) {
+                // Товар: прямая привязка через сегмент номенклатуры (по спецификации US-14)
+                $q->whereHas('productSegment.products', fn ($q) => $q->where('products.id', $product->id))
+                  // ИЛИ скидка применяется ко всем товарам, если сегмент не указан (на всякий случай)
+                  ->orWhereNull('product_segment_uuid');
+            })
+            ->max('percentage') ?? 0.0;
+
+        return max((float)$promotionDiscount, (float)$agreementDiscount);
     }
 
     /**

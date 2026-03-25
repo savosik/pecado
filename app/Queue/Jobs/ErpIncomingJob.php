@@ -3,6 +3,9 @@
 namespace App\Queue\Jobs;
 
 use App\Models\ErpProcessedMessage;
+use App\Services\Erp\Handlers\HandleAgreementCreated;
+use App\Services\Erp\Handlers\HandleAgreementDeleted;
+use App\Services\Erp\Handlers\HandleAgreementUpdated;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
 use App\Services\Erp\Handlers\HandleCategoryUpdated;
@@ -90,6 +93,10 @@ class ErpIncomingJob extends BaseJob
         'category.updated'          => HandleCategoryUpdated::class,
         'product.created'           => HandleProductCreated::class,
         'product.updated'           => HandleProductUpdated::class,
+        // US-14: индивидуальные соглашения
+        'agreement.created'         => HandleAgreementCreated::class,
+        'agreement.updated'         => HandleAgreementUpdated::class,
+        'agreement.deleted'         => HandleAgreementDeleted::class,
     ];
 
 

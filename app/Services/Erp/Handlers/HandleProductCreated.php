@@ -175,13 +175,42 @@ class HandleProductCreated
                     // Найти или создать значение атрибута (если есть value_uuid)
                     $attributeValueId = null;
                     if ($valueUuid) {
-                        $attrValue = \App\Models\AttributeValue::updateOrCreate(
-                            ['external_id' => $valueUuid],
-                            [
-                                'attribute_id' => $attribute->id,
-                                'value'        => $valueLabel ?? $valueUuid,
-                            ]
-                        );
+                        $valueStr = $valueLabel ?? $valueUuid;
+                        $attrValue = \App\Models\AttributeValue::where('external_id', $valueUuid)->first();
+
+                        if ($attrValue) {
+                            $duplicate = \App\Models\AttributeValue::where('attribute_id', $attribute->id)
+                                ->where('value', $valueStr)
+                                ->where('id', '!=', $attrValue->id)
+                                ->first();
+
+                            if ($duplicate) {
+                                // Избегаем Integrity constraint violation на (attribute_id, value)
+                                // Передаем external_id дубликату
+                                $attrValue->update(['external_id' => null]);
+                                $duplicate->update(['external_id' => $valueUuid]);
+                                $attrValue = $duplicate;
+                            } else {
+                                $attrValue->update([
+                                    'attribute_id' => $attribute->id,
+                                    'value'        => $valueStr,
+                                ]);
+                            }
+                        } else {
+                            $attrValue = \App\Models\AttributeValue::where('attribute_id', $attribute->id)
+                                ->where('value', $valueStr)
+                                ->first();
+
+                            if ($attrValue) {
+                                $attrValue->update(['external_id' => $valueUuid]);
+                            } else {
+                                $attrValue = \App\Models\AttributeValue::create([
+                                    'external_id'  => $valueUuid,
+                                    'attribute_id' => $attribute->id,
+                                    'value'        => $valueStr,
+                                ]);
+                            }
+                        }
                         $attributeValueId = $attrValue->id;
                     }
 

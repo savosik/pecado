@@ -133,7 +133,7 @@ class ImportSizeCharts extends Command
                 }
             } else {
                 // Несколько сеток — пробуем сопоставить по ключевым словам в названии категории
-                $matched = $this->assignByCategory($brand, $brand->sizeCharts);
+                $matched = $this->assignByCategory($brand, $charts);
                 $assignedCount += $matched;
 
                 if ($matched > 0) {

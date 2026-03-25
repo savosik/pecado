@@ -156,6 +156,9 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::get('/discounts/search-partner-segments', [\App\Http\Controllers\Admin\DiscountController::class, 'searchPartnerSegments'])->name('discounts.search-partner-segments');
     Route::resource('discounts', \App\Http\Controllers\Admin\DiscountController::class);
 
+    // Индивидуальные соглашения
+    Route::resource('agreements', \App\Http\Controllers\Admin\AgreementController::class)->except(['create', 'store', 'destroy']);
+
     // Сегменты номенклатуры (US-11)
     Route::get('/product-segments/search-products', [\App\Http\Controllers\Admin\ProductSegmentController::class, 'searchProducts'])->name('product-segments.search-products');
     Route::resource('product-segments', \App\Http\Controllers\Admin\ProductSegmentController::class);
