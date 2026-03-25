@@ -150,16 +150,16 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                             };
 
                             return (
-                                <Flex key={key} align="baseline" gap="2" fontSize="sm" py="1">
+                                <Flex key={key} align="baseline" gap="2" fontSize="sm" py="1" overflow="hidden">
                                     <Text color="gray.500" _dark={{ color: 'gray.400' }} flexShrink={0} truncate title={key}>
                                         {key}
                                     </Text>
-                                    <Box flex="1" borderBottomWidth="1px" borderStyle="dotted" borderColor="gray.300" _dark={{ borderColor: 'gray.600' }} transform="translateY(2px)" />
-                                    <Box flexShrink={0} maxW="55%" textAlign="right">
+                                    <Box flex="1" borderBottomWidth="1px" borderStyle="dotted" borderColor="gray.300" _dark={{ borderColor: 'gray.600' }} transform="translateY(2px)" flexShrink={1} minW="10px" />
+                                    <Box flexShrink={1} maxW="55%" textAlign="right" overflow="hidden">
                                         <Text
                                             fontWeight="500"
                                             title={valStr}
-                                            css={isExpanded ? { whiteSpace: 'pre-wrap', wordBreak: 'break-word' } : undefined}
+                                            css={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}
                                             lineClamp={isExpanded ? undefined : 2}
                                         >
                                             {valStr}
