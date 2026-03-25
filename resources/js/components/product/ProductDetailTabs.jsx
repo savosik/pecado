@@ -20,12 +20,16 @@ export default function ProductDetailTabs({ specifications = {}, description = '
 
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
     
-    // Фильтруем характеристики, убирая те, у которых значение "нет"
+    // Фильтруем характеристики, убирая те, у которых значение "нет", и форматируем числа
     const validSpecifications = useMemo(() => {
         const specs = {};
         for (const [k, v] of Object.entries(specifications || {})) {
-            if (String(v ?? '').trim().toLowerCase() !== 'нет') {
-                specs[k] = v;
+            let val = String(v ?? '').trim();
+            if (val.toLowerCase() !== 'нет') {
+                if (/^-?\d+\.\d+$/.test(val)) {
+                    val = parseFloat(val).toString();
+                }
+                specs[k] = val;
             }
         }
         return specs;
