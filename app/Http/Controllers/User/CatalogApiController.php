@@ -115,18 +115,24 @@ class CatalogApiController extends Controller
     {
         $validated = $request->validated();
 
-        // Для каждой группы фасетов строим запрос БЕЗ фильтра этой группы.
-        // Это реализует паттерн «OR внутри группы, AND между группами»:
-        // выбрав «Красный», пользователь всё ещё видит «Синий» и «Зелёный»,
-        // но при этом фасеты Материала учитывают выбранный Цвет.
         $withoutBrands = $validated;
         unset($withoutBrands['brand_ids']);
 
         $withoutCategories = $validated;
         unset($withoutCategories['category_ids']);
 
-        // Для атрибутов — исключаем attribute_value_ids и attribute_inline_filters
-        // из базового запроса, но передаём их в getAttributeFacets для per-attribute exclusion.
+        $selectedBrandIds = array_map(
+            'intval',
+            $validated['brand_ids'] ?? [],
+        );
+        $selectedCategoryIds = array_map(
+            'intval',
+            $validated['category_ids'] ?? [],
+        );
+        if (!empty($validated['category_id']) && !in_array((int)$validated['category_id'], $selectedCategoryIds)) {
+            $selectedCategoryIds[] = (int)$validated['category_id'];
+        }
+
         $selectedAttributeValueIds = array_map(
             'intval',
             $validated['attribute_value_ids'] ?? [],
@@ -136,8 +142,8 @@ class CatalogApiController extends Controller
         unset($withoutAttributes['attribute_inline_filters']);
 
         return response()->json([
-            'brands'     => $this->facetService->getBrandFacets($this->buildBaseQuery($withoutBrands)),
-            'categories' => $this->facetService->getCategoryFacets($this->buildBaseQuery($withoutCategories)),
+            'brands'     => $this->facetService->getBrandFacets($this->buildBaseQuery($withoutBrands), $selectedBrandIds),
+            'categories' => $this->facetService->getCategoryFacets($this->buildBaseQuery($withoutCategories), $selectedCategoryIds),
             'attributes' => $this->facetService->getAttributeFacets(
                 $this->buildBaseQuery($withoutAttributes),
                 $selectedAttributeValueIds,

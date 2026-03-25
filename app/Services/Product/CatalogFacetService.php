@@ -142,6 +142,55 @@ class CatalogFacetService
             ];
         }
 
+        if (!empty($selectedValueIds)) {
+            $foundValueIds = [];
+            foreach ($result as $attr) {
+                foreach ($attr['values'] as $val) {
+                    $foundValueIds[] = $val['id'];
+                }
+            }
+            $missingValueIds = array_diff($selectedValueIds, $foundValueIds);
+
+            if (!empty($missingValueIds)) {
+                $missingValues = DB::table('attribute_values as av')
+                    ->join('attributes as a', 'a.id', '=', 'av.attribute_id')
+                    ->whereIn('av.id', $missingValueIds)
+                    ->select('av.id', 'av.value', 'av.attribute_id', 'a.name as attribute_name', 'a.type as attribute_type', 'a.sort_order as attr_sort')
+                    ->get();
+
+                $missingByAttr = [];
+                foreach ($missingValues as $row) {
+                    $missingByAttr[$row->attribute_id][] = [
+                        'id' => $row->id,
+                        'value' => $row->value,
+                        'count' => 0,
+                    ];
+                }
+
+                foreach ($missingByAttr as $attrId => $missingVals) {
+                    $attrRef = null;
+                    foreach ($result as &$resAttr) {
+                        if ($resAttr['id'] === $attrId) {
+                            $attrRef = &$resAttr;
+                            break;
+                        }
+                    }
+                    if ($attrRef !== null) {
+                        $attrRef['values'] = array_merge($attrRef['values'], $missingVals);
+                        usort($attrRef['values'], fn($a, $b) => mb_strtolower((string)$a['value']) <=> mb_strtolower((string)$b['value']));
+                    } else {
+                        $attrName = $missingValues->firstWhere('attribute_id', $attrId)->attribute_name;
+                        $result[] = [
+                            'id' => $attrId,
+                            'name' => $attrName,
+                            'values' => $missingVals,
+                        ];
+                    }
+                    unset($attrRef);
+                }
+            }
+        }
+
         return $result;
     }
 
@@ -275,9 +324,9 @@ class CatalogFacetService
      *
      * @return array<int, array{id: int, name: string, slug: string, count: int}>
      */
-    public function getBrandFacets(Builder $baseQuery): array
+    public function getBrandFacets(Builder $baseQuery, array $selectedIds = []): array
     {
-        return $this->getEntityFacets($baseQuery, 'brands', 'brand_id');
+        return $this->getEntityFacets($baseQuery, 'brands', 'brand_id', $selectedIds);
     }
 
     /**
@@ -287,9 +336,9 @@ class CatalogFacetService
      *
      * @return array<int, array{id: int, name: string, slug: string, count: int}>
      */
-    public function getCategoryFacets(Builder $baseQuery): array
+    public function getCategoryFacets(Builder $baseQuery, array $selectedIds = []): array
     {
-        return $this->getEntityFacets($baseQuery, 'categories', 'category_id');
+        return $this->getEntityFacets($baseQuery, 'categories', 'category_id', $selectedIds);
     }
 
     /**
@@ -378,7 +427,7 @@ class CatalogFacetService
      * @param  string $fkColumn  FK-колонка в products (brand_id, category_id)
      * @return array<int, array{id: int, name: string, slug: string, count: int}>
      */
-    private function getEntityFacets(Builder $baseQuery, string $table, string $fkColumn): array
+    private function getEntityFacets(Builder $baseQuery, string $table, string $fkColumn, array $selectedIds = []): array
     {
         $productIds = $this->cloneBaseIds($baseQuery);
         $alias = $table[0]; // 'b' для brands, 'c' для categories
@@ -400,7 +449,7 @@ class CatalogFacetService
             $query->where("{$alias}.is_active", true);
         }
 
-        return $query
+        $results = $query
             ->get()
             ->map(fn ($row) => [
                 'id' => $row->id,
@@ -408,8 +457,33 @@ class CatalogFacetService
                 'slug' => $row->slug,
                 'count' => (int) $row->count,
             ])
-            ->values()
             ->toArray();
+
+        if (!empty($selectedIds)) {
+            $foundIds = array_column($results, 'id');
+            $missingIds = array_diff($selectedIds, $foundIds);
+
+            if (!empty($missingIds)) {
+                $missingEntities = DB::table($table)
+                    ->whereIn('id', $missingIds)
+                    ->select('id', 'name', 'slug')
+                    ->get()
+                    ->map(fn ($row) => [
+                        'id' => $row->id,
+                        'name' => $row->name,
+                        'slug' => $row->slug,
+                        'count' => 0,
+                    ])
+                    ->toArray();
+
+                if (!empty($missingEntities)) {
+                    $results = array_merge($results, $missingEntities);
+                    usort($results, fn($a, $b) => mb_strtolower($a['name']) <=> mb_strtolower($b['name']));
+                }
+            }
+        }
+
+        return $results;
     }
 
     /**
