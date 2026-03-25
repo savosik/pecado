@@ -11,6 +11,8 @@ const SORT_LABELS = {
     price_desc: 'Цена ↓',
     name_asc: 'А → Я',
     name_desc: 'Я → А',
+    article_asc: 'Артикул А–Я',
+    article_desc: 'Артикул Я–А',
 };
 
 

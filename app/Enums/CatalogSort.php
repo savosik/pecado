@@ -16,6 +16,8 @@ enum CatalogSort: string
     case PriceDesc = 'price_desc';
     case NameAsc = 'name_asc';
     case NameDesc = 'name_desc';
+    case ArticleAsc = 'article_asc';
+    case ArticleDesc = 'article_desc';
 
     /**
      * Применить сортировку к запросу.
@@ -33,6 +35,8 @@ enum CatalogSort: string
             self::PriceDesc => $query->orderByDesc('base_price')->orderByDesc('id'),
             self::NameAsc => $query->orderBy('name')->orderByDesc('id'),
             self::NameDesc => $query->orderByDesc('name')->orderByDesc('id'),
+            self::ArticleAsc => $query->orderBy('sku')->orderByDesc('id'),
+            self::ArticleDesc => $query->orderByDesc('sku')->orderByDesc('id'),
         };
     }
 
@@ -47,6 +51,8 @@ enum CatalogSort: string
             self::PriceDesc => 'Сначала дорогие',
             self::NameAsc => 'По имени А–Я',
             self::NameDesc => 'По имени Я–А',
+            self::ArticleAsc => 'Артикул А–Я',
+            self::ArticleDesc => 'Артикул Я–А',
         };
     }
 

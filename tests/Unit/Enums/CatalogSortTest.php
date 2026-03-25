@@ -100,6 +100,8 @@ class CatalogSortTest extends TestCase
         $this->assertEquals('Сначала дорогие', CatalogSort::PriceDesc->label());
         $this->assertEquals('По имени А–Я', CatalogSort::NameAsc->label());
         $this->assertEquals('По имени Я–А', CatalogSort::NameDesc->label());
+        $this->assertEquals('Артикул А–Я', CatalogSort::ArticleAsc->label());
+        $this->assertEquals('Артикул Я–А', CatalogSort::ArticleDesc->label());
     }
 
     // ─── options() ──────────────────────────────────────────
@@ -108,7 +110,7 @@ class CatalogSortTest extends TestCase
     {
         $options = CatalogSort::options();
 
-        $this->assertCount(5, $options);
+        $this->assertCount(7, $options);
 
         foreach ($options as $option) {
             $this->assertArrayHasKey('value', $option);
