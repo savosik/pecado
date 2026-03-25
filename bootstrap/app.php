@@ -41,6 +41,18 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
             if (in_array($response->getStatusCode(), [500, 503, 404, 403])) {
+                // API-маршруты — возвращаем JSON, а не Inertia-страницу
+                if ($request->is('api/*') || $request->expectsJson()) {
+                    return response()->json([
+                        'message' => match ($response->getStatusCode()) {
+                            404 => 'Не найдено',
+                            403 => 'Доступ запрещён',
+                            503 => 'Сервис недоступен',
+                            default => 'Ошибка сервера',
+                        },
+                    ], $response->getStatusCode());
+                }
+
                 return Inertia::render('ErrorPage', ['status' => $response->getStatusCode()])
                     ->toResponse($request)
                     ->setStatusCode($response->getStatusCode());

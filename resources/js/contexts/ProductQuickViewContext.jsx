@@ -95,7 +95,10 @@ export function ProductQuickViewProvider({ children }) {
             setLoading(false);
         } catch (e) {
             if (e.name !== 'AbortError') {
+                console.error('[QuickView] Ошибка загрузки товара:', e);
                 closeQuickView();
+                // Fallback: переходим на страницу товара
+                window.location.href = `/products/${encodeURIComponent(slug)}`;
             }
         }
     }, [loadData, closeQuickView]);
