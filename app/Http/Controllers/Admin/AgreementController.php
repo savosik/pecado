@@ -3,7 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Agreement;
+use App\Models\ProductSegment;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -56,6 +60,63 @@ class AgreementController extends AdminController
                 'per_page' => $perPage,
             ],
         ]);
+    }
+
+    /**
+     * Show the form for creating a new agreement.
+     */
+    public function create(): Response
+    {
+        return Inertia::render('Admin/Pages/Agreements/Create');
+    }
+
+    /**
+     * Store a newly created agreement in storage.
+     */
+    public function store(Request $request): \Illuminate\Http\RedirectResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'user_id' => 'required|exists:users,id',
+            'is_active' => 'boolean',
+            'starts_at' => 'nullable|date',
+            'ends_at' => 'nullable|date|after_or_equal:starts_at',
+            'discounts' => 'array',
+            'discounts.*.name' => 'required|string|max:255',
+            'discounts.*.percentage' => 'required|numeric|min:0|max:100',
+            'discounts.*.product_segment_id' => 'nullable|exists:product_segments,id',
+        ]);
+
+        $user = User::findOrFail($validated['user_id']);
+
+        DB::transaction(function () use ($validated, $user) {
+            $agreement = Agreement::create([
+                'uuid' => (string) Str::uuid(),
+                'name' => $validated['name'],
+                'partner_uuid' => $user->erp_id ?? (string) Str::uuid(),
+                'is_active' => $validated['is_active'] ?? false,
+                'starts_at' => $validated['starts_at'] ?? null,
+                'ends_at' => $validated['ends_at'] ?? null,
+            ]);
+
+            if (!empty($validated['discounts'])) {
+                foreach ($validated['discounts'] as $discountData) {
+                    $segment = null;
+                    if (!empty($discountData['product_segment_id'])) {
+                        $segment = ProductSegment::find($discountData['product_segment_id']);
+                    }
+
+                    $agreement->discounts()->create([
+                        'discount_uuid' => (string) Str::uuid(),
+                        'name' => $discountData['name'],
+                        'percentage' => (float) $discountData['percentage'],
+                        'product_segment_uuid' => $segment ? $segment->uuid : null,
+                    ]);
+                }
+            }
+        });
+
+        return redirect()->route('admin.agreements.index')->with('success', 'Соглашение успешно создано');
     }
 
     /**
