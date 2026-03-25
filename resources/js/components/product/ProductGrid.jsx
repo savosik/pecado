@@ -1,4 +1,5 @@
 import { Box, Button, Flex, Grid, GridItem, Heading } from '@chakra-ui/react';
+import { Link } from '@inertiajs/react';
 import ProductCard from './ProductCard';
 
 /**
@@ -68,7 +69,7 @@ export default function ProductGrid({
                 {linkUrl && (
                     <Flex justifyContent="center" mt="5">
                         <Button
-                            as="a"
+                            as={Link}
                             href={linkUrl}
                             variant="outline"
                             size="sm"

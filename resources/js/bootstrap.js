@@ -38,6 +38,10 @@ if (typeof document !== 'undefined') {
             const match = url.pathname.match(/^\/products\/([^/]+)$/);
             if (!match) return;
 
+            // Служебные разделы каталога — не перехватываем (обычная навигация)
+            const CATALOG_SECTIONS = ['novinki', 'bestsellery', 'favorites'];
+            if (CATALOG_SECTIONS.includes(match[1])) return;
+
             // На странице товара — обычная навигация
             if (window.location.pathname.match(/^\/products\/([^/]+)$/)) return;
 
@@ -69,6 +73,9 @@ if (typeof document !== 'undefined') {
             if (url.origin !== window.location.origin) return;
             const match = url.pathname.match(/^\/products\/([^/]+)$/);
             if (!match) return;
+            // Служебные разделы каталога — не делаем prefetch
+            const CATALOG_SECTIONS = ['novinki', 'bestsellery', 'favorites'];
+            if (CATALOG_SECTIONS.includes(match[1])) return;
             const slug = decodeURIComponent(match[1]);
             if (window.__prefetchProductQuickView) {
                 window.__prefetchProductQuickView(slug);
