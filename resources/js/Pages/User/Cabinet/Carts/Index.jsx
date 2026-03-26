@@ -150,7 +150,7 @@ export default function Index({ carts = [], cartsCount = 0 }) {
             <Head title="Мои корзины — Pecado" />
 
             {carts.length === 0 ? (
-                <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
                             <Flex align="center" justify="center" w="14" h="14" borderRadius="full" bg="gray.100" _dark={{ bg: 'gray.700' }}>
@@ -164,10 +164,10 @@ export default function Index({ carts = [], cartsCount = 0 }) {
                     </Card.Body>
                 </Card.Root>
             ) : (
-                <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100" overflow="hidden">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
                     {/* Desktop Table */}
                     <Box display={{ base: 'none', md: 'block' }}>
-                        <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
+                        <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Название</Table.ColumnHeader>
@@ -227,7 +227,7 @@ export default function Index({ carts = [], cartsCount = 0 }) {
                     </Box>
 
                     {/* Mobile Cards */}
-                    <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} />}>
+                    <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }} />}>
                         {carts.map((c) => (
                             <Box key={c.id} p="4">
                                 <Flex justify="space-between" align="start" mb="2">

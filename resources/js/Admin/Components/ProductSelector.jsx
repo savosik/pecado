@@ -177,14 +177,14 @@ export const ProductSelector = ({
                         left={0}
                         right={0}
                         zIndex={1000}
-                        bg="white"
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                         boxShadow="lg"
                         borderRadius="md"
                         mt={1}
                         maxHeight="300px"
                         overflowY="auto"
                         borderWidth="1px"
-                        borderColor="gray.200"
+                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                     >
                         {loading && suggestions.length === 0 ? (
                             <Box p={4} textAlign="center">
@@ -200,7 +200,7 @@ export const ProductSelector = ({
                                         _hover={{ bg: "gray.50" }}
                                         onClick={() => handleSelect(product)}
                                         borderBottomWidth="1px"
-                                        borderColor="gray.100"
+                                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                                         align="start"
                                     >
                                         <Image
@@ -263,9 +263,9 @@ const SelectedItem = ({ product, onRemove, renderItemActions }) => (
     <HStack
         p={3}
         borderWidth="1px"
-        borderColor="gray.200"
+        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
         borderRadius="md"
-        bg="white"
+        bg={{ base: 'white', _dark: 'gray.800' }}
         justify="space-between"
     >
         <HStack gap={3} flex={1} minW={0}>

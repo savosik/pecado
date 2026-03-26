@@ -21,11 +21,11 @@ export default function ProductGrid({
     return (
         <Box
             as="section"
-            bg="white"
+            bg={{ base: 'white', _dark: 'gray.800' }}
             _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
             borderRadius={{ md: 'lg' }}
             border="1px solid"
-            borderColor="gray.100"
+            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
             overflow="hidden"
         >
             {/* Заголовок */}

@@ -93,7 +93,7 @@ export default function ProductQuickViewModal() {
                 >
                     <Box
                         ref={dialogRef}
-                        bg="white"
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                         _dark={{ bg: 'gray.800' }}
                         borderRadius={{ base: 'lg', md: 'xl' }}
                         boxShadow="xl"

@@ -162,7 +162,7 @@ export default function StoryViewer({ stories = [], initialIndex = 0, onClose, o
                     >
                         <Box
                             h="100%"
-                            bg="white"
+                            bg={{ base: 'white', _dark: 'gray.800' }}
                             borderRadius="full"
                             transition={i === slideIndex ? 'width 0.05s linear' : 'none'}
                             w={
@@ -295,7 +295,7 @@ export default function StoryViewer({ stories = [], initialIndex = 0, onClose, o
                             href={slide.button_url}
                             onClick={(e) => e.stopPropagation()}
                             display="inline-block"
-                            bg="white"
+                            bg={{ base: 'white', _dark: 'gray.800' }}
                             color="gray.900"
                             fontWeight="600"
                             px="8"

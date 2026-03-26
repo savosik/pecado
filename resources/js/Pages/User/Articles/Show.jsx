@@ -19,10 +19,10 @@ export default function ArticleShow({ article, seo, breadcrumbs }) {
             <PageHeader title={article.title} />
 
             <Box
-                bg="white" _dark={{ bg: "gray.800" }}
+                bg={{ base: 'white', _dark: 'gray.800' }}
                 _dark={{ bg: 'gray.800' }}
                 border="1px solid"
-                borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                 borderRadius="sm"
                 overflow="hidden"
             >

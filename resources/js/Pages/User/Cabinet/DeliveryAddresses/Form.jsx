@@ -67,7 +67,7 @@ export default function Form({ address }) {
                 <LuArrowLeft /> Назад к списку
             </Button>
 
-            <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+            <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="5">
                     <form onSubmit={handleSubmit}>
                         <VStack gap="4" align="stretch" maxW="600px">

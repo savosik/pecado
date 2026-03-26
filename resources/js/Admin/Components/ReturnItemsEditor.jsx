@@ -309,7 +309,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId, productOrdersRoute, se
 
     return (
         <Card.Root variant="elevated" shadow="md" borderRadius="lg" overflow="hidden">
-            <Box bg="gray.50" px={6} py={4} borderBottomWidth="1px" borderColor="gray.100">
+            <Box bg="gray.50" px={6} py={4} borderBottomWidth="1px" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
                 <HStack justify="space-between" mb={4}>
                     <Heading size="sm" color="gray.700">Добавление позиции</Heading>
                     <IconButton size="xs" variant="ghost" colorPalette="gray" onClick={onCancel}>
@@ -377,7 +377,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId, productOrdersRoute, se
                                             borderWidth="1px"
                                             borderRadius="lg"
                                             cursor="pointer"
-                                            bg="white"
+                                            bg={{ base: 'white', _dark: 'gray.800' }}
                                             transition="all 0.2s"
                                             _hover={{ borderColor: `${accentColor}.400`, shadow: "sm", transform: "translateY(-1px)" }}
                                             onClick={() => handleSelectOrder(order)}
@@ -411,7 +411,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId, productOrdersRoute, se
                 {/* Шаг 3: Детали */}
                 {step === 3 && (
                     <VStack align="stretch" gap={6}>
-                        <HStack p={4} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor="gray.100">
+                        <HStack p={4} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
                             <Image src={selectedProduct?.image_url} boxSize="48px" objectFit="cover" borderRadius="md" fallbackSrc="https://via.placeholder.com/48" />
                             <Box flex={1}>
                                 <Text fontWeight="medium" lineClamp={1}>{selectedProduct?.name}</Text>
@@ -499,7 +499,7 @@ const AddItemForm = ({ onSave, onCancel, reasons, userId, productOrdersRoute, se
                 )}
             </Card.Body>
 
-            <Card.Footer bg="gray.50" borderTopWidth="1px" borderColor="gray.100" py={4}>
+            <Card.Footer bg="gray.50" borderTopWidth="1px" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} py={4}>
                 <HStack justify="flex-end" w="full" gap={3}>
                     <Button variant="subtle" colorPalette="gray" onClick={onCancel} size="md">
                         Отмена

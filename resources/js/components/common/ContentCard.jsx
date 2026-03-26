@@ -18,10 +18,10 @@ export default function ContentCard({ title, excerpt, image, date, url, tags }) 
     return (
         <Card.Root
             overflow="hidden"
-            bg="white"
+            bg={{ base: 'white', _dark: 'gray.800' }}
             _dark={{ bg: 'gray.800' }}
             border="1px solid"
-            borderColor="gray.100"
+            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
             borderRadius="sm"
             transition="all 0.2s"
             _hover={{

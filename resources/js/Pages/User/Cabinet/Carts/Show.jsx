@@ -222,7 +222,7 @@ export default function Show({ cart, cartDetails }) {
             </Flex>
 
             {/* Product Search */}
-            <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" mb="4" border="1px solid" borderColor="gray.100">
+            <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" mb="4" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="4">
                     <Text fontWeight="600" mb="2" fontSize="sm">Добавить товар</Text>
                     <Box ref={searchRef} position="relative">
@@ -245,8 +245,8 @@ export default function Show({ cart, cartDetails }) {
                         {showResults && searchResults.length > 0 && (
                             <Box
                                 position="absolute" top="100%" left="0" right="0" zIndex="10"
-                                bg="white" _dark={{ bg: 'gray.800' }}
-                                border="1px solid" borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
+                                bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}
+                                border="1px solid" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                                 borderRadius="md" shadow="lg" mt="1"
                                 maxH="350px" overflowY="auto"
                             >
@@ -280,8 +280,8 @@ export default function Show({ cart, cartDetails }) {
                         {showResults && searchResults.length === 0 && searchQuery.length >= 2 && !isSearching && (
                             <Box
                                 position="absolute" top="100%" left="0" right="0" zIndex="10"
-                                bg="white" _dark={{ bg: 'gray.800' }}
-                                border="1px solid" borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
+                                bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}
+                                border="1px solid" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                                 borderRadius="md" shadow="lg" mt="1" p="3"
                                 textAlign="center"
                             >
@@ -294,19 +294,19 @@ export default function Show({ cart, cartDetails }) {
 
             {/* Stats */}
             <HStack gap="4" mb="4" flexWrap="wrap">
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="lg" flex="1" minW="120px">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="lg" flex="1" minW="120px">
                     <Card.Body p="3" textAlign="center">
                         <Text fontSize="xs" color="gray.400">Позиций</Text>
                         <Text fontSize="xl" fontWeight="800">{items.length}</Text>
                     </Card.Body>
                 </Card.Root>
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="lg" flex="1" minW="120px">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="lg" flex="1" minW="120px">
                     <Card.Body p="3" textAlign="center">
                         <Text fontSize="xs" color="gray.400">Единиц</Text>
                         <Text fontSize="xl" fontWeight="800">{totalQuantity}</Text>
                     </Card.Body>
                 </Card.Root>
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="lg" flex="1" minW="120px">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="lg" flex="1" minW="120px">
                     <Card.Body p="3" textAlign="center">
                         <Text fontSize="xs" color="gray.400">Итого</Text>
                         {hasDiscount ? (
@@ -322,7 +322,7 @@ export default function Show({ cart, cartDetails }) {
             </HStack>
 
             {/* Items */}
-            <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100" overflow="hidden">
+            <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
                 {items.length === 0 ? (
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
@@ -335,7 +335,7 @@ export default function Show({ cart, cartDetails }) {
                     <>
                         {/* Desktop Table */}
                         <Box display={{ base: 'none', md: 'block' }}>
-                            <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
+                            <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                                 <Table.Header>
                                     <Table.Row>
                                         <Table.ColumnHeader w="60px">Фото</Table.ColumnHeader>
@@ -428,7 +428,7 @@ export default function Show({ cart, cartDetails }) {
                         </Box>
 
                         {/* Mobile Cards */}
-                        <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} />}>
+                        <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }} />}>
                             {items.map((item) => (
                                 <Box key={item.id} p="3">
                                     <Flex gap="3">
@@ -479,7 +479,7 @@ export default function Show({ cart, cartDetails }) {
                         </VStack>
 
                         {/* Totals Footer */}
-                        <Box borderTop="1px solid" borderColor="gray.200" _dark={{ borderColor: 'gray.700' }} p="4">
+                        <Box borderTop="1px solid" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} p="4" _dark={{ borderColor: 'gray.700' }}>
                             <Flex justify="space-between" align="center">
                                 <HStack gap="6">
                                     <Box>

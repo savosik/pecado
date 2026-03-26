@@ -135,7 +135,7 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
 
             {/* Расширенные фильтры */}
             {showFilters && (
-                <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} mb="4" borderRadius="xl" border="1px solid" borderColor="gray.100">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb="4" borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     <Card.Body p="4">
                         <Stack gap="4">
                             <Flex gap="4" direction={{ base: 'column', md: 'row' }}>
@@ -235,7 +235,7 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
 
             {/* Таблица возвратов */}
             {returns.data.length === 0 ? (
-                <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     <Card.Body p="10" textAlign="center">
                         <VStack gap="3">
                             <Flex
@@ -265,18 +265,18 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
             ) : (
                 <>
                     {/* Desktop table */}
-                    <Card.Root bg="white" _dark={{ bg: "gray.800" }}
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }}
                         display={{ base: 'none', md: 'block' }}
                         borderRadius="xl"
                         border="1px solid"
-                        borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                         _dark={{ borderColor: 'gray.700' }}
                         overflow="hidden"
                     >
                         <Box overflowX="auto">
-                            <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
+                            <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                                 <Table.Header>
-                                    <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
+                                    <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                         <SortableHeader field="id" w="80px">№</SortableHeader>
                                         <SortableHeader field="status">Статус</SortableHeader>
                                         <Table.ColumnHeader>Причина</Table.ColumnHeader>
@@ -344,10 +344,10 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                     <VStack gap="3" display={{ base: 'flex', md: 'none' }}>
                         {returns.data.map((ret) => (
                             <Link key={ret.id} href={`/cabinet/returns/${ret.id}`} style={{ width: '100%' }}>
-                                <Card.Root bg="white" _dark={{ bg: "gray.800" }}
+                                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }}
                                     borderRadius="xl"
                                     border="1px solid"
-                                    borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                                     _dark={{ borderColor: 'gray.700' }}
                                     _hover={{ shadow: 'md', transform: 'translateY(-1px)' }}
                                     transition="all 0.2s"

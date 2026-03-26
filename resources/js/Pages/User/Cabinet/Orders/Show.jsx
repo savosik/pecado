@@ -93,7 +93,7 @@ export default function OrderShow({ order }) {
 
                 {/* ═══ Информация о заказе ═══ */}
                 <SimpleGrid columns={{ base: 1, lg: 2 }} gap="4">
-                    <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">Информация о заказе</Text>
                         </Card.Header>
@@ -119,7 +119,7 @@ export default function OrderShow({ order }) {
                         </Card.Body>
                     </Card.Root>
 
-                    <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">Реквизиты</Text>
                         </Card.Header>
@@ -160,7 +160,7 @@ export default function OrderShow({ order }) {
 
                 {/* ═══ Позиции заказа ═══ */}
                 {order.items?.length > 0 && (
-                    <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <Flex align="center" gap="2" flexWrap="wrap">
                                 {typeIcon}
@@ -172,9 +172,9 @@ export default function OrderShow({ order }) {
                         </Card.Header>
                         <Card.Body p="0">
                             <Box overflowX="auto">
-                                <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
+                                <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                                     <Table.Header>
-                                        <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
+                                        <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                             <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
                                             <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
@@ -236,7 +236,7 @@ export default function OrderShow({ order }) {
                 )}
 
                 {/* ═══ Итого ═══ */}
-                <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     <Card.Body p="4">
                         <Flex justify="space-between" align="center">
                             <Flex align="center" gap="2">
@@ -264,7 +264,7 @@ export default function OrderShow({ order }) {
 
                 {/* ═══ Отгрузки по заказу ═══ */}
                 {order.shipments && order.shipments.length > 0 && (
-                    <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <HStack gap="2">
                                 <LuTruck size={20} />
@@ -274,9 +274,9 @@ export default function OrderShow({ order }) {
                             </HStack>
                         </Card.Header>
                         <Card.Body p={0}>
-                            <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
+                            <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                                 <Table.Header>
-                                    <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
+                                    <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                         <Table.ColumnHeader>Дата</Table.ColumnHeader>
                                         <Table.ColumnHeader>Статус</Table.ColumnHeader>
                                         <Table.ColumnHeader textAlign="center">Позиций</Table.ColumnHeader>
@@ -349,7 +349,7 @@ function ChildOrderTable({ title, icon, childOrder, currencySymbol, colorPalette
     const totalQty = items.reduce((s, it) => s + Number(it.quantity || 0), 0);
 
     return (
-        <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
             <Card.Header p="4" pb="2">
                 <Flex align="center" gap="2" flexWrap="wrap">
                     {icon}
@@ -369,9 +369,9 @@ function ChildOrderTable({ title, icon, childOrder, currencySymbol, colorPalette
             </Card.Header>
             <Card.Body p="0">
                 <Box overflowX="auto">
-                    <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
+                    <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                         <Table.Header>
-                            <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
+                            <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                 <Table.ColumnHeader>Название</Table.ColumnHeader>
                                 <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
                                 <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
@@ -431,7 +431,7 @@ function ChildOrderTable({ title, icon, childOrder, currencySymbol, colorPalette
 
 function StatusHistoryTimeline({ histories = [] }) {
     return (
-        <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
             <Card.Header p="4" pb="2">
                 <HStack gap="2">
                     <LuClock size={18} />

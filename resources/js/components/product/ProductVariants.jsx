@@ -83,7 +83,7 @@ export default function ProductVariants({ variants = [], currentProductId, model
                                     {variant.thumbnail || variant.main_image ? (
                                         <Box
                                             w="10" h="14" rounded="md" overflow="hidden"
-                                            bg="gray.100" borderWidth="1px" borderColor="gray.200"
+                                            bg="gray.100" borderWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                                             _dark={{ bg: 'gray.700', borderColor: 'gray.600' }}
                                         >
                                             <Box
@@ -99,7 +99,7 @@ export default function ProductVariants({ variants = [], currentProductId, model
                                             bg="gray.100" _dark={{ bg: 'gray.700', borderColor: 'gray.600' }}
                                             align="center" justify="center"
                                             fontSize="xs" fontWeight="600" color="gray.500"
-                                            borderWidth="1px" borderColor="gray.200"
+                                            borderWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                                         >
                                             {label.charAt(0)?.toUpperCase() || '?'}
                                         </Flex>

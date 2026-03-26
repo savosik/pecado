@@ -29,7 +29,7 @@ export default function Show() {
 
             {/* Белый контейнер-карточка */}
             <Box
-                bg="white" _dark={{ bg: "gray.800" }}
+                bg={{ base: 'white', _dark: 'gray.800' }}
                 _dark={{ bg: 'gray.800' }}
                 borderRadius="xl"
                 boxShadow="sm"

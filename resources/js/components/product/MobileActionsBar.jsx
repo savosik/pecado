@@ -34,7 +34,7 @@ export default function MobileActionsBar({ productId, name, price, isPreorder = 
         <Box
             position="fixed" bottom="0" left="0" right="0"
             zIndex="40"
-            borderTopWidth="1px" borderColor="gray.200"
+            borderTopWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
             bg="white/95" _dark={{ bg: 'gray.900/95', borderColor: 'gray.700' }}
             css={{ backdropFilter: 'blur(8px)' }}
             display={{ md: 'none' }}

@@ -124,7 +124,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
     return (
         <Tabs.Root defaultValue={tabs[0].key} variant="line">
             <Box overflowX="auto" css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-                <Tabs.List borderBottomWidth="1px" borderColor="gray.200" _dark={{ borderColor: 'gray.700' }}>
+                <Tabs.List borderBottomWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     {tabs.map(tab => (
                         <Tabs.Trigger
                             key={tab.key}
@@ -280,7 +280,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                                 gap="3"
                                 p="4"
                                 borderWidth="1px"
-                                borderColor="gray.200" _dark={{ borderColor: 'gray.700' }}
+                                borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}
                                 rounded="sm"
                                 _hover={{ bg: 'gray.50', _dark: { bg: 'gray.800' } }}
                                 transition="background 0.15s"
@@ -324,11 +324,11 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                                         <Box
                                             key={idx}
                                             rounded="sm" p="2"
-                                            borderWidth="1px" borderColor="gray.200" _dark={{ borderColor: 'gray.700' }}
+                                            borderWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}
                                             _hover={{ shadow: 'sm' }}
                                             transition="box-shadow 0.15s"
                                         >
-                                            <Box css={{ aspectRatio: '1' }} rounded="sm" overflow="hidden" bg="white" mb="2">
+                                            <Box css={{ aspectRatio: '1' }} rounded="sm" overflow="hidden" bg={{ base: 'white', _dark: 'gray.800' }} mb="2">
                                                 <Box as="img" src={item.url} alt={`Изображение ${idx + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
                                             </Box>
                                             <Button
@@ -357,7 +357,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                                         <Box
                                             key={idx}
                                             rounded="sm" p="2"
-                                            borderWidth="1px" borderColor="gray.200" _dark={{ borderColor: 'gray.700' }}
+                                            borderWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}
                                         >
                                             <Box css={{ aspectRatio: '16 / 9' }} rounded="sm" overflow="hidden" bg="black" mb="2">
                                                 <Box as="video" src={item.url} w="100%" h="100%" objectFit="cover" controls />

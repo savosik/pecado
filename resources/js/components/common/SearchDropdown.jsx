@@ -334,7 +334,7 @@ export default function SearchDropdown({
 
                     {/* Кнопка «Все результаты» */}
                     {trimmed.length >= 2 && (
-                        <Box px="3" py="2" borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                        <Box px="3" py="2" borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                             <Flex
                                 as={Link}
                                 href={`/search?q=${encodeURIComponent(trimmed)}`}
@@ -382,14 +382,14 @@ export default function SearchDropdown({
                 left="0"
                 right="0"
                 bottom="0"
-                bg="white"
+                bg={{ base: 'white', _dark: 'gray.800' }}
                 _dark={{ bg: 'gray.900' }}
                 zIndex="60"
                 display="flex"
                 flexDirection="column"
             >
                 {/* Шапка с инпутом */}
-                <Flex align="center" gap="2" px="3" py="2" borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                <Flex align="center" gap="2" px="3" py="2" borderBottom="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     <Box flex="1" as="form" onSubmit={handleSubmit}>
                         <Input
                             autoFocus
@@ -432,10 +432,10 @@ export default function SearchDropdown({
             left="0"
             right="0"
             mt="1"
-            bg="white"
+            bg={{ base: 'white', _dark: 'gray.800' }}
             _dark={{ bg: 'gray.800', borderColor: 'gray.600' }}
             border="1px solid"
-            borderColor="gray.200"
+            borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
             borderRadius="lg"
             shadow="lg"
             maxH="384px"

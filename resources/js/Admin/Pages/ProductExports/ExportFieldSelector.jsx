@@ -306,9 +306,9 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
             left={0}
             right={0}
             mt={1}
-            bg="white"
+            bg={{ base: 'white', _dark: 'gray.800' }}
             borderWidth="1px"
-            borderColor="gray.200"
+            borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
             borderRadius="lg"
             boxShadow="lg"
             overflow="hidden"
@@ -318,7 +318,7 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
                 <Box
                     w="200px"
                     borderRightWidth="1px"
-                    borderColor="gray.100"
+                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                     bg="gray.50"
                     overflowY="auto"
                     maxH="400px"

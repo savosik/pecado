@@ -214,7 +214,7 @@ export default function StoryCircles({ stories = [] }) {
                                         position="relative"
                                         borderRadius="2xl"
                                         overflow="hidden"
-                                        bg="white"
+                                        bg={{ base: 'white', _dark: 'gray.800' }}
                                         _dark={{ bg: 'gray.900' }}
                                         css={{ aspectRatio: '143 / 255' }}
                                     >

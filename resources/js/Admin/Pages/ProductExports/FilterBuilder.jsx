@@ -114,7 +114,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                 flexWrap="wrap"
                 gap={1}
                 onClick={() => setOpen(!open)}
-                bg="white"
+                bg={{ base: 'white', _dark: 'gray.800' }}
                 transition="border-color 0.15s"
             >
                 {selectedIds.length === 0
@@ -145,7 +145,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                     left={0}
                     right={0}
                     mt={1}
-                    bg="white"
+                    bg={{ base: 'white', _dark: 'gray.800' }}
                     border="1px solid #e2e8f0"
                     borderRadius="md"
                     zIndex={20}
@@ -300,7 +300,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         flexWrap="wrap"
                         gap={1}
                         onClick={() => setSelectDropdownOpen(!selectDropdownOpen)}
-                        bg="white"
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                     >
                         {selectedIds.length === 0
                             ? <Text fontSize="13px" color="gray.400">Выберите...</Text>
@@ -330,7 +330,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                             left={0}
                             right={0}
                             mt={1}
-                            bg="white"
+                            bg={{ base: 'white', _dark: 'gray.800' }}
                             border="1px solid #e2e8f0"
                             borderRadius="8px"
                             zIndex={10}
@@ -428,9 +428,9 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
 
     return (
         <HStack
-            bg="white"
+            bg={{ base: 'white', _dark: 'gray.800' }}
             border="1px solid"
-            borderColor="gray.200"
+            borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
             borderRadius="lg"
             px={3}
             py={2.5}
@@ -450,7 +450,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                     border="1px solid"
                     borderColor={dropdownOpen ? '#7c3aed' : '#e2e8f0'}
                     borderRadius="8px"
-                    bg="white"
+                    bg={{ base: 'white', _dark: 'gray.800' }}
                     position="relative"
                     transition="border-color 0.15s"
                 >
@@ -482,7 +482,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         left={0}
                         right={0}
                         mt={1}
-                        bg="white"
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                         border="1px solid #e2e8f0"
                         borderRadius="8px"
                         zIndex={20}

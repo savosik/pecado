@@ -65,7 +65,7 @@ export default function ProductPagination({
                 mt="4"
                 pt="4"
                 borderTop="1px solid"
-                borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                 _dark={{ borderColor: 'gray.700' }}
             >
                 <Switch.Root

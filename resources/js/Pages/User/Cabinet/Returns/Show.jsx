@@ -62,7 +62,7 @@ export default function ReturnShow() {
 
                 {/* Информация о возврате */}
                 <SimpleGrid columns={{ base: 1, lg: 2 }} gap="4">
-                    <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">Информация о возврате</Text>
                         </Card.Header>
@@ -77,7 +77,7 @@ export default function ReturnShow() {
                     </Card.Root>
 
                     {returnData.comment && (
-                        <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                             <Card.Header p="4" pb="2">
                                 <HStack gap="2">
                                     <LuMessageSquare size={18} />
@@ -93,7 +93,7 @@ export default function ReturnShow() {
 
                 {/* Позиции возврата */}
                 {returnData.items?.length > 0 && (
-                    <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <HStack gap="2">
                                 <LuPackage size={20} />
@@ -105,9 +105,9 @@ export default function ReturnShow() {
                         <Card.Body p="0">
                             {/* Desktop table */}
                             <Box overflowX="auto" display={{ base: 'none', md: 'block' }}>
-                                <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
+                                <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                                     <Table.Header>
-                                        <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
+                                        <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                             <Table.ColumnHeader>Заказ</Table.ColumnHeader>
                                             <Table.ColumnHeader>Причина</Table.ColumnHeader>
@@ -201,7 +201,7 @@ export default function ReturnShow() {
                                         key={item.id}
                                         p="4"
                                         borderTopWidth={idx > 0 ? '1px' : '0'}
-                                        borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                                         _dark={{ borderColor: 'gray.700' }}
                                         w="full"
                                     >
@@ -248,7 +248,7 @@ export default function ReturnShow() {
                 )}
 
                 {/* Итого */}
-                <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     <Card.Body p="4">
                         <Flex justify="space-between" align="center">
                             <Flex align="center" gap="2">

@@ -70,9 +70,9 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
                         size="lg"
-                        bg="white" _dark={{ bg: "gray.800" }}
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                         _dark={{ bg: 'gray.800' }}
-                        borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
+                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                         borderRadius="sm"
                         pl="12"
                     />
@@ -91,10 +91,10 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                 {/* Контент */}
                 {isSearching ? (
                     <Box
-                        bg="white" _dark={{ bg: "gray.800" }}
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                         _dark={{ bg: 'gray.800' }}
                         border="1px solid"
-                        borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                         borderRadius="sm"
                         p="8"
                         textAlign="center"
@@ -119,10 +119,10 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                     />
                 ) : (
                     <Box
-                        bg="white" _dark={{ bg: "gray.800" }}
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                         _dark={{ bg: 'gray.800' }}
                         border="1px solid"
-                        borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                         borderRadius="sm"
                         overflow="hidden"
                     >
@@ -132,7 +132,7 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                                     key={faq.id}
                                     value={String(faq.id)}
                                     borderBottom="1px solid"
-                                    borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                                     _dark={{ borderColor: 'gray.700' }}
                                     _last={{ borderBottom: 'none' }}
                                 >

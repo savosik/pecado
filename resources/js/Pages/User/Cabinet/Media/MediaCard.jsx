@@ -35,7 +35,7 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
     };
 
     return (
-        <Card.Root bg="white" _dark={{ bg: "gray.800" }}
+        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }}
             overflow="hidden"
             borderWidth={selected ? '2px' : '1px'}
             borderColor={selected ? 'blue.500' : 'gray.200'}
@@ -93,7 +93,7 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
                     >
                         <Checkbox.HiddenInput />
                         <Checkbox.Control
-                            bg="white" _dark={{ bg: "gray.800" }}
+                            bg={{ base: 'white', _dark: 'gray.800' }}
                             _dark={{ bg: 'gray.800' }}
                             shadow="sm"
                         />
@@ -114,7 +114,7 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
                         aria-label="Скачать"
                         size="sm"
                         variant="solid"
-                        bg="white" _dark={{ bg: "gray.800" }}
+                        bg={{ base: 'white', _dark: 'gray.800' }}
                         color="gray.700"
                         shadow="md"
                         _hover={{ bg: 'gray.100' }}

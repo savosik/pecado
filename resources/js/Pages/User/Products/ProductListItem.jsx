@@ -26,7 +26,7 @@ export default function ProductListItem({ product, loading = false }) {
         return (
             <Flex
                 border="1px solid"
-                borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
+                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                 _dark={{ borderColor: 'gray.700', bg: 'gray.800' }}
                 overflow="hidden"
                 gap={{ base: '2', md: '4' }}
@@ -58,8 +58,8 @@ export default function ProductListItem({ product, loading = false }) {
     return (
         <Flex
             border="1px solid"
-            borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
-            bg="white" _dark={{ bg: "gray.800" }}
+            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+            bg={{ base: 'white', _dark: 'gray.800' }}
             _dark={{ borderColor: 'gray.700', bg: 'gray.800' }}
             overflow="hidden"
             transition="all 0.2s"

@@ -26,7 +26,7 @@ export default function ProductCard({ product, loading = false }) {
         return (
             <Box
                 border="1px solid"
-                borderColor="gray.100"
+                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                 _dark={{ borderColor: 'gray.700', bg: 'gray.800' }}
                 overflow="hidden"
                 h="100%"
@@ -61,8 +61,8 @@ export default function ProductCard({ product, loading = false }) {
     return (
         <Box
             border="1px solid"
-            borderColor="gray.100"
-            bg="white"
+            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+            bg={{ base: 'white', _dark: 'gray.800' }}
             _dark={{ borderColor: 'gray.700', bg: 'gray.800' }}
             overflow="hidden"
             transition="all 0.2s"
