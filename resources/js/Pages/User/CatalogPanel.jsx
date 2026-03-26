@@ -732,7 +732,7 @@ export default function CatalogPanel({ open, onClose }) {
                                                     );
 
                                                     return (
-                                                        <Box key={b.id} position="relative" role="group">
+                                                        <Box key={b.id} position="relative" role="group" _hover={{ zIndex: 20 }}>
                                                             {hasChildren ? CardContent : (
                                                                 <Link href={buildBrandUrl(b.slug)} onClick={onClose}>
                                                                     {CardContent}
