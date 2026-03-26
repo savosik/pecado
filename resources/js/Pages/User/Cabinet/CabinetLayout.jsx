@@ -115,7 +115,7 @@ function MobileMenuDrawer({ open, onClose, currentPath }) {
                 <Drawer.Backdrop />
                 <Drawer.Positioner>
                     <Drawer.Content>
-                        <Drawer.Header borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
+                        <Drawer.Header borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                             <Drawer.Title fontSize="lg" fontWeight="700">Личный кабинет</Drawer.Title>
                             <Drawer.CloseTrigger asChild position="absolute" top="3" right="3">
                                 <CloseButton size="sm" />

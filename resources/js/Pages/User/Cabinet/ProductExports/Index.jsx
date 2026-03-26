@@ -88,7 +88,7 @@ export default function Index({ exports, filters }) {
             </Box>
 
             {exports.data.length === 0 ? (
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+                <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
                             <Flex
@@ -112,7 +112,7 @@ export default function Index({ exports, filters }) {
                     </Card.Body>
                 </Card.Root>
             ) : (
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
+                <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100" overflow="hidden">
                     {/* Desktop Table */}
                     <Box display={{ base: 'none', md: 'block' }}>
                         <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
@@ -200,7 +200,7 @@ export default function Index({ exports, filters }) {
 
                     {/* Mobile Cards */}
                     <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch"
-                        separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }} />}
+                        separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} />}
                     >
                         {exports.data.map((exp) => (
                             <Flex key={exp.id} p="4" align="center" justify="space-between">
@@ -250,7 +250,7 @@ export default function Index({ exports, filters }) {
 
                     {/* Pagination */}
                     {exports.last_page > 1 && (
-                        <Flex justify="center" p="3" borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
+                        <Flex justify="center" p="3" borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                             <HStack gap="1">
                                 {exports.links.map((link, i) => (
                                     <Button

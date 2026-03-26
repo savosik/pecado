@@ -222,7 +222,7 @@ export default function Show({ cart, cartDetails }) {
             </Flex>
 
             {/* Product Search */}
-            <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" mb="4" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" mb="4" border="1px solid" borderColor="gray.100">
                 <Card.Body p="4">
                     <Text fontWeight="600" mb="2" fontSize="sm">Добавить товар</Text>
                     <Box ref={searchRef} position="relative">
@@ -245,7 +245,7 @@ export default function Show({ cart, cartDetails }) {
                         {showResults && searchResults.length > 0 && (
                             <Box
                                 position="absolute" top="100%" left="0" right="0" zIndex="10"
-                                bg="white" _dark={{ bg: "gray.800" }} _dark={{ bg: 'gray.800' }}
+                                bg="white" _dark={{ bg: 'gray.800' }}
                                 border="1px solid" borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
                                 borderRadius="md" shadow="lg" mt="1"
                                 maxH="350px" overflowY="auto"
@@ -280,7 +280,7 @@ export default function Show({ cart, cartDetails }) {
                         {showResults && searchResults.length === 0 && searchQuery.length >= 2 && !isSearching && (
                             <Box
                                 position="absolute" top="100%" left="0" right="0" zIndex="10"
-                                bg="white" _dark={{ bg: "gray.800" }} _dark={{ bg: 'gray.800' }}
+                                bg="white" _dark={{ bg: 'gray.800' }}
                                 border="1px solid" borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
                                 borderRadius="md" shadow="lg" mt="1" p="3"
                                 textAlign="center"
@@ -322,7 +322,7 @@ export default function Show({ cart, cartDetails }) {
             </HStack>
 
             {/* Items */}
-            <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
+            <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100" overflow="hidden">
                 {items.length === 0 ? (
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
@@ -428,7 +428,7 @@ export default function Show({ cart, cartDetails }) {
                         </Box>
 
                         {/* Mobile Cards */}
-                        <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }} />}>
+                        <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} />}>
                             {items.map((item) => (
                                 <Box key={item.id} p="3">
                                     <Flex gap="3">
@@ -479,7 +479,7 @@ export default function Show({ cart, cartDetails }) {
                         </VStack>
 
                         {/* Totals Footer */}
-                        <Box borderTop="1px solid" borderColor="gray.200" _dark={{ borderColor: "gray.700" }} p="4" _dark={{ borderColor: 'gray.700' }}>
+                        <Box borderTop="1px solid" borderColor="gray.200" _dark={{ borderColor: 'gray.700' }} p="4">
                             <Flex justify="space-between" align="center">
                                 <HStack gap="6">
                                     <Box>

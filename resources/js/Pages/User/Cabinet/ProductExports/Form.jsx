@@ -128,7 +128,7 @@ export default function Form({ export: exportData, availableFilters, availableFi
             <Head title={`${pageTitle} — Pecado`} />
 
             <form onSubmit={handleSubmit} noValidate>
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+                <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
                     <Card.Body>
                         <Tabs.Root defaultValue="settings" colorPalette="blue">
                             <Tabs.List>

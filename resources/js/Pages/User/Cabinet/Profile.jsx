@@ -71,7 +71,7 @@ export default function Profile() {
         <CabinetLayout title="Мои данные">
             <Head title="Мои данные — Pecado" />
 
-            <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
                 <Card.Header p="5" pb="3">
                     <Text fontSize="md" fontWeight="700">Личная информация</Text>
                 </Card.Header>

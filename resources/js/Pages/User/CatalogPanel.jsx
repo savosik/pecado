@@ -490,7 +490,7 @@ export default function CatalogPanel({ open, onClose }) {
                                         </Text>
                                     </Flex>
                                 )}
-                                <VStack align="stretch" gap="0" borderRadius="lg" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }} overflow="hidden">
+                                <VStack align="stretch" gap="0" borderRadius="lg" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} overflow="hidden">
                                     {mobileCurrentList.map((node, idx) => (
                                         <Flex
                                             key={node.id}
@@ -568,7 +568,7 @@ export default function CatalogPanel({ open, onClose }) {
                             {!searchTerm.trim() && (
                                 <Flex display={{ base: 'none', lg: 'flex' }} gap="6">
                                     {/* Sidebar — root categories */}
-                                    <Box w="72" flexShrink="0" borderRight="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }} pr="4">
+                                    <Box w="72" flexShrink="0" borderRight="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} pr="4">
                                         <VStack align="stretch" gap="1">
                                             {categories.map((root, idx) => (
                                                 <Flex
@@ -723,7 +723,7 @@ export default function CatalogPanel({ open, onClose }) {
                                                                     <Text fontWeight="bold" fontSize="lg" color="gray.300">{b.name.slice(0, 2).toUpperCase()}</Text>
                                                                 )}
                                                             </Flex>
-                                                            <Flex bg="gray.50" px="2" py="1.5" justify="center" align="center" borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.700', borderColor: 'gray.600' }}>
+                                                            <Flex bg="gray.50" px="2" py="1.5" justify="center" align="center" borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.600', bg: 'gray.700' }}>
                                                                 <Text fontSize="xs" fontWeight="500" color="gray.500" _dark={{ color: 'gray.300' }} truncate>
                                                                     {b.name}
                                                                 </Text>
@@ -760,7 +760,7 @@ export default function CatalogPanel({ open, onClose }) {
                                                                 >
                                                                     {/* Parent Header */}
                                                                     <Link href={buildBrandUrl(b.slug)} onClick={onClose}>
-                                                                        <Flex direction="column" align="center" justify="center" p="3" borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _hover={{ bg: 'gray.50' }} _dark={{ borderColor: 'gray.700', _hover: { bg: 'gray.700' } }}>
+                                                                        <Flex direction="column" align="center" justify="center" p="3" borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700', _hover: { bg: 'gray.700'  }}} _hover={{ bg: 'gray.50' }}>
                                                                             {b.logo_url ? (
                                                                                 <Box as="img" src={b.logo_url} h="6" mb="2" objectFit="contain" />
                                                                             ) : (

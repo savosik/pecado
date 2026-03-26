@@ -254,7 +254,7 @@ export default function UserHeader() {
                     <Drawer.Backdrop />
                     <Drawer.Positioner>
                         <Drawer.Content>
-                            <Drawer.Header borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
+                            <Drawer.Header borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
                                 <Drawer.Title fontSize="lg" fontWeight="700">Меню</Drawer.Title>
                                 <Drawer.CloseTrigger asChild>
                                     <CloseButton size="sm" />

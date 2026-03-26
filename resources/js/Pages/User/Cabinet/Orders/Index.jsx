@@ -128,7 +128,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
 
             {/* Расширенные фильтры */}
             {showFilters && (
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} mb="4" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
+                <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} mb="4" borderRadius="xl" border="1px solid" borderColor="gray.100">
                     <Card.Body p="4">
                         <Stack gap="4">
                             <Flex gap="4" direction={{ base: 'column', md: 'row' }}>
@@ -228,7 +228,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
 
             {/* Таблица заказов */}
             {orders.data.length === 0 ? (
-                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
+                <Card.Root bg="white" _dark={{ bg: "gray.800", borderColor: 'gray.700' }} borderRadius="xl" border="1px solid" borderColor="gray.100">
                     <Card.Body p="10" textAlign="center">
                         <VStack gap="3">
                             <Flex
@@ -264,7 +264,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
                         <Box overflowX="auto">
                             <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
                                 <Table.Header>
-                                    <Table.Row bg="white" _dark={{ bg: "gray.800" }} _dark={{ bg: 'gray.800' }}>
+                                    <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
                                         <SortableHeader field="id" w="80px">№</SortableHeader>
                                         <SortableHeader field="status">Статус</SortableHeader>
                                         <Table.ColumnHeader>Компания</Table.ColumnHeader>
