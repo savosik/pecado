@@ -1,7 +1,8 @@
 import {
-    Box, Grid, GridItem, Text, VStack,
+    Box, Flex, Grid, GridItem, Text, VStack,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
+import { ColorModeButton } from '@/components/ui/color-mode';
 
 const companyLinks = [
     { href: '/about', label: 'О компании' },
@@ -112,17 +113,21 @@ export default function UserFooter() {
                     </Grid>
 
                     {/* Bottom Row */}
-                    <Box
+                    <Flex
                         pt="6"
                         borderTop="1px solid"
                         borderColor="gray.200"
                         _dark={{ borderColor: 'gray.800' }}
-                        textAlign={{ base: 'center', sm: 'left' }}
+                        align="center"
+                        justify={{ base: 'center', sm: 'space-between' }}
+                        direction={{ base: 'column-reverse', sm: 'row' }}
+                        gap="4"
                     >
                         <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }}>
                             © {year} Pecado. Все права защищены.
                         </Text>
-                    </Box>
+                        <ColorModeButton aria-label="Переключить тему" />
+                    </Flex>
                 </Box>
             </Box>
         </Box>
