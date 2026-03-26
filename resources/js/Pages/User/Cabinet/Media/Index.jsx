@@ -211,9 +211,9 @@ export default function Index({ collections, modelTypes }) {
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                         borderRadius="xl"
-                        bg="white"
+                        bg="white" _dark={{ bg: "gray.800" }}
                         _dark={{ bg: 'gray.800' }}
-                        borderColor="gray.200"
+                        borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
                         _focus={{ borderColor: 'pecado.500', boxShadow: '0 0 0 1px var(--chakra-colors-pecado-500)' }}
                     />
                     {search && (
@@ -236,11 +236,11 @@ export default function Index({ collections, modelTypes }) {
 
                 {/* Filters panel */}
                 <Box
-                    bg="white"
+                    bg="white" _dark={{ bg: "gray.800" }}
                     _dark={{ bg: 'gray.800' }}
                     borderRadius="xl"
                     border="1px solid"
-                    borderColor="gray.200"
+                    borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
                     _darkBorderColor="gray.700"
                     p="4"
                     shadow="sm"

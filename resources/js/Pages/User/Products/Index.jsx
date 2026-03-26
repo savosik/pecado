@@ -185,10 +185,10 @@ export default function Index() {
     // ─── Sidebar content (мемоизация для предотвращения лишних ререндеров) ───
     const sidebarContent = useMemo(() => (
         <Box
-            bg="white"
+            bg="white" _dark={{ bg: "gray.800" }}
             borderRadius="xl"
             border="1px solid"
-            borderColor="gray.100"
+            borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
             _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
             p="4"
         >

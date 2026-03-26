@@ -115,7 +115,7 @@ function MobileMenuDrawer({ open, onClose, currentPath }) {
                 <Drawer.Backdrop />
                 <Drawer.Positioner>
                     <Drawer.Content>
-                        <Drawer.Header borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                        <Drawer.Header borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
                             <Drawer.Title fontSize="lg" fontWeight="700">Личный кабинет</Drawer.Title>
                             <Drawer.CloseTrigger asChild position="absolute" top="3" right="3">
                                 <CloseButton size="sm" />
@@ -153,10 +153,10 @@ export default function CabinetLayout({ title, children, actions }) {
                     <Box
                         position="sticky"
                         top="80px"
-                        bg="white"
+                        bg="white" _dark={{ bg: "gray.800" }}
                         borderRadius="xl"
                         border="1px solid"
-                        borderColor="gray.100"
+                        borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
                         p="4"
                         _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
                     >
@@ -171,8 +171,8 @@ export default function CabinetLayout({ title, children, actions }) {
                         variant="outline"
                         size="lg"
                         borderRadius="xl"
-                        borderColor="gray.200"
-                        bg="white"
+                        borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
+                        bg="white" _dark={{ bg: "gray.800" }}
                         _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
                         _hover={{ bg: 'gray.50', _dark: { bg: 'gray.750' } }}
                         onClick={() => setDrawerOpen(true)}

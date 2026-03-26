@@ -44,7 +44,7 @@ export default function Index({ addresses = [] }) {
             <Head title="Адреса доставки — Pecado" />
 
             {addresses.length === 0 ? (
-                <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
                             <Flex
@@ -68,10 +68,10 @@ export default function Index({ addresses = [] }) {
                     </Card.Body>
                 </Card.Root>
             ) : (
-                <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
+                <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
                     {/* Desktop Table */}
                     <Box display={{ base: 'none', md: 'block' }}>
-                        <Table.Root bg="white" size="sm">
+                        <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Название</Table.ColumnHeader>
@@ -118,7 +118,7 @@ export default function Index({ addresses = [] }) {
                     </Box>
 
                     {/* Mobile Cards */}
-                    <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }} />}>
+                    <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }} />}>
                         {addresses.map((a) => (
                             <Flex key={a.id} p="4" align="center" justify="space-between">
                                 <Box flex="1" minW="0">

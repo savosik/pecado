@@ -75,7 +75,7 @@ export default function ReturnsCreate({ reasons }) {
             <form onSubmit={handleSubmit}>
                 <Stack gap="5">
                     {/* Комментарий */}
-                    <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                    <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">Комментарий к возврату</Text>
                         </Card.Header>
@@ -95,7 +95,7 @@ export default function ReturnsCreate({ reasons }) {
                     </Card.Root>
 
                     {/* Позиции возврата */}
-                    <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                    <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">
                                 Позиции возврата

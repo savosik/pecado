@@ -51,9 +51,9 @@ function ControlButton({ icon, label, value, children }) {
                 gap="2"
                 px="3"
                 py="1.5"
-                bg="white"
+                bg="white" _dark={{ bg: "gray.800" }}
                 border="1px solid"
-                borderColor="gray.200"
+                borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
                 borderRadius="lg"
                 cursor="pointer"
                 transition="all 0.15s"
@@ -208,9 +208,9 @@ export default function CatalogControls({
                     {/* Вид — toggle-кнопка */}
                     <Flex
                         align="center"
-                        bg="white"
+                        bg="white" _dark={{ bg: "gray.800" }}
                         border="1px solid"
-                        borderColor="gray.200"
+                        borderColor="gray.200" _dark={{ borderColor: "gray.700" }}
                         borderRadius="lg"
                         overflow="hidden"
                         minH="40px"

@@ -147,7 +147,7 @@ export default function Form({ company, countries = [] }) {
                 <LuArrowLeft /> Назад к списку
             </Button>
 
-            <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="5">
                     <Tabs.Root defaultValue="general" variant="enclosed">
                         <Tabs.List>
@@ -274,14 +274,14 @@ export default function Form({ company, countries = [] }) {
                                     </Flex>
 
                                     {bankAccounts.length === 0 ? (
-                                        <Box p="8" textAlign="center" borderWidth="1px" borderRadius="md" borderStyle="dashed" borderColor="gray.200">
+                                        <Box p="8" textAlign="center" borderWidth="1px" borderRadius="md" borderStyle="dashed" borderColor="gray.200" _dark={{ borderColor: "gray.700" }}>
                                             <Text color="gray.400">Банковские счета не добавлены</Text>
                                         </Box>
                                     ) : (
                                         <>
                                             {/* Desktop table */}
                                             <Box display={{ base: 'none', md: 'block' }}>
-                                                <Table.Root bg="white" size="sm" variant="outline">
+                                                <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm" variant="outline">
                                                     <Table.Header>
                                                         <Table.Row>
                                                             <Table.ColumnHeader>Банк</Table.ColumnHeader>
@@ -323,7 +323,7 @@ export default function Form({ company, countries = [] }) {
                                             {/* Mobile cards */}
                                             <VStack display={{ base: 'flex', md: 'none' }} gap="3" align="stretch">
                                                 {bankAccounts.map((acc) => (
-                                                    <Card.Root bg="white" key={acc.id} size="sm" borderRadius="lg" border="1px solid" borderColor="gray.100">
+                                                    <Card.Root bg="white" _dark={{ bg: "gray.800" }} key={acc.id} size="sm" borderRadius="lg" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }}>
                                                         <Card.Body p="3">
                                                             <Flex justify="space-between" align="start">
                                                                 <Box flex="1" minW="0">

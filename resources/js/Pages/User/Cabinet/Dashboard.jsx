@@ -47,7 +47,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
             <Head title="Личный кабинет — Pecado" />
 
             {/* Welcome Card */}
-            <Card.Root bg="white" mb="6" borderRadius="xl" overflow="hidden" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" _dark={{ bg: "gray.800" }} mb="6" borderRadius="xl" overflow="hidden" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="6">
                     <Flex align="center" gap="4">
                         <Flex
@@ -86,10 +86,10 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                 {stats.map((stat) => (
                     <GridItem key={stat.label}>
                         <Link href={stat.href}>
-                            <Card.Root bg="white"
+                            <Card.Root bg="white" _dark={{ bg: "gray.800" }}
                                 borderRadius="xl"
                                 border="1px solid"
-                                borderColor="gray.100"
+                                borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
                                 _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
                                 _hover={{ shadow: 'sm', borderColor: 'pecado.200', _dark: { borderColor: 'pecado.800' } }}
                                 transition="all 0.2s"
@@ -129,10 +129,10 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                 {/* Balance Card */}
                 {balance && (
                     <GridItem>
-                        <Card.Root bg="white"
+                        <Card.Root bg="white" _dark={{ bg: "gray.800" }}
                             borderRadius="xl"
                             border="1px solid"
-                            borderColor="gray.100"
+                            borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
                             _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
                             h="100%"
                         >
@@ -180,7 +180,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
             </Grid>
 
             {/* Recent Orders */}
-            <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Header p="5" pb="3">
                     <Flex align="center" justify="space-between">
                         <Text fontSize="md" fontWeight="700">Последние заказы</Text>

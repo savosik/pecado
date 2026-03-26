@@ -20,7 +20,7 @@ export const SelectContent = React.forwardRef(function SelectContent(props, ref)
     return (
         <Portal disabled={!portalled} container={portalRef}>
             <ChakraSelect.Positioner>
-                <ChakraSelect.Content {...rest} ref={ref} />
+                <ChakraSelect.Content {...rest} ref={ref} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} />
             </ChakraSelect.Positioner>
         </Portal>
     )

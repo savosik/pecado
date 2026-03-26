@@ -40,7 +40,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
             </Box>
 
             {/* Основная информация */}
-            <Card.Root bg="white" mb={6} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+            <Card.Root bg="white" _dark={{ bg: "gray.800" }} mb={6} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
                 <Card.Header>
                     <Flex justify="space-between" align="center" flexWrap="wrap" gap="3">
                         <VStack align="start" gap="1">
@@ -91,7 +91,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
 
             {/* Связанные заказы */}
             {related_orders && related_orders.length > 0 && (
-                <Card.Root bg="white" mb={6} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                <Card.Root bg="white" _dark={{ bg: "gray.800" }} mb={6} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
                     <Card.Header>
                         <HStack gap="2">
                             <LuShoppingBag size={18} />
@@ -99,9 +99,9 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                         </HStack>
                     </Card.Header>
                     <Card.Body p={0}>
-                        <Table.Root bg="white" size="sm">
+                        <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
                             <Table.Header>
-                                <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
+                                <Table.Row bg="white" _dark={{ bg: "gray.800" }} _dark={{ bg: 'gray.800' }}>
                                     <Table.ColumnHeader>Номер заказа</Table.ColumnHeader>
                                     <Table.ColumnHeader>UUID</Table.ColumnHeader>
                                     <Table.ColumnHeader>Статус</Table.ColumnHeader>
@@ -135,7 +135,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
 
             {/* Просрочка по этой реализации */}
             {overdue_detail && (
-                <Card.Root bg="white" mb={6} borderRadius="xl" border="2px solid" borderColor="red.200" _dark={{ borderColor: 'red.800' }}>
+                <Card.Root bg="white" _dark={{ bg: "gray.800" }} mb={6} borderRadius="xl" border="2px solid" borderColor="red.200" _dark={{ borderColor: 'red.800' }}>
                     <Card.Body p={4}>
                         <HStack gap="3" align="start">
                             <Box color="red.500" flexShrink={0} pt={0.5}>
@@ -167,7 +167,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                 </Card.Root>
             )}
 
-            <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+            <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}>
                 <Card.Header>
                     <HStack gap="2">
                         <LuPackage size={18} />
@@ -177,9 +177,9 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                 <Card.Body p={0}>
                     {/* Desktop */}
                     <Box overflowX="auto" display={{ base: 'none', md: 'block' }}>
-                        <Table.Root bg="white" size="sm">
+                        <Table.Root bg="white" _dark={{ bg: "gray.800" }} size="sm">
                             <Table.Header>
-                                <Table.Row bg="white" _dark={{ bg: 'gray.800' }}>
+                                <Table.Row bg="white" _dark={{ bg: "gray.800" }} _dark={{ bg: 'gray.800' }}>
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                     <Table.ColumnHeader>Заказ</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
@@ -264,7 +264,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                             <Box
                                 key={item.id || idx}
                                 w="100%" p="4" borderRadius="lg" border="1px solid"
-                                borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}
+                                borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ borderColor: 'gray.700' }}
                             >
                                 <Text fontWeight="600" mb="2">
                                     {item.product?.name || 'Товар не найден'}

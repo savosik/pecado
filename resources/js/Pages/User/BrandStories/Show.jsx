@@ -19,10 +19,10 @@ export default function BrandStoryShow({ brandStory, seo, breadcrumbs }) {
             <PageHeader title={brandStory.title} />
 
             <Box
-                bg="white"
+                bg="white" _dark={{ bg: "gray.800" }}
                 _dark={{ bg: 'gray.800' }}
                 border="1px solid"
-                borderColor="gray.100"
+                borderColor="gray.100" _dark={{ borderColor: "gray.700" }}
                 borderRadius="sm"
                 overflow="hidden"
             >
