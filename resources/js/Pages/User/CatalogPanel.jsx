@@ -122,6 +122,35 @@ const FeaturedBrandCard = ({ brand }) => {
     );
 };
 
+const getFirstLetter = (name) => {
+    if (!name || !name[0]) return '#';
+    const ch = name[0];
+    return /^[A-Za-zА-Яа-яЁё]/.test(ch) ? ch.toLocaleUpperCase('ru-RU') : '#';
+};
+
+const sortLetters = (a, b) => {
+    if (a === '#') return 1;
+    if (b === '#') return -1;
+    const la = /^[A-Za-z]/.test(a);
+    const lb = /^[A-Za-z]/.test(b);
+    if (la && !lb) return -1;
+    if (!la && lb) return 1;
+    return a.localeCompare(b, 'ru-RU');
+};
+
+const sortBrandsAlpha = (a, b) => {
+    const na = (a.name || '').trim();
+    const nb = (b.name || '').trim();
+    if (!na && !nb) return 0;
+    if (!na) return 1;
+    if (!nb) return -1;
+    const la = /^[A-Za-z]/.test(na);
+    const lb = /^[A-Za-z]/.test(nb);
+    if (la && !lb) return -1;
+    if (!la && lb) return 1;
+    return na.localeCompare(nb, 'ru-RU');
+};
+
 const buildCategoryUrl = (slug) => `/categories/${slug}`;
 const buildBrandUrl = (slug) => `/brands/${slug}`;
 const buildSelectionUrl = (slug) => `/collections/${slug}`;
@@ -297,8 +326,24 @@ export default function CatalogPanel({ open, onClose }) {
 
     /* ── featured brands ── */
     const featuredBrands = useMemo(() =>
-        ownBrands.filter((b) => b.is_featured).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+        ownBrands.filter((b) => b.is_featured).sort(sortBrandsAlpha),
     [ownBrands]);
+
+    /* ── other brands grouped by letter ── */
+    const otherBrandsByLetter = useMemo(() => {
+        const map = {};
+        for (const b of otherBrands) {
+            const name = (b.name || '').trim();
+            if (!name) continue;
+            const letter = getFirstLetter(name);
+            if (!map[letter]) map[letter] = [];
+            map[letter].push(b);
+        }
+        for (const k of Object.keys(map)) {
+            map[k].sort(sortBrandsAlpha);
+        }
+        return map;
+    }, [otherBrands]);
 
     /* ── filtered selections (search) ── */
     const filteredSelections = useMemo(() => {
@@ -655,36 +700,44 @@ export default function CatalogPanel({ open, onClose }) {
                                                 gridTemplateColumns={{ base: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(5, 1fr)', lg: 'repeat(6, 1fr)', xl: 'repeat(8, 1fr)' }}
                                                 gap="3"
                                             >
-                                                {ownBrands.filter(b => !b.is_featured).sort((a,b) => (a.name||'').localeCompare(b.name||'')).map((b) => {
+                                                {ownBrands.filter(b => !b.is_featured).sort(sortBrandsAlpha).map((b) => {
                                                     const hasChildren = b.children && b.children.length > 0;
+                                                    
+                                                    const CardContent = (
+                                                        <Box
+                                                            bg="white"
+                                                            border="1px solid" borderColor="gray.100"
+                                                            _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
+                                                            borderRadius="md"
+                                                            overflow="hidden"
+                                                            _hover={hasChildren ? { borderColor: 'gray.300' } : { shadow: 'sm', borderColor: 'gray.300' }}
+                                                            transition="all 0.2s"
+                                                            display="flex" flexDirection="column"
+                                                            h="24"
+                                                            cursor={hasChildren ? "default" : "pointer"}
+                                                        >
+                                                            <Flex flex="1" align="center" justify="center" p="2" overflow="hidden">
+                                                                {b.logo_url ? (
+                                                                    <Box as="img" src={b.logo_url} maxH="100%" maxW="100%" objectFit="contain" />
+                                                                ) : (
+                                                                    <Text fontWeight="bold" fontSize="lg" color="gray.300">{b.name.slice(0, 2).toUpperCase()}</Text>
+                                                                )}
+                                                            </Flex>
+                                                            <Flex bg="gray.50" px="2" py="1.5" justify="center" align="center" borderTop="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.700', borderColor: 'gray.600' }}>
+                                                                <Text fontSize="xs" fontWeight="500" color="gray.500" _dark={{ color: 'gray.300' }} truncate>
+                                                                    {b.name}
+                                                                </Text>
+                                                            </Flex>
+                                                        </Box>
+                                                    );
+
                                                     return (
                                                         <Box key={b.id} position="relative" role="group">
-                                                            <Link href={buildBrandUrl(b.slug)} onClick={onClose}>
-                                                                <Box
-                                                                    bg="white"
-                                                                    border="1px solid" borderColor="gray.100"
-                                                                    _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
-                                                                    borderRadius="md"
-                                                                    overflow="hidden"
-                                                                    _hover={{ shadow: 'sm', borderColor: 'gray.300' }}
-                                                                    transition="all 0.2s"
-                                                                    display="flex" flexDirection="column"
-                                                                    h="24"
-                                                                >
-                                                                    <Flex flex="1" align="center" justify="center" p="2" overflow="hidden">
-                                                                        {b.logo_url ? (
-                                                                            <Box as="img" src={b.logo_url} maxH="100%" maxW="100%" objectFit="contain" />
-                                                                        ) : (
-                                                                            <Text fontWeight="bold" fontSize="lg" color="gray.300">{b.name.slice(0, 2).toUpperCase()}</Text>
-                                                                        )}
-                                                                    </Flex>
-                                                                    <Flex bg="gray.50" px="2" py="1.5" justify="center" align="center" borderTop="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.700', borderColor: 'gray.600' }}>
-                                                                        <Text fontSize="xs" fontWeight="500" color="gray.500" _dark={{ color: 'gray.300' }} truncate>
-                                                                            {b.name}
-                                                                        </Text>
-                                                                    </Flex>
-                                                                </Box>
-                                                            </Link>
+                                                            {hasChildren ? CardContent : (
+                                                                <Link href={buildBrandUrl(b.slug)} onClick={onClose}>
+                                                                    {CardContent}
+                                                                </Link>
+                                                            )}
 
                                                             {/* Dropdown for children on hover */}
                                                             {hasChildren && (
@@ -741,20 +794,27 @@ export default function CatalogPanel({ open, onClose }) {
                                     )}
 
                                     {/* Other brands Text List */}
-                                    {otherBrands.length > 0 && (
+                                    {Object.keys(otherBrandsByLetter).length > 0 && (
                                         <Box>
                                             <Text fontSize="md" fontWeight="600" mb="4" textTransform="uppercase">Прочие бренды</Text>
                                             <Box
                                                 display="grid"
-                                                gridTemplateColumns={{ base: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)', xl: 'repeat(6, 1fr)' }}
-                                                columnGap="6" rowGap="3"
+                                                gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)', xl: 'repeat(5, 1fr)' }}
+                                                gap="6"
                                             >
-                                                {otherBrands.sort((a,b) => (a.name||'').localeCompare(b.name||'')).map((b) => (
-                                                    <Link key={b.id} href={buildBrandUrl(b.slug)} onClick={onClose}>
-                                                        <Text fontSize="sm" color="gray.600" _hover={{ color: 'pecado.500' }} _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }} transition="colors 0.15s" truncate>
-                                                            <BrandName name={b.name} tags={b.tags} />
-                                                        </Text>
-                                                    </Link>
+                                                {Object.keys(otherBrandsByLetter).sort(sortLetters).map((letter) => (
+                                                    <Box key={letter}>
+                                                        <Text fontSize="xs" fontWeight="600" color="gray.400" textTransform="uppercase" letterSpacing="wide" mb="2">{letter}</Text>
+                                                        <VStack align="stretch" gap="1">
+                                                            {otherBrandsByLetter[letter].map((b) => (
+                                                                <Link key={b.id} href={buildBrandUrl(b.slug)} onClick={onClose}>
+                                                                    <Text fontSize="sm" color="gray.600" _hover={{ color: 'pecado.500' }} _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }} transition="colors 0.15s" truncate>
+                                                                        <BrandName name={b.name} tags={b.tags} />
+                                                                    </Text>
+                                                                </Link>
+                                                            ))}
+                                                        </VStack>
+                                                    </Box>
                                                 ))}
                                             </Box>
                                         </Box>
