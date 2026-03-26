@@ -45,7 +45,8 @@ class CatalogController extends Controller
      */
     public function brands(): JsonResponse
     {
-        $brands = Brand::with('tags')
+        $brands = Brand::with(['tags', 'children' => fn($q) => $q->orderBy('name')])
+            ->whereNull('parent_id')
             ->orderBy('name')
             ->get()
             ->map(function (Brand $brand) {
@@ -61,6 +62,12 @@ class CatalogController extends Controller
                     'tags' => $brand->tags->map(fn ($tag) => [
                         'name' => $tag->getTranslation('name', 'en'),
                         'color' => $tag->type,
+                    ])->values()->toArray(),
+                    'children' => $brand->children->map(fn ($child) => [
+                        'id' => $child->id,
+                        'name' => $child->name,
+                        'slug' => $child->slug,
+                        'category' => $child->category?->value,
                     ])->values()->toArray(),
                 ];
             });
