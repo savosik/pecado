@@ -147,13 +147,13 @@ export default function Form({ company, countries = [] }) {
                 <LuArrowLeft /> Назад к списку
             </Button>
 
-            <Card.Root bg="white" _dark={{ bg: "gray.800" }} borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="white" borderRadius="xl" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="5">
                     <Tabs.Root defaultValue="general" variant="enclosed">
-                        <Tabs.List>
-                            <Tabs.Trigger value="general">Данные компании</Tabs.Trigger>
-                            <Tabs.Trigger value="legal">Юридические реквизиты</Tabs.Trigger>
-                            {isEditing && <Tabs.Trigger value="bank">Банковские реквизиты</Tabs.Trigger>}
+                        <Tabs.List _dark={{ bg: 'whiteAlpha.50', borderColor: 'gray.700' }}>
+                            <Tabs.Trigger value="general" _dark={{ color: 'gray.400', _selected: { color: 'white', bg: 'whiteAlpha.100', borderColor: 'gray.700', borderBottomColor: 'transparent' } }}>Данные компании</Tabs.Trigger>
+                            <Tabs.Trigger value="legal" _dark={{ color: 'gray.400', _selected: { color: 'white', bg: 'whiteAlpha.100', borderColor: 'gray.700', borderBottomColor: 'transparent' } }}>Юридические реквизиты</Tabs.Trigger>
+                            {isEditing && <Tabs.Trigger value="bank" _dark={{ color: 'gray.400', _selected: { color: 'white', bg: 'whiteAlpha.100', borderColor: 'gray.700', borderBottomColor: 'transparent' } }}>Банковские реквизиты</Tabs.Trigger>}
                         </Tabs.List>
 
                         <Tabs.Content value="general">
@@ -323,7 +323,7 @@ export default function Form({ company, countries = [] }) {
                                             {/* Mobile cards */}
                                             <VStack display={{ base: 'flex', md: 'none' }} gap="3" align="stretch">
                                                 {bankAccounts.map((acc) => (
-                                                    <Card.Root bg="white" _dark={{ bg: "gray.800" }} key={acc.id} size="sm" borderRadius="lg" border="1px solid" borderColor="gray.100" _dark={{ borderColor: "gray.700" }}>
+                                                    <Card.Root bg="white" key={acc.id} size="sm" borderRadius="lg" border="1px solid" borderColor="gray.100" _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                                                         <Card.Body p="3">
                                                             <Flex justify="space-between" align="start">
                                                                 <Box flex="1" minW="0">
