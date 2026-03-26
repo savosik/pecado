@@ -1,0 +1,180 @@
+import { useRef } from 'react';
+import { useForm } from '@inertiajs/react';
+import { useSlugField } from '@/Admin/hooks/useSlugField';
+import AdminLayout from '@/Admin/Layouts/AdminLayout';
+import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields, MarkdownEditor } from '@/Admin/Components';
+import { Card, Input, Textarea, Stack, SimpleGrid, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
+import { Switch } from '@/components/ui/switch';
+import { toaster } from '@/components/ui/toaster';
+
+export default function Create({ brands }) {
+    const { data, setData, post, processing, errors, transform } = useForm({
+        title: '',
+        slug: '',
+        short_description: '',
+        detailed_description: '',
+        is_published: true,
+        published_at: '',
+        meta_title: '',
+        meta_description: '',
+        brand_id: '',
+        tags: [],
+        list_item: null,
+        detail_desktop: null,
+        detail_mobile: null,
+    });
+
+    const closeAfterSaveRef = useRef(false);
+
+    transform((data) => ({
+        ...data,
+        _close: closeAfterSaveRef.current ? 1 : 0,
+    }));
+
+    const { handleSourceChange, handleSlugChange } = useSlugField({
+        data, setData, sourceField: 'title',
+    });
+
+    const handleSubmit = (e, shouldClose = false) => {
+        e.preventDefault();
+        closeAfterSaveRef.current = shouldClose;
+        post(route('admin.brand-stories.store'), {
+            onSuccess: () => {
+                toaster.create({
+                    title: 'Статья о бренде успешно создана',
+                    type: 'success',
+                });
+            },
+            onError: () => {
+                toaster.create({
+                    title: 'Ошибка при создании статьи о бренде',
+                    description: 'Проверьте правильность заполнения полей',
+                    type: 'error',
+                });
+            },
+        });
+    };
+
+    const handleSaveAndClose = (e) => {
+        handleSubmit(e, true);
+    };
+
+    return (
+        <>
+            <PageHeader title="Создать статью о бренде" />
+
+            <Card.Root>
+                <Card.Body>
+                    <form onSubmit={handleSubmit}>
+                        <Stack gap={6}>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Заголовок" error={errors.title} required>
+                                    <Input
+                                        value={data.title}
+                                        onChange={(e) => handleSourceChange(e.target.value)}
+                                    />
+                                </FormField>
+
+                                <FormField label="Slug" error={errors.slug} required>
+                                    <Input
+                                        value={data.slug}
+                                        onChange={(e) => handleSlugChange(e.target.value)}
+                                    />
+                                </FormField>
+                            </SimpleGrid>
+
+                            <FormField label="Бренд" error={errors.brand_id} required>
+                                <NativeSelectRoot>
+                                    <NativeSelectField
+                                        placeholder="Выберите бренд"
+                                        value={data.brand_id}
+                                        onChange={(e) => setData('brand_id', e.target.value)}
+                                    >
+                                        {brands.map((brand) => (
+                                            <option key={brand.id} value={brand.id}>
+                                                {brand.name}
+                                            </option>
+                                        ))}
+                                    </NativeSelectField>
+                                </NativeSelectRoot>
+                            </FormField>
+
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Опубликован" error={errors.is_published}>
+                                    <Switch
+                                        checked={data.is_published}
+                                        onCheckedChange={(e) => setData('is_published', e.checked)}
+                                    />
+                                </FormField>
+
+                                <FormField label="Дата публикации" error={errors.published_at}>
+                                    <Input
+                                        type="datetime-local"
+                                        value={data.published_at}
+                                        onChange={(e) => setData('published_at', e.target.value)}
+                                    />
+                                </FormField>
+                            </SimpleGrid>
+
+                            <FormField label="Краткое описание" error={errors.short_description} required>
+                                <Textarea
+                                    value={data.short_description}
+                                    onChange={(e) => setData('short_description', e.target.value)}
+                                    rows={3}
+                                />
+                            </FormField>
+
+                            <FormField label="Полное описание" error={errors.detailed_description} required>
+                                <MarkdownEditor
+                                    value={data.detailed_description}
+                                    onChange={(value) => setData('detailed_description', value)}
+                                    placeholder="Введите полное описание статьи о бренде..."
+                                    context="brand story content"
+                                />
+                            </FormField>
+
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Meta заголовок" error={errors.meta_title}>
+                                    <Input
+                                        value={data.meta_title}
+                                        onChange={(e) => setData('meta_title', e.target.value)}
+                                    />
+                                </FormField>
+
+                                <FormField label="Meta описание" error={errors.meta_description}>
+                                    <Textarea
+                                        value={data.meta_description}
+                                        onChange={(e) => setData('meta_description', e.target.value)}
+                                        rows={3}
+                                    />
+                                </FormField>
+                            </SimpleGrid>
+
+                            <FormField label="Теги" error={errors.tags}>
+                                <TagSelector
+                                    value={data.tags}
+                                    onChange={(value) => setData('tags', value)}
+                                />
+                            </FormField>
+
+                            <ContentMediaFields
+                                data={data}
+                                setData={setData}
+                                errors={errors}
+                            />
+
+                            <FormActions
+                                onSaveAndClose={handleSaveAndClose}
+                                submitLabel="Создать статью о бренде"
+                                onCancel={() => window.history.back()}
+                                isLoading={processing}
+                            />
+                        </Stack>
+                    </form>
+                </Card.Body>
+            </Card.Root>
+        </>
+    );
+}
+
+Create.layout = (page) => <AdminLayout>{page}</AdminLayout>;

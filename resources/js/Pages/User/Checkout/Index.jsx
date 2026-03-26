@@ -1,0 +1,405 @@
+import { useState, useEffect } from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import {
+    Box, Flex, Text, Heading, Button, Table, Badge, Separator,
+    Textarea, NativeSelect, Stack,
+} from '@chakra-ui/react';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare } from 'react-icons/lu';
+import UserLayout from '../UserLayout';
+import Breadcrumbs from '@/components/common/Breadcrumbs';
+import { toaster } from '@/components/ui/toaster';
+import { Field } from '@/components/ui/field';
+
+/**
+ * Страница оформления заказа.
+ *
+ * Props от CheckoutController@index:
+ *   - cart: { id, name }
+ *   - instockItems, preorderItems
+ *   - instockTotals, preorderTotals, grandTotal
+ *   - companies, addresses
+ */
+export default function CheckoutIndex({
+    cart,
+    instockItems = [],
+    preorderItems = [],
+    instockTotals = {},
+    preorderTotals = {},
+    grandTotal = {},
+    companies = [],
+    addresses = [],
+}) {
+    const { currency, errors: serverErrors } = usePage().props;
+    const currencySymbol = currency?.symbol ?? '₽';
+
+    const breadcrumbs = [
+        { label: 'Главная', url: '/' },
+        { label: 'Корзина', url: '/cart' },
+        { label: 'Оформление заказа' },
+    ];
+
+    // Form state
+    const { data, setData, post, processing, errors } = useForm({
+        company_id: companies.length > 0 ? companies[0].id : '',
+        delivery_address_id: addresses.length > 0 ? addresses[0].id : '',
+        new_address: '',
+        comment: '',
+    });
+
+    const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
+
+    // Show server stock error
+    useEffect(() => {
+        if (serverErrors?.stock) {
+            toaster.create({
+                title: 'Ошибка',
+                description: serverErrors.stock,
+                type: 'error',
+            });
+        }
+    }, [serverErrors?.stock]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const submitData = {
+            company_id: data.company_id,
+            comment: data.comment || '',
+        };
+
+        if (useNewAddress) {
+            submitData.new_address = data.new_address;
+        } else {
+            submitData.delivery_address_id = data.delivery_address_id;
+        }
+
+        post('/checkout', {
+            data: submitData,
+            preserveScroll: true,
+        });
+    };
+
+    const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    return (
+        <UserLayout>
+            <Head title="Оформление заказа" />
+            <Breadcrumbs items={breadcrumbs} />
+
+            <Box>
+                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" mb="6">
+                    Оформление заказа
+                </Heading>
+
+                <form onSubmit={handleSubmit}>
+                    <Stack gap="4">
+                        {/* ═══ Таблица: Товары со склада ═══ */}
+                        {instockItems.length > 0 && (
+                            <ItemTable
+                                title="Товары со склада"
+                                icon={<LuWarehouse size={20} />}
+                                items={instockItems}
+                                totals={instockTotals}
+                                currencySymbol={currencySymbol}
+                                colorPalette="green"
+                                fmt={fmt}
+                            />
+                        )}
+
+                        {/* ═══ Таблица: Товары по предзаказу ═══ */}
+                        {preorderItems.length > 0 && (
+                            <ItemTable
+                                title="Товары по предзаказу"
+                                icon={<LuPackage size={20} />}
+                                items={preorderItems}
+                                totals={preorderTotals}
+                                currencySymbol={currencySymbol}
+                                colorPalette="orange"
+                                fmt={fmt}
+                            />
+                        )}
+
+                        {/* ═══ Общий итог ═══ */}
+                        <Box
+                            bg="bg"
+                            borderWidth="1px"
+                            borderColor="border"
+                            rounded="lg"
+                            p={{ base: '3', md: '5' }}
+                        >
+                            <Flex justify="space-between" align="center">
+                                <Text fontWeight="600" fontSize="lg">
+                                    Итого ({grandTotal.quantity ?? 0} шт.)
+                                </Text>
+                                <Flex gap="3" align="center">
+                                    {Number(grandTotal.amount_regular || 0) > Number(grandTotal.amount_discounted || 0) && (
+                                        <Text fontSize="sm" color="fg.muted" textDecoration="line-through">
+                                            {fmt(grandTotal.amount_regular)} {currencySymbol}
+                                        </Text>
+                                    )}
+                                    <Text fontSize="xl" fontWeight="bold">
+                                        {fmt(grandTotal.amount_discounted)} {currencySymbol}
+                                    </Text>
+                                </Flex>
+                            </Flex>
+                        </Box>
+
+                        {/* ═══ Компания ═══ */}
+                        <Box
+                            bg="bg"
+                            borderWidth="1px"
+                            borderColor="border"
+                            rounded="lg"
+                            p={{ base: '4', md: '5' }}
+                        >
+                            <Flex align="center" gap="2" mb="3">
+                                <LuBuilding2 size={20} />
+                                <Text fontWeight="600" fontSize="lg">Компания</Text>
+                            </Flex>
+
+                            {companies.length > 0 ? (
+                                <Field
+                                    label="Выберите компанию"
+                                    invalid={!!errors.company_id}
+                                    errorText={errors.company_id}
+                                >
+                                    <NativeSelect.Root size="md">
+                                        <NativeSelect.Field
+                                            value={data.company_id}
+                                            onChange={(e) => setData('company_id', e.target.value)}
+                                        >
+                                            {companies.map((c) => (
+                                                <option key={c.id} value={c.id}>
+                                                    {c.name}{c.legal_name ? ` (${c.legal_name})` : ''}
+                                                </option>
+                                            ))}
+                                        </NativeSelect.Field>
+                                        <NativeSelect.Indicator />
+                                    </NativeSelect.Root>
+                                </Field>
+                            ) : (
+                                <Text color="fg.muted" fontSize="sm">
+                                    У вас нет зарегистрированных компаний. Обратитесь к менеджеру.
+                                </Text>
+                            )}
+                        </Box>
+
+                        {/* ═══ Адрес доставки ═══ */}
+                        <Box
+                            bg="bg"
+                            borderWidth="1px"
+                            borderColor="border"
+                            rounded="lg"
+                            p={{ base: '4', md: '5' }}
+                        >
+                            <Flex align="center" gap="2" mb="3">
+                                <LuMapPin size={20} />
+                                <Text fontWeight="600" fontSize="lg">Адрес доставки</Text>
+                            </Flex>
+
+                            {addresses.length > 0 && (
+                                <Flex gap="3" mb="3" flexWrap="wrap">
+                                    <Button
+                                        size="sm"
+                                        variant={!useNewAddress ? 'solid' : 'outline'}
+                                        colorPalette="pecado"
+                                        onClick={() => setUseNewAddress(false)}
+                                    >
+                                        Сохранённый адрес
+                                    </Button>
+                                    <Button
+                                        size="sm"
+                                        variant={useNewAddress ? 'solid' : 'outline'}
+                                        colorPalette="pecado"
+                                        onClick={() => setUseNewAddress(true)}
+                                    >
+                                        Новый адрес
+                                    </Button>
+                                </Flex>
+                            )}
+
+                            {!useNewAddress && addresses.length > 0 ? (
+                                <Field
+                                    label="Выберите адрес"
+                                    invalid={!!errors.delivery_address_id}
+                                    errorText={errors.delivery_address_id}
+                                >
+                                    <NativeSelect.Root size="md">
+                                        <NativeSelect.Field
+                                            value={data.delivery_address_id}
+                                            onChange={(e) => setData('delivery_address_id', e.target.value)}
+                                        >
+                                            {addresses.map((a) => (
+                                                <option key={a.id} value={a.id}>
+                                                    {a.name ? `${a.name}: ` : ''}{a.address}
+                                                </option>
+                                            ))}
+                                        </NativeSelect.Field>
+                                        <NativeSelect.Indicator />
+                                    </NativeSelect.Root>
+                                </Field>
+                            ) : (
+                                <Field
+                                    label="Введите адрес доставки"
+                                    invalid={!!errors.delivery_address_id || !!errors.new_address}
+                                    errorText={errors.delivery_address_id || errors.new_address}
+                                >
+                                    <Textarea
+                                        placeholder="Город, улица, дом, квартира..."
+                                        value={data.new_address}
+                                        onChange={(e) => setData('new_address', e.target.value)}
+                                        rows={3}
+                                    />
+                                </Field>
+                            )}
+                        </Box>
+
+                        {/* ═══ Комментарий ═══ */}
+                        <Box
+                            bg="bg"
+                            borderWidth="1px"
+                            borderColor="border"
+                            rounded="lg"
+                            p={{ base: '4', md: '5' }}
+                        >
+                            <Flex align="center" gap="2" mb="3">
+                                <LuMessageSquare size={20} />
+                                <Text fontWeight="600" fontSize="lg">Комментарий к заказу</Text>
+                            </Flex>
+
+                            <Textarea
+                                placeholder="Ваши пожелания или комментарии..."
+                                value={data.comment}
+                                onChange={(e) => setData('comment', e.target.value)}
+                                rows={3}
+                            />
+                        </Box>
+
+                        {/* ═══ Кнопки ═══ */}
+                        <Flex
+                            gap="3"
+                            justify="space-between"
+                            direction={{ base: 'column-reverse', md: 'row' }}
+                        >
+                            <Button asChild variant="outline" size="lg">
+                                <Link href="/cart">
+                                    <LuArrowLeft size={16} />
+                                    Вернуться в корзину
+                                </Link>
+                            </Button>
+
+                            <Button
+                                type="submit"
+                                colorPalette="pecado"
+                                size="lg"
+                                loading={processing}
+                                disabled={processing || companies.length === 0}
+                            >
+                                <LuSend size={16} />
+                                Оформить заказ
+                            </Button>
+                        </Flex>
+                    </Stack>
+                </form>
+            </Box>
+        </UserLayout>
+    );
+}
+
+/**
+ * Компонент таблицы товаров (instock / preorder).
+ */
+function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, fmt }) {
+    const totalQty = totals?.quantity ?? items.reduce((s, it) => s + Number(it.quantity || 0), 0);
+    const totalRegular = Number(totals?.amount_regular ?? 0);
+    const totalDiscounted = Number(totals?.amount_discounted ?? 0);
+    const hasDiscount = totalRegular > 0 && totalRegular !== totalDiscounted;
+
+    return (
+        <Box
+            bg="bg"
+            borderWidth="1px"
+            borderColor="border"
+            rounded="lg"
+            p={{ base: '3', md: '5' }}
+        >
+            <Flex align="center" gap="2" mb="3">
+                {icon}
+                <Text fontWeight="600" fontSize="lg">
+                    {title}
+                </Text>
+                <Badge colorPalette={colorPalette} variant="subtle" ml="1">
+                    {totalQty} шт.
+                </Badge>
+            </Flex>
+
+            <Box overflowX="auto">
+                <Table.Root size="sm" variant="outline">
+                    <Table.Header>
+                        <Table.Row bg="bg.muted">
+                            <Table.ColumnHeader>Название</Table.ColumnHeader>
+                            <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
+                            <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
+                            <Table.ColumnHeader w="130px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
+                        </Table.Row>
+                    </Table.Header>
+                    <Table.Body>
+                        {items.map((it) => {
+                            const pid = it.product?.id || it.id;
+                            const qty = Number(it.quantity || 0);
+                            const priceDisc = Number(it.price_discounted ?? it.price ?? 0);
+                            const priceReg = Number(it.price_regular ?? priceDisc);
+                            const totalDisc = Number(it.total_amount_discounted ?? it.total_amount ?? 0);
+
+                            return (
+                                <Table.Row key={pid}>
+                                    <Table.Cell>
+                                        <Text fontWeight="medium" lineClamp={1}>
+                                            {it.product?.name || 'Товар'}
+                                        </Text>
+                                        <Flex gap="1" mt="0.5">
+                                            {it.product?.brand?.name && (
+                                                <Text fontSize="xs" color="fg.muted">
+                                                    {it.product.brand.name}
+                                                </Text>
+                                            )}
+                                            {it.product?.sku && (
+                                                <Text fontSize="xs" color="fg.muted">
+                                                    • {it.product.sku}
+                                                </Text>
+                                            )}
+                                        </Flex>
+                                    </Table.Cell>
+                                    <Table.Cell textAlign="center">{qty}</Table.Cell>
+                                    <Table.Cell textAlign="right">
+                                        {priceReg !== priceDisc && (
+                                            <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
+                                                {fmt(priceReg)}
+                                            </Text>
+                                        )}
+                                        <Text fontWeight="medium">{fmt(priceDisc)}</Text>
+                                    </Table.Cell>
+                                    <Table.Cell textAlign="right">
+                                        <Text fontWeight="medium">{fmt(totalDisc)}</Text>
+                                    </Table.Cell>
+                                </Table.Row>
+                            );
+                        })}
+                    </Table.Body>
+                </Table.Root>
+            </Box>
+
+            <Separator my="3" />
+
+            <Flex justify="flex-end" gap="4" align="center">
+                {hasDiscount && (
+                    <Text fontSize="sm" color="fg.muted" textDecoration="line-through">
+                        {fmt(totalRegular)} {currencySymbol}
+                    </Text>
+                )}
+                <Text fontSize="lg" fontWeight="bold">
+                    {fmt(totalDiscounted)} {currencySymbol}
+                </Text>
+            </Flex>
+        </Box>
+    );
+}

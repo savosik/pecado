@@ -10,3 +10,12 @@
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
+
+/* Fix for native select options in dark mode */
+html.dark select option,
+html[data-theme="dark"] select option,
+.chakra-theme.dark select option,
+[data-theme="dark"] select option {
+    background-color: var(--chakra-colors-gray-800, #1a202c);
+    color: var(--chakra-colors-gray-100, #edf2f7);
+}
