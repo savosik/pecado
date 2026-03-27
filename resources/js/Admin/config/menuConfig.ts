@@ -102,10 +102,6 @@ export const menuConfig: MenuGroup[] = [
         icon: LuTicket,
         items: [
             { label: "Акции", icon: LuTicket, path: "/admin/promotions" },
-            { label: "Скидки", icon: LuPercent, path: "/admin/discounts" },
-            { label: "Индив. соглашения", icon: LuFileText, path: "/admin/agreements" },
-            { label: "Сегменты товаров", icon: LuSlice, path: "/admin/product-segments" },
-            { label: "Сегменты партнёров", icon: LuUsers, path: "/admin/partner-segments" },
             { label: "Подборки", icon: LuLayoutGrid, path: "/admin/product-selections" },
         ],
     },
