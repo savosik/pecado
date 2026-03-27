@@ -78,10 +78,12 @@
 | Endpoint (из локальной сети) | http://10.2.2.100:9000 |
 | Endpoint (извне) | http://93.94.150.16:9000 |
 | Bucket | prices-exchange |
-| Access Key | sail |
-| Secret Key | password |
+| Access Key | erp1c_prices |
+| Secret Key | Xe9k4Qm7RvBn3TpL2w |
 | Region | us-east-1 |
 | Path Style | true |
+
+> Выделенный пользователь с политикой `prices-exchange-rw` — доступ **только** к бакету `prices-exchange`. Доступа к другим бакетам нет.
 
 ## Mailpit
 

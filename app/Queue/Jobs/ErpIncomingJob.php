@@ -3,30 +3,19 @@
 namespace App\Queue\Jobs;
 
 use App\Models\ErpProcessedMessage;
-use App\Services\Erp\Handlers\HandleAgreementCreated;
-use App\Services\Erp\Handlers\HandleAgreementDeleted;
-use App\Services\Erp\Handlers\HandleAgreementUpdated;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
 use App\Services\Erp\Handlers\HandleCategoryUpdated;
-use App\Services\Erp\Handlers\HandleDiscountCreated;
-use App\Services\Erp\Handlers\HandleDiscountDeleted;
-use App\Services\Erp\Handlers\HandleDiscountUpdated;
 use App\Services\Erp\Handlers\HandleContractorCreated;
 use App\Services\Erp\Handlers\HandleExchangeRateUpdated;
+use App\Services\Erp\Handlers\HandleIndividualPricesReady;
 use App\Services\Erp\Handlers\HandleOrderCreated;
 use App\Services\Erp\Handlers\HandleOrderDeleted;
 use App\Services\Erp\Handlers\HandleOrderUpdated;
 use App\Services\Erp\Handlers\HandlePartnerCreated;
 use App\Services\Erp\Handlers\HandlePartnerDeleted;
-use App\Services\Erp\Handlers\HandlePartnerSegmentCreated;
-use App\Services\Erp\Handlers\HandlePartnerSegmentDeleted;
-use App\Services\Erp\Handlers\HandlePartnerSegmentUpdated;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
 use App\Services\Erp\Handlers\HandleProductCreated;
-use App\Services\Erp\Handlers\HandleProductSegmentCreated;
-use App\Services\Erp\Handlers\HandleProductSegmentDeleted;
-use App\Services\Erp\Handlers\HandleProductSegmentUpdated;
 use App\Services\Erp\Handlers\HandleProductUpdated;
 use App\Services\Erp\Handlers\HandleReturnDeleted;
 use App\Services\Erp\Handlers\HandleReturnUpdated;
@@ -52,51 +41,37 @@ class ErpIncomingJob extends BaseJob
      * v4 — также входящее (1С → Сайт через erp_in.partners) для выгрузки партнёров.
      */
     private const EVENT_HANDLERS = [
-        // US-01
-        'partner.created'           => HandlePartnerCreated::class, // v4: выгрузка партнёров 1С → Сайт
+        // US-02: Партнёры
+        'partner.created'           => HandlePartnerCreated::class,
         'partner.deleted'           => HandlePartnerDeleted::class,
-        // US-02
+        // US-03: Базовые цены
         'price.updated'             => HandlePriceUpdated::class,
-        // US-03
-        'discount.created'          => HandleDiscountCreated::class,
-        'discount.updated'          => HandleDiscountUpdated::class,
-        'discount.deleted'          => HandleDiscountDeleted::class,
-        // US-04
+        // US-05: Курсы валют
         'exchange_rate.updated'     => HandleExchangeRateUpdated::class,
-        // US-05
+        // US-06: Остатки
         'stock.updated'             => HandleStockUpdated::class,
-        // US-06
-        'contractor.created'        => HandleContractorCreated::class, // v4: выгрузка контрагентов 1С → Сайт
-        // US-07
-        'order.created'             => HandleOrderCreated::class, // v3: заказ от менеджера (1С → Сайт)
+        // US-07: Контрагенты
+        'contractor.created'        => HandleContractorCreated::class,
+        // US-08: Заказы
+        'order.created'             => HandleOrderCreated::class,
         'order.updated'             => HandleOrderUpdated::class,
         'order.deleted'             => HandleOrderDeleted::class,
-        // US-08 (отложено, обработчики сохранены)
+        // US-09: Возвраты (отложено)
         'return.updated'            => HandleReturnUpdated::class,
         'return.deleted'            => HandleReturnDeleted::class,
-        // US-09
+        // US-10: Реализации
         'shipment.created'          => HandleShipmentCreated::class,
         'shipment.updated'          => HandleShipmentUpdated::class,
         'shipment.deleted'          => HandleShipmentDeleted::class,
-        // US-10
+        // US-11: Баланс
         'balance.updated'           => HandleBalanceUpdated::class,
-        // US-11: сегменты номенклатуры
-        'product_segment.created'   => HandleProductSegmentCreated::class,
-        'product_segment.updated'   => HandleProductSegmentUpdated::class,
-        'product_segment.deleted'   => HandleProductSegmentDeleted::class,
-        // US-12: сегменты партнёров
-        'partner_segment.created'   => HandlePartnerSegmentCreated::class,
-        'partner_segment.updated'   => HandlePartnerSegmentUpdated::class,
-        'partner_segment.deleted'   => HandlePartnerSegmentDeleted::class,
-        // US-13: каталог (категории и товары)
+        // US-14: Индивидуальные цены (v7)
+        'individual_prices.ready'   => HandleIndividualPricesReady::class,
+        // US-15: Каталог
         'category.created'          => HandleCategoryCreated::class,
         'category.updated'          => HandleCategoryUpdated::class,
         'product.created'           => HandleProductCreated::class,
         'product.updated'           => HandleProductUpdated::class,
-        // US-14: индивидуальные соглашения
-        'agreement.created'         => HandleAgreementCreated::class,
-        'agreement.updated'         => HandleAgreementUpdated::class,
-        'agreement.deleted'         => HandleAgreementDeleted::class,
     ];
 
 

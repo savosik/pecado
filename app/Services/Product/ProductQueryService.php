@@ -2,7 +2,7 @@
 
 namespace App\Services\Product;
 
-use App\Models\Discount;
+
 use App\Models\Product;
 use App\Models\Region;
 use App\Services\CurrencyService;
@@ -28,6 +28,7 @@ class ProductQueryService
             'name'              => $product->name,
             'slug'              => $product->slug,
             'sku'               => $product->sku,
+            'external_id'       => $product->external_id,
             'base_price'        => (float) $product->base_price,
             'brand_name'        => $product->brand?->name,
             'brand_slug'        => $product->brand?->slug,
@@ -173,76 +174,93 @@ class ProductQueryService
     }
 
     /**
-     * Загрузить карту скидок текущего пользователя для переданных ID товаров.
+     * Загрузить карту индивидуальных цен текущего пользователя для переданных товаров.
+     * v7: Используем таблицу individual_prices вместо старой модели Discount.
      *
-     * @param  int[]  $productIds
-     * @return Collection  Коллекция [product_id => max_percentage]
+     * @param  array  $products  массив товаров (каждый с 'id' и 'external_id')
+     * @return Collection  Коллекция [product_id => ['price' => float, 'discount_percent' => float]]
      */
-    public static function loadDiscountMap(array $productIds): Collection
+    public static function loadIndividualPriceMap(array $products): Collection
     {
         $user = Auth::user();
-        if (!$user || empty($productIds)) {
+        if (!$user || !$user->erp_id) {
             return collect();
         }
 
-        return Discount::where('is_posted', true)
-            ->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
-            ->whereHas('products', fn ($q) => $q->whereIn('products.id', $productIds))
-            ->with(['products' => fn ($q) => $q->whereIn('products.id', $productIds)])
-            ->get()
-            ->flatMap(function ($discount) {
-                return $discount->products->map(fn ($product) => [
-                    'product_id' => $product->id,
-                    'percentage' => $discount->percentage,
-                ]);
-            })
-            // Если несколько скидок на один товар — берём максимальную
-            ->groupBy('product_id')
-            ->map(fn ($group) => $group->max('percentage'));
+        // Собираем маппинг external_id → product_id
+        $externalIdMap = collect($products)
+            ->filter(fn ($p) => !empty($p['external_id']))
+            ->pluck('id', 'external_id')
+            ->toArray();
+
+        if (empty($externalIdMap)) {
+            return collect();
+        }
+
+        $prices = DB::table('individual_prices')
+            ->where('partner_uuid', $user->erp_id)
+            ->whereIn('product_uuid', array_keys($externalIdMap))
+            ->select('product_uuid', 'price')
+            ->get();
+
+        return $prices->mapWithKeys(function ($row) use ($externalIdMap) {
+            $productId = $externalIdMap[$row->product_uuid] ?? null;
+            if (!$productId) {
+                return [];
+            }
+            return [$productId => (float) $row->price];
+        });
     }
 
     /**
-     * Обогатить массив товаров скидками из переданной карты.
+     * Применить карту индивидуальных цен к массиву товаров.
      */
-    public static function applyDiscountMap(array $products, Collection $discountMap): array
+    public static function applyIndividualPriceMap(array $products, Collection $priceMap): array
     {
-        if ($discountMap->isEmpty()) {
+        if ($priceMap->isEmpty()) {
             return $products;
         }
 
-        return array_map(function ($product) use ($discountMap) {
-            $percentage = $discountMap[$product['id']] ?? null;
-            if ($percentage) {
-                $product['discount_percentage'] = $percentage;
-                $product['sale_price'] = round($product['base_price'] * (1 - $percentage / 100), 2);
+        return array_map(function ($product) use ($priceMap) {
+            $individualPrice = $priceMap[$product['id']] ?? null;
+            if ($individualPrice !== null) {
+                $basePrice = (float) ($product['base_price'] ?? 0);
+                $discountPercent = $basePrice > 0
+                    ? round((1 - $individualPrice / $basePrice) * 100, 2)
+                    : 0;
+
+                $product['individual_price'] = $individualPrice;
+                $product['discount_percentage'] = max(0, $discountPercent);
+                $product['sale_price'] = $individualPrice;
+                $product['has_discount'] = $discountPercent > 0;
             }
             return $product;
         }, $products);
     }
 
     /**
-     * Обогатить массив товаров скидками текущего пользователя.
+     * Обогатить массив товаров индивидуальными ценами текущего пользователя.
+     * Совместимость: сохраняем ключи discount_percentage и sale_price для фронтенда.
      */
-    public static function enrichProductsWithDiscounts(array $products, ?Collection $discountMap = null): array
+    public static function enrichProductsWithDiscounts(array $products, ?Collection $priceMap = null): array
     {
         $user = Auth::user();
         if (!$user) {
             return $products;
         }
 
-        $productIds = collect($products)->pluck('id')->toArray();
-        if (empty($productIds)) {
+        if (empty($products)) {
             return $products;
         }
 
-        $discountMap = $discountMap ?? self::loadDiscountMap($productIds);
+        $priceMap = $priceMap ?? self::loadIndividualPriceMap($products);
 
-        return self::applyDiscountMap($products, $discountMap);
+        return self::applyIndividualPriceMap($products, $priceMap);
     }
 
     /**
-     * Обогатить подборки скидками текущего пользователя.
-     * Все ID товаров собираются заранее, скидки загружаются одним запросом.
+     * Обогатить подборки индивидуальными ценами текущего пользователя.
+     * Все ID товаров собираются заранее, цены загружаются одним запросом.
      */
     public static function enrichSelectionsWithDiscounts(array $selections): array
     {
@@ -251,17 +269,15 @@ class ProductQueryService
             return $selections;
         }
 
-        // Собираем все ID товаров из всех подборок
-        $allProductIds = collect($selections)
-            ->flatMap(fn ($sel) => collect($sel['products'] ?? [])->pluck('id'))
-            ->unique()
-            ->values()
+        // Собираем все товары из всех подборок
+        $allProducts = collect($selections)
+            ->flatMap(fn ($sel) => $sel['products'] ?? [])
             ->toArray();
 
-        $discountMap = self::loadDiscountMap($allProductIds);
+        $priceMap = self::loadIndividualPriceMap($allProducts);
 
-        return array_map(function ($selection) use ($discountMap) {
-            $selection['products'] = self::applyDiscountMap($selection['products'] ?? [], $discountMap);
+        return array_map(function ($selection) use ($priceMap) {
+            $selection['products'] = self::applyIndividualPriceMap($selection['products'] ?? [], $priceMap);
             return $selection;
         }, $selections);
     }

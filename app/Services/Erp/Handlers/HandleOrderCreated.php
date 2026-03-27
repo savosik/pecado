@@ -119,9 +119,11 @@ class HandleOrderCreated
                     ? Product::where('external_id', $productUuid)->first()
                     : null;
 
-                $quantity = $item['quantity'] ?? 0;
-                $price    = $item['price']    ?? 0;
-                $subtotal = round($quantity * $price, 2);
+                $quantity        = $item['quantity']         ?? 0;
+                $basePrice       = $item['base_price']       ?? $item['price'] ?? 0;
+                $discountPercent = $item['discount_percent'] ?? 0;
+                $finalPrice      = $item['final_price']      ?? $item['price'] ?? $basePrice;
+                $subtotal        = round($quantity * $finalPrice, 2);
 
                 // Если товар не найден — сохраняем название (товара может уже не быть)
                 $name = $product
@@ -129,11 +131,14 @@ class HandleOrderCreated
                     : ($item['name'] ?? $productUuid ?? 'Неизвестный товар');
 
                 $order->items()->create([
-                    'product_id' => $product?->id,
-                    'name'       => $name,
-                    'quantity'   => $quantity,
-                    'price'      => $price,
-                    'subtotal'   => $subtotal,
+                    'product_id'       => $product?->id,
+                    'name'             => $name,
+                    'quantity'         => $quantity,
+                    'price'            => $finalPrice,
+                    'base_price'       => $basePrice,
+                    'discount_percent' => $discountPercent,
+                    'final_price'      => $finalPrice,
+                    'subtotal'         => $subtotal,
                 ]);
 
                 $totalAmount += $subtotal;

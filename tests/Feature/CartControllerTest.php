@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\Pricing\PriceResult;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Cart;
@@ -30,7 +31,7 @@ class CartControllerTest extends TestCase
         $this->priceServiceMock = $this->createMock(PriceServiceInterface::class);
         $this->priceServiceMock->method('getUserPrice')->willReturn(100.0);
         $this->priceServiceMock->method('getBasePrice')->willReturn(120.0);
-        $this->priceServiceMock->method('getDiscountedPrice')->willReturn(100.0);
+        $this->priceServiceMock->method('getPriceResult')->willReturn(new PriceResult(120.0, 100.0, 16.67, true));
         $this->priceServiceMock->method('convertPrice')->willReturnArgument(0);
         $this->app->instance(PriceServiceInterface::class, $this->priceServiceMock);
 

@@ -20,13 +20,14 @@ interface PriceServiceInterface
 
     /**
      * Get the price of the product for a specific user in their preferred currency (or base if none).
+     * Uses individual prices from 1С if available.
      */
-    public function getUserPrice(Product $product, ?User $user = null): float;
+    public function getUserPrice(Product $product, ?User $user = null, ?string $warehouseUuid = null): float;
 
     /**
-     * Get the price of the product for a specific user in the base currency, applying discounts.
+     * Get the full price result with base_price, individual_price, discount_percent.
      */
-    public function getDiscountedPrice(Product $product, User $user): float;
+    public function getPriceResult(Product $product, ?User $user = null, ?string $warehouseUuid = null): PriceResult;
 
     /**
      * Get the price of the product in a specific currency.

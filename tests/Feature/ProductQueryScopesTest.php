@@ -6,7 +6,7 @@ use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\Discount;
+use App\Models\IndividualPrice;
 use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Models\User;
@@ -116,18 +116,26 @@ class ProductQueryScopesTest extends TestCase
 
     // ─── scopeInSale ─────────────────────────────────────────
 
-    public function test_scope_in_sale_filters_discounted_products(): void
+    public function test_scope_in_sale_filters_products_with_individual_prices(): void
     {
-        $discount = Discount::create(['name' => 'Test Discount', 'percentage' => 15]);
-        $withDiscount    = Product::factory()->create();
-        $withoutDiscount = Product::factory()->create();
+        $user = User::factory()->create(['erp_id' => 'test-partner-001']);
+        $this->actingAs($user);
 
-        $withDiscount->discounts()->attach($discount);
+        $withPrice    = Product::factory()->create(['external_id' => 'prod-ext-001']);
+        $withoutPrice = Product::factory()->create(['external_id' => 'prod-ext-002']);
+
+        // Создаём индивидуальную цену только для первого товара
+        IndividualPrice::create([
+            'partner_uuid' => 'test-partner-001',
+            'product_uuid' => 'prod-ext-001',
+            'warehouse_uuid' => 'wh-001',
+            'price' => 80.00,
+        ]);
 
         $results = Product::inSale(true)->pluck('id');
 
-        $this->assertTrue($results->contains($withDiscount->id));
-        $this->assertFalse($results->contains($withoutDiscount->id));
+        $this->assertTrue($results->contains($withPrice->id));
+        $this->assertFalse($results->contains($withoutPrice->id));
     }
 
     // ─── scopeInFavourites ───────────────────────────────────

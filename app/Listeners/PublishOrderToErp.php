@@ -79,12 +79,14 @@ class PublishOrderToErp
         $payload['exchange_rate'] = (float) $order->exchange_rate;
         $payload['rate_coefficient'] = (float) ($order->rate_coefficient ?? 1.0);
 
-        // Позиции заказа
+        // Позиции заказа (v7: base_price, discount_percent, final_price)
         $payload['items'] = $order->items->map(function ($item) {
             return [
-                'product_uuid' => $item->product?->external_id,
-                'quantity' => $item->quantity,
-                'price' => (float) $item->price,
+                'product_uuid'     => $item->product?->external_id,
+                'quantity'         => $item->quantity,
+                'base_price'       => (float) ($item->base_price ?? $item->price),
+                'discount_percent' => (float) ($item->discount_percent ?? 0),
+                'final_price'      => (float) ($item->final_price ?? $item->price),
             ];
         })->toArray();
 

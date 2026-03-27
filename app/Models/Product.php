@@ -201,11 +201,11 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * Get the discounts for the product.
+     * Get the individual prices for the product (v7: from 1С via MinIO).
      */
-    public function discounts(): BelongsToMany
+    public function individualPrices(): HasMany
     {
-        return $this->belongsToMany(Discount::class, 'discount_product');
+        return $this->hasMany(IndividualPrice::class, 'product_uuid', 'external_id');
     }
 
     /**
@@ -259,13 +259,6 @@ class Product extends Model implements HasMedia
     }
 
 
-    /**
-     * Get the product segments for the product (US-11).
-     */
-    public function productSegments(): BelongsToMany
-    {
-        return $this->belongsToMany(ProductSegment::class, 'product_product_segment');
-    }
 
     /**
      * Get the indexable data array for the model.

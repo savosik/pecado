@@ -222,13 +222,26 @@ trait ProductQueryScopes
     }
 
     /**
-     * Фильтр по наличию скидки.
+     * Фильтр по наличию индивидуальной цены (скидки) для текущего пользователя.
+     * v7: Используем таблицу individual_prices вместо связи discounts.
      */
     public function scopeInSale(Builder $query, bool $value = true): Builder
     {
+        $user = \Illuminate\Support\Facades\Auth::user();
+        if (!$user || !$user->erp_id) {
+            return $value ? $query->whereRaw('1 = 0') : $query;
+        }
+
+        $sub = function ($sub) use ($user) {
+            $sub->select(DB::raw(1))
+                ->from('individual_prices')
+                ->whereColumn('individual_prices.product_uuid', 'products.external_id')
+                ->where('individual_prices.partner_uuid', $user->erp_id);
+        };
+
         return $value
-            ? $query->whereHas('discounts')
-            : $query->whereDoesntHave('discounts');
+            ? $query->whereExists($sub)
+            : $query->whereNotExists($sub);
     }
 
     /**

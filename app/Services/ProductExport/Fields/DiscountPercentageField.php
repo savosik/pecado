@@ -20,9 +20,7 @@ class DiscountPercentageField extends ExportField
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
         if (!$clientUser) return 0;
-        $base = (float) $product->base_price;
-        $discounted = $this->priceService->getDiscountedPrice($product, $clientUser);
-        if ($base <= 0) return 0;
-        return round((1 - $discounted / $base) * 100, 2);
+        $priceResult = $this->priceService->getPriceResult($product, $clientUser);
+        return $priceResult->discountPercent;
     }
 }

@@ -151,13 +151,7 @@ class User extends Authenticatable implements HasMedia
     {
         return $this->belongsTo(Currency::class);
     }
-    /**
-     * Get the discounts for the user.
-     */
-    public function discounts(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
-    {
-        return $this->belongsToMany(Discount::class, 'discount_user');
-    }
+
 
     /**
      * Get the favorites for the user.
@@ -252,11 +246,4 @@ class User extends Authenticatable implements HasMedia
         return $this->hasOne(UserQuestionnaire::class);
     }
 
-    /**
-     * US-12: Get the partner segments for the user.
-     */
-    public function partnerSegments(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
-    {
-        return $this->belongsToMany(PartnerSegment::class, 'partner_user');
-    }
 }

@@ -8,5 +8,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('currency:update')->daily();
+Schedule::command('app:clean-price-dumps')->dailyAt('04:00');
 
 

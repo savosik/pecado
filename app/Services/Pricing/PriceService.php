@@ -3,9 +3,11 @@
 namespace App\Services\Pricing;
 
 use App\Contracts\Currency\CurrencyConversionServiceInterface;
+use App\Contracts\Currency\UserCurrencyResolverInterface;
+use App\Contracts\Pricing\PriceResult;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Models\Currency;
-use App\Models\Discount;
+use App\Models\IndividualPrice;
 use App\Models\Product;
 use App\Models\User;
 
@@ -13,7 +15,7 @@ class PriceService implements PriceServiceInterface
 {
     public function __construct(
         protected CurrencyConversionServiceInterface $currencyService,
-        protected \App\Contracts\Currency\UserCurrencyResolverInterface $currencyResolver
+        protected UserCurrencyResolverInterface $currencyResolver
     ) {}
 
     /**
@@ -42,93 +44,59 @@ class PriceService implements PriceServiceInterface
     }
 
     /**
-     * Get the price of the product for a specific user in their preferred currency (or base if none).
-     * Applies the maximum active discount for the user/product combination.
+     * Get the price of the product for a specific user in their preferred currency.
+     * Uses individual_prices from 1С if available, otherwise returns base price.
      */
-    public function getUserPrice(Product $product, ?User $user = null): float
+    public function getUserPrice(Product $product, ?User $user = null, ?string $warehouseUuid = null): float
     {
-        $discountedPrice = $user 
-            ? $this->getDiscountedPrice($product, $user)
-            : $this->getBasePrice($product);
+        $priceResult = $this->getPriceResult($product, $user, $warehouseUuid);
+        $displayPrice = $priceResult->getDisplayPrice();
 
         if ($user) {
             $currency = $this->currencyResolver->resolve($user);
             if ($currency) {
-                return $this->convertPrice($discountedPrice, $currency);
+                return $this->convertPrice($displayPrice, $currency);
             }
         }
 
-        return $discountedPrice;
+        return $displayPrice;
     }
 
     /**
-     * Get the price of the product for a specific user in the base currency, applying discounts.
+     * Get the full price result with base, individual, and discount info.
+     *
+     * v7: Вместо расчёта скидок на сайте — берём готовую индивидуальную цену из таблицы
+     * individual_prices, куда 1С выгружает рассчитанные цены через MinIO.
      */
-    public function getDiscountedPrice(Product $product, User $user): float
+    public function getPriceResult(Product $product, ?User $user = null, ?string $warehouseUuid = null): PriceResult
     {
         $basePrice = $this->getBasePrice($product);
-        $maxDiscount = $this->getMaxDiscountPercentage($user, $product);
-        
-        if ($maxDiscount > 0) {
-            return $basePrice * (1 - $maxDiscount / 100);
+
+        if (!$user || !$user->erp_id) {
+            return PriceResult::withoutDiscount($basePrice);
         }
 
-        return $basePrice;
-    }
+        $productUuid = $product->external_id;
 
-    /**
-     * Get the maximum active discount percentage for a user and product.
-     *
-     * US-03 v2: Партнёр подходит под скидку если привязан напрямую ИЛИ через сегмент партнёров.
-     * Товар подходит если привязан напрямую ИЛИ через сегмент номенклатуры.
-     * Из всех применимых скидок берётся один максимальный процент (без суммирования).
-     * Акции (promotion) учитываются только если текущая дата входит в [starts_at, ends_at].
-     */
-    protected function getMaxDiscountPercentage(User $user, Product $product): float
-    {
-        // 1. Обычные акции/скидки (Discounts)
-        $promotionDiscount = Discount::where('is_posted', true)
-            // Партнёр: прямая привязка ИЛИ через сегмент партнёров
-            ->where(function ($q) use ($user) {
-                $q->whereHas('users', fn ($q) => $q->where('users.id', $user->id))
-                  ->orWhereHas('partnerSegments.users', fn ($q) => $q->where('users.id', $user->id));
-            })
-            // Товар: прямая привязка ИЛИ через сегмент номенклатуры
-            ->where(function ($q) use ($product) {
-                $q->whereHas('products', fn ($q) => $q->where('products.id', $product->id))
-                  ->orWhereHas('productSegments.products', fn ($q) => $q->where('products.id', $product->id));
-            })
-            // Временные акции (promotion) действуют только в своём диапазоне дат
-            ->where(function ($q) {
-                $q->where('type', 'agreement')
-                  ->orWhere(function ($q) {
-                      $q->where('type', 'promotion')
-                        ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
-                        ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()));
-                  });
-            })
-            ->max('percentage') ?? 0.0;
+        if (!$productUuid) {
+            return PriceResult::withoutDiscount($basePrice);
+        }
 
-        // 2. Индивидуальные соглашения (Agreements -> AgreementDiscount)
-        $agreementDiscount = \App\Models\AgreementDiscount::whereHas('agreement', function ($q) use ($user) {
-                $q->where('is_active', true)
-                  ->where('partner_uuid', $user->erp_id)
-                  ->where(function ($q) {
-                      $q->whereNull('starts_at')->orWhere('starts_at', '<=', now());
-                  })
-                  ->where(function ($q) {
-                      $q->whereNull('ends_at')->orWhere('ends_at', '>=', now());
-                  });
-            })
-            ->where(function ($q) use ($product) {
-                // Товар: прямая привязка через сегмент номенклатуры (по спецификации US-14)
-                $q->whereHas('productSegment.products', fn ($q) => $q->where('products.id', $product->id))
-                  // ИЛИ скидка применяется ко всем товарам, если сегмент не указан (на всякий случай)
-                  ->orWhereNull('product_segment_uuid');
-            })
-            ->max('percentage') ?? 0.0;
+        // Ищем индивидуальную цену
+        $query = IndividualPrice::where('partner_uuid', $user->erp_id)
+            ->where('product_uuid', $productUuid);
 
-        return max((float)$promotionDiscount, (float)$agreementDiscount);
+        if ($warehouseUuid) {
+            $query->where('warehouse_uuid', $warehouseUuid);
+        }
+
+        $individualPrice = $query->first();
+
+        if (!$individualPrice) {
+            return PriceResult::withoutDiscount($basePrice);
+        }
+
+        return PriceResult::withIndividualPrice($basePrice, (float) $individualPrice->price);
     }
 
     /**

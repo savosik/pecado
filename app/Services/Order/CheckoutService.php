@@ -114,17 +114,21 @@ class CheckoutService implements CheckoutServiceInterface
     {
         $total = 0;
         foreach ($cartItems as $item) {
-            $price    = $this->priceService->getDiscountedPrice($item->product, $user);
-            $subtotal = $price * $item->quantity;
+            $priceResult = $this->priceService->getPriceResult($item->product, $user);
+            $displayPrice = $priceResult->getDisplayPrice();
+            $subtotal = $displayPrice * $item->quantity;
             $total   += $subtotal;
 
             OrderItem::create([
-                'order_id'   => $order->id,
-                'product_id' => $item->product_id,
-                'name'       => $item->product->name,
-                'price'      => $price,
-                'quantity'   => $item->quantity,
-                'subtotal'   => $subtotal,
+                'order_id'         => $order->id,
+                'product_id'       => $item->product_id,
+                'name'             => $item->product->name,
+                'price'            => $displayPrice,
+                'base_price'       => $priceResult->basePrice,
+                'discount_percent' => $priceResult->discountPercent,
+                'final_price'      => $displayPrice,
+                'quantity'         => $item->quantity,
+                'subtotal'         => $subtotal,
             ]);
         }
         return $total;

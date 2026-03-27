@@ -6,14 +6,11 @@ use App\Contracts\Currency\CurrencyConversionServiceInterface;
 use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Models\Currency;
-use App\Models\Discount;
-use App\Models\PartnerSegment;
+use App\Models\IndividualPrice;
 use App\Models\Product;
-use App\Models\ProductSegment;
 use App\Models\User;
 use App\Services\Pricing\PriceService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Mockery;
 use Tests\TestCase;
 
@@ -54,7 +51,7 @@ class PriceServiceTest extends TestCase
             ->once()
             ->andReturn($currency);
 
-        // Expect conversion call (no discount, so base price)
+        // Expect conversion call (no individual price, so base price)
         $currencyService->shouldReceive('convertFromBase')
             ->with(100.00, $currency)
             ->once()
@@ -81,140 +78,153 @@ class PriceServiceTest extends TestCase
         $this->assertEquals(100.00, $service->getUserPrice($product, $user));
     }
 
-    public function test_it_applies_max_discount_to_user_price()
+    // -------------------------------------------------------------------
+    // v7: Individual Prices
+    // -------------------------------------------------------------------
+
+    public function test_it_returns_individual_price_when_available(): void
     {
         $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
         $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
         $service = new PriceService($currencyService, $currencyResolver);
 
-        $user = User::factory()->create();
-        $product = Product::create(['name' => 'Test', 'base_price' => 100.00]);
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-001']);
+        $product = Product::create([
+            'name' => 'Test',
+            'base_price' => 100.00,
+            'external_id' => 'product-uuid-001',
+        ]);
 
-        // Create active discounts
-        $discount1 = Discount::create(['name' => 'D1', 'percentage' => 10, 'is_posted' => true, 'type' => 'agreement']);
-        $discount1->users()->attach($user->id);
-        $discount1->products()->attach($product->id);
+        // Создаём индивидуальную цену
+        IndividualPrice::create([
+            'partner_uuid' => 'partner-uuid-001',
+            'product_uuid' => 'product-uuid-001',
+            'warehouse_uuid' => 'wh-001',
+            'price' => 70.00,
+        ]);
 
-        $discount2 = Discount::create(['name' => 'D2', 'percentage' => 30, 'is_posted' => true, 'type' => 'agreement']);
-        $discount2->users()->attach($user->id);
-        $discount2->products()->attach($product->id);
+        $currencyResolver->shouldReceive('resolve')->andReturn(null);
 
-        // Inactive discount (should be ignored)
-        $discount3 = Discount::create(['name' => 'D3', 'percentage' => 50, 'is_posted' => false, 'type' => 'agreement']);
-        $discount3->users()->attach($user->id);
-        $discount3->products()->attach($product->id);
-
-        // Mock Resolver returning null (no currency conversion)
-        $currencyResolver->shouldReceive('resolve')
-            ->with(Mockery::on(fn($u) => $u->id === $user->id))
-            ->once()
-            ->andReturn(null);
-
-        // Expected: 100 * (1 - 30/100) = 70
+        // Ожидаем индивидуальную цену вместо базовой
         $this->assertEquals(70.00, $service->getUserPrice($product, $user));
     }
 
-    // -------------------------------------------------------------------
-    // US-03 v2: Сегменты
-    // -------------------------------------------------------------------
-
-    public function test_it_applies_discount_when_partner_matched_via_segment(): void
+    public function test_it_returns_base_price_when_no_individual_price(): void
     {
         $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
         $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
         $service = new PriceService($currencyService, $currencyResolver);
 
-        $user = User::factory()->create();
-        $product = Product::create(['name' => 'Test', 'base_price' => 100.00]);
-
-        // Сегмент партнёров содержит пользователя
-        $partnerSegment = PartnerSegment::create(['uuid' => 'seg-part-test-01', 'name' => 'Тест']);
-        $partnerSegment->users()->attach($user->id);
-
-        // Скидка привязана к сегменту партнёра и к товару напрямую
-        $discount = Discount::create(['type' => 'agreement', 'percentage' => 20, 'is_posted' => true]);
-        $discount->partnerSegments()->attach($partnerSegment->id);
-        $discount->products()->attach($product->id);
-
-        $currencyResolver->shouldReceive('resolve')->andReturn(null);
-
-        // Ожидаем: 100 * (1 - 20/100) = 80
-        $this->assertEquals(80.00, $service->getDiscountedPrice($product, $user));
-    }
-
-    public function test_it_applies_discount_when_product_matched_via_segment(): void
-    {
-        $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
-        $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
-        $service = new PriceService($currencyService, $currencyResolver);
-
-        $user = User::factory()->create();
-        $product = Product::create(['name' => 'Test', 'base_price' => 200.00]);
-
-        // Сегмент номенклатуры содержит товар
-        $productSegment = ProductSegment::create(['uuid' => 'seg-prod-test-01', 'name' => 'Тест']);
-        $productSegment->products()->attach($product->id);
-
-        // Скидка привязана к партнёру напрямую и к сегменту номенклатуры
-        $discount = Discount::create(['type' => 'agreement', 'percentage' => 15, 'is_posted' => true]);
-        $discount->users()->attach($user->id);
-        $discount->productSegments()->attach($productSegment->id);
-
-        $currencyResolver->shouldReceive('resolve')->andReturn(null);
-
-        // Ожидаем: 200 * (1 - 15/100) = 170
-        $this->assertEquals(170.00, $service->getDiscountedPrice($product, $user));
-    }
-
-    public function test_it_applies_discount_when_both_sides_matched_via_segments(): void
-    {
-        $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
-        $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
-        $service = new PriceService($currencyService, $currencyResolver);
-
-        $user = User::factory()->create();
-        $product = Product::create(['name' => 'Test', 'base_price' => 500.00]);
-
-        $partnerSegment = PartnerSegment::create(['uuid' => 'seg-part-test-02', 'name' => 'Голд']);
-        $partnerSegment->users()->attach($user->id);
-
-        $productSegment = ProductSegment::create(['uuid' => 'seg-prod-test-02', 'name' => 'Люкс']);
-        $productSegment->products()->attach($product->id);
-
-        // Скидка привязана через оба сегмента — ни прямых привязок нет
-        $discount = Discount::create(['type' => 'agreement', 'percentage' => 25, 'is_posted' => true]);
-        $discount->partnerSegments()->attach($partnerSegment->id);
-        $discount->productSegments()->attach($productSegment->id);
-
-        $currencyResolver->shouldReceive('resolve')->andReturn(null);
-
-        // Ожидаем: 500 * (1 - 25/100) = 375
-        $this->assertEquals(375.00, $service->getDiscountedPrice($product, $user));
-    }
-
-    public function test_expired_promotion_is_ignored(): void
-    {
-        $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
-        $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
-        $service = new PriceService($currencyService, $currencyResolver);
-
-        $user = User::factory()->create();
-        $product = Product::create(['name' => 'Test', 'base_price' => 100.00]);
-
-        // Акция с истёкшим сроком — не должна применяться
-        $expired = Discount::create([
-            'type' => 'promotion',
-            'percentage' => 50,
-            'is_posted' => true,
-            'starts_at' => now()->subDays(10),
-            'ends_at' => now()->subDay(),
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-002']);
+        $product = Product::create([
+            'name' => 'Test',
+            'base_price' => 200.00,
+            'external_id' => 'product-uuid-002',
         ]);
-        $expired->users()->attach($user->id);
-        $expired->products()->attach($product->id);
 
         $currencyResolver->shouldReceive('resolve')->andReturn(null);
 
-        // Скидка истекла — цена должна остаться базовой
-        $this->assertEquals(100.00, $service->getDiscountedPrice($product, $user));
+        // Нет индивидуальной цены — возвращаем базовую
+        $this->assertEquals(200.00, $service->getUserPrice($product, $user));
+    }
+
+    public function test_get_price_result_returns_discount_info(): void
+    {
+        $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
+        $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
+        $service = new PriceService($currencyService, $currencyResolver);
+
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-003']);
+        $product = Product::create([
+            'name' => 'Test',
+            'base_price' => 100.00,
+            'external_id' => 'product-uuid-003',
+        ]);
+
+        IndividualPrice::create([
+            'partner_uuid' => 'partner-uuid-003',
+            'product_uuid' => 'product-uuid-003',
+            'warehouse_uuid' => 'wh-001',
+            'price' => 70.00,
+        ]);
+
+        $result = $service->getPriceResult($product, $user);
+
+        $this->assertEquals(100.00, $result->basePrice);
+        $this->assertEquals(70.00, $result->individualPrice);
+        $this->assertEquals(30.00, $result->discountPercent);
+        $this->assertTrue($result->hasDiscount);
+        $this->assertEquals(70.00, $result->getDisplayPrice());
+    }
+
+    public function test_get_price_result_without_discount(): void
+    {
+        $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
+        $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
+        $service = new PriceService($currencyService, $currencyResolver);
+
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-004']);
+        $product = Product::create([
+            'name' => 'Test',
+            'base_price' => 100.00,
+            'external_id' => 'product-uuid-004',
+        ]);
+
+        $result = $service->getPriceResult($product, $user);
+
+        $this->assertEquals(100.00, $result->basePrice);
+        $this->assertNull($result->individualPrice);
+        $this->assertEquals(0, $result->discountPercent);
+        $this->assertFalse($result->hasDiscount);
+        $this->assertEquals(100.00, $result->getDisplayPrice());
+    }
+
+    public function test_get_price_result_for_guest_user(): void
+    {
+        $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
+        $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
+        $service = new PriceService($currencyService, $currencyResolver);
+
+        $product = Product::create([
+            'name' => 'Test',
+            'base_price' => 100.00,
+            'external_id' => 'product-uuid-005',
+        ]);
+
+        $result = $service->getPriceResult($product, null);
+
+        $this->assertEquals(100.00, $result->basePrice);
+        $this->assertNull($result->individualPrice);
+        $this->assertFalse($result->hasDiscount);
+    }
+
+    public function test_price_result_to_array(): void
+    {
+        $currencyService = Mockery::mock(CurrencyConversionServiceInterface::class);
+        $currencyResolver = Mockery::mock(UserCurrencyResolverInterface::class);
+        $service = new PriceService($currencyService, $currencyResolver);
+
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-006']);
+        $product = Product::create([
+            'name' => 'Test',
+            'base_price' => 200.00,
+            'external_id' => 'product-uuid-006',
+        ]);
+
+        IndividualPrice::create([
+            'partner_uuid' => 'partner-uuid-006',
+            'product_uuid' => 'product-uuid-006',
+            'warehouse_uuid' => 'wh-001',
+            'price' => 160.00,
+        ]);
+
+        $result = $service->getPriceResult($product, $user);
+        $array = $result->toArray();
+
+        $this->assertEquals(200.00, $array['base_price']);
+        $this->assertEquals(160.00, $array['individual_price']);
+        $this->assertEquals(20.00, $array['discount_percent']);
+        $this->assertTrue($array['has_discount']);
+        $this->assertEquals(160.00, $array['display_price']);
     }
 }

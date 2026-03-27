@@ -396,9 +396,10 @@ class CartController extends AdminController
         $user = $validated['user_id'] ? User::find($validated['user_id']) : null;
         $currencyCode = $validated['currency_code'] ?? 'RUB';
         
-        // 1. Get price in base currency (with user discounts applied)
+        // 1. Get price in base currency (with individual prices applied)
         if ($user) {
-            $basePrice = $this->priceService->getDiscountedPrice($product, $user);
+            $priceResult = $this->priceService->getPriceResult($product, $user);
+            $basePrice = $priceResult->getDisplayPrice();
         } else {
             $basePrice = (float) $product->base_price;
         }

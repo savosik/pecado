@@ -307,10 +307,12 @@ class PublishOrderToErpTest extends TestCase
             return count($items) === 2
                 && $items[0]['product_uuid'] === 'items-test-prod-001'
                 && $items[0]['quantity'] === 5
-                && $items[0]['price'] === 1000.00
+                && $items[0]['base_price'] === 1000.00
+                && $items[0]['final_price'] === 1000.00
                 && $items[1]['product_uuid'] === 'items-test-prod-002'
                 && $items[1]['quantity'] === 3
-                && $items[1]['price'] === 2000.00;
+                && $items[1]['base_price'] === 2000.00
+                && $items[1]['final_price'] === 2000.00;
         });
     }
 

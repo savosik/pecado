@@ -60,6 +60,17 @@ return [
             'report' => false,
         ],
 
+        'prices-exchange' => [
+            'driver' => 's3',
+            'key' => env('PRICES_S3_ACCESS_KEY', 'sail'),
+            'secret' => env('PRICES_S3_SECRET_KEY', 'password'),
+            'region' => env('PRICES_S3_REGION', 'us-east-1'),
+            'bucket' => env('PRICES_S3_BUCKET', 'prices-exchange'),
+            'endpoint' => env('PRICES_S3_ENDPOINT', 'http://minio:9000'),
+            'use_path_style_endpoint' => true,
+            'throw' => true,
+        ],
+
     ],
 
     /*

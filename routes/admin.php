@@ -150,22 +150,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::delete('/promotions/{promotion}/media', [\App\Http\Controllers\Admin\PromotionController::class, 'deleteMedia'])->name('promotions.media.delete');
     Route::resource('promotions', \App\Http\Controllers\Admin\PromotionController::class);
 
-    // Скидки
-    Route::get('/discounts/search-users', [\App\Http\Controllers\Admin\DiscountController::class, 'searchUsers'])->name('discounts.search-users');
-    Route::get('/discounts/search-product-segments', [\App\Http\Controllers\Admin\DiscountController::class, 'searchProductSegments'])->name('discounts.search-product-segments');
-    Route::get('/discounts/search-partner-segments', [\App\Http\Controllers\Admin\DiscountController::class, 'searchPartnerSegments'])->name('discounts.search-partner-segments');
-    Route::resource('discounts', \App\Http\Controllers\Admin\DiscountController::class);
 
-    // Индивидуальные соглашения
-    Route::resource('agreements', \App\Http\Controllers\Admin\AgreementController::class)->except(['destroy']);
-
-    // Сегменты номенклатуры (US-11)
-    Route::get('/product-segments/search-products', [\App\Http\Controllers\Admin\ProductSegmentController::class, 'searchProducts'])->name('product-segments.search-products');
-    Route::resource('product-segments', \App\Http\Controllers\Admin\ProductSegmentController::class);
-
-    // Сегменты партнёров (US-12)
-    Route::get('/partner-segments/search-users', [\App\Http\Controllers\Admin\PartnerSegmentController::class, 'searchUsers'])->name('partner-segments.search-users');
-    Route::resource('partner-segments', \App\Http\Controllers\Admin\PartnerSegmentController::class);
 
 
     // Подборки товаров
