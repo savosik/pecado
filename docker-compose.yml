@@ -145,10 +145,10 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc config host add myminio http://minio:9000 sail password;
-      /usr/bin/mc mb myminio/pecado;
+      /usr/bin/mc alias set myminio http://minio:9000 sail password;
+      /usr/bin/mc mb --ignore-existing myminio/pecado;
       /usr/bin/mc anonymous set public myminio/pecado;
-      /usr/bin/mc mb myminio/prices-exchange;
+      /usr/bin/mc mb --ignore-existing myminio/prices-exchange;
       exit 0;
       "
     networks:
