@@ -24,7 +24,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
     private const BATCH_SIZE = 5000;
 
     /**
-     * Максимальное время выполнения (минут).
+     * Максимальное время выполнения (секунд).
      */
     public int $timeout = 1800; // 30 минут
 
@@ -33,11 +33,17 @@ class ProcessIndividualPricesFile implements ShouldQueue
     public function __construct(
         public readonly string $fileUrl,
         public readonly string $uploadType,
+        public readonly string $partnerUuid,
         public readonly int $recordsCount = 0,
     ) {}
 
     /**
-     * Скачать JSONL из MinIO, прочитать потоково, резолвить UUID→INT, батч-вставить.
+     * Скачать CSV из MinIO, резолвить UUID→INT, батч-вставить.
+     *
+     * Формат CSV (без заголовка):
+     *   product_uuid,warehouse_uuid,price
+     *
+     * partner_uuid передаётся в параметрах Job (один файл = один партнёр).
      */
     public function handle(): void
     {
@@ -46,6 +52,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
         Log::info('ProcessIndividualPricesFile: начало обработки', [
             'file_url' => $this->fileUrl,
             'upload_type' => $this->uploadType,
+            'partner_uuid' => $this->partnerUuid,
             'records_count' => $this->recordsCount,
         ]);
 
@@ -61,25 +68,34 @@ class ProcessIndividualPricesFile implements ShouldQueue
                 return;
             }
 
-            // Загружаем маппинг UUID→INT один раз (в память)
+            // Резолвим partner_uuid → partner_id
+            $partnerId = User::where('erp_id', $this->partnerUuid)->value('id');
+
+            if (!$partnerId) {
+                Log::warning('ProcessIndividualPricesFile: партнёр не найден', [
+                    'partner_uuid' => $this->partnerUuid,
+                ]);
+
+                return;
+            }
+
+            // Загружаем маппинг UUID→INT для товаров и складов
             $maps = $this->loadMaps();
 
-            if ($this->uploadType === 'full') {
-                $this->processFullDump($disk, $filePath, $maps);
-            } else {
-                $this->processDelta($disk, $filePath, $maps);
-            }
+            $this->processFile($disk, $filePath, $partnerId, $maps);
 
             $elapsed = round(microtime(true) - $startTime, 2);
 
             Log::info('ProcessIndividualPricesFile: обработка завершена', [
                 'file_url' => $this->fileUrl,
                 'upload_type' => $this->uploadType,
+                'partner_uuid' => $this->partnerUuid,
                 'elapsed_seconds' => $elapsed,
             ]);
         } catch (\Exception $e) {
             Log::error('ProcessIndividualPricesFile: ошибка обработки', [
                 'file_url' => $this->fileUrl,
+                'partner_uuid' => $this->partnerUuid,
                 'error' => $e->getMessage(),
             ]);
 
@@ -88,16 +104,12 @@ class ProcessIndividualPricesFile implements ShouldQueue
     }
 
     /**
-     * Загрузить маппинг UUID → INT для партнёров, товаров и складов.
+     * Загрузить маппинг UUID → INT для товаров и складов.
      *
-     * @return array{partners: array<string, int>, products: array<string, int>, warehouses: array<string, int>}
+     * @return array{products: array<string, int>, warehouses: array<string, int>}
      */
     private function loadMaps(): array
     {
-        $partners = User::whereNotNull('erp_id')
-            ->pluck('id', 'erp_id')
-            ->toArray();
-
         $products = Product::whereNotNull('external_id')
             ->pluck('id', 'external_id')
             ->toArray();
@@ -107,24 +119,28 @@ class ProcessIndividualPricesFile implements ShouldQueue
             ->toArray();
 
         Log::info('ProcessIndividualPricesFile: маппинг загружен', [
-            'partners' => count($partners),
             'products' => count($products),
             'warehouses' => count($warehouses),
         ]);
 
-        return compact('partners', 'products', 'warehouses');
+        return compact('products', 'warehouses');
     }
 
     /**
-     * Дельта-обновление: INSERT ... ON DUPLICATE KEY UPDATE.
+     * Обработка файла: DELETE старых цен партнёра → INSERT новых.
+     *
+     * Один файл = один партнёр, поэтому стратегия проста:
+     * - delta: удаляем старые цены партнёра, вставляем новые
+     * - full: то же самое (полный набор цен партнёра)
      */
-    private function processDelta($disk, string $filePath, array $maps): void
+    private function processFile($disk, string $filePath, int $partnerId, array $maps): void
     {
         $batch = [];
         $totalProcessed = 0;
         $skipped = 0;
 
-        foreach ($this->readJsonlStream($disk, $filePath, $maps) as $record) {
+        // Читаем все записи из CSV
+        foreach ($this->readCsvStream($disk, $filePath, $maps) as $record) {
             if ($record === null) {
                 $skipped++;
                 continue;
@@ -133,80 +149,48 @@ class ProcessIndividualPricesFile implements ShouldQueue
             $batch[] = $record;
 
             if (count($batch) >= self::BATCH_SIZE) {
-                $this->upsertBatch($batch);
+                // Первый батч — удаляем старые цены партнёра
+                if ($totalProcessed === 0) {
+                    DB::table('individual_prices')
+                        ->where('partner_id', $partnerId)
+                        ->delete();
+                }
+
+                $this->insertBatch($partnerId, $batch);
                 $totalProcessed += count($batch);
                 $batch = [];
             }
         }
 
+        // Если первый батч ещё не начался — удаляем старые цены
+        if ($totalProcessed === 0) {
+            DB::table('individual_prices')
+                ->where('partner_id', $partnerId)
+                ->delete();
+        }
+
         if (!empty($batch)) {
-            $this->upsertBatch($batch);
+            $this->insertBatch($partnerId, $batch);
             $totalProcessed += count($batch);
         }
 
-        Log::info('ProcessIndividualPricesFile: дельта обработана', [
+        Log::info('ProcessIndividualPricesFile: файл обработан', [
+            'partner_id' => $partnerId,
             'total_processed' => $totalProcessed,
             'skipped' => $skipped,
         ]);
     }
 
     /**
-     * Полная замена: временная таблица + RENAME.
-     */
-    private function processFullDump($disk, string $filePath, array $maps): void
-    {
-        $tempTable = 'individual_prices_tmp_' . time();
-
-        // Создаём временную таблицу с такой же структурой
-        DB::statement("CREATE TABLE `{$tempTable}` LIKE `individual_prices`");
-
-        try {
-            $batch = [];
-            $totalProcessed = 0;
-            $skipped = 0;
-
-            foreach ($this->readJsonlStream($disk, $filePath, $maps) as $record) {
-                if ($record === null) {
-                    $skipped++;
-                    continue;
-                }
-
-                $batch[] = $record;
-
-                if (count($batch) >= self::BATCH_SIZE) {
-                    $this->insertBatchInto($tempTable, $batch);
-                    $totalProcessed += count($batch);
-                    $batch = [];
-                }
-            }
-
-            if (!empty($batch)) {
-                $this->insertBatchInto($tempTable, $batch);
-                $totalProcessed += count($batch);
-            }
-
-            // Атомарная замена таблицы
-            $oldTable = 'individual_prices_old_' . time();
-            DB::statement("RENAME TABLE `individual_prices` TO `{$oldTable}`, `{$tempTable}` TO `individual_prices`");
-            DB::statement("DROP TABLE IF EXISTS `{$oldTable}`");
-
-            Log::info('ProcessIndividualPricesFile: полная замена завершена', [
-                'total_processed' => $totalProcessed,
-                'skipped' => $skipped,
-            ]);
-        } catch (\Exception $e) {
-            DB::statement("DROP TABLE IF EXISTS `{$tempTable}`");
-            throw $e;
-        }
-    }
-
-    /**
-     * Потоковое чтение JSONL файла из Storage (генератор).
+     * Потоковое чтение CSV файла из Storage (генератор).
      * Резолвит UUID→INT на лету.
      *
-     * @return \Generator<array{partner_id: int, product_id: int, warehouse_id: int, price: float}|null>
+     * Формат CSV (без заголовка):
+     *   product_uuid,warehouse_uuid,price
+     *
+     * @return \Generator<array{product_id: int, warehouse_id: int, price: float}|null>
      */
-    private function readJsonlStream($disk, string $filePath, array $maps): \Generator
+    private function readCsvStream($disk, string $filePath, array $maps): \Generator
     {
         $stream = $disk->readStream($filePath);
 
@@ -217,44 +201,31 @@ class ProcessIndividualPricesFile implements ShouldQueue
         $lineNumber = 0;
 
         try {
-            while (($line = fgets($stream)) !== false) {
+            while (($row = fgetcsv($stream)) !== false) {
                 $lineNumber++;
-                $line = trim($line);
 
-                if ($line === '') {
+                // Пропускаем пустые строки
+                if (count($row) < 3 || empty($row[0])) {
                     continue;
                 }
 
-                $record = json_decode($line, true);
-
-                if (json_last_error() !== JSON_ERROR_NONE) {
-                    Log::warning('ProcessIndividualPricesFile: невалидный JSON на строке', [
-                        'line_number' => $lineNumber,
-                        'error' => json_last_error_msg(),
-                    ]);
-                    continue;
-                }
-
-                if (empty($record['partner_uuid']) || empty($record['product_uuid']) || empty($record['warehouse_uuid'])) {
-                    continue;
-                }
+                $productUuid = trim($row[0]);
+                $warehouseUuid = trim($row[1]);
+                $price = (float) trim($row[2]);
 
                 // UUID → INT lookup
-                $partnerId = $maps['partners'][$record['partner_uuid']] ?? null;
-                $productId = $maps['products'][$record['product_uuid']] ?? null;
-                $warehouseId = $maps['warehouses'][$record['warehouse_uuid']] ?? null;
+                $productId = $maps['products'][$productUuid] ?? null;
+                $warehouseId = $maps['warehouses'][$warehouseUuid] ?? null;
 
-                if (!$partnerId || !$productId || !$warehouseId) {
-                    // UUID не найден в наших таблицах — пропускаем
+                if (!$productId || !$warehouseId) {
                     yield null;
                     continue;
                 }
 
                 yield [
-                    'partner_id' => $partnerId,
                     'product_id' => $productId,
                     'warehouse_id' => $warehouseId,
-                    'price' => (float) ($record['price'] ?? 0),
+                    'price' => $price,
                 ];
             }
         } finally {
@@ -263,73 +234,39 @@ class ProcessIndividualPricesFile implements ShouldQueue
     }
 
     /**
-     * Upsert батч: INSERT ... ON DUPLICATE KEY UPDATE.
+     * Вставка батча для конкретного партнёра.
      */
-    private function upsertBatch(array $batch): void
+    private function insertBatch(int $partnerId, array $batch): void
     {
         if (empty($batch)) {
             return;
         }
 
         $values = [];
-        $bindings = [];
 
         foreach ($batch as $record) {
-            $values[] = '(?, ?, ?, ?, NOW())';
-            $bindings[] = $record['partner_id'];
-            $bindings[] = $record['product_id'];
-            $bindings[] = $record['warehouse_id'];
-            $bindings[] = $record['price'];
+            $values[] = "({$partnerId},{$record['product_id']},{$record['warehouse_id']},{$record['price']})";
         }
 
-        $sql = 'INSERT INTO `individual_prices` (`partner_id`, `product_id`, `warehouse_id`, `price`, `updated_at`) VALUES '
-            . implode(', ', $values)
-            . ' ON DUPLICATE KEY UPDATE `price` = VALUES(`price`), `updated_at` = NOW()';
-
-        DB::statement($sql, $bindings);
-    }
-
-    /**
-     * Вставка батча в конкретную таблицу (для full dump во временную таблицу).
-     */
-    private function insertBatchInto(string $table, array $batch): void
-    {
-        if (empty($batch)) {
-            return;
-        }
-
-        $values = [];
-        $bindings = [];
-
-        foreach ($batch as $record) {
-            $values[] = '(?, ?, ?, ?, NOW())';
-            $bindings[] = $record['partner_id'];
-            $bindings[] = $record['product_id'];
-            $bindings[] = $record['warehouse_id'];
-            $bindings[] = $record['price'];
-        }
-
-        $sql = "INSERT INTO `{$table}` (`partner_id`, `product_id`, `warehouse_id`, `price`, `updated_at`) VALUES "
+        $sql = 'INSERT INTO `individual_prices` (`partner_id`, `product_id`, `warehouse_id`, `price`) VALUES '
             . implode(', ', $values);
 
-        DB::statement($sql, $bindings);
+        DB::statement($sql);
     }
 
     /**
      * Извлечь относительный путь из s3:// URL.
-     * s3://prices-exchange/2026-03-26/delta_14-05.jsonl → 2026-03-26/delta_14-05.jsonl
+     * s3://prices-exchange/2026-03-26/partner_a1b2c3d4.csv → 2026-03-26/partner_a1b2c3d4.csv
      */
     private function extractFilePath(string $fileUrl): string
     {
-        // Формат: s3://bucket-name/path/to/file
         if (str_starts_with($fileUrl, 's3://')) {
-            $withoutScheme = substr($fileUrl, 5); // prices-exchange/2026-03-26/delta.jsonl
+            $withoutScheme = substr($fileUrl, 5);
             $slashPos = strpos($withoutScheme, '/');
 
             return $slashPos !== false ? substr($withoutScheme, $slashPos + 1) : $withoutScheme;
         }
 
-        // Если уже относительный путь
         return $fileUrl;
     }
 }

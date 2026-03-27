@@ -10,20 +10,25 @@ class HandleIndividualPricesReady
     /**
      * Обработка события individual_prices.ready из 1С.
      *
-     * 1С загрузила JSONL-файл с индивидуальными ценами в MinIO
+     * 1С загрузила CSV-файл с индивидуальными ценами одного партнёра в MinIO
      * и отправила уведомление через RabbitMQ.
      *
-     * Диспатчим асинхронную Job для скачивания и обработки файла.
+     * Формат события:
+     *   file_url:      s3://prices-exchange/2026-03-27/partner_a1b2c3d4.csv
+     *   upload_type:   delta | full
+     *   partner_uuid:  UUID партнёра (контрагента)
+     *   records_count: количество строк (опционально)
      */
     public function handle(array $payload): void
     {
         $fileUrl = $payload['file_url'] ?? null;
         $uploadType = $payload['upload_type'] ?? null;
+        $partnerUuid = $payload['partner_uuid'] ?? null;
         $recordsCount = $payload['records_count'] ?? 0;
         $timestamp = $payload['timestamp'] ?? null;
 
-        if (!$fileUrl || !$uploadType) {
-            Log::warning('individual_prices.ready: отсутствует file_url или upload_type', [
+        if (!$fileUrl || !$uploadType || !$partnerUuid) {
+            Log::warning('individual_prices.ready: отсутствует file_url, upload_type или partner_uuid', [
                 'payload' => $payload,
             ]);
 
@@ -42,10 +47,11 @@ class HandleIndividualPricesReady
         Log::info('individual_prices.ready: получено уведомление, запуск обработки', [
             'file_url' => $fileUrl,
             'upload_type' => $uploadType,
+            'partner_uuid' => $partnerUuid,
             'records_count' => $recordsCount,
             'timestamp' => $timestamp,
         ]);
 
-        ProcessIndividualPricesFile::dispatch($fileUrl, $uploadType, $recordsCount);
+        ProcessIndividualPricesFile::dispatch($fileUrl, $uploadType, $partnerUuid, $recordsCount);
     }
 }
