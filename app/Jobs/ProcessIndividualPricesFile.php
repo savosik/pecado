@@ -84,6 +84,9 @@ class ProcessIndividualPricesFile implements ShouldQueue
 
             $this->processFile($disk, $filePath, $partnerId, $maps);
 
+            // Удаляем CSV из MinIO после успешной обработки
+            $disk->delete($filePath);
+
             $elapsed = round(microtime(true) - $startTime, 2);
 
             Log::info('ProcessIndividualPricesFile: обработка завершена', [
