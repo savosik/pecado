@@ -63,13 +63,25 @@
 | User | pecado |
 | Password | secret |
 
-## MinIO
+## MinIO — Медиа (бакет pecado)
 
 | | |
 |---|---|
-| URL | http://93.94.150.16:9001 |
+| Console URL | http://93.94.150.16:9001 |
 | User | sail |
 | Password | password |
+
+## MinIO — S3 для обмена ценами с 1С (бакет prices-exchange)
+
+| | |
+|---|---|
+| Endpoint (из локальной сети) | http://10.2.2.100:9000 |
+| Endpoint (извне) | http://93.94.150.16:9000 |
+| Bucket | prices-exchange |
+| Access Key | sail |
+| Secret Key | password |
+| Region | us-east-1 |
+| Path Style | true |
 
 ## Mailpit
 

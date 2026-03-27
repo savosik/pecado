@@ -148,6 +148,7 @@ services:
       /usr/bin/mc config host add myminio http://minio:9000 sail password;
       /usr/bin/mc mb myminio/pecado;
       /usr/bin/mc anonymous set public myminio/pecado;
+      /usr/bin/mc mb myminio/prices-exchange;
       exit 0;
       "
     networks:
