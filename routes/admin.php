@@ -193,6 +193,13 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::get('/contractor-balances/search', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'search'])->name('contractor-balances.search');
     Route::resource('contractor-balances', \App\Http\Controllers\Admin\ContractorBalanceController::class);
 
+    // Индивидуальные цены (US-14)
+    Route::get('/individual-prices', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'index'])->name('individual-prices.index');
+    Route::get('/individual-prices/search-partners', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'searchPartners'])->name('individual-prices.search-partners');
+    Route::get('/individual-prices/search-products', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'searchProducts'])->name('individual-prices.search-products');
+    Route::get('/individual-prices/search-warehouses', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'searchWarehouses'])->name('individual-prices.search-warehouses');
+    Route::get('/individual-prices/export', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'export'])->name('individual-prices.export');
+
 
     // --------------------
     // Контент (Content)

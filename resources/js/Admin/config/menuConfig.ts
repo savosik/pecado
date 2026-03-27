@@ -126,6 +126,7 @@ export const menuConfig: MenuGroup[] = [
         items: [
             { label: "Валюты", icon: LuBanknote, path: "/admin/currencies" },
             { label: "Балансы контрагентов", icon: LuWallet, path: "/admin/contractor-balances" },
+            { label: "Инд. цены", icon: LuPercent, path: "/admin/individual-prices" },
         ],
     },
     {
