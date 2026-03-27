@@ -95,11 +95,12 @@ class PriceServiceTest extends TestCase
             'external_id' => 'product-uuid-001',
         ]);
 
-        // Создаём индивидуальную цену
+        // Создаём индивидуальную цену (v7.1: числовые ID)
+        $warehouse = \App\Models\Warehouse::factory()->create(['external_id' => 'wh-001']);
         IndividualPrice::create([
-            'partner_uuid' => 'partner-uuid-001',
-            'product_uuid' => 'product-uuid-001',
-            'warehouse_uuid' => 'wh-001',
+            'partner_id' => $user->id,
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
             'price' => 70.00,
         ]);
 
@@ -141,10 +142,12 @@ class PriceServiceTest extends TestCase
             'external_id' => 'product-uuid-003',
         ]);
 
+        $warehouse = \App\Models\Warehouse::factory()->create(['external_id' => 'wh-001']);
+
         IndividualPrice::create([
-            'partner_uuid' => 'partner-uuid-003',
-            'product_uuid' => 'product-uuid-003',
-            'warehouse_uuid' => 'wh-001',
+            'partner_id' => $user->id,
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
             'price' => 70.00,
         ]);
 
@@ -211,10 +214,12 @@ class PriceServiceTest extends TestCase
             'external_id' => 'product-uuid-006',
         ]);
 
+        $warehouse = \App\Models\Warehouse::factory()->create(['external_id' => 'wh-002']);
+
         IndividualPrice::create([
-            'partner_uuid' => 'partner-uuid-006',
-            'product_uuid' => 'product-uuid-006',
-            'warehouse_uuid' => 'wh-001',
+            'partner_id' => $user->id,
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
             'price' => 160.00,
         ]);
 

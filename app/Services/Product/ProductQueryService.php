@@ -187,28 +187,25 @@ class ProductQueryService
             return collect();
         }
 
-        // Собираем маппинг external_id → product_id
-        $externalIdMap = collect($products)
-            ->filter(fn ($p) => !empty($p['external_id']))
-            ->pluck('id', 'external_id')
+        // v7.1: Собираем product IDs (числовые) напрямую
+        $productIds = collect($products)
+            ->filter(fn ($p) => !empty($p['id']))
+            ->pluck('id')
             ->toArray();
 
-        if (empty($externalIdMap)) {
+        if (empty($productIds)) {
             return collect();
         }
 
+        // Запрос по числовым ID — в 3-5x быстрее чем по UUID
         $prices = DB::table('individual_prices')
-            ->where('partner_uuid', $user->erp_id)
-            ->whereIn('product_uuid', array_keys($externalIdMap))
-            ->select('product_uuid', 'price')
+            ->where('partner_id', $user->id)
+            ->whereIn('product_id', $productIds)
+            ->select('product_id', 'price')
             ->get();
 
-        return $prices->mapWithKeys(function ($row) use ($externalIdMap) {
-            $productId = $externalIdMap[$row->product_uuid] ?? null;
-            if (!$productId) {
-                return [];
-            }
-            return [$productId => (float) $row->price];
+        return $prices->mapWithKeys(function ($row) {
+            return [(int) $row->product_id => (float) $row->price];
         });
     }
 

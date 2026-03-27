@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class IndividualPrice extends Model
 {
@@ -12,9 +13,9 @@ class IndividualPrice extends Model
     protected $table = 'individual_prices';
 
     protected $fillable = [
-        'partner_uuid',
-        'product_uuid',
-        'warehouse_uuid',
+        'partner_id',
+        'product_id',
+        'warehouse_id',
         'price',
     ];
 
@@ -22,14 +23,33 @@ class IndividualPrice extends Model
         'price' => 'decimal:2',
     ];
 
-    /**
-     * Получить индивидуальную цену для конкретного партнёра, товара и склада.
-     */
-    public static function findPrice(string $partnerUuid, string $productUuid, string $warehouseUuid): ?self
+    public function partner(): BelongsTo
     {
-        return static::where('partner_uuid', $partnerUuid)
-            ->where('product_uuid', $productUuid)
-            ->where('warehouse_uuid', $warehouseUuid)
-            ->first();
+        return $this->belongsTo(User::class, 'partner_id');
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class, 'product_id');
+    }
+
+    public function warehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'warehouse_id');
+    }
+
+    /**
+     * Получить индивидуальную цену для конкретного партнёра и товара.
+     */
+    public static function findPrice(int $partnerId, int $productId, ?int $warehouseId = null): ?self
+    {
+        $query = static::where('partner_id', $partnerId)
+            ->where('product_id', $productId);
+
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
+        }
+
+        return $query->first();
     }
 }

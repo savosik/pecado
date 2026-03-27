@@ -123,12 +123,13 @@ class ProductQueryScopesTest extends TestCase
 
         $withPrice    = Product::factory()->create(['external_id' => 'prod-ext-001']);
         $withoutPrice = Product::factory()->create(['external_id' => 'prod-ext-002']);
+        $warehouse    = \App\Models\Warehouse::factory()->create(['external_id' => 'wh-001']);
 
-        // Создаём индивидуальную цену только для первого товара
+        // v7.1: Создаём индивидуальную цену с числовыми ID
         IndividualPrice::create([
-            'partner_uuid' => 'test-partner-001',
-            'product_uuid' => 'prod-ext-001',
-            'warehouse_uuid' => 'wh-001',
+            'partner_id' => $user->id,
+            'product_id' => $withPrice->id,
+            'warehouse_id' => $warehouse->id,
             'price' => 80.00,
         ]);
 

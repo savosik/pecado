@@ -232,11 +232,12 @@ trait ProductQueryScopes
             return $value ? $query->whereRaw('1 = 0') : $query;
         }
 
+        // v7.1: JOIN по числовым ID вместо UUID
         $sub = function ($sub) use ($user) {
             $sub->select(DB::raw(1))
                 ->from('individual_prices')
-                ->whereColumn('individual_prices.product_uuid', 'products.external_id')
-                ->where('individual_prices.partner_uuid', $user->erp_id);
+                ->whereColumn('individual_prices.product_id', 'products.id')
+                ->where('individual_prices.partner_id', $user->id);
         };
 
         return $value

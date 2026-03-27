@@ -47,9 +47,9 @@ class PriceService implements PriceServiceInterface
      * Get the price of the product for a specific user in their preferred currency.
      * Uses individual_prices from 1С if available, otherwise returns base price.
      */
-    public function getUserPrice(Product $product, ?User $user = null, ?string $warehouseUuid = null): float
+    public function getUserPrice(Product $product, ?User $user = null, ?int $warehouseId = null): float
     {
-        $priceResult = $this->getPriceResult($product, $user, $warehouseUuid);
+        $priceResult = $this->getPriceResult($product, $user, $warehouseId);
         $displayPrice = $priceResult->getDisplayPrice();
 
         if ($user) {
@@ -68,7 +68,7 @@ class PriceService implements PriceServiceInterface
      * v7: Вместо расчёта скидок на сайте — берём готовую индивидуальную цену из таблицы
      * individual_prices, куда 1С выгружает рассчитанные цены через MinIO.
      */
-    public function getPriceResult(Product $product, ?User $user = null, ?string $warehouseUuid = null): PriceResult
+    public function getPriceResult(Product $product, ?User $user = null, ?int $warehouseId = null): PriceResult
     {
         $basePrice = $this->getBasePrice($product);
 
@@ -76,18 +76,12 @@ class PriceService implements PriceServiceInterface
             return PriceResult::withoutDiscount($basePrice);
         }
 
-        $productUuid = $product->external_id;
+        // v7.1: Ищем по числовым ID (partner_id = user.id, product_id = product.id)
+        $query = IndividualPrice::where('partner_id', $user->id)
+            ->where('product_id', $product->id);
 
-        if (!$productUuid) {
-            return PriceResult::withoutDiscount($basePrice);
-        }
-
-        // Ищем индивидуальную цену
-        $query = IndividualPrice::where('partner_uuid', $user->erp_id)
-            ->where('product_uuid', $productUuid);
-
-        if ($warehouseUuid) {
-            $query->where('warehouse_uuid', $warehouseUuid);
+        if ($warehouseId) {
+            $query->where('warehouse_id', $warehouseId);
         }
 
         $individualPrice = $query->first();
