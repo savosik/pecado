@@ -195,6 +195,11 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
 
     // Индивидуальные цены (US-14)
     Route::get('/individual-prices', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'index'])->name('individual-prices.index');
+    Route::get('/individual-prices/create', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'create'])->name('individual-prices.create');
+    Route::post('/individual-prices', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'store'])->name('individual-prices.store');
+    Route::get('/individual-prices/edit', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'edit'])->name('individual-prices.edit');
+    Route::put('/individual-prices', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'update'])->name('individual-prices.update');
+    Route::delete('/individual-prices', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'destroy'])->name('individual-prices.destroy');
     Route::get('/individual-prices/search-partners', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'searchPartners'])->name('individual-prices.search-partners');
     Route::get('/individual-prices/search-products', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'searchProducts'])->name('individual-prices.search-products');
     Route::get('/individual-prices/search-warehouses', [\App\Http\Controllers\Admin\IndividualPriceController::class, 'searchWarehouses'])->name('individual-prices.search-warehouses');

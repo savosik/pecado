@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\IndividualPrice;
 use App\Models\User;
 use App\Models\Product;
@@ -14,6 +15,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IndividualPriceController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function index(Request $request)
     {
         $query = IndividualPrice::query()
@@ -26,6 +29,7 @@ class IndividualPriceController extends Controller
                 'individual_prices.warehouse_id',
                 'individual_prices.price',
                 'individual_prices.updated_at',
+                'individual_prices.created_at',
                 'users.name as partner_name',
                 'users.email as partner_email',
                 'products.name as product_name',
@@ -69,20 +73,146 @@ class IndividualPriceController extends Controller
             'prices' => $prices,
             'filters' => $request->only(['partner_id', 'product_id', 'warehouse_id', 'sort_by', 'sort_order', 'per_page']),
             'stats' => $stats,
-            // Передаём начальные display-тексты для EntitySelector (при reload страницы с фильтрами)
             'filterLabels' => $this->getFilterLabels($request),
         ]);
     }
 
     /**
-     * Async search: партнёры
+     * Форма создания
+     */
+    public function create()
+    {
+        return Inertia::render('Admin/Pages/IndividualPrices/Create');
+    }
+
+    /**
+     * Сохранение новой цены
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'partner_id' => 'required|exists:users,id',
+            'product_id' => 'required|exists:products,id',
+            'warehouse_id' => 'required|exists:warehouses,id',
+            'price' => 'required|numeric|min:0',
+        ], [
+            'partner_id.required' => 'Выберите партнёра',
+            'partner_id.exists' => 'Партнёр не найден',
+            'product_id.required' => 'Выберите товар',
+            'product_id.exists' => 'Товар не найден',
+            'warehouse_id.required' => 'Выберите склад',
+            'warehouse_id.exists' => 'Склад не найден',
+            'price.required' => 'Укажите цену',
+            'price.numeric' => 'Цена должна быть числом',
+            'price.min' => 'Цена не может быть отрицательной',
+        ]);
+
+        // Upsert — composite PK: partner_id + product_id + warehouse_id
+        IndividualPrice::upsert(
+            [$validated],
+            ['partner_id', 'product_id', 'warehouse_id'],
+            ['price']
+        );
+
+        return redirect()->route('admin.individual-prices.index', [
+            'partner_id' => $validated['partner_id'],
+        ])->with('success', 'Индивидуальная цена сохранена');
+    }
+
+    /**
+     * Форма редактирования
+     */
+    public function edit(Request $request)
+    {
+        $request->validate([
+            'partner_id' => 'required|integer',
+            'product_id' => 'required|integer',
+            'warehouse_id' => 'required|integer',
+        ]);
+
+        $price = IndividualPrice::where('partner_id', $request->partner_id)
+            ->where('product_id', $request->product_id)
+            ->where('warehouse_id', $request->warehouse_id)
+            ->firstOrFail();
+
+        $partner = User::find($price->partner_id);
+        $product = Product::find($price->product_id);
+        $warehouse = Warehouse::find($price->warehouse_id);
+
+        return Inertia::render('Admin/Pages/IndividualPrices/Edit', [
+            'individualPrice' => [
+                'partner_id' => $price->partner_id,
+                'product_id' => $price->product_id,
+                'warehouse_id' => $price->warehouse_id,
+                'price' => $price->price,
+                'updated_at' => $price->updated_at,
+            ],
+            'labels' => [
+                'partner' => $partner ? ($partner->full_name ?? $partner->name) : "ID: {$price->partner_id}",
+                'product' => $product ? "{$product->sku} — {$product->name}" : "ID: {$price->product_id}",
+                'warehouse' => $warehouse?->name ?? "ID: {$price->warehouse_id}",
+            ],
+        ]);
+    }
+
+    /**
+     * Обновление цены
+     */
+    public function update(Request $request)
+    {
+        $validated = $request->validate([
+            'partner_id' => 'required|integer',
+            'product_id' => 'required|integer',
+            'warehouse_id' => 'required|integer',
+            'price' => 'required|numeric|min:0',
+        ], [
+            'price.required' => 'Укажите цену',
+            'price.numeric' => 'Цена должна быть числом',
+            'price.min' => 'Цена не может быть отрицательной',
+        ]);
+
+        IndividualPrice::where('partner_id', $validated['partner_id'])
+            ->where('product_id', $validated['product_id'])
+            ->where('warehouse_id', $validated['warehouse_id'])
+            ->update(['price' => $validated['price']]);
+
+        return redirect()->route('admin.individual-prices.index', [
+            'partner_id' => $validated['partner_id'],
+        ])->with('success', 'Цена обновлена');
+    }
+
+    /**
+     * Удаление цены
+     */
+    public function destroy(Request $request)
+    {
+        $request->validate([
+            'partner_id' => 'required|integer',
+            'product_id' => 'required|integer',
+            'warehouse_id' => 'required|integer',
+        ]);
+
+        IndividualPrice::where('partner_id', $request->partner_id)
+            ->where('product_id', $request->product_id)
+            ->where('warehouse_id', $request->warehouse_id)
+            ->delete();
+
+        return redirect()->back()->with('success', 'Цена удалена');
+    }
+
+    /**
+     * Async search: партнёры (все пользователи для создания)
      */
     public function searchPartners(Request $request)
     {
-        $query = User::query()
-            ->whereIn('id', function ($q) {
+        $query = User::query();
+
+        // При создании — ищем среди всех; при фильтрации — только тех, у кого есть цены
+        if ($request->boolean('only_with_prices')) {
+            $query->whereIn('id', function ($q) {
                 $q->select('partner_id')->from('individual_prices')->distinct();
             });
+        }
 
         if ($search = $request->input('query')) {
             $query->where(function ($q) use ($search) {
@@ -109,10 +239,13 @@ class IndividualPriceController extends Controller
      */
     public function searchProducts(Request $request)
     {
-        $query = Product::query()
-            ->whereIn('id', function ($q) {
+        $query = Product::query();
+
+        if ($request->boolean('only_with_prices')) {
+            $query->whereIn('id', function ($q) {
                 $q->select('product_id')->from('individual_prices')->distinct();
             });
+        }
 
         if ($search = $request->input('query')) {
             $query->where(function ($q) use ($search) {
@@ -139,10 +272,13 @@ class IndividualPriceController extends Controller
      */
     public function searchWarehouses(Request $request)
     {
-        $query = Warehouse::query()
-            ->whereIn('id', function ($q) {
+        $query = Warehouse::query();
+
+        if ($request->boolean('only_with_prices')) {
+            $query->whereIn('id', function ($q) {
                 $q->select('warehouse_id')->from('individual_prices')->distinct();
             });
+        }
 
         if ($search = $request->input('query')) {
             $query->where('name', 'like', "%{$search}%");
@@ -160,10 +296,14 @@ class IndividualPriceController extends Controller
     }
 
     /**
-     * CSV экспорт с текущими фильтрами
+     * CSV экспорт — только при наличии фильтра partner_id или product_id
      */
     public function export(Request $request): StreamedResponse
     {
+        if (!$request->filled('partner_id') && !$request->filled('product_id')) {
+            abort(422, 'Для экспорта необходимо выбрать партнёра или товар');
+        }
+
         $query = IndividualPrice::query()
             ->join('users', 'individual_prices.partner_id', '=', 'users.id')
             ->join('products', 'individual_prices.product_id', '=', 'products.id')
@@ -222,7 +362,7 @@ class IndividualPriceController extends Controller
     }
 
     /**
-     * Получить display-тексты для фильтров (для начального рендера при URL-навигации)
+     * Получить display-тексты для фильтров
      */
     private function getFilterLabels(Request $request): array
     {

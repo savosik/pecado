@@ -1,14 +1,19 @@
 import { useState, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, EntitySelector } from '@/Admin/Components';
+import { PageHeader, DataTable, EntitySelector, ConfirmDialog } from '@/Admin/Components';
 import { Box, Text, Button, HStack, Badge, SimpleGrid } from '@chakra-ui/react';
-import { LuDownload, LuBanknote } from 'react-icons/lu';
+import { LuDownload, LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { toaster } from '@/components/ui/toaster';
 
 export default function Index({ prices, filters, stats, filterLabels }) {
     const [partnerId, setPartnerId] = useState(filters.partner_id || null);
     const [productId, setProductId] = useState(filters.product_id || null);
     const [warehouseId, setWarehouseId] = useState(filters.warehouse_id || null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [priceToDelete, setPriceToDelete] = useState(null);
+
+    const canExport = !!partnerId || !!productId;
 
     const navigate = useCallback((params) => {
         router.get(route('admin.individual-prices.index'), params, {
@@ -28,7 +33,6 @@ export default function Index({ prices, filters, stats, filterLabels }) {
             [key]: value,
         };
 
-        // Удаляем пустые
         Object.keys(newFilters).forEach(k => {
             if (!newFilters[k]) delete newFilters[k];
         });
@@ -70,11 +74,44 @@ export default function Index({ prices, filters, stats, filterLabels }) {
     };
 
     const handleExport = () => {
+        if (!canExport) return;
         const params = new URLSearchParams();
         if (partnerId) params.set('partner_id', partnerId);
         if (productId) params.set('product_id', productId);
         if (warehouseId) params.set('warehouse_id', warehouseId);
         window.open(`${route('admin.individual-prices.export')}?${params.toString()}`, '_blank');
+    };
+
+    const handleEdit = (row) => {
+        router.visit(route('admin.individual-prices.edit', {
+            partner_id: row.partner_id,
+            product_id: row.product_id,
+            warehouse_id: row.warehouse_id,
+        }));
+    };
+
+    const openDeleteDialog = (row) => {
+        setPriceToDelete(row);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = () => {
+        if (!priceToDelete) return;
+        router.delete(route('admin.individual-prices.destroy'), {
+            data: {
+                partner_id: priceToDelete.partner_id,
+                product_id: priceToDelete.product_id,
+                warehouse_id: priceToDelete.warehouse_id,
+            },
+            onSuccess: () => {
+                toaster.create({ title: 'Цена удалена', type: 'success' });
+                setDeleteDialogOpen(false);
+                setPriceToDelete(null);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при удалении', type: 'error' });
+            },
+        });
     };
 
     const columns = [
@@ -130,13 +167,38 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                 </Text>
             ),
         },
+        {
+            key: 'actions',
+            label: '',
+            render: (_, row) => (
+                <HStack gap={1} justifyContent="flex-end">
+                    <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={() => handleEdit(row)}
+                        title="Редактировать"
+                    >
+                        <LuPencil size={14} />
+                    </Button>
+                    <Button
+                        size="xs"
+                        variant="ghost"
+                        colorPalette="red"
+                        onClick={() => openDeleteDialog(row)}
+                        title="Удалить"
+                    >
+                        <LuTrash2 size={14} />
+                    </Button>
+                </HStack>
+            ),
+        },
     ];
 
     return (
         <>
             <PageHeader
                 title="Индивидуальные цены"
-                description="Просмотр индивидуальных цен партнёров"
+                description="Управление индивидуальными ценами партнёров"
                 actions={
                     <HStack gap={3}>
                         <HStack gap={2}>
@@ -151,8 +213,17 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                             size="sm"
                             variant="outline"
                             onClick={handleExport}
+                            disabled={!canExport}
+                            title={!canExport ? 'Выберите партнёра или товар для экспорта' : ''}
                         >
                             <LuDownload /> Экспорт CSV
+                        </Button>
+                        <Button
+                            size="sm"
+                            colorPalette="blue"
+                            onClick={() => router.visit(route('admin.individual-prices.create'))}
+                        >
+                            <LuPlus /> Создать
                         </Button>
                     </HStack>
                 }
@@ -166,6 +237,7 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                         value={partnerId}
                         onChange={handlePartnerChange}
                         searchUrl={route('admin.individual-prices.search-partners')}
+                        searchParams={{ only_with_prices: true }}
                         placeholder="Поиск по имени или email..."
                         displayField="label"
                         initialDisplay={filterLabels?.partner}
@@ -183,6 +255,7 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                         value={productId}
                         onChange={handleProductChange}
                         searchUrl={route('admin.individual-prices.search-products')}
+                        searchParams={{ only_with_prices: true }}
                         placeholder="Поиск по названию или артикулу..."
                         displayField="label"
                         initialDisplay={filterLabels?.product}
@@ -200,12 +273,21 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                         value={warehouseId}
                         onChange={handleWarehouseChange}
                         searchUrl={route('admin.individual-prices.search-warehouses')}
+                        searchParams={{ only_with_prices: true }}
                         placeholder="Поиск по названию склада..."
                         displayField="label"
                         initialDisplay={filterLabels?.warehouse}
                     />
                 </Box>
             </SimpleGrid>
+
+            {!canExport && (
+                <Box mb={3} px={3} py={2} bg="bg.subtle" borderRadius="md" borderWidth="1px" borderColor="border.muted">
+                    <Text fontSize="sm" color="fg.muted">
+                        💡 Для экспорта CSV выберите партнёра или товар в фильтрах
+                    </Text>
+                </Box>
+            )}
 
             <DataTable
                 data={prices.data}
@@ -216,7 +298,18 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                 sortDirection={filters.sort_order}
                 perPage={filters.per_page}
                 onPerPageChange={handlePerPageChange}
-                emptyMessage="Нет данных. Выберите партнёра для просмотра цен."
+                emptyMessage="Нет данных. Индивидуальные цены появятся после импорта из 1С."
+            />
+
+            <ConfirmDialog
+                open={deleteDialogOpen}
+                onClose={() => { setDeleteDialogOpen(false); setPriceToDelete(null); }}
+                onConfirm={confirmDelete}
+                title="Удалить цену?"
+                description={priceToDelete
+                    ? `Удалить индивидуальную цену ${Number(priceToDelete.price).toLocaleString('ru-RU')} ₽ для "${priceToDelete.partner_name}" на товар "${priceToDelete.product_name}"?`
+                    : ''
+                }
             />
         </>
     );
