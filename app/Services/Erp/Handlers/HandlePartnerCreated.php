@@ -122,16 +122,57 @@ class HandlePartnerCreated
         }
 
         $map = [
-            'россия'     => Country::RU->value,
-            'russia'     => Country::RU->value,
-            'ru'         => Country::RU->value,
-            'беларусь'   => Country::BY->value,
-            'белоруссия' => Country::BY->value,
-            'belarus'    => Country::BY->value,
-            'by'         => Country::BY->value,
-            'казахстан'  => Country::KZ->value,
-            'kazakhstan' => Country::KZ->value,
-            'kz'         => Country::KZ->value,
+            // Россия
+            'россия'       => Country::RU->value,
+            'russia'       => Country::RU->value,
+            'ru'           => Country::RU->value,
+            // Беларусь
+            'беларусь'     => Country::BY->value,
+            'белоруссия'   => Country::BY->value,
+            'belarus'      => Country::BY->value,
+            'by'           => Country::BY->value,
+            // Казахстан
+            'казахстан'    => Country::KZ->value,
+            'kazakhstan'   => Country::KZ->value,
+            'kz'           => Country::KZ->value,
+            // Украина
+            'украина'      => Country::UA->value,
+            'ukraine'      => Country::UA->value,
+            'ua'           => Country::UA->value,
+            // Узбекистан
+            'узбекистан'   => Country::UZ->value,
+            'uzbekistan'   => Country::UZ->value,
+            'uz'           => Country::UZ->value,
+            // Азербайджан
+            'азербайджан'  => Country::AZ->value,
+            'azerbaijan'   => Country::AZ->value,
+            'az'           => Country::AZ->value,
+            // Армения
+            'армения'      => Country::AM->value,
+            'armenia'      => Country::AM->value,
+            'am'           => Country::AM->value,
+            // Грузия
+            'грузия'       => Country::GE->value,
+            'georgia'      => Country::GE->value,
+            'ge'           => Country::GE->value,
+            // Кыргызстан
+            'кыргызстан'   => Country::KG->value,
+            'киргизия'     => Country::KG->value,
+            'kyrgyzstan'   => Country::KG->value,
+            'kg'           => Country::KG->value,
+            // Молдова
+            'молдова'      => Country::MD->value,
+            'молдавия'     => Country::MD->value,
+            'moldova'      => Country::MD->value,
+            'md'           => Country::MD->value,
+            // Таджикистан
+            'таджикистан'  => Country::TJ->value,
+            'tajikistan'   => Country::TJ->value,
+            'tj'           => Country::TJ->value,
+            // Туркменистан
+            'туркменистан' => Country::TM->value,
+            'turkmenistan' => Country::TM->value,
+            'tm'           => Country::TM->value,
         ];
 
         $normalized = $map[mb_strtolower(trim($value))] ?? null;

@@ -49,8 +49,9 @@ class CompanyFactory extends Factory
     {
         return match ($country) {
             Country::RU => fake()->numerify('##########'), // ИНН 10 digits for legal entity
-            Country::BY => fake()->numerify('#########'), // УНП 9 digits
+            Country::BY => fake()->numerify('#########'),  // УНП 9 digits
             Country::KZ => fake()->numerify('############'), // БИН 12 digits
+            default     => fake()->numerify('#########'),  // Generic 9 digits for other CIS
         };
     }
 
