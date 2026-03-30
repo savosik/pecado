@@ -138,10 +138,10 @@ class ErpIncomingJob extends BaseJob
             }
 
             $this->delete();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             Log::error('ERP incoming: ошибка обработки сообщения', [
                 'error' => $e->getMessage(),
-                'body' => $rawBody,
+                'body'  => $rawBody,
             ]);
 
             // Release back to queue for retry

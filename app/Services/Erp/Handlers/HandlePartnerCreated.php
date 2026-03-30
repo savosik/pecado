@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Enums\Country;
 use App\Enums\UserStatus;
 use App\Models\User;
 use App\Models\Region;
@@ -33,7 +34,7 @@ class HandlePartnerCreated
         $password = $payload['password'] ?? null;
         
         $city     = $payload['city'] ?? null;
-        $country  = $payload['country'] ?? null;
+        $country  = $this->normalizeCountry($payload['country'] ?? null);
         
         $regionName = $payload['region'] ?? null;
         $currencyCode = $payload['currency'] ?? null;
@@ -108,5 +109,37 @@ class HandlePartnerCreated
             'erp_id'               => $uuid,
             'must_change_password' => true,
         ]);
+    }
+
+    /**
+     * Нормализует строковое значение страны из 1С в Country enum или null.
+     * 1С может слать: "РОССИЯ", "Россия", "КАЗАХСТАН", "RU" и т.д.
+     */
+    private function normalizeCountry(?string $value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        $map = [
+            'россия'     => Country::RU->value,
+            'russia'     => Country::RU->value,
+            'ru'         => Country::RU->value,
+            'беларусь'   => Country::BY->value,
+            'белоруссия' => Country::BY->value,
+            'belarus'    => Country::BY->value,
+            'by'         => Country::BY->value,
+            'казахстан'  => Country::KZ->value,
+            'kazakhstan' => Country::KZ->value,
+            'kz'         => Country::KZ->value,
+        ];
+
+        $normalized = $map[mb_strtolower(trim($value))] ?? null;
+
+        if (!$normalized) {
+            Log::warning('partner.created: неизвестная страна, пропускаем', ['country' => $value]);
+        }
+
+        return $normalized;
     }
 }
