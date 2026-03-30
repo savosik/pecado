@@ -213,6 +213,10 @@ class ProcessIndividualPricesFile implements ShouldQueue
                 }
 
                 $productUuid = trim($row[0]);
+                // Убираем UTF-8 BOM из первой строки (1С добавляет BOM)
+                if ($lineNumber === 1) {
+                    $productUuid = preg_replace('/^\x{FEFF}/u', '', $productUuid);
+                }
                 $warehouseUuid = trim($row[1]);
                 $price = (float) trim($row[2]);
 
