@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Log;
  */
 class HandleContractorCreated
 {
+    use NormalizesCountry;
     public function handle(array $payload): void
     {
         $uuid        = $payload['uuid']         ?? null;
@@ -30,7 +31,7 @@ class HandleContractorCreated
         $actualAddr  = $payload['actual_address']  ?? null;
         $phone       = $payload['phone']           ?? null;
         $email       = $payload['email']           ?? null;
-        $country     = $payload['country']         ?? 'RU'; // default: Россия
+        $country     = $this->normalizeCountry($payload['country'] ?? null, 'RU'); // default: Россия
         $bankAccounts = $payload['bank_accounts']  ?? null;
 
         if (!$uuid) {
