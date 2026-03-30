@@ -29,7 +29,6 @@ class IndividualPriceController extends Controller
                 'individual_prices.warehouse_id',
                 'individual_prices.price',
                 'individual_prices.updated_at',
-                'individual_prices.created_at',
                 'users.name as partner_name',
                 'users.email as partner_email',
                 'products.name as product_name',
