@@ -55,10 +55,35 @@ class HandlePartnerCreated
             return;
         }
 
+        // Сценарий 1а: Ищем по erp_id (повторная доставка от 1С — идемпотентность)
+        $user = User::where('erp_id', $uuid)->first();
+
+        if ($user) {
+            User::withoutEvents(function () use ($user, $uuid, $login, $name, $surname, $patronymic, $city, $country, $regionId, $currencyId, $phone) {
+                $user->update(array_filter([
+                    'erp_id'      => $uuid,
+                    'status'      => UserStatus::ACTIVE,
+                    'city'        => $city,
+                    'country'     => $country,
+                    'region_id'   => $regionId,
+                    'currency_id' => $currencyId,
+                    'phone'       => $phone,
+                ], fn($v) => $v !== null));
+            });
+
+            Log::info('partner.created: пользователь найден по erp_id, обновлён', [
+                'user_id' => $user->id,
+                'erp_id'  => $uuid,
+            ]);
+
+            return;
+        }
+
+        // Сценарий 1б: Ищем по email/login
         $user = User::where('email', $login)->first();
 
         if ($user) {
-            // Сценарий 1: Пользователь существует — активация
+            // Пользователь существует — привязываем erp_id и активируем
             User::withoutEvents(function () use ($user, $uuid) {
                 $user->update([
                     'erp_id' => $uuid,
@@ -66,7 +91,7 @@ class HandlePartnerCreated
                 ]);
             });
 
-            Log::info('partner.created: пользователь активирован', [
+            Log::info('partner.created: пользователь найден по email, активирован', [
                 'user_id' => $user->id,
                 'login'   => $login,
                 'erp_id'  => $uuid,
@@ -74,6 +99,7 @@ class HandlePartnerCreated
 
             return;
         }
+
 
         // Сценарий 2: Создание нового пользователя из 1С (v4)
         if (!$password) {
