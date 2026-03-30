@@ -101,19 +101,30 @@ class HandleProductUpdated
             }
 
             // --- Штрих-коды (полная замена, только если поле передано) ---
+            // Upsert: вставляем новые, удаляем отсутствующие — избегаем deadlock при параллельных воркерах
             if (array_key_exists('barcodes', $payload)) {
                 $barcodes = $payload['barcodes'] ?? [];
-                $product->barcodes()->delete();
-                foreach ($barcodes as $barcodeValue) {
-                    $barcodeValue = trim((string) $barcodeValue);
-                    if ($barcodeValue !== '') {
-                        ProductBarcode::create([
-                            'product_id' => $product->id,
-                            'barcode'    => $barcodeValue,
-                        ]);
-                    }
+                $barcodeValues = collect($barcodes)
+                    ->map(fn($v) => trim((string) $v))
+                    ->filter(fn($v) => $v !== '')
+                    ->values();
+
+                if ($barcodeValues->isNotEmpty()) {
+                    $now = now();
+                    $rows = $barcodeValues->map(fn($b) => [
+                        'product_id' => $product->id,
+                        'barcode'    => $b,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])->toArray();
+                    DB::table('product_barcodes')->upsert($rows, ['product_id', 'barcode'], ['updated_at']);
+                    $product->barcodes()->whereNotIn('barcode', $barcodeValues)->delete();
+                } else {
+                    // Список пустой — удаляем все штрихкоды товара
+                    $product->barcodes()->delete();
                 }
             }
+
 
             // --- Атрибуты (v4: мерж, не полная замена) ---
             $processedAttributeIds = [];

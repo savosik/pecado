@@ -94,19 +94,29 @@ class HandleProductCreated
             );
 
             // --- Штрих-коды ---
+            // Upsert: вставляем новые, удаляем отсутствующие — избегаем deadlock при параллельных воркерах
             if (!empty($barcodes)) {
-                // Удаляем устаревшие штрих-коды, добавляем новые
-                $product->barcodes()->delete();
-                foreach ($barcodes as $barcodeValue) {
-                    $barcodeValue = trim((string) $barcodeValue);
-                    if ($barcodeValue !== '') {
-                        ProductBarcode::create([
-                            'product_id' => $product->id,
-                            'barcode'    => $barcodeValue,
-                        ]);
-                    }
+                $barcodeValues = collect($barcodes)
+                    ->map(fn($v) => trim((string) $v))
+                    ->filter(fn($v) => $v !== '')
+                    ->values();
+
+                if ($barcodeValues->isNotEmpty()) {
+                    // Upsert всех штрихкодов (insert or ignore)
+                    $now = now();
+                    $rows = $barcodeValues->map(fn($b) => [
+                        'product_id' => $product->id,
+                        'barcode'    => $b,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])->toArray();
+                    DB::table('product_barcodes')->upsert($rows, ['product_id', 'barcode'], ['updated_at']);
+
+                    // Удаляем штрихкоды которых больше нет в списке
+                    $product->barcodes()->whereNotIn('barcode', $barcodeValues)->delete();
                 }
             }
+
 
             // --- Атрибуты (v4: мерж, не полная замена) ---
             // Формат: [{ property_uuid, property_label, value_type, value_uuid, value_label }]
