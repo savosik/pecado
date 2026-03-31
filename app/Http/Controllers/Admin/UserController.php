@@ -94,7 +94,7 @@ class UserController extends Controller
             'patronymic' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
-            'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'country' => 'nullable|string',
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',
@@ -139,7 +139,7 @@ class UserController extends Controller
             'patronymic' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8', // Опционально при обновлении
-            'phone' => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'country' => 'nullable|string',
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',

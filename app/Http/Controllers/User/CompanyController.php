@@ -99,7 +99,7 @@ class CompanyController extends Controller
             'okpo_code'           => ['nullable', 'string', 'max:255'],
             'legal_address'       => ['nullable', 'string'],
             'actual_address'      => ['nullable', 'string'],
-            'phone'               => ['nullable', 'string', 'max:255', 'regex:/^\+7\(\d{3}\)\d{3}-\d{2}-\d{2}$|^\+375\(\d{2}\)\d{3}-\d{2}-\d{2}$/'],
+            'phone'               => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email'               => ['nullable', 'email', 'max:255'],
         ], [
             'country.required'  => 'Выберите страну.',

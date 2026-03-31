@@ -267,4 +267,66 @@ class HandleProductCreatedTest extends TestCase
         // Нет связей в attribute_category
         $this->assertEquals(0, \Illuminate\Support\Facades\DB::table('attribute_category')->count());
     }
+
+    // ──────────────────────────────────────────────
+    // Дедупликация моделей товаров
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function does_not_duplicate_model_on_repeated_product_created(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-model-dup-001',
+            'name'  => 'Товар 1',
+            'model' => ['uuid' => 'shared-model-uuid', 'name' => 'Общая модель'],
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-model-dup-002',
+            'name'  => 'Товар 2',
+            'model' => ['uuid' => 'shared-model-uuid', 'name' => 'Общая модель'],
+        ]);
+
+        // Одна модель
+        $this->assertEquals(1, \App\Models\ProductModel::count());
+
+        // Оба товара привязаны к одной модели
+        $p1 = Product::where('external_id', 'prod-model-dup-001')->first();
+        $p2 = Product::where('external_id', 'prod-model-dup-002')->first();
+        $this->assertEquals($p1->model_id, $p2->model_id);
+    }
+
+    #[Test]
+    public function resolves_model_by_name_when_external_id_differs(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-model-name-001',
+            'name'  => 'Товар А',
+            'model' => ['uuid' => 'model-uuid-old', 'name' => 'Модель X'],
+        ]);
+
+        // Второй товар с другим UUID модели, но тем же названием
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-model-name-002',
+            'name'  => 'Товар Б',
+            'model' => ['uuid' => 'model-uuid-new', 'name' => 'Модель X'],
+        ]);
+
+        // Должна быть одна модель, а не две
+        $this->assertEquals(1, \App\Models\ProductModel::count());
+
+        // external_id обновлён на последний UUID (1С — мастер)
+        $model = \App\Models\ProductModel::first();
+        $this->assertEquals('model-uuid-new', $model->external_id);
+        $this->assertEquals('Модель X', $model->name);
+
+        // Оба товара привязаны к одной модели
+        $p1 = Product::where('external_id', 'prod-model-name-001')->first();
+        $p2 = Product::where('external_id', 'prod-model-name-002')->first();
+        $this->assertEquals($p1->model_id, $p2->model_id);
+    }
 }

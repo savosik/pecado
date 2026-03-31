@@ -65,12 +65,8 @@ class HandleProductCreated
 
             // --- Модель товара ---
             $modelId = null;
-            if (!empty($modelData['uuid'])) {
-                $productModel = ProductModel::updateOrCreate(
-                    ['external_id' => $modelData['uuid']],
-                    ['name' => $modelData['name'] ?? $modelData['uuid']]
-                );
-                $modelId = $productModel->id;
+            if (!empty($modelData)) {
+                $modelId = $this->resolveModelId($modelData);
             }
 
             // --- Upsert товара ---
@@ -328,5 +324,58 @@ class HandleProductCreated
         }
 
         return null;
+    }
+
+    /**
+     * Поиск/создание модели товара.
+     * Каскадная дедупликация: external_id → name → создание.
+     * 1С — мастер-каталог: при конфликте name перезаписываем external_id.
+     */
+    private function resolveModelId(array $modelData): ?int
+    {
+        $uuid = $modelData['uuid'] ?? null;
+        $name = $modelData['name'] ?? null;
+        $code = $modelData['code'] ?? null;
+
+        if (!$uuid && !$name) {
+            return null;
+        }
+
+        // 1. Ищем по external_id (uuid)
+        if ($uuid) {
+            $productModel = ProductModel::where('external_id', $uuid)->first();
+
+            if ($productModel) {
+                $productModel->update(array_filter([
+                    'name' => $name,
+                    'code' => $code,
+                ]));
+
+                return $productModel->id;
+            }
+        }
+
+        // 2. Fallback: ищем по name — возможно модель уже создана с другим external_id
+        if ($name) {
+            $productModel = ProductModel::where('name', $name)->first();
+
+            if ($productModel) {
+                $productModel->update(array_filter([
+                    'external_id' => $uuid,
+                    'code'        => $code,
+                ]));
+
+                return $productModel->id;
+            }
+        }
+
+        // 3. Создаём новую модель
+        $productModel = ProductModel::create(array_filter([
+            'external_id' => $uuid,
+            'name'        => $name ?? $uuid,
+            'code'        => $code,
+        ]));
+
+        return $productModel->id;
     }
 }
