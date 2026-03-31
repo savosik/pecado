@@ -10,17 +10,38 @@ import ChangePasswordDialog from '@/components/common/ChangePasswordDialog';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+/**
+ * Обёртка-layout, которая добавляет глобальный диалог смены пароля.
+ * Рендерится ВНУТРИ Inertia-контекста, поэтому usePage() работает корректно.
+ */
+function GlobalLayout({ children }) {
+    return (
+        <>
+            {children}
+            <ChangePasswordDialog />
+        </>
+    );
+}
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
-    resolve: (name) => {
+    resolve: async (name) => {
         const pages = import.meta.glob('./Pages/**/*.jsx');
         const adminPages = import.meta.glob('./Admin/**/*.jsx');
 
         // Пытаемся найти страницу в соответствующей директории
+        let page;
         if (name.startsWith('Admin/')) {
-            return resolvePageComponent(`./${name}.jsx`, adminPages);
+            page = await resolvePageComponent(`./${name}.jsx`, adminPages);
+        } else {
+            page = await resolvePageComponent(`./Pages/${name}.jsx`, pages);
         }
-        return resolvePageComponent(`./Pages/${name}.jsx`, pages);
+
+        // Оборачиваем каждую страницу в GlobalLayout (persistent layout),
+        // чтобы ChangePasswordDialog был внутри Inertia-контекста
+        page.default.layout = page.default.layout || ((p) => <GlobalLayout>{p}</GlobalLayout>);
+
+        return page;
     },
     setup({ el, App, props }) {
         const root = createRoot(el);
@@ -28,7 +49,6 @@ createInertiaApp({
             <Provider>
                 <ErrorBoundary>
                     <App {...props} />
-                    <ChangePasswordDialog />
                 </ErrorBoundary>
             </Provider>
         );
