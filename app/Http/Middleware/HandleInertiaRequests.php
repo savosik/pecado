@@ -50,6 +50,7 @@ class HandleInertiaRequests extends Middleware
                     'phone' => $request->user()->phone,
                     'email' => $request->user()->email,
                     'is_admin' => $request->user()->is_admin,
+                    'must_change_password' => (bool) $request->user()->must_change_password,
                 ] : null,
             ],
             'currency' => $request->user() ? fn () => [

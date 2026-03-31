@@ -6,6 +6,7 @@ import { createInertiaApp } from '@inertiajs/react';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { Provider } from '@/components/ui/provider';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import ChangePasswordDialog from '@/components/common/ChangePasswordDialog';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -27,6 +28,7 @@ createInertiaApp({
             <Provider>
                 <ErrorBoundary>
                     <App {...props} />
+                    <ChangePasswordDialog />
                 </ErrorBoundary>
             </Provider>
         );
@@ -35,3 +37,4 @@ createInertiaApp({
         color: '#4B5563',
     },
 });
+

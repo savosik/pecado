@@ -14,11 +14,11 @@ class EnsurePasswordChangedTest extends TestCase
     use RefreshDatabase;
 
     // ──────────────────────────────────────────────
-    // Middleware блокирует доступ
+    // Shared Inertia data содержит must_change_password
     // ──────────────────────────────────────────────
 
     #[Test]
-    public function it_redirects_to_change_password_when_must_change_password_is_true(): void
+    public function it_shares_must_change_password_flag_via_inertia(): void
     {
         $user = User::factory()->create([
             'must_change_password' => true,
@@ -27,38 +27,14 @@ class EnsurePasswordChangedTest extends TestCase
 
         $response = $this->actingAs($user)->get('/cabinet/dashboard');
 
-        $response->assertRedirect(route('cabinet.password.change'));
-    }
-
-    #[Test]
-    public function it_allows_access_to_change_password_page_when_must_change(): void
-    {
-        $user = User::factory()->create([
-            'must_change_password' => true,
-            'status' => UserStatus::ACTIVE,
-        ]);
-
-        $response = $this->actingAs($user)->get('/cabinet/change-password');
-
         $response->assertStatus(200);
+        $response->assertInertia(fn ($page) =>
+            $page->where('auth.user.must_change_password', true)
+        );
     }
 
     #[Test]
-    public function it_allows_logout_when_must_change_password(): void
-    {
-        $user = User::factory()->create([
-            'must_change_password' => true,
-            'status' => UserStatus::ACTIVE,
-        ]);
-
-        $response = $this->actingAs($user)->post('/logout');
-
-        // Logout redirects to login
-        $response->assertRedirect('/login');
-    }
-
-    #[Test]
-    public function it_allows_normal_access_when_must_change_password_is_false(): void
+    public function it_shares_must_change_password_false_when_not_required(): void
     {
         $user = User::factory()->create([
             'must_change_password' => false,
@@ -68,23 +44,34 @@ class EnsurePasswordChangedTest extends TestCase
         $response = $this->actingAs($user)->get('/cabinet/dashboard');
 
         $response->assertStatus(200);
+        $response->assertInertia(fn ($page) =>
+            $page->where('auth.user.must_change_password', false)
+        );
     }
 
+    // ──────────────────────────────────────────────
+    // Cabinet доступен и при must_change_password = true
+    // (нет редиректа — диалог на фронтенде)
+    // ──────────────────────────────────────────────
+
     #[Test]
-    public function it_returns_json_403_for_api_requests_when_must_change(): void
+    public function it_allows_cabinet_access_when_must_change_password_is_true(): void
     {
         $user = User::factory()->create([
             'must_change_password' => true,
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $response = $this->actingAs($user)
-            ->getJson('/cabinet/dashboard');
+        $cabinetRoutes = [
+            '/cabinet/dashboard',
+            '/cabinet/profile',
+            '/cabinet/orders',
+        ];
 
-        $response->assertStatus(403)
-            ->assertJson([
-                'message' => 'Необходимо сменить пароль.',
-            ]);
+        foreach ($cabinetRoutes as $route) {
+            $response = $this->actingAs($user)->get($route);
+            $response->assertStatus(200, "Route {$route} should return 200");
+        }
     }
 
     // ──────────────────────────────────────────────
@@ -114,23 +101,23 @@ class EnsurePasswordChangedTest extends TestCase
     }
 
     #[Test]
-    public function it_redirects_to_other_cabinet_pages_until_password_changed(): void
+    public function it_rejects_wrong_current_password(): void
     {
         $user = User::factory()->create([
+            'password'             => Hash::make('old-password'),
             'must_change_password' => true,
-            'status' => UserStatus::ACTIVE,
+            'status'               => UserStatus::ACTIVE,
         ]);
 
-        // Все эти маршруты должны редиректить на смену пароля
-        $protectedRoutes = [
-            '/cabinet/profile',
-            '/cabinet/companies',
-            '/cabinet/orders',
-        ];
+        $response = $this->actingAs($user)->put('/cabinet/change-password', [
+            'current_password'      => 'wrong-password',
+            'password'              => 'new-secure-password',
+            'password_confirmation' => 'new-secure-password',
+        ]);
 
-        foreach ($protectedRoutes as $route) {
-            $response = $this->actingAs($user)->get($route);
-            $response->assertRedirect(route('cabinet.password.change'), "Route {$route} should redirect");
-        }
+        $response->assertSessionHasErrors('current_password');
+
+        $user->refresh();
+        $this->assertTrue($user->must_change_password);
     }
 }
