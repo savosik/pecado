@@ -60,7 +60,7 @@ class IndividualPriceController extends Controller
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        $prices = $query->paginate($request->input('per_page', 25));
+        $prices = $query->paginate($request->input('per_page', 25))->withQueryString();
 
         // Статистика
         $stats = [

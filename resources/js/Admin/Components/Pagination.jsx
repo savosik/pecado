@@ -40,9 +40,12 @@ export const Pagination = ({
                 disabled,
             };
         }
+        // Сохраняем все текущие query-параметры, обновляя только page
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', page);
         return {
             as: Link,
-            href: `?page=${page}`,
+            href: `?${params.toString()}`,
             preserveScroll: true,
             preserveState: true,
             disabled,
