@@ -62,11 +62,10 @@ class NormalizeUserDataJob implements ShouldQueue
         // ФИО
         if (isset($result['type'])) {
             if ($result['type'] === 'organization') {
-                // Организация в полях ФИО — очищаем, сохраняем инфо в comment
-                $orgName = $result['org_name'] ?? '';
-                $orgType = $result['org_type'] ?? '';
-                $commentParts[] = "Организация из 1С: {$orgType} {$orgName}";
-                $updates['name'] = null;
+                // Организация в полях ФИО — сохраняем название в name (NOT NULL), очищаем фамилию/отчество
+                $orgName = trim(($result['org_type'] ?? '') . ' ' . ($result['org_name'] ?? ''));
+                $commentParts[] = "Организация из 1С: {$orgName}";
+                $updates['name'] = $orgName ?: $user->name; // name NOT NULL — оставляем название
                 $updates['surname'] = null;
                 $updates['patronymic'] = null;
             } else {
