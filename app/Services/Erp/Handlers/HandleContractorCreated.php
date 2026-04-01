@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Jobs\NormalizeCompanyDataJob;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -104,5 +105,7 @@ class HandleContractorCreated
             'partner_uuid'   => $partnerUuid,
             'bank_accounts'  => is_array($bankAccounts) ? count($bankAccounts) : 0,
         ]);
+
+        NormalizeCompanyDataJob::dispatch($company->id);
     }
 }

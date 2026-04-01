@@ -3,6 +3,7 @@
 namespace App\Services\Erp\Handlers;
 
 use App\Enums\UserStatus;
+use App\Jobs\NormalizeUserDataJob;
 use App\Models\User;
 use App\Models\Region;
 use App\Models\Currency;
@@ -76,6 +77,8 @@ class HandlePartnerCreated
                 'erp_id'  => $uuid,
             ]);
 
+            NormalizeUserDataJob::dispatch($user->id);
+
             return;
         }
 
@@ -135,5 +138,7 @@ class HandlePartnerCreated
             'erp_id'               => $uuid,
             'must_change_password' => true,
         ]);
+
+        NormalizeUserDataJob::dispatch($newUser->id);
     }
 }
