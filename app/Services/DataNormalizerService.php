@@ -130,7 +130,7 @@ PROMPT;
             return null;
         }
 
-        $apiKey = env('OPENROUTER_API_KEY');
+        $apiKey = config('normalizer.api_key');
 
         if (! $apiKey) {
             Log::warning('DataNormalizerService: OPENROUTER_API_KEY не задан');
