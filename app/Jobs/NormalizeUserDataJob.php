@@ -96,7 +96,15 @@ class NormalizeUserDataJob implements ShouldQueue
 
         // Телефон
         if (isset($result['primary_phone'])) {
-            $updates['phone'] = $result['primary_phone'];
+            $phone = $result['primary_phone'];
+
+            // Пост-обработка: +78XXXXXXXXX (13 символов) → +7XXXXXXXXXX (12 символов)
+            // AI иногда сохраняет "8" как часть номера вместо замены на +7
+            if (preg_match('/^\+78(\d{10})$/', $phone, $m)) {
+                $phone = '+7' . $m[1];
+            }
+
+            $updates['phone'] = $phone;
         }
 
         // Email
