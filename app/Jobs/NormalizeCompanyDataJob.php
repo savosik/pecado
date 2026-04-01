@@ -82,9 +82,7 @@ class NormalizeCompanyDataJob implements ShouldQueue
         // Обновляем компанию
         if (! empty($updates)) {
             Company::withoutEvents(function () use ($company, $updates) {
-                Company::withoutGlobalScopes(function () use ($company, $updates) {
-                    $company->update($updates);
-                });
+                $company->update($updates);
             });
         }
 
