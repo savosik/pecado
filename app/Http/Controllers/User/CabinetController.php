@@ -16,6 +16,7 @@ class CabinetController extends Controller
     public function dashboard()
     {
         $user = Auth::user();
+        $questionnaire = $user->questionnaire;
 
         $ordersCount    = Order::where('user_id', $user->id)->count();
         $favoritesCount = $user->favorites()->count();
@@ -52,6 +53,7 @@ class CabinetController extends Controller
                 'contractors_count' => $balances->count(),
             ] : null,
             'recentOrders'   => $recentOrders,
+            'questionnaireCompleted' => $questionnaire && $questionnaire->isCompleted(),
         ]);
     }
 

@@ -4,9 +4,9 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList } from 'react-icons/lu';
 
-export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [] }) {
+export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true }) {
     const { auth } = usePage().props;
     const user = auth?.user;
     const name = user?.name || user?.name || 'Пользователь';
@@ -76,6 +76,63 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                     </Flex>
                 </Card.Body>
             </Card.Root>
+
+            {/* Onboarding Reminder */}
+            {!questionnaireCompleted && (
+                <Card.Root
+                    mb="6"
+                    borderRadius="xl"
+                    overflow="hidden"
+                    border="1px solid"
+                    borderColor="orange.200"
+                    bg="orange.50"
+                    _dark={{ bg: 'orange.900/10', borderColor: 'orange.800' }}
+                >
+                    <Card.Body p="5">
+                        <Flex align="center" gap="4">
+                            <Flex
+                                align="center"
+                                justify="center"
+                                w="10"
+                                h="10"
+                                borderRadius="xl"
+                                bg="orange.100"
+                                color="orange.600"
+                                _dark={{ bg: 'orange.900/20', color: 'orange.300' }}
+                                flexShrink="0"
+                            >
+                                <LuClipboardList size={20} />
+                            </Flex>
+                            <Box flex="1">
+                                <Text fontSize="sm" fontWeight="600" color="orange.800" _dark={{ color: 'orange.200' }}>
+                                    Заполните анкету
+                                </Text>
+                                <Text fontSize="xs" color="orange.600" _dark={{ color: 'orange.400' }}>
+                                    Расскажите о вашем бизнесе — это поможет нам подобрать лучшие условия сотрудничества.
+                                </Text>
+                            </Box>
+                            <Link href="/onboarding">
+                                <Box
+                                    as="span"
+                                    px="4"
+                                    py="2"
+                                    borderRadius="lg"
+                                    bg="orange.500"
+                                    color="white"
+                                    fontSize="sm"
+                                    fontWeight="600"
+                                    _hover={{ bg: 'orange.600' }}
+                                    transition="background 0.15s"
+                                    whiteSpace="nowrap"
+                                    cursor="pointer"
+                                >
+                                    Заполнить
+                                </Box>
+                            </Link>
+                        </Flex>
+                    </Card.Body>
+                </Card.Root>
+            )}
 
             {/* Stats Grid */}
             <Grid
