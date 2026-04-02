@@ -55,9 +55,9 @@ export default function Edit({ deliveryAddress }) {
                                     value={data.user_id}
                                     onChange={(value) => setData('user_id', value)}
                                     error={errors.user_id}
-                                    initialDisplay={deliveryAddress.user?.full_name}
+                                    initialDisplay={deliveryAddress.user?.name}
                                     valueKey="id"
-                                    displayField="full_name"
+                                    displayField="name"
                                 />
                             </FormField>
 

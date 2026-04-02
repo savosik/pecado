@@ -41,7 +41,7 @@ export default function Index({ questionnaires, filters }) {
                 <Box>
                     <Link href={route('admin.users.edit', row.user.id)}>
                         <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontWeight="medium">
-                            {row.user.full_name}
+                            {row.user.name}
                         </Text>
                     </Link>
                     <Text fontSize="xs" color="gray.500">{row.user.email}</Text>

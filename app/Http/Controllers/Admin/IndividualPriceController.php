@@ -147,7 +147,7 @@ class IndividualPriceController extends Controller
                 'updated_at' => $price->updated_at,
             ],
             'labels' => [
-                'partner' => $partner ? ($partner->full_name ?? $partner->name) : "ID: {$price->partner_id}",
+                'partner' => $partner ? ($partner->name ?? $partner->name) : "ID: {$price->partner_id}",
                 'product' => $product ? "{$product->sku} — {$product->name}" : "ID: {$price->product_id}",
                 'warehouse' => $warehouse?->name ?? "ID: {$price->warehouse_id}",
             ],
@@ -216,18 +216,17 @@ class IndividualPriceController extends Controller
         if ($search = $request->input('query')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('surname', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
         return response()->json(
-            $query->select('id', 'name', 'surname', 'email')
+            $query->select('id', 'name', 'email')
                 ->limit(20)
                 ->get()
                 ->map(fn($u) => [
                     'id' => $u->id,
-                    'label' => $u->full_name,
+                    'label' => $u->name,
                     'email' => $u->email,
                 ])
         );
@@ -369,7 +368,7 @@ class IndividualPriceController extends Controller
 
         if ($request->filled('partner_id')) {
             $user = User::find($request->input('partner_id'));
-            $labels['partner'] = $user ? ($user->full_name ?? $user->name) : null;
+            $labels['partner'] = $user ? ($user->name ?? $user->name) : null;
         }
 
         if ($request->filled('product_id')) {

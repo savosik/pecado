@@ -27,9 +27,7 @@ class HandlePartnerCreated
         $uuid     = $payload['uuid']     ?? null;
         $login    = $payload['login']    ?? null;
         $email    = $payload['email']    ?? $login;
-        $name     = $payload['first_name'] ?? $payload['name'] ?? null;
-        $surname  = $payload['last_name'] ?? null;
-        $patronymic = $payload['middle_name'] ?? null;
+        $name     = $payload['name'] ?? null;
         
         $phone    = $payload['phone']    ?? null;
         $password = $payload['password'] ?? null;
@@ -60,7 +58,7 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $login, $name, $surname, $patronymic, $city, $country, $regionId, $currencyId, $phone) {
+            User::withoutEvents(function () use ($user, $uuid, $login, $name, $city, $country, $regionId, $currencyId, $phone) {
                 $user->update(array_filter([
                     'erp_id'      => $uuid,
                     'status'      => UserStatus::ACTIVE,
@@ -114,11 +112,9 @@ class HandlePartnerCreated
             return;
         }
 
-        $newUser = User::withoutEvents(function () use ($uuid, $login, $email, $name, $surname, $patronymic, $city, $country, $regionId, $currencyId, $phone, $password) {
+        $newUser = User::withoutEvents(function () use ($uuid, $login, $email, $name, $city, $country, $regionId, $currencyId, $phone, $password) {
             return User::create([
                 'name'                 => $name ?? $login,
-                'surname'              => $surname,
-                'patronymic'           => $patronymic,
                 'city'                 => $city,
                 'country'              => $country,
                 'region_id'            => $regionId,

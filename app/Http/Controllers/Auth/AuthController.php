@@ -71,9 +71,7 @@ class AuthController extends Controller
     public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'surname' => 'required|string|max:255',
             'name' => 'required|string|max:255',
-            'patronymic' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'phone' => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'country' => 'required|string|in:RU,BY,KZ',
@@ -81,9 +79,7 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'terms_accepted' => 'accepted',
         ], [
-            'surname.required' => 'Фамилия обязательна для заполнения',
             'name.required' => 'Имя обязательно для заполнения',
-            'patronymic.required' => 'Отчество обязательно для заполнения',
             'email.required' => 'Email обязателен для заполнения',
             'email.email' => 'Введите корректный email',
             'email.unique' => 'Пользователь с таким email уже зарегистрирован',
@@ -98,9 +94,7 @@ class AuthController extends Controller
         ]);
 
         $user = User::create([
-            'surname' => $validated['surname'],
             'name' => $validated['name'],
-            'patronymic' => $validated['patronymic'],
             'email' => strtolower($validated['email']),
             'phone' => $validated['phone'],
             'country' => $validated['country'],

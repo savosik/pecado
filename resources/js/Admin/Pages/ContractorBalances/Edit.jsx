@@ -56,7 +56,7 @@ const ContractorBalancesEdit = ({ balance }) => {
 
     // Отображаемое имя пользователя для EntitySelector
     const userDisplayName = balance.user
-        ? `${balance.user.full_name ?? balance.user.name ?? ''}`
+        ? `${balance.user.name ?? balance.user.name ?? ''}`
         : '';
 
     return (

@@ -106,7 +106,7 @@ class OrderController extends AdminController
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
                 'user' => $order->user ? [
                     'id' => $order->user->id,
-                    'name' => $order->user->full_name,
+                    'name' => $order->user->name,
                     'email' => $order->user->email,
                 ] : null,
                 'company' => $order->company ? [
@@ -243,7 +243,7 @@ class OrderController extends AdminController
                 'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
                 'user' => $order->user ? [
                     'id' => $order->user->id,
-                    'name' => $order->user->full_name,
+                    'name' => $order->user->name,
                     'email' => $order->user->email,
                     'phone' => $order->user->phone,
                 ] : null,
@@ -276,7 +276,7 @@ class OrderController extends AdminController
                         'new_status' => $history->new_status,
                         'old_status_label' => $history->old_status_label,
                         'new_status_label' => $history->new_status_label,
-                        'user_name' => $history->user ? $history->user->full_name : 'Система',
+                        'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
                         'created_at_human' => $history->created_at->diffForHumans(),
@@ -312,7 +312,7 @@ class OrderController extends AdminController
                 'total_amount' => $order->total_amount,
                 'user' => $order->user ? [
                     'id' => $order->user->id,
-                    'name' => $order->user->full_name,
+                    'name' => $order->user->name,
                     'email' => $order->user->email,
                 ] : null,
                 'company' => $order->company ? [
@@ -339,7 +339,7 @@ class OrderController extends AdminController
                         'new_status' => $history->new_status,
                         'old_status_label' => $history->old_status_label,
                         'new_status_label' => $history->new_status_label,
-                        'user_name' => $history->user ? $history->user->full_name : 'Система',
+                        'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
                         'created_at_human' => $history->created_at->diffForHumans(),
@@ -535,20 +535,18 @@ class OrderController extends AdminController
         $users = User::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('surname', 'like', "%{$query}%")
-                  ->orWhere('patronymic', 'like', "%{$query}%")
                   ->orWhere('email', 'like', "%{$query}%");
             })
-            ->select('id', 'name', 'surname', 'patronymic', 'email')
-            ->orderBy('surname')
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
             ->limit(20)
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => $user->full_name,
+                    'name' => $user->name,
                     'email' => $user->email,
-                    'label' => "{$user->full_name} ({$user->email})",
+                    'label' => "{$user->name} ({$user->email})",
                 ];
             });
             
@@ -575,7 +573,7 @@ class OrderController extends AdminController
                          ->orWhere('tax_id', 'like', "%{$query}%");
                 });
             })
-            ->with('user:id,name,surname,patronymic,email')
+            ->with('user:id,name,email')
             ->select('id', 'name', 'user_id')
             ->orderBy('name')
             ->limit(20)
@@ -585,7 +583,7 @@ class OrderController extends AdminController
                     'id' => $company->id,
                     'name' => $company->name,
                     'user_id' => $company->user_id,
-                    'user_name' => $company->user?->full_name,
+                    'user_name' => $company->user?->name,
                     'user_email' => $company->user?->email,
                     'label' => $company->name,
                 ];

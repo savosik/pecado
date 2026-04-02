@@ -78,7 +78,7 @@ class WishlistController extends AdminController
                 'created_at' => $item->created_at?->format('d.m.Y H:i'),
                 'user' => $item->user ? [
                     'id' => $item->user->id,
-                    'name' => $item->user->full_name,
+                    'name' => $item->user->name,
                     'email' => $item->user->email,
                 ] : null,
                 'product' => $item->product ? [
@@ -96,9 +96,9 @@ class WishlistController extends AdminController
             if ($user) {
                 $userFilter = [
                     'id' => $user->id,
-                    'name' => $user->full_name,
+                    'name' => $user->name,
                     'email' => $user->email,
-                    'label' => "{$user->full_name} ({$user->email})",
+                    'label' => "{$user->name} ({$user->email})",
                 ];
             }
         }
@@ -199,9 +199,9 @@ class WishlistController extends AdminController
                 'product_id' => $wishlist->product_id,
                 'user' => $wishlist->user ? [
                     'id' => $wishlist->user->id,
-                    'name' => $wishlist->user->full_name,
+                    'name' => $wishlist->user->name,
                     'email' => $wishlist->user->email,
-                    'label' => "{$wishlist->user->full_name} ({$wishlist->user->email})",
+                    'label' => "{$wishlist->user->name} ({$wishlist->user->email})",
                 ] : null,
                 'product' => $wishlist->product ? [
                     'id' => $wishlist->product->id,
@@ -274,20 +274,18 @@ class WishlistController extends AdminController
         $users = User::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('surname', 'like', "%{$query}%")
-                  ->orWhere('patronymic', 'like', "%{$query}%")
                   ->orWhere('email', 'like', "%{$query}%");
             })
-            ->select('id', 'name', 'surname', 'patronymic', 'email')
-            ->orderBy('surname')
+            ->select('id', 'name', 'email')
+            ->orderBy('name')
             ->limit(20)
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => $user->full_name,
+                    'name' => $user->name,
                     'email' => $user->email,
-                    'label' => "{$user->full_name} ({$user->email})",
+                    'label' => "{$user->name} ({$user->email})",
                 ];
             });
             

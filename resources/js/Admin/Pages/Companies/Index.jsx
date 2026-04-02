@@ -51,7 +51,7 @@ export default function Index({ companies, filters }) {
                     _hover={{ textDecoration: 'underline' }}
                     onClick={() => router.visit(route('admin.users.edit', user.id))}
                 >
-                    {user.full_name}
+                    {user.name}
                 </Text>
             ) : '—',
         },

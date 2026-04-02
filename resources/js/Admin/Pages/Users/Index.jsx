@@ -48,7 +48,7 @@ export default function Index({ users, filters, statuses, statusCounts }) {
             width: '80px',
         },
         {
-            key: 'full_name',
+            key: 'name',
             label: 'ФИО',
             sortable: false,
             render: (fullName, item) => (

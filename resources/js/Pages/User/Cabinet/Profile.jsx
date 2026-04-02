@@ -19,8 +19,6 @@ export default function Profile() {
 
     const [form, setForm] = useState({
         name: user?.name || '',
-        surname: user?.surname || '',
-        patronymic: user?.patronymic || '',
         phone: user?.phone || '',
         email: user?.email || '',
     });
@@ -78,37 +76,15 @@ export default function Profile() {
                 <Card.Body p="5" pt="0">
                     <form onSubmit={handleSubmit}>
                         <VStack gap="4" align="stretch" maxW="500px">
-                            <Field.Root invalid={!!errors.surname}>
-                                <Field.Label fontSize="sm" fontWeight="600">Фамилия</Field.Label>
-                                <Input
-                                    value={form.surname}
-                                    onChange={(e) => handleChange('surname', e.target.value)}
-                                    placeholder="Иванов"
-                                    size="md"
-                                />
-                                {errors.surname && <Field.ErrorText>{errors.surname}</Field.ErrorText>}
-                            </Field.Root>
-
                             <Field.Root invalid={!!errors.name}>
-                                <Field.Label fontSize="sm" fontWeight="600">Имя *</Field.Label>
+                                <Field.Label fontSize="sm" fontWeight="600">Имя / Название *</Field.Label>
                                 <Input
                                     value={form.name}
                                     onChange={(e) => handleChange('name', e.target.value)}
-                                    placeholder="Иван"
+                                    placeholder="Иванов Иван Иванович или ООО Рога и Копыта"
                                     size="md"
                                 />
                                 {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
-                            </Field.Root>
-
-                            <Field.Root invalid={!!errors.patronymic}>
-                                <Field.Label fontSize="sm" fontWeight="600">Отчество</Field.Label>
-                                <Input
-                                    value={form.patronymic}
-                                    onChange={(e) => handleChange('patronymic', e.target.value)}
-                                    placeholder="Иванович"
-                                    size="md"
-                                />
-                                {errors.patronymic && <Field.ErrorText>{errors.patronymic}</Field.ErrorText>}
                             </Field.Root>
 
                             <Field.Root invalid={!!errors.phone}>

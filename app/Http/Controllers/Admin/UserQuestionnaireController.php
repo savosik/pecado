@@ -24,7 +24,6 @@ class UserQuestionnaireController extends Controller
                     ->orWhere('business_type', 'like', "%{$search}%")
                     ->orWhereHas('user', function ($q) use ($search) {
                         $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('surname', 'like', "%{$search}%")
                             ->orWhere('email', 'like', "%{$search}%");
                     });
             });

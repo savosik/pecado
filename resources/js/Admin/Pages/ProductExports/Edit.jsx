@@ -65,7 +65,7 @@ export default function Edit({ export: exportData, availableFilters, availableFi
 
     // Build initial display text for the client user
     const clientUser = exportData.client_user ?? null;
-    const initialClientDisplay = clientUser?.full_name || clientUser?.name || '';
+    const initialClientDisplay = clientUser?.name || clientUser?.name || '';
 
     const closeAfterSaveRef = useRef(false);
     const [preview, setPreview] = useState(null);

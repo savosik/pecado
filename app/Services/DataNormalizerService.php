@@ -7,43 +7,37 @@ use Illuminate\Support\Facades\Log;
 class DataNormalizerService
 {
     /**
-     * Нормализовать данные пользователя (ФИО + телефон + email) через AI.
+     * Нормализовать данные пользователя (name + телефон + email) через AI.
+     * name — единое поле: ФИО физлица или название организации.
      */
     public function normalizeUser(
-        ?string $surname,
         ?string $name,
-        ?string $patronymic,
         ?string $phone = null,
         ?string $email = null,
     ): ?array {
         $systemPrompt = <<<'PROMPT'
-Ты парсер данных контрагентов из 1С. Тебе приходят сырые поля. Разбери их на чистые структурированные поля.
+Ты парсер данных контрагентов из 1С. Тебе приходит поле name — это либо ФИО человека, либо название организации.
 
 ПРАВИЛА:
-1. Определи тип: "person" (физлицо) или "organization" (юрлицо — ООО, ИП, ЗАО, ОАО, ТОО, АО, Отель и т.п.)
-2. Для "organization": верни полное название как оно должно быть (напр. "ООО Яндекс.Маркет"), очисти ФИО (null)
-3. Для "person" с ИП: ФИО — только ФИО человека, "ИП" вынеси в org_type
-4. Отчество: убери из него город/область, если есть. Город → city. Сокращённые отчества ("Ф.", "А.") — оставь как есть
-5. Телефон: первый номер → формат +7XXXXXXXXXX (ровно 12 символов: +7 и 10 цифр). 8 в начале = +7 (8-923-... → +79231...). Остальные номера/факсы/имена → extra_info
-6. Невалидный email (нет @, число) → email=null
-7. Все лишние данные собери в extra_info через "; "
+1. Определи тип: "person" (физлицо) или "organization" (ООО, ИП, ЗАО, ОАО, ТОО, АО, Отель и т.п.)
+2. Для "organization": верни полное название как оно должно быть (напр. "ООО Яндекс.Маркет"), убери дубли (напр. "ООО ООО Рога" → "ООО Рога")
+3. Для "person": нормализуй ФИО (убери лишнее — город, номера, должности). Если есть город в имени → city
+4. Телефон: первый номер → формат +7XXXXXXXXXX (ровно 12 символов). 8 в начале = +7. Остальные → extra_info
+5. Невалидный email (нет @, число) → email=null
+6. Все лишние данные собери в extra_info через "; "
 
 Отвечай ТОЛЬКО JSON без markdown:
 {
   "type": "person" | "organization",
-  "surname": "string | null",
-  "name": "string | null",
-  "patronymic": "string | null",
+  "name": "нормализованное ФИО или полное название организации",
   "city": "string | null",
-  "org_type": "ИП" | "ООО" | ... | null,
-  "org_name": "полное название с формой собственности, напр. 'ООО Яндекс' | null",
   "primary_phone": "+7XXXXXXXXXX | null",
   "email": "string | null",
   "extra_info": "string | null"
 }
 PROMPT;
 
-        $userMessage = "surname: \"{$surname}\"\nname: \"{$name}\"\npatronymic: \"{$patronymic}\"";
+        $userMessage = "name: \"{$name}\"";
 
         if ($phone) {
             $userMessage .= "\nphone: \"{$phone}\"";

@@ -134,7 +134,7 @@ const OrderShow = () => {
                                 <>
                                     <HStack justify="space-between">
                                         <Text color="fg.muted">Имя:</Text>
-                                        <Text>{order.user.full_name}</Text>
+                                        <Text>{order.user.name}</Text>
                                     </HStack>
                                     <HStack justify="space-between">
                                         <Text color="fg.muted">Email:</Text>

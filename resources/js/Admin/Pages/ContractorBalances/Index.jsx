@@ -32,7 +32,7 @@ export default function Index({ balances, filters }) {
             key: 'user',
             label: 'Пользователь',
             render: (_, row) => (
-                <Text fontSize="sm" fontWeight="medium">{row.user?.full_name || '—'}</Text>
+                <Text fontSize="sm" fontWeight="medium">{row.user?.name || '—'}</Text>
             ),
         },
         {

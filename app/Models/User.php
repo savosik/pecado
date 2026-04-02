@@ -25,25 +25,8 @@ class User extends Authenticatable implements HasMedia
      *
      * @var list<string>
      */
-    protected $appends = ['full_name', 'status_label'];
+    protected $appends = ['status_label'];
 
-    /**
-     * ФИО пользователя: Фамилия Имя Отчество.
-     */
-    protected function fullName(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                $parts = array_filter([
-                    $this->surname,
-                    $this->name,
-                    $this->patronymic,
-                ]);
-
-                return count($parts) > 0 ? implode(' ', $parts) : ($this->name ?? '');
-            },
-        );
-    }
 
     /**
      * Человекочитаемое название статуса.
@@ -62,8 +45,6 @@ class User extends Authenticatable implements HasMedia
      */
     protected $fillable = [
         'name',
-        'surname',
-        'patronymic',
         'phone',
         'country',
         'city',

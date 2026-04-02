@@ -22,8 +22,6 @@ class UserBalanceController extends Controller
         if ($search = $request->input('search')) {
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('surname', 'like', "%{$search}%")
-                    ->orWhere('patronymic', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -106,8 +104,6 @@ class UserBalanceController extends Controller
         if ($search = $request->input('search')) {
             $query->whereHas('user', function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('surname', 'like', "%{$search}%")
-                    ->orWhere('patronymic', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
@@ -117,8 +113,8 @@ class UserBalanceController extends Controller
             ->map(function ($balance) {
                 return [
                     'id' => $balance->id,
-                    'name' => "{$balance->user->full_name} ({$balance->balance})",
-                    'user_name' => $balance->user->full_name,
+                    'name' => "{$balance->user->name} ({$balance->balance})",
+                    'user_name' => $balance->user->name,
                     'balance' => $balance->balance,
                 ];
             });

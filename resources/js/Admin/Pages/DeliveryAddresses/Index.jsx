@@ -38,7 +38,7 @@ export default function Index({ deliveryAddresses, filters }) {
                     _hover={{ textDecoration: 'underline' }}
                     onClick={() => router.visit(route('admin.users.edit', user.id))}
                 >
-                    {user.full_name}
+                    {user.name}
                 </Text>
             ) : '—',
         },

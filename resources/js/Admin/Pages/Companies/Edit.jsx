@@ -142,9 +142,9 @@ export default function Edit({ company, countries, yandexMapsApiKey }) {
                                             value={data.user_id}
                                             onChange={(value) => setData('user_id', value)}
                                             error={errors.user_id}
-                                            initialDisplay={company.user?.full_name}
+                                            initialDisplay={company.user?.name}
                                             valueKey="id"
-                                            displayField="full_name"
+                                            displayField="name"
                                         />
                                     </FormField>
 

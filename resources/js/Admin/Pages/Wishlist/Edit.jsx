@@ -134,7 +134,7 @@ const WishlistEdit = ({ wishlistItem }) => {
                                             onChange={handleUserChange}
                                             searchUrl="admin.wishlist.search-users"
                                             placeholder="Поиск по имени или email..."
-                                            displayField="full_name"
+                                            displayField="name"
                                         />
                                     </FormField>
                                 </Box>

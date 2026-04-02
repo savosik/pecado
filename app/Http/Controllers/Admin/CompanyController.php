@@ -157,9 +157,9 @@ class CompanyController extends Controller
             ->map(function ($company) {
                 return [
                     'id' => $company->id,
-                    'name' => $company->name . ' (' . ($company->user ? $company->user->full_name : 'No user') . ')',
+                    'name' => $company->name . ' (' . ($company->user ? $company->user->name : 'No user') . ')',
                     'display_name' => $company->name,
-                    'user_name' => $company->user?->full_name,
+                    'user_name' => $company->user?->name,
                 ];
             });
 

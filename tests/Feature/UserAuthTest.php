@@ -42,9 +42,7 @@ class UserAuthTest extends TestCase
     public function test_user_can_register(): void
     {
         $response = $this->post('/register', [
-            'surname' => 'Иванов',
-            'name' => 'Иван',
-            'patronymic' => 'Иванович',
+            'name' => 'Иванов Иван Иванович',
             'email' => 'test@example.com',
             'phone' => '+79991234567',
             'country' => 'RU',
@@ -65,9 +63,7 @@ class UserAuthTest extends TestCase
     public function test_registration_requires_terms_accepted(): void
     {
         $response = $this->post('/register', [
-            'surname' => 'Иванов',
-            'name' => 'Иван',
-            'patronymic' => 'Иванович',
+            'name' => 'Иванов Иван Иванович',
             'email' => 'test@example.com',
             'phone' => '+79991234567',
             'country' => 'RU',

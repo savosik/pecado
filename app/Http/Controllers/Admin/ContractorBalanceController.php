@@ -23,7 +23,6 @@ class ContractorBalanceController extends Controller
                 $q->where('contractor_inn', 'like', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
                       $uq->where('name', 'like', "%{$search}%")
-                         ->orWhere('surname', 'like', "%{$search}%")
                          ->orWhere('email', 'like', "%{$search}%");
                   })
                   ->orWhereHas('company', function ($cq) use ($search) {
@@ -223,7 +222,7 @@ class ContractorBalanceController extends Controller
         $balances = $query->limit(20)->get()->map(function ($balance) {
             return [
                 'id'              => $balance->id,
-                'name'            => $balance->user->full_name . ' (' . $balance->contractor_inn . ')',
+                'name'            => $balance->user->name . ' (' . $balance->contractor_inn . ')',
                 'contractor_inn'  => $balance->contractor_inn,
                 'current_balance' => $balance->current_balance,
             ];

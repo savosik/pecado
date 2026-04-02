@@ -42,9 +42,9 @@ const Edit = ({ order, statuses, currencies }) => {
     // State for selected entities - initialize from order data
     const [selectedUser, setSelectedUser] = useState(order.user ? {
         id: order.user.id,
-        name: order.user.full_name,
+        name: order.user.name,
         email: order.user.email,
-        label: `${order.user.full_name} (${order.user.email})`,
+        label: `${order.user.name} (${order.user.email})`,
     } : null);
 
     const [selectedCompany, setSelectedCompany] = useState(order.company ? {

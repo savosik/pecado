@@ -112,7 +112,7 @@ export default function Edit({ questionnaire }) {
 
     return (
         <>
-            <PageHeader title={`Анкета: ${questionnaire.user?.full_name || 'Пользователь'}`} />
+            <PageHeader title={`Анкета: ${questionnaire.user?.name || 'Пользователь'}`} />
 
             <Box mb={4} display="flex" gap={3} alignItems="center">
                 <Link href={route('admin.users.edit', questionnaire.user?.id)}>

@@ -262,7 +262,7 @@ const CartCreate = ({ currencies = [] }) => {
                                                 onChange={handleUserChange}
                                                 searchUrl="admin.carts.search-users"
                                                 placeholder="Поиск по имени или email..."
-                                                displayField="full_name"
+                                                displayField="name"
                                             />
                                         </FormField>
                                     </Box>

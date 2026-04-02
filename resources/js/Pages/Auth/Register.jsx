@@ -14,9 +14,7 @@ const countries = [
 
 export default function Register({ errors }) {
     const { data, setData, post, processing } = useForm({
-        surname: '',
         name: '',
-        patronymic: '',
         email: '',
         phone: '',
         country: '',
@@ -57,36 +55,16 @@ export default function Register({ errors }) {
             <AuthLayout title="Регистрация" subtitle="Создайте аккаунт в Pecado">
                 <form onSubmit={handleSubmit}>
                     <Stack gap={4}>
-                        {/* ФИО */}
-                        <Field label={labelEl('Фамилия')} invalid={!!errors.surname} errorText={errors.surname} required>
+                        {/* Имя / Название */}
+                        <Field label={labelEl('Имя / Название')} invalid={!!errors.name} errorText={errors.name} required>
                             <Input
-                                value={data.surname}
-                                onChange={(e) => setData('surname', e.target.value)}
-                                placeholder="Иванов"
+                                value={data.name}
+                                onChange={(e) => setData('name', e.target.value)}
+                                placeholder="Иванов Иван Иванович или ООО Рога и Копыта"
                                 autoFocus
                                 {...inputStyles}
                             />
                         </Field>
-
-                        <SimpleGrid columns={2} gap={3}>
-                            <Field label={labelEl('Имя')} invalid={!!errors.name} errorText={errors.name} required>
-                                <Input
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    placeholder="Иван"
-                                    {...inputStyles}
-                                />
-                            </Field>
-
-                            <Field label={labelEl('Отчество')} invalid={!!errors.patronymic} errorText={errors.patronymic} required>
-                                <Input
-                                    value={data.patronymic}
-                                    onChange={(e) => setData('patronymic', e.target.value)}
-                                    placeholder="Иванович"
-                                    {...inputStyles}
-                                />
-                            </Field>
-                        </SimpleGrid>
 
                         {/* Контакты */}
                         <Field label={labelEl('Email')} invalid={!!errors.email} errorText={errors.email} required>

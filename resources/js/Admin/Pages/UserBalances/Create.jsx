@@ -62,7 +62,7 @@ export default function Create() {
                                     }}
                                     searchUrl="admin.users.search"
                                     placeholder="Выберите пользователя"
-                                    displayField="full_name"
+                                    displayField="name"
                                 />
                             </FormField>
 

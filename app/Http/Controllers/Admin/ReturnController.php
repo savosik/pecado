@@ -94,7 +94,7 @@ class ReturnController extends AdminController
                 'created_at' => $return->created_at?->format('d.m.Y H:i'),
                 'user' => $return->user ? [
                     'id' => $return->user->id,
-                    'name' => $return->user->full_name,
+                    'name' => $return->user->name,
                     'email' => $return->user->email,
                 ] : null,
                 'order' => $return->order ? [
@@ -369,7 +369,7 @@ class ReturnController extends AdminController
                 'updated_at' => $return->updated_at?->format('d.m.Y H:i'),
                 'user' => $return->user ? [
                     'id' => $return->user->id,
-                    'name' => $return->user->full_name,
+                    'name' => $return->user->name,
                     'email' => $return->user->email,
                     'phone' => $return->user->phone,
                 ] : null,

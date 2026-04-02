@@ -127,7 +127,7 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                                 <HStack gap={2}>
                                     <LuUser />
                                     <Text fontSize="sm" fontWeight="medium">
-                                        {auth?.user?.full_name || 'Пользователь'}
+                                        {auth?.user?.name || 'Пользователь'}
                                     </Text>
                                 </HStack>
                             </Box>

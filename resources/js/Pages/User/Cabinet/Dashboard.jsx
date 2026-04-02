@@ -9,7 +9,7 @@ import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet } from 'react-icons/lu
 export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [] }) {
     const { auth } = usePage().props;
     const user = auth?.user;
-    const name = user?.full_name || user?.name || 'Пользователь';
+    const name = user?.name || user?.name || 'Пользователь';
 
     const initials = name
         .split(' ')

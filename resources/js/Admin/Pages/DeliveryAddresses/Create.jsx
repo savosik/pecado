@@ -53,7 +53,7 @@ export default function Create() {
                                     onChange={(value) => setData('user_id', value)}
                                     error={errors.user_id}
                                     valueKey="id"
-                                    displayField="full_name"
+                                    displayField="name"
                                 />
                             </FormField>
 

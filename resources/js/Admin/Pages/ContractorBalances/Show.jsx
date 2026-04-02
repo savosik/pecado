@@ -40,7 +40,7 @@ export default function Show({ balance }) {
                                 {balance.user ? (
                                     <Link href={route('admin.users.edit', balance.user.id)}>
                                         <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontWeight="medium">
-                                            {balance.user.full_name}
+                                            {balance.user.name}
                                         </Text>
                                     </Link>
                                 ) : <Text>—</Text>}

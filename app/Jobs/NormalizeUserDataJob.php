@@ -45,9 +45,7 @@ class NormalizeUserDataJob implements ShouldQueue
         }
 
         $result = $service->normalizeUser(
-            $user->surname,
             $user->name,
-            $user->patronymic,
             $user->phone,
             $user->email,
         );
@@ -61,29 +59,9 @@ class NormalizeUserDataJob implements ShouldQueue
         $updates = [];
         $commentParts = [];
 
-        // ФИО
-        if (isset($result['type'])) {
-            if ($result['type'] === 'organization') {
-                // Используем org_name как есть — AI возвращает полное название
-                $orgName = $result['org_name'] ?? $user->name;
-                $updates['name'] = $orgName ?: $user->name; // name NOT NULL
-                $updates['surname'] = null;
-                $updates['patronymic'] = null;
-            } else {
-                // Персона
-                if (isset($result['surname'])) {
-                    $updates['surname'] = $result['surname'];
-                }
-                if (isset($result['name'])) {
-                    $updates['name'] = $result['name'];
-                }
-                if (array_key_exists('patronymic', $result)) {
-                    $updates['patronymic'] = $result['patronymic'];
-                }
-                if (! empty($result['org_type'])) {
-                    $commentParts[] = "Форма собственности: {$result['org_type']}";
-                }
-            }
+        // Имя / Название
+        if (isset($result['name']) && $result['name'] !== $user->name) {
+            $updates['name'] = $result['name'] ?: $user->name; // name NOT NULL
         }
 
         // Город
@@ -136,8 +114,6 @@ class NormalizeUserDataJob implements ShouldQueue
                 'user_id' => $this->userId,
                 'before'  => [
                     'name'       => $user->name,
-                    'surname'    => $user->surname,
-                    'patronymic' => $user->patronymic,
                     'phone'      => $user->phone,
                     'city'       => $user->city,
                 ],

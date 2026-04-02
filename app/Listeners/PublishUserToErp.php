@@ -43,7 +43,7 @@ class PublishUserToErp
             'message_id' => 'msg-' . Str::uuid()->toString(),
             'uuid'       => (string) ($user->erp_id ?? $user->id),
             'login'      => $user->email,
-            'name'       => $user->full_name,
+            'name'       => $user->name,
             'phone'      => $user->phone,
             'email'      => $user->email,
         ];

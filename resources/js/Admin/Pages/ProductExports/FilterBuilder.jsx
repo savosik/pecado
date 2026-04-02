@@ -98,7 +98,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
         onChange(newIds);
     };
 
-    const displayName = (item) => item.full_name || item.name || item.title || `#${item.id}`;
+    const displayName = (item) => item.name || item.name || item.title || `#${item.id}`;
 
     return (
         <Box position="relative" flex="1" minW="180px" ref={ref}>

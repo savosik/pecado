@@ -134,7 +134,7 @@ const FavoriteCreate = () => {
                                             onChange={handleUserChange}
                                             searchUrl="admin.favorites.search-users"
                                             placeholder="Поиск по имени или email..."
-                                            displayField="full_name"
+                                            displayField="name"
                                         />
                                     </FormField>
                                 </Box>

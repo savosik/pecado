@@ -10,10 +10,6 @@ import { toaster } from '@/components/ui/toaster';
 export default function Edit({ user, regions, currencies, countries, statuses }) {
     const { data, setData, put, processing, errors, transform } = useForm({
         name: user.name || '',
-        surname: user.surname
-
-            || '',
-        patronymic: user.patronymic || '',
         email: user.email || '',
         password: '', // Пустое значение - пароль не меняется
         phone: user.phone || '',
@@ -57,7 +53,7 @@ export default function Edit({ user, regions, currencies, countries, statuses })
     return (
         <>
             <PageHeader
-                title={`Редактирование: ${user.full_name}`}
+                title={`Редактирование: ${user.name}`}
                 description="Изменение информации о пользователе"
             />
 
@@ -65,25 +61,11 @@ export default function Edit({ user, regions, currencies, countries, statuses })
                 <Card.Root>
                     <Card.Body>
                         <Stack gap={6}>
-                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                <FormField label="Фамилия" error={errors.surname}>
-                                    <Input
-                                        value={data.surname}
-                                        onChange={(e) => setData('surname', e.target.value)}
-                                    />
-                                </FormField>
-
-                                <FormField label="Имя" error={errors.name} required>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Имя / Название" error={errors.name} required>
                                     <Input
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
-                                    />
-                                </FormField>
-
-                                <FormField label="Отчество" error={errors.patronymic}>
-                                    <Input
-                                        value={data.patronymic}
-                                        onChange={(e) => setData('patronymic', e.target.value)}
                                     />
                                 </FormField>
                             </SimpleGrid>

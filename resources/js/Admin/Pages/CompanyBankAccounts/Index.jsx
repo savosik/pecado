@@ -36,7 +36,7 @@ export default function Index({ bankAccounts, filters }) {
                     <Text fontWeight="medium">{company.name}</Text>
                     {company.user && (
                         <Text fontSize="xs" color="fg.muted">
-                            Пользователь: {company.user.full_name}
+                            Пользователь: {company.user.name}
                         </Text>
                     )}
                 </Box>

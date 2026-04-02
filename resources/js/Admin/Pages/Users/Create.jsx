@@ -10,8 +10,6 @@ import { toaster } from '@/components/ui/toaster';
 export default function Create({ regions, currencies, countries, statuses }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
-        surname: '',
-        patronymic: '',
         email: '',
         password: '',
         phone: '',
@@ -60,28 +58,12 @@ export default function Create({ regions, currencies, countries, statuses }) {
                 <Card.Root>
                     <Card.Body>
                         <Stack gap={6}>
-                            <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                <FormField label="Фамилия" error={errors.surname}>
-                                    <Input
-                                        value={data.surname}
-                                        onChange={(e) => setData('surname', e.target.value)}
-                                        placeholder="Иванов"
-                                    />
-                                </FormField>
-
-                                <FormField label="Имя" error={errors.name} required>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Имя / Название" error={errors.name} required>
                                     <Input
                                         value={data.name}
                                         onChange={(e) => setData('name', e.target.value)}
-                                        placeholder="Иван"
-                                    />
-                                </FormField>
-
-                                <FormField label="Отчество" error={errors.patronymic}>
-                                    <Input
-                                        value={data.patronymic}
-                                        onChange={(e) => setData('patronymic', e.target.value)}
-                                        placeholder="Иванович"
+                                        placeholder="Иванов Иван Иванович или ООО Рога и Копыта"
                                     />
                                 </FormField>
                             </SimpleGrid>

@@ -99,8 +99,7 @@ class PublishUserToErpTest extends TestCase
         $user = User::factory()->create([
             'erp_id'  => 'test-erp-uuid',
             'email'   => 'client@example.com',
-            'name'    => 'Иван',
-            'surname' => 'Иванов',
+            'name'    => 'Иванов Иван',
             'phone'   => '+7(999)123-45-67',
             'status'  => UserStatus::PROCESSING,
         ]);

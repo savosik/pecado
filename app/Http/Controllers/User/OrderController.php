@@ -220,7 +220,7 @@ class OrderController extends Controller
                         'new_status' => $history->new_status,
                         'old_status_label' => $history->old_status_label,
                         'new_status_label' => $history->new_status_label,
-                        'user_name' => $history->user ? $history->user->full_name : 'Система',
+                        'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
                         'created_at_human' => $history->created_at->diffForHumans(),

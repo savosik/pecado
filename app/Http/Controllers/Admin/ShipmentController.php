@@ -91,7 +91,7 @@ class ShipmentController extends Controller
                 'created_at'     => $shipment->created_at->format('d.m.Y H:i'),
                 'user'           => $shipment->user ? [
                     'id'    => $shipment->user->id,
-                    'name'  => $shipment->user->full_name,
+                    'name'  => $shipment->user->name,
                     'email' => $shipment->user->email,
                 ] : null,
                 'company'        => $shipment->company ? [
@@ -131,7 +131,7 @@ class ShipmentController extends Controller
                 'created_at'     => $shipment->created_at->format('d.m.Y H:i'),
                 'user'           => $shipment->user ? [
                     'id'    => $shipment->user->id,
-                    'name'  => $shipment->user->full_name,
+                    'name'  => $shipment->user->name,
                     'email' => $shipment->user->email,
                 ] : null,
                 'company'        => $shipment->company ? [

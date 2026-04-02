@@ -53,7 +53,7 @@ export default function Index({ exports, filters }) {
             label: 'Клиент',
             render: (_, row) => (
                 <Text fontSize="sm" color="fg.muted">
-                    {row.client_user?.full_name || '—'}
+                    {row.client_user?.name || '—'}
                 </Text>
             ),
         },

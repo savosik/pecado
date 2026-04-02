@@ -46,7 +46,7 @@ export default function Edit({ balance }) {
 
     return (
         <>
-            <PageHeader title={`Редактировать баланс: ${balance.user.full_name}`} />
+            <PageHeader title={`Редактировать баланс: ${balance.user.name}`} />
 
             <Card.Root>
                 <Card.Body>
@@ -61,7 +61,7 @@ export default function Edit({ balance }) {
                                     }}
                                     searchUrl="admin.users.search"
                                     placeholder="Выберите пользователя"
-                                    displayField="full_name"
+                                    displayField="name"
                                 />
                             </FormField>
 

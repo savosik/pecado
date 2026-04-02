@@ -33,7 +33,7 @@ export default function Index({ balances, filters }) {
             render: (_, row) => (
                 <Link href={route('admin.users.edit', row.user.id)}>
                     <Text color="blue.600" _hover={{ textDecoration: 'underline' }}>
-                        {row.user.full_name}
+                        {row.user.name}
                     </Text>
                 </Link>
             ),

@@ -27,8 +27,7 @@ class UserController extends Controller
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('phone', 'like', "%{$search}%")
-                    ->orWhere('surname', 'like', "%{$search}%");
+                    ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
@@ -90,8 +89,6 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'surname' => 'nullable|string|max:255',
-            'patronymic' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email',
             'password' => 'required|string|min:8',
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
@@ -135,8 +132,6 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'surname' => 'nullable|string|max:255',
-            'patronymic' => 'nullable|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8', // Опционально при обновлении
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
@@ -179,20 +174,18 @@ class UserController extends Controller
         if ($search = $request->input('query', $request->input('search'))) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('surname', 'like', "%{$search}%")
-                    ->orWhere('patronymic', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%")
                     ->orWhere('phone', 'like', "%{$search}%");
             });
         }
 
-        $users = $query->select('id', 'name', 'surname', 'patronymic', 'email', 'phone')
+        $users = $query->select('id', 'name', 'email', 'phone')
             ->limit(20)
             ->get()
             ->map(function ($user) {
                 return [
                     'id' => $user->id,
-                    'name' => $user->full_name,
+                    'name' => $user->name,
                     'email' => $user->email,
                     'phone' => $user->phone,
                 ];
