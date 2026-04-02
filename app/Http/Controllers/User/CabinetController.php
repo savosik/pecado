@@ -53,7 +53,9 @@ class CabinetController extends Controller
                 'contractors_count' => $balances->count(),
             ] : null,
             'recentOrders'   => $recentOrders,
-            'questionnaireCompleted' => $questionnaire && $questionnaire->isCompleted(),
+            'questionnaireCompleted' => $questionnaire
+                && $questionnaire->isCompleted()
+                && (!empty($questionnaire->business_type) || !empty($questionnaire->business_name)),
         ]);
     }
 
