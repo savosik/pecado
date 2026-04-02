@@ -4,6 +4,7 @@ import { Link, usePage } from '@inertiajs/react';
 import { LuHouse, LuGrid2X2, LuShoppingCart, LuHeart, LuUser, LuLogIn } from 'react-icons/lu';
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
 import { useCartStore } from '@/stores/useCartStore';
+import { useAuthDialog } from '@/contexts/AuthDialogContext';
 
 /**
  * Бейдж-счётчик (красный кружок с числом).
@@ -104,6 +105,8 @@ export default function MobileNav() {
         document.dispatchEvent(new Event('catalog:open'));
     };
 
+    const { openLogin } = useAuthDialog();
+
     // Общие пункты
     const items = [
         { key: 'home', href: '/', icon: LuHouse, label: 'Главная', active: currentPath === '/' },
@@ -118,7 +121,7 @@ export default function MobileNav() {
         );
     } else {
         items.push(
-            { key: 'login', href: '/login', icon: LuLogIn, label: 'Войти', active: currentPath === '/login' },
+            { key: 'login', onClick: openLogin, icon: LuLogIn, label: 'Войти' },
         );
     }
 

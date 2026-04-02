@@ -6,6 +6,8 @@ import CurrencySwitcher from './Components/CurrencySwitcher';
 import CartDropdown from '@/shared/CartDropdown';
 import Search from '@/shared/Search';
 import HeaderIconButton from '@/components/common/HeaderIconButton';
+import { useAuthDialog } from '@/contexts/AuthDialogContext';
+import AuthDialog from '@/components/auth/AuthDialog';
 import {
     Box, Flex, HStack, Text, IconButton, Button, Badge,
     Drawer, Portal, CloseButton, VStack, Separator, Menu,
@@ -35,6 +37,7 @@ export default function UserHeader() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [catalogOpen, setCatalogOpen] = useState(false);
     const favCount = useFavoritesStore((s) => s.ids.size);
+    const { openLogin, openRegister } = useAuthDialog();
 
     // Загрузка избранного и корзины при наличии пользователя
     useEffect(() => {
@@ -185,21 +188,19 @@ export default function UserHeader() {
                             ) : (
                                 <HStack gap="1">
                                     <Button
-                                        as={Link}
-                                        href="/login"
                                         variant="ghost"
                                         colorPalette="gray"
                                         size="sm"
+                                        onClick={openLogin}
                                     >
                                         <LuUser />
                                         Войти
                                     </Button>
                                     <Button
-                                        as={Link}
-                                        href="/register"
                                         variant="outline"
                                         colorPalette="pecado"
                                         size="sm"
+                                        onClick={openRegister}
                                     >
                                         Регистрация
                                     </Button>
@@ -275,10 +276,10 @@ export default function UserHeader() {
                                         </>
                                     ) : (
                                         <HStack gap="2" mb="2">
-                                            <Button as={Link} href="/login" size="sm" colorPalette="pecado" variant="solid" flex="1" onClick={() => setMobileMenuOpen(false)}>
+                                            <Button size="sm" colorPalette="pecado" variant="solid" flex="1" onClick={() => { setMobileMenuOpen(false); openLogin(); }}>
                                                 Войти
                                             </Button>
-                                            <Button as={Link} href="/register" size="sm" variant="outline" flex="1" onClick={() => setMobileMenuOpen(false)}>
+                                            <Button size="sm" variant="outline" flex="1" onClick={() => { setMobileMenuOpen(false); openRegister(); }}>
                                                 Регистрация
                                             </Button>
                                         </HStack>
@@ -360,6 +361,7 @@ export default function UserHeader() {
             </Drawer.Root>
 
             <CatalogPanel open={catalogOpen} onClose={() => setCatalogOpen(false)} />
+            <AuthDialog />
         </>
     );
 }

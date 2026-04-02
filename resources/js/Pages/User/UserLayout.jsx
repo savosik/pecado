@@ -6,9 +6,11 @@ import ScrollToTop from '@/components/common/ScrollToTop';
 import { Toaster } from '@/components/ui/toaster';
 import { ProductQuickViewProvider } from '@/contexts/ProductQuickViewContext';
 import ProductQuickViewMount from '@/components/product/ProductQuickViewMount';
+import { AuthDialogProvider } from '@/contexts/AuthDialogContext';
 
 export default function UserLayout({ children }) {
     return (
+        <AuthDialogProvider>
         <ProductQuickViewProvider>
             <Box minH="100vh" bg="#f4f4f4" _dark={{ bg: 'gray.900' }} display="flex" flexDirection="column">
                 <UserHeader />
@@ -31,5 +33,6 @@ export default function UserLayout({ children }) {
                 <Toaster />
             </Box>
         </ProductQuickViewProvider>
+        </AuthDialogProvider>
     );
 }
