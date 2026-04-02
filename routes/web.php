@@ -39,6 +39,7 @@ Route::middleware('auth')->group(function () {
     // Onboarding
     Route::get('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'show'])->name('onboarding');
     Route::post('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'store'])->name('onboarding.store');
+    Route::post('/onboarding/personal', [\App\Http\Controllers\User\OnboardingController::class, 'savePersonal'])->name('onboarding.personal');
     Route::post('/onboarding/skip', [\App\Http\Controllers\User\OnboardingController::class, 'skip'])->name('onboarding.skip');
 });
 

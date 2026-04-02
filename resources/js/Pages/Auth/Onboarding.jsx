@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Head, useForm, router } from '@inertiajs/react';
+import axios from 'axios';
 import {
     Box, Flex, Text, Heading, VStack, Button, Input,
     SimpleGrid, Textarea,
@@ -187,6 +188,14 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                 return;
             }
             setPersonalErrors({});
+
+            // Подсохраняем личные данные
+            axios.post('/onboarding/personal', {
+                name: data.name,
+                phone: data.phone,
+                country: data.country,
+                city: data.city,
+            }).catch(() => {});
         }
 
         setStepIndex(Math.min(stepIndex + 1, totalSteps - 1));

@@ -104,4 +104,23 @@ class OnboardingController extends Controller
 
         return redirect('/')->with('success', 'Добро пожаловать в Pecado!');
     }
+
+    /**
+     * Save personal info (intermediate save after step 1).
+     */
+    public function savePersonal(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'phone' => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
+            'country' => 'required|string|in:RU,BY,KZ',
+            'city' => 'required|string|max:255',
+        ]);
+
+        $user->update($validated);
+
+        return response()->json(['ok' => true]);
+    }
 }
