@@ -41,7 +41,7 @@ export default function RegisterForm() {
             boxShadow: "0 0 0 1px rgba(158, 27, 50, 0.15)",
         },
         borderRadius: "lg",
-        h: "11",
+        h: "10",
         fontSize: "sm",
     };
 
@@ -63,26 +63,24 @@ export default function RegisterForm() {
                         />
                     </Field>
 
-                    <SimpleGrid columns={2} gap={3}>
-                        <Field label={labelEl('Email')} invalid={!!errors.email} errorText={errors.email} required>
-                            <Input
-                                type="email"
-                                value={data.email}
-                                onChange={(e) => setData('email', e.target.value)}
-                                placeholder="your@email.com"
-                                {...inputStyles}
-                            />
-                        </Field>
+                    <Field label={labelEl('Email')} invalid={!!errors.email} errorText={errors.email} required>
+                        <Input
+                            type="email"
+                            value={data.email}
+                            onChange={(e) => setData('email', e.target.value)}
+                            placeholder="your@email.com"
+                            {...inputStyles}
+                        />
+                    </Field>
 
-                        <Field label={labelEl('Телефон')} invalid={!!errors.phone} errorText={errors.phone} required>
-                            <PhoneInput
-                                value={data.phone}
-                                onChange={(val) => setData('phone', val)}
-                                placeholder="+7 (999) 123-45-67"
-                                {...inputStyles}
-                            />
-                        </Field>
-                    </SimpleGrid>
+                    <Field label={labelEl('Телефон')} invalid={!!errors.phone} errorText={errors.phone} required>
+                        <PhoneInput
+                            value={data.phone}
+                            onChange={(val) => setData('phone', val)}
+                            placeholder="+7 (999) 123-45-67"
+                            {...inputStyles}
+                        />
+                    </Field>
 
                     <SimpleGrid columns={2} gap={3}>
                         <Field label={labelEl('Страна')} invalid={!!errors.country} errorText={errors.country} required>
@@ -93,7 +91,7 @@ export default function RegisterForm() {
                                 bg="white"
                                 color="gray.900"
                                 borderRadius="lg"
-                                h="11"
+                                h="10"
                                 fontSize="sm"
                                 border="1px solid"
                                 borderColor="gray.300"
@@ -129,7 +127,7 @@ export default function RegisterForm() {
                                 type="password"
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
-                                placeholder="Минимум 8 символов"
+                                placeholder="Мин. 8 символов"
                                 {...inputStyles}
                             />
                         </Field>
