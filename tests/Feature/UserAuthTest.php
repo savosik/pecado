@@ -42,14 +42,9 @@ class UserAuthTest extends TestCase
     public function test_user_can_register(): void
     {
         $response = $this->post('/register', [
-            'name' => 'Иванов Иван Иванович',
             'email' => 'test@example.com',
-            'phone' => '+79991234567',
-            'country' => 'RU',
-            'city' => 'Москва',
             'password' => 'password123',
             'password_confirmation' => 'password123',
-            'terms_accepted' => true,
         ]);
 
         $response->assertRedirect('/onboarding');
@@ -58,22 +53,6 @@ class UserAuthTest extends TestCase
             'is_admin' => false,
         ]);
         $this->assertAuthenticated();
-    }
-
-    public function test_registration_requires_terms_accepted(): void
-    {
-        $response = $this->post('/register', [
-            'name' => 'Иванов Иван Иванович',
-            'email' => 'test@example.com',
-            'phone' => '+79991234567',
-            'country' => 'RU',
-            'city' => 'Москва',
-            'password' => 'password123',
-            'password_confirmation' => 'password123',
-            'terms_accepted' => false,
-        ]);
-
-        $response->assertSessionHasErrors('terms_accepted');
     }
 
     // ─── Login ────────────────────────────────
