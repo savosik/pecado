@@ -71,22 +71,17 @@ class AuthController extends Controller
     public function register(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nullable|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'phone' => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
-            'country' => 'required|string|in:RU,BY,KZ',
-            'city' => 'required|string|max:255',
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
+            'country' => 'nullable|string|in:RU,BY,KZ',
+            'city' => 'nullable|string|max:255',
             'password' => 'required|string|min:8|confirmed',
             'terms_accepted' => 'accepted',
         ], [
-            'name.required' => 'Имя обязательно для заполнения',
             'email.required' => 'Email обязателен для заполнения',
             'email.email' => 'Введите корректный email',
             'email.unique' => 'Пользователь с таким email уже зарегистрирован',
-            'phone.required' => 'Телефон обязателен для заполнения',
-            'country.required' => 'Выберите страну',
-            'country.in' => 'Выберите корректную страну',
-            'city.required' => 'Город обязателен для заполнения',
             'password.required' => 'Пароль обязателен для заполнения',
             'password.min' => 'Пароль должен содержать не менее 8 символов',
             'password.confirmed' => 'Пароли не совпадают',
@@ -94,11 +89,11 @@ class AuthController extends Controller
         ]);
 
         $user = User::create([
-            'name' => $validated['name'],
+            'name' => $validated['name'] ?? null,
             'email' => strtolower($validated['email']),
-            'phone' => $validated['phone'],
-            'country' => $validated['country'],
-            'city' => $validated['city'],
+            'phone' => $validated['phone'] ?? null,
+            'country' => $validated['country'] ?? null,
+            'city' => $validated['city'] ?? null,
             'password' => $validated['password'],
             'terms_accepted' => true,
             'is_admin' => false,
