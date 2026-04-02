@@ -18,8 +18,10 @@ class OnboardingController extends Controller
         $user = Auth::user();
         $questionnaire = $user->questionnaire;
 
-        // Если анкета уже заполнена — редирект на главную
-        if ($questionnaire && $questionnaire->isCompleted()) {
+        // Если анкета реально заполнена — редирект на главную
+        // Скипнутая анкета (completed_at есть, но данных нет) — разрешаем перезаполнить
+        if ($questionnaire && $questionnaire->isCompleted()
+            && (!empty($questionnaire->business_type) || !empty($questionnaire->business_name))) {
             return redirect('/');
         }
 

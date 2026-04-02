@@ -139,7 +139,9 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
         'final',       // Последний шаг
     ];
     const totalSteps = steps.length;
-    const [stepIndex, setStepIndex] = useState(0);
+    // Если личные данные уже заполнены — начинаем со 2-го шага
+    const personalFilled = user?.name && user?.country && user?.city && user?.phone;
+    const [stepIndex, setStepIndex] = useState(personalFilled ? 1 : 0);
     const currentStep = steps[stepIndex];
 
     const { data, setData, post, processing, errors } = useForm({
