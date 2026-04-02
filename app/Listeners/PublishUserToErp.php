@@ -23,16 +23,26 @@ class PublishUserToErp
 
         $user = $event->user;
 
-        // Публикуем только для события UserUpdated, когда статус изменился на ACTIVE
+        // Публикуем только для события UserUpdated
         if ($event instanceof UserUpdated) {
             $changes = $user->getChanges();
 
-            // Проверяем, что статус изменился именно на ACTIVE
-            if (!isset($changes['status']) || $changes['status'] !== UserStatus::ACTIVE->value) {
+            // Два сценария публикации:
+            // 1. Статус изменился на ACTIVE (и профиль заполнен)
+            // 2. Имя заполнено впервые (и пользователь уже ACTIVE)
+            $statusBecameActive = isset($changes['status']) && $changes['status'] === UserStatus::ACTIVE->value;
+            $nameJustFilled = isset($changes['name']) && !empty($changes['name']) && $user->status === UserStatus::ACTIVE;
+
+            if (!$statusBecameActive && !$nameJustFilled) {
                 return;
             }
         } else {
             // Для других событий (UserCreated и т.д.) не публикуем
+            return;
+        }
+
+        // Не отправляем в 1С если профиль не заполнен
+        if (empty($user->name)) {
             return;
         }
 
