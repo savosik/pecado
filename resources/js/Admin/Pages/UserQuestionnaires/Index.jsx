@@ -51,11 +51,18 @@ export default function Index({ questionnaires, filters }) {
         {
             key: 'business_type',
             label: 'Тип бизнеса',
-            render: (_, row) => row.business_type ? (
-                <Badge variant="outline" colorPalette="blue" size="sm">
-                    {businessTypeLabels[row.business_type] || row.business_type}
-                </Badge>
-            ) : <Text color="gray.400">—</Text>,
+            render: (_, row) => {
+                const types = Array.isArray(row.business_type) ? row.business_type : (row.business_type ? [row.business_type] : []);
+                return types.length > 0 ? (
+                    <Box display="flex" gap={1} flexWrap="wrap">
+                        {types.map((t) => (
+                            <Badge key={t} variant="outline" colorPalette="blue" size="sm">
+                                {businessTypeLabels[t] || t}
+                            </Badge>
+                        ))}
+                    </Box>
+                ) : <Text color="gray.400">—</Text>;
+            },
         },
         {
             key: 'business_name',

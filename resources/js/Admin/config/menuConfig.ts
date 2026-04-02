@@ -111,6 +111,7 @@ export const menuConfig: MenuGroup[] = [
         icon: LuUsers,
         items: [
             { label: "Пользователи", icon: LuUsers, path: "/admin/users" },
+            { label: "Анкеты", icon: LuFileText, path: "/admin/user-questionnaires" },
             { label: "Компании", icon: LuBuilding2, path: "/admin/companies" },
             { label: "Банковские счета", icon: LuCreditCard, path: "/admin/company-bank-accounts" },
             { label: "Адреса доставки", icon: LuMapPinned, path: "/admin/delivery-addresses" },
