@@ -33,6 +33,12 @@ class OnboardingController extends Controller
         return Inertia::render('Auth/Onboarding', [
             'questionnaire' => $questionnaire,
             'rootCategories' => $rootCategories,
+            'user' => [
+                'name' => $user->name,
+                'phone' => $user->phone,
+                'country' => $user->country,
+                'city' => $user->city,
+            ],
         ]);
     }
 
@@ -44,6 +50,12 @@ class OnboardingController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
+            // Личные данные пользователя
+            'name' => 'nullable|string|max:255',
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
+            'country' => 'nullable|string|in:RU,BY,KZ',
+            'city' => 'nullable|string|max:255',
+            // Анкета
             'business_type' => 'nullable|array',
             'business_name' => 'nullable|string|max:255',
             'website_url' => 'nullable|string|max:500',
@@ -56,11 +68,23 @@ class OnboardingController extends Controller
             'additional_info' => 'nullable|string|max:2000',
         ]);
 
-        $validated['completed_at'] = now();
+        // Сохраняем личные данные в User
+        $user->update([
+            'name' => $validated['name'] ?? $user->name,
+            'phone' => $validated['phone'] ?? $user->phone,
+            'country' => $validated['country'] ?? $user->country,
+            'city' => $validated['city'] ?? $user->city,
+        ]);
+
+        // Сохраняем анкету
+        $questionnaireData = collect($validated)
+            ->except(['name', 'phone', 'country', 'city'])
+            ->toArray();
+        $questionnaireData['completed_at'] = now();
 
         $user->questionnaire()->updateOrCreate(
             ['user_id' => $user->id],
-            $validated
+            $questionnaireData
         );
 
         return redirect('/')->with('success', 'Спасибо за заполнение анкеты! Добро пожаловать!');

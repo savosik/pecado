@@ -5,8 +5,16 @@ import {
     SimpleGrid, Textarea,
 } from '@chakra-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Field } from '@/components/ui/field';
 import { Link } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/toaster';
+import { PhoneInput } from '@/components/common/PhoneInput';
+
+const countries = [
+    { value: 'RU', label: 'Россия' },
+    { value: 'BY', label: 'Беларусь' },
+    { value: 'KZ', label: 'Казахстан' },
+];
 
 
 
@@ -119,22 +127,27 @@ function ProgressBar({ step, total }) {
     );
 }
 
-export default function Onboarding({ questionnaire, rootCategories = [] }) {
+export default function Onboarding({ questionnaire, rootCategories = [], user = {} }) {
     const hasCategories = rootCategories.length > 0;
 
-    // Определяем шаги: если нет категорий в БД — пропускаем шаг 3
-    // Шаги: 1=Бизнес, 2=Опыт, 3=Категории (если есть), N=Финал
     const steps = [
+        'personal',    // Личные данные
         'business',    // О бизнесе
         'experience',  // Опыт и объёмы
-        ...(hasCategories ? ['categories'] : []), // Категории (только если есть в БД)
+        ...(hasCategories ? ['categories'] : []),
         'final',       // Последний шаг
     ];
     const totalSteps = steps.length;
     const [stepIndex, setStepIndex] = useState(0);
     const currentStep = steps[stepIndex];
 
-    const { data, setData, post, processing } = useForm({
+    const { data, setData, post, processing, errors } = useForm({
+        // Личные данные
+        name: user?.name || '',
+        phone: user?.phone || '',
+        country: user?.country || '',
+        city: user?.city || '',
+        // Анкета
         business_type: questionnaire?.business_type || [],
         business_name: questionnaire?.business_name || '',
         website_url: questionnaire?.website_url || '',
@@ -194,6 +207,7 @@ export default function Onboarding({ questionnaire, rootCategories = [] }) {
     };
 
     const stepMeta = {
+        personal: { title: 'Расскажите о себе', subtitle: 'Заполните основную информацию' },
         business: { title: 'О вашем бизнесе', subtitle: 'Расскажите о вашей компании' },
         experience: { title: 'Опыт и объёмы', subtitle: 'Поможем подобрать лучшие условия' },
         categories: { title: 'Что вас интересует', subtitle: 'Выберите интересующие категории' },
@@ -257,6 +271,83 @@ export default function Onboarding({ questionnaire, rootCategories = [] }) {
                         </VStack>
 
                         <form onSubmit={handleSubmit}>
+                            {/* Личные данные */}
+                            {currentStep === 'personal' && (
+                                <VStack gap={4} align="stretch">
+                                    <Field
+                                        label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Имя / Название</Text>}
+                                        invalid={!!errors.name}
+                                        errorText={errors.name}
+                                    >
+                                        <Input
+                                            value={data.name}
+                                            onChange={(e) => setData('name', e.target.value)}
+                                            placeholder="Иванов Иван Иванович или ООО Рога и Копыта"
+                                            {...inputStyles}
+                                        />
+                                    </Field>
+
+                                    <SimpleGrid columns={2} gap={3}>
+                                        <Field
+                                            label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Страна</Text>}
+                                            invalid={!!errors.country}
+                                            errorText={errors.country}
+                                        >
+                                            <Box
+                                                as="select"
+                                                value={data.country}
+                                                onChange={(e) => setData('country', e.target.value)}
+                                                bg="white"
+                                                color="gray.900"
+                                                borderRadius="lg"
+                                                h="11"
+                                                fontSize="sm"
+                                                border="1px solid"
+                                                borderColor="gray.300"
+                                                _hover={{ borderColor: "gray.400" }}
+                                                _focus={{
+                                                    borderColor: "#9e1b32",
+                                                    boxShadow: "0 0 0 1px rgba(158, 27, 50, 0.15)",
+                                                    outline: "none",
+                                                }}
+                                                w="full"
+                                                px={3}
+                                            >
+                                                <option value="">Выберите</option>
+                                                {countries.map((c) => (
+                                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                                ))}
+                                            </Box>
+                                        </Field>
+
+                                        <Field
+                                            label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Город</Text>}
+                                            invalid={!!errors.city}
+                                            errorText={errors.city}
+                                        >
+                                            <Input
+                                                value={data.city}
+                                                onChange={(e) => setData('city', e.target.value)}
+                                                placeholder="Москва"
+                                                {...inputStyles}
+                                            />
+                                        </Field>
+                                    </SimpleGrid>
+
+                                    <Field
+                                        label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Телефон</Text>}
+                                        invalid={!!errors.phone}
+                                        errorText={errors.phone}
+                                    >
+                                        <PhoneInput
+                                            value={data.phone}
+                                            onChange={(val) => setData('phone', val)}
+                                            placeholder="+7 (999) 123-45-67"
+                                        />
+                                    </Field>
+                                </VStack>
+                            )}
+
                             {/* О бизнесе */}
                             {currentStep === 'business' && (
                                 <VStack gap={5} align="stretch">
