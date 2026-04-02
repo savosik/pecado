@@ -111,7 +111,7 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $user->load(['region', 'currency', 'companies', 'deliveryAddresses']);
+        $user->load(['region', 'currency', 'companies', 'deliveryAddresses', 'questionnaire']);
 
         return Inertia::render('Admin/Pages/Users/Edit', [
             'user' => $user,

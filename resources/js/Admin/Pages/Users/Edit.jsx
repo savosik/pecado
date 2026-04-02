@@ -1,8 +1,8 @@
 import { useRef } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
-import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text, HStack, Badge, Button } from '@chakra-ui/react';
+import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text, HStack, Badge, Button, Flex } from '@chakra-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
@@ -266,6 +266,32 @@ export default function Edit({ user, regions, currencies, countries, statuses })
                     </Card.Footer>
                 </Card.Root>
             </form>
+
+            {/* Анкета */}
+            <Card.Root mt={6}>
+                <Card.Body>
+                    <Flex align="center" justify="space-between">
+                        <Box>
+                            <Text fontWeight="bold" fontSize="md" color="gray.700">Анкета онбординга</Text>
+                            <Text fontSize="sm" color="gray.500">
+                                {user.questionnaire
+                                    ? (user.questionnaire.completed_at ? 'Заполнена' : 'Не завершена')
+                                    : 'Анкета не создана'
+                                }
+                            </Text>
+                        </Box>
+                        {user.questionnaire ? (
+                            <Link href={route('admin.user-questionnaires.edit', user.questionnaire.id)}>
+                                <Button size="sm" variant="outline" colorPalette="blue">Открыть анкету</Button>
+                            </Link>
+                        ) : (
+                            <Link href={`/admin/user-questionnaires/create?user_id=${user.id}`}>
+                                <Button size="sm" colorPalette="blue">Создать анкету</Button>
+                            </Link>
+                        )}
+                    </Flex>
+                </Card.Body>
+            </Card.Root>
         </>
     );
 }

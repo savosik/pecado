@@ -94,7 +94,11 @@ export default function Index({ questionnaires, filters }) {
 
     return (
         <>
-            <PageHeader title="Анкеты пользователей" />
+            <PageHeader
+                title="Анкеты пользователей"
+                createRoute={route('admin.user-questionnaires.create')}
+                createLabel="Создать анкету"
+            />
 
             <Box mb={4}>
                 <SearchInput

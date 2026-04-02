@@ -178,7 +178,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::resource('delivery-addresses', \App\Http\Controllers\Admin\DeliveryAddressController::class);
 
     // Анкеты пользователей
-    Route::resource('user-questionnaires', \App\Http\Controllers\Admin\UserQuestionnaireController::class)->only(['index', 'edit', 'update', 'destroy']);
+    Route::resource('user-questionnaires', \App\Http\Controllers\Admin\UserQuestionnaireController::class)->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
 
     // --------------------
     // Финансы (Finance)

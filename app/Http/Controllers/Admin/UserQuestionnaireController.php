@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\User;
 use App\Models\UserQuestionnaire;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -11,6 +12,48 @@ use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 class UserQuestionnaireController extends Controller
 {
     use RedirectsAfterSave;
+
+    public function create(Request $request)
+    {
+        $userId = $request->input('user_id');
+        $user = $userId ? User::find($userId) : null;
+
+        // Список пользователей без анкеты
+        $usersWithoutQuestionnaire = User::whereDoesntHave('questionnaire')
+            ->orderBy('email')
+            ->get(['id', 'name', 'email']);
+
+        return Inertia::render('Admin/Pages/UserQuestionnaires/Create', [
+            'selectedUser' => $user ? ['id' => $user->id, 'name' => $user->name, 'email' => $user->email] : null,
+            'users' => $usersWithoutQuestionnaire,
+        ]);
+    }
+
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'user_id' => 'required|exists:users,id|unique:user_questionnaires,user_id',
+            'business_type' => 'nullable|array',
+            'business_name' => 'nullable|string|max:255',
+            'website_url' => 'nullable|string|max:500',
+            'years_in_business' => 'nullable|string|max:255',
+            'monthly_order_volume' => 'nullable|string|max:255',
+            'has_physical_store' => 'boolean',
+            'store_count' => 'nullable|string|max:255',
+            'product_categories' => 'nullable|array',
+            'how_found_us' => 'nullable|string|max:255',
+            'additional_info' => 'nullable|string|max:2000',
+        ], [
+            'user_id.required' => 'Выберите пользователя',
+            'user_id.unique' => 'У этого пользователя уже есть анкета',
+        ]);
+
+        $validated['completed_at'] = now();
+
+        $questionnaire = UserQuestionnaire::create($validated);
+
+        return $this->redirectAfterSave($request, 'admin.user-questionnaires.index', 'admin.user-questionnaires.edit', $questionnaire, 'Анкета успешно создана');
+    }
 
     public function index(Request $request)
     {
