@@ -57,14 +57,36 @@ class PublishUserToErpTest extends TestCase
     }
 
     #[Test]
-    public function it_does_not_dispatch_when_status_does_not_change_to_active(): void
+    public function it_dispatches_when_name_filled_on_active_user(): void
     {
         $user = User::factory()->create([
             'status' => UserStatus::ACTIVE,
+            'name'   => null,
         ]);
 
-        // Изменение несвязанного поля
+        Queue::clearResolvedInstances();
+        Queue::fake();
+
+        // Заполнение имени на активном пользователе — должно отправить в ERP
         $user->name = 'Новое имя';
+        $user->save();
+
+        Queue::assertPushed(PublishUserToErpJob::class);
+    }
+
+    #[Test]
+    public function it_does_not_dispatch_when_irrelevant_field_changes_on_active_user(): void
+    {
+        $user = User::factory()->create([
+            'status' => UserStatus::ACTIVE,
+            'name'   => 'Иван',
+        ]);
+
+        Queue::clearResolvedInstances();
+        Queue::fake();
+
+        // Изменение несвязанного поля — не должно отправлять в ERP
+        $user->phone = '+79991234567';
         $user->save();
 
         Queue::assertNothingPushed();
