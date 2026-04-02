@@ -32,6 +32,10 @@ export function PhoneInput({ value, onChange, placeholder, ...rest }) {
                 '.PhoneInputCountry': { 
                     marginRight: '0.5rem' 
                 },
+                '.PhoneInputInput': {
+                    width: '100%',
+                    flex: '1',
+                },
             }}
         >
             <PhoneInputLib

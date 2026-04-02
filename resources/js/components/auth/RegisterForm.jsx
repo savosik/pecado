@@ -144,12 +144,11 @@ export default function RegisterForm() {
                             value={data.phone}
                             onChange={(val) => setData('phone', val)}
                             placeholder="+7 (999) 123-45-67"
-                            {...inputStyles}
                         />
                     </Field>
 
                     {/* === Согласие и кнопка === */}
-                    <Field invalid={!!errors.terms_accepted} errorText={errors.terms_accepted} required>
+                    <Field invalid={!!errors.terms_accepted} errorText={errors.terms_accepted} required mt={2}>
                         <Checkbox
                             checked={data.terms_accepted}
                             onCheckedChange={(e) => setData('terms_accepted', e.checked)}
