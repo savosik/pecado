@@ -77,7 +77,7 @@ class AuthController extends Controller
             'country' => 'nullable|string|in:RU,BY,KZ',
             'city' => 'nullable|string|max:255',
             'password' => 'required|string|min:8|confirmed',
-            'terms_accepted' => 'accepted',
+            'terms_accepted' => 'nullable|boolean',
         ], [
             'email.required' => 'Email обязателен для заполнения',
             'email.email' => 'Введите корректный email',
