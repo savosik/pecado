@@ -152,6 +152,17 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        // Нельзя активировать пользователя без заполненного имени (онбординг)
+        if (
+            isset($validated['status']) &&
+            $validated['status'] === UserStatus::ACTIVE->value &&
+            empty($validated['name'] ?? $user->name)
+        ) {
+            return back()->withErrors([
+                'status' => 'Невозможно активировать пользователя без заполненного имени. Пользователь ещё не прошёл онбординг.',
+            ]);
+        }
+
         $user->update($validated);
 
         return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно обновлен');
