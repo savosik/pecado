@@ -7,20 +7,7 @@ use Illuminate\Support\Facades\Log;
 class DataNormalizerService
 {
     /**
-     * Нормализовать данные пользователя (ФИО + телефон + email) через OpenRouter AI.
-     *
-     * @return array{
-     *   type: string,
-     *   surname: ?string,
-     *   name: ?string,
-     *   patronymic: ?string,
-     *   city: ?string,
-     *   org_type: ?string,
-     *   org_name: ?string,
-     *   primary_phone: ?string,
-     *   email: ?string,
-     *   extra_info: ?string,
-     * }|null
+     * Нормализовать данные пользователя (ФИО + телефон + email) через AI.
      */
     public function normalizeUser(
         ?string $surname,
@@ -30,29 +17,29 @@ class DataNormalizerService
         ?string $email = null,
     ): ?array {
         $systemPrompt = <<<'PROMPT'
-Ты — парсер данных контрагентов из 1С. Разбери данные на структурированные поля.
+Ты парсер данных контрагентов из 1С. Тебе приходят сырые поля. Разбери их на чистые структурированные поля.
 
 ПРАВИЛА:
-1. Если в ФИО записано название организации (ООО, ИП, ЗАО, ОАО, ТОО, АО, Отель и т.п.) — определи type="organization", собери полное название в org_name, очисти поля ФИО (установи null)
-2. Если ИП — surname/name/patronymic должны быть ТОЛЬКО ФИО человека (без "ИП"). "ИП" → org_type
-3. Если в отчестве есть город (г., обл., район) — вынеси город в city, отчество оставь чистым. Если отчество сокращено (например "Ф.г.Белово" = отчество "Ф." + город "Белово") — разбери их отдельно
-4. Телефон: извлеки первый номер в формат +7XXXXXXXXXX (ровно 10 цифр после +7). ВАЖНО: "8" в начале российского номера — это код страны, эквивалент +7. Номер 8-923-496-60-87 → +79234966087 (НЕ +789234966087). После +7 должно быть ровно 10 цифр. Доп. номера, факсы, имена → extra_info
-5. Если email не является валидным (нет @, это число и т.п.) — установи email=null, исходное значение добавь в extra_info
-6. Если данные уже чистые — верни их как есть, type="person"
-7. Все лишние данные (доп. телефоны, факсы, комментарии, форма собственности, город если есть) собирай в extra_info через "; "
+1. Определи тип: "person" (физлицо) или "organization" (юрлицо — ООО, ИП, ЗАО, ОАО, ТОО, АО, Отель и т.п.)
+2. Для "organization": верни полное название как оно должно быть (напр. "ООО Яндекс.Маркет"), очисти ФИО (null)
+3. Для "person" с ИП: ФИО — только ФИО человека, "ИП" вынеси в org_type
+4. Отчество: убери из него город/область, если есть. Город → city. Сокращённые отчества ("Ф.", "А.") — оставь как есть
+5. Телефон: первый номер → формат +7XXXXXXXXXX (ровно 12 символов: +7 и 10 цифр). 8 в начале = +7 (8-923-... → +79231...). Остальные номера/факсы/имена → extra_info
+6. Невалидный email (нет @, число) → email=null
+7. Все лишние данные собери в extra_info через "; "
 
-ВЕРНИ ТОЛЬКО JSON (без markdown, без ```, без пояснений):
+Отвечай ТОЛЬКО JSON без markdown:
 {
-  "type": "person" или "organization",
-  "surname": "string или null",
-  "name": "string или null",
-  "patronymic": "string или null",
-  "city": "string или null",
-  "org_type": "ИП" или "ООО" или "ЗАО" или "ОАО" или "ТОО" или "АО" или null,
-  "org_name": "string или null",
-  "primary_phone": "string в формате +7XXXXXXXXXX или null",
-  "email": "string или null",
-  "extra_info": "string или null"
+  "type": "person" | "organization",
+  "surname": "string | null",
+  "name": "string | null",
+  "patronymic": "string | null",
+  "city": "string | null",
+  "org_type": "ИП" | "ООО" | ... | null,
+  "org_name": "полное название с формой собственности, напр. 'ООО Яндекс' | null",
+  "primary_phone": "+7XXXXXXXXXX | null",
+  "email": "string | null",
+  "extra_info": "string | null"
 }
 PROMPT;
 
@@ -70,31 +57,25 @@ PROMPT;
     }
 
     /**
-     * Нормализовать данные компании (телефон + email) через OpenRouter AI.
-     *
-     * @return array{
-     *   primary_phone: ?string,
-     *   email: ?string,
-     *   extra_info: ?string,
-     * }|null
+     * Нормализовать данные компании (телефон + email) через AI.
      */
     public function normalizeCompany(
         ?string $phone = null,
         ?string $email = null,
     ): ?array {
         $systemPrompt = <<<'PROMPT'
-Ты — парсер контактных данных компаний из 1С.
+Ты парсер контактных данных компаний из 1С.
 
 ПРАВИЛА:
-1. Телефон: извлеки первый номер в формат +7XXXXXXXXXX (ровно 10 цифр после +7). ВАЖНО: "8" в начале = код страны = +7. Номер 8-XXX-XXX-XX-XX → +7XXXXXXXXXX. Доп. номера, факсы, имена → extra_info
-2. Если email не валидный — email=null, значение → extra_info
+1. Телефон: первый номер → +7XXXXXXXXXX (ровно 12 символов). 8 в начале = +7. Остальные → extra_info
+2. Невалидный email → null
 3. Чистые данные — верни как есть
 
-ВЕРНИ ТОЛЬКО JSON:
+Отвечай ТОЛЬКО JSON:
 {
-  "primary_phone": "string в формате +7XXXXXXXXXX или null",
-  "email": "string или null",
-  "extra_info": "string или null"
+  "primary_phone": "+7XXXXXXXXXX | null",
+  "email": "string | null",
+  "extra_info": "string | null"
 }
 PROMPT;
 
@@ -122,6 +103,29 @@ PROMPT;
     }
 
     /**
+     * Валидация телефона: +7 + ровно 10 цифр.
+     * Если невалидный — возвращает null.
+     */
+    public static function validatePhone(?string $phone): ?string
+    {
+        if (! $phone) {
+            return null;
+        }
+
+        // Исправить +78... → +7...
+        if (preg_match('/^\+78(\d{10})$/', $phone, $m)) {
+            $phone = '+7' . $m[1];
+        }
+
+        // Должно быть ровно +7XXXXXXXXXX
+        if (preg_match('/^\+7\d{10}$/', $phone)) {
+            return $phone;
+        }
+
+        return null; // невалидный — игнорируем
+    }
+
+    /**
      * Вызвать OpenRouter API.
      */
     private function callAi(string $systemPrompt, string $userMessage): ?array
@@ -145,7 +149,7 @@ PROMPT;
                 ->withHttpHeader('X-Title', config('app.name'))
                 ->withApiKey($apiKey)
                 ->withHttpClient(new \GuzzleHttp\Client([
-                    'timeout' => config('normalizer.timeout', 10),
+                    'timeout' => config('normalizer.timeout', 30),
                 ]))
                 ->make();
 
@@ -156,7 +160,7 @@ PROMPT;
                     ['role' => 'user', 'content' => $userMessage],
                 ],
                 'temperature' => 0,
-                'max_tokens'  => 300,
+                'max_tokens'  => 400,
             ]);
 
             $content = $response->choices[0]->message->content;

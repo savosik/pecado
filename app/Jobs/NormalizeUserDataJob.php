@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Log;
  *
  * Диспатчится из HandlePartnerCreated после сохранения сырых данных.
  * При ошибке AI — данные остаются как есть, Job просто ретраится.
+ *
+ * v2: идемпотентный — повторный прогон не накапливает мусор.
  */
 class NormalizeUserDataJob implements ShouldQueue
 {
@@ -62,10 +64,9 @@ class NormalizeUserDataJob implements ShouldQueue
         // ФИО
         if (isset($result['type'])) {
             if ($result['type'] === 'organization') {
-                // Организация в полях ФИО — сохраняем название в name (NOT NULL), очищаем фамилию/отчество
-                $orgName = trim(($result['org_type'] ?? '') . ' ' . ($result['org_name'] ?? ''));
-                $commentParts[] = "Организация из 1С: {$orgName}";
-                $updates['name'] = $orgName ?: $user->name; // name NOT NULL — оставляем название
+                // Используем org_name как есть — AI возвращает полное название
+                $orgName = $result['org_name'] ?? $user->name;
+                $updates['name'] = $orgName ?: $user->name; // name NOT NULL
                 $updates['surname'] = null;
                 $updates['patronymic'] = null;
             } else {
@@ -89,30 +90,23 @@ class NormalizeUserDataJob implements ShouldQueue
         if (! empty($result['city'])) {
             if (empty($user->city)) {
                 $updates['city'] = $result['city'];
-            } else {
+            } elseif ($user->city !== $result['city']) {
                 $commentParts[] = "Город из 1С: {$result['city']}";
             }
         }
 
-        // Телефон
+        // Телефон — с валидацией
         if (isset($result['primary_phone'])) {
-            $phone = $result['primary_phone'];
-
-            // Пост-обработка: +78XXXXXXXXX (13 символов) → +7XXXXXXXXXX (12 символов)
-            // AI иногда сохраняет "8" как часть номера вместо замены на +7
-            if (preg_match('/^\+78(\d{10})$/', $phone, $m)) {
-                $phone = '+7' . $m[1];
+            $validatedPhone = DataNormalizerService::validatePhone($result['primary_phone']);
+            if ($validatedPhone && $validatedPhone !== $user->phone) {
+                $updates['phone'] = $validatedPhone;
             }
-
-            $updates['phone'] = $phone;
         }
 
-        // Email
+        // Email — не обнуляем (нужен для логина)
         if (array_key_exists('email', $result) && $result['email'] !== $user->email) {
-            // AI убрал невалидный email
             if ($result['email'] === null && $user->email) {
                 $commentParts[] = "Некорректный email: {$user->email}";
-                // Не обнуляем email — он нужен для логина
             }
         }
 
@@ -121,15 +115,9 @@ class NormalizeUserDataJob implements ShouldQueue
             $commentParts[] = $result['extra_info'];
         }
 
-        // Собираем comment
+        // Собираем comment — ИДЕМПОТЕНТНО (затираем, не дописываем)
         if (! empty($commentParts)) {
-            $existingComment = $user->comment ?? '';
-            $newComment = implode('; ', $commentParts);
-
-            // Не дублируем если уже есть
-            if (! str_contains($existingComment, $newComment)) {
-                $updates['comment'] = trim("{$existingComment}\n{$newComment}");
-            }
+            $updates['comment'] = implode('; ', $commentParts);
         }
 
         // Фильтруем — не обновляем если ничего не изменилось
@@ -145,8 +133,8 @@ class NormalizeUserDataJob implements ShouldQueue
 
         if ($this->dryRun) {
             Log::info('NormalizeUserDataJob [DRY-RUN]', [
-                'user_id'  => $this->userId,
-                'before'   => [
+                'user_id' => $this->userId,
+                'before'  => [
                     'name'       => $user->name,
                     'surname'    => $user->surname,
                     'patronymic' => $user->patronymic,
