@@ -50,11 +50,11 @@ class OnboardingController extends Controller
         $user = Auth::user();
 
         $validated = $request->validate([
-            // Личные данные пользователя
-            'name' => 'nullable|string|max:255',
-            'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
-            'country' => 'nullable|string|in:RU,BY,KZ',
-            'city' => 'nullable|string|max:255',
+            // Личные данные пользователя (обязательные)
+            'name' => 'required|string|max:255',
+            'phone' => ['required', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
+            'country' => 'required|string|in:RU,BY,KZ',
+            'city' => 'required|string|max:255',
             // Анкета
             'business_type' => 'nullable|array',
             'business_name' => 'nullable|string|max:255',

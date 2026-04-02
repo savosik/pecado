@@ -169,9 +169,26 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
         }
     };
 
+    const [personalErrors, setPersonalErrors] = useState({});
+
     const next = (e) => {
         e.preventDefault();
         e.stopPropagation();
+
+        // Валидация личных данных
+        if (currentStep === 'personal') {
+            const errs = {};
+            if (!data.name?.trim()) errs.name = 'Имя обязательно для заполнения';
+            if (!data.country) errs.country = 'Выберите страну';
+            if (!data.city?.trim()) errs.city = 'Город обязателен для заполнения';
+            if (!data.phone || data.phone.length < 8) errs.phone = 'Введите номер телефона';
+            if (Object.keys(errs).length > 0) {
+                setPersonalErrors(errs);
+                return;
+            }
+            setPersonalErrors({});
+        }
+
         setStepIndex(Math.min(stepIndex + 1, totalSteps - 1));
     };
 
@@ -241,17 +258,20 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                     objectFit="contain"
                                 />
                             </Link>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                color="gray.400"
-                                fontWeight="normal"
-                                _hover={{ color: 'gray.600' }}
-                                onClick={handleSkip}
-                                type="button"
-                            >
-                                Пропустить
-                            </Button>
+                            {currentStep !== 'personal' && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    color="gray.400"
+                                    fontWeight="normal"
+                                    _hover={{ color: 'gray.600' }}
+                                    onClick={handleSkip}
+                                    type="button"
+                                >
+                                    Пропустить
+                                </Button>
+                            )}
+                            {currentStep === 'personal' && <Box />}
                         </Flex>
 
                         <ProgressBar step={stepIndex + 1} total={totalSteps} />
@@ -276,8 +296,9 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                 <VStack gap={4} align="stretch">
                                     <Field
                                         label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Имя / Название</Text>}
-                                        invalid={!!errors.name}
-                                        errorText={errors.name}
+                                        invalid={!!personalErrors.name}
+                                        errorText={personalErrors.name}
+                                        required
                                     >
                                         <Input
                                             value={data.name}
@@ -290,8 +311,9 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                     <SimpleGrid columns={2} gap={3}>
                                         <Field
                                             label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Страна</Text>}
-                                            invalid={!!errors.country}
-                                            errorText={errors.country}
+                                            invalid={!!personalErrors.country}
+                                            errorText={personalErrors.country}
+                                            required
                                         >
                                             <Box
                                                 as="select"
@@ -322,8 +344,9 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
 
                                         <Field
                                             label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Город</Text>}
-                                            invalid={!!errors.city}
-                                            errorText={errors.city}
+                                            invalid={!!personalErrors.city}
+                                            errorText={personalErrors.city}
+                                            required
                                         >
                                             <Input
                                                 value={data.city}
@@ -336,8 +359,9 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
 
                                     <Field
                                         label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Телефон</Text>}
-                                        invalid={!!errors.phone}
-                                        errorText={errors.phone}
+                                        invalid={!!personalErrors.phone}
+                                        errorText={personalErrors.phone}
+                                        required
                                     >
                                         <PhoneInput
                                             value={data.phone}
