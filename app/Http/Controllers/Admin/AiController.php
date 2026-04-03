@@ -9,15 +9,16 @@ use OpenAI\Client;
 class AiController extends Controller
 {
     /**
-     * Генерация нового контента или рерайт.
+     * AI генерация / редактирование контента.
      */
     public function generate(Request $request)
     {
         $request->validate([
-            'prompt' => 'required|string|max:1000',
+            'prompt' => 'required|string|max:2000',
             'context' => 'nullable|string|max:5000',
-            'current_content' => 'nullable|string|max:50000',
-            'mode' => 'nullable|string|in:generation,rewrite,edit',
+            'current_content' => 'nullable|string|max:100000',
+            'selected_text' => 'nullable|string|max:50000',
+            'mode' => 'nullable|string|in:generation,rewrite,edit,edit_selection',
         ]);
 
         $apiKey = config('normalizer.api_key');
@@ -43,8 +44,22 @@ class AiController extends Controller
                 ['role' => 'system', 'content' => $systemPrompt],
             ];
 
-            // Для режима edit передаём текущий контент как контекст
-            if ($mode === 'edit' && $request->current_content) {
+            if ($mode === 'edit_selection') {
+                // Режим: редактирование выделенного фрагмента
+                $messages[] = [
+                    'role' => 'user',
+                    'content' => "Выделенный фрагмент HTML, который нужно изменить:\n\n" . $request->selected_text,
+                ];
+                $messages[] = [
+                    'role' => 'assistant',
+                    'content' => 'Вижу выделенный фрагмент. Какие изменения внести?',
+                ];
+                $messages[] = [
+                    'role' => 'user',
+                    'content' => $request->prompt,
+                ];
+            } elseif ($mode === 'edit' && $request->current_content) {
+                // Режим: редактирование всего документа
                 $messages[] = [
                     'role' => 'user',
                     'content' => "Текущий HTML-документ:\n\n" . $request->current_content,
@@ -57,6 +72,14 @@ class AiController extends Controller
                     'role' => 'user',
                     'content' => $request->prompt,
                 ];
+            } elseif ($mode === 'generation' && $request->current_content) {
+                // Генерация с учётом существующего контента
+                $messages[] = [
+                    'role' => 'user',
+                    'content' => "В документе уже есть контент:\n\n" . $request->current_content .
+                        "\n\n---\n\nЗадание: " . $request->prompt .
+                        "\n\nВАЖНО: верни ВЕСЬ документ полностью (и старый контент, и новый). Не сокращай и не обрезай существующий текст.",
+                ];
             } else {
                 $messages[] = [
                     'role' => 'user',
@@ -68,7 +91,7 @@ class AiController extends Controller
                 'model' => 'openai/gpt-4o-mini',
                 'messages' => $messages,
                 'temperature' => 0.7,
-                'max_tokens' => 4000,
+                'max_tokens' => 16000,
             ]);
 
             return response()->json([
@@ -87,30 +110,53 @@ class AiController extends Controller
      */
     private function buildSystemPrompt(string $mode, ?string $context): string
     {
+        $stylingRules = "
+ПРАВИЛА СТИЛИЗАЦИИ HTML:
+- Для жирного: <strong>текст</strong>
+- Для курсива: <em>текст</em>
+- Для цвета текста: <span style=\"color: #e53e3e\">красный</span>, <span style=\"color: #3182ce\">синий</span>, <span style=\"color: #38a169\">зелёный</span>, <span style=\"color: #d69e2e\">жёлтый</span>
+- Для фона/выделения: <mark style=\"background: #fef08a\">выделено</mark> или <mark style=\"background: #bbf7d0\">зелёный маркер</mark>
+- Для подчёркивания: <u>текст</u>
+- Для зачёркивания: <s>текст</s>
+- Заголовки: <h2>, <h3>, <h4>
+- Списки: <ul><li>, <ol><li>
+- Цитаты: <blockquote>
+- Таблицы: <table><tr><th>/<td>
+- Разделитель: <hr>
+- Используй эти стили когда пользователь просит выделить, покрасить, пометить текст.";
+
         $prompt = match ($mode) {
+            'edit_selection' => "Ты — профессиональный редактор контента.
+Тебе передаётся ВЫДЕЛЕННЫЙ ФРАГМЕНТ HTML-документа и инструкция по его изменению.
+Верни ТОЛЬКО изменённый фрагмент (не весь документ, а только ту часть что была выделена).
+{$stylingRules}
+ВАЖНО:
+- Возвращай ТОЛЬКО чистый HTML, без Markdown, без ```html обёрток.
+- Не добавляй <!DOCTYPE>, <html>, <body> и другие обёртки.",
+
             'edit' => "Ты — профессиональный редактор контента.
 Тебе передаётся HTML-документ и инструкция по его изменению.
 Твоя задача — внести запрошенные изменения и вернуть ВЕСЬ документ полностью с изменениями.
+{$stylingRules}
 ВАЖНО:
 - Возвращай ТОЛЬКО чистый HTML, без Markdown, без ```html обёрток.
-- Сохраняй существующую структуру и форматирование, если не просят изменить.
-- Используй HTML теги: p, h2, h3, h4, ul, ol, li, strong, em, blockquote, table, tr, th, td.
-- Если просят добавить контент — добавляй в логичное место документа.
-- Для выделения используй inline-стили: style=\"color: ...\", style=\"background: ...\".
-- Не добавляй HTML-обёртки вроде <html>, <body>, <!DOCTYPE>.",
+- Сохраняй ВСЮ существующую структуру и контент, если не просят изменить.
+- НЕ СОКРАЩАЙ и НЕ ОБРЕЗАЙ текст — верни документ ПОЛНОСТЬЮ.
+- Не добавляй <!DOCTYPE>, <html>, <body> и другие обёртки.",
 
             'rewrite' => "Ты — профессиональный редактор и копирайтер.
-Твоя задача — переписать (рерайт) предоставленный текст, улучшив его читаемость и стиль, сохраняя смысл.
-Используй HTML форматирование (p, ul, li, strong), если это уместно в исходном тексте.
-Верни результат как чистый HTML без Markdown-разметки (```html).
-Не делай двойные переносы строк между абзацами, используй тег <p> для разделения.",
+Перепиши предоставленный текст, улучшив читаемость и стиль, сохраняя смысл и длину.
+{$stylingRules}
+Верни результат как чистый HTML без Markdown-разметки.",
 
             default => "Ты — профессиональный копирайтер для интернет-магазина одежды и аксессуаров.
-Твоя задача — писать продающие, грамотные и привлекательные описания товаров на русском языке.
-Используй HTML форматирование (p, h2, h3, ul, ol, li, strong, em, blockquote), чтобы текст был хорошо структурирован.
-Верни результат как чистый HTML без Markdown-разметки (```html).
-Не делай двойные переносы строк между абзацами, используй тег <p> для разделения.
-Создавай богатый, интересный контент с подзаголовками, списками и акцентами.",
+Пиши продающие, грамотные и привлекательные описания на русском языке.
+{$stylingRules}
+ВАЖНО:
+- Возвращай ТОЛЬКО чистый HTML, без Markdown, без ```html обёрток.
+- Создавай ДЛИННЫЙ, ПОДРОБНЫЙ контент (минимум 5-7 абзацев).
+- Используй подзаголовки (h2, h3), списки, цитаты, выделения для богатой структуры.
+- НЕ обрезай текст — пиши полностью до логического конца.",
         };
 
         if ($context) {

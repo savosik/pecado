@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Box, HStack, VStack, Text, Input, IconButton, Button, Flex } from '@chakra-ui/react';
-import { LuSend, LuSparkles, LuUser, LuBot, LuLoader, LuPenLine, LuListPlus, LuScissors, LuWand } from 'react-icons/lu';
+import { LuSend, LuSparkles, LuUser, LuBot, LuLoader, LuPenLine, LuListPlus, LuScissors, LuWand, LuMousePointerClick } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
 
@@ -8,23 +8,22 @@ import axios from 'axios';
  * Quick-action кнопки для быстрых AI-команд.
  */
 const QUICK_ACTIONS = [
-    { label: 'Напиши описание', icon: <LuPenLine size={14} />, prompt: 'Напиши подробное, продающее описание для данного раздела. Используй подзаголовки, списки и акценты.' },
-    { label: 'Перепиши', icon: <LuWand size={14} />, prompt: 'Перепиши текст, улучши читаемость и стиль, сохрани смысл.' },
-    { label: 'Добавь структуру', icon: <LuListPlus size={14} />, prompt: 'Добавь чёткую структуру: подзаголовки (h2, h3), списки (ul/ol), выделение ключевых моментов.' },
-    { label: 'Сократи', icon: <LuScissors size={14} />, prompt: 'Сократи текст на 30-40%, оставь только ключевую информацию.' },
+    { label: 'Напиши описание', icon: <LuPenLine size={14} />, prompt: 'Напиши подробное, продающее описание для данного раздела. Используй подзаголовки h2/h3, списки, выделения. Минимум 5 абзацев.' },
+    { label: 'Перепиши', icon: <LuWand size={14} />, prompt: 'Перепиши текст, улучши читаемость и стиль, сохрани смысл и длину.' },
+    { label: 'Добавь структуру', icon: <LuListPlus size={14} />, prompt: 'Добавь чёткую структуру: подзаголовки (h2, h3), списки (ul/ol), выделение ключевых моментов жирным. Не обрезай текст.' },
+    { label: 'Сократи', icon: <LuScissors size={14} />, prompt: 'Сократи текст на 30-40%, оставь только ключевую информацию. Сохрани форматирование.' },
 ];
 
 /**
  * AI Chat Panel — чат-интерфейс внизу редактора.
- *
- * @param {{ editor: object, context: string, onContentChange: function }} props
  */
 export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
     const [loading, setLoading] = useState(false);
-    const [pendingContent, setPendingContent] = useState(null); // Контент ожидающий Accept
-    const [previousContent, setPreviousContent] = useState(null); // Snapshot для Reject
+    const [pendingContent, setPendingContent] = useState(null);
+    const [previousContent, setPreviousContent] = useState(null);
+    const [selectionInfo, setSelectionInfo] = useState(null); // { from, to, text }
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
 
@@ -33,51 +32,156 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // Track selection changes
+    useEffect(() => {
+        if (!editor) return;
+
+        const handleSelectionUpdate = () => {
+            const { from, to } = editor.state.selection;
+            if (from !== to) {
+                const selectedText = editor.state.doc.textBetween(from, to, ' ');
+                // Get HTML of selection
+                const slice = editor.state.selection.content();
+                const div = document.createElement('div');
+                const fragment = slice.content;
+                const serializer = editor.view.dom.ownerDocument.createElement('div');
+
+                // Use editor's view to serialize the fragment
+                const tempEditor = document.createElement('div');
+                const tempView = editor.view;
+                const selectedHtml = getSelectedHtml(editor, from, to);
+
+                setSelectionInfo({ from, to, text: selectedText, html: selectedHtml });
+            } else {
+                setSelectionInfo(null);
+            }
+        };
+
+        editor.on('selectionUpdate', handleSelectionUpdate);
+        return () => editor.off('selectionUpdate', handleSelectionUpdate);
+    }, [editor]);
+
+    /**
+     * Получить HTML из выделенного диапазона
+     */
+    function getSelectedHtml(editor, from, to) {
+        try {
+            const { state } = editor;
+            const slice = state.doc.slice(from, to);
+            const serializer = window.DOMSerializer || null;
+
+            // Простой способ — используем текстовый контент + пробуем HTML
+            const tempDiv = document.createElement('div');
+            const fragment = slice.content;
+
+            // Serialize fragment to HTML using ProseMirror
+            const domSerializer = editor.view.domSerializer || editor.schema;
+            if (domSerializer && domSerializer.serializeFragment) {
+                const dom = domSerializer.serializeFragment(fragment);
+                tempDiv.appendChild(dom);
+                return tempDiv.innerHTML;
+            }
+
+            // Fallback: берём текстовый контент
+            return editor.state.doc.textBetween(from, to, '\n');
+        } catch (e) {
+            return editor.state.doc.textBetween(from, to, '\n');
+        }
+    }
+
     const sendMessage = async (text) => {
         if (!text?.trim() || loading) return;
 
-        const userMessage = { role: 'user', content: text.trim() };
+        const isSelectionMode = selectionInfo && selectionInfo.from !== selectionInfo.to;
+        const currentHtml = editor?.getHTML() || '';
+        const hasContent = currentHtml && currentHtml !== '<p></p>';
+
+        const displayText = isSelectionMode
+            ? `[выделено: "${selectionInfo.text.slice(0, 50)}${selectionInfo.text.length > 50 ? '...' : ''}"] ${text.trim()}`
+            : text.trim();
+
+        const userMessage = { role: 'user', content: displayText };
         setMessages((prev) => [...prev, userMessage]);
         setInputValue('');
         setLoading(true);
 
         try {
-            const currentHtml = editor?.getHTML() || '';
-            const isEdit = currentHtml && currentHtml !== '<p></p>';
-
-            // Сохраняем snapshot перед изменением
+            // Сохраняем snapshot
             setPreviousContent(currentHtml);
 
-            const response = await axios.post(route('admin.ai.generate'), {
-                prompt: text.trim(),
-                context,
-                current_content: isEdit ? currentHtml : '',
-                mode: isEdit ? 'edit' : 'generation',
-            });
+            let mode, requestData;
 
-            const aiContent = response.data.content;
+            if (isSelectionMode) {
+                // Режим: только выделенный текст
+                mode = 'edit_selection';
+                requestData = {
+                    prompt: text.trim(),
+                    context,
+                    selected_text: selectionInfo.html || selectionInfo.text,
+                    current_content: currentHtml,
+                    mode: 'edit_selection',
+                };
+            } else if (hasContent) {
+                // Режим: редактирование всего документа
+                mode = 'edit';
+                requestData = {
+                    prompt: text.trim(),
+                    context,
+                    current_content: currentHtml,
+                    mode: 'edit',
+                };
+            } else {
+                // Режим: генерация с нуля
+                mode = 'generation';
+                requestData = {
+                    prompt: text.trim(),
+                    context,
+                    mode: 'generation',
+                };
+            }
 
-            // Применяем контент в редактор
+            const response = await axios.post(route('admin.ai.generate'), requestData);
+            let aiContent = response.data.content;
+
+            // Чистим ответ от markdown-обёрток
+            aiContent = aiContent
+                .replace(/^```html\s*/i, '')
+                .replace(/\s*```$/i, '')
+                .replace(/^```\s*/i, '')
+                .replace(/^<html>\s*/i, '')
+                .replace(/\s*<\/html>$/i, '')
+                .trim();
+
             if (editor) {
-                const cleanHtml = aiContent
-                    .replace(/^```html\s*/i, '')
-                    .replace(/\s*```$/i, '')
-                    .replace(/^<html>\s*/i, '')
-                    .replace(/\s*<\/html>$/i, '')
-                    .trim();
+                if (isSelectionMode) {
+                    // Заменяем только выделенный фрагмент
+                    editor.chain()
+                        .focus()
+                        .deleteRange({ from: selectionInfo.from, to: selectionInfo.to })
+                        .insertContentAt(selectionInfo.from, aiContent, { parseOptions: { preserveWhitespace: false } })
+                        .run();
 
-                setPendingContent(cleanHtml);
-                editor.commands.setContent(cleanHtml, false);
-                onContentChange?.(cleanHtml);
+                    const updatedHtml = editor.getHTML();
+                    setPendingContent(updatedHtml);
+                    onContentChange?.(updatedHtml);
+                } else {
+                    // Заменяем весь контент
+                    setPendingContent(aiContent);
+                    editor.commands.setContent(aiContent, false);
+                    onContentChange?.(aiContent);
+                }
             }
 
             const aiMessage = {
                 role: 'assistant',
-                content: isEdit
-                    ? 'Готово! Изменения внесены. Проверьте результат и нажмите «Принять» или «Отменить».'
-                    : 'Готово! Контент сгенерирован. Проверьте результат и нажмите «Принять» или «Отменить».',
+                content: isSelectionMode
+                    ? 'Выделенный фрагмент изменён. Проверьте и нажмите «Принять» или «Отменить».'
+                    : mode === 'edit'
+                        ? 'Документ обновлён. Проверьте и нажмите «Принять» или «Отменить».'
+                        : 'Контент сгенерирован! Проверьте и нажмите «Принять» или «Отменить».',
             };
             setMessages((prev) => [...prev, aiMessage]);
+            setSelectionInfo(null);
 
         } catch (error) {
             console.error('AI error:', error);
@@ -87,11 +191,6 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
                 isError: true,
             };
             setMessages((prev) => [...prev, errMessage]);
-            toaster.create({
-                title: 'Ошибка AI',
-                description: error.response?.data?.message || 'Что-то пошло не так',
-                type: 'error',
-            });
         } finally {
             setLoading(false);
         }
@@ -137,21 +236,22 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
                     <Text fontSize="sm" color="green.700" _dark={{ color: 'green.300' }}>
                         AI внёс изменения в документ
                     </Text>
-                    <Button
-                        size="xs"
-                        colorPalette="green"
-                        onClick={handleAccept}
-                    >
+                    <Button size="xs" colorPalette="green" onClick={handleAccept}>
                         ✓ Принять
                     </Button>
-                    <Button
-                        size="xs"
-                        variant="outline"
-                        colorPalette="red"
-                        onClick={handleReject}
-                    >
+                    <Button size="xs" variant="outline" colorPalette="red" onClick={handleReject}>
                         ✕ Отменить
                     </Button>
+                </HStack>
+            )}
+
+            {/* Selection indicator */}
+            {selectionInfo && !loading && (
+                <HStack px="3" py="1.5" bg="purple.50" _dark={{ bg: 'purple.950/20' }} borderBottomWidth="1px" borderColor="purple.200" gap="2">
+                    <LuMousePointerClick size={14} style={{ color: 'var(--chakra-colors-purple-500)', flexShrink: 0 }} />
+                    <Text fontSize="xs" color="purple.700" _dark={{ color: 'purple.300' }} truncate>
+                        Выделено: «{selectionInfo.text.slice(0, 80)}{selectionInfo.text.length > 80 ? '...' : ''}» — AI изменит только этот фрагмент
+                    </Text>
                 </HStack>
             )}
 
@@ -181,38 +281,17 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
 
             {/* Chat messages */}
             {messages.length > 0 && (
-                <Box
-                    maxH="200px"
-                    overflowY="auto"
-                    px="3"
-                    pt="2"
-                >
+                <Box maxH="200px" overflowY="auto" px="3" pt="2">
                     <VStack gap="2" align="stretch">
                         {messages.map((msg, i) => (
-                            <HStack
-                                key={i}
-                                align="start"
-                                gap="2"
-                                opacity={msg.role === 'system' ? 0.6 : 1}
-                            >
+                            <HStack key={i} align="start" gap="2" opacity={msg.role === 'system' ? 0.6 : 1}>
                                 {msg.role === 'user' && (
-                                    <Box
-                                        w="5" h="5" borderRadius="full"
-                                        bg="purple.100" _dark={{ bg: 'purple.900/40' }}
-                                        display="flex" alignItems="center" justifyContent="center"
-                                        flexShrink={0} mt="0.5"
-                                    >
+                                    <Box w="5" h="5" borderRadius="full" bg="purple.100" _dark={{ bg: 'purple.900/40' }} display="flex" alignItems="center" justifyContent="center" flexShrink={0} mt="0.5">
                                         <LuUser size={12} />
                                     </Box>
                                 )}
                                 {msg.role === 'assistant' && (
-                                    <Box
-                                        w="5" h="5" borderRadius="full"
-                                        bg={msg.isError ? 'red.100' : 'green.100'}
-                                        _dark={{ bg: msg.isError ? 'red.900/40' : 'green.900/40' }}
-                                        display="flex" alignItems="center" justifyContent="center"
-                                        flexShrink={0} mt="0.5"
-                                    >
+                                    <Box w="5" h="5" borderRadius="full" bg={msg.isError ? 'red.100' : 'green.100'} _dark={{ bg: msg.isError ? 'red.900/40' : 'green.900/40' }} display="flex" alignItems="center" justifyContent="center" flexShrink={0} mt="0.5">
                                         <LuBot size={12} />
                                     </Box>
                                 )}
@@ -228,12 +307,7 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
                         ))}
                         {loading && (
                             <HStack gap="2" color="purple.500">
-                                <Box
-                                    w="5" h="5" borderRadius="full"
-                                    bg="purple.100" _dark={{ bg: 'purple.900/40' }}
-                                    display="flex" alignItems="center" justifyContent="center"
-                                    flexShrink={0}
-                                >
+                                <Box w="5" h="5" borderRadius="full" bg="purple.100" _dark={{ bg: 'purple.900/40' }} display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
                                     <LuBot size={12} />
                                 </Box>
                                 <HStack gap="1" fontSize="sm">
@@ -253,7 +327,7 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
                 <Input
                     ref={inputRef}
                     size="sm"
-                    placeholder="Опишите что нужно сделать с контентом..."
+                    placeholder={selectionInfo ? 'Что сделать с выделенным текстом...' : 'Опишите что нужно сделать с контентом...'}
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyDown={handleKeyDown}
