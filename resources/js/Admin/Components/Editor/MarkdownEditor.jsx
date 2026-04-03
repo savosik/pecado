@@ -28,6 +28,7 @@ import {
 
 import { SlashMenu } from './SlashMenu';
 import { AiChatPanel } from './AiChatPanel';
+import { AiBubbleMenu } from './AiBubbleMenu';
 
 /**
  * Agent Editor — Tiptap + AI Chat Panel.
@@ -49,9 +50,7 @@ export const MarkdownEditor = ({
     const slashMenuRef = useRef(null);
     const containerRef = useRef(null);
     const [toolbarExpanded, setToolbarExpanded] = useState(false);
-
-    // Selection toolbar state
-    const [selectionToolbar, setSelectionToolbar] = useState({ show: false, top: 0, left: 0 });
+    const chatPanelRef = useRef(null);
 
     const editor = useEditor({
         extensions: [
@@ -91,26 +90,7 @@ export const MarkdownEditor = ({
             onChange(html === '<p></p>' ? '' : html);
         },
 
-        onSelectionUpdate: ({ editor }) => {
-            const { from, to } = editor.state.selection;
-            if (from === to) {
-                setSelectionToolbar((prev) => ({ ...prev, show: false }));
-                return;
-            }
 
-            const { view } = editor;
-            const start = view.coordsAtPos(from);
-            const end = view.coordsAtPos(to);
-            const containerRect = containerRef.current?.getBoundingClientRect();
-
-            if (containerRect) {
-                setSelectionToolbar({
-                    show: true,
-                    top: start.top - containerRect.top - 44,
-                    left: (start.left + end.left) / 2 - containerRect.left,
-                });
-            }
-        },
 
         editorProps: {
             handleKeyDown: (view, event) => {
@@ -185,6 +165,13 @@ export const MarkdownEditor = ({
         isInternalChange.current = true;
         onChange(html === '<p></p>' ? '' : html);
     }, [onChange]);
+
+    // Bridge: BubbleMenu AI action → AiChatPanel Accept/Reject
+    const handleBubblePendingChange = useCallback(({ previousContent, actionLabel }) => {
+        if (chatPanelRef.current) {
+            chatPanelRef.current.setPendingFromExternal(previousContent, actionLabel);
+        }
+    }, []);
 
     // Compact toolbar button
     const TB = ({ icon, label, isActive, onClick, disabled }) => (
@@ -313,36 +300,13 @@ export const MarkdownEditor = ({
                 </HStack>
             </Box>
 
-            {/* Selection toolbar */}
-            {selectionToolbar.show && editor && (
-                <Box
-                    position="absolute"
-                    top={`${selectionToolbar.top}px`}
-                    left={`${selectionToolbar.left}px`}
-                    transform="translateX(-50%)"
-                    zIndex="popover"
-                >
-                    <HStack bg="gray.900" borderRadius="lg" px="1.5" py="1" gap="0.5" boxShadow="lg">
-                        <IconButton size="2xs" variant={editor.isActive('bold') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleBold().run()} aria-label="Жирный" color="white"><LuBold /></IconButton>
-                        <IconButton size="2xs" variant={editor.isActive('italic') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleItalic().run()} aria-label="Курсив" color="white"><LuItalic /></IconButton>
-                        <IconButton size="2xs" variant={editor.isActive('underline') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleUnderline().run()} aria-label="Подчёркнутый" color="white"><LuUnderlineIcon /></IconButton>
-                        <IconButton size="2xs" variant={editor.isActive('strike') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleStrike().run()} aria-label="Зачёркнутый" color="white"><LuStrikethrough /></IconButton>
-                        <IconButton size="2xs" variant={editor.isActive('code') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleCode().run()} aria-label="Код" color="white"><LuCode /></IconButton>
-                        <IconButton
-                            size="2xs"
-                            variant={editor.isActive('link') ? 'solid' : 'ghost'}
-                            colorPalette="whiteAlpha"
-                            onClick={() => {
-                                const url = window.prompt('URL:', editor.getAttributes('link').href);
-                                if (url === null) return;
-                                if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); }
-                                else { editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run(); }
-                            }}
-                            aria-label="Ссылка"
-                            color="white"
-                        ><LuLink /></IconButton>
-                    </HStack>
-                </Box>
+            {/* AI BubbleMenu */}
+            {editor && (
+                <AiBubbleMenu
+                    editor={editor}
+                    context={context}
+                    onPendingChange={handleBubblePendingChange}
+                />
             )}
 
             {/* Editor content */}
@@ -361,6 +325,7 @@ export const MarkdownEditor = ({
 
             {/* AI Chat Panel */}
             <AiChatPanel
+                ref={chatPanelRef}
                 editor={editor}
                 context={context}
                 onContentChange={handleAiContentChange}

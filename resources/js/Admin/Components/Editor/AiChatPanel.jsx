@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Box, HStack, VStack, Text, Input, IconButton, Button, Flex } from '@chakra-ui/react';
 import { LuSend, LuSparkles, LuUser, LuBot, LuLoader, LuPenLine, LuListPlus, LuScissors, LuWand, LuMousePointerClick } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
@@ -17,7 +17,7 @@ const QUICK_ACTIONS = [
 /**
  * AI Chat Panel — чат-интерфейс внизу редактора.
  */
-export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
+export const AiChatPanel = forwardRef(({ editor, context = '', onContentChange }, ref) => {
     const [messages, setMessages] = useState([]);
     const [inputValue, setInputValue] = useState('');
     const [loading, setLoading] = useState(false);
@@ -26,6 +26,19 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
     const [selectionInfo, setSelectionInfo] = useState(null); // { from, to, text }
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
+
+    // Expose method for BubbleMenu bridge
+    useImperativeHandle(ref, () => ({
+        setPendingFromExternal: (prevContent, actionLabel) => {
+            setPreviousContent(prevContent);
+            setPendingContent(true);
+            setMessages((prev) => [
+                ...prev,
+                { role: 'system', content: `✨ AI: ${actionLabel}` },
+                { role: 'assistant', content: 'Готово! Проверьте изменения и нажмите «Принять» или «Отменить».' },
+            ]);
+        },
+    }));
 
     // Auto-scroll to bottom
     useEffect(() => {
@@ -349,4 +362,6 @@ export const AiChatPanel = ({ editor, context = '', onContentChange }) => {
             </HStack>
         </Box>
     );
-};
+});
+
+AiChatPanel.displayName = 'AiChatPanel';

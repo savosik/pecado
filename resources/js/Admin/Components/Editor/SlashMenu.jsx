@@ -101,6 +101,47 @@ const SLASH_ITEMS = [
             },
         ],
     },
+    {
+        category: 'Декоративные',
+        items: [
+            {
+                title: 'Градиент-карточка',
+                description: 'Акцентный блок с градиентом',
+                icon: <LuCircleAlert />,
+                html: '<div style="border-radius:16px;background:linear-gradient(135deg,#ec4899 0%,#8b5cf6 100%);padding:40px;color:white;margin:2em 0;box-shadow:0 20px 25px -5px rgba(0,0,0,0.15)"><h3 style="font-size:1.5em;font-weight:700;margin:0 0 12px 0;color:white">Заголовок блока</h3><p style="color:#fce7f3;font-size:1.125em;line-height:1.6;margin:0">Текст акцентного блока. Используйте для спецпредложений, промо-акций и важных анонсов.</p></div>',
+            },
+            {
+                title: 'Статистика',
+                description: 'Ряд из 4 карточек со значениями',
+                icon: <LuCircleAlert />,
+                html: '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:2em 0"><div style="text-align:center;border-radius:12px;background:white;border:1px solid #e5e7eb;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05)"><div style="font-size:1.75em;font-weight:700;color:#ec4899">1 200+</div><div style="margin-top:4px;font-size:0.875em;color:#6b7280">Товаров</div></div><div style="text-align:center;border-radius:12px;background:white;border:1px solid #e5e7eb;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05)"><div style="font-size:1.75em;font-weight:700;color:#ec4899">45</div><div style="margin-top:4px;font-size:0.875em;color:#6b7280">Брендов</div></div><div style="text-align:center;border-radius:12px;background:white;border:1px solid #e5e7eb;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05)"><div style="font-size:1.75em;font-weight:700;color:#ec4899">98%</div><div style="margin-top:4px;font-size:0.875em;color:#6b7280">Довольных</div></div><div style="text-align:center;border-radius:12px;background:white;border:1px solid #e5e7eb;padding:20px;box-shadow:0 1px 2px rgba(0,0,0,0.05)"><div style="font-size:1.75em;font-weight:700;color:#ec4899">24ч</div><div style="margin-top:4px;font-size:0.875em;color:#6b7280">Отгрузка</div></div></div>',
+            },
+            {
+                title: 'Таймлайн',
+                description: 'Пошаговый процесс',
+                icon: <LuCircleAlert />,
+                html: '<div style="margin:2em 0"><div style="display:flex;gap:16px;margin-bottom:0"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#ec4899;color:white;display:flex;align-items:center;justify-content:center;font-size:0.875em;font-weight:700;box-shadow:0 4px 6px rgba(236,72,153,0.3);flex-shrink:0">01</div><div style="width:2px;flex:1;background:#fbcfe8;min-height:32px"></div></div><div style="padding-bottom:32px"><h4 style="font-weight:600;margin:0 0 4px 0">Шаг первый</h4><p style="font-size:0.875em;color:#6b7280;margin:0">Описание первого шага процесса.</p></div></div><div style="display:flex;gap:16px;margin-bottom:0"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#ec4899;color:white;display:flex;align-items:center;justify-content:center;font-size:0.875em;font-weight:700;box-shadow:0 4px 6px rgba(236,72,153,0.3);flex-shrink:0">02</div><div style="width:2px;flex:1;background:#fbcfe8;min-height:32px"></div></div><div style="padding-bottom:32px"><h4 style="font-weight:600;margin:0 0 4px 0">Шаг второй</h4><p style="font-size:0.875em;color:#6b7280;margin:0">Описание второго шага процесса.</p></div></div><div style="display:flex;gap:16px"><div style="display:flex;flex-direction:column;align-items:center"><div style="width:40px;height:40px;border-radius:50%;background:#ec4899;color:white;display:flex;align-items:center;justify-content:center;font-size:0.875em;font-weight:700;box-shadow:0 4px 6px rgba(236,72,153,0.3);flex-shrink:0">03</div></div><div><h4 style="font-weight:600;margin:0 0 4px 0">Шаг третий</h4><p style="font-size:0.875em;color:#6b7280;margin:0">Описание третьего шага процесса.</p></div></div></div>',
+            },
+            {
+                title: 'Сравнение',
+                description: '«До / После»',
+                icon: <LuCircleAlert />,
+                html: '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:24px;margin:2em 0"><div style="border-radius:12px;border:2px solid #fecaca;padding:24px;background:#fef2f2"><div style="font-size:0.75em;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#ef4444;margin-bottom:12px">❌ Было</div><p style="color:#4b5563;font-size:0.875em;line-height:1.6;margin:0">Описание состояния «до» изменений.</p></div><div style="border-radius:12px;border:2px solid #bbf7d0;padding:24px;background:#f0fdf4"><div style="font-size:0.75em;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#22c55e;margin-bottom:12px">✅ Стало</div><p style="color:#4b5563;font-size:0.875em;line-height:1.6;margin:0">Описание состояния «после» изменений.</p></div></div>',
+            },
+            {
+                title: 'Pull-цитата',
+                description: 'Акцентная цитата с градиентом',
+                icon: <LuQuote />,
+                html: '<div style="border-left:4px solid #e94560;background:linear-gradient(135deg,#fdf2f8 0%,#fce7f3 100%);border-radius:0 12px 12px 0;padding:24px 32px;margin:2.5em 0"><p style="font-size:1.375em;font-weight:600;color:#1f2937;font-style:italic;line-height:1.4;margin:0">«Ваша цитата здесь.»</p><p style="margin-top:12px;font-size:0.875em;color:#6b7280;margin-bottom:0">— Автор</p></div>',
+            },
+            {
+                title: 'Бейджи',
+                description: 'Ряд цветных меток',
+                icon: <LuCircleAlert />,
+                html: '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:1em 0"><span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:9999px;font-size:0.75em;font-weight:500;background:#dcfce7;color:#166534">Новинка</span><span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:9999px;font-size:0.75em;font-weight:500;background:#fce7f3;color:#9d174d">Акция</span><span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:9999px;font-size:0.75em;font-weight:500;background:#dbeafe;color:#1e40af">Популярный</span><span style="display:inline-flex;align-items:center;padding:4px 12px;border-radius:9999px;font-size:0.75em;font-weight:500;background:#f3e8ff;color:#6b21a8">Эксклюзив</span></div>',
+            },
+        ],
+    },
 ];
 
 /**
