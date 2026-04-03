@@ -118,7 +118,7 @@ export default function Index({ prices, filters, stats, filterLabels }) {
         {
             key: 'partner_name',
             label: 'Партнёр',
-            sortable: true,
+            sortable: false,
             render: (name, row) => (
                 <Box>
                     <Text fontWeight="medium" fontSize="sm">{name}</Text>
@@ -131,7 +131,7 @@ export default function Index({ prices, filters, stats, filterLabels }) {
         {
             key: 'product_name',
             label: 'Товар',
-            sortable: true,
+            sortable: false,
             render: (name, row) => (
                 <Box>
                     <Text fontWeight="medium" fontSize="sm">{name}</Text>
@@ -144,7 +144,7 @@ export default function Index({ prices, filters, stats, filterLabels }) {
         {
             key: 'warehouse_name',
             label: 'Склад',
-            sortable: true,
+            sortable: false,
             render: (name) => <Text fontSize="sm">{name}</Text>,
         },
         {

@@ -19,48 +19,56 @@ class IndividualPriceController extends Controller
 
     public function index(Request $request)
     {
-        $query = IndividualPrice::query()
-            ->join('users', 'individual_prices.partner_id', '=', 'users.id')
-            ->join('products', 'individual_prices.product_id', '=', 'products.id')
-            ->join('warehouses', 'individual_prices.warehouse_id', '=', 'warehouses.id')
-            ->select([
-                'individual_prices.partner_id',
-                'individual_prices.product_id',
-                'individual_prices.warehouse_id',
-                'individual_prices.price',
-                'individual_prices.updated_at',
-                'users.name as partner_name',
-                'users.email as partner_email',
-                'products.name as product_name',
-                'products.sku as product_sku',
-                'warehouses.name as warehouse_name',
-            ]);
+        $query = IndividualPrice::query();
 
         // Фильтр по партнёру
         if ($request->filled('partner_id')) {
-            $query->where('individual_prices.partner_id', $request->input('partner_id'));
+            $query->where('partner_id', $request->input('partner_id'));
         }
 
         // Фильтр по товару
         if ($request->filled('product_id')) {
-            $query->where('individual_prices.product_id', $request->input('product_id'));
+            $query->where('product_id', $request->input('product_id'));
         }
 
         // Фильтр по складу
         if ($request->filled('warehouse_id')) {
-            $query->where('individual_prices.warehouse_id', $request->input('warehouse_id'));
+            $query->where('warehouse_id', $request->input('warehouse_id'));
         }
 
-        // Сортировка
+        // Сортировка — только по полям базовой таблицы для использования индексов
         $sortBy = $request->input('sort_by', 'updated_at');
         $sortOrder = $request->input('sort_order', 'desc');
 
-        $allowedSorts = ['price', 'updated_at', 'partner_name', 'product_name', 'warehouse_name'];
+        $allowedSorts = ['price', 'updated_at'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortOrder);
+        } else {
+            $query->orderBy('updated_at', 'desc');
         }
 
         $prices = $query->simplePaginate($request->input('per_page', 25))->withQueryString();
+
+        // Подгружаем имена связанных сущностей только для уже отпагинированных записей
+        $partnerIds = $prices->pluck('partner_id')->unique();
+        $productIds = $prices->pluck('product_id')->unique();
+        $warehouseIds = $prices->pluck('warehouse_id')->unique();
+
+        $partners = User::whereIn('id', $partnerIds)->pluck('name', 'id')->toArray();
+        $partnerEmails = User::whereIn('id', $partnerIds)->pluck('email', 'id')->toArray();
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+        $warehouses = Warehouse::whereIn('id', $warehouseIds)->pluck('name', 'id')->toArray();
+
+        // Трансформируем данные для фронтенда
+        $prices->through(function ($item) use ($partners, $partnerEmails, $products, $warehouses) {
+            $product = $products[$item->product_id] ?? null;
+            $item->partner_name = $partners[$item->partner_id] ?? "ID: {$item->partner_id}";
+            $item->partner_email = $partnerEmails[$item->partner_id] ?? '';
+            $item->product_name = $product?->name ?? "ID: {$item->product_id}";
+            $item->product_sku = $product?->sku ?? '';
+            $item->warehouse_name = $warehouses[$item->warehouse_id] ?? "ID: {$item->warehouse_id}";
+            return $item;
+        });
 
         // Статистика (кэшируем на 5 минут — таблица ~3M строк)
         $stats = cache()->remember('individual_prices_stats', 300, function () {
