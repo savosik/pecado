@@ -88,7 +88,7 @@ class AiController extends Controller
             }
 
             $response = $client->chat()->create([
-                'model' => 'openai/gpt-4o-mini',
+                'model' => config('normalizer.model', 'openai/gpt-4o'),
                 'messages' => $messages,
                 'temperature' => 0.7,
                 'max_tokens' => 16000,
