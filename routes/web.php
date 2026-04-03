@@ -54,6 +54,9 @@ Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
 // AI Generation
 Route::post('/ai/generate', [App\Http\Controllers\Admin\AiController::class, 'generate'])->name('admin.ai.generate');
 
+// Blueprint типографики контента (утилитарная страница для компиляции Tailwind-классов)
+Route::get('/content-blueprint', fn () => Inertia::render('ContentBlueprint'))->name('content.blueprint');
+
 // Публичная ссылка для скачивания выгрузки товаров
 Route::get('/export/{hash}', [\App\Http\Controllers\ProductExportDownloadController::class, 'download'])->name('export.download');
 
