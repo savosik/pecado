@@ -64,6 +64,7 @@ class HandleInertiaRequests extends Middleware
                 'error' => fn () => $request->session()->get('error'),
                 'warning' => fn () => $request->session()->get('warning'),
                 'info' => fn () => $request->session()->get('info'),
+                'onboarding_completed' => fn () => $request->session()->get('onboarding_completed'),
             ],
             'footerCategories' => Cache::remember('footer.categories', 3600, fn () =>
                 Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
