@@ -94,8 +94,36 @@ class AiController extends Controller
                 'max_tokens' => 16000,
             ]);
 
+            // Универсальный парсинг ответа — разные провайдеры возвращают разные форматы
+            $content = null;
+
+            // Способ 1: стандартный OpenAI SDK объект
+            if (isset($response->choices[0]->message->content)) {
+                $content = $response->choices[0]->message->content;
+            }
+            // Способ 2: массив
+            elseif (is_array($response) && isset($response['choices'][0]['message']['content'])) {
+                $content = $response['choices'][0]['message']['content'];
+            }
+            // Способ 3: toArray()
+            elseif (method_exists($response, 'toArray')) {
+                $arr = $response->toArray();
+                $content = $arr['choices'][0]['message']['content'] ?? null;
+                if (!$content) {
+                    \Log::warning('AI response toArray structure:', $arr);
+                }
+            }
+
+            if (!$content) {
+                \Log::error('AI: cannot parse response', [
+                    'type' => get_class($response),
+                    'dump' => json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+                ]);
+                throw new \Exception('Не удалось получить ответ от AI модели. Проверьте логи.');
+            }
+
             return response()->json([
-                'content' => $response->choices[0]->message->content,
+                'content' => $content,
             ]);
 
         } catch (\Exception $e) {
