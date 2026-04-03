@@ -17,10 +17,12 @@ import {
 /**
  * Pagination — универсальный компонент пагинации
  *
- * @param {Object} pagination - Данные пагинации Laravel (current_page, last_page, per_page, total, from, to)
- * @param {number} perPage - Текущее значение per_page (опционально, если управляется извне)
+ * Поддерживает как paginate() (с last_page, total), так и simplePaginate() (без них).
+ *
+ * @param {Object} pagination - Данные пагинации Laravel
+ * @param {number} perPage - Текущее значение per_page (опционально)
  * @param {Function} onPerPageChange - Callback при изменении per_page
- * @param {Function} onPageChange - Callback при смене страницы; если передан — используется onClick вместо Link
+ * @param {Function} onPageChange - Callback при смене страницы
  */
 export const Pagination = ({
     pagination,
@@ -28,10 +30,19 @@ export const Pagination = ({
     onPerPageChange,
     onPageChange,
 }) => {
-    if (!pagination || pagination.last_page <= 1) return null;
+    if (!pagination) return null;
 
+    const isSimple = pagination.last_page === undefined;
+
+    // Для simplePaginate: нет last_page, есть prev_page_url / next_page_url
     const isFirst = pagination.current_page === 1;
-    const isLast = pagination.current_page === pagination.last_page;
+    const isLast = isSimple
+        ? !pagination.next_page_url
+        : pagination.current_page === pagination.last_page;
+
+    // Скрываем пагинацию если одна страница
+    if (!isSimple && pagination.last_page <= 1) return null;
+    if (isSimple && isFirst && isLast) return null;
 
     const navButtonProps = (page, disabled) => {
         if (onPageChange) {
@@ -40,7 +51,6 @@ export const Pagination = ({
                 disabled,
             };
         }
-        // Сохраняем все текущие query-параметры, обновляя только page
         const params = new URLSearchParams(window.location.search);
         params.set('page', page);
         return {
@@ -62,8 +72,14 @@ export const Pagination = ({
             <HStack justifyContent="space-between" flexWrap="wrap" gap={3}>
                 <HStack gap={3}>
                     <Text fontSize="sm" color="fg.muted">
-                        Показано {pagination.from || 0} - {pagination.to || 0} из{' '}
-                        {pagination.total || 0}
+                        {isSimple ? (
+                            <>Страница {pagination.current_page}</>
+                        ) : (
+                            <>
+                                Показано {pagination.from || 0} - {pagination.to || 0} из{' '}
+                                {pagination.total || 0}
+                            </>
+                        )}
                     </Text>
                     {onPerPageChange && (
                         <HStack gap={2}>
@@ -84,14 +100,17 @@ export const Pagination = ({
                     )}
                 </HStack>
                 <HStack gap={1}>
-                    <IconButton
-                        {...navButtonProps(1, isFirst)}
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Первая страница"
-                    >
-                        <LuChevronsLeft />
-                    </IconButton>
+                    {/* Кнопки "Первая" и "Последняя" — только для полной пагинации */}
+                    {!isSimple && (
+                        <IconButton
+                            {...navButtonProps(1, isFirst)}
+                            size="sm"
+                            variant="ghost"
+                            aria-label="Первая страница"
+                        >
+                            <LuChevronsLeft />
+                        </IconButton>
+                    )}
                     <IconButton
                         {...navButtonProps(pagination.current_page - 1, isFirst)}
                         size="sm"
@@ -101,7 +120,10 @@ export const Pagination = ({
                         <LuChevronLeft />
                     </IconButton>
                     <Text fontSize="sm" px={3}>
-                        Страница {pagination.current_page} из {pagination.last_page}
+                        {isSimple
+                            ? `Страница ${pagination.current_page}`
+                            : `Страница ${pagination.current_page} из ${pagination.last_page}`
+                        }
                     </Text>
                     <IconButton
                         {...navButtonProps(pagination.current_page + 1, isLast)}
@@ -111,14 +133,16 @@ export const Pagination = ({
                     >
                         <LuChevronRight />
                     </IconButton>
-                    <IconButton
-                        {...navButtonProps(pagination.last_page, isLast)}
-                        size="sm"
-                        variant="ghost"
-                        aria-label="Последняя страница"
-                    >
-                        <LuChevronsRight />
-                    </IconButton>
+                    {!isSimple && (
+                        <IconButton
+                            {...navButtonProps(pagination.last_page, isLast)}
+                            size="sm"
+                            variant="ghost"
+                            aria-label="Последняя страница"
+                        >
+                            <LuChevronsRight />
+                        </IconButton>
+                    )}
                 </HStack>
             </HStack>
         </Box>

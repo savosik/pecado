@@ -60,13 +60,15 @@ class IndividualPriceController extends Controller
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        $prices = $query->paginate($request->input('per_page', 25))->withQueryString();
+        $prices = $query->simplePaginate($request->input('per_page', 25))->withQueryString();
 
-        // Статистика
-        $stats = [
-            'total_prices' => IndividualPrice::count(),
-            'total_partners' => IndividualPrice::distinct('partner_id')->count('partner_id'),
-        ];
+        // Статистика (кэшируем на 5 минут — таблица ~3M строк)
+        $stats = cache()->remember('individual_prices_stats', 300, function () {
+            return [
+                'total_prices' => IndividualPrice::count(),
+                'total_partners' => IndividualPrice::distinct('partner_id')->count('partner_id'),
+            ];
+        });
 
         return Inertia::render('Admin/Pages/IndividualPrices/Index', [
             'prices' => $prices,
