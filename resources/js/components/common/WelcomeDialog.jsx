@@ -78,8 +78,7 @@ export default function WelcomeDialog({ userName }) {
                             lineHeight="1.6"
                             maxW="360px"
                         >
-                            Спасибо за регистрацию в Pecado! Мы рады приветствовать вас
-                            в нашей партнёрской программе.
+                            Мы рады приветствовать вас на нашем сайте!
                         </Text>
                         <Text
                             fontSize="sm"
