@@ -18,16 +18,21 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 
-import { Box, HStack, IconButton } from '@chakra-ui/react';
-import { LuBold, LuItalic, LuUnderline as LuUnderlineIcon, LuStrikethrough, LuLink, LuCode } from 'react-icons/lu';
+import { Box, HStack, IconButton, Collapsible, Button } from '@chakra-ui/react';
+import {
+    LuBold, LuItalic, LuUnderline as LuUnderlineIcon, LuStrikethrough,
+    LuLink, LuCode, LuHeading2, LuHeading3, LuList, LuListOrdered,
+    LuQuote, LuImage, LuTable, LuMinus, LuEllipsis,
+    LuAlignLeft, LuAlignCenter, LuHighlighter, LuListChecks,
+} from 'react-icons/lu';
 
-import { EditorToolbar } from './EditorToolbar';
 import { SlashMenu } from './SlashMenu';
-import { AiAssistant } from './AiAssistant';
+import { AiChatPanel } from './AiChatPanel';
 
 /**
- * Tiptap-based rich text editor — drop-in replacement для старого Quill-редактора.
+ * Agent Editor — Tiptap + AI Chat Panel.
  *
+ * Компактный тулбар + чат-панель внизу для AI-инструкций.
  * Тот же API: value, onChange, placeholder, context.
  */
 export const MarkdownEditor = ({
@@ -43,6 +48,7 @@ export const MarkdownEditor = ({
     const [slashPos, setSlashPos] = useState(null);
     const slashMenuRef = useRef(null);
     const containerRef = useRef(null);
+    const [toolbarExpanded, setToolbarExpanded] = useState(false);
 
     // Selection toolbar state
     const [selectionToolbar, setSelectionToolbar] = useState({ show: false, top: 0, left: 0 });
@@ -92,7 +98,6 @@ export const MarkdownEditor = ({
                 return;
             }
 
-            // Position the toolbar above the selection
             const { view } = editor;
             const start = view.coordsAtPos(from);
             const end = view.coordsAtPos(to);
@@ -112,7 +117,6 @@ export const MarkdownEditor = ({
                 if (event.key === '/' && !showSlash) {
                     const { $from } = view.state.selection;
                     const isEmptyLine = $from.parent.content.size === 0;
-
                     if (isEmptyLine) {
                         setTimeout(() => {
                             const containerRect = containerRef.current?.getBoundingClientRect();
@@ -130,42 +134,27 @@ export const MarkdownEditor = ({
                 }
 
                 if (showSlash) {
-                    if (event.key === 'Escape') {
-                        setShowSlash(false);
-                        return true;
-                    }
-                    if (event.key === 'Backspace' && slashQuery === '') {
-                        setShowSlash(false);
-                        return false;
-                    }
+                    if (event.key === 'Escape') { setShowSlash(false); return true; }
+                    if (event.key === 'Backspace' && slashQuery === '') { setShowSlash(false); return false; }
                     if (['ArrowUp', 'ArrowDown', 'Enter'].includes(event.key)) {
                         return slashMenuRef.current?.onKeyDown({ event }) ?? false;
                     }
                 }
-
                 return false;
             },
-
             handleTextInput: (view, from, to, text) => {
-                if (showSlash) {
-                    setSlashQuery((prev) => prev + text);
-                }
+                if (showSlash) setSlashQuery((prev) => prev + text);
                 return false;
             },
         },
     });
 
-    // Sync external value changes (form resets, initial load)
+    // Sync external value
     useEffect(() => {
         if (!editor) return;
-        if (isInternalChange.current) {
-            isInternalChange.current = false;
-            return;
-        }
-
+        if (isInternalChange.current) { isInternalChange.current = false; return; }
         const currentHtml = editor.getHTML();
         const isEmpty = currentHtml === '<p></p>';
-
         if ((isEmpty && value && value !== '') || (!isEmpty && currentHtml !== value)) {
             editor.commands.setContent(value || '', false);
         }
@@ -187,23 +176,31 @@ export const MarkdownEditor = ({
             const textBefore = $from.parent.textContent;
             if (textBefore.startsWith('/')) {
                 const start = $from.start();
-                editor.chain()
-                    .focus()
-                    .deleteRange({ from: start, to: start + textBefore.length })
-                    .run();
+                editor.chain().focus().deleteRange({ from: start, to: start + textBefore.length }).run();
             }
         }
     }, [editor]);
 
-    const handleAiGenerate = useCallback((text) => {
-        if (editor) {
-            let cleanHtml = text
-                .replace(/^<html>\s*/i, '')
-                .replace(/\s*<\/html>$/i, '')
-                .trim();
-            editor.chain().focus().insertContent(cleanHtml).run();
-        }
-    }, [editor]);
+    const handleAiContentChange = useCallback((html) => {
+        isInternalChange.current = true;
+        onChange(html === '<p></p>' ? '' : html);
+    }, [onChange]);
+
+    // Compact toolbar button
+    const TB = ({ icon, label, isActive, onClick, disabled }) => (
+        <IconButton
+            size="2xs"
+            variant={isActive ? 'solid' : 'ghost'}
+            colorPalette={isActive ? 'purple' : 'gray'}
+            title={label}
+            onClick={onClick}
+            disabled={disabled}
+            aria-label={label}
+            _hover={{ bg: isActive ? undefined : 'gray.100' }}
+        >
+            {icon}
+        </IconButton>
+    );
 
     return (
         <Box
@@ -216,10 +213,9 @@ export const MarkdownEditor = ({
             w="full"
             position="relative"
             css={{
-                /* Tiptap editor area */
                 '& .tiptap': {
                     minHeight: minHeight,
-                    maxHeight: '600px',
+                    maxHeight: '500px',
                     overflowY: 'auto',
                     padding: '12px 16px',
                     outline: 'none',
@@ -227,7 +223,6 @@ export const MarkdownEditor = ({
                     lineHeight: '1.7',
                     fontFamily: 'inherit',
                 },
-                /* Placeholder */
                 '& .tiptap p.is-editor-empty:first-child::before': {
                     content: 'attr(data-placeholder)',
                     float: 'left',
@@ -236,113 +231,89 @@ export const MarkdownEditor = ({
                     pointerEvents: 'none',
                     height: 0,
                 },
-                /* Heading styles */
                 '& .tiptap h1': { fontSize: '2em', fontWeight: 700, letterSpacing: '-0.02em', marginTop: '0.5em', marginBottom: '0.5em' },
                 '& .tiptap h2': { fontSize: '1.5em', fontWeight: 600, letterSpacing: '-0.02em', marginTop: '1.2em', marginBottom: '0.5em' },
-                '& .tiptap h3': { fontSize: '1.25em', fontWeight: 600, letterSpacing: '-0.01em', marginTop: '1em', marginBottom: '0.4em' },
+                '& .tiptap h3': { fontSize: '1.25em', fontWeight: 600, marginTop: '1em', marginBottom: '0.4em' },
                 '& .tiptap h4': { fontSize: '1.125em', fontWeight: 600, marginTop: '0.8em', marginBottom: '0.3em' },
-                /* Blockquote */
                 '& .tiptap blockquote': {
                     borderLeft: '4px solid var(--chakra-colors-purple-400)',
-                    paddingLeft: '1em',
-                    marginLeft: 0,
-                    color: 'var(--chakra-colors-fg-muted)',
-                    fontStyle: 'italic',
+                    paddingLeft: '1em', marginLeft: 0,
+                    color: 'var(--chakra-colors-fg-muted)', fontStyle: 'italic',
                 },
-                /* Code block */
                 '& .tiptap pre': {
-                    background: '#1e1e2e',
-                    color: '#cdd6f4',
-                    borderRadius: '8px',
-                    padding: '12px 16px',
-                    fontSize: '0.875em',
-                    fontFamily: 'monospace',
-                    overflowX: 'auto',
+                    background: '#1e1e2e', color: '#cdd6f4', borderRadius: '8px',
+                    padding: '12px 16px', fontSize: '0.875em', fontFamily: 'monospace', overflowX: 'auto',
                 },
-                '& .tiptap code': {
-                    background: 'var(--chakra-colors-bg-muted)',
-                    borderRadius: '4px',
-                    padding: '2px 6px',
-                    fontSize: '0.9em',
-                    fontFamily: 'monospace',
-                },
-                '& .tiptap pre code': {
-                    background: 'transparent',
-                    padding: 0,
-                },
-                /* Inline marks */
-                '& .tiptap mark': {
-                    background: '#fef08a',
-                    borderRadius: '2px',
-                    padding: '0 2px',
-                },
-                /* Lists */
+                '& .tiptap code': { background: 'var(--chakra-colors-bg-muted)', borderRadius: '4px', padding: '2px 6px', fontSize: '0.9em', fontFamily: 'monospace' },
+                '& .tiptap pre code': { background: 'transparent', padding: 0 },
+                '& .tiptap mark': { background: '#fef08a', borderRadius: '2px', padding: '0 2px' },
                 '& .tiptap ul': { paddingLeft: '1.5em', listStyleType: 'disc' },
                 '& .tiptap ol': { paddingLeft: '1.5em', listStyleType: 'decimal' },
                 '& .tiptap li': { marginBottom: '0.25em' },
-                /* Task list */
-                '& .tiptap ul[data-type="taskList"]': {
-                    listStyleType: 'none',
-                    paddingLeft: '0.5em',
-                },
-                '& .tiptap ul[data-type="taskList"] li': {
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '8px',
-                },
-                '& .tiptap ul[data-type="taskList"] li label': {
-                    marginTop: '3px',
-                },
-                /* HR */
-                '& .tiptap hr': {
-                    border: 'none',
-                    borderTop: '2px solid var(--chakra-colors-border)',
-                    margin: '1.5em 0',
-                },
-                /* Image */
-                '& .tiptap img': {
-                    maxWidth: '100%',
-                    borderRadius: '12px',
-                    margin: '1em 0',
-                },
-                /* Table */
-                '& .tiptap table': {
-                    borderCollapse: 'collapse',
-                    width: '100%',
-                    margin: '1em 0',
-                },
-                '& .tiptap th, & .tiptap td': {
-                    border: '1px solid var(--chakra-colors-border)',
-                    padding: '8px 12px',
-                    textAlign: 'left',
-                },
-                '& .tiptap th': {
-                    background: 'var(--chakra-colors-bg-muted)',
-                    fontWeight: 600,
-                },
-                /* Link */
-                '& .tiptap a': {
-                    color: 'var(--chakra-colors-purple-500)',
-                    textDecoration: 'underline',
-                    cursor: 'pointer',
-                },
+                '& .tiptap ul[data-type="taskList"]': { listStyleType: 'none', paddingLeft: '0.5em' },
+                '& .tiptap ul[data-type="taskList"] li': { display: 'flex', alignItems: 'flex-start', gap: '8px' },
+                '& .tiptap hr': { border: 'none', borderTop: '2px solid var(--chakra-colors-border)', margin: '1.5em 0' },
+                '& .tiptap img': { maxWidth: '100%', borderRadius: '12px', margin: '1em 0' },
+                '& .tiptap table': { borderCollapse: 'collapse', width: '100%', margin: '1em 0' },
+                '& .tiptap th, & .tiptap td': { border: '1px solid var(--chakra-colors-border)', padding: '8px 12px', textAlign: 'left' },
+                '& .tiptap th': { background: 'var(--chakra-colors-bg-muted)', fontWeight: 600 },
+                '& .tiptap a': { color: 'var(--chakra-colors-purple-500)', textDecoration: 'underline', cursor: 'pointer' },
             }}
         >
-            {/* AI Assistant row */}
-            <HStack
-                justify="flex-end"
-                bg="bg.muted"
-                borderBottomWidth="1px"
-                borderColor="border"
-                p={2}
-            >
-                <AiAssistant onGenerate={handleAiGenerate} context={context} />
-            </HStack>
+            {/* Compact toolbar */}
+            <Box bg="bg.muted" borderBottomWidth="1px" borderColor="border" px="2" py="1">
+                <HStack gap="0.5" flexWrap="wrap">
+                    {editor && (
+                        <>
+                            <TB icon={<LuBold />} label="Жирный" isActive={editor.isActive('bold')} onClick={() => editor.chain().focus().toggleBold().run()} />
+                            <TB icon={<LuItalic />} label="Курсив" isActive={editor.isActive('italic')} onClick={() => editor.chain().focus().toggleItalic().run()} />
+                            <TB icon={<LuHeading2 />} label="Заголовок 2" isActive={editor.isActive('heading', { level: 2 })} onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} />
+                            <TB icon={<LuHeading3 />} label="Заголовок 3" isActive={editor.isActive('heading', { level: 3 })} onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} />
+                            <TB icon={<LuList />} label="Список" isActive={editor.isActive('bulletList')} onClick={() => editor.chain().focus().toggleBulletList().run()} />
+                            <TB icon={<LuLink />} label="Ссылка" isActive={editor.isActive('link')} onClick={() => {
+                                const url = window.prompt('URL:', editor.getAttributes('link').href);
+                                if (url === null) return;
+                                if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); }
+                                else { editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run(); }
+                            }} />
 
-            {/* Toolbar */}
-            <EditorToolbar editor={editor} />
+                            {/* Expand button */}
+                            <Button
+                                size="2xs"
+                                variant="ghost"
+                                onClick={() => setToolbarExpanded(!toolbarExpanded)}
+                                title={toolbarExpanded ? 'Свернуть' : 'Ещё инструменты'}
+                                px="1"
+                            >
+                                <LuEllipsis />
+                            </Button>
 
-            {/* Selection toolbar (custom bubble menu) */}
+                            {/* Expanded toolbar */}
+                            {toolbarExpanded && (
+                                <>
+                                    <TB icon={<LuUnderlineIcon />} label="Подчёркнутый" isActive={editor.isActive('underline')} onClick={() => editor.chain().focus().toggleUnderline().run()} />
+                                    <TB icon={<LuStrikethrough />} label="Зачёркнутый" isActive={editor.isActive('strike')} onClick={() => editor.chain().focus().toggleStrike().run()} />
+                                    <TB icon={<LuHighlighter />} label="Маркер" isActive={editor.isActive('highlight')} onClick={() => editor.chain().focus().toggleHighlight().run()} />
+                                    <TB icon={<LuAlignLeft />} label="По левому" isActive={editor.isActive({ textAlign: 'left' })} onClick={() => editor.chain().focus().setTextAlign('left').run()} />
+                                    <TB icon={<LuAlignCenter />} label="По центру" isActive={editor.isActive({ textAlign: 'center' })} onClick={() => editor.chain().focus().setTextAlign('center').run()} />
+                                    <TB icon={<LuListOrdered />} label="Нумерованный" isActive={editor.isActive('orderedList')} onClick={() => editor.chain().focus().toggleOrderedList().run()} />
+                                    <TB icon={<LuListChecks />} label="Чеклист" isActive={editor.isActive('taskList')} onClick={() => editor.chain().focus().toggleTaskList().run()} />
+                                    <TB icon={<LuQuote />} label="Цитата" isActive={editor.isActive('blockquote')} onClick={() => editor.chain().focus().toggleBlockquote().run()} />
+                                    <TB icon={<LuCode />} label="Код" isActive={editor.isActive('codeBlock')} onClick={() => editor.chain().focus().toggleCodeBlock().run()} />
+                                    <TB icon={<LuMinus />} label="Разделитель" onClick={() => editor.chain().focus().setHorizontalRule().run()} />
+                                    <TB icon={<LuImage />} label="Изображение" onClick={() => {
+                                        const url = window.prompt('URL изображения:');
+                                        if (url) editor.chain().focus().setImage({ src: url }).run();
+                                    }} />
+                                    <TB icon={<LuTable />} label="Таблица" onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} />
+                                </>
+                            )}
+                        </>
+                    )}
+                </HStack>
+            </Box>
+
+            {/* Selection toolbar */}
             {selectionToolbar.show && editor && (
                 <Box
                     position="absolute"
@@ -351,14 +322,7 @@ export const MarkdownEditor = ({
                     transform="translateX(-50%)"
                     zIndex="popover"
                 >
-                    <HStack
-                        bg="gray.900"
-                        borderRadius="lg"
-                        px="1.5"
-                        py="1"
-                        gap="0.5"
-                        boxShadow="lg"
-                    >
+                    <HStack bg="gray.900" borderRadius="lg" px="1.5" py="1" gap="0.5" boxShadow="lg">
                         <IconButton size="2xs" variant={editor.isActive('bold') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleBold().run()} aria-label="Жирный" color="white"><LuBold /></IconButton>
                         <IconButton size="2xs" variant={editor.isActive('italic') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleItalic().run()} aria-label="Курсив" color="white"><LuItalic /></IconButton>
                         <IconButton size="2xs" variant={editor.isActive('underline') ? 'solid' : 'ghost'} colorPalette="whiteAlpha" onClick={() => editor.chain().focus().toggleUnderline().run()} aria-label="Подчёркнутый" color="white"><LuUnderlineIcon /></IconButton>
@@ -371,17 +335,12 @@ export const MarkdownEditor = ({
                             onClick={() => {
                                 const url = window.prompt('URL:', editor.getAttributes('link').href);
                                 if (url === null) return;
-                                if (url === '') {
-                                    editor.chain().focus().extendMarkRange('link').unsetLink().run();
-                                } else {
-                                    editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-                                }
+                                if (url === '') { editor.chain().focus().extendMarkRange('link').unsetLink().run(); }
+                                else { editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run(); }
                             }}
                             aria-label="Ссылка"
                             color="white"
-                        >
-                            <LuLink />
-                        </IconButton>
+                        ><LuLink /></IconButton>
                     </HStack>
                 </Box>
             )}
@@ -399,6 +358,13 @@ export const MarkdownEditor = ({
                     position={slashPos}
                 />
             )}
+
+            {/* AI Chat Panel */}
+            <AiChatPanel
+                editor={editor}
+                context={context}
+                onContentChange={handleAiContentChange}
+            />
         </Box>
     );
 };
