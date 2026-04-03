@@ -314,7 +314,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                             {currentStep === 'personal' && (
                                 <VStack gap={4} align="stretch">
                                     <Field
-                                        label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Имя / Название</Text>}
+                                        label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Ваше ФИО или Название компании</Text>}
                                         invalid={!!personalErrors.name}
                                         errorText={personalErrors.name}
                                         required
@@ -322,7 +322,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                         <Input
                                             value={data.name}
                                             onChange={(e) => setData('name', e.target.value)}
-                                            placeholder="Иванов Иван Иванович или ООО Рога и Копыта"
+                                            placeholder="Иванов Иван Иванович или ООО Компания"
                                             {...inputStyles}
                                         />
                                     </Field>

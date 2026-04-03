@@ -87,7 +87,10 @@ class OnboardingController extends Controller
             $questionnaireData
         );
 
-        return redirect('/')->with('success', 'Спасибо за заполнение анкеты! Добро пожаловать!');
+        return redirect('/')->with([
+            'success' => 'Спасибо за заполнение анкеты! Добро пожаловать!',
+            'onboarding_completed' => true,
+        ]);
     }
 
     /**
