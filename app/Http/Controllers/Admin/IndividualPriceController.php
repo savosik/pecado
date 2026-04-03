@@ -70,11 +70,17 @@ class IndividualPriceController extends Controller
             return $item;
         });
 
-        // Статистика (кэшируем на 5 минут — таблица ~3M строк)
-        $stats = cache()->remember('individual_prices_stats', 300, function () {
+        // Статистика — быстрая оценка без COUNT(*) по таблице ~3M строк
+        $stats = cache()->remember('individual_prices_stats', 3600, function () {
+            $approx = DB::selectOne(
+                "SELECT TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'individual_prices'"
+            );
+            $partnerCardinality = DB::selectOne(
+                "SELECT CARDINALITY FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'individual_prices' AND INDEX_NAME = 'idx_individual_prices_partner' LIMIT 1"
+            );
             return [
-                'total_prices' => IndividualPrice::count(),
-                'total_partners' => IndividualPrice::distinct('partner_id')->count('partner_id'),
+                'total_prices' => $approx?->TABLE_ROWS ?? 0,
+                'total_partners' => $partnerCardinality?->CARDINALITY ?? 0,
             ];
         });
 
