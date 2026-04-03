@@ -88,7 +88,7 @@ class AiController extends Controller
             }
 
             $response = $client->chat()->create([
-                'model' => 'google/gemini-2.5-flash',
+                'model' => 'google/gemini-3.1-pro-preview',
                 'messages' => $messages,
                 'temperature' => 0.7,
                 'max_tokens' => 16000,
