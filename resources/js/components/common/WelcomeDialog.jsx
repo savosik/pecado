@@ -78,7 +78,7 @@ export default function WelcomeDialog({ userName }) {
                             lineHeight="1.6"
                             maxW="360px"
                         >
-                            Мы рады приветствовать вас на нашем сайте!
+                            Спасибо за регистрацию! Мы рады приветствовать Вас на нашем сайте.
                         </Text>
                         <Text
                             fontSize="sm"
