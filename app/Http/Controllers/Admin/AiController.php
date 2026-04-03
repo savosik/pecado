@@ -20,7 +20,7 @@ class AiController extends Controller
             'mode' => 'nullable|string|in:generation,rewrite,edit',
         ]);
 
-        $apiKey = env('OPENROUTER_API_KEY');
+        $apiKey = config('normalizer.api_key');
 
         if (!$apiKey) {
             return response()->json([
