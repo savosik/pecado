@@ -88,7 +88,7 @@ class AiController extends Controller
             }
 
             $response = $client->chat()->create([
-                'model' => config('normalizer.model', 'openai/gpt-4o'),
+                'model' => 'google/gemini-2.5-flash',
                 'messages' => $messages,
                 'temperature' => 0.7,
                 'max_tokens' => 16000,
