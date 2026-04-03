@@ -2,7 +2,7 @@ import { Box, Container, Heading, VStack, Text, Flex } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { Toaster } from '@/components/ui/toaster';
 
-export default function AuthLayout({ children, title, subtitle }) {
+export default function AuthLayout({ children, title, subtitle, image = '/images/auth-hero-v2.png' }) {
     return (
         <>
             <Toaster />
@@ -61,7 +61,7 @@ export default function AuthLayout({ children, title, subtitle }) {
                 >
                     <Box
                         as="img"
-                        src="/images/auth-hero-v2.png"
+                        src={image}
                         alt=""
                         position="absolute"
                         inset="0"

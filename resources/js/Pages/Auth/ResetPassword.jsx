@@ -39,6 +39,7 @@ export default function ResetPassword({ token, email, errors }) {
             <AuthLayout
                 title="Новый пароль"
                 subtitle="Придумайте новый надёжный пароль"
+                image="/images/auth-reset.png"
             >
                 <form onSubmit={handleSubmit}>
                     <Stack gap={5}>

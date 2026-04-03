@@ -40,7 +40,7 @@ export default function Register({ errors }) {
         <>
             <Head title="Регистрация" />
 
-            <AuthLayout title="Регистрация" subtitle="Создайте аккаунт в Pecado">
+            <AuthLayout title="Регистрация" subtitle="Создайте аккаунт в Pecado" image="/images/auth-register.png">
                 <form onSubmit={handleSubmit}>
                     <Stack gap={4}>
                         <Field label={labelEl('Email')} invalid={!!errors.email} errorText={errors.email} required>

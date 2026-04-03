@@ -242,6 +242,14 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
         final: { title: 'Последний шаг', subtitle: 'Ещё пара вопросов и всё готово!' },
     };
 
+    const stepImages = {
+        personal: '/images/onboard-personal.png',
+        business: '/images/onboard-business.png',
+        experience: '/images/onboard-experience.png',
+        categories: '/images/onboard-categories.png',
+        final: '/images/onboard-final.png',
+    };
+
     return (
         <>
             <Head title="Анкета — Pecado" />
@@ -637,13 +645,15 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                 >
                     <Box
                         as="img"
-                        src="/images/auth-hero-v2.png"
+                        src={stepImages[currentStep] || '/images/onboard-personal.png'}
                         alt=""
                         position="absolute"
                         inset="0"
                         w="100%"
                         h="100%"
                         objectFit="cover"
+                        transition="opacity 0.5s ease"
+                        key={currentStep}
                     />
                     <Box
                         position="absolute"

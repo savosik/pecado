@@ -36,6 +36,7 @@ export default function ForgotPassword({ errors }) {
             <AuthLayout
                 title="Восстановление пароля"
                 subtitle="Введите email и мы отправим ссылку для сброса пароля"
+                image="/images/auth-forgot.png"
             >
                 {flash?.success && (
                     <Box

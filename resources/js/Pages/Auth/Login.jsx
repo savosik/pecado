@@ -37,7 +37,7 @@ export default function Login({ errors }) {
         <>
             <Head title="Вход" />
 
-            <AuthLayout title="Вход в аккаунт" subtitle="Добро пожаловать в Pecado">
+            <AuthLayout title="Вход в аккаунт" subtitle="Добро пожаловать в Pecado" image="/images/auth-login.png">
                 <form onSubmit={handleSubmit}>
                     <Stack gap={5}>
                         <Field
