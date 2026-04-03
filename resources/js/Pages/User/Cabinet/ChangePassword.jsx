@@ -3,6 +3,7 @@ import {
     Box, Flex, VStack, Text, Input, Button, Card,
     Field,
 } from '@chakra-ui/react';
+import PasswordInput from '@/components/ui/password-input';
 import { Head, usePage, router } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
 import { LuLock, LuCheck } from 'react-icons/lu';
@@ -62,10 +63,9 @@ export default function ChangePassword() {
                         <VStack gap="4" align="stretch" maxW="500px">
                             <Field.Root invalid={!!errors.current_password}>
                                 <Field.Label fontSize="sm" fontWeight="600">Текущий пароль *</Field.Label>
-                                <Input
+                                <PasswordInput
                                     value={form.current_password}
                                     onChange={(e) => handleChange('current_password', e.target.value)}
-                                    type="password"
                                     placeholder="Введите текущий пароль"
                                     size="md"
                                     required
@@ -75,10 +75,9 @@ export default function ChangePassword() {
 
                             <Field.Root invalid={!!errors.password}>
                                 <Field.Label fontSize="sm" fontWeight="600">Новый пароль *</Field.Label>
-                                <Input
+                                <PasswordInput
                                     value={form.password}
                                     onChange={(e) => handleChange('password', e.target.value)}
-                                    type="password"
                                     placeholder="Минимум 8 символов"
                                     size="md"
                                     required
@@ -88,10 +87,9 @@ export default function ChangePassword() {
 
                             <Field.Root invalid={!!errors.password_confirmation}>
                                 <Field.Label fontSize="sm" fontWeight="600">Подтвердите пароль *</Field.Label>
-                                <Input
+                                <PasswordInput
                                     value={form.password_confirmation}
                                     onChange={(e) => handleChange('password_confirmation', e.target.value)}
-                                    type="password"
                                     placeholder="Повторите новый пароль"
                                     size="md"
                                     required

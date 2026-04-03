@@ -3,6 +3,7 @@ import { useForm } from '@inertiajs/react';
 import { Box, Input, Button, Text, Stack } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
+import PasswordInput from '@/components/ui/password-input';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
 import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
 
@@ -58,8 +59,7 @@ export default function LoginForm() {
                         invalid={!!errors.password}
                         errorText={errors.password}
                     >
-                        <Input
-                            type="password"
+                        <PasswordInput
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
                             placeholder="••••••••"

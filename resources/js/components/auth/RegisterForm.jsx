@@ -2,6 +2,7 @@ import { useForm } from '@inertiajs/react';
 import { Box, Input, Button, Text, Stack, SimpleGrid } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
+import PasswordInput from '@/components/ui/password-input';
 import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
 
 export default function RegisterForm() {
@@ -53,8 +54,7 @@ export default function RegisterForm() {
 
                     <SimpleGrid columns={2} gap={3}>
                         <Field label={labelEl('Пароль')} invalid={!!errors.password} errorText={errors.password} required>
-                            <Input
-                                type="password"
+                            <PasswordInput
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
                                 placeholder="Мин. 8 символов"
@@ -63,8 +63,7 @@ export default function RegisterForm() {
                         </Field>
 
                         <Field label={labelEl('Подтвердите')} invalid={!!errors.password_confirmation} errorText={errors.password_confirmation} required>
-                            <Input
-                                type="password"
+                            <PasswordInput
                                 value={data.password_confirmation}
                                 onChange={(e) => setData('password_confirmation', e.target.value)}
                                 placeholder="Повторите пароль"

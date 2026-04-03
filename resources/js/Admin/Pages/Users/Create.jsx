@@ -3,6 +3,7 @@ import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, HStack, Badge, Button, Text } from '@chakra-ui/react';
+import PasswordInput from '@/components/ui/password-input';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
@@ -79,8 +80,7 @@ export default function Create({ regions, currencies, countries, statuses }) {
                                 </FormField>
 
                                 <FormField label="Пароль" error={errors.password} required>
-                                    <Input
-                                        type="password"
+                                    <PasswordInput
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
                                         placeholder="Минимум 8 символов"

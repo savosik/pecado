@@ -3,6 +3,7 @@ import { useForm, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text, HStack, Badge, Button, Flex } from '@chakra-ui/react';
+import PasswordInput from '@/components/ui/password-input';
 import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
@@ -80,8 +81,7 @@ export default function Edit({ user, regions, currencies, countries, statuses })
                                 </FormField>
 
                                 <FormField label="Пароль" error={errors.password}>
-                                    <Input
-                                        type="password"
+                                    <PasswordInput
                                         value={data.password}
                                         onChange={(e) => setData('password', e.target.value)}
                                         placeholder="Оставьте пустым, если не хотите менять"
