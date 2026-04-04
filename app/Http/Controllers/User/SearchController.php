@@ -115,8 +115,15 @@ class SearchController extends Controller
         ]);
 
         try {
-            $products = Product::search($validated['q'])
-                ->query(fn ($q) => $q->with(['brand', 'media']))
+            $searchBuilder = Product::search($validated['q'])
+                ->query(fn ($q) => $q->with(['brand', 'media']));
+
+            // Гибридный поиск (полнотекст + семантика)
+            if ($hybridOptions = $this->getHybridSearchOptions()) {
+                $searchBuilder->options($hybridOptions);
+            }
+
+            $products = $searchBuilder
                 ->take(8)
                 ->get()
                 ->map(fn (Product $product) => $this->formatProductCompact($product));
@@ -189,13 +196,19 @@ class SearchController extends Controller
             $perPage = $limit ?? 20;
 
             try {
-                $paginated = Product::search($query)
+                $searchBuilder = Product::search($query)
                     ->query(function ($q) {
                         $q->select('products.*');
                         $q->with(ProductQueryService::productEagerLoads());
                         ProductQueryService::withRegionStockSums($q);
-                    })
-                    ->paginate($perPage, 'page', $page);
+                    });
+
+                // Гибридный поиск (полнотекст + семантика)
+                if ($hybridOptions = $this->getHybridSearchOptions()) {
+                    $searchBuilder->options($hybridOptions);
+                }
+
+                $paginated = $searchBuilder->paginate($perPage, 'page', $page);
 
                 $products = $paginated->getCollection();
 
@@ -329,6 +342,23 @@ class SearchController extends Controller
             'slug'      => $product->slug,
             'price'     => (float) $product->base_price,
             'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
+        ];
+    }
+
+    /**
+     * Получить опции гибридного поиска для Meilisearch.
+     */
+    private function getHybridSearchOptions(): ?array
+    {
+        if (! config('search.hybrid.enabled')) {
+            return null;
+        }
+
+        return [
+            'hybrid' => [
+                'embedder' => config('search.hybrid.embedder'),
+                'semanticRatio' => config('search.hybrid.semantic_ratio'),
+            ],
         ];
     }
 

@@ -24,8 +24,14 @@ class CatalogController extends Controller
 
         if ($search) {
             // Полнотекстовый поиск через Meilisearch
-            $products = Product::search($search)
-                ->query(fn ($q) => $q->with(['brand', 'category', 'media']))
+            $searchBuilder = Product::search($search)
+                ->query(fn ($q) => $q->with(['brand', 'category', 'media']));
+
+            if ($hybridOptions = $this->getHybridSearchOptions()) {
+                $searchBuilder->options($hybridOptions);
+            }
+
+            $products = $searchBuilder
                 ->paginate($perPage)
                 ->withQueryString();
         } else {
@@ -64,8 +70,14 @@ class CatalogController extends Controller
         }
 
         // Поиск товаров (до 8)
-        $products = Product::search($query)
-            ->query(fn ($q) => $q->with(['brand', 'media']))
+        $searchBuilder = Product::search($query)
+            ->query(fn ($q) => $q->with(['brand', 'media']));
+
+        if ($hybridOptions = $this->getHybridSearchOptions()) {
+            $searchBuilder->options($hybridOptions);
+        }
+
+        $products = $searchBuilder
             ->take(8)
             ->get()
             ->map(fn (Product $product) => [
@@ -94,5 +106,22 @@ class CatalogController extends Controller
             'products' => $products,
             'categories' => $categories,
         ]);
+    }
+
+    /**
+     * Получить опции гибридного поиска для Meilisearch.
+     */
+    private function getHybridSearchOptions(): ?array
+    {
+        if (! config('search.hybrid.enabled')) {
+            return null;
+        }
+
+        return [
+            'hybrid' => [
+                'embedder' => config('search.hybrid.embedder'),
+                'semanticRatio' => config('search.hybrid.semantic_ratio'),
+            ],
+        ];
     }
 }

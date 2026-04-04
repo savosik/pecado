@@ -70,7 +70,7 @@ services:
       - pecado-network
 
   meilisearch:
-    image: getmeili/meilisearch:latest
+    image: getmeili/meilisearch:v1.14
     container_name: pecado-meilisearch
     restart: unless-stopped
     environment:
