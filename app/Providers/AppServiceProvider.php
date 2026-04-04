@@ -2,6 +2,12 @@
 
 namespace App\Providers;
 
+use Dedoc\Scramble\Scramble;
+use Dedoc\Scramble\Support\Generator\OpenApi;
+use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -45,6 +51,8 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\Order\OrderRepositoryInterface::class,
             \App\Repositories\OrderRepository::class
         );
+
+        Scramble::ignoreDefaultRoutes();
     }
 
     /**
@@ -86,5 +94,27 @@ class AppServiceProvider extends ServiceProvider
             \App\Events\ReturnCreated::class,
             \App\Listeners\PublishReturnToErp::class,
         );
+
+        // Rate limiter для Content API (ИИ-агент)
+        RateLimiter::for('content-api', function (Request $request) {
+            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+        });
+
+        // Scramble: документировать только /api/content/* роуты
+        Scramble::registerApi('content', [
+            'api_path' => 'api/content',
+            'info' => [
+                'title' => 'Pecado Content API',
+                'version' => '1.0',
+                'description' => 'API для ИИ-агента контент-менеджера. Авторизация через Bearer Token (Sanctum).',
+            ],
+        ])->afterOpenApiGenerated(function (OpenApi $openApi) {
+            $openApi->secure(
+                SecurityScheme::http('bearer', 'bearer')
+            );
+        });
+
+        Scramble::registerUiRoute(path: 'docs/api', api: 'content');
+        Scramble::registerJsonSpecificationRoute(path: 'docs/api.json', api: 'content');
     }
 }

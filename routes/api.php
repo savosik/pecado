@@ -21,3 +21,57 @@ Route::get('/catalog/products/price-intervals', [CatalogApiController::class, 'p
 
 // QuickView — JSON-карточка товара
 Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])->name('api.products.show');
+
+// ──────────────────────────────────────────────────────────────
+// Content API — для ИИ-агента контент-менеджера
+// ──────────────────────────────────────────────────────────────
+Route::prefix('content')
+    ->middleware(['auth:sanctum', 'throttle:content-api'])
+    ->name('api.content.')
+    ->group(function () {
+        // Информация об агенте
+        Route::get('me', [\App\Http\Controllers\Api\Content\MeController::class, 'index'])->name('me');
+
+        // ── Контент — полный CRUD ──────────────────────────────────
+        Route::apiResource('news', \App\Http\Controllers\Api\Content\NewsController::class)->parameters(['news' => 'news']);
+        Route::apiResource('articles', \App\Http\Controllers\Api\Content\ArticleController::class);
+        Route::apiResource('faqs', \App\Http\Controllers\Api\Content\FaqController::class);
+        Route::apiResource('brand-stories', \App\Http\Controllers\Api\Content\BrandStoryController::class)->parameters(['brand-stories' => 'brandStory']);
+        Route::apiResource('banners', \App\Http\Controllers\Api\Content\BannerController::class);
+        Route::apiResource('pages', \App\Http\Controllers\Api\Content\PageController::class);
+
+        // Промоакции + привязка товаров
+        Route::apiResource('promotions', \App\Http\Controllers\Api\Content\PromotionController::class);
+        Route::post('promotions/{promotion}/products', [\App\Http\Controllers\Api\Content\PromotionController::class, 'syncProducts'])->name('promotions.sync-products');
+
+        // Подборки товаров + привязка товаров с featured
+        Route::apiResource('product-selections', \App\Http\Controllers\Api\Content\ProductSelectionController::class)->parameters(['product-selections' => 'productSelection']);
+        Route::post('product-selections/{productSelection}/products', [\App\Http\Controllers\Api\Content\ProductSelectionController::class, 'syncProductsEndpoint'])->name('product-selections.sync-products');
+
+        // Сториз + вложенные слайды
+        Route::apiResource('stories', \App\Http\Controllers\Api\Content\StoryController::class);
+        Route::get('stories/{story}/slides', [\App\Http\Controllers\Api\Content\StorySlideController::class, 'index'])->name('stories.slides.index');
+        Route::post('stories/{story}/slides', [\App\Http\Controllers\Api\Content\StorySlideController::class, 'store'])->name('stories.slides.store');
+        Route::put('stories/{story}/slides/{slide}', [\App\Http\Controllers\Api\Content\StorySlideController::class, 'update'])->name('stories.slides.update');
+        Route::delete('stories/{story}/slides/{slide}', [\App\Http\Controllers\Api\Content\StorySlideController::class, 'destroy'])->name('stories.slides.destroy');
+        Route::post('stories/{story}/slides/reorder', [\App\Http\Controllers\Api\Content\StorySlideController::class, 'reorder'])->name('stories.slides.reorder');
+
+        // Теги (view + create)
+        Route::get('tags', [\App\Http\Controllers\Api\Content\TagController::class, 'index'])->name('tags.index');
+        Route::post('tags', [\App\Http\Controllers\Api\Content\TagController::class, 'store'])->name('tags.store');
+
+        // ── Каталог — READ-ONLY ────────────────────────────────────
+        Route::get('products', [\App\Http\Controllers\Api\Content\ProductController::class, 'index'])->name('products.index');
+        Route::get('products/search', [\App\Http\Controllers\Api\Content\ProductController::class, 'search'])->name('products.search');
+        Route::get('products/facets', [\App\Http\Controllers\Api\Content\ProductController::class, 'facets'])->name('products.facets');
+        Route::get('products/price-intervals', [\App\Http\Controllers\Api\Content\ProductController::class, 'priceIntervals'])->name('products.price-intervals');
+        Route::get('products/{product}', [\App\Http\Controllers\Api\Content\ProductController::class, 'show'])->name('products.show');
+
+        Route::get('brands', [\App\Http\Controllers\Api\Content\BrandController::class, 'index'])->name('brands.index');
+        Route::get('brands/{brand}', [\App\Http\Controllers\Api\Content\BrandController::class, 'show'])->name('brands.show');
+
+        Route::get('categories', [\App\Http\Controllers\Api\Content\CategoryController::class, 'index'])->name('categories.index');
+        Route::get('categories/{category}', [\App\Http\Controllers\Api\Content\CategoryController::class, 'show'])->name('categories.show');
+
+        Route::get('regions', [\App\Http\Controllers\Api\Content\RegionController::class, 'index'])->name('regions.index');
+    });
