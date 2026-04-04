@@ -198,7 +198,9 @@ Content-Type: multipart/form-data
 
 title=Новость
 content=<p>Текст</p>
-image=@photo.jpg
+list_item=@photo_list.jpg
+detail_desktop=@photo_desktop.jpg
+detail_mobile=@photo_mobile.jpg
 ```
 
 ### 2. По URL (JSON)
@@ -209,12 +211,36 @@ Content-Type: application/json
 {
   "title": "Новость",
   "content": "<p>Текст</p>",
-  "image_url": "https://example.com/photo.jpg"
+  "list_item_url": "https://example.com/list.jpg",
+  "detail_desktop_url": "https://example.com/desktop.jpg",
+  "detail_mobile_url": "https://example.com/mobile.jpg"
 }
 ```
 
 Поддерживаемые форматы: **JPEG, PNG, WebP, GIF, SVG, MP4, WebM, MOV**.  
 Максимальный размер: **10–20 MB** (в зависимости от ресурса).
+
+### 🖼️ Медиа-поля по ресурсам
+
+У большинства контента **3 изображения**: для списка, для десктопа и для мобильной версии.
+
+| Ресурс | Поле файла / URL | Описание | Возвращается как |
+|--------|-----------------|----------|-----------------|
+| **News, Articles, BrandStories, Pages** | `list_item` / `list_item_url` | Изображение для списка | `images.list_item` |
+| | `detail_desktop` / `detail_desktop_url` | Десктоп-версия для детальной страницы | `images.detail_item_desktop` |
+| | `detail_mobile` / `detail_mobile_url` | Мобильная версия для детальной страницы | `images.detail_item_mobile` |
+| **Banners** | `desktop_image` / `desktop_image_url` | Десктоп-баннер | `images.desktop` |
+| | `mobile_image` / `mobile_image_url` | Мобильный баннер | `images.mobile` |
+| **Promotions** | `list_item` / `list_item_url` | Превью акции | `images.list_item` |
+| | `detail_desktop` / `detail_desktop_url` | Десктоп-версия | `images.detail_item_desktop` |
+| | `detail_mobile` / `detail_mobile_url` | Мобильная версия | `images.detail_item_mobile` |
+| | `images[]` / `images_urls[]` | Галерея (массив) | `gallery[].url` |
+| **ProductSelections** | `desktop_image` / `desktop_image_url` | Десктоп обложка | `images.desktop` |
+| | `mobile_image` / `mobile_image_url` | Мобильная обложка | `images.mobile` |
+| **StorySlides** | `media` / `media_url` | Изображение/видео слайда | `media_url` |
+
+> **Важно:** При обновлении (PUT) загрузка нового изображения автоматически заменяет старое.  
+> Для удаления галерейных фото промоакции — передай `delete_gallery_ids: [1, 2, 3]`.
 
 ---
 
