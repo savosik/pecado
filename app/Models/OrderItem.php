@@ -15,12 +15,18 @@ class OrderItem extends Model
         'product_id',
         'name',
         'price',
+        'base_price',
+        'discount_percent',
+        'final_price',
         'quantity',
         'subtotal',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
+        'base_price' => 'decimal:2',
+        'discount_percent' => 'decimal:2',
+        'final_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'quantity' => 'integer',
     ];
