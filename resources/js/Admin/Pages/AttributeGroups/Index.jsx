@@ -50,14 +50,14 @@ export default function Index({ attributeGroups, filters }) {
                 title="Группы атрибутов"
                 description="Логическая группировка характеристик товаров"
                 actions={
-                    {can('attribute-groups.create') && (
+                    can('attribute-groups.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.attribute-groups.create'))}
                     >
                         <LuPlus /> Создать группу
                     </Button>
-                    )}
+                    )
                 }
             />
 

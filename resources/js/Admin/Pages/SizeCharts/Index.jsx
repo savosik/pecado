@@ -80,11 +80,11 @@ export default function Index({ sizeCharts, filters }) {
                 title="Размерные сетки"
                 description="Управление таблицами размеров"
                 actions={
-                    {can('size-charts.create') && (
+                    can('size-charts.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.size-charts.create'))}>
                         <LuPlus /> Создать сетку
                     </Button>
-                    )}
+                    )
                 }
             />
 

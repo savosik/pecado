@@ -63,14 +63,14 @@ export default function Index({ productModels, filters }) {
                 title="Модели товаров"
                 description="Управление моделями товаров"
                 actions={
-                    {can('product-models.create') && (
+                    can('product-models.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.product-models.create'))}
                     >
                         <LuPlus /> Создать модель
                     </Button>
-                    )}
+                    )
                 }
             />
 

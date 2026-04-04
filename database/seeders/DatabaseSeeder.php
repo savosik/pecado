@@ -25,14 +25,16 @@ class DatabaseSeeder extends Seeder
             ProductSelectionSeeder::class,
         ]);
 
+        $this->call(RolesAndPermissionsSeeder::class);
+
         // Создание администратора (DEV_SERVER_CREDENTIALS.md)
-        User::updateOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'admin@pecado.ru'],
             [
                 'name'     => 'Admin',
                 'password' => 'Admin2024!',
-                'is_admin' => true,
             ]
         );
+        $admin->assignRole('super-admin');
     }
 }

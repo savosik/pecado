@@ -25,7 +25,9 @@ class ProductExportAllFormatsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->adminUser = User::factory()->create(['is_admin' => true]);
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+        $this->adminUser = User::factory()->create();
+        $this->adminUser->assignRole('super-admin');
         // Создаём несколько товаров для тестирования форматов экспорта
         \App\Models\Product::factory()->count(3)->create();
     }

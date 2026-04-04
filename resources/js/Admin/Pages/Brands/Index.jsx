@@ -118,14 +118,14 @@ export default function Index({ brands, filters }) {
                 title="Бренды"
                 description="Управление брендами и производителями"
                 actions={
-                    {can('brands.create') && (
+                    can('brands.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.brands.create'))}
                     >
                         <LuPlus /> Создать бренд
                     </Button>
-                    )}
+                    )
                 }
             />
 

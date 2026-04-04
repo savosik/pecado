@@ -94,11 +94,11 @@ export default function Index({ product_selections, filters }) {
                 title="Подборки товаров"
                 description="Управление подборками товаров для отображения на сайте"
                 actions={
-                    {can('product-selections.create') && (
+                    can('product-selections.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.product-selections.create'))}>
                         <LuPlus /> Создать подборку
                     </Button>
-                    )}
+                    )
                 }
             />
 

@@ -87,11 +87,11 @@ export default function Index({ bankAccounts, filters }) {
                 title="Банковские счета компаний"
                 description="Управление банковскими счетами"
                 actions={
-                    {can('company-bank-accounts.create') && (
+                    can('company-bank-accounts.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.company-bank-accounts.create'))}>
                         <LuPlus /> Создать счет
                     </Button>
-                    )}
+                    )
                 }
             />
 

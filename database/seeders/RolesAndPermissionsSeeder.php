@@ -200,16 +200,20 @@ class RolesAndPermissionsSeeder extends Seeder
             }
         }
 
-        // 3. Назначаем super-admin всем текущим пользователям с is_admin = true
-        $adminUsers = User::where('is_admin', true)->get();
-        $superAdminRole = Role::findByName('super-admin', 'web');
+        // 3. Назначаем super-admin всем текущим пользователям с is_admin = true (если колонка ещё существует)
+        if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'is_admin')) {
+            $adminUsers = User::where('is_admin', true)->get();
+            $superAdminRole = Role::findByName('super-admin', 'web');
 
-        foreach ($adminUsers as $user) {
-            if (!$user->hasRole('super-admin')) {
-                $user->assignRole($superAdminRole);
+            foreach ($adminUsers as $user) {
+                if (!$user->hasRole('super-admin')) {
+                    $user->assignRole($superAdminRole);
+                }
             }
-        }
 
-        $this->command->info("Роль «Супер-админ» назначена {$adminUsers->count()} пользователям с is_admin=true.");
+            $this->command->info("Роль «Супер-админ» назначена {$adminUsers->count()} пользователям с is_admin=true.");
+        } else {
+            $this->command->info('Колонка is_admin удалена — миграция пользователей пропущена.');
+        }
     }
 }

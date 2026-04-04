@@ -78,11 +78,11 @@ export default function Index({ deliveryAddresses, filters }) {
                 title="Адреса доставки"
                 description="Управление адресами доставки пользователей"
                 actions={
-                    {can('delivery-addresses.create') && (
+                    can('delivery-addresses.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.delivery-addresses.create'))}>
                         <LuPlus /> Создать адрес
                     </Button>
-                    )}
+                    )
                 }
             />
 

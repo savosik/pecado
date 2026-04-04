@@ -139,11 +139,11 @@ export default function Index({ discounts, filters }) {
                 title="Скидки"
                 description="Управление скидками для товаров и партнёров"
                 actions={
-                    {can('discounts.create') && (
+                    can('discounts.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.discounts.create'))}>
                         <LuPlus /> Создать скидку
                     </Button>
-                    )}
+                    )
                 }
             />
 

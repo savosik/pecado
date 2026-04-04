@@ -50,11 +50,11 @@ export default function Index({ roles, filters }) {
                 title="Роли"
                 description="Управление ролями и правами доступа"
                 actions={
-                    {can('roles.create') && (
+                    can('roles.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.roles.create'))}>
                         <LuPlus /> Создать роль
                     </Button>
-                    )}
+                    )
                 }
             />
 

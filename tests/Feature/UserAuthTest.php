@@ -11,6 +11,12 @@ class UserAuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+    }
+
     // ─── Page Rendering ───────────────────────
 
     public function test_login_page_renders(): void
@@ -50,7 +56,6 @@ class UserAuthTest extends TestCase
         $response->assertRedirect('/onboarding');
         $this->assertDatabaseHas('users', [
             'email' => 'test@example.com',
-            'is_admin' => false,
         ]);
         $this->assertAuthenticated();
     }
@@ -60,7 +65,6 @@ class UserAuthTest extends TestCase
     public function test_user_can_login(): void
     {
         $user = User::factory()->create([
-            'is_admin' => false,
         ]);
 
         $response = $this->post('/login', [
@@ -74,9 +78,8 @@ class UserAuthTest extends TestCase
 
     public function test_admin_login_redirects_to_admin(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->create();
+        $user->assignRole('super-admin');
 
         $response = $this->post('/login', [
             'email' => $user->email,
@@ -124,7 +127,6 @@ class UserAuthTest extends TestCase
     public function test_non_admin_cannot_access_admin(): void
     {
         $user = User::factory()->create([
-            'is_admin' => false,
         ]);
 
         $response = $this->actingAs($user)->get('/admin');
@@ -134,9 +136,8 @@ class UserAuthTest extends TestCase
 
     public function test_admin_can_access_admin(): void
     {
-        $user = User::factory()->create([
-            'is_admin' => true,
-        ]);
+        $user = User::factory()->create();
+        $user->assignRole('super-admin');
 
         $response = $this->actingAs($user)->get('/admin');
 

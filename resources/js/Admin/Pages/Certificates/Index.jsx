@@ -92,11 +92,11 @@ export default function Index({ certificates, filters }) {
                 title="Сертификаты"
                 description="Управление сертификатами соответствия"
                 actions={
-                    {can('certificates.create') && (
+                    can('certificates.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.certificates.create'))}>
                         <LuPlus /> Создать сертификат
                     </Button>
-                    )}
+                    )
                 }
             />
 

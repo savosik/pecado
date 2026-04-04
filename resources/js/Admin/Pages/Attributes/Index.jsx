@@ -103,14 +103,14 @@ export default function Index({ attributes, filters }) {
                 title="Атрибуты"
                 description="Управление характеристиками товаров"
                 actions={
-                    {can('attributes.create') && (
+                    can('attributes.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.attributes.create'))}
                     >
                         <LuPlus /> Создать атрибут
                     </Button>
-                    )}
+                    )
                 }
             />
 

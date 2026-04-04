@@ -131,14 +131,14 @@ export default function Index({ products, filters }) {
             <PageHeader
                 title="Товары"
                 actions={
-                    {can('products.create') && (
+                    can('products.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.products.create'))}
                     >
                         <LuPlus /> Создать товар
                     </Button>
-                    )}
+                    )
                 }
             />
 

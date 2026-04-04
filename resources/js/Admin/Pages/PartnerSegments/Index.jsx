@@ -77,11 +77,11 @@ export default function Index({ segments, filters }) {
                 title="Сегменты партнёров"
                 description="Управление сегментами партнёров из 1С (US-12)"
                 actions={
-                    {can('partner-segments.create') && (
+                    can('partner-segments.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.partner-segments.create'))}>
                         <LuPlus /> Создать сегмент
                     </Button>
-                    )}
+                    )
                 }
             />
 

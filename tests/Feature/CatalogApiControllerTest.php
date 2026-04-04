@@ -21,7 +21,7 @@ class CatalogApiControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->user = User::factory()->create(['is_admin' => false]);
+        $this->user = User::factory()->create();
     }
 
     // ─── products ───────────────────────────────────────────

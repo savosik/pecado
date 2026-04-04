@@ -104,14 +104,14 @@ class ProductExportSeeder extends Seeder
      */
     public function run(): void
     {
-        $adminUser = User::where('is_admin', true)->first();
+        $adminUser = User::role('super-admin')->first() ?? User::first();
 
         if (!$adminUser) {
             $this->command->warn('Администратор не найден. Пропускаем ProductExportSeeder.');
             return;
         }
 
-        $clientUser = User::where('is_admin', false)->first();
+        $clientUser = User::whereDoesntHave('roles')->first();
         $clientUserId = $clientUser?->id ?? $adminUser->id;
 
         $allFields = $this->getAllFields();

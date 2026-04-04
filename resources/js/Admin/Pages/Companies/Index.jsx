@@ -100,11 +100,11 @@ export default function Index({ companies, filters }) {
                 title="Компании"
                 description="Управление компаниями пользователей"
                 actions={
-                    {can('companies.create') && (
+                    can('companies.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.companies.create'))}>
                         <LuPlus /> Создать компанию
                     </Button>
-                    )}
+                    )
                 }
             />
 

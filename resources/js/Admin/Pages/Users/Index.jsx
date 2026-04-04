@@ -128,11 +128,11 @@ export default function Index({ users, filters, statuses, statusCounts, availabl
                 title="Пользователи"
                 description="Управление пользователями системы"
                 actions={
-                    {can('users.create') && (
+                    can('users.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.users.create'))}>
                         <LuPlus /> Создать пользователя
                     </Button>
-                    )}
+                    )
                 }
             />
 

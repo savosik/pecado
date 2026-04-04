@@ -77,11 +77,11 @@ export default function Index({ promotions, filters }) {
                 title="Акции"
                 description="Управление рекламными акциями"
                 actions={
-                    {can('promotions.create') && (
+                    can('promotions.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.promotions.create'))}>
                         <LuPlus /> Создать акцию
                     </Button>
-                    )}
+                    )
                 }
             />
 

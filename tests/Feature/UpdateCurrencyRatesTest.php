@@ -18,6 +18,12 @@ class UpdateCurrencyRatesTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
+    }
+
     private string $cbrXml = <<<XML
 <?xml version="1.0" encoding="windows-1251"?>
 <ValCurs Date="11.03.2026" name="Foreign Currency Market">
@@ -73,7 +79,8 @@ XML;
     public function test_update_rates_button_calls_command(): void
     {
         /** @var User $admin */
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = User::factory()->create();
+        $admin->assignRole('super-admin');
 
         Currency::create(['code' => 'RUB', 'name' => 'Rub', 'symbol' => '₽', 'is_base' => true, 'exchange_rate' => 1]);
         Currency::create(['code' => 'BYN', 'name' => 'Byn', 'symbol' => 'Br', 'is_base' => false, 'exchange_rate' => 1]);
