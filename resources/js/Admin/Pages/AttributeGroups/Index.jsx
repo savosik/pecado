@@ -5,8 +5,10 @@ import { Box, Text, Badge, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ attributeGroups, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -39,7 +41,7 @@ export default function Index({ attributeGroups, filters }) {
             label: 'Атрибутов',
             render: (val) => <Badge colorPalette="blue">{val}</Badge>,
         },
-        createActionsColumn('admin.attribute-groups', openDeleteDialog),
+        createActionsColumn('admin.attribute-groups', openDeleteDialog, { permissionPrefix: 'attribute-groups' }),
     ];
 
     return (
@@ -48,12 +50,14 @@ export default function Index({ attributeGroups, filters }) {
                 title="Группы атрибутов"
                 description="Логическая группировка характеристик товаров"
                 actions={
+                    {can('attribute-groups.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.attribute-groups.create'))}
                     >
                         <LuPlus /> Создать группу
                     </Button>
+                    )}
                 }
             />
 

@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ regions, currencies, countries, statuses }) {
+export default function Create({ regions, currencies, countries, statuses, availableRoles }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         email: '',
@@ -18,7 +18,7 @@ export default function Create({ regions, currencies, countries, statuses }) {
         city: '',
         region_id: '',
         currency_id: '',
-        is_admin: false,
+        roles: [],
         is_subscribed: false,
         terms_accepted: false,
         status: '',
@@ -231,12 +231,21 @@ export default function Create({ regions, currencies, countries, statuses }) {
                             </FormField>
 
                             <Stack gap={2}>
-                                <Checkbox
-                                    checked={data.is_admin}
-                                    onCheckedChange={(e) => setData('is_admin', e.checked)}
-                                >
-                                    Администратор
-                                </Checkbox>
+                                <Text fontWeight="semibold" fontSize="sm" mb={1}>Роли</Text>
+                                {availableRoles?.map((role) => (
+                                    <Checkbox
+                                        key={role.name}
+                                        checked={data.roles.includes(role.name)}
+                                        onCheckedChange={(e) => {
+                                            const next = e.checked
+                                                ? [...data.roles, role.name]
+                                                : data.roles.filter(r => r !== role.name);
+                                            setData('roles', next);
+                                        }}
+                                    >
+                                        {role.name}
+                                    </Checkbox>
+                                ))}
 
                                 <Checkbox
                                     checked={data.is_subscribed}

@@ -10,6 +10,7 @@ use App\Models\Region;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class UserController extends Controller
@@ -19,7 +20,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $query = User::query()
-            ->with(['region', 'currency'])
+            ->with(['region', 'currency', 'roles'])
             ->withCount('companies');
 
         // Поиск
@@ -36,8 +37,8 @@ class UserController extends Controller
             $query->where('region_id', $request->input('region_id'));
         }
 
-        if ($request->filled('is_admin')) {
-            $query->where('is_admin', $request->boolean('is_admin'));
+        if ($request->filled('role')) {
+            $query->whereHas('roles', fn($q) => $q->where('name', $request->input('role')));
         }
 
         if ($request->filled('status')) {
@@ -60,12 +61,13 @@ class UserController extends Controller
 
         return Inertia::render('Admin/Pages/Users/Index', [
             'users' => $users,
-            'filters' => $request->only(['search', 'region_id', 'is_admin', 'status', 'sort_by', 'sort_order', 'per_page']),
+            'filters' => $request->only(['search', 'region_id', 'role', 'status', 'sort_by', 'sort_order', 'per_page']),
             'statuses' => collect(UserStatus::cases())->map(fn($status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
             'statusCounts' => $statusCounts,
+            'availableRoles' => Role::orderBy('name')->pluck('name')->toArray(),
         ]);
     }
 
@@ -82,6 +84,7 @@ class UserController extends Controller
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
+            'availableRoles' => Role::orderBy('name')->get()->map(fn($r) => ['id' => $r->id, 'name' => $r->name]),
         ]);
     }
 
@@ -96,25 +99,32 @@ class UserController extends Controller
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',
             'currency_id' => 'nullable|exists:currencies,id',
-            'is_admin' => 'boolean',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
             'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id',
+            'roles' => 'array',
+            'roles.*' => 'string|exists:roles,name',
         ]);
 
+        $roles = $validated['roles'] ?? [];
+        unset($validated['roles']);
+
         $user = User::create($validated);
+        $user->syncRoles($roles);
 
         return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно создан');
     }
 
     public function edit(User $user)
     {
-        $user->load(['region', 'currency', 'companies', 'deliveryAddresses', 'questionnaire']);
+        $user->load(['region', 'currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles']);
 
         return Inertia::render('Admin/Pages/Users/Edit', [
-            'user' => $user,
+            'user' => array_merge($user->toArray(), [
+                'role_names' => $user->getRoleNames()->toArray(),
+            ]),
             'regions' => Region::select('id', 'name')->orderBy('name')->get(),
             'currencies' => Currency::select('id', 'code', 'name')->orderBy('code')->get(),
             'countries' => collect(Country::cases())->map(fn($country) => [
@@ -125,6 +135,7 @@ class UserController extends Controller
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
+            'availableRoles' => Role::orderBy('name')->get()->map(fn($r) => ['id' => $r->id, 'name' => $r->name]),
         ]);
     }
 
@@ -139,20 +150,22 @@ class UserController extends Controller
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',
             'currency_id' => 'nullable|exists:currencies,id',
-            'is_admin' => 'boolean',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
             'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id,' . $user->id,
+            'roles' => 'array',
+            'roles.*' => 'string|exists:roles,name',
         ]);
 
-        // Если пароль не указан, удаляем его из массива обновления
+        $roles = $validated['roles'] ?? [];
+        unset($validated['roles']);
+
         if (empty($validated['password'])) {
             unset($validated['password']);
         }
 
-        // Нельзя активировать пользователя без заполненного имени (онбординг)
         if (
             isset($validated['status']) &&
             $validated['status'] === UserStatus::ACTIVE->value &&
@@ -164,6 +177,7 @@ class UserController extends Controller
         }
 
         $user->update($validated);
+        $user->syncRoles($roles);
 
         return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно обновлен');
     }

@@ -8,9 +8,11 @@ import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { toaster } from "@/components/ui/toaster";
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 const WarehousesIndex = ({ filters }) => {
     const { warehouses } = usePage().props;
+    const { can } = usePermission();
     const [deleteId, setDeleteId] = React.useState(null);
 
     const handleSort = (field, direction) => {
@@ -28,7 +30,7 @@ const WarehousesIndex = ({ filters }) => {
         { label: "ID", key: "id", sortable: true },
         { label: "Название", key: "name", sortable: true },
         { label: "Внешний ID", key: "external_id", sortable: true },
-        createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id)),
+        createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id), { permissionPrefix: 'warehouses' }),
     ];
 
     const handleDelete = () => {
@@ -52,9 +54,11 @@ const WarehousesIndex = ({ filters }) => {
             <PageHeader
                 title="Склады"
                 actions={
+                    can('warehouses.create') && (
                     <Button as={Link} href={route("admin.warehouses.create")} colorPalette="blue">
                         <LuPlus /> Создать склад
                     </Button>
+                    )
                 }
             />
 

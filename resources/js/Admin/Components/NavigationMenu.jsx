@@ -2,20 +2,27 @@ import { Accordion, HStack, Text, Icon, VStack } from "@chakra-ui/react";
 import { Link } from "@inertiajs/react";
 import { menuConfig } from "../config/menuConfig";
 import { useNavigation } from "../hooks/useNavigation";
+import { usePermission } from "../hooks/usePermission";
 
 /**
  * NavigationMenu — переиспользуемый компонент навигации
- * Используется в Sidebar (десктоп) и MobileSidebar (мобильный Drawer)
- *
- * @param {Function} onItemClick - Callback при клике на пункт меню (для закрытия Drawer)
- * @param {boolean} isCollapsed - Свёрнут ли сайдбар (только для десктопа)
+ * Фильтрует пункты меню по правам пользователя.
  */
 export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
     const { isActive, getActiveGroups } = useNavigation();
+    const { can } = usePermission();
+
+    // Фильтруем группы: скрываем группу если ни один пункт не доступен
+    const filteredGroups = menuConfig
+        .map((group) => ({
+            ...group,
+            items: group.items.filter(item => !item.permission || can(item.permission)),
+        }))
+        .filter((group) => group.items.length > 0);
 
     return (
         <Accordion.Root collapsible multiple defaultValue={getActiveGroups()}>
-            {menuConfig.map((group) => (
+            {filteredGroups.map((group) => (
                 <Accordion.Item key={group.title} value={group.title}>
                     <Accordion.ItemTrigger
                         px={2}

@@ -8,9 +8,11 @@ import { DataTable } from "@/Admin/Components/DataTable";
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { toaster } from "@/components/ui/toaster";
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 const RegionsIndex = ({ filters }) => {
     const { regions } = usePage().props;
+    const { can } = usePermission();
     const [deleteId, setDeleteId] = React.useState(null);
 
     const handleSort = (field, direction) => {
@@ -69,7 +71,7 @@ const RegionsIndex = ({ filters }) => {
                 </div>
             ),
         },
-        createActionsColumn('admin.regions', (region) => setDeleteId(region.id)),
+        createActionsColumn('admin.regions', (region) => setDeleteId(region.id), { permissionPrefix: 'regions' }),
     ];
 
     const handleDelete = () => {
@@ -93,9 +95,11 @@ const RegionsIndex = ({ filters }) => {
             <PageHeader
                 title="Регионы"
                 actions={
+                    can('regions.create') && (
                     <Button as={Link} href={route("admin.regions.create")} colorPalette="blue">
                         <LuPlus /> Создать регион
                     </Button>
+                    )
                 }
             />
 

@@ -5,8 +5,10 @@ import { Box, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ deliveryAddresses, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -67,7 +69,7 @@ export default function Index({ deliveryAddresses, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.delivery-addresses', openDeleteDialog),
+        createActionsColumn('admin.delivery-addresses', openDeleteDialog, { permissionPrefix: 'delivery-addresses' }),
     ];
 
     return (
@@ -76,9 +78,11 @@ export default function Index({ deliveryAddresses, filters }) {
                 title="Адреса доставки"
                 description="Управление адресами доставки пользователей"
                 actions={
+                    {can('delivery-addresses.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.delivery-addresses.create'))}>
                         <LuPlus /> Создать адрес
                     </Button>
+                    )}
                 }
             />
 

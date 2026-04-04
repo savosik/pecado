@@ -6,8 +6,10 @@ import { Box, HStack, Badge, Image, Text, Button, Group } from '@chakra-ui/react
 import { LuPlus, LuList, LuNetwork } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ categories, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -128,7 +130,7 @@ export default function Index({ categories, filters }) {
                 </Badge>
             ),
         },
-        createActionsColumn('admin.categories', openDeleteDialog),
+        createActionsColumn('admin.categories', openDeleteDialog, { permissionPrefix: 'categories' }),
     ];
 
     const viewMode = filters.view || 'list';
@@ -165,12 +167,14 @@ export default function Index({ categories, filters }) {
                             </Button>
                         </Group>
 
+                        {can('categories.create') && (
                         <Button
                             colorPalette="blue"
                             onClick={() => router.visit(route('admin.categories.create'))}
                         >
                             <LuPlus /> Создать категорию
                         </Button>
+                        )}
                     </HStack>
                 }
             />

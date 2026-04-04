@@ -5,8 +5,10 @@ import { Box, Text, Button, Badge } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ companies, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -89,7 +91,7 @@ export default function Index({ companies, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.companies', openDeleteDialog),
+        createActionsColumn('admin.companies', openDeleteDialog, { permissionPrefix: 'companies' }),
     ];
 
     return (
@@ -98,9 +100,11 @@ export default function Index({ companies, filters }) {
                 title="Компании"
                 description="Управление компаниями пользователей"
                 actions={
+                    {can('companies.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.companies.create'))}>
                         <LuPlus /> Создать компанию
                     </Button>
+                    )}
                 }
             />
 

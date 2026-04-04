@@ -95,7 +95,7 @@ class SocialAuthController extends Controller
                 'name' => $socialUser->getName() ?? Str::before($socialUser->getEmail(), '@'),
                 'email' => $socialUser->getEmail(),
                 'password' => Hash::make(Str::random(32)),
-                'is_admin' => false,
+                // No admin role by default for social auth users
             ]);
         }
 

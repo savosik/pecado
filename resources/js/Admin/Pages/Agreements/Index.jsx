@@ -3,8 +3,10 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput } from '@/Admin/Components';
 import { Box, Text, Badge } from '@chakra-ui/react';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ agreements, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -103,14 +105,16 @@ export default function Index({ agreements, filters }) {
                     >
                         Просмотр
                     </Text>
-                    <Text 
-                        as="button" 
-                        color="orange.500" 
-                        fontSize="sm" 
-                        onClick={() => router.visit(route('admin.agreements.edit', row.id))}
-                    >
-                        Редакт.
-                    </Text>
+                    {can('agreements.edit') && (
+                        <Text 
+                            as="button" 
+                            color="orange.500" 
+                            fontSize="sm" 
+                            onClick={() => router.visit(route('admin.agreements.edit', row.id))}
+                        >
+                            Редакт.
+                        </Text>
+                    )}
                 </Box>
             ),
         }
@@ -121,6 +125,7 @@ export default function Index({ agreements, filters }) {
             <PageHeader
                 title="Индивидуальные соглашения"
                 description="Индивидуальные соглашения и их кастомные скидки для партнёров."
+                createPermission="agreements.create"
                 createHref={route('admin.agreements.create')}
             />
 

@@ -93,13 +93,14 @@ export default function Index({ currencies, filters }) {
                 <Box fontSize="sm" color="fg.muted">—</Box>
             ),
         },
-        createActionsColumn('admin.currencies', openDeleteDialog),
+        createActionsColumn('admin.currencies', openDeleteDialog, { permissionPrefix: 'currencies' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Валюты"
+                createPermission="currencies.create"
                 onCreate={() => router.visit(route('admin.currencies.create'))}
                 createLabel="Создать валюту"
                 actions={

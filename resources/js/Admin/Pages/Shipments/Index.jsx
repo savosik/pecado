@@ -139,6 +139,7 @@ export default function Index({ shipments, filters, statuses }) {
         },
         createActionsColumn('admin.shipments', openDeleteDialog, {
             showEdit: false,
+            permissionPrefix: 'shipments',
             extraActions: (row) => (
                 <IconButton
                     size="sm"

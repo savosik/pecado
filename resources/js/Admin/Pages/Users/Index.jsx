@@ -5,6 +5,7 @@ import { Box, Text, Button, Badge, HStack } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 const getStatusColor = (status) => {
     const colors = {
@@ -15,7 +16,8 @@ const getStatusColor = (status) => {
     return colors[status] || 'gray';
 };
 
-export default function Index({ users, filters, statuses, statusCounts }) {
+export default function Index({ users, filters, statuses, statusCounts, availableRoles }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -91,13 +93,21 @@ export default function Index({ users, filters, statuses, statusCounts }) {
             render: (count) => <Badge colorPalette="blue">{count || 0}</Badge>,
         },
         {
-            key: 'is_admin',
-            label: 'Админ',
-            render: (isAdmin) => (
-                <Badge colorPalette={isAdmin ? 'green' : 'gray'}>
-                    {isAdmin ? 'Да' : 'Нет'}
-                </Badge>
-            ),
+            key: 'roles',
+            label: 'Роли',
+            render: (_, item) => {
+                const roleNames = item.roles?.map(r => r.name) || [];
+                if (roleNames.length === 0) return <Text fontSize="sm" color="fg.muted">—</Text>;
+                return (
+                    <HStack gap={1} flexWrap="wrap">
+                        {roleNames.map(name => (
+                            <Badge key={name} colorPalette={name === 'super-admin' ? 'red' : 'blue'} fontSize="xs">
+                                {name}
+                            </Badge>
+                        ))}
+                    </HStack>
+                );
+            },
         },
         {
             key: 'created_at',
@@ -109,7 +119,7 @@ export default function Index({ users, filters, statuses, statusCounts }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.users', openDeleteDialog),
+        createActionsColumn('admin.users', openDeleteDialog, { permissionPrefix: 'users' }),
     ];
 
     return (
@@ -118,9 +128,11 @@ export default function Index({ users, filters, statuses, statusCounts }) {
                 title="Пользователи"
                 description="Управление пользователями системы"
                 actions={
+                    {can('users.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.users.create'))}>
                         <LuPlus /> Создать пользователя
                     </Button>
+                    )}
                 }
             />
 

@@ -52,6 +52,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Super-admin bypass — role «super-admin» получает все права автоматически
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+            return $user->hasRole('super-admin') ? true : null;
+        });
+
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\UserCreated::class,
             \App\Listeners\PublishUserToErp::class,

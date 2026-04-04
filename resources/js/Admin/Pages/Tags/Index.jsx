@@ -43,13 +43,14 @@ export default function Index({ tags, filters }) {
             sortable: true,
             render: (_, row) => <Text fontSize="sm">{row.order_column}</Text>,
         },
-        createActionsColumn('admin.tags', openDeleteDialog),
+        createActionsColumn('admin.tags', openDeleteDialog, { permissionPrefix: 'tags' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Теги"
+                createPermission="tags.create"
                 onCreate={() => router.visit(route('admin.tags.create'))}
                 createLabel="Создать тег"
             />

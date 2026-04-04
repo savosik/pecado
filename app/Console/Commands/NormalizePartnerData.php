@@ -50,7 +50,7 @@ class NormalizePartnerData extends Command
 
     private function normalizeUsers(bool $dryRun, int $limit, bool $sync): void
     {
-        $query = User::where('is_admin', false);
+        $query = User::doesntHave('roles');
 
         if ($limit > 0) {
             $query->limit($limit);

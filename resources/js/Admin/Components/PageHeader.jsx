@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Heading, Text, Button, HStack, VStack } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuPlus } from 'react-icons/lu';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 /**
  * PageHeader - заголовок страницы с описанием и кнопками действий
@@ -11,6 +12,7 @@ import { LuPlus } from 'react-icons/lu';
  * @param {Function} onCreate - Callback для кнопки "Создать"
  * @param {string} createHref - Ссылка для кнопки "Создать" (Inertia Link)
  * @param {string} createLabel - Текст кнопки создания
+ * @param {string} createPermission - Право для показа кнопки (напр. 'products.create')
  * @param {ReactNode} actions - Дополнительные действия (кнопки, меню и т.д.)
  */
 export const PageHeader = ({
@@ -19,8 +21,13 @@ export const PageHeader = ({
     onCreate,
     createHref,
     createLabel = 'Создать',
+    createPermission,
     actions,
 }) => {
+    const { can } = usePermission();
+
+    const showCreate = (onCreate || createHref) && (!createPermission || can(createPermission));
+
     return (
         <Box mb={6}>
             <HStack justifyContent="space-between" alignItems="flex-start">
@@ -36,7 +43,7 @@ export const PageHeader = ({
                 <HStack gap={3}>
                     {actions}
 
-                    {(onCreate || createHref) && (
+                    {showCreate && (
                         createHref ? (
                             <Button
                                 as={Link}

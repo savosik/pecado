@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { HStack, Image, Text, Box, Button, Input, VStack, SimpleGrid } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuTrash2, LuPackage, LuFilter, LuX, LuPlus } from "react-icons/lu";
+import { usePermission } from '@/Admin/hooks/usePermission';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
@@ -15,6 +16,7 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 
 const WishlistIndex = ({ filters }) => {
     const { wishlistItems } = usePage().props;
+    const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]);
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -182,7 +184,7 @@ const WishlistIndex = ({ filters }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.wishlist', (item) => setDeleteId(item.id)),
+        createActionsColumn('admin.wishlist', (item) => setDeleteId(item.id), { permissionPrefix: 'wishlist' }),
     ];
 
     const handleDelete = () => {
@@ -213,12 +215,14 @@ const WishlistIndex = ({ filters }) => {
                         >
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
+                        {can('wishlist.create') && (
                         <Button
                             colorPalette="blue"
                             onClick={() => router.visit(route("admin.wishlist.create"))}
                         >
                             <LuPlus /> Добавить в список желаний
                         </Button>
+                        )}
                     </HStack>
                 }
             />
@@ -283,9 +287,11 @@ const WishlistIndex = ({ filters }) => {
                 <Box p={4} borderWidth="1px" borderRadius="md" mb={4} bg="blue.50" _dark={{ bg: "blue.900" }}>
                     <HStack>
                         <Text>Выбрано: {selectedItems.length}</Text>
+                        {can('wishlist.delete') && (
                         <Button onClick={handleBulkDelete} colorPalette="red" size="sm">
                             <LuTrash2 /> Удалить выбранные
                         </Button>
+                        )}
                         <Button onClick={() => setSelectedItems([])} variant="ghost" size="sm">
                             Отменить выбор
                         </Button>

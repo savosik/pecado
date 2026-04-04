@@ -9,9 +9,7 @@ use Symfony\Component\HttpFoundation\Response;
 class EnsureUserIsAdmin
 {
     /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * Пользователь может зайти в админку если у него есть хотя бы одна роль.
      */
     public function handle(Request $request, Closure $next): Response
     {
@@ -19,8 +17,8 @@ class EnsureUserIsAdmin
             return redirect('/login')->with('error', 'Необходимо войти в систему');
         }
 
-        if (!$request->user()->is_admin) {
-            return redirect('/')->with('error', 'Доступ запрещён. Требуются права администратора.');
+        if ($request->user()->roles->isEmpty()) {
+            return redirect('/')->with('error', 'Доступ запрещён. У вас нет прав для доступа к панели администрирования.');
         }
 
         return $next($request);

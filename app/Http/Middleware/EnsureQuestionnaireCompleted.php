@@ -16,7 +16,7 @@ class EnsureQuestionnaireCompleted
     {
         $user = Auth::user();
 
-        if (!$user || $user->is_admin) {
+        if (!$user || $user->roles->isNotEmpty()) {
             return $next($request);
         }
 

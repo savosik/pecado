@@ -79,13 +79,14 @@ export default function Index({ balances, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.user-balances', openDeleteDialog),
+        createActionsColumn('admin.user-balances', openDeleteDialog, { permissionPrefix: 'user-balances' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Балансы пользователей"
+                createPermission="user-balances.create"
                 onCreate={() => router.visit(route('admin.user-balances.create'))}
                 createLabel="Создать баланс"
             />

@@ -58,13 +58,14 @@ export default function Index({ pages, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.pages', openDeleteDialog),
+        createActionsColumn('admin.pages', openDeleteDialog, { permissionPrefix: 'pages' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Страницы"
+                createPermission="pages.create"
                 onCreate={() => router.visit(route('admin.pages.create'))}
                 createLabel="Создать страницу"
             />

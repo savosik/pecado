@@ -5,8 +5,10 @@ import { Box, Text, Button, Badge } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ segments, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -66,7 +68,7 @@ export default function Index({ segments, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.product-segments', openDeleteDialog),
+        createActionsColumn('admin.product-segments', openDeleteDialog, { permissionPrefix: 'product-segments' }),
     ];
 
     return (
@@ -75,9 +77,11 @@ export default function Index({ segments, filters }) {
                 title="Сегменты номенклатуры"
                 description="Управление сегментами товаров из 1С (US-11)"
                 actions={
+                    {can('product-segments.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.product-segments.create'))}>
                         <LuPlus /> Создать сегмент
                     </Button>
+                    )}
                 }
             />
 

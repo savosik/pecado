@@ -22,8 +22,10 @@ import {
 } from '@chakra-ui/react';
 import { LuTrash2, LuImage, LuVideo, LuFileText, LuFile, LuEye, LuDownload } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ media, filters, collections, modelTypes }) {
+    const { can } = usePermission();
     const [search, setSearch] = useState(filters.search || '');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mediaToDelete, setMediaToDelete] = useState(null);
@@ -268,6 +270,7 @@ export default function Index({ media, filters, collections, modelTypes }) {
                                 {new Date(item.created_at).toLocaleDateString('ru-RU')}
                             </Text>
 
+                            {can('media.delete') && (
                             <Button
                                 size="sm"
                                 width="full"
@@ -278,6 +281,7 @@ export default function Index({ media, filters, collections, modelTypes }) {
                                 <LuTrash2 />
                                 Удалить
                             </Button>
+                            )}
                         </Card.Body>
                     </Card.Root>
                 ))}

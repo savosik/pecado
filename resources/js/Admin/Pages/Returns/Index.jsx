@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { toaster } from "@/components/ui/toaster";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 const getStatusColor = (status) => {
     const colors = {
@@ -24,6 +25,7 @@ const getStatusColor = (status) => {
 
 const ReturnsIndex = ({ filters, statuses, reasons }) => {
     const { returns } = usePage().props;
+    const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
     const [selectedReturns, setSelectedReturns] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
@@ -179,7 +181,7 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id)),
+        createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id), { permissionPrefix: 'returns' }),
     ];
 
     const handleDelete = () => {
@@ -210,12 +212,14 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                         >
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
+                        {can('returns.create') && (
                         <Button
                             onClick={() => router.visit(route("admin.returns.create"))}
                             colorPalette="blue"
                         >
                             <LuPlus /> Создать возврат
                         </Button>
+                        )}
                     </HStack>
                 }
             />
@@ -332,9 +336,11 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                                 ))}
                             </Select.Content>
                         </Select.Root>
+                        {can('returns.edit') && (
                         <Button onClick={handleBulkStatusUpdate} colorPalette="blue">
                             Применить статус
                         </Button>
+                        )}
                         <Button onClick={() => setSelectedReturns([])} variant="ghost">
                             Отменить выбор
                         </Button>

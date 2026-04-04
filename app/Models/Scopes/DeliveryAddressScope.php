@@ -19,7 +19,7 @@ class DeliveryAddressScope implements Scope
     {
         $user = Auth::user();
 
-        if ($user && !$user->is_admin) {
+        if ($user && $user->roles->isEmpty()) {
             $builder->where('user_id', $user->id);
         }
     }

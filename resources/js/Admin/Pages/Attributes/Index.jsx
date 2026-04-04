@@ -5,8 +5,10 @@ import { Box, Badge, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ attributes, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -92,7 +94,7 @@ export default function Index({ attributes, filters }) {
                 );
             },
         },
-        createActionsColumn('admin.attributes', openDeleteDialog),
+        createActionsColumn('admin.attributes', openDeleteDialog, { permissionPrefix: 'attributes' }),
     ];
 
     return (
@@ -101,12 +103,14 @@ export default function Index({ attributes, filters }) {
                 title="Атрибуты"
                 description="Управление характеристиками товаров"
                 actions={
+                    {can('attributes.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.attributes.create'))}
                     >
                         <LuPlus /> Создать атрибут
                     </Button>
+                    )}
                 }
             />
 

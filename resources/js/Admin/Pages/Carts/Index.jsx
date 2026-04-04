@@ -12,9 +12,11 @@ import { Field } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProductSelector } from "@/Admin/Components/ProductSelector";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 const CartsIndex = ({ filters }) => {
     const { carts } = usePage().props;
+    const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
     const [selectedCarts, setSelectedCarts] = useState([]);
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -191,7 +193,7 @@ const CartsIndex = ({ filters }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.carts', (cart) => setDeleteId(cart.id)),
+        createActionsColumn('admin.carts', (cart) => setDeleteId(cart.id), { permissionPrefix: 'carts' }),
     ];
 
     const handleDelete = () => {
@@ -222,12 +224,14 @@ const CartsIndex = ({ filters }) => {
                         >
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
+                        {can('carts.create') && (
                         <Button
                             colorPalette="blue"
                             onClick={() => router.visit(route("admin.carts.create"))}
                         >
                             <LuPlus /> Создать корзину
                         </Button>
+                        )}
                     </HStack>
                 }
             />
@@ -342,9 +346,11 @@ const CartsIndex = ({ filters }) => {
                 <Box p={4} borderWidth="1px" borderRadius="md" mb={4} bg="blue.50" _dark={{ bg: "blue.900" }}>
                     <HStack>
                         <Text>Выбрано: {selectedCarts.length}</Text>
+                        {can('carts.delete') && (
                         <Button onClick={handleBulkDelete} colorPalette="red" size="sm">
                             <LuTrash2 /> Удалить выбранные
                         </Button>
+                        )}
                         <Button onClick={() => setSelectedCarts([])} variant="ghost" size="sm">
                             Отменить выбор
                         </Button>

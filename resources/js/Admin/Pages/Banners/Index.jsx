@@ -110,13 +110,14 @@ export default function Index({ banners, filters }) {
             sortable: true,
             width: '100px',
         },
-        createActionsColumn('admin.banners', openDeleteDialog),
+        createActionsColumn('admin.banners', openDeleteDialog, { permissionPrefix: 'banners' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Баннеры"
+                createPermission="banners.create"
                 onCreate={() => router.visit(route('admin.banners.create'))}
                 createLabel="Создать баннер"
             />

@@ -5,8 +5,10 @@ import { Box, Text, Button, Badge } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ bankAccounts, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -76,7 +78,7 @@ export default function Index({ bankAccounts, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.company-bank-accounts', openDeleteDialog),
+        createActionsColumn('admin.company-bank-accounts', openDeleteDialog, { permissionPrefix: 'company-bank-accounts' }),
     ];
 
     return (
@@ -85,9 +87,11 @@ export default function Index({ bankAccounts, filters }) {
                 title="Банковские счета компаний"
                 description="Управление банковскими счетами"
                 actions={
+                    {can('company-bank-accounts.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.company-bank-accounts.create'))}>
                         <LuPlus /> Создать счет
                     </Button>
+                    )}
                 }
             />
 

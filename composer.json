@@ -23,6 +23,7 @@
         "openai-php/client": "^0.18.0",
         "phpoffice/phpspreadsheet": "^5.4",
         "spatie/laravel-medialibrary": "^11.0.0",
+        "spatie/laravel-permission": "^7.2",
         "spatie/laravel-tags": "^4.10",
         "tightenco/ziggy": "^2.6",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.4"

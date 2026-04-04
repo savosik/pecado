@@ -15,10 +15,12 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+use Spatie\Permission\Traits\HasRoles;
+
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, InteractsWithMedia;
+    use HasApiTokens, HasFactory, Notifiable, InteractsWithMedia, HasRoles;
 
     /**
      * The accessors to append to the model's array form.
@@ -55,7 +57,6 @@ class User extends Authenticatable implements HasMedia
         'email',
         'password',
         'must_change_password',
-        'is_admin',
         'erp_id',
         'region_id',
         'currency_id',
@@ -84,7 +85,6 @@ class User extends Authenticatable implements HasMedia
             'must_change_password' => 'boolean',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
-            'is_admin' => 'boolean',
             'country' => Country::class,
             'status' => UserStatus::class,
             'region_id' => 'integer',

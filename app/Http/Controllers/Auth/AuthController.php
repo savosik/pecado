@@ -41,7 +41,7 @@ class AuthController extends Controller
             $user = Auth::user();
 
             // Админы — в админку, обычные пользователи — на главную
-            $redirectTo = $user->is_admin ? '/admin' : '/';
+            $redirectTo = $user->roles->isNotEmpty() ? '/admin' : '/';
 
             // Если intended URL — API-маршрут, сбрасываем, чтобы не отдавать JSON вместо Inertia-страницы
             $intended = $request->session()->pull('url.intended', $redirectTo);
@@ -96,7 +96,7 @@ class AuthController extends Controller
             'city' => $validated['city'] ?? null,
             'password' => $validated['password'],
             'terms_accepted' => true,
-            'is_admin' => false,
+            // 'is_admin' removed — roles are assigned separately
         ]);
 
         Auth::login($user);

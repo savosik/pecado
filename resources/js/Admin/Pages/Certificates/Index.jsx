@@ -5,8 +5,10 @@ import { Box, HStack, Text, IconButton, Button } from '@chakra-ui/react';
 import { LuPlus, LuFile } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ certificates, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -81,7 +83,7 @@ export default function Index({ certificates, filters }) {
                 </HStack>
             ),
         },
-        createActionsColumn('admin.certificates', openDeleteDialog),
+        createActionsColumn('admin.certificates', openDeleteDialog, { permissionPrefix: 'certificates' }),
     ];
 
     return (
@@ -90,9 +92,11 @@ export default function Index({ certificates, filters }) {
                 title="Сертификаты"
                 description="Управление сертификатами соответствия"
                 actions={
+                    {can('certificates.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.certificates.create'))}>
                         <LuPlus /> Создать сертификат
                     </Button>
+                    )}
                 }
             />
 

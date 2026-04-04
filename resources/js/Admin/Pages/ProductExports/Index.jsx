@@ -120,13 +120,14 @@ export default function Index({ exports, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.product-exports', openDeleteDialog),
+        createActionsColumn('admin.product-exports', openDeleteDialog, { permissionPrefix: 'product-exports' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Выгрузки товаров"
+                createPermission="product-exports.create"
                 onCreate={() => router.visit(route('admin.product-exports.create'))}
                 createLabel="Создать выгрузку"
             />

@@ -9,7 +9,6 @@ import {
     LuRuler,
     LuBarcode,
     LuShieldCheck,
-    LuSlice,
     LuWarehouse,
     LuMapPin,
     LuShoppingCart,
@@ -44,6 +43,7 @@ export interface MenuItem {
     label: string;
     icon: React.ElementType;
     path: string;
+    permission?: string;
 }
 
 export interface MenuGroup {
@@ -64,95 +64,94 @@ export const menuConfig: MenuGroup[] = [
         title: "Каталог",
         icon: LuPackage,
         items: [
-            { label: "Товары", icon: LuPackage, path: "/admin/products" },
-            { label: "Категории", icon: LuFolderTree, path: "/admin/categories" },
-            { label: "Бренды", icon: LuBadge, path: "/admin/brands" },
-            { label: "Модели", icon: LuBox, path: "/admin/product-models" },
-            { label: "Атрибуты", icon: LuList, path: "/admin/attributes" },
-            { label: "Группы атрибутов", icon: LuLayers, path: "/admin/attribute-groups" },
-            { label: "Размерные сетки", icon: LuRuler, path: "/admin/size-charts" },
-            { label: "Штрихкоды", icon: LuBarcode, path: "/admin/product-barcodes" },
-            { label: "Сертификаты", icon: LuShieldCheck, path: "/admin/certificates" },
-            { label: "Выгрузки", icon: LuDownload, path: "/admin/product-exports" },
-
+            { label: "Товары", icon: LuPackage, path: "/admin/products", permission: "products.view" },
+            { label: "Категории", icon: LuFolderTree, path: "/admin/categories", permission: "categories.view" },
+            { label: "Бренды", icon: LuBadge, path: "/admin/brands", permission: "brands.view" },
+            { label: "Модели", icon: LuBox, path: "/admin/product-models", permission: "product-models.view" },
+            { label: "Атрибуты", icon: LuList, path: "/admin/attributes", permission: "attributes.view" },
+            { label: "Группы атрибутов", icon: LuLayers, path: "/admin/attribute-groups", permission: "attribute-groups.view" },
+            { label: "Размерные сетки", icon: LuRuler, path: "/admin/size-charts", permission: "size-charts.view" },
+            { label: "Штрихкоды", icon: LuBarcode, path: "/admin/product-barcodes", permission: "product-barcodes.view" },
+            { label: "Сертификаты", icon: LuShieldCheck, path: "/admin/certificates", permission: "certificates.view" },
+            { label: "Выгрузки", icon: LuDownload, path: "/admin/product-exports", permission: "product-exports.view" },
         ],
     },
     {
         title: "Склады",
         icon: LuWarehouse,
         items: [
-            { label: "Склады", icon: LuWarehouse, path: "/admin/warehouses" },
-            { label: "Регионы", icon: LuMapPin, path: "/admin/regions" },
+            { label: "Склады", icon: LuWarehouse, path: "/admin/warehouses", permission: "warehouses.view" },
+            { label: "Регионы", icon: LuMapPin, path: "/admin/regions", permission: "regions.view" },
         ],
     },
     {
         title: "Продажи",
         icon: LuShoppingCart,
         items: [
-            { label: "Заказы", icon: LuShoppingCart, path: "/admin/orders" },
-            { label: "Корзины", icon: LuShoppingBag, path: "/admin/carts" },
-            { label: "Возвраты", icon: LuUndo2, path: "/admin/returns" },
-            { label: "Реализации", icon: LuTruck, path: "/admin/shipments" },
-            { label: "Избранное", icon: LuHeart, path: "/admin/favorites" },
-            { label: "Список желаний", icon: LuBookmark, path: "/admin/wishlist" },
+            { label: "Заказы", icon: LuShoppingCart, path: "/admin/orders", permission: "orders.view" },
+            { label: "Корзины", icon: LuShoppingBag, path: "/admin/carts", permission: "carts.view" },
+            { label: "Возвраты", icon: LuUndo2, path: "/admin/returns", permission: "returns.view" },
+            { label: "Реализации", icon: LuTruck, path: "/admin/shipments", permission: "shipments.view" },
+            { label: "Избранное", icon: LuHeart, path: "/admin/favorites", permission: "favorites.view" },
+            { label: "Список желаний", icon: LuBookmark, path: "/admin/wishlist", permission: "wishlist.view" },
         ],
     },
     {
         title: "Маркетинг",
         icon: LuTicket,
         items: [
-            { label: "Акции", icon: LuTicket, path: "/admin/promotions" },
-            { label: "Подборки", icon: LuLayoutGrid, path: "/admin/product-selections" },
+            { label: "Акции", icon: LuTicket, path: "/admin/promotions", permission: "promotions.view" },
+            { label: "Подборки", icon: LuLayoutGrid, path: "/admin/product-selections", permission: "product-selections.view" },
         ],
     },
-
     {
         title: "Пользователи",
         icon: LuUsers,
         items: [
-            { label: "Пользователи", icon: LuUsers, path: "/admin/users" },
-            { label: "Анкеты", icon: LuFileText, path: "/admin/user-questionnaires" },
-            { label: "Компании", icon: LuBuilding2, path: "/admin/companies" },
-            { label: "Банковские счета", icon: LuCreditCard, path: "/admin/company-bank-accounts" },
-            { label: "Адреса доставки", icon: LuMapPinned, path: "/admin/delivery-addresses" },
+            { label: "Пользователи", icon: LuUsers, path: "/admin/users", permission: "users.view" },
+            { label: "Анкеты", icon: LuFileText, path: "/admin/user-questionnaires", permission: "user-questionnaires.view" },
+            { label: "Компании", icon: LuBuilding2, path: "/admin/companies", permission: "companies.view" },
+            { label: "Банковские счета", icon: LuCreditCard, path: "/admin/company-bank-accounts", permission: "company-bank-accounts.view" },
+            { label: "Адреса доставки", icon: LuMapPinned, path: "/admin/delivery-addresses", permission: "delivery-addresses.view" },
         ],
     },
     {
         title: "Финансы",
         icon: LuBanknote,
         items: [
-            { label: "Валюты", icon: LuBanknote, path: "/admin/currencies" },
-            { label: "Балансы контрагентов", icon: LuWallet, path: "/admin/contractor-balances" },
-            { label: "Инд. цены", icon: LuPercent, path: "/admin/individual-prices" },
+            { label: "Валюты", icon: LuBanknote, path: "/admin/currencies", permission: "currencies.view" },
+            { label: "Балансы контрагентов", icon: LuWallet, path: "/admin/contractor-balances", permission: "contractor-balances.view" },
+            { label: "Инд. цены", icon: LuPercent, path: "/admin/individual-prices", permission: "individual-prices.view" },
         ],
     },
     {
         title: "Контент",
         icon: LuFileText,
         items: [
-            { label: "Статьи", icon: LuFileText, path: "/admin/articles" },
-            { label: "О брендах", icon: LuBadge, path: "/admin/brand-stories" },
-            { label: "Новости", icon: LuNewspaper, path: "/admin/news" },
-            { label: "FAQ", icon: LuCircleHelp, path: "/admin/faqs" },
-            { label: "Баннеры", icon: LuImage, path: "/admin/banners" },
-            { label: "Страницы", icon: LuFile, path: "/admin/pages" },
-            { label: "Истории", icon: LuCirclePlay, path: "/admin/stories" },
+            { label: "Статьи", icon: LuFileText, path: "/admin/articles", permission: "articles.view" },
+            { label: "О брендах", icon: LuBadge, path: "/admin/brand-stories", permission: "brand-stories.view" },
+            { label: "Новости", icon: LuNewspaper, path: "/admin/news", permission: "news.view" },
+            { label: "FAQ", icon: LuCircleHelp, path: "/admin/faqs", permission: "faqs.view" },
+            { label: "Баннеры", icon: LuImage, path: "/admin/banners", permission: "banners.view" },
+            { label: "Страницы", icon: LuFile, path: "/admin/pages", permission: "pages.view" },
+            { label: "Истории", icon: LuCirclePlay, path: "/admin/stories", permission: "stories.view" },
         ],
     },
     {
         title: "Теги",
         icon: LuTags,
         items: [
-            { label: "Теги", icon: LuTags, path: "/admin/tags" },
+            { label: "Теги", icon: LuTags, path: "/admin/tags", permission: "tags.view" },
         ],
     },
     {
         title: "Система",
         icon: LuSettings,
         items: [
-            { label: "Шина ERP", icon: LuRadio, path: "/admin/erp-bus" },
-            { label: "Медиа", icon: LuImagePlay, path: "/admin/media" },
-            { label: "Настройки", icon: LuSettings, path: "/admin/settings" },
+            { label: "Шина ERP", icon: LuRadio, path: "/admin/erp-bus", permission: "erp-bus.view" },
+            { label: "Медиа", icon: LuImagePlay, path: "/admin/media", permission: "media.view" },
+            { label: "Роли", icon: LuShieldCheck, path: "/admin/roles", permission: "roles.view" },
+            { label: "Настройки", icon: LuSettings, path: "/admin/settings", permission: "settings.view" },
         ],
     },
 ];

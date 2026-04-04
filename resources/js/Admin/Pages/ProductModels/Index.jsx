@@ -5,8 +5,10 @@ import { Box, Text, Button, Flex } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ productModels, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -52,7 +54,7 @@ export default function Index({ productModels, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.product-models', openDeleteDialog),
+        createActionsColumn('admin.product-models', openDeleteDialog, { permissionPrefix: 'product-models' }),
     ];
 
     return (
@@ -61,12 +63,14 @@ export default function Index({ productModels, filters }) {
                 title="Модели товаров"
                 description="Управление моделями товаров"
                 actions={
+                    {can('product-models.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.product-models.create'))}
                     >
                         <LuPlus /> Создать модель
                     </Button>
+                    )}
                 }
             />
 

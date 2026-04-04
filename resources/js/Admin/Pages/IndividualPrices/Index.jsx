@@ -5,8 +5,10 @@ import { PageHeader, DataTable, EntitySelector, ConfirmDialog } from '@/Admin/Co
 import { Box, Text, Button, HStack, Badge, SimpleGrid } from '@chakra-ui/react';
 import { LuDownload, LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ prices, filters, stats, filterLabels }) {
+    const { can } = usePermission();
     const [partnerId, setPartnerId] = useState(filters.partner_id || null);
     const [productId, setProductId] = useState(filters.product_id || null);
     const [warehouseId, setWarehouseId] = useState(filters.warehouse_id || null);
@@ -172,23 +174,27 @@ export default function Index({ prices, filters, stats, filterLabels }) {
             label: '',
             render: (_, row) => (
                 <HStack gap={1} justifyContent="flex-end">
-                    <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={() => handleEdit(row)}
-                        title="Редактировать"
-                    >
-                        <LuPencil size={14} />
-                    </Button>
-                    <Button
-                        size="xs"
-                        variant="ghost"
-                        colorPalette="red"
-                        onClick={() => openDeleteDialog(row)}
-                        title="Удалить"
-                    >
-                        <LuTrash2 size={14} />
-                    </Button>
+                    {can('individual-prices.edit') && (
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            onClick={() => handleEdit(row)}
+                            title="Редактировать"
+                        >
+                            <LuPencil size={14} />
+                        </Button>
+                    )}
+                    {can('individual-prices.delete') && (
+                        <Button
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="red"
+                            onClick={() => openDeleteDialog(row)}
+                            title="Удалить"
+                        >
+                            <LuTrash2 size={14} />
+                        </Button>
+                    )}
                 </HStack>
             ),
         },
@@ -218,6 +224,7 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                         >
                             <LuDownload /> Экспорт CSV
                         </Button>
+                        {can('individual-prices.create') && (
                         <Button
                             size="sm"
                             colorPalette="blue"
@@ -225,6 +232,7 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                         >
                             <LuPlus /> Создать
                         </Button>
+                        )}
                     </HStack>
                 }
             />

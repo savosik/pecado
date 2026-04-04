@@ -48,13 +48,14 @@ export default function Index({ faqs, filters }) {
                 </Badge>
             ),
         },
-        createActionsColumn('admin.faqs', openDeleteDialog),
+        createActionsColumn('admin.faqs', openDeleteDialog, { permissionPrefix: 'faqs' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="FAQ"
+                createPermission="faqs.create"
                 onCreate={() => router.visit(route('admin.faqs.create'))}
                 createLabel="Создать FAQ"
             />

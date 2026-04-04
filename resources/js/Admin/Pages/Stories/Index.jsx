@@ -76,7 +76,7 @@ export default function Index({ stories, filters }) {
             label: 'Порядок',
             sortable: true,
         },
-        createActionsColumn('admin.stories', openDeleteDialog),
+        createActionsColumn('admin.stories', openDeleteDialog, { permissionPrefix: 'stories' }),
     ];
 
     return (
@@ -84,6 +84,7 @@ export default function Index({ stories, filters }) {
             <PageHeader
                 title="Сторис"
                 description="Управление историями (stories)"
+                createPermission="stories.create"
                 onCreate={() => router.visit(route('admin.stories.create'))}
                 createLabel="Создать сторис"
             />

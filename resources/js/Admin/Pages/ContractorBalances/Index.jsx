@@ -3,9 +3,11 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
 import { Box, Text, Badge, IconButton, HStack } from '@chakra-ui/react';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { usePermission } from '@/Admin/hooks/usePermission';
 import { LuEye, LuPencil, LuTrash2 } from 'react-icons/lu';
 
 export default function Index({ balances, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -103,24 +105,28 @@ export default function Index({ balances, filters }) {
                     >
                         <LuEye />
                     </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="yellow"
-                        aria-label="Редактировать"
-                        onClick={() => router.visit(route('admin.contractor-balances.edit', row.id))}
-                    >
-                        <LuPencil />
-                    </IconButton>
-                    <IconButton
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="red"
-                        aria-label="Удалить"
-                        onClick={() => openDeleteDialog(row)}
-                    >
-                        <LuTrash2 />
-                    </IconButton>
+                    {can('contractor-balances.edit') && (
+                        <IconButton
+                            size="sm"
+                            variant="ghost"
+                            colorPalette="yellow"
+                            aria-label="Редактировать"
+                            onClick={() => router.visit(route('admin.contractor-balances.edit', row.id))}
+                        >
+                            <LuPencil />
+                        </IconButton>
+                    )}
+                    {can('contractor-balances.delete') && (
+                        <IconButton
+                            size="sm"
+                            variant="ghost"
+                            colorPalette="red"
+                            aria-label="Удалить"
+                            onClick={() => openDeleteDialog(row)}
+                        >
+                            <LuTrash2 />
+                        </IconButton>
+                    )}
                 </HStack>
             ),
         },
@@ -130,6 +136,7 @@ export default function Index({ balances, filters }) {
         <>
             <PageHeader
                 title="Балансы контрагентов"
+                createPermission="contractor-balances.create"
                 createHref={route('admin.contractor-balances.create')}
                 createLabel="Создать баланс"
             />

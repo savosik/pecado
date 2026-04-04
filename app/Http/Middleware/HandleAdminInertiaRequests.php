@@ -7,40 +7,29 @@ use Inertia\Middleware;
 
 class HandleAdminInertiaRequests extends Middleware
 {
-    /**
-     * The root template that's loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'admin';
 
-    /**
-     * Determines the current asset version.
-     *
-     * @see https://inertiajs.com/asset-versioning
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @see https://inertiajs.com/shared-data
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'email' => $request->user()->email,
-                    'is_admin' => $request->user()->is_admin,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'is_super_admin' => $user->hasRole('super-admin'),
+                    'permissions' => $user->hasRole('super-admin')
+                        ? ['*']
+                        : $user->getAllPermissions()->pluck('name')->toArray(),
+                    'roles' => $user->getRoleNames()->toArray(),
                 ] : null,
             ],
             'flash' => [

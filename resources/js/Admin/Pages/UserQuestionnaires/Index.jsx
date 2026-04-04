@@ -89,13 +89,14 @@ export default function Index({ questionnaires, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.user-questionnaires', openDeleteDialog, { showView: false }),
+        createActionsColumn('admin.user-questionnaires', openDeleteDialog, { showView: false , permissionPrefix: 'user-questionnaires' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Анкеты пользователей"
+                createPermission="user-questionnaires.create"
                 createRoute={route('admin.user-questionnaires.create')}
                 createLabel="Создать анкету"
             />

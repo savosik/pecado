@@ -4,9 +4,11 @@ import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Compo
 import { Box, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
+import { usePermission } from '@/Admin/hooks/usePermission';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 
 export default function Index({ barcodes, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -53,7 +55,7 @@ export default function Index({ barcodes, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.product-barcodes', openDeleteDialog),
+        createActionsColumn('admin.product-barcodes', openDeleteDialog, { permissionPrefix: 'product-barcodes' }),
     ];
 
     return (
@@ -62,9 +64,11 @@ export default function Index({ barcodes, filters }) {
                 title="Штрихкоды"
                 description="Управление штрихкодами товаров"
                 actions={
+                    can('product-barcodes.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.product-barcodes.create'))}>
                         <LuPlus /> Добавить штрихкод
                     </Button>
+                    )
                 }
             />
 

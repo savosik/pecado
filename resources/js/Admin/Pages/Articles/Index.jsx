@@ -73,13 +73,14 @@ export default function Index({ articles, filters }) {
                 </HStack>
             ),
         },
-        createActionsColumn('admin.articles', openDeleteDialog),
+        createActionsColumn('admin.articles', openDeleteDialog, { permissionPrefix: 'articles' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="Статьи"
+                createPermission="articles.create"
                 onCreate={() => router.visit(route('admin.articles.create'))}
                 createLabel="Создать статью"
             />

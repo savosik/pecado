@@ -5,8 +5,10 @@ import { Box, HStack, Badge, Image, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 export default function Index({ products, filters }) {
+    const { can } = usePermission();
     const {
         searchQuery,
         handleSearch,
@@ -121,7 +123,7 @@ export default function Index({ products, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.products', openDeleteDialog),
+        createActionsColumn('admin.products', openDeleteDialog, { permissionPrefix: 'products' }),
     ];
 
     return (
@@ -129,12 +131,14 @@ export default function Index({ products, filters }) {
             <PageHeader
                 title="Товары"
                 actions={
+                    {can('products.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.products.create'))}
                     >
                         <LuPlus /> Создать товар
                     </Button>
+                    )}
                 }
             />
 

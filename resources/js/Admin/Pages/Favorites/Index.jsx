@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { HStack, Image, Text, Box, Button, Input, VStack, SimpleGrid } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuTrash2, LuPackage, LuFilter, LuX, LuPlus } from "react-icons/lu";
+import { usePermission } from '@/Admin/hooks/usePermission';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
@@ -15,6 +16,7 @@ import { EntitySelector } from "@/Admin/Components/EntitySelector";
 
 const FavoritesIndex = ({ filters }) => {
     const { favorites } = usePage().props;
+    const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
     const [selectedItems, setSelectedItems] = useState([]);
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
@@ -182,7 +184,7 @@ const FavoritesIndex = ({ filters }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.favorites', (favorite) => setDeleteId(favorite.id)),
+        createActionsColumn('admin.favorites', (favorite) => setDeleteId(favorite.id), { permissionPrefix: 'favorites' }),
     ];
 
     const handleDelete = () => {
@@ -213,12 +215,14 @@ const FavoritesIndex = ({ filters }) => {
                         >
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
+                        {can('favorites.create') && (
                         <Button
                             colorPalette="blue"
                             onClick={() => router.visit(route("admin.favorites.create"))}
                         >
                             <LuPlus /> Добавить в избранное
                         </Button>
+                        )}
                     </HStack>
                 }
             />
@@ -283,9 +287,11 @@ const FavoritesIndex = ({ filters }) => {
                 <Box p={4} borderWidth="1px" borderRadius="md" mb={4} bg="blue.50" _dark={{ bg: "blue.900" }}>
                     <HStack>
                         <Text>Выбрано: {selectedItems.length}</Text>
+                        {can('favorites.delete') && (
                         <Button onClick={handleBulkDelete} colorPalette="red" size="sm">
                             <LuTrash2 /> Удалить выбранные
                         </Button>
+                        )}
                         <Button onClick={() => setSelectedItems([])} variant="ghost" size="sm">
                             Отменить выбор
                         </Button>

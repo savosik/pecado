@@ -11,6 +11,7 @@ import { toaster } from "@/components/ui/toaster";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { usePermission } from '@/Admin/hooks/usePermission';
 
 const getStatusColor = (status) => {
     const colors = {
@@ -28,6 +29,7 @@ const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';
 
 const OrdersIndex = ({ filters, statuses, types, companies }) => {
     const { orders } = usePage().props;
+    const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
@@ -186,7 +188,7 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.orders', (order) => setDeleteId(order.id)),
+        createActionsColumn('admin.orders', (order) => setDeleteId(order.id), { permissionPrefix: 'orders' }),
     ];
 
     const handleDelete = () => {
@@ -217,12 +219,14 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
                         >
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
+                        {can('orders.create') && (
                         <Button
                             onClick={() => router.visit(route("admin.orders.create"))}
                             colorPalette="blue"
                         >
                             <LuPlus /> Создать заказ
                         </Button>
+                        )}
                     </HStack>
                 }
             />
@@ -358,9 +362,11 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
                                 ))}
                             </Select.Content>
                         </Select.Root>
+                        {can('orders.edit') && (
                         <Button onClick={handleBulkStatusUpdate} colorPalette="blue">
                             Применить статус
                         </Button>
+                        )}
                         <Button onClick={() => setSelectedOrders([])} variant="ghost">
                             Отменить выбор
                         </Button>

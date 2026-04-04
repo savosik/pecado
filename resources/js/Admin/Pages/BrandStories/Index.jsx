@@ -82,13 +82,14 @@ export default function Index({ brandStories, filters }) {
                 </HStack>
             ),
         },
-        createActionsColumn('admin.brand-stories', openDeleteDialog),
+        createActionsColumn('admin.brand-stories', openDeleteDialog, { permissionPrefix: 'brand-stories' }),
     ];
 
     return (
         <>
             <PageHeader
                 title="О брендах"
+                createPermission="brand-stories.create"
                 onCreate={() => router.visit(route('admin.brand-stories.create'))}
                 createLabel="Создать статью о бренде"
             />
