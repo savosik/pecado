@@ -57,7 +57,7 @@ class Article extends Model implements HasMedia
      */
     public function shouldBeSearchable(): bool
     {
-        return $this->is_published && $this->published_at && $this->published_at->lte(now());
+        return $this->is_published && (is_null($this->published_at) || $this->published_at->lte(now()));
     }
 
     /**
@@ -66,6 +66,6 @@ class Article extends Model implements HasMedia
     public function scopePublished($query)
     {
         return $query->where('is_published', true)
-                     ->where('published_at', '<=', now());
+                     ->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()));
     }
 }

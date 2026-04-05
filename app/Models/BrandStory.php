@@ -39,7 +39,7 @@ class BrandStory extends Model implements HasMedia
     public function scopePublished($query)
     {
         return $query->where('is_published', true)
-                     ->where('published_at', '<=', now());
+                     ->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()));
     }
 
     public function brand(): BelongsTo
