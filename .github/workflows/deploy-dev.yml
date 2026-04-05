@@ -195,26 +195,29 @@ jobs:
           set -euo pipefail
           cd /srv/pecado
 
-          echo "==> [1/6] Установка PHP зависимостей..."
+          echo "==> [1/7] Установка PHP зависимостей..."
           sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
 
-          echo "==> [2/6] Очистка и прогрев кешей Laravel..."
+          echo "==> [2/7] Очистка и прогрев кешей Laravel..."
           sg docker -c 'docker compose exec -T app php artisan optimize:clear'
           sg docker -c 'docker compose exec -T app php artisan config:cache'
           sg docker -c 'docker compose exec -T app php artisan route:cache'
           sg docker -c 'docker compose exec -T app php artisan view:cache'
           sg docker -c 'docker compose exec -T app php artisan optimize'
 
-          echo "==> [3/6] Выполнение миграций..."
+          echo "==> [3/7] Выполнение миграций..."
           sg docker -c 'docker compose exec -T app php artisan migrate --force'
 
-          echo "==> [4/6] Настройка топологии RabbitMQ..."
+          echo "==> [4/7] Синхронизация ролей и прав..."
+          sg docker -c 'docker compose exec -T app php artisan db:seed --class=RolesAndPermissionsSeeder --force'
+
+          echo "==> [5/7] Настройка топологии RabbitMQ..."
           sg docker -c 'docker compose exec -T app php artisan rabbitmq:setup' || true
 
-          echo "==> [5/6] Перезапуск очередей..."
+          echo "==> [6/7] Перезапуск очередей..."
           sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
-          echo "==> [6/6] Перезагрузка PHP-FPM и workers..."
+          echo "==> [7/7] Перезагрузка PHP-FPM и workers..."
           sg docker -c 'docker compose restart app worker'
 
           echo ""

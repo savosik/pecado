@@ -50,15 +50,6 @@ class AuthController extends Controller
                 $intended = $redirectTo;
             }
 
-            \Log::info('LOGIN REDIRECT DEBUG', [
-                'email' => $user->email,
-                'roles' => $user->getRoleNames()->toArray(),
-                'roles_count' => $user->roles->count(),
-                'redirectTo' => $redirectTo,
-                'intended' => $intended,
-                'url_intended_was' => $request->session()->get('url.intended', 'NOT_SET'),
-            ]);
-
             return redirect()->to($intended)->with('success', 'Вы успешно вошли в систему');
         }
 
