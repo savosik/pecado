@@ -15,8 +15,15 @@
 | | |
 |---|---|
 | URL | http://dev.pecado.ru/admin |
-| Email | admin@pecado.ru |
-| Password | Admin2024! |
+
+### Аккаунты с доступом к админке
+
+| Email | Password | Роль |
+|---|---|---|
+| admin@pecado.ru | Admin2024! | super-admin |
+| savosik@pecado.ru | Savosik2024! | super-admin |
+
+> Для входа в админку пользователю нужна хотя бы одна роль. Управление ролями: `/admin/roles`.
 
 | SSH user | ladmin |
 | SSH password | 0zp6fx# |

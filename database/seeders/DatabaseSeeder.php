@@ -27,14 +27,21 @@ class DatabaseSeeder extends Seeder
 
         $this->call(RolesAndPermissionsSeeder::class);
 
-        // Создание администратора (DEV_SERVER_CREDENTIALS.md)
-        $admin = User::updateOrCreate(
-            ['email' => 'admin@pecado.ru'],
-            [
-                'name'     => 'Admin',
-                'password' => 'Admin2024!',
-            ]
-        );
-        $admin->assignRole('super-admin');
+        // Создание администраторов (DEV_SERVER_CREDENTIALS.md)
+        $admins = [
+            ['email' => 'admin@pecado.ru',    'name' => 'Admin',                'password' => 'Admin2024!'],
+            ['email' => 'savosik@pecado.ru',   'name' => 'Savosik (Dev Admin)',  'password' => 'Savosik2024!'],
+        ];
+
+        foreach ($admins as $data) {
+            $user = User::updateOrCreate(
+                ['email' => $data['email']],
+                [
+                    'name'     => $data['name'],
+                    'password' => $data['password'],
+                ]
+            );
+            $user->assignRole('super-admin');
+        }
     }
 }
