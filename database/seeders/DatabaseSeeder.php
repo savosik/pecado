@@ -27,13 +27,20 @@ class DatabaseSeeder extends Seeder
 
         $this->call(RolesAndPermissionsSeeder::class);
 
-        // Создание администраторов (DEV_SERVER_CREDENTIALS.md)
-        $admins = [
-            ['email' => 'admin@pecado.ru',    'name' => 'Admin',                'password' => 'Admin2024!'],
-            ['email' => 'savosik@pecado.ru',   'name' => 'Savosik (Dev Admin)',  'password' => 'Savosik2024!'],
+        // Создание тестовых аккаунтов (docs/DEV_SERVER_CREDENTIALS.md)
+        $accounts = [
+            // Super-admin — полный доступ
+            ['email' => 'admin@pecado.ru',           'name' => 'Admin',                'password' => 'Admin2024!',     'role' => 'super-admin'],
+            ['email' => 'savosik@pecado.ru',          'name' => 'Savosik (Dev Admin)',  'password' => 'Savosik2024!',   'role' => 'super-admin'],
+            // Контент-менеджер — статьи, новости, баннеры, страницы
+            ['email' => 'content@pecado.ru',          'name' => 'Контент-менеджер',     'password' => 'Content2024!',   'role' => 'content-manager'],
+            // Менеджер продаж — заказы, клиенты, возвраты
+            ['email' => 'sales@pecado.ru',            'name' => 'Менеджер продаж',      'password' => 'Sales2024!',     'role' => 'sales-manager'],
+            // Каталоговед — товары, категории, бренды, атрибуты
+            ['email' => 'catalog@pecado.ru',          'name' => 'Каталоговед',          'password' => 'Catalog2024!',   'role' => 'catalogist'],
         ];
 
-        foreach ($admins as $data) {
+        foreach ($accounts as $data) {
             $user = User::updateOrCreate(
                 ['email' => $data['email']],
                 [
@@ -41,7 +48,7 @@ class DatabaseSeeder extends Seeder
                     'password' => $data['password'],
                 ]
             );
-            $user->assignRole('super-admin');
+            $user->syncRoles([$data['role']]);
         }
     }
 }

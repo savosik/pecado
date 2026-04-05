@@ -18,12 +18,15 @@
 
 ### Аккаунты с доступом к админке
 
-| Email | Password | Роль |
-|---|---|---|
-| admin@pecado.ru | Admin2024! | super-admin |
-| savosik@pecado.ru | Savosik2024! | super-admin |
+| Email | Password | Роль | Описание |
+|---|---|---|---|
+| admin@pecado.ru | Admin2024! | super-admin | Полный доступ ко всем разделам |
+| savosik@pecado.ru | Savosik2024! | super-admin | Полный доступ ко всем разделам |
+| content@pecado.ru | Content2024! | content-manager | Статьи, новости, баннеры, сторис, страницы, FAQ, промоакции |
+| sales@pecado.ru | Sales2024! | sales-manager | Заказы, возвраты, отгрузки, клиенты, корзины |
+| catalog@pecado.ru | Catalog2024! | catalogist | Товары, категории, бренды, модели, атрибуты, размерные сетки |
 
-> Для входа в админку пользователю нужна хотя бы одна роль. Управление ролями: `/admin/roles`.
+> Аккаунты создаются через `DatabaseSeeder`. Для входа в админку нужна хотя бы одна роль. Управление ролями: `/admin/roles`.
 
 | SSH user | ladmin |
 | SSH password | 0zp6fx# |
