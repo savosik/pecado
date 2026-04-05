@@ -47,7 +47,7 @@ class HandleInertiaRequests extends Middleware
                     'name' => $request->user()->name,
                     'phone' => $request->user()->phone,
                     'email' => $request->user()->email,
-                    'is_admin' => $request->user()->roles->isNotEmpty(),
+                    'is_admin' => $request->user()->loadMissing('roles')->roles->isNotEmpty(),
                     'must_change_password' => (bool) $request->user()->must_change_password,
                 ] : null,
             ],

@@ -39,6 +39,7 @@ class AuthController extends Controller
 
             /** @var User $user */
             $user = Auth::user();
+            $user->load('roles'); // явно подгрузить роли после Auth::attempt
 
             // Админы — в админку, обычные пользователи — на главную
             $redirectTo = $user->roles->isNotEmpty() ? '/admin' : '/';

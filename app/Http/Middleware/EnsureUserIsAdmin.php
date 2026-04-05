@@ -17,7 +17,7 @@ class EnsureUserIsAdmin
             return redirect('/login')->with('error', 'Необходимо войти в систему');
         }
 
-        if ($request->user()->roles->isEmpty()) {
+        if ($request->user()->loadMissing('roles')->roles->isEmpty()) {
             return redirect('/')->with('error', 'Доступ запрещён. У вас нет прав для доступа к панели администрирования.');
         }
 
