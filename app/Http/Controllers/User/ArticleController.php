@@ -74,8 +74,8 @@ class ArticleController extends Controller
             ->where('slug', $slug)
             ->firstOrFail();
 
-        // HTML-санитизация через HTMLPurifier
-        $sanitizedContent = clean($article->detailed_description);
+        // Выводим контент как есть, так как он создаётся админами и содержит сложную журнальную HTML-верстку
+        $sanitizedContent = $article->detailed_description;
 
         $descriptionText = $article->meta_description
             ?: ($article->short_description ?: Str::limit(strip_tags($article->detailed_description), 160));
