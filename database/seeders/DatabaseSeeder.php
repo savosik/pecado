@@ -17,12 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             CurrencySeeder::class,
-            SettingsSeeder::class,
-            ProductExportSeeder::class,
-            BannerSeeder::class,
-            StorySeeder::class,
-            ProductSeeder::class,
-            ProductSelectionSeeder::class,
+            WarehouseAndRegionSeeder::class,
         ]);
 
         $this->call(RolesAndPermissionsSeeder::class);
