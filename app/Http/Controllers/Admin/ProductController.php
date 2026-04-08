@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Product;
+use App\Models\Scopes\HiddenScope;
 use App\Models\Brand;
 use App\Models\Category;
 
@@ -27,7 +28,7 @@ class ProductController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = Product::query()
+        $query = Product::withoutGlobalScope(HiddenScope::class)
             ->with(['brand', 'model', 'category', 'media', 'tags']);
 
         // Поиск
@@ -110,6 +111,7 @@ class ProductController extends AdminController
             'is_marked' => 'boolean',
             'is_liquidation' => 'boolean',
             'for_marketplaces' => 'boolean',
+            'hidden' => 'boolean',
             'barcodes' => 'nullable|array',
             'barcodes.*' => 'string|max:255',
             'image' => 'nullable|image|max:10240',
@@ -197,8 +199,10 @@ class ProductController extends AdminController
     /**
      * Show the form for editing the specified product.
      */
-    public function edit(Product $product): Response
+    public function edit($id): Response
     {
+        $product = Product::withoutGlobalScope(HiddenScope::class)->findOrFail($id);
+
         $product->load([
             'brand', 
             'model', 
@@ -239,6 +243,7 @@ class ProductController extends AdminController
                 'is_marked' => $product->is_marked,
                 'is_liquidation' => $product->is_liquidation,
                 'for_marketplaces' => $product->for_marketplaces,
+                'hidden' => $product->hidden,
                 'brand' => $product->brand,
                 'model' => $product->model,
                 'main_image' => $product->getFirstMediaUrl('main'),
@@ -302,8 +307,10 @@ class ProductController extends AdminController
     /**
      * Update the specified product in storage.
      */
-    public function update(Request $request, Product $product): RedirectResponse
+    public function update(Request $request, $id): RedirectResponse
     {
+        $product = Product::withoutGlobalScope(HiddenScope::class)->findOrFail($id);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
@@ -328,6 +335,7 @@ class ProductController extends AdminController
             'is_marked' => 'boolean',
             'is_liquidation' => 'boolean',
             'for_marketplaces' => 'boolean',
+            'hidden' => 'boolean',
             'barcodes' => 'nullable|array',
             'barcodes.*' => 'string|max:255',
             'image' => 'nullable|image|max:10240',
@@ -453,8 +461,9 @@ class ProductController extends AdminController
     /**
      * Remove the specified product from storage.
      */
-    public function destroy(Product $product): RedirectResponse
+    public function destroy($id): RedirectResponse
     {
+        $product = Product::withoutGlobalScope(HiddenScope::class)->findOrFail($id);
         $product->delete();
 
         return redirect()->route('admin.products.index')->with('success', 'Товар успешно удалён');
@@ -463,8 +472,10 @@ class ProductController extends AdminController
     /**
      * Delete a specific media file from the product.
      */
-    public function deleteMedia(Product $product, Request $request): \Illuminate\Http\JsonResponse
+    public function deleteMedia($id, Request $request): \Illuminate\Http\JsonResponse
     {
+        $product = Product::withoutGlobalScope(HiddenScope::class)->findOrFail($id);
+
         $validated = $request->validate([
             'media_id' => 'required|integer|exists:media,id',
         ]);

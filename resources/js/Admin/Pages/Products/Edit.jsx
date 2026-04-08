@@ -35,6 +35,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         is_marked: product.is_marked || false,
         is_liquidation: product.is_liquidation || false,
         for_marketplaces: product.for_marketplaces || false,
+        hidden: product.hidden || false,
         category_id: product.category_id || null,
 
         additional_images: [],
@@ -64,7 +65,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
         categories: ['category_id'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
-        pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
+        pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces', 'hidden'].some(field => errors[field]),
         descriptions: ['short_description', 'description', 'meta_title', 'meta_description'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
     }), [errors]);
@@ -496,6 +497,16 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                                 colorPalette="green"
                                             >
                                                 {data.for_marketplaces ? 'Да' : 'Нет'}
+                                            </Switch>
+                                        </FormField>
+
+                                        <FormField label="Скрыть в интернете (v10)">
+                                            <Switch
+                                                checked={data.hidden}
+                                                onCheckedChange={(e) => setData('hidden', e.checked)}
+                                                colorPalette="red"
+                                            >
+                                                {data.hidden ? 'Да' : 'Нет'}
                                             </Switch>
                                         </FormField>
                                     </SimpleGrid>

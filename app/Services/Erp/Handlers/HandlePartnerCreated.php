@@ -4,17 +4,23 @@ namespace App\Services\Erp\Handlers;
 
 use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
+use App\Models\ClientStatus;
 use App\Models\User;
 use App\Models\Region;
 use App\Models\Currency;
 use Illuminate\Support\Facades\Log;
 
 /**
- * US-01 v4: Обработка события partner.created из 1С.
+ * US-02 v11: Обработка события partner.created из 1С.
  *
- * Два сценария:
- * 1. Пользователь найден по email (login) → обновляет erp_id и статус ACTIVE
- * 2. Пользователь не найден + есть password → создаёт нового пользователя
+ * Три сценария:
+ * 1а. Пользователь найден по erp_id (идемпотентность) → обновляет данные
+ * 1б. Пользователь найден по email (login) → привязывает erp_id
+ * 2.  Пользователь не найден + есть password → создаёт нового
+ *
+ * v11:
+ * - is_active (boolean) → определяет UserStatus (ACTIVE / BLOCKED)
+ * - client_status (string|null) → резолвит ClientStatus по external_id
  *
  * Все операции через User::withoutEvents() для предотвращения петли:
  * partner.created → UserUpdated → PublishUserToErp → partner.created → LOOP
@@ -22,31 +28,39 @@ use Illuminate\Support\Facades\Log;
 class HandlePartnerCreated
 {
     use NormalizesCountry;
+
     public function handle(array $payload): void
     {
         $uuid     = $payload['uuid']     ?? null;
         $login    = $payload['login']    ?? null;
         $email    = $payload['email']    ?? $login;
         $name     = $payload['name'] ?? null;
-        
+
         $phone    = $payload['phone']    ?? null;
         $password = $payload['password'] ?? null;
-        
+
         $city     = $payload['city'] ?? null;
         $country  = $this->normalizeCountry($payload['country'] ?? null);
-        
+
         $regionName = $payload['region'] ?? null;
         $currencyCode = $payload['currency'] ?? null;
-        
+
         $regionId = null;
         if ($regionName) {
             $regionId = Region::where('name', $regionName)->value('id');
         }
-        
+
         $currencyId = null;
         if ($currencyCode) {
             $currencyId = Currency::where('code', $currencyCode)->value('id');
         }
+
+        // v11: is_active (boolean) → UserStatus
+        $isActive = $payload['is_active'] ?? true;
+        $userStatus = $isActive ? UserStatus::ACTIVE : UserStatus::BLOCKED;
+
+        // v11: client_status → ClientStatus по external_id
+        $clientStatusId = $this->resolveClientStatusId($payload);
 
         if (!$uuid || !$login) {
             Log::warning('partner.created: отсутствует uuid или login', ['payload' => $payload]);
@@ -58,16 +72,23 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $login, $name, $city, $country, $regionId, $currencyId, $phone) {
-                $user->update(array_filter([
+            User::withoutEvents(function () use ($user, $uuid, $city, $country, $regionId, $currencyId, $phone, $userStatus, $clientStatusId) {
+                $updateData = array_filter([
                     'erp_id'      => $uuid,
-                    'status'      => UserStatus::ACTIVE,
+                    'status'      => $userStatus,
                     'city'        => $city,
                     'country'     => $country,
                     'region_id'   => $regionId,
                     'currency_id' => $currencyId,
                     'phone'       => $phone,
-                ], fn($v) => $v !== null));
+                ], fn($v) => $v !== null);
+
+                // client_status_id может быть null (сброс) — не фильтруем
+                if ($clientStatusId !== false) {
+                    $updateData['client_status_id'] = $clientStatusId;
+                }
+
+                $user->update($updateData);
             });
 
             Log::info('partner.created: пользователь найден по erp_id, обновлён', [
@@ -84,25 +105,29 @@ class HandlePartnerCreated
         $user = User::where('email', $login)->first();
 
         if ($user) {
-            // Пользователь существует — привязываем erp_id и активируем
-            User::withoutEvents(function () use ($user, $uuid) {
-                $user->update([
+            User::withoutEvents(function () use ($user, $uuid, $userStatus, $clientStatusId) {
+                $updateData = [
                     'erp_id' => $uuid,
-                    'status' => UserStatus::ACTIVE,
-                ]);
+                    'status' => $userStatus,
+                ];
+
+                if ($clientStatusId !== false) {
+                    $updateData['client_status_id'] = $clientStatusId;
+                }
+
+                $user->update($updateData);
             });
 
             Log::info('partner.created: пользователь найден по email, активирован', [
                 'user_id' => $user->id,
-                'login'   => $login,
+                'login'   => $user->email,
                 'erp_id'  => $uuid,
             ]);
 
             return;
         }
 
-
-        // Сценарий 2: Создание нового пользователя из 1С (v4)
+        // Сценарий 2: Создание нового пользователя из 1С
         if (!$password) {
             Log::warning('partner.created: пользователь не найден и нет пароля для создания', [
                 'login' => $login,
@@ -112,29 +137,68 @@ class HandlePartnerCreated
             return;
         }
 
-        $newUser = User::withoutEvents(function () use ($uuid, $login, $email, $name, $city, $country, $regionId, $currencyId, $phone, $password) {
-            return User::create([
-                'name'                 => $name ?? $login,
-                'city'                 => $city,
-                'country'              => $country,
-                'region_id'            => $regionId,
-                'currency_id'          => $currencyId,
-                'email'                => $email,
-                'phone'                => $phone,
-                'password'             => $password, // auto-hashed через cast 'hashed'
-                'must_change_password' => true,
-                'erp_id'               => $uuid,
-                'status'               => UserStatus::ACTIVE,
-            ]);
+        $createData = [
+            'name'                 => $name ?? $login,
+            'city'                 => $city,
+            'country'              => $country,
+            'region_id'            => $regionId,
+            'currency_id'          => $currencyId,
+            'email'                => $email,
+            'phone'                => $phone,
+            'password'             => $password,
+            'must_change_password' => true,
+            'erp_id'               => $uuid,
+            'status'               => $userStatus,
+        ];
+
+        if ($clientStatusId !== false) {
+            $createData['client_status_id'] = $clientStatusId;
+        }
+
+        $newUser = User::withoutEvents(function () use ($createData) {
+            return User::create($createData);
         });
 
         Log::info('partner.created: новый пользователь создан из 1С', [
             'user_id'              => $newUser->id,
-            'login'                => $login,
+            'login'                => $newUser->email,
             'erp_id'               => $uuid,
             'must_change_password' => true,
         ]);
 
         NormalizeUserDataJob::dispatch($newUser->id);
+    }
+
+    /**
+     * Резолвит client_status из payload в client_status_id.
+     *
+     * @return int|null|false  int — найден, null — сбросить, false — не менять
+     */
+    private function resolveClientStatusId(array $payload): int|null|false
+    {
+        // Поле отсутствует в payload — не менять текущий статус
+        if (!array_key_exists('client_status', $payload)) {
+            return false;
+        }
+
+        $clientStatusCode = $payload['client_status'];
+
+        // Явный null — сбросить статус
+        if ($clientStatusCode === null) {
+            return null;
+        }
+
+        $clientStatusId = ClientStatus::where('external_id', $clientStatusCode)->value('id');
+
+        if ($clientStatusId === null) {
+            Log::warning('partner.created: неизвестный client_status, статус не изменён', [
+                'client_status' => $clientStatusCode,
+                'uuid'          => $payload['uuid'] ?? null,
+            ]);
+
+            return false;
+        }
+
+        return $clientStatusId;
     }
 }

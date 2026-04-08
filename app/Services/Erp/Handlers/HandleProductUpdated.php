@@ -91,6 +91,11 @@ class HandleProductUpdated
                 }
             }
 
+            // --- Скрыть в интернете (v10) ---
+            if (array_key_exists('hidden', $payload)) {
+                $updateData['hidden'] = (bool) $payload['hidden'];
+            }
+
             // Применяем обновление полей (без base_price!)
             if (!empty($updateData)) {
                 $product->update($updateData);

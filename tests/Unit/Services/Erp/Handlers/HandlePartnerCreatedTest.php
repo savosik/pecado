@@ -5,6 +5,7 @@ namespace Tests\Unit\Services\Erp\Handlers;
 use App\Enums\UserStatus;
 use App\Events\UserCreated;
 use App\Events\UserUpdated;
+use App\Models\ClientStatus;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandlePartnerCreated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -217,4 +218,211 @@ class HandlePartnerCreatedTest extends TestCase
         Event::assertNotDispatched(UserUpdated::class);
         Event::assertNotDispatched(UserCreated::class);
     }
+
+    // ──────────────────────────────────────────────
+    // v11: client_status — резолвинг статуса клиента
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_sets_client_status_when_valid_client_status_provided(): void
+    {
+        $goldStatus = ClientStatus::factory()->create([
+            'name'        => 'Gold',
+            'external_id' => 'gold',
+        ]);
+
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event'         => 'partner.created',
+            'uuid'          => 'uuid-with-status',
+            'login'         => 'golduser@example.com',
+            'password'      => 'temp123',
+            'client_status' => 'gold',
+        ]);
+
+        $user = User::where('email', 'golduser@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals($goldStatus->id, $user->client_status_id);
+    }
+
+    #[Test]
+    public function it_resets_client_status_when_null(): void
+    {
+        $silverStatus = ClientStatus::factory()->create([
+            'name'        => 'Silver',
+            'external_id' => 'silver',
+        ]);
+
+        $user = User::factory()->create([
+            'email'            => 'reset@example.com',
+            'erp_id'           => 'uuid-reset-status',
+            'client_status_id' => $silverStatus->id,
+        ]);
+
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event'         => 'partner.created',
+            'uuid'          => 'uuid-reset-status',
+            'login'         => 'reset@example.com',
+            'client_status' => null,
+        ]);
+
+        $user->refresh();
+        $this->assertNull($user->client_status_id);
+    }
+
+    #[Test]
+    public function it_logs_warning_for_unknown_client_status(): void
+    {
+        $user = User::factory()->create([
+            'email'  => 'unknown@example.com',
+            'erp_id' => 'uuid-unknown-status',
+            'client_status_id' => null,
+        ]);
+
+        Log::shouldReceive('warning')
+            ->atLeast()->once()
+            ->withArgs(function ($msg, $context = []) {
+                // Нас интересует конкретный вызов — неизвестный client_status
+                if (str_contains($msg, 'неизвестный client_status')) {
+                    return $context['client_status'] === 'platinum';
+                }
+                // Остальные warning (например, от NormalizeUserDataJob) — пропускаем
+                return true;
+            });
+
+        Log::shouldReceive('info')->andReturnNull();
+
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event'         => 'partner.created',
+            'uuid'          => 'uuid-unknown-status',
+            'login'         => 'unknown@example.com',
+            'client_status' => 'platinum',
+        ]);
+
+        $user->refresh();
+        $this->assertNull($user->client_status_id); // не изменился
+    }
+
+    #[Test]
+    public function it_updates_client_status_on_redelivery(): void
+    {
+        $silverStatus = ClientStatus::factory()->create([
+            'name'        => 'Silver',
+            'external_id' => 'silver',
+        ]);
+
+        $goldStatus = ClientStatus::factory()->create([
+            'name'        => 'Gold',
+            'external_id' => 'gold',
+        ]);
+
+        $user = User::factory()->create([
+            'email'            => 'upgrade@example.com',
+            'erp_id'           => 'uuid-upgrade',
+            'client_status_id' => $silverStatus->id,
+        ]);
+
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event'         => 'partner.created',
+            'uuid'          => 'uuid-upgrade',
+            'login'         => 'upgrade@example.com',
+            'client_status' => 'gold',
+        ]);
+
+        $user->refresh();
+        $this->assertEquals($goldStatus->id, $user->client_status_id);
+    }
+
+    #[Test]
+    public function it_does_not_change_status_when_client_status_absent(): void
+    {
+        $silverStatus = ClientStatus::factory()->create([
+            'name'        => 'Silver',
+            'external_id' => 'silver',
+        ]);
+
+        $user = User::factory()->create([
+            'email'            => 'nochange@example.com',
+            'erp_id'           => 'uuid-nochange',
+            'client_status_id' => $silverStatus->id,
+        ]);
+
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid'  => 'uuid-nochange',
+            'login' => 'nochange@example.com',
+            // client_status отсутствует — не менять
+        ]);
+
+        $user->refresh();
+        $this->assertEquals($silverStatus->id, $user->client_status_id);
+    }
+
+    // ──────────────────────────────────────────────
+    // v11: is_active — блокировка/активация
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_blocks_user_when_is_active_false(): void
+    {
+        $user = User::factory()->create([
+            'email'  => 'blocked@example.com',
+            'erp_id' => 'uuid-block',
+            'status' => UserStatus::ACTIVE,
+        ]);
+
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event'     => 'partner.created',
+            'uuid'      => 'uuid-block',
+            'login'     => 'blocked@example.com',
+            'is_active' => false,
+        ]);
+
+        $user->refresh();
+        $this->assertEquals(UserStatus::BLOCKED, $user->status);
+    }
+
+    #[Test]
+    public function it_activates_user_when_is_active_true(): void
+    {
+        $user = User::factory()->create([
+            'email'  => 'reactivate@example.com',
+            'erp_id' => 'uuid-reactivate',
+            'status' => UserStatus::BLOCKED,
+        ]);
+
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event'     => 'partner.created',
+            'uuid'      => 'uuid-reactivate',
+            'login'     => 'reactivate@example.com',
+            'is_active' => true,
+        ]);
+
+        $user->refresh();
+        $this->assertEquals(UserStatus::ACTIVE, $user->status);
+    }
+
+    #[Test]
+    public function it_creates_blocked_user_when_is_active_false(): void
+    {
+        $handler = new HandlePartnerCreated();
+        $handler->handle([
+            'event'     => 'partner.created',
+            'uuid'      => 'uuid-create-blocked',
+            'login'     => 'newblocked@example.com',
+            'password'  => 'temp123',
+            'is_active' => false,
+        ]);
+
+        $user = User::where('email', 'newblocked@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals(UserStatus::BLOCKED, $user->status);
+    }
 }
+

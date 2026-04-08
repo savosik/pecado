@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Helpers\SearchHelper;
+use App\Models\Scopes\HiddenScope;
 use App\Models\Traits\ProductQueryScopes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -26,6 +27,10 @@ class Product extends Model implements HasMedia
      */
     protected static function booted(): void
     {
+        // v10: Скрытые товары не отображаются на сайте.
+        // В Admin-контроллерах снимается через withoutGlobalScope(HiddenScope::class).
+        static::addGlobalScope(new HiddenScope());
+
         static::saving(function (Product $product) {
             foreach (['name', 'description', 'short_description'] as $field) {
                 if ($product->isDirty($field) && is_string($product->{$field})) {
@@ -73,6 +78,7 @@ class Product extends Model implements HasMedia
         'is_marked',
         'is_liquidation',
         'for_marketplaces',
+        'hidden',
         'description',
         'description_html',
         'short_description',
@@ -98,6 +104,7 @@ class Product extends Model implements HasMedia
             'is_marked' => 'boolean',
             'is_liquidation' => 'boolean',
             'for_marketplaces' => 'boolean',
+            'hidden' => 'boolean',
             'pros_cons' => 'array',
         ];
     }
@@ -259,6 +266,14 @@ class Product extends Model implements HasMedia
     }
 
 
+
+    /**
+     * Define if the model should be searchable.
+     */
+    public function shouldBeSearchable(): bool
+    {
+        return !$this->hidden;
+    }
 
     /**
      * Get the indexable data array for the model.

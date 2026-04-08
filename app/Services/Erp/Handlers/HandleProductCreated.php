@@ -31,6 +31,7 @@ class HandleProductCreated
         $barcodes     = $payload['barcodes']      ?? [];
         $modelData    = $payload['model']         ?? null;
         $attributes   = $payload['attributes']    ?? [];
+        $hidden       = (bool) ($payload['hidden'] ?? false);
 
         if (!$uuid || !$name) {
             Log::warning('product.created: отсутствуют обязательные поля uuid или name', [
@@ -41,7 +42,7 @@ class HandleProductCreated
 
         DB::transaction(function () use (
             $uuid, $name, $code, $sku, $categoryUuid, $brandData,
-            $description, $barcodes, $modelData, $attributes
+            $description, $barcodes, $modelData, $attributes, $hidden
         ) {
             // --- Категория ---
             $categoryId = null;
@@ -84,6 +85,7 @@ class HandleProductCreated
                     'category_id' => $categoryId,
                     'brand_id'    => $brandId,
                     'model_id'    => $modelId,
+                    'hidden'      => $hidden,
                     // Цена не перезаписывается здесь — она управляется через price.updated (US-02)
                     'base_price'  => $basePrice,
                 ]

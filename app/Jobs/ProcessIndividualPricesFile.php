@@ -130,19 +130,30 @@ class ProcessIndividualPricesFile implements ShouldQueue
     }
 
     /**
-     * Обработка файла: DELETE старых цен партнёра → INSERT новых.
+     * Маршрутизация обработки по типу выгрузки (v9).
      *
-     * Один файл = один партнёр, поэтому стратегия проста:
-     * - delta: удаляем старые цены партнёра, вставляем новые
-     * - full: то же самое (полный набор цен партнёра)
+     * - full:  DELETE все цены партнёра → INSERT батчами
+     * - delta: UPSERT (INSERT ... ON DUPLICATE KEY UPDATE) только пришедших цен
      */
     private function processFile($disk, string $filePath, int $partnerId, array $maps): void
+    {
+        if ($this->uploadType === 'full') {
+            $this->processFullFile($disk, $filePath, $partnerId, $maps);
+        } else {
+            $this->processDeltaFile($disk, $filePath, $partnerId, $maps);
+        }
+    }
+
+    /**
+     * Full: полное удаление всех цен партнёра → вставка батчами.
+     * Один файл = полный прайс-лист одного партнёра.
+     */
+    private function processFullFile($disk, string $filePath, int $partnerId, array $maps): void
     {
         $batch = [];
         $totalProcessed = 0;
         $skipped = 0;
 
-        // Читаем все записи из CSV
         foreach ($this->readCsvStream($disk, $filePath, $maps) as $record) {
             if ($record === null) {
                 $skipped++;
@@ -177,7 +188,45 @@ class ProcessIndividualPricesFile implements ShouldQueue
             $totalProcessed += count($batch);
         }
 
-        Log::info('ProcessIndividualPricesFile: файл обработан', [
+        Log::info('ProcessIndividualPricesFile [full]: файл обработан', [
+            'partner_id' => $partnerId,
+            'total_processed' => $totalProcessed,
+            'skipped' => $skipped,
+        ]);
+    }
+
+    /**
+     * Delta (v9): UPSERT только пришедших цен.
+     * Остальные цены партнёра не удаляются.
+     * INSERT ... ON DUPLICATE KEY UPDATE price = VALUES(price), updated_at = NOW()
+     */
+    private function processDeltaFile($disk, string $filePath, int $partnerId, array $maps): void
+    {
+        $batch = [];
+        $totalProcessed = 0;
+        $skipped = 0;
+
+        foreach ($this->readCsvStream($disk, $filePath, $maps) as $record) {
+            if ($record === null) {
+                $skipped++;
+                continue;
+            }
+
+            $batch[] = $record;
+
+            if (count($batch) >= self::BATCH_SIZE) {
+                $this->upsertBatch($partnerId, $batch);
+                $totalProcessed += count($batch);
+                $batch = [];
+            }
+        }
+
+        if (!empty($batch)) {
+            $this->upsertBatch($partnerId, $batch);
+            $totalProcessed += count($batch);
+        }
+
+        Log::info('ProcessIndividualPricesFile [delta]: файл обработан', [
             'partner_id' => $partnerId,
             'total_processed' => $totalProcessed,
             'skipped' => $skipped,
@@ -257,6 +306,31 @@ class ProcessIndividualPricesFile implements ShouldQueue
 
         $sql = 'INSERT INTO `individual_prices` (`partner_id`, `product_id`, `warehouse_id`, `price`) VALUES '
             . implode(', ', $values);
+
+        DB::statement($sql);
+    }
+
+    /**
+     * UPSERT батча для дельта-обновления (v9).
+     * INSERT ... ON DUPLICATE KEY UPDATE price = VALUES(price), updated_at = NOW()
+     *
+     * Обновляет только пришедшие цены, не трогая остальные.
+     */
+    private function upsertBatch(int $partnerId, array $batch): void
+    {
+        if (empty($batch)) {
+            return;
+        }
+
+        $values = [];
+
+        foreach ($batch as $record) {
+            $values[] = "({$partnerId},{$record['product_id']},{$record['warehouse_id']},{$record['price']},NOW())";
+        }
+
+        $sql = 'INSERT INTO `individual_prices` (`partner_id`, `product_id`, `warehouse_id`, `price`, `updated_at`) VALUES '
+            . implode(', ', $values)
+            . ' ON DUPLICATE KEY UPDATE `price` = VALUES(`price`), `updated_at` = NOW()';
 
         DB::statement($sql);
     }

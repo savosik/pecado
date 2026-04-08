@@ -64,7 +64,12 @@ export default function Index({ products, filters }) {
             sortable: true,
             render: (_, product) => (
                 <Box>
-                    <Text fontWeight="medium">{product.name}</Text>
+                    <HStack gap={2}>
+                        <Text fontWeight="medium">{product.name}</Text>
+                        {product.hidden && (
+                            <Badge size="xs" colorPalette="red">Скрыт</Badge>
+                        )}
+                    </HStack>
                     {product.sku && (
                         <Text fontSize="sm" color="fg.muted">SKU: {product.sku}</Text>
                     )}
