@@ -4,9 +4,10 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuAward } from 'react-icons/lu';
+import { Tooltip } from '@/components/ui/tooltip';
 
-export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true }) {
+export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null }) {
     const { auth } = usePage().props;
     const user = auth?.user;
     const name = user?.name || user?.name || 'Пользователь';
@@ -50,25 +51,48 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
             <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb="6" borderRadius="xl" overflow="hidden" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
                 <Card.Body p="6">
                     <Flex align="center" gap="4">
-                        <Flex
-                            align="center"
-                            justify="center"
-                            w="14"
-                            h="14"
-                            borderRadius="full"
-                            bg="pecado.50"
-                            color="pecado.600"
-                            _dark={{ bg: 'pecado.900/20', color: 'pecado.300' }}
-                            fontSize="lg"
-                            fontWeight="700"
-                            flexShrink="0"
-                        >
-                            {initials}
-                        </Flex>
+                        <Tooltip content={clientStatus ? clientStatus.name : 'Статус не назначен'} positioning={{ placement: 'top' }}>
+                            <Flex
+                                align="center"
+                                justify="center"
+                                w="14"
+                                h="14"
+                                borderRadius="full"
+                                bg="pecado.50"
+                                color="pecado.600"
+                                _dark={{ bg: 'pecado.900/20', color: 'pecado.300' }}
+                                fontSize="lg"
+                                fontWeight="700"
+                                flexShrink="0"
+                                border="3px solid"
+                                borderColor={clientStatus?.color || 'transparent'}
+                                boxShadow={clientStatus?.color ? `0 0 0 1px ${clientStatus.color}20, 0 0 12px ${clientStatus.color}40` : 'none'}
+                                transition="all 0.3s"
+                                cursor="default"
+                            >
+                                {initials}
+                            </Flex>
+                        </Tooltip>
                         <Box flex="1">
-                            <Text fontSize="lg" fontWeight="700" mb="0.5">
-                                Добро пожаловать, {(user?.name || 'Пользователь')}
-                            </Text>
+                            <Flex align="center" gap="2" mb="0.5">
+                                <Text fontSize="lg" fontWeight="700">
+                                    Добро пожаловать, {(user?.name || 'Пользователь')}
+                                </Text>
+                                {clientStatus && (
+                                    <Badge
+                                        px="2.5"
+                                        py="0.5"
+                                        borderRadius="full"
+                                        fontSize="xs"
+                                        fontWeight="600"
+                                        bg={clientStatus.color || 'gray.200'}
+                                        color="white"
+                                        textShadow="0 1px 2px rgba(0,0,0,0.2)"
+                                    >
+                                        {clientStatus.name}
+                                    </Badge>
+                                )}
+                            </Flex>
                             <Text fontSize="sm" color="gray.500">
                                 Здесь вы можете управлять заказами, избранным и настройками профиля.
                             </Text>
@@ -230,6 +254,58 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                         Просрочка: {parseFloat(balance.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
                                     </Text>
                                 )}
+                            </Card.Body>
+                        </Card.Root>
+                    </GridItem>
+                )}
+
+                {/* Client Status Card */}
+                {clientStatus && (
+                    <GridItem>
+                        <Card.Root
+                            borderRadius="xl"
+                            border="2px solid"
+                            borderColor={clientStatus.color || 'gray.200'}
+                            bg={{ base: 'white', _dark: 'gray.800' }}
+                            _dark={{ bg: 'gray.800' }}
+                            h="100%"
+                            overflow="hidden"
+                            position="relative"
+                        >
+                            <Box
+                                position="absolute"
+                                top="0"
+                                left="0"
+                                right="0"
+                                h="3px"
+                                bg={clientStatus.color || 'gray.300'}
+                            />
+                            <Card.Body p="5">
+                                <HStack justify="space-between" mb="3">
+                                    <Flex
+                                        align="center"
+                                        justify="center"
+                                        w="10"
+                                        h="10"
+                                        borderRadius="xl"
+                                        bg={`${clientStatus.color}15` || 'gray.50'}
+                                        color={clientStatus.color || 'gray.500'}
+                                    >
+                                        <LuAward size={20} />
+                                    </Flex>
+                                </HStack>
+                                <Text
+                                    fontSize="lg"
+                                    fontWeight="800"
+                                    lineHeight="1.2"
+                                    color={clientStatus.color || 'gray.800'}
+                                    _dark={{ color: clientStatus.color || 'gray.200' }}
+                                >
+                                    {clientStatus.name}
+                                </Text>
+                                <Text fontSize="sm" color="gray.500" mt="1">
+                                    Ваш статус
+                                </Text>
                             </Card.Body>
                         </Card.Root>
                     </GridItem>

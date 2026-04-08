@@ -14,6 +14,7 @@ class ClientStatus extends Model implements HasMedia
 
     protected $fillable = [
         'name',
+        'color',
         'description',
         'amount_from',
         'external_id',

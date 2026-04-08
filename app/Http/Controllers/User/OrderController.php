@@ -147,6 +147,7 @@ class OrderController extends Controller
             'items.product.brand:id,name',
             'items.product.media',
             'statusHistories.user',
+            'changeLogs',
         ]);
 
 
@@ -224,6 +225,19 @@ class OrderController extends Controller
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
                         'created_at_human' => $history->created_at->diffForHumans(),
+                    ];
+                }),
+                'change_logs' => $order->changeLogs->map(function ($log) {
+                    return [
+                        'id'               => $log->id,
+                        'type'             => $log->type,
+                        'summary'          => $log->summary,
+                        'changes'          => $log->changes,
+                        'source'           => $log->source,
+                        'old_total'        => $log->old_total,
+                        'new_total'        => $log->new_total,
+                        'created_at'       => $log->created_at->format('d.m.Y H:i'),
+                        'created_at_human' => $log->created_at->diffForHumans(),
                     ];
                 }),
             ],

@@ -1,11 +1,14 @@
+import { useState } from 'react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator, Stack,
-    Card, HStack, VStack, SimpleGrid, Image,
+    Card, HStack, VStack, SimpleGrid, Image, Collapsible,
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     LuArrowLeft, LuPackage, LuWarehouse,
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
+    LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
+    LuPlus, LuMinus, LuTrendingDown, LuTrendingUp,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 
@@ -15,6 +18,7 @@ const STATUS_LABELS = {
     shipped: 'Отправлен',
     delivered: 'Доставлен',
     cancelled: 'Отменён',
+    confirmed: 'Подтверждён',
 };
 
 const STATUS_COLORS = {
@@ -23,6 +27,7 @@ const STATUS_COLORS = {
     shipped: 'purple',
     delivered: 'green',
     cancelled: 'red',
+    confirmed: 'teal',
 };
 
 const TYPE_LABELS = {
@@ -48,6 +53,9 @@ export default function OrderShow({ order }) {
             hour: '2-digit', minute: '2-digit',
         })
         : order.created_at_formatted || '—';
+
+    // Объединённый timeline
+    const timelineEntries = buildTimeline(order.status_histories, order.change_logs);
 
     return (
         <CabinetLayout
@@ -107,7 +115,7 @@ export default function OrderShow({ order }) {
                                             {fmt(order.total_converted)} {currencySymbol}
                                             {order.currency_code && order.currency_code !== currency?.code && (
                                                 <Text as="span" fontSize="xs" color="gray.400" ml="1">
-                                                    ({fmt(order.total_amount)} {order.currency_code})
+                                                    ({fmt(order.total_amount)} {order.currency_code})
                                                 </Text>
                                             )}
                                         </>
@@ -249,7 +257,7 @@ export default function OrderShow({ order }) {
                                 </Text>
                                 {order.currency_code && order.currency_code !== currency?.code && (
                                     <Text fontSize="xs" color="gray.400">
-                                        {fmt(order.total_amount)} {order.currency_code}
+                                        {fmt(order.total_amount)} {order.currency_code}
                                     </Text>
                                 )}
                             </VStack>
@@ -257,9 +265,9 @@ export default function OrderShow({ order }) {
                     </Card.Body>
                 </Card.Root>
 
-                {/* ═══ История статусов ═══ */}
-                {order.status_histories && order.status_histories.length > 0 && (
-                    <StatusHistoryTimeline histories={order.status_histories} />
+                {/* ═══ Единый timeline: статусы + изменения ═══ */}
+                {timelineEntries.length > 0 && (
+                    <OrderTimeline entries={timelineEntries} />
                 )}
 
                 {/* ═══ Отгрузки по заказу ═══ */}
@@ -333,6 +341,10 @@ export default function OrderShow({ order }) {
     );
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Вспомогательные компоненты
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 function InfoRow({ label, value, bold }) {
     return (
         <Flex gap="2" direction={{ base: 'column', sm: 'row' }}>
@@ -344,98 +356,53 @@ function InfoRow({ label, value, bold }) {
     );
 }
 
-function ChildOrderTable({ title, icon, childOrder, currencySymbol, colorPalette, fmt }) {
-    const items = childOrder.items || [];
-    const totalQty = items.reduce((s, it) => s + Number(it.quantity || 0), 0);
+/**
+ * Объединяет status_histories и change_logs в один массив, сортирует по дате.
+ */
+function buildTimeline(statusHistories = [], changeLogs = []) {
+    const entries = [];
 
-    return (
-        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-            <Card.Header p="4" pb="2">
-                <Flex align="center" gap="2" flexWrap="wrap">
-                    {icon}
-                    <Text fontWeight="700" fontSize="md">{title}</Text>
-                    <Badge colorPalette={colorPalette} variant="subtle" ml="1">
-                        {totalQty} шт.
-                    </Badge>
-                    <Badge
-                        colorPalette={STATUS_COLORS[childOrder.status] ?? 'gray'}
-                        variant="subtle"
-                        ml="auto"
-                        borderRadius="full"
-                    >
-                        {childOrder.status_label || STATUS_LABELS[childOrder.status] || childOrder.status}
-                    </Badge>
-                </Flex>
-            </Card.Header>
-            <Card.Body p="0">
-                <Box overflowX="auto">
-                    <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
-                        <Table.Header>
-                            <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
-                                <Table.ColumnHeader>Название</Table.ColumnHeader>
-                                <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
-                                <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
-                                <Table.ColumnHeader w="130px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
-                            </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                            {items.map((item) => (
-                                <Table.Row key={item.id}>
-                                    <Table.Cell>
-                                        {item.product?.slug ? (
-                                            <Link href={`/products/${item.product.slug}`}>
-                                                <Text fontWeight="500" lineClamp={1} _hover={{ color: 'pecado.500' }} transition="color 0.15s">
-                                                    {item.product?.name || item.name || 'Товар'}
-                                                </Text>
-                                            </Link>
-                                        ) : (
-                                            <Text fontWeight="500" lineClamp={1}>
-                                                {item.name || 'Товар'}
-                                            </Text>
-                                        )}
-                                        <Flex gap="1" mt="0.5">
-                                            {item.product?.brand?.name && (
-                                                <Text fontSize="xs" color="fg.muted">{item.product.brand.name}</Text>
-                                            )}
-                                            {item.product?.sku && (
-                                                <Text fontSize="xs" color="fg.muted">• {item.product.sku}</Text>
-                                            )}
-                                        </Flex>
-                                    </Table.Cell>
-                                    <Table.Cell textAlign="center">{item.quantity}</Table.Cell>
-                                    <Table.Cell textAlign="right">
-                                        <Text fontWeight="500">{fmt(item.price)}</Text>
-                                    </Table.Cell>
-                                    <Table.Cell textAlign="right">
-                                        <Text fontWeight="600">{fmt(item.subtotal)}</Text>
-                                    </Table.Cell>
-                                </Table.Row>
-                            ))}
-                        </Table.Body>
-                    </Table.Root>
-                </Box>
+    for (const h of statusHistories) {
+        entries.push({
+            id: `status-${h.id}`,
+            type: 'status_changed',
+            created_at: h.created_at,
+            created_at_human: h.created_at_human,
+            data: h,
+        });
+    }
 
-                <Separator />
+    for (const c of changeLogs) {
+        entries.push({
+            id: `change-${c.id}`,
+            type: c.type,
+            created_at: c.created_at,
+            created_at_human: c.created_at_human,
+            data: c,
+        });
+    }
 
-                <Box p="4">
-                    <Flex justify="flex-end">
-                        <Text fontSize="lg" fontWeight="bold">
-                            {fmt(childOrder.total_amount)} {currencySymbol}
-                        </Text>
-                    </Flex>
-                </Box>
-            </Card.Body>
-        </Card.Root>
-    );
+    // Сортировка: новейшие сверху
+    entries.sort((a, b) => {
+        const da = a.created_at.split('.').reverse().join('-');
+        const db = b.created_at.split('.').reverse().join('-');
+        return db.localeCompare(da);
+    });
+
+    return entries;
 }
 
-function StatusHistoryTimeline({ histories = [] }) {
+/**
+ * Единый timeline — история статусов и изменений заказа.
+ */
+function OrderTimeline({ entries = [] }) {
     return (
         <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
             <Card.Header p="4" pb="2">
                 <HStack gap="2">
                     <LuClock size={18} />
-                    <Text fontWeight="700" fontSize="md">История изменения статусов</Text>
+                    <Text fontWeight="700" fontSize="md">История заказа</Text>
+                    <Badge variant="subtle" colorPalette="gray" fontSize="2xs">{entries.length}</Badge>
                 </HStack>
             </Card.Header>
             <Card.Body p="4" pt="2">
@@ -452,8 +419,8 @@ function StatusHistoryTimeline({ histories = [] }) {
                     />
 
                     <Stack gap={5}>
-                        {histories.map((history, index) => (
-                            <Box key={history.id} position="relative" pl="50px">
+                        {entries.map((entry, index) => (
+                            <Box key={entry.id} position="relative" pl="50px">
                                 {/* Индикатор */}
                                 <Box
                                     position="absolute"
@@ -462,60 +429,21 @@ function StatusHistoryTimeline({ histories = [] }) {
                                     width="18px"
                                     height="18px"
                                     borderRadius="full"
-                                    bg={index === 0 ? 'pecado.500' : 'gray.300'}
+                                    bg={index === 0
+                                        ? (entry.type === 'items_updated' ? 'orange.500' : 'pecado.500')
+                                        : 'gray.300'
+                                    }
                                     border="3px solid"
                                     borderColor="white"
                                     _dark={{ borderColor: 'gray.800' }}
                                     zIndex={1}
                                 />
 
-                                <Stack gap={1}>
-                                    <Text fontWeight="500" fontSize="sm">
-                                        {history.old_status ? (
-                                            <>
-                                                <Box as="span" color="orange.600">
-                                                    {history.old_status_label}
-                                                </Box>
-                                                {' → '}
-                                                <Box as="span" color="green.600">
-                                                    {history.new_status_label}
-                                                </Box>
-                                            </>
-                                        ) : (
-                                            <>
-                                                Создан со статусом{' '}
-                                                <Box as="span" color="blue.600" fontWeight="600">
-                                                    {history.new_status_label}
-                                                </Box>
-                                            </>
-                                        )}
-                                    </Text>
-
-                                    <HStack fontSize="xs" color="fg.muted" gap="1">
-                                        <LuUser size={12} />
-                                        <Text>{history.user_name}</Text>
-                                        <Text>•</Text>
-                                        <Text>{history.created_at_human}</Text>
-                                    </HStack>
-
-                                    {history.comment && (
-                                        <Box
-                                            fontSize="sm"
-                                            bg="gray.50"
-                                            _dark={{ bg: 'gray.700' }}
-                                            p={3}
-                                            borderRadius="md"
-                                            borderLeftWidth="3px"
-                                            borderLeftColor="pecado.400"
-                                            mt={1}
-                                        >
-                                            <HStack align="start" gap={2}>
-                                                <LuMessageSquare size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
-                                                <Text>{history.comment}</Text>
-                                            </HStack>
-                                        </Box>
-                                    )}
-                                </Stack>
+                                {entry.type === 'status_changed' ? (
+                                    <StatusEntry entry={entry} />
+                                ) : (
+                                    <ItemsChangedEntry entry={entry} />
+                                )}
                             </Box>
                         ))}
                     </Stack>
@@ -524,3 +452,186 @@ function StatusHistoryTimeline({ histories = [] }) {
         </Card.Root>
     );
 }
+
+/**
+ * Запись о смене статуса.
+ */
+function StatusEntry({ entry }) {
+    const h = entry.data;
+    return (
+        <Stack gap={1}>
+            <HStack gap="1.5">
+                <LuArrowRightLeft size={14} style={{ color: 'var(--chakra-colors-blue-500)', flexShrink: 0 }} />
+                <Text fontWeight="500" fontSize="sm">
+                    {h.old_status ? (
+                        <>
+                            <Box as="span" color="orange.600">{h.old_status_label}</Box>
+                            {' → '}
+                            <Box as="span" color="green.600">{h.new_status_label}</Box>
+                        </>
+                    ) : (
+                        <>
+                            Создан со статусом{' '}
+                            <Box as="span" color="blue.600" fontWeight="600">{h.new_status_label}</Box>
+                        </>
+                    )}
+                </Text>
+            </HStack>
+
+            <HStack fontSize="xs" color="fg.muted" gap="1">
+                <LuUser size={12} />
+                <Text>{h.user_name}</Text>
+                <Text>•</Text>
+                <Text>{h.created_at_human}</Text>
+            </HStack>
+
+            {h.comment && (
+                <Box
+                    fontSize="sm"
+                    bg="gray.50"
+                    _dark={{ bg: 'gray.700' }}
+                    p={3}
+                    borderRadius="md"
+                    borderLeftWidth="3px"
+                    borderLeftColor="pecado.400"
+                    mt={1}
+                >
+                    <HStack align="start" gap={2}>
+                        <LuMessageSquare size={14} style={{ marginTop: '2px', flexShrink: 0 }} />
+                        <Text>{h.comment}</Text>
+                    </HStack>
+                </Box>
+            )}
+        </Stack>
+    );
+}
+
+/**
+ * Запись об изменении позиций — с expandable деталями.
+ */
+function ItemsChangedEntry({ entry }) {
+    const [expanded, setExpanded] = useState(false);
+    const c = entry.data;
+    const changes = c.changes || {};
+    const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const hasDetails = (changes.added?.length > 0) || (changes.removed?.length > 0) || (changes.modified?.length > 0);
+
+    return (
+        <Stack gap={1}>
+            <HStack gap="1.5">
+                <LuPencilLine size={14} style={{ color: 'var(--chakra-colors-orange-500)', flexShrink: 0 }} />
+                <Text fontWeight="600" fontSize="sm" color="orange.700" _dark={{ color: 'orange.300' }}>
+                    Заказ изменён
+                </Text>
+                {c.source === 'erp' && (
+                    <Badge variant="subtle" colorPalette="blue" fontSize="2xs">1С</Badge>
+                )}
+            </HStack>
+
+            {/* Сумма до/после */}
+            {c.old_total != null && c.new_total != null && Math.abs(c.old_total - c.new_total) > 0.01 && (
+                <HStack fontSize="sm" gap="1.5">
+                    {c.new_total < c.old_total
+                        ? <LuTrendingDown size={14} style={{ color: 'var(--chakra-colors-red-500)' }} />
+                        : <LuTrendingUp size={14} style={{ color: 'var(--chakra-colors-green-500)' }} />
+                    }
+                    <Text color="fg.muted">Сумма:</Text>
+                    <Text fontWeight="600" textDecoration="line-through" color="fg.muted">{fmt(c.old_total)} ₽</Text>
+                    <Text>→</Text>
+                    <Text fontWeight="700" color={c.new_total < c.old_total ? 'red.600' : 'green.600'}>
+                        {fmt(c.new_total)} ₽
+                    </Text>
+                </HStack>
+            )}
+
+            <HStack fontSize="xs" color="fg.muted" gap="1">
+                <LuClock size={12} />
+                <Text>{c.created_at}</Text>
+                <Text>•</Text>
+                <Text>{c.created_at_human}</Text>
+            </HStack>
+
+            {/* Expandable details */}
+            {hasDetails && (
+                <Box mt={1}>
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setExpanded(!expanded)}
+                        color="pecado.600"
+                        _hover={{ bg: 'pecado.50', _dark: { bg: 'gray.700' } }}
+                    >
+                        {expanded ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
+                        {expanded ? 'Скрыть подробности' : 'Подробности'}
+                    </Button>
+
+                    {expanded && (
+                        <Box
+                            mt={2}
+                            bg="gray.50"
+                            _dark={{ bg: 'gray.700' }}
+                            borderRadius="lg"
+                            p={3}
+                            fontSize="sm"
+                        >
+                            <Stack gap={2}>
+                                {changes.added?.map((item, i) => (
+                                    <HStack key={`add-${i}`} gap="2" align="start">
+                                        <Box color="green.500" mt="1"><LuPlus size={14} /></Box>
+                                        <Text>
+                                            <Box as="span" fontWeight="600">«{item.product_name}»</Box>
+                                            {' — '}кол-во: {item.quantity}, цена: {fmt(item.price)} ₽
+                                        </Text>
+                                    </HStack>
+                                ))}
+
+                                {changes.removed?.map((item, i) => (
+                                    <HStack key={`rem-${i}`} gap="2" align="start">
+                                        <Box color="red.500" mt="1"><LuMinus size={14} /></Box>
+                                        <Text>
+                                            <Box as="span" fontWeight="600" textDecoration="line-through">«{item.product_name}»</Box>
+                                            {' — '}удалён из заказа
+                                        </Text>
+                                    </HStack>
+                                ))}
+
+                                {changes.modified?.map((item, i) => (
+                                    <HStack key={`mod-${i}`} gap="2" align="start">
+                                        <Box color="orange.500" mt="1"><LuPencilLine size={14} /></Box>
+                                        <Box>
+                                            <Text fontWeight="600">«{item.product_name}»</Text>
+                                            <Stack gap={0.5} ml="2" mt="0.5">
+                                                {item.changes?.quantity && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        Кол-во: {item.changes.quantity.old} → {item.changes.quantity.new}
+                                                    </Text>
+                                                )}
+                                                {item.changes?.discount_percent && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        Скидка: {item.changes.discount_percent.old}% → {item.changes.discount_percent.new}%
+                                                    </Text>
+                                                )}
+                                                {item.changes?.final_price && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        Цена: {fmt(item.changes.final_price.old)} → {fmt(item.changes.final_price.new)} ₽
+                                                    </Text>
+                                                )}
+                                                {item.changes?.base_price && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        Базовая цена: {fmt(item.changes.base_price.old)} → {fmt(item.changes.base_price.new)} ₽
+                                                    </Text>
+                                                )}
+                                            </Stack>
+                                        </Box>
+                                    </HStack>
+                                ))}
+                            </Stack>
+                        </Box>
+                    )}
+                </Box>
+            )}
+        </Stack>
+    );
+}
+

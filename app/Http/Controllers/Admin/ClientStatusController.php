@@ -70,6 +70,7 @@ class ClientStatusController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'color' => ['nullable', 'string', 'max:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'description' => 'nullable|string',
             'amount_from' => 'nullable|numeric|min:0',
             'external_id' => 'nullable|string|max:255|unique:client_statuses,external_id',
@@ -77,6 +78,7 @@ class ClientStatusController extends AdminController
         ], [
             'name.required' => 'Название обязательно для заполнения.',
             'name.max' => 'Название не должно превышать 255 символов.',
+            'color.regex' => 'Цвет должен быть в формате #RRGGBB.',
             'amount_from.numeric' => 'Сумма должна быть числом.',
             'amount_from.min' => 'Сумма не может быть отрицательной.',
             'external_id.unique' => 'Такой внешний ИД уже существует.',
@@ -108,6 +110,7 @@ class ClientStatusController extends AdminController
             'clientStatus' => [
                 'id' => $clientStatus->id,
                 'name' => $clientStatus->name,
+                'color' => $clientStatus->color,
                 'description' => $clientStatus->description,
                 'amount_from' => $clientStatus->amount_from,
                 'external_id' => $clientStatus->external_id,
@@ -124,6 +127,7 @@ class ClientStatusController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'color' => ['nullable', 'string', 'max:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'description' => 'nullable|string',
             'amount_from' => 'nullable|numeric|min:0',
             'external_id' => 'nullable|string|max:255|unique:client_statuses,external_id,' . $clientStatus->id,
@@ -131,6 +135,7 @@ class ClientStatusController extends AdminController
         ], [
             'name.required' => 'Название обязательно для заполнения.',
             'name.max' => 'Название не должно превышать 255 символов.',
+            'color.regex' => 'Цвет должен быть в формате #RRGGBB.',
             'amount_from.numeric' => 'Сумма должна быть числом.',
             'amount_from.min' => 'Сумма не может быть отрицательной.',
             'external_id.unique' => 'Такой внешний ИД уже существует.',

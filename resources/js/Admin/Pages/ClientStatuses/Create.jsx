@@ -2,12 +2,13 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader } from '@/Admin/Components';
-import { Box, Card, SimpleGrid, Input, Textarea, Stack } from '@chakra-ui/react';
+import { Box, Card, SimpleGrid, Input, Textarea, Stack, HStack, Badge } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Create() {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
+        color: '#C0C0C0',
         description: '',
         amount_from: '',
         external_id: '',
@@ -85,6 +86,50 @@ export default function Create() {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField
+                                label="Цвет статуса"
+                                error={errors.color}
+                                helperText="HEX цвет для отображения рамки аватарки клиента"
+                            >
+                                <HStack gap={3}>
+                                    <Box
+                                        as="input"
+                                        type="color"
+                                        value={data.color || '#C0C0C0'}
+                                        onChange={(e) => setData('color', e.target.value)}
+                                        w="50px"
+                                        h="40px"
+                                        p="1"
+                                        borderRadius="lg"
+                                        border="1px solid"
+                                        borderColor="gray.200"
+                                        cursor="pointer"
+                                    />
+                                    <Input
+                                        value={data.color || ''}
+                                        onChange={(e) => setData('color', e.target.value)}
+                                        placeholder="#FFD700"
+                                        maxLength={7}
+                                        w="140px"
+                                        fontFamily="mono"
+                                    />
+                                    {data.color && (
+                                        <Badge
+                                            px={3}
+                                            py={1}
+                                            borderRadius="full"
+                                            bg={data.color}
+                                            color="white"
+                                            fontSize="xs"
+                                            fontWeight="600"
+                                            textShadow="0 1px 2px rgba(0,0,0,0.3)"
+                                        >
+                                            Превью
+                                        </Badge>
+                                    )}
+                                </HStack>
+                            </FormField>
 
                             <FormField
                                 label="Внешний ИД"

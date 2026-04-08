@@ -137,6 +137,14 @@ class Order extends Model
     }
 
     /**
+     * Журнал изменений заказа (позиции, скидки и т.д.)
+     */
+    public function changeLogs(): HasMany
+    {
+        return $this->hasMany(OrderChangeLog::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
      * Реализации (отгрузки) по этому заказу — через shipment_items.order_uuid.
      */
     public function shipments(): \Illuminate\Database\Eloquent\Collection
