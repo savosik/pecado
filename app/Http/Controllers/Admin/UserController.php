@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Region;
 use App\Models\User;
+use App\Models\ClientStatus;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
@@ -85,6 +86,7 @@ class UserController extends Controller
                 'label' => $status->label(),
             ]),
             'availableRoles' => Role::orderBy('name')->get()->map(fn($r) => ['id' => $r->id, 'name' => $r->name]),
+            'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -106,6 +108,7 @@ class UserController extends Controller
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id',
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',
+            'client_status_id' => 'nullable|exists:client_statuses,id',
         ]);
 
         $roles = $validated['roles'] ?? [];
@@ -119,7 +122,7 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $user->load(['region', 'currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles']);
+        $user->load(['region', 'currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles', 'clientStatus']);
 
         return Inertia::render('Admin/Pages/Users/Edit', [
             'user' => array_merge($user->toArray(), [
@@ -136,6 +139,7 @@ class UserController extends Controller
                 'label' => $status->label(),
             ]),
             'availableRoles' => Role::orderBy('name')->get()->map(fn($r) => ['id' => $r->id, 'name' => $r->name]),
+            'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -157,6 +161,7 @@ class UserController extends Controller
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id,' . $user->id,
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',
+            'client_status_id' => 'nullable|exists:client_statuses,id',
         ]);
 
         $roles = $validated['roles'] ?? [];

@@ -44,6 +44,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Пользователи
         'users'             => ['view', 'create', 'edit', 'delete'],
         'user-questionnaires'=> ['view', 'create', 'edit', 'delete'],
+        'client-statuses'   => ['view', 'create', 'edit', 'delete'],
         'companies'         => ['view', 'create', 'edit', 'delete'],
         'company-bank-accounts' => ['view', 'create', 'edit', 'delete'],
         'delivery-addresses'=> ['view', 'create', 'edit', 'delete'],
@@ -98,6 +99,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'product-selections'=> 'Подборки',
         'users'             => 'Пользователи',
         'user-questionnaires'=> 'Анкеты',
+        'client-statuses'   => 'Статусы клиентов',
         'companies'         => 'Компании',
         'company-bank-accounts' => 'Банковские счета',
         'delivery-addresses'=> 'Адреса доставки',

@@ -565,6 +565,23 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     });
     Route::delete('/user-questionnaires/{user_questionnaire}', [\App\Http\Controllers\Admin\UserQuestionnaireController::class, 'destroy'])->name('user-questionnaires.destroy')->middleware('permission:user-questionnaires.delete');
 
+    // Статусы клиентов
+    Route::middleware('permission:client-statuses.view')->group(function () {
+        Route::get('/client-statuses', [\App\Http\Controllers\Admin\ClientStatusController::class, 'index'])->name('client-statuses.index');
+    });
+    Route::middleware('permission:client-statuses.create')->group(function () {
+        Route::get('/client-statuses/create', [\App\Http\Controllers\Admin\ClientStatusController::class, 'create'])->name('client-statuses.create');
+        Route::post('/client-statuses', [\App\Http\Controllers\Admin\ClientStatusController::class, 'store'])->name('client-statuses.store');
+    });
+    Route::middleware('permission:client-statuses.edit')->group(function () {
+        Route::get('/client-statuses/{client_status}/edit', [\App\Http\Controllers\Admin\ClientStatusController::class, 'edit'])->name('client-statuses.edit');
+        Route::put('/client-statuses/{client_status}', [\App\Http\Controllers\Admin\ClientStatusController::class, 'update'])->name('client-statuses.update');
+    });
+    Route::middleware('permission:client-statuses.delete')->group(function () {
+        Route::delete('/client-statuses/{client_status}', [\App\Http\Controllers\Admin\ClientStatusController::class, 'destroy'])->name('client-statuses.destroy');
+        Route::delete('/client-statuses/{client_status}/media', [\App\Http\Controllers\Admin\ClientStatusController::class, 'deleteMedia'])->name('client-statuses.media.delete');
+    });
+
     // =====================================================================
     // Финансы
     // =====================================================================

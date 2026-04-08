@@ -60,6 +60,7 @@ class User extends Authenticatable implements HasMedia
         'erp_id',
         'region_id',
         'currency_id',
+        'client_status_id',
     ];
 
     /**
@@ -89,6 +90,7 @@ class User extends Authenticatable implements HasMedia
             'status' => UserStatus::class,
             'region_id' => 'integer',
             'currency_id' => 'integer',
+            'client_status_id' => 'integer',
         ];
     }
 
@@ -225,6 +227,14 @@ class User extends Authenticatable implements HasMedia
     public function questionnaire(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(UserQuestionnaire::class);
+    }
+
+    /**
+     * Get the client status for the user.
+     */
+    public function clientStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(ClientStatus::class);
     }
 
 }

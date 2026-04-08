@@ -37,6 +37,7 @@ import {
     LuSettings,
     LuDownload,
     LuRadio,
+    LuAward,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -113,6 +114,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Компании", icon: LuBuilding2, path: "/admin/companies", permission: "companies.view" },
             { label: "Банковские счета", icon: LuCreditCard, path: "/admin/company-bank-accounts", permission: "company-bank-accounts.view" },
             { label: "Адреса доставки", icon: LuMapPinned, path: "/admin/delivery-addresses", permission: "delivery-addresses.view" },
+            { label: "Статусы клиентов", icon: LuAward, path: "/admin/client-statuses", permission: "client-statuses.view" },
         ],
     },
     {
