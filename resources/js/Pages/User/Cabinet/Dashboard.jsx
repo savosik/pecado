@@ -4,7 +4,7 @@ import {
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuAward } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 
 export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null }) {
@@ -259,57 +259,6 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                     </GridItem>
                 )}
 
-                {/* Client Status Card */}
-                {clientStatus && (
-                    <GridItem>
-                        <Card.Root
-                            borderRadius="xl"
-                            border="2px solid"
-                            borderColor={clientStatus.color || 'gray.200'}
-                            bg={{ base: 'white', _dark: 'gray.800' }}
-                            _dark={{ bg: 'gray.800' }}
-                            h="100%"
-                            overflow="hidden"
-                            position="relative"
-                        >
-                            <Box
-                                position="absolute"
-                                top="0"
-                                left="0"
-                                right="0"
-                                h="3px"
-                                bg={clientStatus.color || 'gray.300'}
-                            />
-                            <Card.Body p="5">
-                                <HStack justify="space-between" mb="3">
-                                    <Flex
-                                        align="center"
-                                        justify="center"
-                                        w="10"
-                                        h="10"
-                                        borderRadius="xl"
-                                        bg={`${clientStatus.color}15` || 'gray.50'}
-                                        color={clientStatus.color || 'gray.500'}
-                                    >
-                                        <LuAward size={20} />
-                                    </Flex>
-                                </HStack>
-                                <Text
-                                    fontSize="lg"
-                                    fontWeight="800"
-                                    lineHeight="1.2"
-                                    color={clientStatus.color || 'gray.800'}
-                                    _dark={{ color: clientStatus.color || 'gray.200' }}
-                                >
-                                    {clientStatus.name}
-                                </Text>
-                                <Text fontSize="sm" color="gray.500" mt="1">
-                                    Ваш статус
-                                </Text>
-                            </Card.Body>
-                        </Card.Root>
-                    </GridItem>
-                )}
             </Grid>
 
             {/* Recent Orders */}

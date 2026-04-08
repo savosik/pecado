@@ -8,6 +8,7 @@ import Search from '@/shared/Search';
 import HeaderIconButton from '@/components/common/HeaderIconButton';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
 import AuthDialog from '@/components/auth/AuthDialog';
+import { Tooltip } from '@/components/ui/tooltip';
 import {
     Box, Flex, HStack, Text, IconButton, Button, Badge,
     Drawer, Portal, CloseButton, VStack, Separator, Menu,
@@ -116,25 +117,31 @@ export default function UserHeader() {
                                             size="sm"
                                             title={user.name}
                                         >
-                                            <Flex
-                                                align="center"
-                                                justify="center"
-                                                w="7"
-                                                h="7"
-                                                borderRadius="full"
-                                                bg="gray.200"
-                                                _dark={{ bg: 'gray.600' }}
-                                                flexShrink="0"
-                                            >
-                                                <Text fontSize="xs" fontWeight="600" color="gray.700" _dark={{ color: 'gray.200' }}>
-                                                    {(() => {
-                                                        const parts = (user.name || '').trim().split(/\s+/);
-                                                        const first = parts[0]?.[0] ?? '';
-                                                        const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : '';
-                                                        return (first + last).toUpperCase() || '?';
-                                                    })()}
-                                                </Text>
-                                            </Flex>
+                                            <Tooltip content={user.client_status_name || 'Статус не назначен'} positioning={{ placement: 'bottom' }}>
+                                                <Flex
+                                                    align="center"
+                                                    justify="center"
+                                                    w="7"
+                                                    h="7"
+                                                    borderRadius="full"
+                                                    bg="gray.200"
+                                                    _dark={{ bg: 'gray.600' }}
+                                                    flexShrink="0"
+                                                    border={user.client_status_color ? '2px solid' : 'none'}
+                                                    borderColor={user.client_status_color || 'transparent'}
+                                                    boxShadow={user.client_status_color ? `0 0 0 1px ${user.client_status_color}30, 0 0 8px ${user.client_status_color}40` : 'none'}
+                                                    transition="all 0.3s"
+                                                >
+                                                    <Text fontSize="xs" fontWeight="600" color="gray.700" _dark={{ color: 'gray.200' }}>
+                                                        {(() => {
+                                                            const parts = (user.name || '').trim().split(/\s+/);
+                                                            const first = parts[0]?.[0] ?? '';
+                                                            const last = parts.length > 1 ? parts[parts.length - 1]?.[0] ?? '' : '';
+                                                            return (first + last).toUpperCase() || '?';
+                                                        })()}
+                                                    </Text>
+                                                </Flex>
+                                            </Tooltip>
                                             <Text display={{ base: 'none', xl: 'inline' }} fontSize="xs" maxW="120px" truncate>
                                                 {user.name}
                                             </Text>
