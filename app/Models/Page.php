@@ -12,6 +12,7 @@ class Page extends Model implements HasMedia
 {
     use HasFactory;
     use \App\Traits\HasContentMedia;
+    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'title',

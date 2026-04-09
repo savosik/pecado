@@ -8,6 +8,7 @@ use App\Models\Product;
 use App\Services\Product\ProductQueryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PromotionController extends Controller
@@ -19,6 +20,7 @@ class PromotionController extends Controller
     {
         $promotions = Promotion::query()
             ->orderByDesc('created_at')
+            ->forRegion(Auth::user()?->region_id)
             ->paginate(12)
             ->withQueryString();
 
@@ -55,6 +57,7 @@ class PromotionController extends Controller
     {
         $promotion = Promotion::query()
             ->where('slug', $slug)
+            ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
         // Загружаем товары через ProductQueryService (как в Избранном)

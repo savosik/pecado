@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PageController extends Controller
@@ -16,6 +17,7 @@ class PageController extends Controller
     {
         $page = Page::where('slug', $slug)
             ->where('is_published', true)
+            ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
         // HTML-санитизация — оставляем только безопасные теги

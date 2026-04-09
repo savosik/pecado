@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Page;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ class PageController extends Controller
 
     public function index(Request $request)
     {
-        $query = Page::query();
+        $query = Page::query()->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -37,6 +38,7 @@ class PageController extends Controller
         // Загружаем медиа для каждой страницы
         $pages->getCollection()->transform(function ($page) {
             $page->list_image = $page->getFirstMediaUrl('list-item');
+            $page->region_names = $page->regions->pluck('name')->toArray();
             return $page;
         });
 
@@ -48,7 +50,9 @@ class PageController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Pages/Pages/Create');
+        return Inertia::render('Admin/Pages/Pages/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function store(Request $request)
@@ -59,12 +63,17 @@ class PageController extends Controller
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $page = Page::create($validated);
+
+        // Синхронизировать регионы
+        $page->regions()->sync($validated['region_ids'] ?? []);
 
         // Загрузить изображения
         if ($request->hasFile('list_item')) {
@@ -85,9 +94,11 @@ class PageController extends Controller
         $page->list_image = $page->getFirstMediaUrl('list-item');
         $page->detail_desktop_image = $page->getFirstMediaUrl('detail-item-desktop');
         $page->detail_mobile_image = $page->getFirstMediaUrl('detail-item-mobile');
+        $page->region_ids = $page->regions->pluck('id')->toArray();
 
         return Inertia::render('Admin/Pages/Pages/Edit', [
             'page' => $page,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -99,12 +110,17 @@ class PageController extends Controller
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $page->update($validated);
+
+        // Синхронизировать регионы
+        $page->regions()->sync($validated['region_ids'] ?? []);
 
         // Обновить изображения
         if ($request->hasFile('list_item')) {

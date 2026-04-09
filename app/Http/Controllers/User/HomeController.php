@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Services\Product\ProductQueryService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
@@ -12,7 +13,8 @@ class HomeController extends Controller
 {
     public function index()
     {
-        $selections  = ProductSelectionController::getCachedSelections();
+        $regionId = Auth::user()?->region_id;
+        $selections  = ProductSelectionController::getCachedSelections($regionId);
 
         // Новинки и бестселлеры — запрос с фильтрацией по остаткам региона пользователя
         $wh = ProductQueryService::getRegionWarehouseIds();
@@ -37,8 +39,8 @@ class HomeController extends Controller
         $bestsellers = ProductQueryService::convertProductsPrices($bestsellers);
 
         return Inertia::render('User/Home', [
-            'banners'            => BannerController::getCachedBanners(),
-            'stories'            => StoryController::getCachedStories(),
+            'banners'            => BannerController::getCachedBanners($regionId),
+            'stories'            => StoryController::getCachedStories($regionId),
             'productSelections'  => $selections,
             'newProducts'        => $newProducts,
             'bestsellerProducts' => $bestsellers,

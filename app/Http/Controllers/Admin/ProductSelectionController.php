@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\ProductSelection;
 use App\Models\Product;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -22,7 +23,7 @@ class ProductSelectionController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = ProductSelection::query()->withCount(['products', 'featuredProducts']);
+        $query = ProductSelection::query()->withCount(['products', 'featuredProducts'])->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -49,6 +50,7 @@ class ProductSelectionController extends AdminController
 
         $productSelections->through(function ($selection) {
             $selection->desktop_image_url = $selection->getFirstMediaUrl('desktop');
+            $selection->region_names = $selection->regions->pluck('name')->toArray();
             return $selection;
         });
 
@@ -68,7 +70,9 @@ class ProductSelectionController extends AdminController
      */
     public function create(): Response
     {
-        return Inertia::render('Admin/Pages/ProductSelections/Create');
+        return Inertia::render('Admin/Pages/ProductSelections/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -89,6 +93,8 @@ class ProductSelectionController extends AdminController
             'featured_ids.*' => 'exists:products,id',
             'desktop_image' => 'nullable|image|max:10240',
             'mobile_image' => 'nullable|image|max:10240',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         DB::beginTransaction();
@@ -112,6 +118,9 @@ class ProductSelectionController extends AdminController
                 }
                 $productSelection->products()->sync($syncData);
             }
+
+            // Синхронизировать регионы
+            $productSelection->regions()->sync($validated['region_ids'] ?? []);
 
             // Загрузка медиафайлов
             if ($request->hasFile('desktop_image')) {
@@ -201,7 +210,9 @@ class ProductSelectionController extends AdminController
                 'desktop_image_id' => $productSelection->getFirstMedia('desktop')?->id,
                 'mobile_image_url' => $productSelection->getFirstMediaUrl('mobile'),
                 'mobile_image_id' => $productSelection->getFirstMedia('mobile')?->id,
+                'region_ids' => $productSelection->regions->pluck('id')->toArray(),
             ],
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -225,6 +236,8 @@ class ProductSelectionController extends AdminController
             'mobile_image' => 'nullable|image|max:10240',
             'delete_desktop_image' => 'nullable|boolean',
             'delete_mobile_image' => 'nullable|boolean',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         DB::beginTransaction();
@@ -246,6 +259,9 @@ class ProductSelectionController extends AdminController
                 $syncData[$productId] = ['featured' => in_array($productId, $featuredIds)];
             }
             $productSelection->products()->sync($syncData);
+
+            // Синхронизировать регионы
+            $productSelection->regions()->sync($validated['region_ids'] ?? []);
 
             // Удаление desktop изображения
             if (!empty($validated['delete_desktop_image'])) {

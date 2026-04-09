@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Story;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class StoryController extends Controller
@@ -13,7 +14,8 @@ class StoryController extends Controller
      */
     public function index()
     {
-        $stories = self::getCachedStories();
+        $regionId = Auth::user()?->region_id;
+        $stories = self::getCachedStories($regionId);
 
         return response()->json($stories);
     }
@@ -21,12 +23,15 @@ class StoryController extends Controller
     /**
      * Получить stories с кешированием (10 мин).
      */
-    public static function getCachedStories(): array
+    public static function getCachedStories(?int $regionId = null): array
     {
-        return Cache::remember('user.stories.active', 600, function () {
+        $cacheKey = 'user.stories.active.' . ($regionId ?? 'all');
+
+        return Cache::remember($cacheKey, 600, function () use ($regionId) {
             return Story::active()
                 ->published()
                 ->ordered()
+                ->forRegion($regionId)
                 ->with(['slides' => function ($query) {
                     $query->orderBy('sort_order');
                 }])

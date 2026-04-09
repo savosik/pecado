@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\BrandStory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class BrandStoryController extends Controller
@@ -17,7 +18,8 @@ class BrandStoryController extends Controller
     {
         $selectedTags = $request->input('tags', []);
 
-        $query = BrandStory::published()->with(['tags', 'brand'])->orderByDesc('published_at');
+        $query = BrandStory::published()->with(['tags', 'brand'])->orderByDesc('published_at')
+            ->forRegion(Auth::user()?->region_id);
 
         if (!empty($selectedTags)) {
             $query->withAnyTags($selectedTags);
@@ -77,6 +79,7 @@ class BrandStoryController extends Controller
         $brandStory = BrandStory::published()
             ->with(['tags', 'brand'])
             ->where('slug', $slug)
+            ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
         // HTML-санитизация через HTMLPurifier

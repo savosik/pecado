@@ -1,13 +1,13 @@
 import { useState, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, EntitySelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, EntitySelector, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Stack, SimpleGrid, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
 
-export default function Edit({ banner }) {
+export default function Edit({ banner, regions = [] }) {
     const [data, setFormData] = useState({
         title: banner.title || '',
         linkable_type: banner.linkable_type || '',
@@ -17,6 +17,7 @@ export default function Edit({ banner }) {
         sort_order: banner.sort_order || 0,
         desktop_image: null,
         mobile_image: null,
+        region_ids: banner.region_ids || [],
     });
 
     const [errors, setErrors] = useState({});
@@ -90,6 +91,13 @@ export default function Edit({ banner }) {
 
         if (data.mobile_image instanceof File) {
             formDataToSend.append('mobile_image', data.mobile_image);
+        }
+
+        // Append region_ids
+        if (data.region_ids && data.region_ids.length > 0) {
+            data.region_ids.forEach((id) => {
+                formDataToSend.append('region_ids[]', id);
+            });
         }
 
         try {
@@ -214,6 +222,14 @@ export default function Edit({ banner }) {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
+                                <RegionSelector
+                                    regions={regions}
+                                    value={data.region_ids}
+                                    onChange={(value) => setData('region_ids', value)}
+                                />
+                            </FormField>
 
                             <FormActions
                                 onSaveAndClose={handleSaveAndClose}

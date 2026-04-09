@@ -2,12 +2,12 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields, MarkdownEditor, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Textarea, Stack, SimpleGrid, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ brands }) {
+export default function Create({ brands, regions = [] }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         title: '',
         slug: '',
@@ -22,6 +22,7 @@ export default function Create({ brands }) {
         list_item: null,
         detail_desktop: null,
         detail_mobile: null,
+        region_ids: [],
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -154,6 +155,14 @@ export default function Create({ brands }) {
                                 <TagSelector
                                     value={data.tags}
                                     onChange={(value) => setData('tags', value)}
+                                />
+                            </FormField>
+
+                            <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
+                                <RegionSelector
+                                    regions={regions}
+                                    value={data.region_ids}
+                                    onChange={(value) => setData('region_ids', value)}
                                 />
                             </FormField>
 

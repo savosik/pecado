@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class BannerController extends Controller
@@ -13,7 +14,8 @@ class BannerController extends Controller
      */
     public function index()
     {
-        $banners = $this->getCachedBanners();
+        $regionId = Auth::user()?->region_id;
+        $banners = self::getCachedBanners($regionId);
 
         return response()->json($banners);
     }
@@ -21,12 +23,15 @@ class BannerController extends Controller
     /**
      * Получить баннеры с кешированием (10 мин).
      */
-    public static function getCachedBanners(): array
+    public static function getCachedBanners(?int $regionId = null): array
     {
-        return Cache::remember('user.banners.active', 600, function () {
+        $cacheKey = 'user.banners.active.' . ($regionId ?? 'all');
+
+        return Cache::remember($cacheKey, 600, function () use ($regionId) {
             return Banner::active()
                 ->ordered()
                 ->with('linkable')
+                ->forRegion($regionId)
                 ->get()
                 ->map(function (Banner $banner) {
                     return [

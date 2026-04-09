@@ -1,11 +1,11 @@
 import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector, MarkdownEditor, RegionSelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create() {
+export default function Create({ regions = [] }) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         meta_title: '',
@@ -16,6 +16,7 @@ export default function Create() {
         detail_desktop: null,
         detail_mobile: null,
         images: [],
+        region_ids: [],
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -47,6 +48,13 @@ export default function Create() {
         data.images.forEach((image, index) => {
             formData.append(`images[${index}]`, image);
         });
+
+        // Регионы
+        if (data.region_ids && data.region_ids.length > 0) {
+            data.region_ids.forEach((id) => {
+                formData.append('region_ids[]', id);
+            });
+        }
 
         router.post(route('admin.promotions.store'), formData, {
             forceFormData: true,
@@ -136,6 +144,14 @@ export default function Create() {
                     </Card.Body>
 
                     <Card.Footer>
+                        <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
+                            <RegionSelector
+                                regions={regions}
+                                value={data.region_ids}
+                                onChange={(value) => setData('region_ids', value)}
+                            />
+                        </FormField>
+
                         <FormActions
                             onSaveAndClose={handleSaveAndClose}
                             isLoading={processing}

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Services\Product\ProductQueryService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 
 class ProductSelectionController extends Controller
@@ -21,12 +22,15 @@ class ProductSelectionController extends Controller
      * Кеш не привязан к пользователю — хранятся «чистые» данные без скидок/конвертации/остатков.
      * Остатки добавляются после кеша через enrichSelectionsWithStock.
      */
-    public static function getCachedSelections(): array
+    public static function getCachedSelections(?int $regionId = null): array
     {
-        return Cache::remember(self::CACHE_KEY_SELECTIONS, 600, function () {
+        $cacheKey = self::CACHE_KEY_SELECTIONS . '.' . ($regionId ?? 'all');
+
+        return Cache::remember($cacheKey, 600, function () use ($regionId) {
             return ProductSelection::active()
                 ->showOnHome()
                 ->ordered()
+                ->forRegion($regionId)
                 ->with(['featuredProducts' => function ($query) {
                     $query->with(ProductQueryService::productEagerLoads());
                 }])

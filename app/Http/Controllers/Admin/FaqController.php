@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Faq;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ class FaqController extends Controller
 
     public function index(Request $request)
     {
-        $query = Faq::query();
+        $query = Faq::query()->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -33,6 +34,11 @@ class FaqController extends Controller
         $perPage = $request->input('per_page', 15);
         $faqs = $query->paginate($perPage)->withQueryString();
 
+        $faqs->getCollection()->transform(function ($faq) {
+            $faq->region_names = $faq->regions->pluck('name')->toArray();
+            return $faq;
+        });
+
         return Inertia::render('Admin/Pages/Faqs/Index', [
             'faqs' => $faqs,
             'filters' => $request->only(['search', 'sort_by', 'sort_order', 'per_page']),
@@ -41,7 +47,9 @@ class FaqController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Pages/Faqs/Create');
+        return Inertia::render('Admin/Pages/Faqs/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function store(Request $request)
@@ -51,6 +59,8 @@ class FaqController extends Controller
             'content' => 'required|string',
             'sort_order' => 'nullable|integer|min:0',
             'is_published' => 'boolean',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
@@ -58,13 +68,19 @@ class FaqController extends Controller
 
         $faq = Faq::create($validated);
 
+        // Синхронизировать регионы
+        $faq->regions()->sync($validated['region_ids'] ?? []);
+
         return $this->redirectAfterSave($request, 'admin.faqs.index', 'admin.faqs.edit', $faq, 'FAQ успешно создан');
     }
 
     public function edit(Faq $faq)
     {
+        $faq->region_ids = $faq->regions->pluck('id')->toArray();
+
         return Inertia::render('Admin/Pages/Faqs/Edit', [
             'faq' => $faq,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -75,11 +91,16 @@ class FaqController extends Controller
             'content' => 'required|string',
             'sort_order' => 'nullable|integer|min:0',
             'is_published' => 'boolean',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
 
         $faq->update($validated);
+
+        // Синхронизировать регионы
+        $faq->regions()->sync($validated['region_ids'] ?? []);
 
         return $this->redirectAfterSave($request, 'admin.faqs.index', 'admin.faqs.edit', $faq, 'FAQ успешно обновлён');
     }

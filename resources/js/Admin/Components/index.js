@@ -22,4 +22,5 @@ export * from './CertificateSelector';
 export { PhoneInput } from './PhoneInput';
 export { YandexMapPicker } from './YandexMapPicker';
 export { CategoryTreeSelector } from './CategoryTreeSelector';
+export { default as RegionSelector } from './RegionSelector';
 

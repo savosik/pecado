@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Story;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ class StoryController extends Controller
 
     public function index(Request $request)
     {
-        $query = Story::query()->withCount('slides');
+        $query = Story::query()->withCount('slides')->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -27,6 +28,11 @@ class StoryController extends Controller
         $query->orderBy($sortBy, $sortOrder);
 
         $stories = $query->paginate(15)->withQueryString();
+
+        $stories->getCollection()->transform(function ($story) {
+            $story->region_names = $story->regions->pluck('name')->toArray();
+            return $story;
+        });
 
         return Inertia::render('Admin/Pages/Stories/Index', [
             'stories' => $stories,
@@ -48,7 +54,9 @@ class StoryController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Pages/Stories/Create');
+        return Inertia::render('Admin/Pages/Stories/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function store(Request $request)
@@ -60,9 +68,14 @@ class StoryController extends Controller
             'is_published' => 'boolean',
             'show_name' => 'boolean',
             'sort_order' => 'integer',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         $story = Story::create($validated);
+
+        // Синхронизировать регионы
+        $story->regions()->sync($validated['region_ids'] ?? []);
 
         return $this->redirectAfterSave($request, 'admin.stories.index', 'admin.stories.edit', $story, 'Сторис успешно создан. Теперь добавьте слайды.');
     }
@@ -87,8 +100,11 @@ class StoryController extends Controller
             return $slide;
         });
 
+        $story->region_ids = $story->regions->pluck('id')->toArray();
+
         return Inertia::render('Admin/Pages/Stories/Edit', [
             'story' => $story,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -101,9 +117,14 @@ class StoryController extends Controller
             'is_published' => 'boolean',
             'show_name' => 'boolean',
             'sort_order' => 'integer',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         $story->update($validated);
+
+        // Синхронизировать регионы
+        $story->regions()->sync($validated['region_ids'] ?? []);
 
         return $this->redirectAfterSave($request, 'admin.stories.index', 'admin.stories.edit', $story, 'Сторис успешно обновлён');
     }

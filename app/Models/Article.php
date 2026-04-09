@@ -16,6 +16,7 @@ class Article extends Model implements HasMedia
     /** @use HasFactory<\Database\Factories\ArticleFactory> */
     use HasFactory, HasTags, Searchable;
     use \App\Traits\HasContentMedia;
+    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'title',

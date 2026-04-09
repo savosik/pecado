@@ -12,6 +12,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class Banner extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia, Searchable;
+    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'title',

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\News;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class NewsController extends Controller
@@ -17,7 +18,8 @@ class NewsController extends Controller
     {
         $selectedTags = $request->input('tags', []);
 
-        $query = News::published()->with('tags')->orderByDesc('published_at');
+        $query = News::published()->with('tags')->orderByDesc('published_at')
+            ->forRegion(Auth::user()?->region_id);
 
         if (!empty($selectedTags)) {
             $query->withAnyTags($selectedTags);
@@ -73,6 +75,7 @@ class NewsController extends Controller
         $newsItem = News::published()
             ->with('tags')
             ->where('slug', $slug)
+            ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
         // HTML-санитизация через HTMLPurifier

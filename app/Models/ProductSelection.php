@@ -11,6 +11,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 class ProductSelection extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia;
+    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'name',

@@ -1,17 +1,18 @@
 import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, MarkdownEditor, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Stack, Flex } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create() {
+export default function Create({ regions = [] }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         title: '',
         content: '',
         sort_order: 0,
         is_published: true,
+        region_ids: [],
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -89,6 +90,14 @@ export default function Create() {
                                     />
                                 </FormField>
                             </Flex>
+
+                            <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
+                                <RegionSelector
+                                    regions={regions}
+                                    value={data.region_ids}
+                                    onChange={(value) => setData('region_ids', value)}
+                                />
+                            </FormField>
 
                             <FormActions
                                 onSaveAndClose={handleSaveAndClose}

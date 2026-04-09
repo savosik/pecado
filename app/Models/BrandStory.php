@@ -15,6 +15,7 @@ class BrandStory extends Model implements HasMedia
     /** @use HasFactory<\Database\Factories\BrandFactory> */
     use HasFactory, HasTags;
     use \App\Traits\HasContentMedia;
+    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'title',

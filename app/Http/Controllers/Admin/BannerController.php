@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Banner;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ class BannerController extends Controller
 
     public function index(Request $request)
     {
-        $query = Banner::query();
+        $query = Banner::query()->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -50,6 +51,12 @@ class BannerController extends Controller
             return $banner;
         });
 
+        // Добавить регионы
+        $banners->getCollection()->transform(function ($banner) {
+            $banner->region_names = $banner->regions->pluck('name')->toArray();
+            return $banner;
+        });
+
         return Inertia::render('Admin/Pages/Banners/Index', [
             'banners' => $banners,
             'filters' => $request->only(['search', 'is_active', 'sort_by', 'sort_order', 'per_page']),
@@ -58,7 +65,9 @@ class BannerController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Pages/Banners/Create');
+        return Inertia::render('Admin/Pages/Banners/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function store(Request $request)
@@ -69,6 +78,8 @@ class BannerController extends Controller
             'linkable_id' => 'nullable|integer',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'desktop_image' => 'required|file|mimes:jpeg,png,jpg,webp,gif,svg,mp4,webm,mov|max:10240',
             'mobile_image' => 'required|file|mimes:jpeg,png,jpg,webp,gif,svg,mp4,webm,mov|max:10240',
         ]);
@@ -84,6 +95,9 @@ class BannerController extends Controller
             $banner->addMediaFromRequest('mobile_image')->toMediaCollection('mobile');
         }
 
+        // Синхронизировать регионы
+        $banner->regions()->sync($validated['region_ids'] ?? []);
+
         return $this->redirectAfterSave($request, 'admin.banners.index', 'admin.banners.edit', $banner, 'Баннер успешно создан');
     }
 
@@ -91,6 +105,7 @@ class BannerController extends Controller
     {
         $banner->desktop_image = $banner->getFirstMediaUrl('desktop');
         $banner->mobile_image = $banner->getFirstMediaUrl('mobile');
+        $banner->region_ids = $banner->regions->pluck('id')->toArray();
         
         // Загружаем linkable для отображения в форме
         if ($banner->linkable) {
@@ -99,6 +114,7 @@ class BannerController extends Controller
 
         return Inertia::render('Admin/Pages/Banners/Edit', [
             'banner' => $banner,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -110,6 +126,8 @@ class BannerController extends Controller
             'linkable_id' => 'nullable|integer',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'desktop_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg,mp4,webm,mov|max:10240',
             'mobile_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg,mp4,webm,mov|max:10240',
         ]);
@@ -127,6 +145,9 @@ class BannerController extends Controller
             $banner->clearMediaCollection('mobile');
             $banner->addMediaFromRequest('mobile_image')->toMediaCollection('mobile');
         }
+
+        // Синхронизировать регионы
+        $banner->regions()->sync($validated['region_ids'] ?? []);
 
         return $this->redirectAfterSave($request, 'admin.banners.index', 'admin.banners.edit', $banner, 'Баннер успешно обновлен');
     }

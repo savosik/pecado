@@ -2,11 +2,11 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ContentMediaFields, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ContentMediaFields, MarkdownEditor, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Stack, SimpleGrid, Textarea } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create() {
+export default function Create({ regions = [] }) {
     const { data, setData, post, processing, errors , transform } = useForm({
         title: '',
         slug: '',
@@ -16,6 +16,7 @@ export default function Create() {
         list_item: null,
         detail_desktop: null,
         detail_mobile: null,
+        region_ids: [],
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -106,6 +107,14 @@ export default function Create() {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
+                                <RegionSelector
+                                    regions={regions}
+                                    value={data.region_ids}
+                                    onChange={(value) => setData('region_ids', value)}
+                                />
+                            </FormField>
 
                             <ContentMediaFields
                                 data={data}

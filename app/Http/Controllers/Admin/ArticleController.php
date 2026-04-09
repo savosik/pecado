@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Article;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ class ArticleController extends Controller
 
     public function index(Request $request)
     {
-        $query = Article::query()->withCount('tags');
+        $query = Article::query()->withCount('tags')->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -38,6 +39,7 @@ class ArticleController extends Controller
         $articles->getCollection()->transform(function ($article) {
             $article->tag_list = $article->tags->pluck('name')->toArray();
             $article->list_image = $article->getFirstMediaUrl('list-item');
+            $article->region_names = $article->regions->pluck('name')->toArray();
             return $article;
         });
 
@@ -49,7 +51,9 @@ class ArticleController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Pages/Articles/Create');
+        return Inertia::render('Admin/Pages/Articles/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function store(Request $request)
@@ -65,6 +69,8 @@ class ArticleController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
@@ -73,6 +79,9 @@ class ArticleController extends Controller
         $article = Article::create($validated);
 
         // Прикрепить теги
+        // Синхронизировать регионы
+        $article->regions()->sync($validated['region_ids'] ?? []);
+
         if (!empty($validated['tags'])) {
             $article->attachTags($validated['tags']);
         }
@@ -98,9 +107,11 @@ class ArticleController extends Controller
         $article->detail_desktop_image = $article->getFirstMediaUrl('detail-item-desktop');
         $article->detail_mobile_image = $article->getFirstMediaUrl('detail-item-mobile');
         $article->published_at = $article->published_at?->format('Y-m-d\TH:i');
+        $article->region_ids = $article->regions->pluck('id')->toArray();
 
         return Inertia::render('Admin/Pages/Articles/Edit', [
             'article' => $article,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -117,12 +128,17 @@ class ArticleController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $article->update($validated);
+
+        // Синхронизировать регионы
+        $article->regions()->sync($validated['region_ids'] ?? []);
 
         // Синхронизировать теги
         if (isset($validated['tags'])) {

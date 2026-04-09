@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector, MarkdownEditor, RegionSelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Flex, Text, IconButton } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 import { Switch } from '@/components/ui/switch';
 
-export default function Edit({ product_selection }) {
+export default function Edit({ product_selection, regions = [] }) {
     const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
         name: product_selection.name || '',
@@ -19,6 +19,7 @@ export default function Edit({ product_selection }) {
         featured_ids: (product_selection.products || []).filter(p => p.featured).map(p => p.id),
         desktop_image: null,
         mobile_image: null,
+        region_ids: product_selection.region_ids || [],
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -55,6 +56,13 @@ export default function Edit({ product_selection }) {
         }
         if (data.mobile_image) {
             formData.append('mobile_image', data.mobile_image);
+        }
+
+        // Регионы
+        if (data.region_ids && data.region_ids.length > 0) {
+            data.region_ids.forEach((id) => {
+                formData.append('region_ids[]', id);
+            });
         }
 
         router.post(route('admin.product-selections.update', product_selection.id), formData, {
@@ -251,6 +259,14 @@ export default function Edit({ product_selection }) {
                     </Card.Body>
 
                     <Card.Footer>
+                        <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
+                            <RegionSelector
+                                regions={regions}
+                                value={data.region_ids}
+                                onChange={(value) => setData('region_ids', value)}
+                            />
+                        </FormField>
+
                         <FormActions
                             onSaveAndClose={handleSaveAndClose}
                             loading={processing}

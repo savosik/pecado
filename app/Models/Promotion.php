@@ -12,6 +12,7 @@ class Promotion extends Model implements HasMedia
 {
     use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use \App\Traits\HasContentMedia;
+    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'name',

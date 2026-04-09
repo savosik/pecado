@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\News;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -14,7 +15,7 @@ class NewsController extends Controller
 
     public function index(Request $request)
     {
-        $query = News::query()->withCount('tags');
+        $query = News::query()->withCount('tags')->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -37,6 +38,7 @@ class NewsController extends Controller
         $news->getCollection()->transform(function ($item) {
             $item->tag_list = $item->tags->pluck('name')->toArray();
             $item->list_image = $item->getFirstMediaUrl('list-item');
+            $item->region_names = $item->regions->pluck('name')->toArray();
             return $item;
         });
 
@@ -48,7 +50,9 @@ class NewsController extends Controller
 
     public function create()
     {
-        return Inertia::render('Admin/Pages/News/Create');
+        return Inertia::render('Admin/Pages/News/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     public function store(Request $request)
@@ -63,6 +67,8 @@ class NewsController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
@@ -71,6 +77,9 @@ class NewsController extends Controller
         $newsItem = News::create($validated);
 
         // Прикрепить теги
+        // Синхронизировать регионы
+        $newsItem->regions()->sync($validated['region_ids'] ?? []);
+
         if (!empty($validated['tags'])) {
             $newsItem->attachTags($validated['tags']);
         }
@@ -96,9 +105,11 @@ class NewsController extends Controller
         $news->detail_desktop_image = $news->getFirstMediaUrl('detail-item-desktop');
         $news->detail_mobile_image = $news->getFirstMediaUrl('detail-item-mobile');
         $news->published_at = $news->published_at?->format('Y-m-d\TH:i');
+        $news->region_ids = $news->regions->pluck('id')->toArray();
 
         return Inertia::render('Admin/Pages/News/Edit', [
             'news' => $news,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -114,12 +125,17 @@ class NewsController extends Controller
             'meta_description' => 'nullable|string',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
         ]);
 
         $news->update($validated);
+
+        // Синхронизировать регионы
+        $news->regions()->sync($validated['region_ids'] ?? []);
 
         // Синхронизировать теги
         if (isset($validated['tags'])) {

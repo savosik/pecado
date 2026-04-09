@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Brand;
 use App\Models\BrandStory;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -15,7 +16,7 @@ class BrandStoryController extends Controller
 
     public function index(Request $request)
     {
-        $query = BrandStory::query()->with('brand')->withCount('tags');
+        $query = BrandStory::query()->with('brand')->withCount('tags')->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -39,6 +40,7 @@ class BrandStoryController extends Controller
         $brandStories->getCollection()->transform(function ($brandStory) {
             $brandStory->tag_list = $brandStory->tags->pluck('name')->toArray();
             $brandStory->list_image = $brandStory->getFirstMediaUrl('list-item');
+            $brandStory->region_names = $brandStory->regions->pluck('name')->toArray();
             return $brandStory;
         });
 
@@ -54,6 +56,7 @@ class BrandStoryController extends Controller
 
         return Inertia::render('Admin/Pages/BrandStories/Create', [
             'brands' => $brands,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -71,6 +74,8 @@ class BrandStoryController extends Controller
             'brand_id' => 'required|exists:brands,id',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
@@ -93,6 +98,9 @@ class BrandStoryController extends Controller
         $brandStory = BrandStory::create($validated);
 
         // Прикрепить теги
+        // Синхронизировать регионы
+        $brandStory->regions()->sync($validated['region_ids'] ?? []);
+
         if (!empty($validated['tags'])) {
             $brandStory->attachTags($validated['tags']);
         }
@@ -118,12 +126,14 @@ class BrandStoryController extends Controller
         $brandStory->detail_desktop_image = $brandStory->getFirstMediaUrl('detail-item-desktop');
         $brandStory->detail_mobile_image = $brandStory->getFirstMediaUrl('detail-item-mobile');
         $brandStory->published_at = $brandStory->published_at?->format('Y-m-d\TH:i');
+        $brandStory->region_ids = $brandStory->regions->pluck('id')->toArray();
 
         $brands = Brand::orderBy('name')->get(['id', 'name']);
 
         return Inertia::render('Admin/Pages/BrandStories/Edit', [
             'brandStory' => $brandStory,
             'brands' => $brands,
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -141,6 +151,8 @@ class BrandStoryController extends Controller
             'brand_id' => 'required|exists:brands,id',
             'tags' => 'nullable|array',
             'tags.*' => 'string',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
             'list_item' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_desktop' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
             'detail_mobile' => 'nullable|image|mimes:jpeg,png,jpg,webp,gif,svg|max:20480',
@@ -161,6 +173,9 @@ class BrandStoryController extends Controller
         ]);
 
         $brandStory->update($validated);
+
+        // Синхронизировать регионы
+        $brandStory->regions()->sync($validated['region_ids'] ?? []);
 
         // Синхронизировать теги
         if (isset($validated['tags'])) {

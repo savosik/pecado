@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ProductSelection;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Auth;
 
 class CatalogController extends Controller
 {
@@ -84,6 +85,7 @@ class CatalogController extends Controller
     {
         $selections = ProductSelection::active()
             ->ordered()
+            ->forRegion(Auth::user()?->region_id)
             ->get(['id', 'name', 'slug', 'short_description']);
 
         return response()->json([

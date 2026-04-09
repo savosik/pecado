@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class ArticleController extends Controller
@@ -17,7 +18,8 @@ class ArticleController extends Controller
     {
         $selectedTags = $request->input('tags', []);
 
-        $query = Article::published()->with('tags')->orderByDesc('published_at');
+        $query = Article::published()->with('tags')->orderByDesc('published_at')
+            ->forRegion(Auth::user()?->region_id);
 
         if (!empty($selectedTags)) {
             $query->withAnyTags($selectedTags);
@@ -72,6 +74,7 @@ class ArticleController extends Controller
         $article = Article::published()
             ->with('tags')
             ->where('slug', $slug)
+            ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
         // Выводим контент как есть, так как он создаётся админами и содержит сложную журнальную HTML-верстку

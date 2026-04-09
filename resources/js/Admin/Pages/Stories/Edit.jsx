@@ -2,12 +2,12 @@ import { useState, useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Stack, Heading, Box } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import SlidesEditor from './Components/SlidesEditor';
 
-export default function Edit({ story }) {
+export default function Edit({ story, regions = [] }) {
     const { data, setData, put, processing, errors, transform } = useForm({
         name: story.name || '',
         slug: story.slug || '',
@@ -15,6 +15,7 @@ export default function Edit({ story }) {
         is_published: story.is_published ?? false,
         show_name: story.show_name ?? true,
         sort_order: story.sort_order || 0,
+        region_ids: story.region_ids || [],
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -110,6 +111,14 @@ export default function Edit({ story }) {
                     </Card.Body>
 
                     <Card.Footer>
+                        <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
+                            <RegionSelector
+                                regions={regions}
+                                value={data.region_ids}
+                                onChange={(value) => setData('region_ids', value)}
+                            />
+                        </FormField>
+
                         <FormActions
                             isLoading={processing}
                             onSaveAndClose={handleSaveAndClose}

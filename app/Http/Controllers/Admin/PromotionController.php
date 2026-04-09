@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Promotion;
 use App\Models\Product;
+use App\Models\Region;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -20,7 +21,7 @@ class PromotionController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = Promotion::query()->withCount('products');
+        $query = Promotion::query()->withCount('products')->with('regions:id,name');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -47,6 +48,7 @@ class PromotionController extends AdminController
 
         $promotions->getCollection()->transform(function ($promotion) {
             $promotion->list_image = $promotion->getFirstMediaUrl('list-item');
+            $promotion->region_names = $promotion->regions->pluck('name')->toArray();
             return $promotion;
         });
 
@@ -66,7 +68,9 @@ class PromotionController extends AdminController
      */
     public function create(): Response
     {
-        return Inertia::render('Admin/Pages/Promotions/Create');
+        return Inertia::render('Admin/Pages/Promotions/Create', [
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
+        ]);
     }
 
     /**
@@ -86,6 +90,8 @@ class PromotionController extends AdminController
             'detail_mobile' => 'nullable|image|max:10240',
             'images' => 'nullable|array',
             'images.*' => 'image|max:10240',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         DB::beginTransaction();
@@ -101,6 +107,9 @@ class PromotionController extends AdminController
             if (!empty($validated['product_ids'])) {
                 $promotion->products()->sync($validated['product_ids']);
             }
+
+            // Синхронизировать регионы
+            $promotion->regions()->sync($validated['region_ids'] ?? []);
 
             // Загрузка медиафайлов
             if ($request->hasFile('list_item')) {
@@ -179,6 +188,7 @@ class PromotionController extends AdminController
                 'meta_title' => $promotion->meta_title,
                 'meta_description' => $promotion->meta_description,
                 'description' => $promotion->description,
+                'region_ids' => $promotion->regions->pluck('id')->toArray(),
                 'products' => $promotion->products->map(fn ($p) => [
                     'id' => $p->id,
                     'name' => $p->name,
@@ -197,6 +207,7 @@ class PromotionController extends AdminController
                     ];
                 }),
             ],
+            'regions' => Region::orderBy('name')->get(['id', 'name']),
         ]);
     }
 
@@ -219,6 +230,8 @@ class PromotionController extends AdminController
             'images.*' => 'image|max:10240',
             'delete_gallery_ids' => 'nullable|array',
             'delete_gallery_ids.*' => 'integer',
+            'region_ids' => 'nullable|array',
+            'region_ids.*' => 'exists:regions,id',
         ]);
 
         DB::beginTransaction();
@@ -232,6 +245,9 @@ class PromotionController extends AdminController
 
             // Синхронизация товаров
             $promotion->products()->sync($validated['product_ids'] ?? []);
+
+            // Синхронизировать регионы
+            $promotion->regions()->sync($validated['region_ids'] ?? []);
 
             // Загрузка изображений контента
             if ($request->hasFile('list_item')) {
