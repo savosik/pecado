@@ -12,22 +12,24 @@
             ]
         },
         "context7": {
-            "command": "docker",
+            "command": "/home/savosik/.nvm/versions/node/v20.20.1/bin/npx",
             "args": [
-                "exec",
-                "-i",
-                "pecado-node",
-                "context7-mcp"
-            ]
+                "-y",
+                "@upstash/context7-mcp@latest"
+            ],
+            "env": {
+                "PATH": "/home/savosik/.nvm/versions/node/v20.20.1/bin:/usr/bin:/bin"
+            }
         },
         "chakra-ui": {
-            "command": "docker",
+            "command": "/home/savosik/.nvm/versions/node/v20.20.1/bin/npx",
             "args": [
-                "exec",
-                "-i",
-                "pecado-node",
-                "chakra-ui-mcp"
-            ]
+                "-y",
+                "@chakra-ui/react-mcp@latest"
+            ],
+            "env": {
+                "PATH": "/home/savosik/.nvm/versions/node/v20.20.1/bin:/usr/bin:/bin"
+            }
         }
     }
 }
