@@ -303,6 +303,20 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     });
     Route::delete('/news/{news}', [\App\Http\Controllers\Admin\NewsController::class, 'destroy'])->name('news.destroy')->middleware('permission:news.delete');
 
+    // Меню
+    Route::middleware('permission:menu-items.view')->group(function () {
+        Route::get('/menu-items', [\App\Http\Controllers\Admin\MenuItemController::class, 'index'])->name('menu-items.index');
+    });
+    Route::middleware('permission:menu-items.create')->group(function () {
+        Route::get('/menu-items/create', [\App\Http\Controllers\Admin\MenuItemController::class, 'create'])->name('menu-items.create');
+        Route::post('/menu-items', [\App\Http\Controllers\Admin\MenuItemController::class, 'store'])->name('menu-items.store');
+    });
+    Route::middleware('permission:menu-items.edit')->group(function () {
+        Route::get('/menu-items/{menu_item}/edit', [\App\Http\Controllers\Admin\MenuItemController::class, 'edit'])->name('menu-items.edit');
+        Route::put('/menu-items/{menu_item}', [\App\Http\Controllers\Admin\MenuItemController::class, 'update'])->name('menu-items.update');
+    });
+    Route::delete('/menu-items/{menu_item}', [\App\Http\Controllers\Admin\MenuItemController::class, 'destroy'])->name('menu-items.destroy')->middleware('permission:menu-items.delete');
+
     // FAQ
     Route::middleware('permission:faqs.view')->group(function () {
         Route::get('/faqs/search', [\App\Http\Controllers\Admin\FaqController::class, 'search'])->name('faqs.search');

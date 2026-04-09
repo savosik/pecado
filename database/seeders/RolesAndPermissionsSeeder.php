@@ -62,6 +62,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'banners'           => ['view', 'create', 'edit', 'delete'],
         'pages'             => ['view', 'create', 'edit', 'delete'],
         'stories'           => ['view', 'create', 'edit', 'delete'],
+        'menu-items'        => ['view', 'create', 'edit', 'delete'],
 
         // Теги
         'tags'              => ['view', 'create', 'edit', 'delete'],
@@ -113,6 +114,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'banners'           => 'Баннеры',
         'pages'             => 'Страницы',
         'stories'           => 'Истории',
+        'menu-items'        => 'Меню',
         'tags'              => 'Теги',
         'erp-bus'           => 'Шина ERP',
         'media'             => 'Медиа',
@@ -133,6 +135,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 'articles', 'brand-stories', 'news', 'faqs',
                 'banners', 'pages', 'stories', 'tags', 'media',
+                'menu-items',
             ],
         ],
         'sales-manager' => [

@@ -1,25 +1,49 @@
 import {
-    Box, Flex, Grid, GridItem, Text, VStack,
+    Box, Flex, Grid, GridItem, Text, VStack, HStack, Badge,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import { ColorModeButton } from '@/components/ui/color-mode';
 
-const companyLinks = [
-    { href: '/about', label: 'О компании' },
-    { href: '/careers', label: 'Карьера' },
-    { href: '/news', label: 'Новости' },
-    { href: '/articles', label: 'Статьи' },
-];
-
-const buyerLinks = [
-    { href: '/faq', label: 'FAQ' },
-    { href: '/where-to-buy', label: 'Где купить' },
-    { href: '/promotions', label: 'Акции' },
-];
-
 export default function UserFooter() {
-    const { footerCategories = [] } = usePage().props;
+    const { footerCategories = [], footerMenuItems = [] } = usePage().props;
     const year = new Date().getFullYear();
+
+    // Группируем пункты меню по footer_group
+    const companyLinks = footerMenuItems.filter((item) => item.footer_group === 'company');
+    const buyerLinks = footerMenuItems.filter((item) => item.footer_group === 'buyers');
+
+    const renderLink = (item) => (
+        <Link
+            key={`${item.id}-${item.url}`}
+            href={item.url}
+            {...(item.open_in_new_tab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+        >
+            <HStack gap="1.5">
+                <Text
+                    fontSize="sm"
+                    color="gray.600"
+                    _dark={{ color: 'gray.400' }}
+                    _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
+                    transition="colors 0.2s"
+                >
+                    {item.title}
+                </Text>
+                {item.badge_text && (
+                    <Badge
+                        size="xs"
+                        variant="solid"
+                        bg={item.badge_color || '#e53e3e'}
+                        color="white"
+                        borderRadius="full"
+                        px="1.5"
+                        fontSize="2xs"
+                    >
+                        {item.badge_text}
+                    </Badge>
+                )}
+            </HStack>
+        </Link>
+    );
 
     return (
         <Box as="footer" mt="auto">
@@ -51,19 +75,7 @@ export default function UserFooter() {
                                 О компании
                             </Text>
                             <VStack align="start" gap="2">
-                                {companyLinks.map((item) => (
-                                    <Link key={item.href} href={item.href}>
-                                        <Text
-                                            fontSize="sm"
-                                            color="gray.600"
-                                            _dark={{ color: 'gray.400' }}
-                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
-                                            transition="colors 0.2s"
-                                        >
-                                            {item.label}
-                                        </Text>
-                                    </Link>
-                                ))}
+                                {companyLinks.map(renderLink)}
                             </VStack>
                         </GridItem>
 
@@ -73,19 +85,7 @@ export default function UserFooter() {
                                 Покупателям
                             </Text>
                             <VStack align="start" gap="2">
-                                {buyerLinks.map((item) => (
-                                    <Link key={item.href} href={item.href}>
-                                        <Text
-                                            fontSize="sm"
-                                            color="gray.600"
-                                            _dark={{ color: 'gray.400' }}
-                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
-                                            transition="colors 0.2s"
-                                        >
-                                            {item.label}
-                                        </Text>
-                                    </Link>
-                                ))}
+                                {buyerLinks.map(renderLink)}
                             </VStack>
                         </GridItem>
 

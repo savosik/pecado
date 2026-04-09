@@ -20,21 +20,29 @@ import {
     LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge,
 } from 'react-icons/lu';
 
-const navLinks = [
-    { href: '/products', label: 'Каталог', icon: LuGrid2X2 },
-    { href: '/promotions', label: 'Акции' },
-    { href: '/news', label: 'Новости', icon: LuNewspaper },
-    { href: '/articles', label: 'Статьи', icon: LuFileText },
-    { href: '/brand-stories', label: 'О брендах', icon: LuBadge },
-    { href: '/faq', label: 'FAQ', icon: LuCircleHelp },
-    { href: '/where-to-buy', label: 'Где купить', icon: LuMapPin },
-];
+// Маппинг имён иконок на компоненты
+const iconMap = {
+    LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin, LuBadge,
+    LuHeart, LuShoppingCart, LuHouse, LuMenu, LuUser,
+    LuLayoutDashboard, LuShoppingBag,
+};
+
 
 
 
 export default function UserHeader() {
-    const { auth } = usePage().props;
+    const { auth, headerMenuItems = [] } = usePage().props;
     const user = auth?.user;
+
+    // Преобразуем данные из БД в формат для рендеринга
+    const navLinks = headerMenuItems.map((item) => ({
+        href: item.url,
+        label: item.title,
+        icon: item.icon ? iconMap[item.icon] : null,
+        badgeText: item.badge_text,
+        badgeColor: item.badge_color,
+        openInNewTab: item.open_in_new_tab,
+    }));
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [catalogOpen, setCatalogOpen] = useState(false);
     const favCount = useFavoritesStore((s) => s.ids.size);
@@ -236,19 +244,39 @@ export default function UserHeader() {
                     <Box maxW="1360px" mx="auto" px="6" py="1.5">
                         <HStack gap="6">
                             {navLinks.map((item) => (
-                                <Link key={item.href} href={item.href}>
-                                    <Text
-                                        fontSize="xs"
-                                        fontWeight="500"
-                                        textTransform="uppercase"
-                                        letterSpacing="0.04em"
-                                        color="gray.600"
-                                        _hover={{ color: 'pecado.500' }}
-                                        _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }}
-                                        transition="colors 0.2s"
-                                    >
-                                        {item.label}
-                                    </Text>
+                                <Link
+                                    key={item.href}
+                                    href={item.href}
+                                    {...(item.openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                >
+                                    <HStack gap="1.5">
+                                        <Text
+                                            fontSize="xs"
+                                            fontWeight="500"
+                                            textTransform="uppercase"
+                                            letterSpacing="0.04em"
+                                            color="gray.600"
+                                            _hover={{ color: 'pecado.500' }}
+                                            _dark={{ color: 'gray.400', _hover: { color: 'pecado.300' } }}
+                                            transition="colors 0.2s"
+                                        >
+                                            {item.label}
+                                        </Text>
+                                        {item.badgeText && (
+                                            <Badge
+                                                size="xs"
+                                                variant="solid"
+                                                bg={item.badgeColor || '#e53e3e'}
+                                                color="white"
+                                                borderRadius="full"
+                                                px="1.5"
+                                                fontSize="2xs"
+                                                lineHeight="1"
+                                            >
+                                                {item.badgeText}
+                                            </Badge>
+                                        )}
+                                    </HStack>
                                 </Link>
                             ))}
                         </HStack>
@@ -302,14 +330,35 @@ export default function UserHeader() {
                                         </HStack>
                                     </Link>
 
-                                    {navLinks.map((item) => (
-                                        <Link key={item.href} href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                                            <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
-                                                {item.icon && <item.icon size={18} />}
-                                                <Text fontSize="sm" fontWeight="500">{item.label}</Text>
-                                            </HStack>
-                                        </Link>
-                                    ))}
+                                    {navLinks.map((item) => {
+                                        const IconComp = item.icon;
+                                        return (
+                                            <Link
+                                                key={item.href}
+                                                href={item.href}
+                                                onClick={() => setMobileMenuOpen(false)}
+                                                {...(item.openInNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                                            >
+                                                <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
+                                                    {IconComp && <IconComp size={18} />}
+                                                    <Text fontSize="sm" fontWeight="500">{item.label}</Text>
+                                                    {item.badgeText && (
+                                                        <Badge
+                                                            size="xs"
+                                                            variant="solid"
+                                                            bg={item.badgeColor || '#e53e3e'}
+                                                            color="white"
+                                                            borderRadius="full"
+                                                            px="1.5"
+                                                            fontSize="2xs"
+                                                        >
+                                                            {item.badgeText}
+                                                        </Badge>
+                                                    )}
+                                                </HStack>
+                                            </Link>
+                                        );
+                                    })}
 
                                     {user && (
                                         <>

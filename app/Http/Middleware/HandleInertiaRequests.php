@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Currency;
 use App\Models\Category;
+use App\Models\MenuItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Middleware;
@@ -70,6 +71,12 @@ class HandleInertiaRequests extends Middleware
             ],
             'footerCategories' => Cache::remember('footer.categories', 3600, fn () =>
                 Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
+            ),
+            'headerMenuItems' => Cache::remember('menu.header', 3600, fn () =>
+                MenuItem::published()->forHeader()->ordered()->get()
+            ),
+            'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () =>
+                MenuItem::published()->forFooter()->ordered()->get()
             ),
         ];
     }

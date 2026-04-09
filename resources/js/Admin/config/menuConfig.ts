@@ -38,6 +38,7 @@ import {
     LuDownload,
     LuRadio,
     LuAward,
+    LuMenu,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -137,6 +138,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Баннеры", icon: LuImage, path: "/admin/banners", permission: "banners.view" },
             { label: "Страницы", icon: LuFile, path: "/admin/pages", permission: "pages.view" },
             { label: "Истории", icon: LuCirclePlay, path: "/admin/stories", permission: "stories.view" },
+            { label: "Меню", icon: LuMenu, path: "/admin/menu-items", permission: "menu-items.view" },
         ],
     },
     {
