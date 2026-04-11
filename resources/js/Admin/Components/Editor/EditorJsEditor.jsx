@@ -82,6 +82,10 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     { default: CoverImageTool },
                     { default: PhotoMosaicTool },
                     { default: ProductCarouselTool },
+                    { default: IconFeatureTool },
+                    { default: CountdownTool },
+                    { default: TabsTool },
+                    { default: ImageCarouselTool },
                 ] = await Promise.all([
                     import('@editorjs/editorjs'),
                     import('@editorjs/header'),
@@ -106,6 +110,10 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     import('./tools/CoverImageTool'),
                     import('./tools/PhotoMosaicTool'),
                     import('./tools/ProductCarouselTool'),
+                    import('./tools/IconFeatureTool'),
+                    import('./tools/CountdownTool'),
+                    import('./tools/TabsTool'),
+                    import('./tools/ImageCarouselTool'),
                 ]);
 
                 if (!isMounted || !containerRef.current) return;
@@ -193,6 +201,10 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                         coverImage: { class: CoverImageTool },
                         photoMosaic: { class: PhotoMosaicTool },
                         productCarousel: { class: ProductCarouselTool },
+                        iconFeature: { class: IconFeatureTool },
+                        countdown: { class: CountdownTool },
+                        tabs: { class: TabsTool },
+                        imageCarousel: { class: ImageCarouselTool },
                     },
 
                     i18n: {

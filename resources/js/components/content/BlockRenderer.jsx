@@ -50,6 +50,10 @@ function Block({ block }) {
         case 'endmark':      return <EndmarkBlock data={block.data} />;
         case 'photoMosaic':  return <PhotoMosaicBlock data={block.data} />;
         case 'twoColumnText': return <TwoColumnTextBlock data={block.data} />;
+        case 'iconFeature':  return <IconFeatureBlock data={block.data} />;
+        case 'countdown':    return <CountdownBlock data={block.data} />;
+        case 'tabs':         return <TabsBlock data={block.data} />;
+        case 'imageCarousel': return <ImageCarouselBlock data={block.data} />;
         default:             return null;
     }
 }
@@ -391,6 +395,156 @@ function TwoColumnTextBlock({ data }) {
             {(data.paragraphs || []).map((p, i) => (
                 <p key={i} dangerouslySetInnerHTML={{ __html: p }} />
             ))}
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────
+   Лендинговые блоки
+   ───────────────────────────────────────── */
+
+function IconFeatureBlock({ data }) {
+    const cols = data.columns || '3';
+    return (
+        <div className={`cb-icon-features cb-icon-features--${cols}`}>
+            {(data.items || []).map((item, i) => (
+                <div key={i} className="cb-icon-features__item">
+                    <div className="cb-icon-features__icon">{item.icon}</div>
+                    {item.title && <div className="cb-icon-features__title">{item.title}</div>}
+                    {item.text && <div className="cb-icon-features__text">{item.text}</div>}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function CountdownBlock({ data }) {
+    const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+
+    useEffect(() => {
+        if (!data.targetDate) return;
+        const target = new Date(data.targetDate).getTime();
+
+        const tick = () => {
+            const diff = Math.max(0, target - Date.now());
+            setTimeLeft({
+                days: Math.floor(diff / 86400000),
+                hours: Math.floor((diff % 86400000) / 3600000),
+                minutes: Math.floor((diff % 3600000) / 60000),
+                seconds: Math.floor((diff % 60000) / 1000),
+            });
+        };
+
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [data.targetDate]);
+
+    const pad = n => String(n).padStart(2, '0');
+    const style = data.style || 'default';
+
+    return (
+        <div className={`cb-countdown cb-countdown--${style}`}>
+            {data.title && <div className="cb-countdown__title">{data.title}</div>}
+            <div className="cb-countdown__boxes">
+                {[
+                    [timeLeft.days, 'Дней'],
+                    [timeLeft.hours, 'Часов'],
+                    [timeLeft.minutes, 'Минут'],
+                    [timeLeft.seconds, 'Секунд'],
+                ].map(([val, label], i) => (
+                    <div key={i} className="cb-countdown__box">
+                        <div className="cb-countdown__value">{pad(val)}</div>
+                        <div className="cb-countdown__label">{label}</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function TabsBlock({ data }) {
+    const [active, setActive] = useState(0);
+    const tabs = data.tabs || [];
+    if (!tabs.length) return null;
+
+    return (
+        <div className="cb-tabs">
+            <div className="cb-tabs__bar" role="tablist">
+                {tabs.map((tab, i) => (
+                    <button
+                        key={i}
+                        role="tab"
+                        className={`cb-tabs__tab${active === i ? ' cb-tabs__tab--active' : ''}`}
+                        onClick={() => setActive(i)}
+                    >
+                        {tab.title}
+                    </button>
+                ))}
+            </div>
+            <div
+                className="cb-tabs__content"
+                role="tabpanel"
+                dangerouslySetInnerHTML={{ __html: tabs[active]?.content || '' }}
+            />
+        </div>
+    );
+}
+
+function ImageCarouselBlock({ data }) {
+    const slides = data.slides || [];
+    const [current, setCurrent] = useState(0);
+
+    useEffect(() => {
+        if (!data.autoplay || slides.length <= 1) return;
+        const ms = (data.interval || 5) * 1000;
+        const id = setInterval(() => {
+            setCurrent(prev => (prev + 1) % slides.length);
+        }, ms);
+        return () => clearInterval(id);
+    }, [data.autoplay, data.interval, slides.length]);
+
+    if (!slides.length) return null;
+
+    return (
+        <div className="cb-carousel">
+            <div className="cb-carousel__viewport">
+                <img
+                    className="cb-carousel__image"
+                    src={slides[current]?.url}
+                    alt={slides[current]?.caption || ''}
+                    loading="lazy"
+                />
+                {slides.length > 1 && (
+                    <>
+                        <button
+                            className="cb-carousel__arrow cb-carousel__arrow--prev"
+                            onClick={() => setCurrent((current - 1 + slides.length) % slides.length)}
+                            aria-label="Назад"
+                        >‹</button>
+                        <button
+                            className="cb-carousel__arrow cb-carousel__arrow--next"
+                            onClick={() => setCurrent((current + 1) % slides.length)}
+                            aria-label="Вперёд"
+                        >›</button>
+                    </>
+                )}
+            </div>
+            {slides[current]?.caption && (
+                <div className="cb-carousel__caption">{slides[current].caption}</div>
+            )}
+            {slides.length > 1 && (
+                <div className="cb-carousel__dots">
+                    {slides.map((_, i) => (
+                        <button
+                            key={i}
+                            className={`cb-carousel__dot${i === current ? ' cb-carousel__dot--active' : ''}`}
+                            onClick={() => setCurrent(i)}
+                            aria-label={`Слайд ${i + 1}`}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
