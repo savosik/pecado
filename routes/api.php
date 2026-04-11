@@ -19,6 +19,9 @@ Route::get('/catalog/products', [CatalogApiController::class, 'products'])->name
 Route::get('/catalog/products/facets', [CatalogApiController::class, 'facets'])->name('api.catalog.products.facets');
 Route::get('/catalog/products/price-intervals', [CatalogApiController::class, 'priceIntervals'])->name('api.catalog.products.price-intervals');
 
+// Товары по массиву ID — для блока productCarousel в контенте
+Route::get('/products/by-ids', [\App\Http\Controllers\User\ProductByIdsController::class, '__invoke'])->name('api.products.by-ids');
+
 // QuickView — JSON-карточка товара
 Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])->name('api.products.show');
 
