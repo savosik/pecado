@@ -11,8 +11,8 @@
     --cb-muted: var(--chakra-colors-fg-muted);
     --cb-border: var(--chakra-colors-border);
     --cb-bg-subtle: var(--chakra-colors-bg-subtle);
-    --cb-accent: var(--chakra-colors-purple-500);
-    --cb-accent-light: var(--chakra-colors-purple-100);
+    --cb-accent: #9e1b32;
+    --cb-accent-light: #f5e0e4;
 
     font-size: 1rem;
     line-height: 1.8;
@@ -382,7 +382,7 @@
     border: 1px solid var(--cb-border);
 }
 .cb-cta--gradient {
-    background: linear-gradient(135deg, var(--chakra-colors-purple-500), var(--chakra-colors-pink-500));
+    background: linear-gradient(135deg, #9e1b32, #c2365a);
     border: none;
     color: #fff;
 }
@@ -411,7 +411,7 @@
 }
 .cb-cta--gradient .cb-cta__button {
     background: #fff;
-    color: var(--chakra-colors-purple-600);
+    color: #9e1b32;
 }
 .cb-cta__button:hover {
     opacity: 0.85;
