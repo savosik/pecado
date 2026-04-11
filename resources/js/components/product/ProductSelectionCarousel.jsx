@@ -115,39 +115,54 @@ export default function ProductSelectionTabs({ selections = [] }) {
                     >
                         {/* Мобильный баннер (на маленьких экранах) */}
                         {activeSelection.mobile_image && (
-                            <Image
-                                src={activeSelection.mobile_image}
-                                alt={activeSelection.name}
-                                w="100%"
-                                h={{ base: '120px', sm: '140px' }}
-                                objectFit="cover"
-                                loading="lazy"
+                            <Box
+                                css={{ aspectRatio: '3 / 2' }}
                                 display={{ base: 'block', md: 'none' }}
-                            />
+                                overflow="hidden"
+                            >
+                                <Image
+                                    src={activeSelection.mobile_image}
+                                    alt={activeSelection.name}
+                                    w="100%"
+                                    h="100%"
+                                    objectFit="cover"
+                                    loading="lazy"
+                                />
+                            </Box>
                         )}
                         {/* Десктопный баннер (на больших экранах) */}
                         {activeSelection.desktop_image && (
-                            <Image
-                                src={activeSelection.desktop_image}
-                                alt={activeSelection.name}
-                                w="100%"
-                                h={{ md: '140px', lg: '160px' }}
-                                objectFit="cover"
-                                loading="lazy"
+                            <Box
+                                css={{ aspectRatio: '8 / 3' }}
                                 display={{ base: activeSelection.mobile_image ? 'none' : 'block', md: 'block' }}
-                            />
+                                overflow="hidden"
+                            >
+                                <Image
+                                    src={activeSelection.desktop_image}
+                                    alt={activeSelection.name}
+                                    w="100%"
+                                    h="100%"
+                                    objectFit="cover"
+                                    loading="lazy"
+                                />
+                            </Box>
                         )}
                         {/* Fallback: если есть только мобильный, показываем его и на десктопе */}
                         {!activeSelection.desktop_image && activeSelection.mobile_image && (
-                            <Image
-                                src={activeSelection.mobile_image}
-                                alt={activeSelection.name}
-                                w="100%"
-                                h={{ md: '140px', lg: '160px' }}
-                                objectFit="cover"
-                                loading="lazy"
+                            <Box
+                                css={{ aspectRatio: '8 / 3' }}
                                 display={{ base: 'none', md: 'block' }}
-                            />
+                                overflow="hidden"
+                            >
+                                <Image
+                                    src={activeSelection.mobile_image}
+                                    alt={activeSelection.name}
+                                    w="100%"
+                                    h="100%"
+                                    objectFit="cover"
+                                    loading="lazy"
+                                />
+                            </Box>
                         )}
                     </Box>
                 </Box>

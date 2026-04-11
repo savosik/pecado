@@ -28,13 +28,21 @@ export default function NewsShow({ newsItem, seo, breadcrumbs }) {
             >
                 {/* Изображение */}
                 {newsItem.image && (
-                    <Image
-                        src={newsItem.image}
-                        alt={newsItem.title}
-                        w="100%"
-                        maxH="480px"
-                        objectFit="cover"
-                    />
+                    <Box
+                        position="relative"
+                        overflow="hidden"
+                        css={{
+                            aspectRatio: { base: '3 / 2', md: '8 / 3' },
+                        }}
+                    >
+                        <Image
+                            src={newsItem.image}
+                            alt={newsItem.title}
+                            w="100%"
+                            h="100%"
+                            objectFit="cover"
+                        />
+                    </Box>
                 )}
 
                 {/* Контент */}

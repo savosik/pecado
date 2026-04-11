@@ -216,7 +216,7 @@ export default function StoryCircles({ stories = [] }) {
                                         overflow="hidden"
                                         bg={{ base: 'white', _dark: 'gray.800' }}
                                         _dark={{ bg: 'gray.900' }}
-                                        css={{ aspectRatio: '143 / 255' }}
+                                        css={{ aspectRatio: '9 / 16' }}
                                     >
                                         {preview ? (
                                             <Image

@@ -211,7 +211,10 @@ export default function BannerSlider({ banners = [], autoPlayMs = 5000 }) {
             {/* Slides */}
             <Box
                 position="relative"
-                h={{ base: '200px', sm: '280px', md: '380px', lg: '460px' }}
+                h="auto"
+                css={{
+                    aspectRatio: { base: '16 / 9', md: '11 / 4' },
+                }}
             >
                 {banners.map((slide, i) => {
                     const position = getSlidePosition(i);

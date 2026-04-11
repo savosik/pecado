@@ -29,24 +29,34 @@ export default function PromotionShow({ promotion, seo, breadcrumbs }) {
             >
                 {/* Баннер */}
                 {promotion.image && (
-                    <Box>
-                        <Image
-                            src={promotion.image}
-                            alt={promotion.name}
-                            w="100%"
-                            maxH="480px"
-                            objectFit="cover"
+                    <Box position="relative" overflow="hidden">
+                        <Box
+                            css={{
+                                aspectRatio: { base: '3 / 2', md: '8 / 3' },
+                            }}
                             display={{ base: promotion.mobile_image ? 'none' : 'block', md: 'block' }}
-                        />
-                        {promotion.mobile_image && (
+                        >
                             <Image
-                                src={promotion.mobile_image}
+                                src={promotion.image}
                                 alt={promotion.name}
                                 w="100%"
-                                maxH="400px"
+                                h="100%"
                                 objectFit="cover"
-                                display={{ base: 'block', md: 'none' }}
                             />
+                        </Box>
+                        {promotion.mobile_image && (
+                            <Box
+                                css={{ aspectRatio: '3 / 2' }}
+                                display={{ base: 'block', md: 'none' }}
+                            >
+                                <Image
+                                    src={promotion.mobile_image}
+                                    alt={promotion.name}
+                                    w="100%"
+                                    h="100%"
+                                    objectFit="cover"
+                                />
+                            </Box>
                         )}
                     </Box>
                 )}
@@ -87,14 +97,19 @@ export default function PromotionShow({ promotion, seo, breadcrumbs }) {
                                 borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                                 _dark={{ borderColor: 'gray.700' }}
                             >
-                                <Image
-                                    src={item.url}
-                                    alt=""
-                                    w="100%"
-                                    h="200px"
-                                    objectFit="cover"
-                                    loading="lazy"
-                                />
+                                <Box
+                                    css={{ aspectRatio: '4 / 3' }}
+                                    overflow="hidden"
+                                >
+                                    <Image
+                                        src={item.url}
+                                        alt=""
+                                        w="100%"
+                                        h="100%"
+                                        objectFit="cover"
+                                        loading="lazy"
+                                    />
+                                </Box>
                             </Box>
                         ))}
                     </SimpleGrid>

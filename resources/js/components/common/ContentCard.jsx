@@ -34,7 +34,7 @@ export default function ContentCard({ title, excerpt, image, date, url, tags }) 
                 <Box
                     position="relative"
                     overflow="hidden"
-                    h={{ base: '180px', md: '200px' }}
+                    css={{ aspectRatio: '3 / 2' }}
                     _hover={{ '& img': { transform: 'scale(1.05)' } }}
                 >
                     <Image

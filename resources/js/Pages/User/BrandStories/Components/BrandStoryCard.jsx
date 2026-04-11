@@ -28,7 +28,7 @@ export default function BrandStoryCard({ item }) {
                 <Box
                     position="relative"
                     overflow="hidden"
-                    h={{ base: '200px', md: '240px' }}
+                    css={{ aspectRatio: '4 / 3' }}
                     _hover={{ '& img': { transform: 'scale(1.05)' } }}
                 >
                     <Image
