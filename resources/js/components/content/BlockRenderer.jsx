@@ -54,6 +54,17 @@ function Block({ block }) {
         case 'countdown':    return <CountdownBlock data={block.data} />;
         case 'tabs':         return <TabsBlock data={block.data} />;
         case 'imageCarousel': return <ImageCarouselBlock data={block.data} />;
+        case 'stats':        return <StatsBlock data={block.data} />;
+        case 'logoWall':     return <LogoWallBlock data={block.data} />;
+        case 'alertBanner':  return <AlertBannerBlock data={block.data} />;
+        case 'spacer':       return <SpacerBlock data={block.data} />;
+        case 'button':       return <ButtonBlock data={block.data} />;
+        case 'steps':        return <StepsBlock data={block.data} />;
+        case 'timeline':     return <TimelineBlock data={block.data} />;
+        case 'beforeAfter':  return <BeforeAfterBlock data={block.data} />;
+        case 'comparison':   return <ComparisonBlock data={block.data} />;
+        case 'pricingTable': return <PricingTableBlock data={block.data} />;
+        case 'map':          return <MapBlock data={block.data} />;
         default:             return null;
     }
 }
@@ -548,3 +559,220 @@ function ImageCarouselBlock({ data }) {
         </div>
     );
 }
+
+function StatsBlock({ data }) {
+    if (!data.items || !data.items.length) return null;
+    return (
+        <div className="cb-stats">
+            {data.items.map((item, i) => (
+                <div key={i} className="cb-stats__item">
+                    <div className="cb-stats__value">{item.value}</div>
+                    <div className="cb-stats__label">{item.label}</div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function LogoWallBlock({ data }) {
+    if (!data.logos || !data.logos.length) return null;
+    const isMarquee = data.marquee !== false;
+    
+    return (
+        <div className="cb-logowall">
+            {data.title && <h3 className="cb-logowall__title">{data.title}</h3>}
+            <div className={`cb-logowall__track ${isMarquee ? 'cb-logowall__track--marquee' : 'cb-logowall__track--grid'}`}>
+                {data.logos.map((logo, i) => (
+                    <img key={i} src={logo.url} alt="Logo" className="cb-logowall__img" loading="lazy" />
+                ))}
+                {isMarquee && data.logos.map((logo, i) => (
+                    <img key={`dup-${i}`} src={logo.url} alt="Logo" className="cb-logowall__img" loading="lazy" aria-hidden="true" />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function AlertBannerBlock({ data }) {
+    const style = data.style || 'promo';
+    return (
+        <div className={`cb-alert-banner cb-alert-banner--${style}`}>
+            <div className="cb-alert-banner__content">
+                <span className="cb-alert-banner__text">{data.text}</span>
+                {data.btnText && data.btnUrl && (
+                    <a href={data.btnUrl} className="cb-alert-banner__btn">{data.btnText}</a>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function SpacerBlock({ data }) {
+    const height = data.height || 40;
+    return <div style={{ height: `${height}px` }} aria-hidden="true"></div>;
+}
+
+function ButtonBlock({ data }) {
+    if (!data.url) return null;
+    const align = data.align || 'center';
+    const alignMap = { left: 'flex-start', center: 'center', right: 'flex-end' };
+    return (
+        <div className="cb-button-wrap" style={{ justifyContent: alignMap[align] }}>
+            <a href={data.url} className={`cb-btn cb-btn--${data.style || 'solid'}`}>
+                {data.text || 'Нажать'}
+            </a>
+        </div>
+    );
+}
+
+function StepsBlock({ data }) {
+    if (!data.steps || !data.steps.length) return null;
+    return (
+        <div className="cb-steps">
+            {data.steps.map((step, i) => (
+                <div key={i} className="cb-steps__item">
+                    <div className="cb-steps__num">{i + 1}</div>
+                    <div className="cb-steps__content">
+                        {step.title && <div className="cb-steps__title">{step.title}</div>}
+                        {step.text && <div className="cb-steps__text">{step.text}</div>}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function TimelineBlock({ data }) {
+    if (!data.events || !data.events.length) return null;
+    return (
+        <div className="cb-timeline">
+            {data.events.map((ev, i) => (
+                <div key={i} className="cb-timeline__item">
+                    <div className="cb-timeline__date">{ev.date}</div>
+                    <div className="cb-timeline__content">
+                        {ev.title && <div className="cb-timeline__title">{ev.title}</div>}
+                        {ev.text && <div className="cb-timeline__text">{ev.text}</div>}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function BeforeAfterBlock({ data }) {
+    const [sliderPos, setSliderPos] = useState(50);
+    const containerRef = useRef(null);
+
+    const handleMove = (e) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const clientX = e.clientX ?? (e.touches && e.touches[0].clientX);
+        if (clientX === undefined) return;
+        
+        let pos = ((clientX - rect.left) / rect.width) * 100;
+        pos = Math.max(0, Math.min(100, pos));
+        setSliderPos(pos);
+    };
+
+    const handleDown = () => {
+        const up = () => {
+            window.removeEventListener('mousemove', handleMove);
+            window.removeEventListener('mouseup', up);
+        };
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', up);
+    };
+
+    if (!data.beforeUrl || !data.afterUrl) return null;
+
+    return (
+        <div className="cb-before-after" ref={containerRef}>
+            <img src={data.afterUrl} alt="After" className="cb-before-after__img" />
+            <div className="cb-before-after__label cb-before-after__label--after">{data.afterLabel || 'После'}</div>
+            
+            <div className="cb-before-after__overlay" style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}>
+                <img src={data.beforeUrl} alt="Before" className="cb-before-after__img" />
+                <div className="cb-before-after__label cb-before-after__label--before">{data.beforeLabel || 'До'}</div>
+            </div>
+
+            <div 
+                className="cb-before-after__slider" 
+                style={{ left: `${sliderPos}%` }}
+                onMouseDown={handleDown}
+                onTouchMove={handleMove}
+            >
+                <div className="cb-before-after__handle">↔</div>
+            </div>
+        </div>
+    );
+}
+
+function ComparisonBlock({ data }) {
+    if (!data.rows || !data.rows.length) return null;
+    
+    const renderIcon = (type, text) => {
+        if (type === 'check') return <span className="cb-comp__icon cb-comp__icon--check">✓</span>;
+        if (type === 'cross') return <span className="cb-comp__icon cb-comp__icon--cross">✕</span>;
+        return <span className="cb-comp__text">{text}</span>;
+    };
+
+    return (
+        <div className="cb-comp-wrap">
+            <table className="cb-comp">
+                <thead>
+                    <tr>
+                        <th className="cb-comp__feature-th"></th>
+                        <th>{data.col1Title}</th>
+                        <th className="cb-comp__th--brand">{data.col2Title}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {data.rows.map((row, i) => (
+                        <tr key={i}>
+                            <td className="cb-comp__feature">{row.feature}</td>
+                            <td>{renderIcon(row.col1Icon, row.col1Text)}</td>
+                            <td className="cb-comp__td--brand">{renderIcon(row.col2Icon, row.col2Text)}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+}
+
+function PricingTableBlock({ data }) {
+    if (!data.plans || !data.plans.length) return null;
+    return (
+        <div className="cb-pricing">
+            {data.plans.map((plan, i) => (
+                <div key={i} className={`cb-pricing__card ${plan.isPopular ? 'cb-pricing__card--popular' : ''}`}>
+                    {plan.isPopular && <div className="cb-pricing__badge">Рекомендуем</div>}
+                    <h4 className="cb-pricing__title">{plan.title}</h4>
+                    <div className="cb-pricing__price">{plan.price}</div>
+                    
+                    <ul className="cb-pricing__features">
+                        {(plan.features || []).map((feat, j) => (
+                            <li key={j}>{feat}</li>
+                        ))}
+                    </ul>
+                    
+                    <a href={plan.btnUrl || '#'} className="cb-pricing__btn">
+                        {plan.btnText || 'Выбрать'}
+                    </a>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function MapBlock({ data }) {
+    if (!data.embedCode) return null;
+    return (
+        <div 
+            className="cb-map" 
+            style={{ height: `${data.height || 400}px` }} 
+            dangerouslySetInnerHTML={{ __html: data.embedCode }}
+        />
+    );
+}
+
