@@ -261,7 +261,7 @@
     .cb-columns--3 { grid-template-columns: 1fr; }
 }
 .cb-columns__item {
-    text-align: center;
+    text-align: justify;
     padding: 16px;
 }
 .cb-columns__icon {
