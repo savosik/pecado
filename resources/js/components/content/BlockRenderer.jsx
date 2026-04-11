@@ -1,6 +1,6 @@
 import '../../../css/blocks.css';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from '@inertiajs/react';
 import { Box } from '@chakra-ui/react';
 import ProductCard from '@/components/product/ProductCard';
