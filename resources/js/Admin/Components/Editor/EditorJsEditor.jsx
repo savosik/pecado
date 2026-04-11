@@ -70,6 +70,18 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     { default: Embed },
                     { default: InlineCode },
                     { default: Marker },
+                    // Кастомные инструменты
+                    { default: ColumnsTool },
+                    { default: ImageTextTool },
+                    { default: CallToActionTool },
+                    { default: GalleryTool },
+                    { default: FaqTool },
+                    { default: PullQuoteTool },
+                    { default: OpinionBoxTool },
+                    { default: ReviewsTool },
+                    { default: CoverImageTool },
+                    { default: PhotoMosaicTool },
+                    { default: ProductCarouselTool },
                 ] = await Promise.all([
                     import('@editorjs/editorjs'),
                     import('@editorjs/header'),
@@ -82,6 +94,18 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     import('@editorjs/embed'),
                     import('@editorjs/inline-code'),
                     import('@editorjs/marker'),
+                    // Кастомные инструменты
+                    import('./tools/ColumnsTool'),
+                    import('./tools/ImageTextTool'),
+                    import('./tools/CallToActionTool'),
+                    import('./tools/GalleryTool'),
+                    import('./tools/FaqTool'),
+                    import('./tools/PullQuoteTool'),
+                    import('./tools/OpinionBoxTool'),
+                    import('./tools/ReviewsTool'),
+                    import('./tools/CoverImageTool'),
+                    import('./tools/PhotoMosaicTool'),
+                    import('./tools/ProductCarouselTool'),
                 ]);
 
                 if (!isMounted || !containerRef.current) return;
@@ -156,6 +180,19 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                         },
                         inlineCode: { class: InlineCode },
                         marker: { class: Marker },
+
+                        // ======= Кастомные инструменты =======
+                        columns: { class: ColumnsTool },
+                        imageText: { class: ImageTextTool },
+                        callToAction: { class: CallToActionTool },
+                        gallery: { class: GalleryTool },
+                        faq: { class: FaqTool },
+                        pullQuote: { class: PullQuoteTool },
+                        opinionBox: { class: OpinionBoxTool },
+                        reviews: { class: ReviewsTool },
+                        coverImage: { class: CoverImageTool },
+                        photoMosaic: { class: PhotoMosaicTool },
+                        productCarousel: { class: ProductCarouselTool },
                     },
 
                     i18n: {
