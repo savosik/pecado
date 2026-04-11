@@ -65,6 +65,7 @@ function Block({ block }) {
         case 'comparison':   return <ComparisonBlock data={block.data} />;
         case 'pricingTable': return <PricingTableBlock data={block.data} />;
         case 'map':          return <MapBlock data={block.data} />;
+        case 'team':         return <TeamBlock data={block.data} />;
         default:             return null;
     }
 }
@@ -773,6 +774,27 @@ function MapBlock({ data }) {
             style={{ height: `${data.height || 400}px` }} 
             dangerouslySetInnerHTML={{ __html: data.embedCode }}
         />
+    );
+}
+
+function TeamBlock({ data }) {
+    const cols = data.columns || '3';
+    if (!data.members || !data.members.length) return null;
+    return (
+        <div className={`cb-team cb-team--${cols}`}>
+            {data.members.map((m, i) => (
+                <div key={i} className="cb-team__card">
+                    {m.photo ? (
+                        <img src={m.photo} alt={m.name} className="cb-team__photo" loading="lazy" />
+                    ) : (
+                        <div className="cb-team__photo-placeholder">👤</div>
+                    )}
+                    {m.name && <div className="cb-team__name">{m.name}</div>}
+                    {m.role && <div className="cb-team__role">{m.role}</div>}
+                    {m.bio && <div className="cb-team__bio">{m.bio}</div>}
+                </div>
+            ))}
+        </div>
     );
 }
 

@@ -97,6 +97,7 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     { default: ComparisonTool },
                     { default: PricingTableTool },
                     { default: MapTool },
+                    { default: TeamTool },
                 ] = await Promise.all([
                     import('@editorjs/editorjs'),
                     import('@editorjs/header'),
@@ -136,6 +137,7 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     import('./tools/ComparisonTool'),
                     import('./tools/PricingTableTool'),
                     import('./tools/MapTool'),
+                    import('./tools/TeamTool'),
                 ]);
 
                 if (!isMounted || !containerRef.current) return;
@@ -238,6 +240,7 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                         comparison: { class: ComparisonTool },
                         pricingTable: { class: PricingTableTool },
                         map: { class: MapTool },
+                        team: { class: TeamTool },
                     },
 
                     i18n: {
