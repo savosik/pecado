@@ -36,8 +36,9 @@ function Block({ block }) {
         case 'infoBox':      return <InfoBoxBlock data={block.data} />;
         case 'embed':        return <EmbedBlock data={block.data} />;
         case 'imageText':    return <ImageTextBlock data={block.data} />;
-        case 'twoColumns':   return <ColumnsBlock data={block.data} count={2} />;
-        case 'threeColumns': return <ColumnsBlock data={block.data} count={3} />;
+        case 'columns':      return <ColumnsBlock data={block.data} />;
+        case 'twoColumns':   return <ColumnsBlock data={{...block.data, layout: '2'}} />;
+        case 'threeColumns': return <ColumnsBlock data={{...block.data, layout: '3'}} />;
         case 'productCarousel': return <ProductCarouselBlock data={block.data} />;
         case 'gallery':      return <GalleryBlock data={block.data} />;
         case 'faq':          return <FaqBlock data={block.data} />;
@@ -114,7 +115,12 @@ function QuoteBlock({ data }) {
 }
 
 function PullQuoteBlock({ data }) {
-    return <div className="cb-pull-quote">{data.text}</div>;
+    return (
+        <div className="cb-pull-quote">
+            <div className="cb-pull-quote__text">{data.text}</div>
+            {data.caption && <div className="cb-pull-quote__caption">{data.caption}</div>}
+        </div>
+    );
 }
 
 function DelimiterBlock() {
@@ -182,9 +188,10 @@ function EmbedBlock({ data }) {
 
 function ImageTextBlock({ data }) {
     const isRight = data.imagePosition === 'right';
+    const imgSrc = data.imageUrl || data.image;
     return (
         <div className={`cb-image-text${isRight ? ' cb-image-text--reverse' : ''}`}>
-            <img className="cb-image-text__image" src={data.image} alt={data.imageAlt || ''} loading="lazy" />
+            <img className="cb-image-text__image" src={imgSrc} alt={data.imageAlt || ''} loading="lazy" />
             <div className="cb-image-text__content">
                 {data.title && <div className="cb-image-text__title">{data.title}</div>}
                 <div className="cb-image-text__text" dangerouslySetInnerHTML={{ __html: data.text }} />
@@ -193,16 +200,24 @@ function ImageTextBlock({ data }) {
     );
 }
 
-function ColumnsBlock({ data, count }) {
+function ColumnsBlock({ data }) {
+    const count = data.layout || '2';
     return (
         <div className={`cb-columns cb-columns--${count}`}>
-            {(data.columns || []).map((col, i) => (
-                <div key={i} className="cb-columns__item">
-                    {col.icon && <div className="cb-columns__icon">{col.icon}</div>}
-                    {col.title && <div className="cb-columns__title">{col.title}</div>}
-                    {col.text && <div className="cb-columns__text">{col.text}</div>}
-                </div>
-            ))}
+            {(data.columns || []).map((col, i) => {
+                // Поддержка как строк (из Tool), так и объектов (из AI)
+                const isString = typeof col === 'string';
+                return (
+                    <div key={i} className="cb-columns__item">
+                        {!isString && col.icon && <div className="cb-columns__icon">{col.icon}</div>}
+                        {!isString && col.title && <div className="cb-columns__title">{col.title}</div>}
+                        <div
+                            className="cb-columns__text"
+                            dangerouslySetInnerHTML={{ __html: isString ? col : (col.text || '') }}
+                        />
+                    </div>
+                );
+            })}
         </div>
     );
 }
@@ -291,28 +306,30 @@ function CallToActionBlock({ data }) {
 function ReviewsBlock({ data }) {
     return (
         <div className="cb-reviews">
-            {(data.items || []).map((review, i) => (
-                <div key={i} className="cb-review">
-                    {review.stars && (
+            {(data.items || []).map((review, i) => {
+                const stars = review.rating || review.stars || 5;
+                return (
+                    <div key={i} className="cb-review">
                         <div className="cb-review__stars">
-                            {'★'.repeat(review.stars)}{'☆'.repeat(5 - review.stars)}
+                            {'★'.repeat(stars)}{'☆'.repeat(5 - stars)}
                         </div>
-                    )}
-                    <div className="cb-review__text" dangerouslySetInnerHTML={{ __html: review.text }} />
-                    <div className="cb-review__author">
-                        {review.author}{review.city ? ` · ${review.city}` : ''}
+                        <div className="cb-review__text" dangerouslySetInnerHTML={{ __html: review.text }} />
+                        <div className="cb-review__author">
+                            {review.author}{review.city ? ` · ${review.city}` : ''}
+                        </div>
                     </div>
-                </div>
-            ))}
+                );
+            })}
         </div>
     );
 }
 
 function CoverImageBlock({ data }) {
+    const imgSrc = data.url || data.image;
     return (
         <div className="cb-cover">
-            <img className="cb-cover__image" src={data.image} alt={data.title || ''} />
-            <div className="cb-cover__overlay">
+            <img className="cb-cover__image" src={imgSrc} alt={data.title || ''} />
+            <div className="cb-cover__overlay" style={data.overlayColor ? {backgroundColor: data.overlayColor} : {}}>
                 {data.label && <div className="cb-cover__label">{data.label}</div>}
                 {data.title && <h1 className="cb-cover__title">{data.title}</h1>}
                 {data.subtitle && <p className="cb-cover__subtitle">{data.subtitle}</p>}
@@ -339,8 +356,13 @@ function NumberedListBlock({ data }) {
 function OpinionBoxBlock({ data }) {
     return (
         <div className="cb-opinion">
-            <div className="cb-opinion__tag">{data.tag || '💬 Мнение эксперта'}</div>
-            {data.title && <div className="cb-opinion__title">{data.title}</div>}
+            <div className="cb-opinion__header">
+                {data.photo && <img className="cb-opinion__photo" src={data.photo} alt={data.name || ''} />}
+                <div>
+                    {data.name && <div className="cb-opinion__name">{data.name}</div>}
+                    {data.title && <div className="cb-opinion__title">{data.title}</div>}
+                </div>
+            </div>
             <div className="cb-opinion__text" dangerouslySetInnerHTML={{ __html: data.text }} />
         </div>
     );
