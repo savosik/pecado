@@ -3,7 +3,7 @@ import UserLayout from '../UserLayout';
 import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageHeader from '@/components/common/PageHeader';
-import { Prose } from '@/components/ui/prose';
+import ContentRenderer from '@/components/content/ContentRenderer';
 import { formatDate } from '@/utils/formatDate';
 
 /**
@@ -71,12 +71,8 @@ export default function ArticleShow({ article, seo, breadcrumbs }) {
                         )}
                     </HStack>
 
-                    {/* HTML-контент */}
-                    <Prose
-                        size="lg"
-                        maxW="none"
-                        dangerouslySetInnerHTML={{ __html: article.content }}
-                    />
+                    {/* Контент (JSON-блоки или HTML) */}
+                    <ContentRenderer content={article.content} />
                 </Box>
             </Box>
         </UserLayout>

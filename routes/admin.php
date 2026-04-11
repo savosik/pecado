@@ -19,6 +19,10 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Dashboard — доступен всем с ролью
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
+    // Editor.js — загрузка изображений
+    Route::post('/api/upload-image', [\App\Http\Controllers\Admin\EditorUploadController::class, 'uploadByFile'])->name('api.upload-image');
+    Route::post('/api/fetch-url', [\App\Http\Controllers\Admin\EditorUploadController::class, 'fetchByUrl'])->name('api.fetch-url');
+
     // =====================================================================
     // Каталог
     // =====================================================================

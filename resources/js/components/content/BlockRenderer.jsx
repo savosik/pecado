@@ -1,0 +1,374 @@
+import '../../../css/blocks.css';
+
+import { useState, useEffect } from 'react';
+import { Link } from '@inertiajs/react';
+import { Box } from '@chakra-ui/react';
+import ProductCard from '@/components/product/ProductCard';
+
+/**
+ * BlockRenderer — рендерер JSON-блоков контента.
+ * Принимает массив блоков из Editor.js и рендерит каждый
+ * соответствующим React-компонентом с чистыми CSS-стилями.
+ */
+export default function BlockRenderer({ blocks = [] }) {
+    if (!blocks || !blocks.length) return null;
+
+    return (
+        <div className="content-blocks">
+            {blocks.map((block, i) => (
+                <Block key={`${block.type}-${i}`} block={block} />
+            ))}
+        </div>
+    );
+}
+
+function Block({ block }) {
+    switch (block.type) {
+        case 'header':       return <HeaderBlock data={block.data} />;
+        case 'paragraph':    return <ParagraphBlock data={block.data} />;
+        case 'image':        return <ImageBlock data={block.data} />;
+        case 'list':         return <ListBlock data={block.data} />;
+        case 'quote':        return <QuoteBlock data={block.data} />;
+        case 'pullQuote':    return <PullQuoteBlock data={block.data} />;
+        case 'delimiter':    return <DelimiterBlock />;
+        case 'table':        return <TableBlock data={block.data} />;
+        case 'warning':
+        case 'infoBox':      return <InfoBoxBlock data={block.data} />;
+        case 'embed':        return <EmbedBlock data={block.data} />;
+        case 'imageText':    return <ImageTextBlock data={block.data} />;
+        case 'twoColumns':   return <ColumnsBlock data={block.data} count={2} />;
+        case 'threeColumns': return <ColumnsBlock data={block.data} count={3} />;
+        case 'productCarousel': return <ProductCarouselBlock data={block.data} />;
+        case 'gallery':      return <GalleryBlock data={block.data} />;
+        case 'faq':          return <FaqBlock data={block.data} />;
+        case 'callToAction': return <CallToActionBlock data={block.data} />;
+        case 'reviews':      return <ReviewsBlock data={block.data} />;
+        case 'coverImage':   return <CoverImageBlock data={block.data} />;
+        case 'numberedList': return <NumberedListBlock data={block.data} />;
+        case 'opinionBox':   return <OpinionBoxBlock data={block.data} />;
+        case 'endmark':      return <EndmarkBlock data={block.data} />;
+        case 'photoMosaic':  return <PhotoMosaicBlock data={block.data} />;
+        case 'twoColumnText': return <TwoColumnTextBlock data={block.data} />;
+        default:             return null;
+    }
+}
+
+/* ─────────────────────────────────────────
+   Базовые блоки
+   ───────────────────────────────────────── */
+
+function HeaderBlock({ data }) {
+    const Tag = `h${data.level || 2}`;
+    return <Tag className={`cb-header cb-header--${data.level || 2}`}>{data.text}</Tag>;
+}
+
+function ParagraphBlock({ data }) {
+    return (
+        <p
+            className={`cb-paragraph${data.dropCap ? ' cb-paragraph--drop-cap' : ''}`}
+            dangerouslySetInnerHTML={{ __html: data.text }}
+        />
+    );
+}
+
+function ImageBlock({ data }) {
+    const cls = [
+        'cb-image',
+        data.stretched && 'cb-image--stretched',
+        data.withBorder && 'cb-image--bordered',
+    ].filter(Boolean).join(' ');
+
+    return (
+        <figure className={cls}>
+            <img
+                className="cb-image__picture"
+                src={data.url || data.file?.url}
+                alt={data.alt || data.caption || ''}
+                loading="lazy"
+            />
+            {data.caption && (
+                <figcaption className="cb-image__caption">{data.caption}</figcaption>
+            )}
+        </figure>
+    );
+}
+
+function ListBlock({ data }) {
+    const Tag = data.style === 'ordered' ? 'ol' : 'ul';
+    return (
+        <Tag className={`cb-list cb-list--${data.style || 'unordered'}`}>
+            {(data.items || []).map((item, i) => (
+                <li key={i} dangerouslySetInnerHTML={{ __html: typeof item === 'string' ? item : item.content || '' }} />
+            ))}
+        </Tag>
+    );
+}
+
+function QuoteBlock({ data }) {
+    return (
+        <blockquote className="cb-quote">
+            <div className="cb-quote__text" dangerouslySetInnerHTML={{ __html: data.text }} />
+            {data.caption && <cite className="cb-quote__caption">{data.caption}</cite>}
+        </blockquote>
+    );
+}
+
+function PullQuoteBlock({ data }) {
+    return <div className="cb-pull-quote">{data.text}</div>;
+}
+
+function DelimiterBlock() {
+    return <div className="cb-delimiter">***</div>;
+}
+
+function TableBlock({ data }) {
+    const rows = data.content || [];
+    if (!rows.length) return null;
+
+    return (
+        <table className="cb-table">
+            {data.withHeadings && rows.length > 0 && (
+                <thead>
+                    <tr>
+                        {rows[0].map((cell, ci) => (
+                            <th key={ci} dangerouslySetInnerHTML={{ __html: cell }} />
+                        ))}
+                    </tr>
+                </thead>
+            )}
+            <tbody>
+                {rows.slice(data.withHeadings ? 1 : 0).map((row, ri) => (
+                    <tr key={ri}>
+                        {row.map((cell, ci) => (
+                            <td key={ci} dangerouslySetInnerHTML={{ __html: cell }} />
+                        ))}
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
+function InfoBoxBlock({ data }) {
+    return (
+        <div className="cb-info-box">
+            {data.title && <div className="cb-info-box__title">{data.title}</div>}
+            <div className="cb-info-box__message" dangerouslySetInnerHTML={{ __html: data.message || data.text || '' }} />
+        </div>
+    );
+}
+
+function EmbedBlock({ data }) {
+    let src = data.source || data.embed || '';
+    // YouTube embed URL
+    if (data.service === 'youtube' && src.includes('watch')) {
+        const id = new URL(src).searchParams.get('v');
+        if (id) src = `https://www.youtube.com/embed/${id}`;
+    }
+
+    return (
+        <div className="cb-embed">
+            <div className="cb-embed__wrapper">
+                <iframe src={src} allowFullScreen loading="lazy" title={data.caption || 'Видео'} />
+            </div>
+            {data.caption && <div className="cb-embed__caption">{data.caption}</div>}
+        </div>
+    );
+}
+
+/* ─────────────────────────────────────────
+   Кастомные блоки
+   ───────────────────────────────────────── */
+
+function ImageTextBlock({ data }) {
+    const isRight = data.imagePosition === 'right';
+    return (
+        <div className={`cb-image-text${isRight ? ' cb-image-text--reverse' : ''}`}>
+            <img className="cb-image-text__image" src={data.image} alt={data.imageAlt || ''} loading="lazy" />
+            <div className="cb-image-text__content">
+                {data.title && <div className="cb-image-text__title">{data.title}</div>}
+                <div className="cb-image-text__text" dangerouslySetInnerHTML={{ __html: data.text }} />
+            </div>
+        </div>
+    );
+}
+
+function ColumnsBlock({ data, count }) {
+    return (
+        <div className={`cb-columns cb-columns--${count}`}>
+            {(data.columns || []).map((col, i) => (
+                <div key={i} className="cb-columns__item">
+                    {col.icon && <div className="cb-columns__icon">{col.icon}</div>}
+                    {col.title && <div className="cb-columns__title">{col.title}</div>}
+                    {col.text && <div className="cb-columns__text">{col.text}</div>}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function ProductCarouselBlock({ data }) {
+    const [products, setProducts] = useState([]);
+
+    useEffect(() => {
+        if (!data.productIds?.length && !data.selectionSlug) return;
+
+        const params = data.productIds?.length
+            ? `?ids=${data.productIds.join(',')}`
+            : `?selection=${data.selectionSlug}`;
+
+        fetch(`/api/products/by-ids${params}`)
+            .then(r => r.json())
+            .then(res => setProducts(Array.isArray(res) ? res : res.data || []))
+            .catch(() => {});
+    }, [data.productIds, data.selectionSlug]);
+
+    if (!products.length && !data.productIds?.length) return null;
+
+    return (
+        <div className="cb-products">
+            {data.title && <div className="cb-products__title">{data.title}</div>}
+            <div className="cb-products__grid">
+                {products.map(product => (
+                    <ProductCard key={product.id} product={product} />
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function GalleryBlock({ data }) {
+    const cols = data.columns || 3;
+    return (
+        <div className={`cb-gallery cb-gallery--${cols}`}>
+            {(data.images || []).map((img, i) => (
+                <div key={i} className="cb-gallery__item">
+                    <img className="cb-gallery__image" src={img.url} alt={img.alt || ''} loading="lazy" />
+                    {img.caption && <div className="cb-gallery__caption">{img.caption}</div>}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function FaqBlock({ data }) {
+    const [openIndex, setOpenIndex] = useState(null);
+
+    return (
+        <div className="cb-faq">
+            {(data.items || []).map((item, i) => (
+                <div key={i} className={`cb-faq__item${openIndex === i ? ' cb-faq__item--open' : ''}`}>
+                    <button
+                        className="cb-faq__question"
+                        onClick={() => setOpenIndex(openIndex === i ? null : i)}
+                    >
+                        <span>{item.question}</span>
+                        <span className="cb-faq__chevron">▼</span>
+                    </button>
+                    {openIndex === i && (
+                        <div className="cb-faq__answer" dangerouslySetInnerHTML={{ __html: item.answer }} />
+                    )}
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function CallToActionBlock({ data }) {
+    return (
+        <div className={`cb-cta${data.style === 'gradient' ? ' cb-cta--gradient' : ''}`}>
+            {data.title && <div className="cb-cta__title">{data.title}</div>}
+            {data.text && <div className="cb-cta__text">{data.text}</div>}
+            {data.buttonText && (
+                <Link href={data.buttonUrl || '#'} className="cb-cta__button">
+                    {data.buttonText}
+                </Link>
+            )}
+        </div>
+    );
+}
+
+function ReviewsBlock({ data }) {
+    return (
+        <div className="cb-reviews">
+            {(data.items || []).map((review, i) => (
+                <div key={i} className="cb-review">
+                    {review.stars && (
+                        <div className="cb-review__stars">
+                            {'★'.repeat(review.stars)}{'☆'.repeat(5 - review.stars)}
+                        </div>
+                    )}
+                    <div className="cb-review__text" dangerouslySetInnerHTML={{ __html: review.text }} />
+                    <div className="cb-review__author">
+                        {review.author}{review.city ? ` · ${review.city}` : ''}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function CoverImageBlock({ data }) {
+    return (
+        <div className="cb-cover">
+            <img className="cb-cover__image" src={data.image} alt={data.title || ''} />
+            <div className="cb-cover__overlay">
+                {data.label && <div className="cb-cover__label">{data.label}</div>}
+                {data.title && <h1 className="cb-cover__title">{data.title}</h1>}
+                {data.subtitle && <p className="cb-cover__subtitle">{data.subtitle}</p>}
+            </div>
+        </div>
+    );
+}
+
+function NumberedListBlock({ data }) {
+    return (
+        <ol className="cb-numbered-list">
+            {(data.items || []).map((item, i) => (
+                <li key={i} className="cb-numbered-list__item">
+                    <div>
+                        {item.title && <div className="cb-numbered-list__title">{item.title}</div>}
+                        <div className="cb-numbered-list__text">{item.text}</div>
+                    </div>
+                </li>
+            ))}
+        </ol>
+    );
+}
+
+function OpinionBoxBlock({ data }) {
+    return (
+        <div className="cb-opinion">
+            <div className="cb-opinion__tag">{data.tag || '💬 Мнение эксперта'}</div>
+            {data.title && <div className="cb-opinion__title">{data.title}</div>}
+            <div className="cb-opinion__text" dangerouslySetInnerHTML={{ __html: data.text }} />
+        </div>
+    );
+}
+
+function EndmarkBlock({ data }) {
+    return <div className="cb-endmark">— {data.text} —</div>;
+}
+
+function PhotoMosaicBlock({ data }) {
+    const images = data.images || [];
+    return (
+        <div className="cb-mosaic">
+            {images.map((img, i) => (
+                <div key={i} className={`cb-mosaic__item${img.span === 'rows' ? ' cb-mosaic__item--span' : ''}`}>
+                    <img className="cb-mosaic__image" src={img.url} alt={img.alt || ''} loading="lazy" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+function TwoColumnTextBlock({ data }) {
+    return (
+        <div className="cb-two-col-text">
+            {(data.paragraphs || []).map((p, i) => (
+                <p key={i} dangerouslySetInnerHTML={{ __html: p }} />
+            ))}
+        </div>
+    );
+}

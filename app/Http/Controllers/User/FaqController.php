@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Faq;
+use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -62,7 +63,7 @@ class FaqController extends Controller
                 'name' => $faq->title,
                 'acceptedAnswer' => [
                     '@type' => 'Answer',
-                    'text' => strip_tags($faq->content),
+                    'text' => ContentHelper::extractText($faq->content, 500),
                 ],
             ])->values()->all(),
         ];

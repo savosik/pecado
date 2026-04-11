@@ -2,7 +2,7 @@ import { Box } from '@chakra-ui/react';
 import UserLayout from '../UserLayout';
 import SeoHead from '@/components/common/SeoHead';
 import PageHeader from '@/components/common/PageHeader';
-import { Prose } from '@/components/ui/prose';
+import ContentRenderer from '@/components/content/ContentRenderer';
 
 /**
  * CMS-страница — рендер произвольного HTML-контента.
@@ -23,11 +23,7 @@ export default function PageShow({ page, seo }) {
                 borderRadius="sm"
                 p={{ base: '5', md: '8' }}
             >
-                <Prose
-                    size="lg"
-                    maxW="none"
-                    dangerouslySetInnerHTML={{ __html: page.content }}
-                />
+                <ContentRenderer content={page.content} />
             </Box>
         </UserLayout>
     );

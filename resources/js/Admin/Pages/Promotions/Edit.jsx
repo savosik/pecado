@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector, MarkdownEditor, RegionSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector, EditorJsEditor, RegionSelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -146,7 +146,7 @@ export default function Edit({ promotion, regions = [] }) {
                             </FormField>
 
                             <FormField label="Описание акции" error={errors.description}>
-                                <MarkdownEditor
+                                <EditorJsEditor
                                     value={data.description}
                                     onChange={(value) => setData('description', value)}
                                     placeholder="Подробное описание акции..."

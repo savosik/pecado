@@ -3,7 +3,7 @@ import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, EditorJsEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
 import { Switch } from '@/components/ui/switch';
@@ -521,7 +521,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                         error={errors.short_description}
                                         helperText="Краткое описание для карточки товара"
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.short_description}
                                             onChange={(val) => setData('short_description', val)}
                                             placeholder="Введите краткое описание товара"
@@ -535,7 +535,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                         error={errors.description}
                                         helperText="Подробное описание товара"
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.description}
                                             onChange={handleDescriptionChange}
                                             placeholder="Введите полное описание товара"

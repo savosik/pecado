@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Page;
+use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -20,9 +21,11 @@ class PageController extends Controller
             ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
-        // HTML-санитизация — оставляем только безопасные теги
+        // JSON-контент передаём как есть, HTML — санитизируем
+        $content = $page->content;
+        $isJson = is_string($content) && str_starts_with(trim($content), '{');
         $allowedTags = '<p><br><h1><h2><h3><h4><h5><h6><ul><ol><li><a><strong><b><em><i><img><table><thead><tbody><tr><td><th><blockquote><hr><figure><figcaption><code><pre><span><div><section><sub><sup>';
-        $sanitizedContent = strip_tags($page->content, $allowedTags);
+        $sanitizedContent = $isJson ? $content : strip_tags($content, $allowedTags);
 
         return Inertia::render('User/Pages/Show', [
             'page' => [
@@ -33,7 +36,7 @@ class PageController extends Controller
             ],
             'seo' => [
                 'title'       => $page->meta_title ?: $page->title,
-                'description' => $page->meta_description ?: mb_substr(strip_tags($page->content), 0, 160),
+                'description' => $page->meta_description ?: ContentHelper::extractText($page->content, 160),
                 'url'         => $request->url(),
                 'type'        => 'article',
             ],

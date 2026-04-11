@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields, MarkdownEditor, RegionSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, TagSelector, ContentMediaFields, EditorJsEditor, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Textarea, Stack, SimpleGrid, NativeSelectRoot, NativeSelectField } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
@@ -126,7 +126,7 @@ export default function Create({ brands, regions = [] }) {
                             </FormField>
 
                             <FormField label="Полное описание" error={errors.detailed_description} required>
-                                <MarkdownEditor
+                                <EditorJsEditor
                                     value={data.detailed_description}
                                     onChange={(value) => setData('detailed_description', value)}
                                     placeholder="Введите полное описание статьи о бренде..."

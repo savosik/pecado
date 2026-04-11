@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, EditorJsEditor } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 import { Switch } from '@/components/ui/switch';
@@ -213,7 +213,7 @@ export default function Edit({ brand, brands, categories }) {
                                         label="Краткое описание"
                                         error={errors.short_description}
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.short_description}
                                             onChange={(val) => setData('short_description', val)}
                                             placeholder="Введите краткое описание"
@@ -226,7 +226,7 @@ export default function Edit({ brand, brands, categories }) {
                                         label="Полное описание"
                                         error={errors.description}
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.description}
                                             onChange={(val) => setData('description', val)}
                                             placeholder="Введите полное описание"

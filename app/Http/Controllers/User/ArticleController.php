@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Article;
+use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -42,7 +43,7 @@ class ArticleController extends Controller
                 'id' => $item->id,
                 'title' => $item->title,
                 'slug' => $item->slug,
-                'excerpt' => $item->short_description ?: Str::limit(strip_tags($item->detailed_description), 160),
+                'excerpt' => $item->short_description ?: ContentHelper::extractText($item->detailed_description, 160),
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'published_at' => $item->published_at?->toISOString(),
                 'tags' => $item->tags->pluck('name')->toArray(),
@@ -81,7 +82,7 @@ class ArticleController extends Controller
         $sanitizedContent = $article->detailed_description;
 
         $descriptionText = $article->meta_description
-            ?: ($article->short_description ?: Str::limit(strip_tags($article->detailed_description), 160));
+            ?: ($article->short_description ?: ContentHelper::extractText($article->detailed_description, 160));
 
         // Structured data (Article)
         $structuredData = [

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Promotion;
 use App\Models\Product;
+use App\Helpers\ContentHelper;
 use App\Services\Product\ProductQueryService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -29,7 +30,7 @@ class PromotionController extends Controller
                 'id' => $item->id,
                 'name' => $item->name,
                 'slug' => $item->slug,
-                'excerpt' => $item->description ? Str::limit(strip_tags($item->description), 160) : null,
+                'excerpt' => $item->description ? ContentHelper::extractText($item->description, 160) : null,
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'created_at' => $item->created_at?->toISOString(),
             ];
@@ -80,10 +81,13 @@ class PromotionController extends Controller
             $productItems = ProductQueryService::convertProductsPrices($productItems);
         }
 
-        $sanitizedContent = clean($promotion->description);
+        // JSON-контент передаём как есть, HTML — санитизируем
+        $content = $promotion->description;
+        $isJson = is_string($content) && str_starts_with(trim($content ?: ''), '{');
+        $sanitizedContent = $isJson ? $content : clean($content);
 
         $descriptionText = $promotion->meta_description
-            ?: ($promotion->description ? Str::limit(strip_tags($promotion->description), 160) : '');
+            ?: ($promotion->description ? ContentHelper::extractText($promotion->description, 160) : '');
 
         $detailImage = $promotion->getFirstMediaUrl('detail-item-desktop');
         $detailMobileImage = $promotion->getFirstMediaUrl('detail-item-mobile');

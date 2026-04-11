@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, MarkdownEditor, RegionSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, EditorJsEditor, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Stack, Flex } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
@@ -62,7 +62,7 @@ export default function Create({ regions = [] }) {
                             </FormField>
 
                             <FormField label="Ответ" error={errors.content} required>
-                                <MarkdownEditor
+                                <EditorJsEditor
                                     value={data.content}
                                     onChange={(value) => setData('content', value)}
                                     placeholder="Введите ответ на вопрос..."

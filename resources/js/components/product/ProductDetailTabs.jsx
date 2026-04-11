@@ -3,6 +3,7 @@ import DOMPurify from 'dompurify';
 import { Box, Flex, Text, Button, Table } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
 import { LuDownload, LuFileText } from 'react-icons/lu';
+import ContentRenderer from '@/components/content/ContentRenderer';
 
 /**
  * ProductDetailTabs — табы с описанием, характеристиками, размерной сеткой, сертификатами и медиа.
@@ -203,16 +204,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
             {hasDesc && (
                 <Tabs.Content value="description" pt="4">
                     <Box p={{ base: '3', md: '5' }} rounded="sm">
-                        <Box
-                            fontSize="md" lineHeight="relaxed"
-                            dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
-                            css={{
-                                '& p': { marginBottom: '0.75em' },
-                                '& ul, & ol': { paddingLeft: '1.5em', marginBottom: '0.75em' },
-                                '& h2, & h3': { fontWeight: '600', marginTop: '1em', marginBottom: '0.5em' },
-                                '& a': { color: 'var(--chakra-colors-pecado-500)', textDecoration: 'underline' },
-                            }}
-                        />
+                        <ContentRenderer content={description} />
                     </Box>
                 </Tabs.Content>
             )}

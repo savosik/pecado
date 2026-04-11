@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\BrandStory;
+use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -42,7 +43,7 @@ class BrandStoryController extends Controller
                 'id' => $item->id,
                 'title' => $item->title,
                 'slug' => $item->slug,
-                'excerpt' => $item->short_description ?: Str::limit(strip_tags($item->detailed_description), 160),
+                'excerpt' => $item->short_description ?: ContentHelper::extractText($item->detailed_description, 160),
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'published_at' => $item->published_at?->toISOString(),
                 'tags' => $item->tags->pluck('name')->toArray(),
@@ -82,11 +83,13 @@ class BrandStoryController extends Controller
             ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
-        // HTML-санитизация через HTMLPurifier
-        $sanitizedContent = clean($brandStory->detailed_description);
+        // JSON-контент передаём как есть, HTML — санитизируем
+        $content = $brandStory->detailed_description;
+        $isJson = is_string($content) && str_starts_with(trim($content), '{');
+        $sanitizedContent = $isJson ? $content : clean($content);
 
         $descriptionText = $brandStory->meta_description
-            ?: ($brandStory->short_description ?: Str::limit(strip_tags($brandStory->detailed_description), 160));
+            ?: ($brandStory->short_description ?: ContentHelper::extractText($brandStory->detailed_description, 160));
 
         // Structured data (Article)
         $structuredData = [

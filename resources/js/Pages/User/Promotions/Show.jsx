@@ -4,7 +4,7 @@ import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageHeader from '@/components/common/PageHeader';
 import ProductCard from '@/components/product/ProductCard';
-import { Prose } from '@/components/ui/prose';
+import ContentRenderer from '@/components/content/ContentRenderer';
 import { formatDate } from '@/utils/formatDate';
 
 /**
@@ -70,13 +70,9 @@ export default function PromotionShow({ promotion, seo, breadcrumbs }) {
                         </Text>
                     )}
 
-                    {/* HTML-контент (описание) */}
+                    {/* Контент (JSON-блоки или HTML) */}
                     {promotion.content && (
-                        <Prose
-                            size="lg"
-                            maxW="none"
-                            dangerouslySetInnerHTML={{ __html: promotion.content }}
-                        />
+                        <ContentRenderer content={promotion.content} />
                     )}
                 </Box>
             </Box>

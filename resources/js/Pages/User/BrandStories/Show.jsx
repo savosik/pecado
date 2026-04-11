@@ -5,7 +5,7 @@ import UserLayout from '../UserLayout';
 import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageHeader from '@/components/common/PageHeader';
-import { Prose } from '@/components/ui/prose';
+import ContentRenderer from '@/components/content/ContentRenderer';
 import { formatDate } from '@/utils/formatDate';
 
 /**
@@ -77,12 +77,8 @@ export default function BrandStoryShow({ brandStory, seo, breadcrumbs }) {
                         )}
                     </HStack>
 
-                    {/* HTML-контент */}
-                    <Prose
-                        size="lg"
-                        maxW="none"
-                        dangerouslySetInnerHTML={{ __html: brandStory.content }}
-                    />
+                    {/* Контент (JSON-блоки или HTML) */}
+                    <ContentRenderer content={brandStory.content} />
 
                     {/* Кнопка «Товары бренда» */}
                     {brandStory.brand && brandStory.brand.slug && (

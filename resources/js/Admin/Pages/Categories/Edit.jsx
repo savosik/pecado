@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useForm, router } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, MarkdownEditor } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, TagSelector, SelectRelation, EditorJsEditor } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs, Badge, HStack, Text } from '@chakra-ui/react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toaster } from '@/components/ui/toaster';
@@ -349,7 +349,7 @@ export default function Edit({ category, categories, availableAttributes }) {
                                         error={errors.short_description}
                                         helperText="Краткое описание для карточки категории"
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.short_description}
                                             onChange={(val) => setData('short_description', val)}
                                             placeholder="Введите краткое описание категории"
@@ -363,7 +363,7 @@ export default function Edit({ category, categories, availableAttributes }) {
                                         error={errors.description}
                                         helperText="Подробное описание категории"
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.description}
                                             onChange={(val) => setData('description', val)}
                                             placeholder="Введите полное описание категории"

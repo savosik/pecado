@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector, MarkdownEditor, RegionSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, ProductSelector, EditorJsEditor, RegionSelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 import { Switch } from '@/components/ui/switch';
@@ -133,7 +133,7 @@ export default function Create({ regions = [] }) {
                             </FormField>
 
                             <FormField label="Описание подборки" error={errors.description}>
-                                <MarkdownEditor
+                                <EditorJsEditor
                                     value={data.description}
                                     onChange={(value) => setData('description', value)}
                                     placeholder="Подробное описание подборки..."

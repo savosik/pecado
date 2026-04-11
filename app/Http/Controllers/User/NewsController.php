@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\News;
+use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
@@ -43,7 +44,7 @@ class NewsController extends Controller
                 'id' => $item->id,
                 'title' => $item->title,
                 'slug' => $item->slug,
-                'excerpt' => Str::limit(strip_tags($item->detailed_description), 160),
+                'excerpt' => ContentHelper::extractText($item->detailed_description, 160),
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'published_at' => $item->published_at?->toISOString(),
                 'tags' => $item->tags->pluck('name')->toArray(),
@@ -78,11 +79,13 @@ class NewsController extends Controller
             ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();
 
-        // HTML-санитизация через HTMLPurifier
-        $sanitizedContent = clean($newsItem->detailed_description);
+        // JSON-контент передаём как есть, HTML — санитизируем
+        $content = $newsItem->detailed_description;
+        $isJson = is_string($content) && str_starts_with(trim($content), '{');
+        $sanitizedContent = $isJson ? $content : clean($content);
 
         $descriptionText = $newsItem->meta_description
-            ?: Str::limit(strip_tags($newsItem->detailed_description), 160);
+            ?: ContentHelper::extractText($newsItem->detailed_description, 160);
 
         // Structured data (Article)
         $structuredData = [

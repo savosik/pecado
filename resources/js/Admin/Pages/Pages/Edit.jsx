@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ContentMediaFields, MarkdownEditor, RegionSelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ContentMediaFields, EditorJsEditor, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Stack, SimpleGrid, Textarea } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -82,7 +82,7 @@ export default function Edit({ page, regions = [] }) {
                             </SimpleGrid>
 
                             <FormField label="Содержимое" error={errors.content} required>
-                                <MarkdownEditor
+                                <EditorJsEditor
                                     value={data.content}
                                     onChange={(value) => setData('content', value)}
                                     placeholder="Введите содержимое страницы..."

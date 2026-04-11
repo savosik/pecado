@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, MarkdownEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, EditorJsEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
 
 import { Field } from '@/components/ui/field';
@@ -419,7 +419,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                         error={errors.short_description}
                                         helperText="Краткое описание для карточки товара"
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.short_description}
                                             onChange={(val) => setData('short_description', val)}
                                             placeholder="Введите краткое описание товара"
@@ -433,7 +433,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                         error={errors.description}
                                         helperText="Подробное описание товара (Markdown)"
                                     >
-                                        <MarkdownEditor
+                                        <EditorJsEditor
                                             value={data.description}
                                             onChange={handleDescriptionChange}
                                             placeholder="Введите полное описание товара"
