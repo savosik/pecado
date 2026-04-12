@@ -36,20 +36,40 @@ export default class TabsTool {
 
         this.data.tabs.forEach((tab, i) => {
             const tabBtn = document.createElement('div');
-            tabBtn.style.cssText = `padding:8px 16px;cursor:pointer;font-size:13px;font-weight:600;border-bottom:2px solid ${this.activeTab === i ? '#9e1b32' : 'transparent'};margin-bottom:-2px;color:${this.activeTab === i ? '#9e1b32' : '#666'};display:flex;align-items:center;gap:6px;`;
+            const isActive = this.activeTab === i;
+            tabBtn.style.cssText = `padding:6px 4px 6px 8px;cursor:pointer;font-size:13px;font-weight:600;border-bottom:2px solid ${isActive ? '#9e1b32' : 'transparent'};margin-bottom:-2px;color:${isActive ? '#9e1b32' : '#666'};display:flex;align-items:center;gap:4px;`;
 
             const titleInput = document.createElement('input');
             titleInput.value = tab.title;
-            titleInput.style.cssText = `border:none;outline:none;font-weight:600;font-size:13px;width:${Math.max(60, tab.title.length * 8)}px;color:inherit;background:transparent;`;
+            titleInput.style.cssText = `border:1px dashed transparent;outline:none;font-weight:600;font-size:13px;width:${Math.max(80, tab.title.length * 9)}px;color:inherit;background:transparent;padding:2px 4px;border-radius:3px;cursor:text;`;
+            titleInput.addEventListener('mouseenter', () => { titleInput.style.borderColor = '#d1d5db'; });
+            titleInput.addEventListener('mouseleave', () => { if (document.activeElement !== titleInput) titleInput.style.borderColor = 'transparent'; });
+            titleInput.addEventListener('focus', (e) => {
+                e.stopPropagation();
+                titleInput.style.borderColor = '#9e1b32';
+                titleInput.style.background = '#fff';
+                if (this.activeTab !== i) {
+                    this.activeTab = i;
+                    // Defer re-render to keep focus
+                    setTimeout(() => this._renderUI(), 0);
+                }
+            });
+            titleInput.addEventListener('blur', () => {
+                titleInput.style.borderColor = 'transparent';
+                titleInput.style.background = 'transparent';
+            });
             titleInput.addEventListener('input', () => {
                 this.data.tabs[i].title = titleInput.value;
-                titleInput.style.width = Math.max(60, titleInput.value.length * 8) + 'px';
+                titleInput.style.width = Math.max(80, titleInput.value.length * 9) + 'px';
             });
-            titleInput.addEventListener('focus', () => { this.activeTab = i; this._renderUI(); });
+            titleInput.addEventListener('click', (e) => { e.stopPropagation(); });
 
             const delBtn = document.createElement('button');
             delBtn.textContent = '✕';
-            delBtn.style.cssText = 'background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;';
+            delBtn.title = 'Удалить вкладку';
+            delBtn.style.cssText = 'background:none;border:none;color:#ccc;cursor:pointer;font-size:12px;padding:2px;line-height:1;';
+            delBtn.addEventListener('mouseenter', () => { delBtn.style.color = '#ef4444'; });
+            delBtn.addEventListener('mouseleave', () => { delBtn.style.color = '#ccc'; });
             delBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if (this.data.tabs.length > 1) {
