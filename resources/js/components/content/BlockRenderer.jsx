@@ -767,13 +767,75 @@ function PricingTableBlock({ data }) {
 }
 
 function MapBlock({ data }) {
-    if (!data.embedCode) return null;
+    const mapRef = useRef(null);
+    const mapInstanceRef = useRef(null);
+
+    const lat = data.lat ?? 55.7558;
+    const lng = data.lng ?? 37.6173;
+    const zoom = data.zoom ?? 12;
+    const height = data.height || 400;
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const initMap = () => {
+            if (cancelled || !mapRef.current || mapInstanceRef.current) return;
+
+            const map = new window.ymaps.Map(mapRef.current, {
+                center: [lat, lng],
+                zoom: zoom,
+                controls: ['zoomControl', 'geolocationControl'],
+            });
+
+            if (data.marker) {
+                const placemark = new window.ymaps.Placemark([lat, lng], {
+                    balloonContent: data.marker,
+                    hintContent: data.marker,
+                }, {
+                    preset: 'islands#redDotIcon',
+                });
+                map.geoObjects.add(placemark);
+            }
+
+            mapInstanceRef.current = map;
+        };
+
+        if (window.ymaps && window.ymaps.Map) {
+            window.ymaps.ready(initMap);
+        } else {
+            // Load Yandex Maps API
+            const existing = document.querySelector('script[src*="api-maps.yandex.ru"]');
+            if (!existing) {
+                const script = document.createElement('script');
+                script.src = 'https://api-maps.yandex.ru/2.1/?apikey=&lang=ru_RU';
+                script.async = true;
+                script.onload = () => window.ymaps.ready(initMap);
+                document.head.appendChild(script);
+            } else {
+                // Script exists but not loaded yet
+                const check = setInterval(() => {
+                    if (window.ymaps && window.ymaps.Map) {
+                        clearInterval(check);
+                        window.ymaps.ready(initMap);
+                    }
+                }, 200);
+                setTimeout(() => clearInterval(check), 10000);
+            }
+        }
+
+        return () => {
+            cancelled = true;
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.destroy();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, [lat, lng, zoom, data.marker]);
+
     return (
-        <div 
-            className="cb-map" 
-            style={{ height: `${data.height || 400}px` }} 
-            dangerouslySetInnerHTML={{ __html: data.embedCode }}
-        />
+        <div className="cb-map" style={{ height: `${height}px` }}>
+            <div ref={mapRef} style={{ width: '100%', height: '100%' }} />
+        </div>
     );
 }
 
