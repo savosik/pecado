@@ -1,3 +1,5 @@
+import { createImageField } from './editorUpload';
+
 export default class BeforeAfterTool {
     static get toolbox() {
         return {
@@ -18,33 +20,41 @@ export default class BeforeAfterTool {
     render() {
         this.wrapper = document.createElement('div');
         this.wrapper.style.cssText = 'border:1px solid #e5e7eb;border-radius:8px;padding:16px;';
-        
-        const createGroup = (prefix) => {
-            const group = document.createElement('div');
-            group.style.cssText = 'margin-bottom:12px;';
-            
-            const title = document.createElement('div');
-            title.textContent = prefix === 'before' ? 'Изображение "До"' : 'Изображение "После"';
-            title.style.cssText = 'font-size:13px;font-weight:600;margin-bottom:6px;';
-            
-            const urlInp = document.createElement('input');
-            urlInp.value = this.data[`${prefix}Url`];
-            urlInp.placeholder = 'URL картинки';
-            urlInp.style.cssText = 'width:100%;border:1px solid #d1d5db;border-radius:4px;padding:6px;margin-bottom:6px;font-size:12px;';
-            urlInp.addEventListener('input', () => { this.data[`${prefix}Url`] = urlInp.value; });
-            
-            const labelInp = document.createElement('input');
-            labelInp.value = this.data[`${prefix}Label`];
-            labelInp.placeholder = 'Подпись (ярлык)';
-            labelInp.style.cssText = 'width:100%;border:1px solid #d1d5db;border-radius:4px;padding:6px;font-size:12px;';
-            labelInp.addEventListener('input', () => { this.data[`${prefix}Label`] = labelInp.value; });
-            
-            group.append(title, urlInp, labelInp);
-            return group;
-        };
 
-        this.wrapper.append(createGroup('before'), createGroup('after'));
+        const grid = document.createElement('div');
+        grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:16px;';
+
+        grid.appendChild(this._createGroup('before'));
+        grid.appendChild(this._createGroup('after'));
+
+        this.wrapper.appendChild(grid);
         return this.wrapper;
+    }
+
+    _createGroup(prefix) {
+        const group = document.createElement('div');
+
+        const title = document.createElement('div');
+        title.textContent = prefix === 'before' ? '📷 Изображение "До"' : '📷 Изображение "После"';
+        title.style.cssText = 'font-size:13px;font-weight:600;margin-bottom:6px;';
+        group.appendChild(title);
+
+        // Изображение с загрузкой
+        group.appendChild(createImageField({
+            value: this.data[`${prefix}Url`],
+            placeholder: 'URL или загрузите файл →',
+            onChange: (url) => { this.data[`${prefix}Url`] = url; },
+            previewHeight: '100px',
+        }));
+
+        const labelInp = document.createElement('input');
+        labelInp.value = this.data[`${prefix}Label`];
+        labelInp.placeholder = 'Подпись (ярлык)';
+        labelInp.style.cssText = 'width:100%;border:1px solid #d1d5db;border-radius:4px;padding:6px;font-size:12px;';
+        labelInp.addEventListener('input', () => { this.data[`${prefix}Label`] = labelInp.value; });
+        group.appendChild(labelInp);
+
+        return group;
     }
 
     save() {

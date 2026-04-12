@@ -1,7 +1,8 @@
 /**
  * ImageCarouselTool — карусель изображений.
- * Слайдер с навигацией, подписями, авто-прокруткой.
  */
+import { uploadImage } from './editorUpload';
+
 export default class ImageCarouselTool {
     static get toolbox() {
         return {
@@ -77,13 +78,37 @@ export default class ImageCarouselTool {
                 card.appendChild(placeholder);
             }
 
-            // URL Input
+            // URL + upload row
+            const urlRow = document.createElement('div');
+            urlRow.style.cssText = 'display:flex;border-top:1px solid #e5e7eb;';
+
             const urlInput = document.createElement('input');
             urlInput.value = slide.url || '';
-            urlInput.placeholder = 'URL изображения';
-            urlInput.style.cssText = 'width:100%;border:none;border-top:1px solid #e5e7eb;padding:6px 8px;font-size:11px;outline:none;';
+            urlInput.placeholder = 'URL';
+            urlInput.style.cssText = 'flex:1;border:none;padding:6px 8px;font-size:11px;outline:none;min-width:0;';
             urlInput.addEventListener('input', () => { this.data.slides[i].url = urlInput.value; });
             urlInput.addEventListener('blur', () => this._renderUI());
+
+            const upBtn = document.createElement('label');
+            upBtn.textContent = '📁';
+            upBtn.title = 'Загрузить';
+            upBtn.style.cssText = 'padding:4px 8px;cursor:pointer;font-size:13px;border-left:1px solid #e5e7eb;display:flex;align-items:center;background:#f9fafb;';
+            const fi = document.createElement('input');
+            fi.type = 'file';
+            fi.accept = 'image/*';
+            fi.style.display = 'none';
+            fi.addEventListener('change', async () => {
+                if (!fi.files[0]) return;
+                try {
+                    this.data.slides[i].url = await uploadImage(fi.files[0]);
+                    this._renderUI();
+                } catch (e) { alert('Ошибка загрузки'); }
+                fi.value = '';
+            });
+            upBtn.appendChild(fi);
+
+            urlRow.append(urlInput, upBtn);
+            card.appendChild(urlRow);
 
             // Caption
             const capInput = document.createElement('input');
@@ -98,21 +123,46 @@ export default class ImageCarouselTool {
             del.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.5);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;line-height:20px;text-align:center;';
             del.addEventListener('click', () => { this.data.slides.splice(i, 1); this._renderUI(); });
 
-            card.append(del, urlInput, capInput);
+            card.append(del, capInput);
             slideList.appendChild(card);
         });
 
         this.wrapper.appendChild(slideList);
 
-        // Add slide
-        const addBtn = document.createElement('button');
-        addBtn.textContent = '+ Добавить слайд';
-        addBtn.style.cssText = 'padding:8px 20px;border:1px dashed #d1d5db;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#666;';
-        addBtn.addEventListener('click', () => {
+        // Add slide — URL + upload
+        const addRow = document.createElement('div');
+        addRow.style.cssText = 'display:flex;gap:8px;';
+
+        const addUpload = document.createElement('label');
+        addUpload.textContent = '📁 Загрузить слайды';
+        addUpload.style.cssText = 'padding:8px 16px;border:1px dashed #d1d5db;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#666;flex:1;text-align:center;';
+        const addFi = document.createElement('input');
+        addFi.type = 'file';
+        addFi.accept = 'image/*';
+        addFi.multiple = true;
+        addFi.style.display = 'none';
+        addFi.addEventListener('change', async () => {
+            for (const file of addFi.files) {
+                try {
+                    const url = await uploadImage(file);
+                    this.data.slides.push({ url, caption: '' });
+                } catch (e) { console.error(e); }
+            }
+            this._renderUI();
+            addFi.value = '';
+        });
+        addUpload.appendChild(addFi);
+
+        const addEmpty = document.createElement('button');
+        addEmpty.textContent = '+ Пустой слайд';
+        addEmpty.style.cssText = 'padding:8px 16px;border:1px dashed #d1d5db;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#666;';
+        addEmpty.addEventListener('click', () => {
             this.data.slides.push({ url: '', caption: '' });
             this._renderUI();
         });
-        this.wrapper.appendChild(addBtn);
+
+        addRow.append(addUpload, addEmpty);
+        this.wrapper.appendChild(addRow);
     }
 
     save() {

@@ -1,7 +1,8 @@
 /**
  * TeamTool — блок «Наша команда».
- * Карточки с фото, именем, должностью и описанием.
  */
+import { createImageField } from './editorUpload';
+
 export default class TeamTool {
     static get toolbox() {
         return {
@@ -50,27 +51,13 @@ export default class TeamTool {
             const card = document.createElement('div');
             card.style.cssText = 'border:1px solid #e5e7eb;border-radius:6px;padding:12px;text-align:center;';
 
-            // Фото URL
-            const photoInput = document.createElement('input');
-            photoInput.value = m.photo;
-            photoInput.placeholder = 'URL фото';
-            photoInput.style.cssText = 'width:100%;border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;font-size:11px;margin-bottom:8px;';
-            photoInput.addEventListener('input', () => { this.data.members[i].photo = photoInput.value; });
-
-            // Preview
-            if (m.photo) {
-                const img = document.createElement('img');
-                img.src = m.photo;
-                img.style.cssText = 'width:60px;height:60px;border-radius:50%;object-fit:cover;margin:0 auto 8px;display:block;';
-                card.appendChild(img);
-            } else {
-                const placeholder = document.createElement('div');
-                placeholder.style.cssText = 'width:60px;height:60px;border-radius:50%;background:#f3f4f6;margin:0 auto 8px;display:flex;align-items:center;justify-content:center;font-size:20px;color:#ccc;';
-                placeholder.textContent = '👤';
-                card.appendChild(placeholder);
-            }
-
-            card.appendChild(photoInput);
+            // Фото с загрузкой
+            card.appendChild(createImageField({
+                value: m.photo,
+                placeholder: 'URL фото или загрузите →',
+                onChange: (url) => { this.data.members[i].photo = url; },
+                previewHeight: '80px',
+            }));
 
             // Имя
             const nameInput = document.createElement('input');
@@ -95,8 +82,8 @@ export default class TeamTool {
 
             // Удалить
             const delBtn = document.createElement('button');
-            delBtn.textContent = '✕';
-            delBtn.style.cssText = 'background:none;border:none;color:#ef4444;cursor:pointer;font-size:14px;margin-top:4px;';
+            delBtn.textContent = '✕ Удалить';
+            delBtn.style.cssText = 'background:none;border:none;color:#ef4444;cursor:pointer;font-size:11px;margin-top:4px;';
             delBtn.addEventListener('click', () => { this.data.members.splice(i, 1); this._renderUI(); });
 
             card.append(nameInput, roleInput, bioInput, delBtn);

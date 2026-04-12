@@ -1,6 +1,8 @@
 /**
  * ImageTextTool — блок «изображение + текст» (два столбца).
  */
+import { createImageField } from './editorUpload';
+
 export default class ImageTextTool {
     static get toolbox() {
         return {
@@ -49,14 +51,13 @@ export default class ImageTextTool {
         });
         wrapper.appendChild(posRow);
 
-        // URL изображения
-        const imgInput = document.createElement('input');
-        imgInput.type = 'text';
-        imgInput.value = this.data.imageUrl;
-        imgInput.placeholder = 'URL изображения...';
-        imgInput.style.cssText = 'width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;';
-        imgInput.addEventListener('input', () => { this.data.imageUrl = imgInput.value; });
-        wrapper.appendChild(imgInput);
+        // Изображение (URL + загрузка)
+        wrapper.appendChild(createImageField({
+            value: this.data.imageUrl,
+            placeholder: 'URL изображения или загрузите файл →',
+            onChange: (url) => { this.data.imageUrl = url; },
+            previewHeight: '120px',
+        }));
 
         // Заголовок
         const titleInput = document.createElement('input');
@@ -78,9 +79,6 @@ export default class ImageTextTool {
         return wrapper;
     }
 
-    save() {
-        return this.data;
-    }
-
+    save() { return this.data; }
     static get isReadOnlySupported() { return true; }
 }

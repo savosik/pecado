@@ -1,6 +1,8 @@
 /**
  * PhotoMosaicTool — мозаичная сетка фотографий.
  */
+import { uploadImage } from './editorUpload';
+
 export default class PhotoMosaicTool {
     static get toolbox() {
         return {
@@ -55,10 +57,35 @@ export default class PhotoMosaicTool {
 
         const addRow = document.createElement('div');
         addRow.style.cssText = 'display:flex;gap:8px;';
+
         const urlIn = document.createElement('input');
         urlIn.placeholder = 'URL изображения...';
         urlIn.style.cssText = 'flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:6px;font-size:14px;';
         addRow.appendChild(urlIn);
+
+        // Загрузка файлов
+        const uploadBtn = document.createElement('label');
+        uploadBtn.textContent = '📁';
+        uploadBtn.title = 'Загрузить файлы';
+        uploadBtn.style.cssText = 'padding:8px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;';
+        const fi = document.createElement('input');
+        fi.type = 'file';
+        fi.accept = 'image/*';
+        fi.multiple = true;
+        fi.style.display = 'none';
+        fi.addEventListener('change', async () => {
+            for (const file of fi.files) {
+                try {
+                    const url = await uploadImage(file);
+                    this.data.images.push({ url });
+                } catch (e) { console.error(e); }
+            }
+            this._rebuild();
+            fi.value = '';
+        });
+        uploadBtn.appendChild(fi);
+        addRow.appendChild(uploadBtn);
+
         const addBtn = document.createElement('button');
         addBtn.textContent = '+ Добавить';
         addBtn.type = 'button';

@@ -1,6 +1,8 @@
 /**
  * CoverImageTool — обложка (полноширинное изображение с оверлеем текста).
  */
+import { createImageField } from './editorUpload';
+
 export default class CoverImageTool {
     static get toolbox() {
         return {
@@ -27,20 +29,29 @@ export default class CoverImageTool {
         label.style.cssText = 'font-size:13px;color:#888;margin-bottom:8px;font-weight:500;';
         wrapper.appendChild(label);
 
-        const fields = [
-            { key: 'url', placeholder: 'URL фонового изображения...' },
-            { key: 'title', placeholder: 'Заголовок на обложке...' },
-            { key: 'subtitle', placeholder: 'Подзаголовок (необязательно)...' },
-        ];
+        // Фоновое изображение (URL + загрузка)
+        wrapper.appendChild(createImageField({
+            value: this.data.url,
+            placeholder: 'URL фонового изображения или загрузите →',
+            onChange: (url) => { this.data.url = url; },
+            previewHeight: '120px',
+        }));
 
-        fields.forEach(f => {
-            const el = document.createElement('input');
-            el.value = this.data[f.key];
-            el.placeholder = f.placeholder;
-            el.style.cssText = 'width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;';
-            el.addEventListener('input', () => { this.data[f.key] = el.value; });
-            wrapper.appendChild(el);
-        });
+        // Заголовок
+        const titleInput = document.createElement('input');
+        titleInput.value = this.data.title;
+        titleInput.placeholder = 'Заголовок на обложке...';
+        titleInput.style.cssText = 'width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;';
+        titleInput.addEventListener('input', () => { this.data.title = titleInput.value; });
+        wrapper.appendChild(titleInput);
+
+        // Подзаголовок
+        const subInput = document.createElement('input');
+        subInput.value = this.data.subtitle;
+        subInput.placeholder = 'Подзаголовок (необязательно)...';
+        subInput.style.cssText = 'width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;';
+        subInput.addEventListener('input', () => { this.data.subtitle = subInput.value; });
+        wrapper.appendChild(subInput);
 
         return wrapper;
     }

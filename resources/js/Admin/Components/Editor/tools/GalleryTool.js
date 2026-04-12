@@ -1,6 +1,8 @@
 /**
  * GalleryTool — галерея из нескольких изображений.
  */
+import { createImageField, uploadImage } from './editorUpload';
+
 export default class GalleryTool {
     static get toolbox() {
         return {
@@ -49,13 +51,39 @@ export default class GalleryTool {
             this.wrapper.appendChild(grid);
         }
 
-        // Добавить URL
+        // Добавить — URL ввод + загрузка файла
         const addRow = document.createElement('div');
         addRow.style.cssText = 'display:flex;gap:8px;margin-bottom:8px;';
+
         const urlInput = document.createElement('input');
         urlInput.placeholder = 'URL изображения...';
         urlInput.style.cssText = 'flex:1;padding:8px;border:1px solid #e5e7eb;border-radius:6px;font-size:14px;';
         addRow.appendChild(urlInput);
+
+        // Кнопка загрузки файла
+        const uploadBtn = document.createElement('label');
+        uploadBtn.textContent = '📁';
+        uploadBtn.title = 'Загрузить файл';
+        uploadBtn.style.cssText = 'padding:8px 12px;background:#f3f4f6;border:1px solid #d1d5db;border-radius:6px;cursor:pointer;font-size:16px;display:flex;align-items:center;';
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.multiple = true;
+        fileInput.style.display = 'none';
+        fileInput.addEventListener('change', async () => {
+            for (const file of fileInput.files) {
+                try {
+                    const url = await uploadImage(file);
+                    this.data.images.push({ url, caption: '' });
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+            this._rebuild();
+            fileInput.value = '';
+        });
+        uploadBtn.appendChild(fileInput);
+        addRow.appendChild(uploadBtn);
 
         const addBtn = document.createElement('button');
         addBtn.textContent = '+ Добавить';

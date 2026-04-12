@@ -1,3 +1,5 @@
+import { uploadImage } from './editorUpload';
+
 export default class LogoWallTool {
     static get toolbox() {
         return {
@@ -63,32 +65,83 @@ export default class LogoWallTool {
                 card.appendChild(ph);
             }
 
+            // URL + upload row
+            const urlRow = document.createElement('div');
+            urlRow.style.cssText = 'display:flex;gap:2px;';
+
             const urlInput = document.createElement('input');
             urlInput.value = logo.url;
             urlInput.placeholder = 'URL';
-            urlInput.style.cssText = 'width:100%;font-size:10px;border:1px solid #d1d5db;border-radius:2px;padding:2px 4px;';
+            urlInput.style.cssText = 'flex:1;font-size:10px;border:1px solid #d1d5db;border-radius:2px;padding:2px 4px;min-width:0;';
             urlInput.addEventListener('input', () => { this.data.logos[i].url = urlInput.value; });
             urlInput.addEventListener('blur', () => this._renderUI());
+
+            const upBtn = document.createElement('label');
+            upBtn.textContent = '📁';
+            upBtn.title = 'Загрузить';
+            upBtn.style.cssText = 'font-size:12px;cursor:pointer;padding:2px 4px;';
+            const fi = document.createElement('input');
+            fi.type = 'file';
+            fi.accept = 'image/*';
+            fi.style.display = 'none';
+            fi.addEventListener('change', async () => {
+                if (!fi.files[0]) return;
+                try {
+                    this.data.logos[i].url = await uploadImage(fi.files[0]);
+                    this._renderUI();
+                } catch (e) { alert('Ошибка загрузки'); }
+                fi.value = '';
+            });
+            upBtn.appendChild(fi);
+
+            urlRow.append(urlInput, upBtn);
+            card.appendChild(urlRow);
 
             const del = document.createElement('button');
             del.textContent = '✕';
             del.style.cssText = 'position:absolute;top:2px;right:2px;background:rgba(255,0,0,0.7);color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:9px;width:14px;height:14px;line-height:14px;padding:0;';
             del.addEventListener('click', () => { this.data.logos.splice(i, 1); this._renderUI(); });
 
-            card.append(urlInput, del);
+            card.appendChild(del);
             list.appendChild(card);
         });
 
         this.wrapper.appendChild(list);
 
-        const addBtn = document.createElement('button');
-        addBtn.textContent = '+ Добавить логотип';
-        addBtn.style.cssText = 'padding:6px 16px;border:1px dashed #d1d5db;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#666;width:100%;';
-        addBtn.addEventListener('click', () => {
+        // Add button with upload
+        const addRow = document.createElement('div');
+        addRow.style.cssText = 'display:flex;gap:8px;';
+
+        const addUpload = document.createElement('label');
+        addUpload.textContent = '📁 Загрузить логотипы';
+        addUpload.style.cssText = 'padding:6px 16px;border:1px dashed #d1d5db;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#666;flex:1;text-align:center;';
+        const addFi = document.createElement('input');
+        addFi.type = 'file';
+        addFi.accept = 'image/*';
+        addFi.multiple = true;
+        addFi.style.display = 'none';
+        addFi.addEventListener('change', async () => {
+            for (const file of addFi.files) {
+                try {
+                    const url = await uploadImage(file);
+                    this.data.logos.push({ url });
+                } catch(e) { console.error(e); }
+            }
+            this._renderUI();
+            addFi.value = '';
+        });
+        addUpload.appendChild(addFi);
+
+        const addEmpty = document.createElement('button');
+        addEmpty.textContent = '+ Пустой слот';
+        addEmpty.style.cssText = 'padding:6px 16px;border:1px dashed #d1d5db;border-radius:4px;background:none;cursor:pointer;font-size:13px;color:#666;';
+        addEmpty.addEventListener('click', () => {
             this.data.logos.push({ url: '', alt: '' });
             this._renderUI();
         });
-        this.wrapper.appendChild(addBtn);
+
+        addRow.append(addUpload, addEmpty);
+        this.wrapper.appendChild(addRow);
     }
 
     save() {

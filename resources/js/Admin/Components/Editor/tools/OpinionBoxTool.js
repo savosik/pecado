@@ -1,6 +1,8 @@
 /**
  * OpinionBoxTool — мнение эксперта с фото и должностью.
  */
+import { createImageField } from './editorUpload';
+
 export default class OpinionBoxTool {
     static get toolbox() {
         return {
@@ -27,21 +29,37 @@ export default class OpinionBoxTool {
         label.style.cssText = 'font-size:13px;color:#888;margin-bottom:10px;font-weight:500;';
         wrapper.appendChild(label);
 
-        const fields = [
-            { key: 'photo', placeholder: 'URL фото эксперта...', type: 'input' },
-            { key: 'name', placeholder: 'Имя эксперта...', type: 'input' },
-            { key: 'title', placeholder: 'Должность...', type: 'input' },
-            { key: 'text', placeholder: 'Текст мнения...', type: 'textarea' },
-        ];
+        // Фото эксперта (URL + загрузка)
+        wrapper.appendChild(createImageField({
+            value: this.data.photo,
+            placeholder: 'URL фото эксперта или загрузите →',
+            onChange: (url) => { this.data.photo = url; },
+            previewHeight: '80px',
+        }));
 
-        fields.forEach(f => {
-            const el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
-            el.value = this.data[f.key];
-            el.placeholder = f.placeholder;
-            el.style.cssText = `width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;font-family:inherit;${f.type === 'textarea' ? 'min-height:80px;resize:vertical;line-height:1.6;' : ''}`;
-            el.addEventListener('input', () => { this.data[f.key] = el.value; });
-            wrapper.appendChild(el);
-        });
+        // Имя
+        const nameInput = document.createElement('input');
+        nameInput.value = this.data.name;
+        nameInput.placeholder = 'Имя эксперта...';
+        nameInput.style.cssText = 'width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;';
+        nameInput.addEventListener('input', () => { this.data.name = nameInput.value; });
+        wrapper.appendChild(nameInput);
+
+        // Должность
+        const titleInput = document.createElement('input');
+        titleInput.value = this.data.title;
+        titleInput.placeholder = 'Должность...';
+        titleInput.style.cssText = 'width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;';
+        titleInput.addEventListener('input', () => { this.data.title = titleInput.value; });
+        wrapper.appendChild(titleInput);
+
+        // Текст
+        const textArea = document.createElement('textarea');
+        textArea.value = this.data.text;
+        textArea.placeholder = 'Текст мнения...';
+        textArea.style.cssText = 'width:100%;padding:8px;border:1px solid #e5e7eb;border-radius:6px;margin-bottom:8px;font-size:14px;font-family:inherit;min-height:80px;resize:vertical;line-height:1.6;';
+        textArea.addEventListener('input', () => { this.data.text = textArea.value; });
+        wrapper.appendChild(textArea);
 
         return wrapper;
     }
