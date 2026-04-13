@@ -31,3 +31,20 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
         discountPct: product.discount_percentage,
     };
 }
+
+/**
+ * Возвращает описание товара с правильной цепочкой приоритетов:
+ * rich_content (если есть блоки) → description_html → description → short_description
+ *
+ * Editor.js при пустом контенте сохраняет { blocks: [] }, что truthy в JS.
+ * Поэтому нужна явная проверка наличия блоков.
+ */
+export function getProductDescription(product) {
+    // rich_content — только если есть реальные блоки
+    const rc = product.rich_content;
+    if (rc && typeof rc === 'object' && Array.isArray(rc.blocks) && rc.blocks.length > 0) {
+        return rc;
+    }
+
+    return product.description_html || product.description || product.short_description || null;
+}

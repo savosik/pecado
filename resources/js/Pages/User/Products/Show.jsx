@@ -7,7 +7,7 @@ import ProductInfo from '@/components/product/ProductInfo';
 import ProductDetailTabs from '@/components/product/ProductDetailTabs';
 import ProductVariants from '@/components/product/ProductVariants';
 import MobileActionsBar from '@/components/product/MobileActionsBar';
-import { buildProductInfoProps } from '@/utils/product';
+import { buildProductInfoProps, getProductDescription } from '@/utils/product';
 
 /**
  * Show — детальная страница товара.
@@ -51,7 +51,7 @@ export default function Show() {
 
                     <ProductDetailTabs
                         specifications={specifications}
-                        description={product.rich_content || product.description_html || product.description || product.short_description}
+                        description={getProductDescription(product)}
                         media={media}
                         certificates={certificates}
                         sizeChart={sizeChart}
@@ -77,7 +77,7 @@ export default function Show() {
 
                         <ProductDetailTabs
                             specifications={specifications}
-                            description={product.rich_content || product.description_html || product.description || product.short_description}
+                            description={getProductDescription(product)}
                             media={media}
                             certificates={certificates}
                             sizeChart={sizeChart}

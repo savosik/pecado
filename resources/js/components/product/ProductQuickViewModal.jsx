@@ -3,7 +3,7 @@ import { Box, Flex, Grid, GridItem, IconButton, Spinner, Text } from '@chakra-ui
 import { LuX } from 'react-icons/lu';
 import { usePage } from '@inertiajs/react';
 import { useProductQuickView } from '@/contexts/ProductQuickViewContext';
-import { buildProductInfoProps } from '@/utils/product';
+import { buildProductInfoProps, getProductDescription } from '@/utils/product';
 import ProductGallery from './ProductGallery';
 import ProductInfo from './ProductInfo';
 import ProductDetailTabs from './ProductDetailTabs';
@@ -154,7 +154,7 @@ export default function ProductQuickViewModal() {
 
                                         <ProductDetailTabs
                                             specifications={specifications}
-                                            description={product.rich_content || product.description_html || product.description || product.short_description}
+                                            description={getProductDescription(product)}
                                             media={media}
                                             certificates={certificates}
                                             sizeChart={sizeChart}
@@ -180,7 +180,7 @@ export default function ProductQuickViewModal() {
 
                                             <ProductDetailTabs
                                                 specifications={specifications}
-                                                description={product.rich_content || product.description_html || product.description || product.short_description}
+                                                description={getProductDescription(product)}
                                                 media={media}
                                                 certificates={certificates}
                                                 sizeChart={sizeChart}
