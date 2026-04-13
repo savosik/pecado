@@ -1,17 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
     Box, Flex, Text, Card, HStack, VStack, Badge, Button,
-    IconButton, Table, Input, Dialog, Portal, SimpleGrid, Heading, Spinner,
+    IconButton, Table, Input, Dialog, Portal,
 } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
-import {
-    LuPlus, LuPencil, LuTrash2, LuCopy, LuSearch, LuFileDown,
-    LuFileCode, LuShoppingBag, LuGlobe, LuMessageCircle, LuPenTool,
-    LuShoppingCart, LuStore, LuLink, LuCheck, LuRefreshCw, LuX,
-} from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTrash2, LuCopy, LuSearch, LuFileDown } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
-import axios from 'axios';
 
 const formatColors = {
     json: 'blue',
@@ -20,164 +15,9 @@ const formatColors = {
     xls: 'purple',
 };
 
-const presetIcons = {
-    LuFileCode: LuFileCode,
-    LuShoppingBag: LuShoppingBag,
-    LuGlobe: LuGlobe,
-    LuMessageCircle: LuMessageCircle,
-    LuSearch: LuSearch,
-    LuPenTool: LuPenTool,
-    LuShoppingCart: LuShoppingCart,
-    LuStore: LuStore,
-};
-
-function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
-    const IconComponent = presetIcons[preset.icon] || LuFileDown;
-    const isLoading = loadingKey === preset.key;
-    const isGenerated = preset.generated && preset.download_url;
-
-    return (
-        <Card.Root
-            bg={{ base: 'white', _dark: 'gray.800' }}
-            borderRadius="xl"
-            border="1px solid"
-            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-            _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
-            overflow="hidden"
-            transition="all 0.2s"
-            _hover={{ shadow: 'md', borderColor: '#9e1b32' }}
-        >
-            <Card.Body p="5">
-                <VStack align="stretch" gap="3">
-                    {/* Header */}
-                    <HStack>
-                        <Flex
-                            align="center" justify="center" w="10" h="10" borderRadius="lg"
-                            bg={`${preset.color}.50`} _dark={{ bg: `${preset.color}.900` }}
-                            flexShrink="0"
-                        >
-                            <IconComponent size={20} color={`var(--chakra-colors-${preset.color}-500)`} />
-                        </Flex>
-                        <Box flex="1" minW="0">
-                            <Text fontWeight="700" fontSize="sm" lineClamp={1}>{preset.name}</Text>
-                            <Badge colorPalette={preset.color} variant="subtle" size="sm" mt="0.5">
-                                .{preset.extension}
-                            </Badge>
-                        </Box>
-                    </HStack>
-
-                    {/* Description */}
-                    <Text fontSize="xs" color="gray.500" lineClamp={2} minH="32px">
-                        {preset.description}
-                    </Text>
-
-                    {/* Link & Actions */}
-                    {isGenerated ? (
-                        <VStack align="stretch" gap="2">
-                            <HStack
-                                bg="green.50" _dark={{ bg: 'green.900' }}
-                                borderRadius="lg" px="3" py="2"
-                            >
-                                <LuCheck size={14} color="green" />
-                                <Text fontSize="xs" color="green.600" _dark={{ color: 'green.300' }} flex="1" truncate>
-                                    {preset.download_url}
-                                </Text>
-                                <IconButton
-                                    size="xs" variant="ghost" colorPalette="green"
-                                    onClick={() => {
-                                        navigator.clipboard.writeText(preset.download_url);
-                                        toaster.create({ title: 'Ссылка скопирована', type: 'success' });
-                                    }}
-                                    aria-label="Копировать"
-                                >
-                                    <LuCopy />
-                                </IconButton>
-                            </HStack>
-                            <HStack gap="2">
-                                <Button
-                                    flex="1" size="xs" variant="outline" colorPalette="green"
-                                    onClick={() => window.open(preset.download_url, '_blank')}
-                                >
-                                    <LuFileDown /> Скачать
-                                </Button>
-                                <IconButton
-                                    size="xs" variant="ghost" colorPalette="red"
-                                    onClick={() => onDelete(preset.key)}
-                                    aria-label="Удалить выгрузку"
-                                >
-                                    <LuX />
-                                </IconButton>
-                            </HStack>
-                            {preset.cached_at && (
-                                <Text fontSize="2xs" color="gray.400" textAlign="center">
-                                    Обновлено: {new Date(preset.cached_at).toLocaleString('ru-RU')}
-                                </Text>
-                            )}
-                        </VStack>
-                    ) : (
-                        <Button
-                            w="full" size="sm"
-                            bg="#9e1b32" color="white"
-                            _hover={{ bg: '#7a1527' }}
-                            onClick={() => onGenerate(preset.key)}
-                            loading={isLoading}
-                            loadingText="Генерация..."
-                        >
-                            <LuLink /> Получить ссылку
-                        </Button>
-                    )}
-                </VStack>
-            </Card.Body>
-        </Card.Root>
-    );
-}
-
 export default function Index({ exports, filters }) {
     const [searchQuery, setSearchQuery] = useState(filters?.search || '');
     const [deleteExport, setDeleteExport] = useState(null);
-    const [presets, setPresets] = useState([]);
-    const [presetsLoading, setPresetsLoading] = useState(true);
-    const [generatingKey, setGeneratingKey] = useState(null);
-
-    // Загружаем пресеты через API
-    useEffect(() => {
-        loadPresets();
-    }, []);
-
-    const loadPresets = async () => {
-        try {
-            setPresetsLoading(true);
-            const res = await axios.get('/cabinet/export-presets');
-            setPresets(res.data.presets || []);
-        } catch (err) {
-            console.error('Failed to load presets:', err);
-        } finally {
-            setPresetsLoading(false);
-        }
-    };
-
-    const handleGeneratePreset = async (key) => {
-        try {
-            setGeneratingKey(key);
-            const res = await axios.post(`/cabinet/export-presets/${key}/generate`);
-            toaster.create({ title: 'Ссылка на выгрузку создана!', type: 'success' });
-            await loadPresets(); // Обновляем список
-        } catch (err) {
-            toaster.create({ title: 'Ошибка генерации', type: 'error' });
-        } finally {
-            setGeneratingKey(null);
-        }
-    };
-
-    const handleDeletePreset = async (key) => {
-        try {
-            await axios.delete(`/cabinet/export-presets/${key}`);
-            toaster.create({ title: 'Выгрузка удалена', type: 'success' });
-            await loadPresets();
-        } catch (err) {
-            toaster.create({ title: 'Ошибка удаления', type: 'error' });
-        }
-    };
 
     const handleSearch = (value) => {
         setSearchQuery(value);
@@ -209,7 +49,7 @@ export default function Index({ exports, filters }) {
 
     return (
         <CabinetLayout
-            title="Выгрузки товаров"
+            title="Конструктор выгрузок"
             actions={
                 <Button
                     as={Link}
@@ -223,50 +63,11 @@ export default function Index({ exports, filters }) {
                 </Button>
             }
         >
-            <Head title="Выгрузки товаров — Pecado" />
+            <Head title="Конструктор выгрузок — Pecado" />
 
-            {/* ═══════════════════════════════════════════ */}
-            {/* Стандартные форматы (пресеты) */}
-            {/* ═══════════════════════════════════════════ */}
-            <Box mb="8">
-                <HStack mb="4" align="center">
-                    <Heading size="md" fontWeight="700">Стандартные форматы для CMS</Heading>
-                    <IconButton
-                        size="xs" variant="ghost" colorPalette="gray"
-                        onClick={loadPresets}
-                        aria-label="Обновить"
-                    >
-                        <LuRefreshCw />
-                    </IconButton>
-                </HStack>
-                <Text fontSize="sm" color="gray.500" mb="4">
-                    Готовые выгрузки для популярных интернет-магазинов. Нажмите «Получить ссылку» — и вставьте URL в настройки импорта вашего движка.
-                    Цены и остатки формируются индивидуально для вашего аккаунта.
-                </Text>
-
-                {presetsLoading ? (
-                    <Flex justify="center" py="8">
-                        <Spinner size="lg" color="#9e1b32" />
-                    </Flex>
-                ) : (
-                    <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, xl: 4 }} gap="4">
-                        {presets.map((preset) => (
-                            <PresetCard
-                                key={preset.key}
-                                preset={preset}
-                                onGenerate={handleGeneratePreset}
-                                onDelete={handleDeletePreset}
-                                loadingKey={generatingKey}
-                            />
-                        ))}
-                    </SimpleGrid>
-                )}
-            </Box>
-
-            {/* ═══════════════════════════════════════════ */}
-            {/* Собственные (кастомные) выгрузки */}
-            {/* ═══════════════════════════════════════════ */}
-            <Heading size="md" fontWeight="700" mb="4">Ваши собственные выгрузки</Heading>
+            <Text fontSize="sm" color="gray.500" mb="4">
+                Создавайте произвольные выгрузки с выбором полей, фильтров и формата.
+            </Text>
 
             {/* Search */}
             <Box mb={4}>
@@ -300,7 +101,7 @@ export default function Index({ exports, filters }) {
                             >
                                 <LuFileDown size={24} color="gray" />
                             </Flex>
-                            <Text color="gray.500">Собственных выгрузок пока нет</Text>
+                            <Text color="gray.500">Выгрузок пока нет</Text>
                             <Text fontSize="xs" color="gray.400">
                                 Создайте произвольную выгрузку с выбором полей, фильтров и формата
                             </Text>

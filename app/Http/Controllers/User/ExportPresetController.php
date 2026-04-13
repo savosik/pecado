@@ -8,6 +8,7 @@ use App\Services\ProductExport\Presets\PresetRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 
 class ExportPresetController extends Controller
 {
@@ -16,7 +17,7 @@ class ExportPresetController extends Controller
     ) {}
 
     /**
-     * Получить список доступных пресетов с ссылками текущего пользователя.
+     * Страница стандартных выгрузок (Inertia).
      */
     public function index()
     {
@@ -41,7 +42,9 @@ class ExportPresetController extends Controller
             ]);
         })->toArray();
 
-        return response()->json(['presets' => $presets]);
+        return Inertia::render('User/Cabinet/ExportPresets/Index', [
+            'presets' => $presets,
+        ]);
     }
 
     /**

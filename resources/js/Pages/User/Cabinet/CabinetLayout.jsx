@@ -8,7 +8,7 @@ import UserLayout from '../UserLayout';
 import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
-    LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck,
+    LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuLayoutGrid, LuWrench,
 } from 'react-icons/lu';
 
 const menuGroups = [
@@ -35,9 +35,15 @@ const menuGroups = [
         ],
     },
     {
+        title: 'Выгрузки',
+        items: [
+            { href: '/cabinet/export-presets', label: 'Стандартные выгрузки', icon: LuLayoutGrid },
+            { href: '/cabinet/product-exports', label: 'Конструктор выгрузок', icon: LuWrench },
+        ],
+    },
+    {
         title: 'Инструменты',
         items: [
-            { href: '/cabinet/product-exports', label: 'Выгрузки товаров', icon: LuFileDown },
             { href: '/cabinet/media', label: 'Медиатека', icon: LuImage },
         ],
     },

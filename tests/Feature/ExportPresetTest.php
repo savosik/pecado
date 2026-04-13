@@ -288,33 +288,44 @@ class ExportPresetTest extends TestCase
     // API Controller — ExportPresetController
     // ═══════════════════════════════════════════════
 
-    public function test_guest_cannot_access_presets_api(): void
+    public function test_guest_cannot_access_presets_page(): void
     {
-        $this->getJson('/cabinet/export-presets')
-            ->assertStatus(401); // unauthorized (JSON)
+        $this->get('/cabinet/export-presets')
+            ->assertRedirect(); // redirect to login
     }
 
-    public function test_authenticated_user_can_list_presets(): void
+    public function test_authenticated_user_can_view_presets_page(): void
     {
         $response = $this->actingAs($this->user)
-            ->getJson('/cabinet/export-presets');
+            ->get('/cabinet/export-presets');
 
         $response->assertOk();
-        $response->assertJsonStructure([
-            'presets' => [
-                '*' => ['key', 'name', 'description', 'extension', 'color', 'icon', 'generated', 'download_url'],
-            ],
-        ]);
+        $response->assertInertia(fn ($page) => $page
+            ->component('User/Cabinet/ExportPresets/Index')
+            ->has('presets', 8)
+            ->where('presets.0.generated', false)
+        );
 
-        $presets = $response->json('presets');
-        $this->assertCount(8, $presets, 'API должен возвращать 8 пресетов');
+        echo "\n✅ Inertia page: 8 пресетов, ни один не сгенерирован\n";
+    }
 
-        // Изначально ни один не должен быть сгенерирован
-        foreach ($presets as $preset) {
-            $this->assertFalse($preset['generated'], "Пресет '{$preset['key']}' не должен быть сгенерирован изначально");
-        }
+    public function test_presets_not_visible_in_custom_exports_list(): void
+    {
+        // Создаём пресет
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/export-presets/yml/generate');
 
-        echo "\n✅ API index: 8 пресетов, ни один не сгенерирован\n";
+        // Проверяем что в конструкторе выгрузок пресет не появляется
+        $response = $this->actingAs($this->user)
+            ->get('/cabinet/product-exports');
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('User/Cabinet/ProductExports/Index')
+            ->has('exports.data', 0) // пресеты не должны попадать в список
+        );
+
+        echo "\n✅ Пресеты не видны в списке собственных выгрузок\n";
     }
 
     public function test_user_can_generate_preset_link(): void
