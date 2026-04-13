@@ -4,7 +4,7 @@ import { useSlugField } from '@/Admin/hooks/useSlugField';
 import axios from 'axios';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, EditorJsEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
-import { Box, Card, SimpleGrid, Input, Stack, Tabs } from '@chakra-ui/react';
+import { Box, Card, SimpleGrid, Input, Textarea, Stack, Tabs } from '@chakra-ui/react';
 
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
@@ -20,8 +20,10 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         brand_id: product.brand_id || null,
         model_id: product.model_id || null,
         size_chart_id: product.size_chart_id || null,
-        description: product.description_html || product.description || '',
+        description: product.description || '',
+        description_html: product.description_html || '',
         short_description: product.short_description || '',
+        rich_content: product.rich_content ? JSON.stringify(product.rich_content) : '',
         meta_title: product.meta_title || '',
         meta_description: product.meta_description || '',
         sku: product.sku || '',
@@ -66,7 +68,8 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         categories: ['category_id'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces', 'hidden'].some(field => errors[field]),
-        descriptions: ['short_description', 'description', 'meta_title', 'meta_description'].some(field => errors[field]),
+        descriptions: ['short_description', 'description', 'description_html', 'meta_title', 'meta_description'].some(field => errors[field]),
+        richContent: ['rich_content'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
     }), [errors]);
 
@@ -100,8 +103,8 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         });
     };
 
-    const handleDescriptionChange = (html) => {
-        setData('description', html);
+    const handleRichContentChange = (jsonString) => {
+        setData('rich_content', jsonString);
     };
 
     const handleDeleteMainImage = async () => {
@@ -240,6 +243,14 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                 </Tabs.Trigger>
                                 <Tabs.Trigger value="attributes">
                                     <LuListChecks /> Атрибуты
+                                </Tabs.Trigger>
+                                <Tabs.Trigger value="rich_content">
+                                    <LuAlignLeft /> Rich-контент
+                                    {tabErrors.richContent && (
+                                        <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                            ⚠️
+                                        </Box>
+                                    )}
                                 </Tabs.Trigger>
                             </Tabs.List>
 
@@ -519,28 +530,41 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                     <FormField
                                         label="Краткое описание"
                                         error={errors.short_description}
-                                        helperText="Краткое описание для карточки товара"
+                                        helperText="Краткое описание для карточки товара (текст/HTML для выгрузок)"
                                     >
-                                        <EditorJsEditor
+                                        <Textarea
                                             value={data.short_description}
-                                            onChange={(val) => setData('short_description', val)}
+                                            onChange={(e) => setData('short_description', e.target.value)}
                                             placeholder="Введите краткое описание товара"
-                                            minHeight="100px"
-                                            context={`Товар: ${data.name} (Кратко)`}
+                                            rows={3}
                                         />
                                     </FormField>
 
                                     <FormField
                                         label="Полное описание"
                                         error={errors.description}
-                                        helperText="Подробное описание товара"
+                                        helperText="Подробное описание товара (текст для выгрузок)"
                                     >
-                                        <EditorJsEditor
+                                        <Textarea
                                             value={data.description}
-                                            onChange={handleDescriptionChange}
+                                            onChange={(e) => setData('description', e.target.value)}
                                             placeholder="Введите полное описание товара"
-                                            minHeight="300px"
-                                            context={`Товар: ${data.name}`}
+                                            rows={6}
+                                        />
+                                    </FormField>
+
+                                    <FormField
+                                        label="Описание (HTML)"
+                                        error={errors.description_html}
+                                        helperText="HTML-версия описания (для выгрузок с разметкой)"
+                                    >
+                                        <Textarea
+                                            value={data.description_html}
+                                            onChange={(e) => setData('description_html', e.target.value)}
+                                            placeholder="<p>HTML описание товара</p>"
+                                            rows={6}
+                                            fontFamily="mono"
+                                            fontSize="sm"
                                         />
                                     </FormField>
 
@@ -641,6 +665,25 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                         onChange={(attrs) => setData('attributes', attrs)}
                                         errors={errors.attributes}
                                     />
+                                </Stack>
+                            </Tabs.Content>
+
+                            {/* Таб: Rich-контент (Editor.js) */}
+                            <Tabs.Content value="rich_content">
+                                <Stack gap={6} mt={6}>
+                                    <FormField
+                                        label="Rich-контент для сайта"
+                                        error={errors.rich_content}
+                                        helperText="Расширенное описание товара с блоками для отображения на сайте. Если заполнено — отображается вместо обычного описания."
+                                    >
+                                        <EditorJsEditor
+                                            value={data.rich_content}
+                                            onChange={handleRichContentChange}
+                                            placeholder="Добавьте блоки контента для отображения на сайте..."
+                                            minHeight="400px"
+                                            context={`Товар: ${data.name}`}
+                                        />
+                                    </FormField>
                                 </Stack>
                             </Tabs.Content>
                         </Tabs.Root>

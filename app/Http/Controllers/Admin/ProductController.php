@@ -97,6 +97,7 @@ class ProductController extends AdminController
             'size_chart_id' => 'nullable|exists:size_charts,id',
             'description' => 'nullable|string',
             'description_html' => 'nullable|string',
+            'rich_content' => 'nullable|json',
             'short_description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
@@ -139,6 +140,13 @@ class ProductController extends AdminController
         // Устанавливаем основной штрихкод как первый из списка для совместимости
         if (!empty($validated['barcodes'])) {
             $validated['barcode'] = $validated['barcodes'][0];
+        }
+
+        // Декодируем rich_content из JSON-строки в массив для корректной работы с кастом
+        if (isset($validated['rich_content'])) {
+            $validated['rich_content'] = !empty($validated['rich_content'])
+                ? json_decode($validated['rich_content'], true)
+                : null;
         }
 
         $product = Product::create($validated);
@@ -229,6 +237,7 @@ class ProductController extends AdminController
                 'size_chart_id' => $product->size_chart_id,
                 'description' => $product->description,
                 'description_html' => $product->description_html,
+                'rich_content' => $product->rich_content,
                 'short_description' => $product->short_description,
                 'meta_title' => $product->meta_title,
                 'meta_description' => $product->meta_description,
@@ -321,6 +330,7 @@ class ProductController extends AdminController
             'size_chart_id' => 'nullable|exists:size_charts,id',
             'description' => 'nullable|string',
             'description_html' => 'nullable|string',
+            'rich_content' => 'nullable|json',
             'short_description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
@@ -370,6 +380,13 @@ class ProductController extends AdminController
         // Устанавливаем основной штрихкод как первый из списка для совместимости
         if (isset($validated['barcodes'])) {
             $validated['barcode'] = !empty($validated['barcodes']) ? $validated['barcodes'][0] : null;
+        }
+
+        // Декодируем rich_content из JSON-строки в массив для корректной работы с кастом
+        if (isset($validated['rich_content'])) {
+            $validated['rich_content'] = !empty($validated['rich_content'])
+                ? json_decode($validated['rich_content'], true)
+                : null;
         }
 
         $product->update($validated);

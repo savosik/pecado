@@ -443,6 +443,7 @@ class ProductController extends Controller
         $productData['barcode'] = $product->barcode;
         $productData['description'] = $product->description;
         $productData['description_html'] = $product->description_html;
+        $productData['rich_content'] = $product->rich_content;
         $productData['barcodes'] = $product->barcodes->map(fn ($b) => [
             'id'      => $b->id,
             'barcode' => $b->barcode,

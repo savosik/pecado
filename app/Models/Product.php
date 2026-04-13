@@ -81,6 +81,7 @@ class Product extends Model implements HasMedia
         'hidden',
         'description',
         'description_html',
+        'rich_content',
         'short_description',
         'meta_title',
         'meta_description',
@@ -106,6 +107,7 @@ class Product extends Model implements HasMedia
             'for_marketplaces' => 'boolean',
             'hidden' => 'boolean',
             'pros_cons' => 'array',
+            'rich_content' => 'array',
         ];
     }
 

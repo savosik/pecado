@@ -51,7 +51,7 @@ export default function Show() {
 
                     <ProductDetailTabs
                         specifications={specifications}
-                        description={product.description_html || product.description}
+                        description={product.rich_content || product.description_html || product.description}
                         media={media}
                         certificates={certificates}
                         sizeChart={sizeChart}
@@ -77,7 +77,7 @@ export default function Show() {
 
                         <ProductDetailTabs
                             specifications={specifications}
-                            description={product.description_html || product.description}
+                            description={product.rich_content || product.description_html || product.description}
                             media={media}
                             certificates={certificates}
                             sizeChart={sizeChart}
