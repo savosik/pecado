@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Badge, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ attributeGroups, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.attribute-groups', filters, {
         entityLabel: 'Группа атрибутов',
     });
@@ -50,14 +55,24 @@ export default function Index({ attributeGroups, filters }) {
                 title="Группы атрибутов"
                 description="Логическая группировка характеристик товаров"
                 actions={
-                    can('attribute-groups.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="группы атрибутов"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('attribute-groups.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.attribute-groups.create'))}
                     >
                         <LuPlus /> Создать группу
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

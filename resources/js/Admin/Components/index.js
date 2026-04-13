@@ -8,6 +8,7 @@ export * from './TagSelector';
 export { SearchInput } from './SearchInput';
 export { FilterPanel } from './FilterPanel';
 export { ConfirmDialog } from './ConfirmDialog';
+export { DeleteAllButton } from './DeleteAllButton';
 export { ImageUploader } from './ImageUploader';
 export { MultipleImageUploader } from './MultipleImageUploader';
 export { VideoUploader } from './VideoUploader';

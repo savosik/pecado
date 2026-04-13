@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button, Badge, Image } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ product_selections, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.product-selections', filters, {
         entityLabel: 'Подборка',
     });
@@ -94,11 +99,21 @@ export default function Index({ product_selections, filters }) {
                 title="Подборки товаров"
                 description="Управление подборками товаров для отображения на сайте"
                 actions={
-                    can('product-selections.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="подборки товаров"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('product-selections.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.product-selections.create'))}>
                         <LuPlus /> Создать подборку
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button, Badge } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ bankAccounts, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.company-bank-accounts', filters, {
         entityLabel: 'Банковский счет',
     });
@@ -87,11 +92,21 @@ export default function Index({ bankAccounts, filters }) {
                 title="Банковские счета компаний"
                 description="Управление банковскими счетами"
                 actions={
-                    can('company-bank-accounts.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="банковские счета"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('company-bank-accounts.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.company-bank-accounts.create'))}>
                         <LuPlus /> Создать счет
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

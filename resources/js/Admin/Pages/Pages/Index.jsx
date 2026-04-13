@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { DataTable, PageHeader, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { DataTable, PageHeader, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Text, Image, Box } from '@chakra-ui/react';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -15,6 +15,11 @@ export default function Index({ pages, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.pages', filters, {
         entityLabel: 'Страница',
     });
@@ -68,6 +73,17 @@ export default function Index({ pages, filters }) {
                 createPermission="pages.create"
                 onCreate={() => router.visit(route('admin.pages.create'))}
                 createLabel="Создать страницу"
+            
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="страницы"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
             />
 
             <Box mb={4}>

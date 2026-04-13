@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import CategoryTree from './CategoryTree';
 import { Box, HStack, Badge, Image, Text, Button, Group } from '@chakra-ui/react';
 import { LuPlus, LuList, LuNetwork } from 'react-icons/lu';
@@ -21,6 +21,11 @@ export default function Index({ categories, filters }) {
         confirmDelete,
         closeDeleteDialog,
         navigate,
+    deleteAllDialogOpen,
+    deleteAllProcessing,
+    openDeleteAllDialog,
+    confirmDeleteAll,
+    closeDeleteAllDialog,
     } = useResourceIndex('admin.categories', filters, {
         entityLabel: 'Категория',
     });
@@ -149,7 +154,16 @@ export default function Index({ categories, filters }) {
             <PageHeader
                 title="Категории"
                 actions={
-                    <HStack>
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="категории"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {<HStack>
                         <Group attached>
                             <Button
                                 size="sm"
@@ -175,7 +189,8 @@ export default function Index({ categories, filters }) {
                             <LuPlus /> Создать категорию
                         </Button>
                         )}
-                    </HStack>
+                    </HStack>}
+                    </>
                 }
             />
 

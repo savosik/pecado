@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import { useState } from 'react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Badge, Button } from '@chakra-ui/react';
 import { LuPlus, LuRefreshCw } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -18,6 +18,11 @@ export default function Index({ currencies, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.currencies', filters, {
         entityLabel: 'Валюта',
     });
@@ -104,7 +109,16 @@ export default function Index({ currencies, filters }) {
                 onCreate={() => router.visit(route('admin.currencies.create'))}
                 createLabel="Создать валюту"
                 actions={
-                    <Button
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="валюты"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {<Button
                         onClick={handleUpdateRates}
                         loading={updatingRates}
                         loadingText="Обновление..."
@@ -113,7 +127,8 @@ export default function Index({ currencies, filters }) {
                     >
                         <LuRefreshCw />
                         Обновить курсы
-                    </Button>
+                    </Button>}
+                    </>
                 }
             />
 

@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, HStack, Badge, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ sizeCharts, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.size-charts', filters, {
         entityLabel: 'Размерная сетка',
     });
@@ -80,11 +85,21 @@ export default function Index({ sizeCharts, filters }) {
                 title="Размерные сетки"
                 description="Управление таблицами размеров"
                 actions={
-                    can('size-charts.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="размерные сетки"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('size-charts.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.size-charts.create'))}>
                         <LuPlus /> Создать сетку
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

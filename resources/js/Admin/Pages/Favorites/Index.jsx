@@ -13,11 +13,30 @@ import { Field } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ProductSelector } from "@/Admin/Components/ProductSelector";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
+import { DeleteAllButton } from '@/Admin/Components';
 
 const FavoritesIndex = ({ filters }) => {
     const { favorites } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
+    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', 'favorites'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
     const [selectedItems, setSelectedItems] = useState([]);
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
@@ -208,7 +227,16 @@ const FavoritesIndex = ({ filters }) => {
             <PageHeader
                 title="Избранное пользователей"
                 actions={
-                    <HStack>
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="избранное"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {<HStack>
                         <Button
                             onClick={() => setShowFilters(!showFilters)}
                             variant="outline"
@@ -223,7 +251,8 @@ const FavoritesIndex = ({ filters }) => {
                             <LuPlus /> Добавить в избранное
                         </Button>
                         )}
-                    </HStack>
+                    </HStack>}
+                    </>
                 }
             />
 

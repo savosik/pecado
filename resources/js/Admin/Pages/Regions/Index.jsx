@@ -9,6 +9,7 @@ import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { toaster } from "@/components/ui/toaster";
 import { usePermission } from '@/Admin/hooks/usePermission';
+import { DeleteAllButton } from '@/Admin/Components';
 
 const RegionsIndex = ({ filters }) => {
     const { regions } = usePage().props;
@@ -95,11 +96,21 @@ const RegionsIndex = ({ filters }) => {
             <PageHeader
                 title="Регионы"
                 actions={
-                    can('regions.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="регионы"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('regions.create') && (
                     <Button as={Link} href={route("admin.regions.create")} colorPalette="blue">
                         <LuPlus /> Создать регион
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

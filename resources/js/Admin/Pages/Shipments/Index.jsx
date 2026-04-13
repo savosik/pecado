@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import {
     Box, Text, Badge, IconButton, HStack, VStack, Card,
     Input, Stack, Button, Flex,
@@ -29,6 +29,11 @@ export default function Index({ shipments, filters, statuses }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.shipments', filters, {
         entityLabel: 'Реализация',
     });
@@ -155,7 +160,18 @@ export default function Index({ shipments, filters, statuses }) {
 
     return (
         <>
-            <PageHeader title="Реализации" />
+            <PageHeader title="Реализации" 
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="реализации"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
+            />
 
             {/* Поиск и фильтры */}
             <Flex gap="3" mb={4} direction={{ base: 'column', sm: 'row' }}>

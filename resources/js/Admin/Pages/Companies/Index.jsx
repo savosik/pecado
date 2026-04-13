@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button, Badge } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ companies, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.companies', filters, {
         entityLabel: 'Компания',
     });
@@ -100,11 +105,21 @@ export default function Index({ companies, filters }) {
                 title="Компании"
                 description="Управление компаниями пользователей"
                 actions={
-                    can('companies.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="компании"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('companies.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.companies.create'))}>
                         <LuPlus /> Создать компанию
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, SearchInput, ConfirmDialog, Pagination } from '@/Admin/Components';
+import { PageHeader, SearchInput, ConfirmDialog, Pagination, DeleteAllButton } from '@/Admin/Components';
 import {
     Card,
     SimpleGrid,
@@ -27,6 +27,24 @@ import { usePermission } from '@/Admin/hooks/usePermission';
 export default function Index({ media, filters, collections, modelTypes }) {
     const { can } = usePermission();
     const [search, setSearch] = useState(filters.search || '');
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
+    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', 'media'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [mediaToDelete, setMediaToDelete] = useState(null);
     const [previewItem, setPreviewItem] = useState(null);
@@ -120,6 +138,17 @@ export default function Index({ media, filters, collections, modelTypes }) {
             <PageHeader
                 title="Медиафайлы"
                 description={`Всего: ${media.total} файлов`}
+            
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="медиафайлы"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
             />
 
             <Stack gap={4} mb={6}>

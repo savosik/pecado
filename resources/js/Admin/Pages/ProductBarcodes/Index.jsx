@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ barcodes, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.product-barcodes', filters, {
         entityLabel: 'Штрихкод',
     });
@@ -64,11 +69,21 @@ export default function Index({ barcodes, filters }) {
                 title="Штрихкоды"
                 description="Управление штрихкодами товаров"
                 actions={
-                    can('product-barcodes.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="штрихкоды"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('product-barcodes.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.product-barcodes.create'))}>
                         <LuPlus /> Добавить штрихкод
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

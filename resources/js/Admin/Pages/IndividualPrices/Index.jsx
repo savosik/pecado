@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, EntitySelector, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, EntitySelector, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button, HStack, Badge, SimpleGrid } from '@chakra-ui/react';
 import { LuDownload, LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
@@ -10,6 +10,24 @@ import { usePermission } from '@/Admin/hooks/usePermission';
 export default function Index({ prices, filters, stats, filterLabels }) {
     const { can } = usePermission();
     const [partnerId, setPartnerId] = useState(filters.partner_id || null);
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
+    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', 'individual-prices'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
     const [productId, setProductId] = useState(filters.product_id || null);
     const [warehouseId, setWarehouseId] = useState(filters.warehouse_id || null);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -206,7 +224,16 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                 title="Индивидуальные цены"
                 description="Управление индивидуальными ценами партнёров"
                 actions={
-                    <HStack gap={3}>
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="индивидуальные цены"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {<HStack gap={3}>
                         <HStack gap={2}>
                             <Badge colorPalette="blue" variant="subtle" px={2} py={1}>
                                 {stats?.total_prices?.toLocaleString('ru-RU') || 0} цен
@@ -233,7 +260,8 @@ export default function Index({ prices, filters, stats, filterLabels }) {
                             <LuPlus /> Создать
                         </Button>
                         )}
-                    </HStack>
+                    </HStack>}
+                    </>
                 }
             />
 

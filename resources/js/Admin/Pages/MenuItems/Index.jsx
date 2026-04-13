@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Badge, HStack } from '@chakra-ui/react';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
@@ -31,6 +31,11 @@ export default function Index({ menuItems, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.menu-items', filters, {
         entityLabel: 'Пункт меню',
     });
@@ -114,6 +119,17 @@ export default function Index({ menuItems, filters }) {
                 createPermission="menu-items.create"
                 onCreate={() => router.visit(route('admin.menu-items.create'))}
                 createLabel="Добавить пункт"
+            
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="пункты меню"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
             />
 
             <Box mb={4}>

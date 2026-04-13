@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, HStack, Text, IconButton, Button } from '@chakra-ui/react';
 import { LuPlus, LuFile } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ certificates, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.certificates', filters, {
         entityLabel: 'Сертификат',
     });
@@ -92,11 +97,21 @@ export default function Index({ certificates, filters }) {
                 title="Сертификаты"
                 description="Управление сертификатами соответствия"
                 actions={
-                    can('certificates.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="сертификаты"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('certificates.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.certificates.create'))}>
                         <LuPlus /> Создать сертификат
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

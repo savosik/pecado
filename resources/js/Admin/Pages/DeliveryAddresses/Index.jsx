@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ deliveryAddresses, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.delivery-addresses', filters, {
         entityLabel: 'Адрес доставки',
     });
@@ -78,11 +83,21 @@ export default function Index({ deliveryAddresses, filters }) {
                 title="Адреса доставки"
                 description="Управление адресами доставки пользователей"
                 actions={
-                    can('delivery-addresses.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="адреса доставки"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('delivery-addresses.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.delivery-addresses.create'))}>
                         <LuPlus /> Создать адрес
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

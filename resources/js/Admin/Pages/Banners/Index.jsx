@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { DataTable, PageHeader, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { DataTable, PageHeader, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Text, Image, Box, Badge } from '@chakra-ui/react';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -15,6 +15,11 @@ export default function Index({ banners, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.banners', filters, {
         entityLabel: 'Баннер',
     });
@@ -120,6 +125,17 @@ export default function Index({ banners, filters }) {
                 createPermission="banners.create"
                 onCreate={() => router.visit(route('admin.banners.create'))}
                 createLabel="Создать баннер"
+            
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="баннеры"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
             />
 
             <Box mb={4}>

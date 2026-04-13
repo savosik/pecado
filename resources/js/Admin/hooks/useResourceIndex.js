@@ -4,7 +4,7 @@ import { toaster } from '@/components/ui/toaster';
 
 /**
  * useResourceIndex — хук для Index-страниц ресурсов
- * Инкапсулирует: поиск, сортировку, постраничную навигацию, удаление
+ * Инкапсулирует: поиск, сортировку, постраничную навигацию, удаление, массовое удаление
  *
  * @param {string} routeName - Базовое имя маршрута (напр. 'admin.brands')
  * @param {Object} filters - Текущие фильтры из Inertia props
@@ -12,17 +12,26 @@ import { toaster } from '@/components/ui/toaster';
  * @param {string} options.entityLabel - Название сущности для тостеров (напр. 'бренд')
  * @param {string} options.deleteSuccessTitle - Заголовок тостера при удалении
  * @param {string} options.deleteErrorTitle - Заголовок ошибки удаления
+ * @param {string} options.bulkDeleteResource - Slug ресурса для bulk-delete-all (авто-определяется из routeName)
  */
 export const useResourceIndex = (routeName, filters = {}, options = {}) => {
     const {
         entityLabel = 'запись',
         deleteSuccessTitle,
         deleteErrorTitle,
+        bulkDeleteResource,
     } = options;
 
     const [searchQuery, setSearchQuery] = useState(filters.search || '');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [entityToDelete, setEntityToDelete] = useState(null);
+
+    // Массовое удаление
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+
+    // Определяем slug ресурса: 'admin.brand-stories' => 'brand-stories'
+    const resourceSlug = bulkDeleteResource || routeName.replace(/^admin\./, '');
 
     // Навигация с фильтрами
     const navigate = (params) => {
@@ -94,6 +103,37 @@ export const useResourceIndex = (routeName, filters = {}, options = {}) => {
         setEntityToDelete(null);
     };
 
+    // --- Массовое удаление всех записей ---
+
+    const openDeleteAllDialog = () => {
+        setDeleteAllDialogOpen(true);
+    };
+
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', resourceSlug), {
+            onSuccess: () => {
+                toaster.create({
+                    title: 'Все записи успешно удалены',
+                    type: 'success',
+                });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({
+                    title: 'Ошибка при массовом удалении',
+                    type: 'error',
+                });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
+
+    const closeDeleteAllDialog = () => {
+        setDeleteAllDialogOpen(false);
+    };
+
     return {
         // Поиск
         searchQuery,
@@ -106,12 +146,19 @@ export const useResourceIndex = (routeName, filters = {}, options = {}) => {
         // Постраничная навигация
         handlePerPageChange,
 
-        // Удаление
+        // Удаление одной записи
         deleteDialogOpen,
         entityToDelete,
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+
+        // Массовое удаление
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
 
         // Утилиты
         navigate,

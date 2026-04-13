@@ -13,11 +13,30 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ProductSelector } from "@/Admin/Components/ProductSelector";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { usePermission } from '@/Admin/hooks/usePermission';
+import { DeleteAllButton } from '@/Admin/Components';
 
 const CartsIndex = ({ filters }) => {
     const { carts } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
+    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', 'carts'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
     const [selectedCarts, setSelectedCarts] = useState([]);
     const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
@@ -217,7 +236,16 @@ const CartsIndex = ({ filters }) => {
             <PageHeader
                 title="Корзины"
                 actions={
-                    <HStack>
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="корзины"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {<HStack>
                         <Button
                             onClick={() => setShowFilters(!showFilters)}
                             variant="outline"
@@ -232,7 +260,8 @@ const CartsIndex = ({ filters }) => {
                             <LuPlus /> Создать корзину
                         </Button>
                         )}
-                    </HStack>
+                    </HStack>}
+                    </>
                 }
             />
 

@@ -12,6 +12,7 @@ import { toaster } from "@/components/ui/toaster";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { usePermission } from '@/Admin/hooks/usePermission';
+import { DeleteAllButton } from '@/Admin/Components';
 
 const getStatusColor = (status) => {
     const colors = {
@@ -27,6 +28,24 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
     const { returns } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
+    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', 'returns'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
     const [selectedReturns, setSelectedReturns] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
     const [bulkStatus, setBulkStatus] = useState("");
@@ -205,7 +224,16 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
             <PageHeader
                 title="Возвраты"
                 actions={
-                    <HStack>
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="возвраты"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {<HStack>
                         <Button
                             onClick={() => setShowFilters(!showFilters)}
                             variant="outline"
@@ -220,7 +248,8 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                             <LuPlus /> Создать возврат
                         </Button>
                         )}
-                    </HStack>
+                    </HStack>}
+                    </>
                 }
             />
 

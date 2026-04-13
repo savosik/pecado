@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, SearchInput, DataTable, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, SearchInput, DataTable, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Badge, Box } from '@chakra-ui/react';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -15,6 +15,11 @@ export default function Index({ stories, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.stories', filters, {
         entityLabel: 'Сторис',
     });
@@ -87,6 +92,17 @@ export default function Index({ stories, filters }) {
                 createPermission="stories.create"
                 onCreate={() => router.visit(route('admin.stories.create'))}
                 createLabel="Создать сторис"
+            
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="сторис"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
             />
 
             <Box mb={4}>

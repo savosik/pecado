@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Button, Badge, Image } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ promotions, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.promotions', filters, {
         entityLabel: 'Акция',
     });
@@ -77,11 +82,21 @@ export default function Index({ promotions, filters }) {
                 title="Акции"
                 description="Управление рекламными акциями"
                 actions={
-                    can('promotions.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="акции"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('promotions.create') && (
                     <Button colorPalette="blue" onClick={() => router.visit(route('admin.promotions.create'))}>
                         <LuPlus /> Создать акцию
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

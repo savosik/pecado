@@ -9,6 +9,7 @@ import { PageHeader } from "@/Admin/Components/PageHeader";
 import { ConfirmDialog } from "@/Admin/Components/ConfirmDialog";
 import { toaster } from "@/components/ui/toaster";
 import { usePermission } from '@/Admin/hooks/usePermission';
+import { DeleteAllButton } from '@/Admin/Components';
 
 const WarehousesIndex = ({ filters }) => {
     const { warehouses } = usePage().props;
@@ -54,11 +55,21 @@ const WarehousesIndex = ({ filters }) => {
             <PageHeader
                 title="Склады"
                 actions={
-                    can('warehouses.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="склады"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('warehouses.create') && (
                     <Button as={Link} href={route("admin.warehouses.create")} colorPalette="blue">
                         <LuPlus /> Создать склад
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

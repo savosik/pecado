@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Badge, IconButton, HStack } from '@chakra-ui/react';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { usePermission } from '@/Admin/hooks/usePermission';
@@ -17,6 +17,11 @@ export default function Index({ balances, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.contractor-balances', filters, {
         entityLabel: 'Баланс контрагента',
     });
@@ -139,6 +144,17 @@ export default function Index({ balances, filters }) {
                 createPermission="contractor-balances.create"
                 createHref={route('admin.contractor-balances.create')}
                 createLabel="Создать баланс"
+            
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="балансы контрагентов"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
             />
 
             <Box mb={4}>

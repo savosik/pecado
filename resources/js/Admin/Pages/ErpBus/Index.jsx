@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader } from '@/Admin/Components';
+import { PageHeader, DeleteAllButton } from '@/Admin/Components';
 import {
     Box,
     Text,
@@ -26,6 +26,7 @@ import {
     LuSkull,
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
+import { toaster } from '@/components/ui/toaster';
 
 /**
  * Карточка статуса одной очереди.
@@ -147,6 +148,24 @@ const Pagination = ({ data, paramName = 'page' }) => {
 
 export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters }) {
     const [search, setSearch] = useState(filters.search || '');
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
+    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', 'erp-processed-messages'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
     const [eventFilter, setEventFilter] = useState(filters.event || '');
 
     const handleRefresh = useCallback(() => {
@@ -183,7 +202,18 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
     return (
         <>
             <Flex justify="space-between" align="center" mb={6}>
-                <PageHeader title="Шина ERP" />
+                <PageHeader title="Шина ERP"
+                    actions={
+                        <DeleteAllButton
+                            sectionLabel="записи ERP"
+                                dialogOpen={deleteAllDialogOpen}
+                                onOpen={openDeleteAllDialog}
+                                onClose={closeDeleteAllDialog}
+                                onConfirm={confirmDeleteAll}
+                                isLoading={deleteAllProcessing}
+                        />
+                    }
+                />
                 <IconButton
                     size="sm"
                     variant="outline"

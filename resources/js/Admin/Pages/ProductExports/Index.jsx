@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Text, Badge, HStack, IconButton } from '@chakra-ui/react';
 import { LuPlus, LuCopy, LuLink } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -23,6 +23,11 @@ export default function Index({ exports, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.product-exports', filters, {
         entityLabel: 'выгрузку',
     });
@@ -130,6 +135,17 @@ export default function Index({ exports, filters }) {
                 createPermission="product-exports.create"
                 onCreate={() => router.visit(route('admin.product-exports.create'))}
                 createLabel="Создать выгрузку"
+            
+                actions={
+                    <DeleteAllButton
+                        sectionLabel="выгрузки товаров"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                }
             />
 
             <Box mb={4}>

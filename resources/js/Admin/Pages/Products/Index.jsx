@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, HStack, Badge, Image, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ products, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.products', filters, {
         entityLabel: 'Товар',
     });
@@ -136,14 +141,24 @@ export default function Index({ products, filters }) {
             <PageHeader
                 title="Товары"
                 actions={
-                    can('products.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="товары"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('products.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.products.create'))}
                     >
                         <LuPlus /> Создать товар
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, Badge, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ attributes, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.attributes', filters, {
         entityLabel: 'Атрибут',
     });
@@ -103,14 +108,24 @@ export default function Index({ attributes, filters }) {
                 title="Атрибуты"
                 description="Управление характеристиками товаров"
                 actions={
-                    can('attributes.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="атрибуты"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('attributes.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.attributes.create'))}
                     >
                         <LuPlus /> Создать атрибут
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 

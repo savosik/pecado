@@ -1,6 +1,6 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, HStack, Image, Text, Button } from '@chakra-ui/react';
 import { LuPlus } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
@@ -19,6 +19,11 @@ export default function Index({ clientStatuses, filters }) {
         openDeleteDialog,
         confirmDelete,
         closeDeleteDialog,
+        deleteAllDialogOpen,
+        deleteAllProcessing,
+        openDeleteAllDialog,
+        confirmDeleteAll,
+        closeDeleteAllDialog,
     } = useResourceIndex('admin.client-statuses', filters, {
         entityLabel: 'Статус клиента',
     });
@@ -100,14 +105,24 @@ export default function Index({ clientStatuses, filters }) {
                 title="Статусы клиентов"
                 description="Управление статусами клиентов"
                 actions={
-                    can('client-statuses.create') && (
+                    <>
+                        <DeleteAllButton
+                        sectionLabel="статусы клиентов"
+                        dialogOpen={deleteAllDialogOpen}
+                        onOpen={openDeleteAllDialog}
+                        onClose={closeDeleteAllDialog}
+                        onConfirm={confirmDeleteAll}
+                        isLoading={deleteAllProcessing}
+                    />
+                        {can('client-statuses.create') && (
                     <Button
                         colorPalette="blue"
                         onClick={() => router.visit(route('admin.client-statuses.create'))}
                     >
                         <LuPlus /> Создать статус
                     </Button>
-                    )
+                    )}
+                    </>
                 }
             />
 
