@@ -450,18 +450,21 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                         />
                                     </FormField>
 
-                                    <FormField
-                                        label="Описание (HTML)"
-                                        error={errors.description_html}
-                                        helperText="HTML-версия описания с форматированием (для выгрузок)"
-                                    >
-                                        <SimpleWysiwyg
-                                            value={data.description_html}
-                                            onChange={(html) => setData('description_html', html)}
-                                            placeholder="Оформите описание товара..."
-                                            minHeight="200px"
-                                        />
-                                    </FormField>
+                                    <Box mx={{ base: '-4', md: '-6' }}>
+                                        <FormField
+                                            label="Описание (HTML)"
+                                            error={errors.description_html}
+                                            helperText="HTML-версия описания с форматированием (для выгрузок)"
+                                            px={{ base: '4', md: '6' }}
+                                        >
+                                            <SimpleWysiwyg
+                                                value={data.description_html}
+                                                onChange={(html) => setData('description_html', html)}
+                                                placeholder="Оформите описание товара..."
+                                                minHeight="200px"
+                                            />
+                                        </FormField>
+                                    </Box>
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                         <FormField
@@ -547,11 +550,12 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
 
                             {/* Таб: Rich-контент (Editor.js) */}
                             <Tabs.Content value="rich_content">
-                                <Stack gap={6} mt={6}>
+                                <Stack gap={6} mt={6} mx={{ base: '-4', md: '-6' }}>
                                     <FormField
                                         label="Rich-контент для сайта"
                                         error={errors.rich_content}
                                         helperText="Расширенное описание товара с блоками для отображения на сайте. Если заполнено — отображается вместо обычного описания."
+                                        px={{ base: '4', md: '6' }}
                                     >
                                         <EditorJsEditor
                                             value={data.rich_content}
