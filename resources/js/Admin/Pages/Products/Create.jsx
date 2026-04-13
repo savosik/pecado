@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, EditorJsEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, EditorJsEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector, SimpleWysiwyg } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Textarea, Stack, Tabs } from '@chakra-ui/react';
 
 import { Field } from '@/components/ui/field';
@@ -453,15 +453,13 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                     <FormField
                                         label="Описание (HTML)"
                                         error={errors.description_html}
-                                        helperText="HTML-версия описания (для выгрузок с разметкой)"
+                                        helperText="HTML-версия описания с форматированием (для выгрузок)"
                                     >
-                                        <Textarea
+                                        <SimpleWysiwyg
                                             value={data.description_html}
-                                            onChange={(e) => setData('description_html', e.target.value)}
-                                            placeholder="<p>HTML описание товара</p>"
-                                            rows={6}
-                                            fontFamily="mono"
-                                            fontSize="sm"
+                                            onChange={(html) => setData('description_html', html)}
+                                            placeholder="Оформите описание товара..."
+                                            minHeight="200px"
                                         />
                                     </FormField>
 

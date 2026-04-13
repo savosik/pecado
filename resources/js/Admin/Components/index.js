@@ -24,4 +24,5 @@ export { PhoneInput } from './PhoneInput';
 export { YandexMapPicker } from './YandexMapPicker';
 export { CategoryTreeSelector } from './CategoryTreeSelector';
 export { default as RegionSelector } from './RegionSelector';
+export { default as SimpleWysiwyg } from './SimpleWysiwyg';
 
