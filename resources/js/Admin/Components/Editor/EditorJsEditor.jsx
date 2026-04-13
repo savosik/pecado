@@ -98,6 +98,7 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     { default: PricingTableTool },
                     { default: MapTool },
                     { default: TeamTool },
+                    { default: AiBlockTool },
                 ] = await Promise.all([
                     import('@editorjs/editorjs'),
                     import('@editorjs/header'),
@@ -138,6 +139,7 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                     import('./tools/PricingTableTool'),
                     import('./tools/MapTool'),
                     import('./tools/TeamTool'),
+                    import('./tools/AiBlockTool'),
                 ]);
 
                 if (!isMounted || !containerRef.current) return;
@@ -241,6 +243,9 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
                         pricingTable: { class: PricingTableTool },
                         map: { class: MapTool },
                         team: { class: TeamTool },
+
+                        // ======= AI-генератор =======
+                        aiBlock: { class: AiBlockTool },
                     },
 
                     i18n: {

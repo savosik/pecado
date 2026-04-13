@@ -23,6 +23,9 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::post('/api/upload-image', [\App\Http\Controllers\Admin\EditorUploadController::class, 'uploadByFile'])->name('api.upload-image');
     Route::post('/api/fetch-url', [\App\Http\Controllers\Admin\EditorUploadController::class, 'fetchByUrl'])->name('api.fetch-url');
 
+    // Editor.js — AI-генерация блоков
+    Route::post('/api/ai-generate-block', [\App\Http\Controllers\Admin\AiBlockController::class, 'generate'])->name('api.ai-generate-block');
+
     // =====================================================================
     // Каталог
     // =====================================================================
