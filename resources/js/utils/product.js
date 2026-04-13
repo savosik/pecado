@@ -33,11 +33,23 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
 }
 
 /**
+ * Проверяет, является ли HTML-строка «пустой» визуально.
+ * WYSIWYG может оставить <p><br></p>, <p></p>, &nbsp; и т.д.
+ */
+function isEmptyHtml(html) {
+    if (!html) return true;
+    // Убираем теги, &nbsp;, пробелы — если ничего не осталось, значит пусто
+    const text = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, '').trim();
+    return text.length === 0;
+}
+
+/**
  * Возвращает описание товара с правильной цепочкой приоритетов:
  * rich_content (если есть блоки) → description_html → description → short_description
  *
- * Editor.js при пустом контенте сохраняет { blocks: [] }, что truthy в JS.
- * Поэтому нужна явная проверка наличия блоков.
+ * Учитывает:
+ * - Editor.js при пустом контенте сохраняет { blocks: [] }
+ * - WYSIWYG может оставить <p><br></p> как «пустой» HTML
  */
 export function getProductDescription(product) {
     // rich_content — только если есть реальные блоки
@@ -46,5 +58,9 @@ export function getProductDescription(product) {
         return rc;
     }
 
-    return product.description_html || product.description || product.short_description || null;
+    if (!isEmptyHtml(product.description_html)) return product.description_html;
+    if (product.description?.trim()) return product.description;
+    if (product.short_description?.trim()) return product.short_description;
+
+    return null;
 }
