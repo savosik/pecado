@@ -15,6 +15,24 @@ const WarehousesIndex = ({ filters }) => {
     const { warehouses } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = React.useState(null);
+    const [deleteAllDialogOpen, setDeleteAllDialogOpen] = React.useState(false);
+    const [deleteAllProcessing, setDeleteAllProcessing] = React.useState(false);
+    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
+    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
+    const confirmDeleteAll = () => {
+        setDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-delete-all', 'warehouses'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
+                setDeleteAllDialogOpen(false);
+                setDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                setDeleteAllProcessing(false);
+            },
+        });
+    };
 
     const handleSort = (field, direction) => {
         router.get(route("admin.warehouses.index"), {
