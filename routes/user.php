@@ -162,6 +162,11 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::put('/product-exports/{productExport}', [ProductExportController::class, 'update'])->name('product-exports.update');
     Route::delete('/product-exports/{productExport}', [ProductExportController::class, 'destroy'])->name('product-exports.destroy');
 
+    // Стандартные выгрузки (пресеты для CMS)
+    Route::get('/export-presets', [\App\Http\Controllers\User\ExportPresetController::class, 'index'])->name('export-presets.index');
+    Route::post('/export-presets/{preset}/generate', [\App\Http\Controllers\User\ExportPresetController::class, 'generate'])->name('export-presets.generate');
+    Route::delete('/export-presets/{preset}', [\App\Http\Controllers\User\ExportPresetController::class, 'destroy'])->name('export-presets.destroy');
+
     // Возвраты
     Route::get('/returns/search-products', [ReturnController::class, 'searchProducts'])->name('returns.search-products');
     Route::get('/returns/product-orders', [ReturnController::class, 'getProductOrders'])->name('returns.product-orders');

@@ -1,0 +1,82 @@
+<?php
+
+namespace App\Services\ProductExport\Presets;
+
+use App\Models\ProductExport;
+
+/**
+ * ВКонтакте Магазин CSV — формат для загрузки товаров в группы/паблики ВК.
+ *
+ * Колонки: Название, Описание, Фото, Категория, Цена, Старая цена,
+ * Артикул, В наличии, Размеры таблицы, Свойства.
+ */
+class VkMarketCsvPreset extends AbstractPreset
+{
+    public function key(): string { return 'vk'; }
+    public function name(): string { return 'Магазин ВКонтакте (CSV)'; }
+    public function description(): string { return 'CSV-файл для пакетной загрузки товаров в Магазин ВКонтакте (паблики и группы).'; }
+    public function fileExtension(): string { return 'csv'; }
+    public function mimeType(): string { return 'text/csv; charset=utf-8'; }
+    public function color(): string { return 'blue'; }
+    public function icon(): string { return 'LuMessageCircle'; }
+
+    public function writeToStream($stream, ProductExport $export): void
+    {
+        $data = $this->fetchRichData($export);
+
+        // BOM
+        fwrite($stream, "\xEF\xBB\xBF");
+
+        $headers = [
+            'Название',
+            'Описание',
+            'Фото (ссылки через запятую)',
+            'Категория',
+            'Цена',
+            'Старая цена',
+            'Артикул',
+            'В наличии',
+            'Бренд',
+        ];
+
+        // Добавляем колонки для атрибутов (свойства товара)
+        $maxAttrs = $data->max(fn ($item) => count($item['attributes']));
+        for ($i = 1; $i <= $maxAttrs; $i++) {
+            $headers[] = "Свойство {$i} название";
+            $headers[] = "Свойство {$i} значение";
+        }
+
+        fputcsv($stream, $headers, ';');
+
+        foreach ($data as $item) {
+            $allImages = collect([$item['main_image']])
+                ->merge($item['additional_images'])
+                ->filter()
+                ->implode(', ');
+
+            $row = [
+                $item['name'],                                         // Название
+                $item['description_plain'] ?? '',                      // Описание
+                $allImages,                                            // Фото
+                $item['category_name'] ?? '',                          // Категория
+                (string) $item['price'],                               // Цена
+                $item['base_price'] > $item['price']
+                    ? (string) $item['base_price'] : '',               // Старая цена
+                $item['sku'] ?? '',                                    // Артикул
+                $item['stock'] > 0 ? 'Да' : 'Нет',                    // В наличии
+                $item['brand_name'] ?? '',                             // Бренд
+            ];
+
+            foreach ($item['attributes'] as $attr) {
+                $row[] = $attr['name'];
+                $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+            }
+            $remaining = ($maxAttrs - count($item['attributes'])) * 2;
+            for ($i = 0; $i < $remaining; $i++) {
+                $row[] = '';
+            }
+
+            fputcsv($stream, $row, ';');
+        }
+    }
+}

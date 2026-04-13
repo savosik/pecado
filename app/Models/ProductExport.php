@@ -18,10 +18,12 @@ class ProductExport extends Model
         'name',
         'hash',
         'format',
+        'preset',
         'filters',
         'fields',
         'is_active',
         'last_downloaded_at',
+        'cached_at',
     ];
 
     protected function casts(): array
@@ -32,7 +34,41 @@ class ProductExport extends Model
             'is_active' => 'boolean',
             'format' => ExportFormat::class,
             'last_downloaded_at' => 'datetime',
+            'cached_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Check if this export is a preset (not a custom export).
+     */
+    public function isPreset(): bool
+    {
+        return !empty($this->preset);
+    }
+
+    /**
+     * Get the path for the cached export file.
+     */
+    public function getCacheFilePath(): string
+    {
+        return storage_path("app/exports/{$this->hash}");
+    }
+
+    /**
+     * Check if a valid cache file exists.
+     */
+    public function hasFreshCache(int $maxAgeHours = 4): bool
+    {
+        if (!$this->cached_at) {
+            return false;
+        }
+
+        $filePath = $this->getCacheFilePath();
+        if (!file_exists($filePath)) {
+            return false;
+        }
+
+        return $this->cached_at->diffInHours(now()) < $maxAgeHours;
     }
 
     /**
