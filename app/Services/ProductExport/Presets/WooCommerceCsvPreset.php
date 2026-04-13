@@ -6,9 +6,7 @@ use App\Models\ProductExport;
 
 /**
  * WooCommerce CSV — формат встроенного импортера WooCommerce.
- *
- * Колонки: SKU, Name, Published, Short description, Description,
- * Regular price, Sale price, Stock, Categories, Images, Attribute 1 name, etc.
+ * Использует chunk-подход для больших каталогов.
  */
 class WooCommerceCsvPreset extends AbstractPreset
 {
@@ -22,76 +20,57 @@ class WooCommerceCsvPreset extends AbstractPreset
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $data = $this->fetchRichData($export);
-
-        // Определяем максимальное количество атрибутов
-        $maxAttrs = $data->max(fn ($item) => count($item['attributes']));
-        $maxImages = $data->max(fn ($item) => count($item['additional_images']));
-
         // BOM
         fwrite($stream, "\xEF\xBB\xBF");
 
-        // Заголовки
-        $headers = [
-            'ID', 'Type', 'SKU', 'Name', 'Published', 'Featured',
-            'Short description', 'Description',
-            'Sale price', 'Regular price',
-            'Stock', 'In stock?',
-            'Categories', 'Tags', 'Images',
-            'Meta: _seo_title', 'Meta: _seo_description',
-            'External ID', 'Brands',
-        ];
+        $headersWritten = false;
 
-        // Атрибутные колонки
-        for ($i = 1; $i <= $maxAttrs; $i++) {
-            $headers[] = "Attribute {$i} name";
-            $headers[] = "Attribute {$i} value(s)";
-        }
+        $this->eachChunk($export, function ($items) use ($stream, &$headersWritten) {
+            $maxAttrs = $items->max(fn ($item) => count($item['attributes']));
 
-        fputcsv($stream, $headers);
-
-        // Данные
-        foreach ($data as $item) {
-            // Все картинки через запятую (WooCommerce формат)
-            $allImages = collect([$item['main_image']])
-                ->merge($item['additional_images'])
-                ->filter()
-                ->implode(', ');
-
-            $row = [
-                $item['id'],                                      // ID
-                'simple',                                         // Type
-                $item['sku'] ?? '',                                // SKU
-                $item['name'],                                    // Name
-                '1',                                              // Published
-                $item['is_bestseller'] ? '1' : '0',               // Featured
-                $item['short_description'] ?? '',                  // Short description
-                $item['description'] ?? '',                        // Description
-                (string) $item['price'],                          // Sale price
-                (string) $item['base_price'],                     // Regular price
-                (string) $item['stock'],                          // Stock
-                $item['stock'] > 0 ? '1' : '0',                  // In stock?
-                $item['category_path'] ?? '',                     // Categories
-                '',                                               // Tags
-                $allImages,                                       // Images
-                $item['meta_title'] ?? '',                        // Meta: _seo_title
-                $item['meta_description'] ?? '',                  // Meta: _seo_description
-                $item['external_id'] ?? '',                       // External ID
-                $item['brand_name'] ?? '',                        // Brands
-            ];
-
-            // Атрибуты
-            foreach ($item['attributes'] as $attr) {
-                $row[] = $attr['name'];
-                $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
-            }
-            // Заполнить оставшиеся слоты пустыми
-            $remaining = ($maxAttrs - count($item['attributes'])) * 2;
-            for ($i = 0; $i < $remaining; $i++) {
-                $row[] = '';
+            if (!$headersWritten) {
+                $headers = [
+                    'ID', 'Type', 'SKU', 'Name', 'Published', 'Featured',
+                    'Short description', 'Description', 'Sale price', 'Regular price',
+                    'Stock', 'In stock?', 'Categories', 'Tags', 'Images',
+                    'Meta: _seo_title', 'Meta: _seo_description', 'External ID', 'Brands',
+                ];
+                for ($i = 1; $i <= $maxAttrs; $i++) {
+                    $headers[] = "Attribute {$i} name";
+                    $headers[] = "Attribute {$i} value(s)";
+                }
+                fputcsv($stream, $headers);
+                $headersWritten = true;
             }
 
-            fputcsv($stream, $row);
-        }
+            foreach ($items as $item) {
+                $allImages = collect([$item['main_image']])
+                    ->merge($item['additional_images'])
+                    ->filter()
+                    ->implode(', ');
+
+                $row = [
+                    $item['id'], 'simple', $item['sku'] ?? '', $item['name'],
+                    '1', $item['is_bestseller'] ? '1' : '0',
+                    $item['short_description'] ?? '', $item['description'] ?? '',
+                    (string) $item['price'], (string) $item['base_price'],
+                    (string) $item['stock'], $item['stock'] > 0 ? '1' : '0',
+                    $item['category_path'] ?? '', '', $allImages,
+                    $item['meta_title'] ?? '', $item['meta_description'] ?? '',
+                    $item['external_id'] ?? '', $item['brand_name'] ?? '',
+                ];
+
+                foreach ($item['attributes'] as $attr) {
+                    $row[] = $attr['name'];
+                    $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+                }
+                $remaining = ($maxAttrs - count($item['attributes'])) * 2;
+                for ($i = 0; $i < $remaining; $i++) {
+                    $row[] = '';
+                }
+
+                fputcsv($stream, $row);
+            }
+        });
     }
 }

@@ -7,8 +7,7 @@ use App\Models\ProductExport;
 /**
  * OpenCart CSV — формат для модуля Export/Import Tool.
  *
- * Колонки: product_id, name(ru), categories, sku, model, price, quantity,
- * image, additional_images, description(ru), meta_title(ru), manufacturer, status.
+ * Использует chunk-подход для обработки больших каталогов.
  */
 class OpenCartCsvPreset extends AbstractPreset
 {
@@ -22,71 +21,63 @@ class OpenCartCsvPreset extends AbstractPreset
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $data = $this->fetchRichData($export);
-
         // BOM
         fwrite($stream, "\xEF\xBB\xBF");
 
-        $headers = [
-            'product_id',
-            'name(ru)',
-            'categories',
-            'sku',
-            'model',
-            'price',
-            'quantity',
-            'status',
-            'image',
-            'additional_images',
-            'description(ru)',
-            'meta_title(ru)',
-            'meta_description(ru)',
-            'manufacturer',
-            'upc',
-            'weight',
-        ];
+        $headersWritten = false;
 
-        // Атрибуты
-        $maxAttrs = $data->max(fn ($item) => count($item['attributes']));
-        for ($i = 1; $i <= $maxAttrs; $i++) {
-            $headers[] = "attribute_name_{$i}";
-            $headers[] = "attribute_value_{$i}";
-        }
+        $this->eachChunk($export, function ($items) use ($stream, &$headersWritten) {
+            // Определяем максимальное количество атрибутов в чанке
+            $maxAttrs = $items->max(fn ($item) => count($item['attributes']));
 
-        fputcsv($stream, $headers);
-
-        foreach ($data as $item) {
-            $additionalImages = implode(',', $item['additional_images']);
-
-            $row = [
-                $item['id'],                                           // product_id
-                $item['name'],                                         // name(ru)
-                $item['category_path'] ?? '',                          // categories
-                $item['sku'] ?? '',                                    // sku
-                $item['model_code'] ?? $item['sku'] ?? '',             // model
-                (string) $item['price'],                               // price
-                (string) $item['stock'],                               // quantity
-                $item['stock'] > 0 ? '1' : '0',                       // status
-                $item['main_image'] ?? '',                             // image
-                $additionalImages,                                     // additional_images
-                $item['description'] ?? '',                            // description(ru)
-                $item['meta_title'] ?? '',                             // meta_title(ru)
-                $item['meta_description'] ?? '',                       // meta_description(ru)
-                $item['brand_name'] ?? '',                             // manufacturer
-                $item['barcode'] ?? '',                                // upc
-                '',                                                    // weight
-            ];
-
-            foreach ($item['attributes'] as $attr) {
-                $row[] = $attr['name'];
-                $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
-            }
-            $remaining = ($maxAttrs - count($item['attributes'])) * 2;
-            for ($i = 0; $i < $remaining; $i++) {
-                $row[] = '';
+            if (!$headersWritten) {
+                $headers = [
+                    'product_id', 'name(ru)', 'categories', 'sku', 'model',
+                    'price', 'quantity', 'status', 'image', 'additional_images',
+                    'description(ru)', 'meta_title(ru)', 'meta_description(ru)',
+                    'manufacturer', 'upc', 'weight',
+                ];
+                for ($i = 1; $i <= $maxAttrs; $i++) {
+                    $headers[] = "attribute_name_{$i}";
+                    $headers[] = "attribute_value_{$i}";
+                }
+                fputcsv($stream, $headers);
+                $headersWritten = true;
             }
 
-            fputcsv($stream, $row);
-        }
+            foreach ($items as $item) {
+                $additionalImages = implode(',', $item['additional_images']);
+
+                $row = [
+                    $item['id'],
+                    $item['name'],
+                    $item['category_path'] ?? '',
+                    $item['sku'] ?? '',
+                    $item['model_code'] ?? $item['sku'] ?? '',
+                    (string) $item['price'],
+                    (string) $item['stock'],
+                    $item['stock'] > 0 ? '1' : '0',
+                    $item['main_image'] ?? '',
+                    $additionalImages,
+                    $item['description'] ?? '',
+                    $item['meta_title'] ?? '',
+                    $item['meta_description'] ?? '',
+                    $item['brand_name'] ?? '',
+                    $item['barcode'] ?? '',
+                    '',
+                ];
+
+                foreach ($item['attributes'] as $attr) {
+                    $row[] = $attr['name'];
+                    $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+                }
+                $remaining = ($maxAttrs - count($item['attributes'])) * 2;
+                for ($i = 0; $i < $remaining; $i++) {
+                    $row[] = '';
+                }
+
+                fputcsv($stream, $row);
+            }
+        });
     }
 }

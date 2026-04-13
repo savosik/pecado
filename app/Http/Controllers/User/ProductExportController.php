@@ -28,6 +28,7 @@ class ProductExportController extends Controller
     {
         $query = ProductExport::query()
             ->where('user_id', Auth::id())
+            ->whereNull('preset') // Пресеты отображаются отдельно в карточках
             ->latest();
 
         if ($search = $request->input('search')) {

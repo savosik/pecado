@@ -17,28 +17,64 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Базовый класс для всех пресетов.
  * Содержит общую логику загрузки товаров со всеми связями, атрибутами,
  * ценами и остатками пользователя.
+ *
+ * Использует chunk-подход для обработки больших каталогов (~10k+ товаров)
+ * без переполнения памяти.
  */
 abstract class AbstractPreset implements PresetInterface
 {
+    protected const CHUNK_SIZE = 500;
+
     public function __construct(
         protected PriceServiceInterface $priceService,
         protected StockServiceInterface $stockService,
     ) {}
 
     /**
-     * Собрать полный набор данных для экспорта.
-     * Возвращает коллекцию ассоциативных массивов с «богатыми» данными.
+     * Получить пользователя из экспорта.
+     */
+    protected function resolveClientUser(ProductExport $export): ?User
+    {
+        return $export->client_user_id
+            ? User::with('region')->find($export->client_user_id)
+            : null;
+    }
+
+    /**
+     * Обработка товаров чанками через callback.
+     * Вызывает $callback для каждого чанка mapped-данных.
+     *
+     * @param ProductExport $export
+     * @param callable(Collection<int, array>): void $callback получает коллекцию rich-data массивов
+     */
+    protected function eachChunk(ProductExport $export, callable $callback): void
+    {
+        $clientUser = $this->resolveClientUser($export);
+
+        $this->buildBaseQuery()
+            ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback) {
+                $mapped = $products->map(fn (Product $product) => $this->mapProduct($product, $clientUser));
+                $callback($mapped);
+            });
+    }
+
+    /**
+     * Собрать полный набор данных для экспорта (малые каталоги, XML).
+     * Для больших каталогов лучше использовать eachChunk().
      */
     protected function fetchRichData(ProductExport $export): Collection
     {
-        $clientUser = $export->client_user_id
-            ? User::with('region')->find($export->client_user_id)
-            : null;
+        $clientUser = $this->resolveClientUser($export);
 
-        $query = $this->buildBaseQuery();
-        $products = $query->get();
+        $result = collect();
 
-        return $products->map(fn (Product $product) => $this->mapProduct($product, $clientUser));
+        $this->buildBaseQuery()
+            ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, &$result) {
+                $mapped = $products->map(fn (Product $product) => $this->mapProduct($product, $clientUser));
+                $result = $result->concat($mapped);
+            });
+
+        return $result;
     }
 
     /**
@@ -162,7 +198,7 @@ abstract class AbstractPreset implements PresetInterface
             'attributes' => $attributes,
             'is_new' => $product->is_new,
             'is_bestseller' => $product->is_bestseller,
-            'weight' => null, // Можно добавить, когда появится поле в модели
+            'weight' => null,
             'model_name' => $product->model?->name,
             'model_code' => $product->model?->code,
             'url' => $product->url ?: url("/products/{$product->slug}"),

@@ -5,10 +5,7 @@ namespace App\Services\ProductExport\Presets;
 use App\Models\ProductExport;
 
 /**
- * ВКонтакте Магазин CSV — формат для загрузки товаров в группы/паблики ВК.
- *
- * Колонки: Название, Описание, Фото, Категория, Цена, Старая цена,
- * Артикул, В наличии, Размеры таблицы, Свойства.
+ * ВКонтакте Магазин CSV — chunk-based.
  */
 class VkMarketCsvPreset extends AbstractPreset
 {
@@ -22,61 +19,47 @@ class VkMarketCsvPreset extends AbstractPreset
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $data = $this->fetchRichData($export);
-
-        // BOM
         fwrite($stream, "\xEF\xBB\xBF");
 
-        $headers = [
-            'Название',
-            'Описание',
-            'Фото (ссылки через запятую)',
-            'Категория',
-            'Цена',
-            'Старая цена',
-            'Артикул',
-            'В наличии',
-            'Бренд',
-        ];
+        $headersWritten = false;
 
-        // Добавляем колонки для атрибутов (свойства товара)
-        $maxAttrs = $data->max(fn ($item) => count($item['attributes']));
-        for ($i = 1; $i <= $maxAttrs; $i++) {
-            $headers[] = "Свойство {$i} название";
-            $headers[] = "Свойство {$i} значение";
-        }
+        $this->eachChunk($export, function ($items) use ($stream, &$headersWritten) {
+            $maxAttrs = $items->max(fn ($item) => count($item['attributes']));
 
-        fputcsv($stream, $headers, ';');
-
-        foreach ($data as $item) {
-            $allImages = collect([$item['main_image']])
-                ->merge($item['additional_images'])
-                ->filter()
-                ->implode(', ');
-
-            $row = [
-                $item['name'],                                         // Название
-                $item['description_plain'] ?? '',                      // Описание
-                $allImages,                                            // Фото
-                $item['category_name'] ?? '',                          // Категория
-                (string) $item['price'],                               // Цена
-                $item['base_price'] > $item['price']
-                    ? (string) $item['base_price'] : '',               // Старая цена
-                $item['sku'] ?? '',                                    // Артикул
-                $item['stock'] > 0 ? 'Да' : 'Нет',                    // В наличии
-                $item['brand_name'] ?? '',                             // Бренд
-            ];
-
-            foreach ($item['attributes'] as $attr) {
-                $row[] = $attr['name'];
-                $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
-            }
-            $remaining = ($maxAttrs - count($item['attributes'])) * 2;
-            for ($i = 0; $i < $remaining; $i++) {
-                $row[] = '';
+            if (!$headersWritten) {
+                $headers = [
+                    'Название', 'Описание', 'Фото (ссылки через запятую)', 'Категория',
+                    'Цена', 'Старая цена', 'Артикул', 'В наличии', 'Бренд',
+                ];
+                for ($i = 1; $i <= $maxAttrs; $i++) {
+                    $headers[] = "Свойство {$i} название";
+                    $headers[] = "Свойство {$i} значение";
+                }
+                fputcsv($stream, $headers, ';');
+                $headersWritten = true;
             }
 
-            fputcsv($stream, $row, ';');
-        }
+            foreach ($items as $item) {
+                $allImages = collect([$item['main_image']])
+                    ->merge($item['additional_images'])->filter()->implode(', ');
+
+                $row = [
+                    $item['name'], $item['description_plain'] ?? '', $allImages,
+                    $item['category_name'] ?? '', (string) $item['price'],
+                    $item['base_price'] > $item['price'] ? (string) $item['base_price'] : '',
+                    $item['sku'] ?? '', $item['stock'] > 0 ? 'Да' : 'Нет',
+                    $item['brand_name'] ?? '',
+                ];
+
+                foreach ($item['attributes'] as $attr) {
+                    $row[] = $attr['name'];
+                    $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+                }
+                $remaining = ($maxAttrs - count($item['attributes'])) * 2;
+                for ($i = 0; $i < $remaining; $i++) { $row[] = ''; }
+
+                fputcsv($stream, $row, ';');
+            }
+        });
     }
 }

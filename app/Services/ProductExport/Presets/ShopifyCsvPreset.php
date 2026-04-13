@@ -7,9 +7,7 @@ use Illuminate\Support\Str;
 
 /**
  * Shopify CSV — строгий формат для импорта товаров в Shopify.
- *
- * Обязательные колонки: Handle, Title, Body (HTML), Vendor, Type,
- * Variant SKU, Variant Price, Variant Inventory Qty, Image Src, и т.д.
+ * Использует chunk-подход для больших каталогов.
  */
 class ShopifyCsvPreset extends AbstractPreset
 {
@@ -24,83 +22,54 @@ class ShopifyCsvPreset extends AbstractPreset
     protected function getHeaders(): array
     {
         return [
-            'Handle',
-            'Title',
-            'Body (HTML)',
-            'Vendor',
-            'Product Category',
-            'Type',
-            'Tags',
-            'Published',
-            'Variant SKU',
-            'Variant Grams',
-            'Variant Inventory Qty',
-            'Variant Price',
-            'Variant Compare At Price',
-            'Variant Barcode',
-            'Image Src',
-            'Image Position',
-            'Image Alt Text',
-            'SEO Title',
-            'SEO Description',
-            'Status',
+            'Handle', 'Title', 'Body (HTML)', 'Vendor', 'Product Category',
+            'Type', 'Tags', 'Published', 'Variant SKU', 'Variant Grams',
+            'Variant Inventory Qty', 'Variant Price', 'Variant Compare At Price',
+            'Variant Barcode', 'Image Src', 'Image Position', 'Image Alt Text',
+            'SEO Title', 'SEO Description', 'Status',
         ];
     }
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $data = $this->fetchRichData($export);
-
         // BOM for UTF-8
         fwrite($stream, "\xEF\xBB\xBF");
 
-        // Header row
-        fputcsv($stream, $this->getHeaders());
+        $headers = $this->getHeaders();
+        fputcsv($stream, $headers);
 
-        foreach ($data as $item) {
-            $handle = Str::slug($item['name'] . '-' . ($item['sku'] ?: $item['id']));
+        $this->eachChunk($export, function ($items) use ($stream, $headers) {
+            foreach ($items as $item) {
+                $handle = Str::slug($item['name'] . '-' . ($item['sku'] ?: $item['id']));
 
-            // Теги из атрибутов
-            $tags = collect($item['attributes'])
-                ->map(fn ($a) => "{$a['name']}:{$a['value']}")
-                ->implode(', ');
+                $tags = collect($item['attributes'])
+                    ->map(fn ($a) => "{$a['name']}:{$a['value']}")
+                    ->implode(', ');
 
-            // Основная строка товара
-            $row = [
-                $handle,                                          // Handle
-                $item['name'],                                    // Title
-                $item['description'] ?? '',                       // Body (HTML)
-                $item['brand_name'] ?? '',                        // Vendor
-                $item['category_path'] ?? '',                     // Product Category
-                $item['category_name'] ?? '',                     // Type
-                $tags,                                            // Tags
-                'TRUE',                                           // Published
-                $item['sku'] ?? '',                                // Variant SKU
-                '',                                               // Variant Grams
-                (string) $item['stock'],                          // Variant Inventory Qty
-                (string) $item['price'],                          // Variant Price
-                $item['base_price'] > $item['price']
-                    ? (string) $item['base_price'] : '',          // Variant Compare At Price
-                $item['barcode'] ?? '',                           // Variant Barcode
-                $item['main_image'] ?? '',                        // Image Src
-                $item['main_image'] ? '1' : '',                   // Image Position
-                $item['name'],                                    // Image Alt Text
-                $item['meta_title'] ?? '',                        // SEO Title
-                $item['meta_description'] ?? '',                  // SEO Description
-                $item['stock'] > 0 ? 'active' : 'draft',         // Status
-            ];
+                $row = [
+                    $handle, $item['name'], $item['description'] ?? '',
+                    $item['brand_name'] ?? '', $item['category_path'] ?? '',
+                    $item['category_name'] ?? '', $tags, 'TRUE',
+                    $item['sku'] ?? '', '',
+                    (string) $item['stock'], (string) $item['price'],
+                    $item['base_price'] > $item['price'] ? (string) $item['base_price'] : '',
+                    $item['barcode'] ?? '', $item['main_image'] ?? '',
+                    $item['main_image'] ? '1' : '', $item['name'],
+                    $item['meta_title'] ?? '', $item['meta_description'] ?? '',
+                    $item['stock'] > 0 ? 'active' : 'draft',
+                ];
+                fputcsv($stream, $row);
 
-            fputcsv($stream, $row);
-
-            // Дополнительные картинки — каждая в отдельной строке
-            foreach ($item['additional_images'] as $i => $imgUrl) {
-                $imgRow = array_fill(0, count($this->getHeaders()), '');
-                $imgRow[0] = $handle;                              // Handle
-                $imgRow[array_search('Image Src', $this->getHeaders())] = $imgUrl;
-                $imgRow[array_search('Image Position', $this->getHeaders())] = (string) ($i + 2);
-                $imgRow[array_search('Image Alt Text', $this->getHeaders())] = $item['name'] . ' — фото ' . ($i + 2);
-                fputcsv($stream, $imgRow);
+                // Дополнительные картинки
+                foreach ($item['additional_images'] as $i => $imgUrl) {
+                    $imgRow = array_fill(0, count($headers), '');
+                    $imgRow[0] = $handle;
+                    $imgRow[array_search('Image Src', $headers)] = $imgUrl;
+                    $imgRow[array_search('Image Position', $headers)] = (string) ($i + 2);
+                    $imgRow[array_search('Image Alt Text', $headers)] = $item['name'] . ' — фото ' . ($i + 2);
+                    fputcsv($stream, $imgRow);
+                }
             }
-        }
+        });
     }
 }

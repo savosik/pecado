@@ -5,10 +5,7 @@ namespace App\Services\ProductExport\Presets;
 use App\Models\ProductExport;
 
 /**
- * Tilda Publishing CSV — формат для импорта товаров в Tilda-магазин.
- *
- * Колонки: Brand, SKU, Category, Title, Description, Text,
- * Photo, Price, Price Old, Editions (JSON), Quantity, External ID.
+ * Tilda Publishing CSV — chunk-based.
  */
 class TildaCsvPreset extends AbstractPreset
 {
@@ -22,73 +19,55 @@ class TildaCsvPreset extends AbstractPreset
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $data = $this->fetchRichData($export);
-
-        // BOM
         fwrite($stream, "\xEF\xBB\xBF");
 
-        $headers = [
-            'Brand',
-            'SKU',
-            'Category',
-            'Title',
-            'Description',
-            'Text',
-            'Photo',
-            'Price',
-            'Price Old',
-            'Quantity',
-            'External ID',
-            'Parent UID',
-            'Mark',
-        ];
+        $headersWritten = false;
 
-        // Характеристики как дополнительные колонки
-        $maxAttrs = $data->max(fn ($item) => count($item['attributes']));
-        for ($i = 1; $i <= $maxAttrs; $i++) {
-            $headers[] = "Characteristic {$i} Title";
-            $headers[] = "Characteristic {$i} Value";
-        }
+        $this->eachChunk($export, function ($items) use ($stream, &$headersWritten) {
+            $maxAttrs = $items->max(fn ($item) => count($item['attributes']));
 
-        fputcsv($stream, $headers, ';');
-
-        foreach ($data as $item) {
-            $allImages = collect([$item['main_image']])
-                ->merge($item['additional_images'])
-                ->filter()
-                ->implode(';');
-
-            $marks = [];
-            if ($item['is_new']) $marks[] = 'new';
-            if ($item['is_bestseller']) $marks[] = 'bestseller';
-
-            $row = [
-                $item['brand_name'] ?? '',                             // Brand
-                $item['sku'] ?? '',                                    // SKU
-                $item['category_path'] ?? '',                          // Category
-                $item['name'],                                         // Title
-                $item['short_description'] ?? '',                      // Description
-                $item['description'] ?? '',                            // Text
-                $allImages,                                            // Photo
-                (string) $item['price'],                               // Price
-                $item['base_price'] > $item['price']
-                    ? (string) $item['base_price'] : '',               // Price Old
-                (string) $item['stock'],                               // Quantity
-                $item['external_id'] ?? (string) $item['id'],         // External ID
-                '',                                                    // Parent UID
-                implode(',', $marks),                                  // Mark
-            ];
-
-            foreach ($item['attributes'] as $attr) {
-                $row[] = $attr['name'];
-                $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
-            }
-            $remaining = ($maxAttrs - count($item['attributes'])) * 2;
-            for ($i = 0; $i < $remaining; $i++) {
-                $row[] = '';
+            if (!$headersWritten) {
+                $headers = [
+                    'Brand', 'SKU', 'Category', 'Title', 'Description', 'Text',
+                    'Photo', 'Price', 'Price Old', 'Quantity', 'External ID',
+                    'Parent UID', 'Mark',
+                ];
+                for ($i = 1; $i <= $maxAttrs; $i++) {
+                    $headers[] = "Characteristic {$i} Title";
+                    $headers[] = "Characteristic {$i} Value";
+                }
+                fputcsv($stream, $headers, ';');
+                $headersWritten = true;
             }
 
-            fputcsv($stream, $row, ';');
-        }
+            foreach ($items as $item) {
+                $allImages = collect([$item['main_image']])
+                    ->merge($item['additional_images'])->filter()->implode(';');
+
+                $marks = [];
+                if ($item['is_new']) $marks[] = 'new';
+                if ($item['is_bestseller']) $marks[] = 'bestseller';
+
+                $row = [
+                    $item['brand_name'] ?? '', $item['sku'] ?? '',
+                    $item['category_path'] ?? '', $item['name'],
+                    $item['short_description'] ?? '', $item['description'] ?? '',
+                    $allImages, (string) $item['price'],
+                    $item['base_price'] > $item['price'] ? (string) $item['base_price'] : '',
+                    (string) $item['stock'],
+                    $item['external_id'] ?? (string) $item['id'],
+                    '', implode(',', $marks),
+                ];
+
+                foreach ($item['attributes'] as $attr) {
+                    $row[] = $attr['name'];
+                    $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+                }
+                $remaining = ($maxAttrs - count($item['attributes'])) * 2;
+                for ($i = 0; $i < $remaining; $i++) { $row[] = ''; }
+
+                fputcsv($stream, $row, ';');
+            }
+        });
     }
 }
