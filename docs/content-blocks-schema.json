@@ -1,14 +1,26 @@
 {
   "_meta": {
-    "description": "Схема блоков контента Pecado. Используется как спецификация для Editor.js в админке и как референс для AI-генерации контента через API.",
-    "version": "1.0",
-    "usage": "AI должен возвращать объект { blocks: [...] } с блоками из этой схемы. Порядок блоков = порядок на странице."
+    "description": "Полная схема всех блоков контента Pecado Editor.js. Включает встроенные блоки и все кастомные инструменты. Используется как спецификация для Editor.js в админке и как референс для AI-генерации контента через API.",
+    "version": "2.0",
+    "updated": "2026-04-13",
+    "usage": "AI должен возвращать объект { blocks: [...] } с блоками из этой схемы. Порядок блоков = порядок на странице.",
+    "totalBlockTypes": 38,
+    "categories": {
+      "text": ["header", "paragraph", "list", "quote", "pullQuote"],
+      "media": ["image", "gallery", "imageCarousel", "photoMosaic", "coverImage", "beforeAfter", "logoWall"],
+      "layout": ["columns", "imageText", "twoColumns", "threeColumns", "iconFeature", "tabs"],
+      "data": ["table", "comparison", "pricingTable", "stats", "steps", "timeline", "faq"],
+      "interactive": ["callToAction", "button", "alertBanner", "countdown", "productCarousel", "embed", "map"],
+      "people": ["opinionBox", "reviews", "team"],
+      "utility": ["delimiter", "spacer", "warning"]
+    }
   },
 
   "blockTypes": {
 
     "header": {
       "description": "Заголовок. Уровни: 2 (секция), 3 (подсекция), 4 (мелкий).",
+      "toolbox": "Заголовок",
       "schema": {
         "type": "header",
         "data": {
@@ -23,7 +35,8 @@
     },
 
     "paragraph": {
-      "description": "Абзац текста. Поддерживает inline HTML: <b>, <i>, <a href>, <mark>.",
+      "description": "Абзац текста. Поддерживает inline HTML: <b>, <i>, <a href>, <mark>, <code>.",
+      "toolbox": "Текст",
       "schema": {
         "type": "paragraph",
         "data": {
@@ -37,35 +50,45 @@
     },
 
     "image": {
-      "description": "Изображение с подписью. URL должен быть абсолютным путём к загруженному файлу.",
+      "description": "Изображение с подписью. Загрузка через /admin/api/upload-image или по URL через /admin/api/fetch-url.",
+      "toolbox": "Изображение",
       "schema": {
         "type": "image",
         "data": {
-          "url": "string (URL изображения)",
+          "file": {
+            "url": "string (URL изображения)"
+          },
           "caption": "string (подпись, опционально)",
-          "alt": "string (alt-текст для SEO)",
-          "withBorder": "boolean (рамка, опционально)",
-          "stretched": "boolean (на всю ширину, опционально)"
+          "withBorder": "boolean (рамка, по умолчанию false)",
+          "stretched": "boolean (на всю ширину, по умолчанию false)",
+          "withBackground": "boolean (с фоном, по умолчанию false)"
         }
       },
       "example": {
         "type": "image",
         "data": {
-          "url": "/storage/media/articles/trends-2026-hero.jpg",
+          "file": { "url": "/storage/media/articles/trends-2026-hero.jpg" },
           "caption": "Выставка интим-товаров EroExpo 2026",
-          "alt": "Стенды производителей на выставке EroExpo 2026",
-          "stretched": true
+          "stretched": true,
+          "withBorder": false,
+          "withBackground": false
         }
       }
     },
 
     "list": {
-      "description": "Маркированный или нумерованный список.",
+      "description": "Маркированный или нумерованный список. Поддерживает вложенные уровни.",
+      "toolbox": "Список",
       "schema": {
         "type": "list",
         "data": {
           "style": "'unordered' | 'ordered'",
-          "items": ["string", "string"]
+          "items": [
+            {
+              "content": "string (текст пункта)",
+              "items": ["вложенные пункты (рекурсивно, опционально)"]
+            }
+          ]
         }
       },
       "example": {
@@ -73,9 +96,9 @@
         "data": {
           "style": "unordered",
           "items": [
-            "Увеличение среднего чека на 15%",
-            "Рост доли онлайн-продаж до 60%",
-            "Спрос на премиум-сегмент +30%"
+            { "content": "Увеличение среднего чека на 15%", "items": [] },
+            { "content": "Рост доли онлайн-продаж до 60%", "items": [] },
+            { "content": "Спрос на премиум-сегмент +30%", "items": [] }
           ]
         }
       }
@@ -83,6 +106,7 @@
 
     "quote": {
       "description": "Цитата с указанием автора.",
+      "toolbox": "Цитата",
       "schema": {
         "type": "quote",
         "data": {
@@ -103,6 +127,7 @@
 
     "delimiter": {
       "description": "Визуальный разделитель между секциями. Не содержит данных.",
+      "toolbox": "Разделитель",
       "schema": {
         "type": "delimiter",
         "data": {}
@@ -115,6 +140,7 @@
 
     "table": {
       "description": "Таблица с данными. Первая строка может быть заголовком.",
+      "toolbox": "Таблица",
       "schema": {
         "type": "table",
         "data": {
@@ -138,6 +164,7 @@
 
     "warning": {
       "description": "Информационный блок с акцентом (совет, предупреждение, важно).",
+      "toolbox": "Предупреждение",
       "schema": {
         "type": "warning",
         "data": {
@@ -154,32 +181,741 @@
       }
     },
 
+    "embed": {
+      "description": "Встроенный контент: YouTube, Vimeo.",
+      "toolbox": "Встроенный контент",
+      "schema": {
+        "type": "embed",
+        "data": {
+          "service": "'youtube' | 'vimeo'",
+          "source": "string (URL видео)",
+          "embed": "string (URL для iframe, генерируется автоматически)",
+          "width": "number (ширина, опционально)",
+          "height": "number (высота, опционально)",
+          "caption": "string (подпись, опционально)"
+        }
+      },
+      "example": {
+        "type": "embed",
+        "data": {
+          "service": "youtube",
+          "source": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          "embed": "https://www.youtube.com/embed/dQw4w9WgXcQ",
+          "width": 580,
+          "height": 320,
+          "caption": "Обзор новинок Satisfyer 2026"
+        }
+      }
+    },
+
+    "columns": {
+      "description": "Блок с 2 или 3 колонками произвольного текста.",
+      "toolbox": "Колонки",
+      "schema": {
+        "type": "columns",
+        "data": {
+          "columns": ["string (текст колонки 1)", "string (текст колонки 2)"],
+          "layout": "'2' | '3'"
+        }
+      },
+      "example": {
+        "type": "columns",
+        "data": {
+          "layout": "2",
+          "columns": [
+            "Мы работаем напрямую с производителями и гарантируем подлинность каждого товара в каталоге.",
+            "Все поставки застрахованы. В случае повреждения груза мы заменим товар за свой счёт."
+          ]
+        }
+      }
+    },
+
     "imageText": {
-      "description": "Блок «изображение + текст рядом». Двухколоночная компоновка.",
+      "description": "Блок «изображение + текст рядом». Двухколоночная компоновка с выбором позиции фото.",
+      "toolbox": "Фото + текст",
       "schema": {
         "type": "imageText",
         "data": {
-          "image": "string (URL изображения)",
-          "imageAlt": "string",
+          "imageUrl": "string (URL изображения)",
           "imagePosition": "'left' | 'right'",
-          "title": "string (заголовок текстовой части)",
+          "title": "string (заголовок текстовой части, опционально)",
           "text": "string (текст, может содержать inline HTML)"
         }
       },
       "example": {
         "type": "imageText",
         "data": {
-          "image": "/storage/media/brands/satisfyer-factory.jpg",
-          "imageAlt": "Производство Satisfyer в Германии",
+          "imageUrl": "/storage/media/brands/satisfyer-factory.jpg",
           "imagePosition": "left",
           "title": "Немецкое качество",
-          "text": "Все изделия Satisfyer проходят <b>трёхступенчатый контроль качества</b> на заводе в Билефельде. Компания использует только медицинский силикон и гипоаллергенные материалы."
+          "text": "Все изделия Satisfyer проходят <b>трёхступенчатый контроль качества</b> на заводе в Билефельде."
+        }
+      }
+    },
+
+    "callToAction": {
+      "description": "CTA-баннер с заголовком, текстом и кнопкой. Привлечение внимания к действию.",
+      "toolbox": "CTA кнопка",
+      "schema": {
+        "type": "callToAction",
+        "data": {
+          "title": "string (заголовок)",
+          "text": "string (описание, опционально)",
+          "buttonText": "string (текст кнопки)",
+          "buttonUrl": "string (URL кнопки)",
+          "style": "'primary' | 'secondary' | 'gradient'"
+        }
+      },
+      "example": {
+        "type": "callToAction",
+        "data": {
+          "title": "Готовы начать сотрудничество?",
+          "text": "Оформите первый заказ и получите персонального менеджера",
+          "buttonText": "Перейти в каталог",
+          "buttonUrl": "/catalog",
+          "style": "primary"
+        }
+      }
+    },
+
+    "gallery": {
+      "description": "Галерея изображений в виде сетки. Поддерживает загрузку нескольких файлов.",
+      "toolbox": "Галерея",
+      "schema": {
+        "type": "gallery",
+        "data": {
+          "images": [
+            {
+              "url": "string (URL изображения)",
+              "caption": "string (подпись, опционально)"
+            }
+          ],
+          "caption": "string (общая подпись к галерее, опционально)"
+        }
+      },
+      "example": {
+        "type": "gallery",
+        "data": {
+          "caption": "Фотоотчёт с EroExpo 2026",
+          "images": [
+            { "url": "/storage/media/gallery/img1.jpg", "caption": "" },
+            { "url": "/storage/media/gallery/img2.jpg", "caption": "" },
+            { "url": "/storage/media/gallery/img3.jpg", "caption": "" }
+          ]
+        }
+      }
+    },
+
+    "faq": {
+      "description": "Блок «вопрос-ответ» в формате аккордеона.",
+      "toolbox": "FAQ",
+      "schema": {
+        "type": "faq",
+        "data": {
+          "items": [
+            {
+              "question": "string",
+              "answer": "string (может содержать inline HTML)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "faq",
+        "data": {
+          "items": [
+            {
+              "question": "Какая минимальная сумма заказа?",
+              "answer": "Минимальная сумма первого заказа — <b>15 000 ₽</b>. Для постоянных клиентов ограничений нет."
+            },
+            {
+              "question": "Есть ли доставка в регионы?",
+              "answer": "Да, доставляем по всей России через СДЭК, ПЭК и Деловые Линии."
+            }
+          ]
+        }
+      }
+    },
+
+    "pullQuote": {
+      "description": "Крупная центрированная цитата с декоративным оформлением.",
+      "toolbox": "Крупная цитата",
+      "schema": {
+        "type": "pullQuote",
+        "data": {
+          "text": "string (текст цитаты)",
+          "caption": "string (автор / источник, опционально)"
+        }
+      },
+      "example": {
+        "type": "pullQuote",
+        "data": {
+          "text": "Инновации в индустрии интим-товаров определяют рынок на годы вперёд.",
+          "caption": "Отраслевой обзор 2026"
+        }
+      }
+    },
+
+    "opinionBox": {
+      "description": "Мнение эксперта с фотографией, именем и должностью.",
+      "toolbox": "Мнение эксперта",
+      "schema": {
+        "type": "opinionBox",
+        "data": {
+          "name": "string (имя эксперта)",
+          "title": "string (должность)",
+          "photo": "string (URL фото)",
+          "text": "string (текст мнения)"
+        }
+      },
+      "example": {
+        "type": "opinionBox",
+        "data": {
+          "name": "Анна Петрова",
+          "title": "Руководитель отдела закупок",
+          "photo": "/storage/media/team/anna.jpg",
+          "text": "Сотрудничество с Pecado позволило нам увеличить ассортимент на 40% и значительно повысить средний чек."
+        }
+      }
+    },
+
+    "reviews": {
+      "description": "Блок отзывов / testimonials с рейтингом (звёзды).",
+      "toolbox": "Отзывы",
+      "schema": {
+        "type": "reviews",
+        "data": {
+          "items": [
+            {
+              "author": "string (имя автора)",
+              "text": "string (текст отзыва)",
+              "rating": "number (1–5)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "reviews",
+        "data": {
+          "items": [
+            {
+              "author": "Ирина, г. Москва",
+              "text": "Отличный сервис! Быстрая доставка и качественная упаковка.",
+              "rating": 5
+            },
+            {
+              "author": "Сергей, г. Казань",
+              "text": "Работаем уже 2 года, всё устраивает. Рекомендую!",
+              "rating": 5
+            }
+          ]
+        }
+      }
+    },
+
+    "coverImage": {
+      "description": "Обложка — полноширинное изображение с оверлеем заголовка и подзаголовка.",
+      "toolbox": "Обложка",
+      "schema": {
+        "type": "coverImage",
+        "data": {
+          "url": "string (URL фонового изображения)",
+          "title": "string (заголовок на обложке)",
+          "subtitle": "string (подзаголовок, опционально)",
+          "overlayColor": "string (цвет оверлея, по умолчанию 'rgba(0,0,0,0.4)')"
+        }
+      },
+      "example": {
+        "type": "coverImage",
+        "data": {
+          "url": "/storage/media/covers/brand-hero.jpg",
+          "title": "Добро пожаловать в Pecado",
+          "subtitle": "Ваш надёжный B2B-партнёр",
+          "overlayColor": "rgba(0,0,0,0.4)"
+        }
+      }
+    },
+
+    "photoMosaic": {
+      "description": "Мозаичная сетка фотографий. Поддерживает загрузку нескольких файлов.",
+      "toolbox": "Фотомозаика",
+      "schema": {
+        "type": "photoMosaic",
+        "data": {
+          "images": [
+            {
+              "url": "string (URL изображения)"
+            }
+          ],
+          "layout": "'masonry'"
+        }
+      },
+      "example": {
+        "type": "photoMosaic",
+        "data": {
+          "layout": "masonry",
+          "images": [
+            { "url": "/storage/media/mosaic/img1.jpg" },
+            { "url": "/storage/media/mosaic/img2.jpg" },
+            { "url": "/storage/media/mosaic/img3.jpg" },
+            { "url": "/storage/media/mosaic/img4.jpg" }
+          ]
+        }
+      }
+    },
+
+    "productCarousel": {
+      "description": "Карусель товаров. Указываются ID товаров из каталога. Товары подгружаются из базы при рендере.",
+      "toolbox": "Карусель товаров",
+      "schema": {
+        "type": "productCarousel",
+        "data": {
+          "title": "string (заголовок секции, опционально)",
+          "productIds": ["number (ID товаров из каталога)"]
+        }
+      },
+      "example": {
+        "type": "productCarousel",
+        "data": {
+          "title": "Бестселлеры Satisfyer",
+          "productIds": [142, 567, 891, 234, 456]
+        }
+      }
+    },
+
+    "iconFeature": {
+      "description": "Сетка карточек с иконками (эмодзи), заголовками и описаниями. Для лендингов и преимуществ.",
+      "toolbox": "Иконки-фичи",
+      "schema": {
+        "type": "iconFeature",
+        "data": {
+          "columns": "'2' | '3' | '4'",
+          "items": [
+            {
+              "icon": "string (эмодзи или текст иконки)",
+              "title": "string (заголовок)",
+              "text": "string (описание)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "iconFeature",
+        "data": {
+          "columns": "3",
+          "items": [
+            { "icon": "🚀", "title": "Быстрая доставка", "text": "Отправляем заказы в день оплаты" },
+            { "icon": "⭐", "title": "Премиум качество", "text": "Только сертифицированные товары" },
+            { "icon": "💎", "title": "Выгодные цены", "text": "Работаем напрямую с производителями" }
+          ]
+        }
+      }
+    },
+
+    "countdown": {
+      "description": "Таймер обратного отсчёта. Фронтенд считает в реальном времени.",
+      "toolbox": "Таймер",
+      "schema": {
+        "type": "countdown",
+        "data": {
+          "title": "string (заголовок таймера)",
+          "targetDate": "string (дата/время окончания, ISO формат: YYYY-MM-DDTHH:mm)",
+          "style": "'default' | 'accent' | 'dark'"
+        }
+      },
+      "example": {
+        "type": "countdown",
+        "data": {
+          "title": "До конца акции осталось",
+          "targetDate": "2026-05-01T00:00",
+          "style": "accent"
+        }
+      }
+    },
+
+    "tabs": {
+      "description": "Блок с вкладками (табами). Каждый таб: заголовок + HTML-контент.",
+      "toolbox": "Табы",
+      "schema": {
+        "type": "tabs",
+        "data": {
+          "tabs": [
+            {
+              "title": "string (заголовок вкладки)",
+              "content": "string (содержимое, поддерживает HTML)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "tabs",
+        "data": {
+          "tabs": [
+            { "title": "Описание", "content": "Подробное описание бренда и его философии." },
+            { "title": "Характеристики", "content": "Материал: медицинский силикон. Гарантия: 15 лет." },
+            { "title": "Доставка", "content": "Бесплатная доставка от 30 000 ₽. Срок: 2–5 рабочих дней." }
+          ]
+        }
+      }
+    },
+
+    "imageCarousel": {
+      "description": "Карусель изображений с автопрокруткой. Поддерживает загрузку файлов.",
+      "toolbox": "Карусель",
+      "schema": {
+        "type": "imageCarousel",
+        "data": {
+          "slides": [
+            {
+              "url": "string (URL изображения)",
+              "caption": "string (подпись, опционально)"
+            }
+          ],
+          "autoplay": "boolean (автопрокрутка, по умолчанию true)",
+          "interval": "number (интервал в секундах, по умолчанию 5)"
+        }
+      },
+      "example": {
+        "type": "imageCarousel",
+        "data": {
+          "autoplay": true,
+          "interval": 5,
+          "slides": [
+            { "url": "/storage/media/carousel/slide1.jpg", "caption": "Новая коллекция 2026" },
+            { "url": "/storage/media/carousel/slide2.jpg", "caption": "Эксклюзивные бренды" },
+            { "url": "/storage/media/carousel/slide3.jpg", "caption": "Специальные условия для партнёров" }
+          ]
+        }
+      }
+    },
+
+    "stats": {
+      "description": "Блок числовой статистики. Крупные значения с подписями.",
+      "toolbox": "Статистика",
+      "schema": {
+        "type": "stats",
+        "data": {
+          "items": [
+            {
+              "value": "string (значение, напр. '5000+', '7 лет')",
+              "label": "string (описание)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "stats",
+        "data": {
+          "items": [
+            { "value": "5000+", "label": "Товаров в каталоге" },
+            { "value": "200+", "label": "Активных партнёров" },
+            { "value": "7 лет", "label": "На рынке" },
+            { "value": "98%", "label": "Довольных клиентов" }
+          ]
+        }
+      }
+    },
+
+    "logoWall": {
+      "description": "Стена логотипов партнёров/брендов с опциональной бегущей строкой (marquee).",
+      "toolbox": "Логотипы",
+      "schema": {
+        "type": "logoWall",
+        "data": {
+          "title": "string (заголовок секции, опционально)",
+          "marquee": "boolean (бегущая строка, по умолчанию true)",
+          "logos": [
+            {
+              "url": "string (URL логотипа)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "logoWall",
+        "data": {
+          "title": "Наши партнёры",
+          "marquee": true,
+          "logos": [
+            { "url": "/storage/media/logos/satisfyer.png" },
+            { "url": "/storage/media/logos/womanizer.png" },
+            { "url": "/storage/media/logos/lelo.png" }
+          ]
+        }
+      }
+    },
+
+    "alertBanner": {
+      "description": "Баннер-уведомление с настраиваемым стилем и опциональной кнопкой.",
+      "toolbox": "Баннер",
+      "schema": {
+        "type": "alertBanner",
+        "data": {
+          "text": "string (текст баннера)",
+          "style": "'promo' | 'info' | 'warning'",
+          "btnText": "string (текст кнопки, пусто = без кнопки)",
+          "btnUrl": "string (URL кнопки)"
+        }
+      },
+      "example": {
+        "type": "alertBanner",
+        "data": {
+          "text": "🔥 Скидка 20% на весь ассортимент Satisfyer до конца месяца!",
+          "style": "promo",
+          "btnText": "Успеть заказать",
+          "btnUrl": "/catalog?brand=satisfyer"
+        }
+      }
+    },
+
+    "spacer": {
+      "description": "Вертикальный отступ заданной высоты.",
+      "toolbox": "Отступ",
+      "schema": {
+        "type": "spacer",
+        "data": {
+          "height": "number (высота в пикселях, 10–200, по умолчанию 40)"
+        }
+      },
+      "example": {
+        "type": "spacer",
+        "data": { "height": 60 }
+      }
+    },
+
+    "button": {
+      "description": "Отдельная кнопка с настройкой выравнивания и стиля (заливка/контур).",
+      "toolbox": "Кнопка",
+      "schema": {
+        "type": "button",
+        "data": {
+          "text": "string (текст кнопки)",
+          "url": "string (URL ссылки)",
+          "align": "'left' | 'center' | 'right'",
+          "style": "'solid' | 'outline'"
+        }
+      },
+      "example": {
+        "type": "button",
+        "data": {
+          "text": "Перейти в каталог",
+          "url": "/catalog",
+          "align": "center",
+          "style": "solid"
+        }
+      }
+    },
+
+    "steps": {
+      "description": "Пронумерованные шаги с заголовком и описанием. Для инструкций и процессов.",
+      "toolbox": "Шаги",
+      "schema": {
+        "type": "steps",
+        "data": {
+          "steps": [
+            {
+              "title": "string (заголовок шага)",
+              "text": "string (описание шага)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "steps",
+        "data": {
+          "steps": [
+            { "title": "Регистрация", "text": "Создайте аккаунт на сайте и заполните данные о компании." },
+            { "title": "Первый заказ", "text": "Выберите товары из каталога и оформите заказ." },
+            { "title": "Доставка", "text": "Получите заказ в течение 2–5 рабочих дней." }
+          ]
+        }
+      }
+    },
+
+    "timeline": {
+      "description": "Хронология событий с датой, заголовком и описанием.",
+      "toolbox": "Хронология",
+      "schema": {
+        "type": "timeline",
+        "data": {
+          "events": [
+            {
+              "date": "string (дата или год)",
+              "title": "string (заголовок события)",
+              "text": "string (описание, опционально)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "timeline",
+        "data": {
+          "events": [
+            { "date": "2019", "title": "Основание компании", "text": "Pecado начинает работу как B2B-дистрибьютор." },
+            { "date": "2021", "title": "1000 партнёров", "text": "Достигнут рубеж в 1000 активных партнёров." },
+            { "date": "2024", "title": "Запуск онлайн-платформы", "text": "Полная цифровизация каталога и заказов." }
+          ]
+        }
+      }
+    },
+
+    "beforeAfter": {
+      "description": "Сравнение «До / После» с двумя изображениями и подписями.",
+      "toolbox": "До / После",
+      "schema": {
+        "type": "beforeAfter",
+        "data": {
+          "beforeUrl": "string (URL изображения «До»)",
+          "beforeLabel": "string (подпись, по умолчанию 'До')",
+          "afterUrl": "string (URL изображения «После»)",
+          "afterLabel": "string (подпись, по умолчанию 'После')"
+        }
+      },
+      "example": {
+        "type": "beforeAfter",
+        "data": {
+          "beforeUrl": "/storage/media/before-after/shop-before.jpg",
+          "beforeLabel": "До оформления",
+          "afterUrl": "/storage/media/before-after/shop-after.jpg",
+          "afterLabel": "После оформления"
+        }
+      }
+    },
+
+    "comparison": {
+      "description": "Таблица сравнения (напр. «Мы vs Другие»). Строки с характеристиками и иконками ✓/✕.",
+      "toolbox": "Сравнение",
+      "schema": {
+        "type": "comparison",
+        "data": {
+          "col1Title": "string (заголовок первой колонки, напр. 'Другие')",
+          "col2Title": "string (заголовок второй колонки, напр. 'Pecado')",
+          "rows": [
+            {
+              "feature": "string (название характеристики)",
+              "col1Text": "string (значение в колонке 1)",
+              "col1Icon": "'none' | 'check' | 'cross' | 'text'",
+              "col2Text": "string (значение в колонке 2)",
+              "col2Icon": "'none' | 'check' | 'cross' | 'text'"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "comparison",
+        "data": {
+          "col1Title": "Другие поставщики",
+          "col2Title": "Pecado",
+          "rows": [
+            { "feature": "Бесплатная доставка", "col1Text": "Нет", "col1Icon": "cross", "col2Text": "Да", "col2Icon": "check" },
+            { "feature": "Возврат 30 дней", "col1Text": "14 дней", "col1Icon": "text", "col2Text": "30 дней", "col2Icon": "check" },
+            { "feature": "Персональный менеджер", "col1Text": "Нет", "col1Icon": "cross", "col2Text": "Да", "col2Icon": "check" }
+          ]
+        }
+      }
+    },
+
+    "pricingTable": {
+      "description": "Таблица тарифов/планов с выделением популярного, кнопкой и списком опций.",
+      "toolbox": "Тарифы",
+      "schema": {
+        "type": "pricingTable",
+        "data": {
+          "plans": [
+            {
+              "title": "string (название тарифа)",
+              "price": "string (цена, напр. '990 ₽/мес')",
+              "btnText": "string (текст кнопки)",
+              "btnUrl": "string (URL кнопки)",
+              "features": ["string (опция/фича)"],
+              "isPopular": "boolean (выделить как популярный, по умолчанию false)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "pricingTable",
+        "data": {
+          "plans": [
+            {
+              "title": "Старт",
+              "price": "0 ₽",
+              "btnText": "Начать",
+              "btnUrl": "/register",
+              "features": ["До 50 SKU", "Стандартная доставка", "Email-поддержка"],
+              "isPopular": false
+            },
+            {
+              "title": "Бизнес",
+              "price": "Бесплатно",
+              "btnText": "Подключить",
+              "btnUrl": "/register?plan=business",
+              "features": ["Безлимит SKU", "Скидка 10% от объёма", "Персональный менеджер", "Приоритетная доставка"],
+              "isPopular": true
+            }
+          ]
+        }
+      }
+    },
+
+    "map": {
+      "description": "Блок Яндекс Карты с точкой, масштабом и текстом маркера.",
+      "toolbox": "Карта",
+      "schema": {
+        "type": "map",
+        "data": {
+          "lat": "number (широта, по умолчанию 55.7558)",
+          "lng": "number (долгота, по умолчанию 37.6173)",
+          "zoom": "number (масштаб 1–18, по умолчанию 12)",
+          "marker": "string (текст маркера, опционально)",
+          "height": "number (высота карты в px, по умолчанию 400)"
+        }
+      },
+      "example": {
+        "type": "map",
+        "data": {
+          "lat": 55.7558,
+          "lng": 37.6173,
+          "zoom": 15,
+          "marker": "Офис Pecado",
+          "height": 400
+        }
+      }
+    },
+
+    "team": {
+      "description": "Блок «Наша команда» с сеткой карточек участников (фото, имя, должность, описание).",
+      "toolbox": "Команда",
+      "schema": {
+        "type": "team",
+        "data": {
+          "columns": "'2' | '3' | '4'",
+          "members": [
+            {
+              "photo": "string (URL фото)",
+              "name": "string (имя)",
+              "role": "string (должность)",
+              "bio": "string (краткое описание, опционально)"
+            }
+          ]
+        }
+      },
+      "example": {
+        "type": "team",
+        "data": {
+          "columns": "3",
+          "members": [
+            { "photo": "/storage/media/team/ivanov.jpg", "name": "Иван Иванов", "role": "CEO", "bio": "Основатель компании с 10-летним опытом в e-commerce." },
+            { "photo": "/storage/media/team/petrova.jpg", "name": "Анна Петрова", "role": "COO", "bio": "Отвечает за операционное управление и логистику." },
+            { "photo": "/storage/media/team/sidorov.jpg", "name": "Пётр Сидоров", "role": "CTO", "bio": "Разработка и технологическая инфраструктура." }
+          ]
         }
       }
     },
 
     "twoColumns": {
-      "description": "Две колонки с иконкой/заголовком/текстом. Для преимуществ, сравнений.",
+      "description": "Две колонки с иконкой/заголовком/текстом. Для преимуществ, сравнений. (Legacy — рекомендуется использовать iconFeature)",
+      "toolbox": "2 колонки (legacy)",
       "schema": {
         "type": "twoColumns",
         "data": {
@@ -196,23 +932,16 @@
         "type": "twoColumns",
         "data": {
           "columns": [
-            {
-              "icon": "🚚",
-              "title": "Быстрая доставка",
-              "text": "Отправляем заказы в день оплаты. Доставка по всей России от 2 дней."
-            },
-            {
-              "icon": "📦",
-              "title": "Дискретная упаковка",
-              "text": "Нейтральная упаковка без логотипов и указания содержимого."
-            }
+            { "icon": "🚚", "title": "Быстрая доставка", "text": "Отправляем заказы в день оплаты." },
+            { "icon": "📦", "title": "Дискретная упаковка", "text": "Нейтральная упаковка без логотипов." }
           ]
         }
       }
     },
 
     "threeColumns": {
-      "description": "Три колонки. Для преимуществ, характеристик, этапов.",
+      "description": "Три колонки с иконкой/заголовком/текстом. (Legacy — рекомендуется использовать iconFeature)",
+      "toolbox": "3 колонки (legacy)",
       "schema": {
         "type": "threeColumns",
         "data": {
@@ -235,187 +964,58 @@
           ]
         }
       }
-    },
-
-    "productCarousel": {
-      "description": "Карусель товаров. Указываются ID товаров или slug подборки. Товары подгружаются из базы при рендере.",
-      "schema": {
-        "type": "productCarousel",
-        "data": {
-          "title": "string (заголовок секции, опционально)",
-          "productIds": ["number (ID товаров)"],
-          "selectionSlug": "string (slug подборки — альтернатива productIds)",
-          "maxItems": "number (макс. кол-во, по умолчанию 10)"
-        }
-      },
-      "examples": [
-        {
-          "_comment": "По конкретным ID товаров",
-          "type": "productCarousel",
-          "data": {
-            "title": "Бестселлеры Satisfyer",
-            "productIds": [142, 567, 891, 234, 456]
-          }
-        },
-        {
-          "_comment": "По подборке",
-          "type": "productCarousel",
-          "data": {
-            "title": "Новинки сезона",
-            "selectionSlug": "novinki",
-            "maxItems": 8
-          }
-        }
-      ]
-    },
-
-    "callToAction": {
-      "description": "CTA-баннер с кнопкой. Привлечение внимания к действию.",
-      "schema": {
-        "type": "callToAction",
-        "data": {
-          "title": "string (заголовок)",
-          "text": "string (описание, опционально)",
-          "buttonText": "string (текст кнопки)",
-          "buttonUrl": "string (URL кнопки)",
-          "style": "'primary' | 'secondary' | 'gradient'"
-        }
-      },
-      "example": {
-        "type": "callToAction",
-        "data": {
-          "title": "Готовы начать сотрудничество?",
-          "text": "Оформите первый заказ и получите персонального менеджера",
-          "buttonText": "Перейти в каталог",
-          "buttonUrl": "/catalog",
-          "style": "gradient"
-        }
-      }
-    },
-
-    "gallery": {
-      "description": "Галерея изображений в сетке.",
-      "schema": {
-        "type": "gallery",
-        "data": {
-          "images": [
-            {
-              "url": "string",
-              "alt": "string",
-              "caption": "string (опционально)"
-            }
-          ],
-          "columns": "2 | 3 | 4"
-        }
-      },
-      "example": {
-        "type": "gallery",
-        "data": {
-          "columns": 3,
-          "images": [
-            { "url": "/storage/media/gallery/img1.jpg", "alt": "Выставочный стенд", "caption": "EroExpo 2026" },
-            { "url": "/storage/media/gallery/img2.jpg", "alt": "Новая коллекция", "caption": "Весна 2026" },
-            { "url": "/storage/media/gallery/img3.jpg", "alt": "Упаковка продукции", "caption": "Премиум-линейка" }
-          ]
-        }
-      }
-    },
-
-    "embed": {
-      "description": "Встроенный контент: YouTube, Vimeo и др.",
-      "schema": {
-        "type": "embed",
-        "data": {
-          "service": "'youtube' | 'vimeo'",
-          "source": "string (URL видео)",
-          "caption": "string (подпись, опционально)"
-        }
-      },
-      "example": {
-        "type": "embed",
-        "data": {
-          "service": "youtube",
-          "source": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-          "caption": "Обзор новинок Satisfyer 2026"
-        }
-      }
-    },
-
-    "faq": {
-      "description": "Блок «вопрос-ответ» в формате аккордеона.",
-      "schema": {
-        "type": "faq",
-        "data": {
-          "items": [
-            {
-              "question": "string",
-              "answer": "string (может содержать inline HTML)"
-            }
-          ]
-        }
-      },
-      "example": {
-        "type": "faq",
-        "data": {
-          "items": [
-            {
-              "question": "Какая минимальная сумма заказа?",
-              "answer": "Минимальная сумма первого заказа — <b>15 000 ₽</b>. Для постоянных клиентов ограничений нет."
-            },
-            {
-              "question": "Есть ли доставка в регионы?",
-              "answer": "Да, доставляем по всей России через СДЭК, ПЭК и Деловые Линии. Срок — от 2 до 7 рабочих дней."
-            },
-            {
-              "question": "Как стать партнёром?",
-              "answer": "Зарегистрируйтесь на сайте, заполните данные о компании и оформите первый заказ. Персональный менеджер свяжется с вами в течение 24 часов."
-            }
-          ]
-        }
-      }
     }
   },
 
   "_fullExample": {
     "_comment": "Пример полной статьи, сгенерированной AI. Именно такой JSON AI должен вернуть.",
     "blocks": [
-      { "type": "header", "data": { "text": "Satisfyer: Немецкое качество для вашего магазина", "level": 2 } },
-      { "type": "paragraph", "data": { "text": "Бренд <b>Satisfyer</b> — один из мировых лидеров в производстве интим-товаров. Компания была основана в 2016 году и за короткий срок завоевала доверие миллионов покупателей." } },
-      { "type": "imageText", "data": {
-        "image": "/storage/media/brands/satisfyer-hero.jpg",
-        "imageAlt": "Линейка продукции Satisfyer",
-        "imagePosition": "right",
-        "title": "Почему Satisfyer?",
-        "text": "Инновационная технология воздушной стимуляции, запатентованная Satisfyer, произвела революцию на рынке. Более <b>50 международных наград</b> за дизайн и качество."
-      }},
-      { "type": "delimiter", "data": {} },
-      { "type": "header", "data": { "text": "Преимущества для партнёров", "level": 3 } },
-      { "type": "threeColumns", "data": { "columns": [
-        { "icon": "📈", "title": "Высокая маржа", "text": "Наценка от 80% на розничные продажи" },
-        { "icon": "🔄", "title": "Быстрая оборачиваемость", "text": "Средний срок продажи единицы — 14 дней" },
-        { "icon": "📣", "title": "Маркетинг", "text": "Готовые POS-материалы и обучение продавцов" }
+      { "type": "coverImage", "data": { "url": "/storage/media/covers/satisfyer-hero.jpg", "title": "Satisfyer — немецкое качество для вашего бизнеса", "subtitle": "Полный каталог с доставкой со склада в Москве", "overlayColor": "rgba(0,0,0,0.45)" } },
+      { "type": "spacer", "data": { "height": 40 } },
+      { "type": "header", "data": { "text": "Почему Satisfyer — бестселлер в каждом магазине", "level": 2 } },
+      { "type": "paragraph", "data": { "text": "Бренд <b>Satisfyer</b> — один из мировых лидеров в производстве интим-товаров. Более <b>50 международных наград</b> за дизайн и инновации." } },
+      { "type": "stats", "data": { "items": [
+        { "value": "50+", "label": "Международных наград" },
+        { "value": "127%", "label": "Средняя маржа" },
+        { "value": "14 дней", "label": "Средний срок продажи" }
       ]}},
-      { "type": "paragraph", "data": { "text": "Мы предлагаем полный ассортимент Satisfyer с <b>доставкой со склада в Москве</b>. Все товары сертифицированы и имеют официальную гарантию." } },
+      { "type": "delimiter", "data": {} },
+      { "type": "imageText", "data": {
+        "imageUrl": "/storage/media/brands/satisfyer-tech.jpg",
+        "imagePosition": "right",
+        "title": "Инновационная технология",
+        "text": "Запатентованная технология воздушной стимуляции произвела революцию. Все изделия из <b>медицинского силикона</b>."
+      }},
+      { "type": "iconFeature", "data": { "columns": "3", "items": [
+        { "icon": "📈", "title": "Высокая маржа", "text": "Наценка от 80% на розничные продажи" },
+        { "icon": "🔄", "title": "Быстрая оборачиваемость", "text": "Средний срок продажи — 14 дней" },
+        { "icon": "📣", "title": "Маркетинг", "text": "Готовые POS-материалы и обучение" }
+      ]}},
       { "type": "productCarousel", "data": { "title": "Бестселлеры Satisfyer", "productIds": [142, 567, 891, 234] } },
       { "type": "table", "data": {
         "withHeadings": true,
         "content": [
           ["Модель", "РРЦ", "Ваша цена", "Маржа"],
           ["Satisfyer Pro 2", "4 990 ₽", "2 200 ₽", "127%"],
-          ["Satisfyer Curvy 3+", "5 490 ₽", "2 500 ₽", "120%"],
-          ["Satisfyer Men Heat", "6 990 ₽", "3 100 ₽", "125%"]
+          ["Satisfyer Curvy 3+", "5 490 ₽", "2 500 ₽", "120%"]
         ]
       }},
-      { "type": "faq", "data": { "items": [
-        { "question": "Какой минимальный заказ по Satisfyer?", "answer": "Минимальный заказ — <b>10 единиц</b> в ассортименте. Микс моделей на ваш выбор." },
-        { "question": "Есть ли гарантия на товар?", "answer": "Да, полная официальная гарантия производителя — 15 лет на моторы, 1 год на аккумуляторы." }
+      { "type": "tabs", "data": { "tabs": [
+        { "title": "Доставка", "content": "Бесплатная доставка от 30 000 ₽. СДЭК, ПЭК, Деловые Линии. Срок: 2–5 рабочих дней." },
+        { "title": "Оплата", "content": "Безналичный расчёт, оплата по счёту. Постоплата для постоянных клиентов." },
+        { "title": "Возврат", "content": "Возврат в течение 30 дней с момента получения. Бесплатная обратная доставка." }
       ]}},
+      { "type": "faq", "data": { "items": [
+        { "question": "Какой минимальный заказ?", "answer": "Минимальный заказ — <b>10 единиц</b> в ассортименте." },
+        { "question": "Есть ли гарантия?", "answer": "Да, 15 лет на моторы, 1 год на аккумуляторы." }
+      ]}},
+      { "type": "alertBanner", "data": { "text": "🔥 Акция: скидка 15% при заказе от 50 000 ₽!", "style": "promo", "btnText": "Заказать", "btnUrl": "/catalog?brand=satisfyer" } },
       { "type": "callToAction", "data": {
         "title": "Начните продавать Satisfyer уже сегодня",
-        "text": "Оформите первый заказ и получите бесплатный стартовый набор POS-материалов",
+        "text": "Оформите заказ и получите бесплатный стартовый набор POS-материалов",
         "buttonText": "Заказать Satisfyer",
         "buttonUrl": "/brands/satisfyer",
-        "style": "gradient"
+        "style": "primary"
       }}
     ]
   }
