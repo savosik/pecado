@@ -154,7 +154,7 @@ export default function ProductQuickViewModal() {
 
                                         <ProductDetailTabs
                                             specifications={specifications}
-                                            description={product.description_html || product.description}
+                                            description={product.rich_content || product.description_html || product.description || product.short_description}
                                             media={media}
                                             certificates={certificates}
                                             sizeChart={sizeChart}
@@ -180,7 +180,7 @@ export default function ProductQuickViewModal() {
 
                                             <ProductDetailTabs
                                                 specifications={specifications}
-                                                description={product.description_html || product.description}
+                                                description={product.rich_content || product.description_html || product.description || product.short_description}
                                                 media={media}
                                                 certificates={certificates}
                                                 sizeChart={sizeChart}

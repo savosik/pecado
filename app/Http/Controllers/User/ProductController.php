@@ -444,6 +444,7 @@ class ProductController extends Controller
         $productData['description'] = $product->description;
         $productData['description_html'] = $product->description_html;
         $productData['rich_content'] = $product->rich_content;
+        $productData['short_description'] = $product->short_description;
         $productData['barcodes'] = $product->barcodes->map(fn ($b) => [
             'id'      => $b->id,
             'barcode' => $b->barcode,
