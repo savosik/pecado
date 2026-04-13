@@ -369,18 +369,19 @@ function EditorJsEditor({ value, onChange, placeholder = 'Нажмите Tab и�
         <Box
             ref={containerRef}
             minH="200px"
+            w="100%"
             border="1px solid"
             borderColor="border"
             borderRadius="md"
             p="4"
             bg="bg"
             css={{
-                // Стили для Editor.js внутри Chakra
+                // Стили для Editor.js внутри Chakra — !important перебивает дефолтные 650px
                 '& .ce-block__content': {
-                    maxWidth: '100%',
+                    maxWidth: '100% !important',
                 },
                 '& .ce-toolbar__content': {
-                    maxWidth: '100%',
+                    maxWidth: '100% !important',
                 },
                 '& .codex-editor__redactor': {
                     paddingBottom: '100px',

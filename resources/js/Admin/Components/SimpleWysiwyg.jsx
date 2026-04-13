@@ -121,6 +121,7 @@ export default function SimpleWysiwyg({ value, onChange, placeholder = 'Введ
 
     return (
         <Box
+            w="100%"
             borderWidth="1px"
             borderColor={{ base: 'gray.200', _dark: 'gray.600' }}
             _dark={{ borderColor: 'gray.600' }}
