@@ -455,6 +455,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                         error={errors.description_html}
                                         helperText="HTML-версия описания с форматированием (для выгрузок)"
                                         w="100%"
+                                        alignItems="stretch"
                                     >
                                         <SimpleWysiwyg
                                             value={data.description_html}
@@ -554,6 +555,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                         error={errors.rich_content}
                                         helperText="Расширенное описание товара с блоками для отображения на сайте. Если заполнено — отображается вместо обычного описания."
                                         w="100%"
+                                        alignItems="stretch"
                                     >
                                         <EditorJsEditor
                                             value={data.rich_content}
