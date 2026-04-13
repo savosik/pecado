@@ -29,12 +29,12 @@ class EditorUploadController extends Controller
         ]);
 
         $file = $request->file('image');
-        $path = $file->store('editor-images/' . date('Y/m'), 'public');
+        $path = $file->store('editor-images/' . date('Y/m'), 's3');
 
         return response()->json([
             'success' => 1,
             'file' => [
-                'url' => Storage::disk('public')->url($path),
+                'url' => Storage::disk('s3')->url($path),
             ],
         ]);
     }
