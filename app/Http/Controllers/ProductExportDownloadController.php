@@ -58,7 +58,7 @@ class ProductExportDownloadController extends Controller
         $hasCacheFile = file_exists($filePath) && filesize($filePath) > 0;
 
         // Случай 1: Свежий кэш — отдаём мгновенно
-        if ($export->hasFreshCache(4) && $hasCacheFile) {
+        if ($export->hasFreshCache(1) && $hasCacheFile) {
             $export->update(['last_downloaded_at' => now()]);
 
             return response()->download($filePath, $filename, [
