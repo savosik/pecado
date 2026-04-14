@@ -143,6 +143,16 @@ jobs:
       - name: "📄 Build AsyncAPI docs (validate + bundle + HTML)"
         run: npm run asyncapi:build
 
+      - name: "🐍 Setup Python"
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: "📚 Build MkDocs (ERP guide)"
+        run: |
+          pip install mkdocs-material
+          mkdocs build
+
       - name: "📤 Upload build artifacts"
         uses: actions/upload-artifact@v4
         with:
@@ -157,6 +167,13 @@ jobs:
           path: |
             docs/asyncapi/html
             docs/asyncapi/pecado-erp-bundled.yaml
+          retention-days: 1
+
+      - name: "📤 Upload MkDocs site"
+        uses: actions/upload-artifact@v4
+        with:
+          name: mkdocs-site
+          path: docs-erp/site
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
@@ -184,6 +201,12 @@ jobs:
         with:
           name: asyncapi-docs
           path: docs/asyncapi/html
+
+      - name: "📥 Download MkDocs site"
+        uses: actions/download-artifact@v4
+        with:
+          name: mkdocs-site
+          path: docs-erp/site
 
       - name: "🔧 Fix Docker file ownership"
         run: |

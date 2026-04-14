@@ -45,3 +45,6 @@ boost.json
 # AsyncAPI generated HTML docs
 /docs/asyncapi/html/
 /docs/asyncapi/pecado-erp-bundled.yaml
+
+# MkDocs generated site
+/docs-erp/site/

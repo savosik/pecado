@@ -1,0 +1,28 @@
+# Реализации
+
+> **JSON Schema:** [`shipment.created.json`](/docs/erp/schemas/shipment.created.json) | [`shipment.deleted.json`](/docs/erp/schemas/shipment.deleted.json)  
+> **AsyncAPI:** [Полная спецификация](/docs/erp/spec.yaml)
+
+**Направление:** 1С → Сайт | **Очередь:** `erp_in.documents`
+
+## События
+
+| Событие | Описание |
+|---|---|
+| `shipment.created` | При первом проведении реализации |
+| `shipment.updated` | При перепроведении (формат идентичен `created`) |
+| `shipment.deleted` | При отмене проведения |
+
+## Бизнес-правила
+
+- Одна реализация может включать позиции из **нескольких заказов**
+- Связь с заказами через `order_uuid` в каждой позиции
+- Расчёт задолженности ведётся по реализациям, не по заказам
+- `contractor_inn` — привязка к контрагенту по ИНН
+
+## Критерии приёмки
+
+- [ ] Сайт принимает `shipment.created`, `shipment.updated`, `shipment.deleted`
+- [ ] Реализация привязывается к контрагенту по ИНН
+- [ ] Позиции связаны с заказами через `order_uuid`
+- [ ] Реализация отображается в ЛК

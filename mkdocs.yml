@@ -1,0 +1,79 @@
+site_name: Pecado ERP — Интеграция 1С ↔ Сайт
+site_description: Документация по интеграции 1С:КА2 и сайта Pecado через RabbitMQ
+site_url: https://dev.pecado.ru/docs/erp-guide/
+docs_dir: docs-erp/content
+site_dir: docs-erp/site
+
+theme:
+  name: material
+  language: ru
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Светлая тема
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Тёмная тема
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+nav:
+  - Обзор: index.md
+  - Changelog: changelog.md
+  - Настройки обмена: settings.md
+  - Инфраструктура: infrastructure.md
+  - Бизнес-правила:
+    - Партнёры: rules/partners.md
+    - Каталог: rules/catalog.md
+    - Цены: rules/prices.md
+    - Остатки: rules/stocks.md
+    - Контрагенты: rules/contractors.md
+    - Заказы: rules/orders.md
+    - Возвраты: rules/returns.md
+    - Реализации: rules/shipments.md
+    - Баланс: rules/balances.md
+    - Индивидуальные цены: rules/individual-prices.md
+    - Ценообразование: rules/pricing-model.md
+    - Атрибуты товаров: rules/product-attributes.md
+    - Клиентские сегменты: rules/client-segments.md
+    - Нормализация данных: rules/data-normalization.md
+  - Тест-план:
+    - "Фаза 0: Подготовка": tests/phase-0-setup.md
+    - "Фаза 1: 1С → Сайт": tests/phase-1-inbound.md
+    - "Фаза 2: Сайт → 1С": tests/phase-2-outbound.md
+    - "Фаза 3: Сквозные сценарии": tests/phase-3-e2e.md
+    - "Фаза 4: Edge-кейсы": tests/phase-4-edge.md
+  - Первоначальная выгрузка: initial-load.md
+  - Открытые вопросы: open-questions.md
+  - Ссылки:
+    - "AsyncAPI (интерактивная)": https://dev.pecado.ru/docs/erp/
+    - "AsyncAPI (YAML)": https://dev.pecado.ru/docs/erp/spec.yaml
+    - "JSON Schemas": https://dev.pecado.ru/docs/erp/schemas/
