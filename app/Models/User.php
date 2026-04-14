@@ -206,6 +206,14 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Get the API tokens for the user.
+     */
+    public function apiTokens(): HasMany
+    {
+        return $this->hasMany(ApiToken::class);
+    }
+
+    /**
      * Get the social accounts for the user.
      */
     public function socialAccounts(): HasMany

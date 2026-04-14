@@ -78,3 +78,15 @@ Route::prefix('content')
 
         Route::get('regions', [\App\Http\Controllers\Api\Content\RegionController::class, 'index'])->name('regions.index');
     });
+
+// ──────────────────────────────────────────────────────────────
+// Client API — публичные эндпоинты по хешу (без авторизации)
+// ──────────────────────────────────────────────────────────────
+Route::prefix('client-api/{token}')
+    ->middleware('throttle:60,1')
+    ->name('client-api.')
+    ->group(function () {
+        Route::get('/prices', [\App\Http\Controllers\Api\ClientApiController::class, 'prices'])->name('prices');
+        Route::get('/stocks', [\App\Http\Controllers\Api\ClientApiController::class, 'stocks'])->name('stocks');
+        Route::post('/orders', [\App\Http\Controllers\Api\ClientApiController::class, 'orders'])->name('orders');
+    });

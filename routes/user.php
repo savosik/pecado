@@ -167,6 +167,12 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::post('/export-presets/{preset}/generate', [\App\Http\Controllers\User\ExportPresetController::class, 'generate'])->name('export-presets.generate');
     Route::delete('/export-presets/{preset}', [\App\Http\Controllers\User\ExportPresetController::class, 'destroy'])->name('export-presets.destroy');
 
+    // API-токены
+    Route::get('/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'index'])->name('api-tokens.index');
+    Route::post('/api-tokens', [\App\Http\Controllers\User\ApiTokenController::class, 'store'])->name('api-tokens.store');
+    Route::post('/api-tokens/{apiToken}/regenerate', [\App\Http\Controllers\User\ApiTokenController::class, 'regenerate'])->name('api-tokens.regenerate');
+    Route::delete('/api-tokens/{apiToken}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
+
     // Возвраты
     Route::get('/returns/search-products', [ReturnController::class, 'searchProducts'])->name('returns.search-products');
     Route::get('/returns/product-orders', [ReturnController::class, 'getProductOrders'])->name('returns.product-orders');
