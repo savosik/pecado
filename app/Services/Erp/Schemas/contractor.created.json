@@ -1,0 +1,127 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "contractor.created",
+    "title": "contractor.created (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "partner_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid"
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "legal_name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "tax_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "tax_code": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "registration_number": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "okpo_code": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+        },
+        "legal_address": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "actual_address": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "phone": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "email": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "bank_accounts": {
+            "type": [
+                "array",
+                "null"
+            ],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "bank_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "bank_bik": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "correspondent_account": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "account_number": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid"
+    ]
+}

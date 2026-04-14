@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\ErpProcessedMessage;
+use App\Models\ErpValidationError;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -87,17 +88,37 @@ class ErpBusController extends AdminController
         // 5. Все уникальные типы событий (для фильтра)
         $eventTypes = ErpProcessedMessage::distinct()->pluck('event')->sort()->values();
 
+        // 6. Ошибки валидации JSON Schema
+        $validationErrors = ErpValidationError::query()
+            ->orderByDesc('created_at')
+            ->paginate(15, ['*'], 'validation_page')
+            ->withQueryString();
+
+        $validationErrorsCount = ErpValidationError::count();
+
         return Inertia::render('Admin/Pages/ErpBus/Index', [
             'queues' => $queues,
             'processed' => $processed,
             'failedJobs' => $failedJobs,
             'eventStats' => $eventStats,
             'eventTypes' => $eventTypes,
+            'validationErrors' => $validationErrors,
+            'validationErrorsCount' => $validationErrorsCount,
             'filters' => [
                 'event' => $request->get('event', ''),
                 'search' => $request->get('search', ''),
             ],
         ]);
+    }
+
+    /**
+     * Очистить лог ошибок валидации.
+     */
+    public function clearValidationErrors(): \Illuminate\Http\RedirectResponse
+    {
+        ErpValidationError::truncate();
+
+        return back()->with('success', 'Лог ошибок валидации очищен');
     }
 
     /**

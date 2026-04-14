@@ -63,7 +63,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event'      => 'partner.created',
-            'uuid'       => 'test-uuid-001',
+            'uuid'       => '00000000-0000-4000-a000-000000000045',
             'login'      => 'partner-test@example.com',
             'message_id' => 'msg-001',
             'timestamp'  => now()->toIso8601String(),
@@ -75,7 +75,7 @@ class ErpIncomingJobTest extends TestCase
 
         // v4: Пользователь активирован и привязан к ERP
         $this->assertEquals(UserStatus::ACTIVE, $user->status);
-        $this->assertEquals('test-uuid-001', $user->erp_id);
+        $this->assertEquals('00000000-0000-4000-a000-000000000045', $user->erp_id);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-001',
             'event'      => 'partner.created',
@@ -87,12 +87,12 @@ class ErpIncomingJobTest extends TestCase
     {
         $user = User::factory()->create([
             'status' => UserStatus::ACTIVE,
-            'erp_id' => 'test-uuid-002',
+            'erp_id' => '00000000-0000-4000-a000-000000000046',
         ]);
 
         $job = $this->makeJob([
             'event' => 'partner.deleted',
-            'uuid' => 'test-uuid-002',
+            'uuid' => '00000000-0000-4000-a000-000000000046',
             'message_id' => 'msg-002',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -114,7 +114,7 @@ class ErpIncomingJobTest extends TestCase
         $user = User::factory()->create([
             'email' => 'partner-idem@example.com',
             'status' => UserStatus::BLOCKED,
-            'erp_id' => 'blocked-uuid',
+            'erp_id' => '00000000-0000-4000-a000-000000000004',
         ]);
 
         // Имитируем уже обработанное сообщение
@@ -126,7 +126,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'partner.created',
-            'uuid' => 'new-uuid',
+            'uuid' => '00000000-0000-4000-a000-00000000001b',
             'login' => 'partner-idem@example.com',
             'message_id' => 'msg-duplicate',
         ]);
@@ -137,7 +137,7 @@ class ErpIncomingJobTest extends TestCase
 
         // Статус НЕ должен измениться — дубликат проигнорирован
         $this->assertEquals(UserStatus::BLOCKED, $user->status);
-        $this->assertEquals('blocked-uuid', $user->erp_id);
+        $this->assertEquals('00000000-0000-4000-a000-000000000004', $user->erp_id);
     }
 
     #[Test]
@@ -204,7 +204,7 @@ class ErpIncomingJobTest extends TestCase
             });
 
         $job = $this->makeJob([
-            'uuid' => 'some-uuid',
+            'uuid' => '00000000-0000-4000-a000-000000000035',
             'login' => 'test@example.com',
         ]);
 
@@ -217,12 +217,12 @@ class ErpIncomingJobTest extends TestCase
         // Используем partner.deleted (остаётся как входящее событие) вместо partner.created (v2: стало исходящим)
         $user = User::factory()->create([
             'status' => UserStatus::ACTIVE,
-            'erp_id' => 'uuid-no-msgid',
+            'erp_id' => '00000000-0000-4000-a000-000000000047',
         ]);
 
         $job = $this->makeJob([
             'event' => 'partner.deleted',
-            'uuid'  => 'uuid-no-msgid',
+            'uuid'  => '00000000-0000-4000-a000-000000000047',
             // no message_id
         ]);
 
@@ -243,13 +243,13 @@ class ErpIncomingJobTest extends TestCase
         $user = User::factory()->create([
             'email'  => 'full-cycle@example.com',
             'status' => UserStatus::ACTIVE,
-            'erp_id' => 'cycle-uuid-001',
+            'erp_id' => '00000000-0000-4000-a000-00000000000c',
         ]);
 
         // partner.deleted (1С → Сайт)
         $deletedJob = $this->makeJob([
             'event'      => 'partner.deleted',
-            'uuid'       => 'cycle-uuid-001',
+            'uuid'       => '00000000-0000-4000-a000-00000000000c',
             'message_id' => 'msg-cycle-deleted',
         ]);
         $deletedJob->fire();
@@ -260,7 +260,7 @@ class ErpIncomingJobTest extends TestCase
         // Дубль partner.deleted (тот же message_id) — не должен повторно обработаться
         $duplicateJob = $this->makeJob([
             'event'      => 'partner.deleted',
-            'uuid'       => 'cycle-uuid-001',
+            'uuid'       => '00000000-0000-4000-a000-00000000000c',
             'message_id' => 'msg-cycle-deleted',
         ]);
         $duplicateJob->fire();
@@ -278,13 +278,13 @@ class ErpIncomingJobTest extends TestCase
     public function price_updated_changes_product_base_price_through_job(): void
     {
         $product = Product::factory()->create([
-            'external_id' => 'product-uuid-price-001',
+            'external_id' => '00000000-0000-4000-a000-00000000002e',
             'base_price' => 10000.00,
         ]);
 
         $job = $this->makeJob([
             'event' => 'price.updated',
-            'product_uuid' => 'product-uuid-price-001',
+            'product_uuid' => '00000000-0000-4000-a000-00000000002e',
             'price' => 15000.00,
             'message_id' => 'msg-price-001',
             'timestamp' => now()->toIso8601String(),
@@ -305,7 +305,7 @@ class ErpIncomingJobTest extends TestCase
     public function price_updated_idempotency_prevents_reprocessing(): void
     {
         $product = Product::factory()->create([
-            'external_id' => 'product-uuid-idem',
+            'external_id' => '00000000-0000-4000-a000-00000000002d',
             'base_price' => 10000.00,
         ]);
 
@@ -319,7 +319,7 @@ class ErpIncomingJobTest extends TestCase
         // Первое обновление прошло ранее, теперь пытаемся повторить с другой ценой
         $job = $this->makeJob([
             'event' => 'price.updated',
-            'product_uuid' => 'product-uuid-idem',
+            'product_uuid' => '00000000-0000-4000-a000-00000000002d',
             'price' => 99999.00,
             'message_id' => 'msg-price-duplicate',
         ]);
@@ -337,7 +337,7 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event' => 'price.updated',
-            'product_uuid' => 'nonexistent-product-uuid',
+            'product_uuid' => '00000000-0000-4000-a000-00000000001f',
             'price' => 15000.00,
             'message_id' => 'msg-price-unknown',
             'timestamp' => now()->toIso8601String(),
@@ -356,19 +356,19 @@ class ErpIncomingJobTest extends TestCase
     public function price_updated_multiple_products_independently(): void
     {
         $product1 = Product::factory()->create([
-            'external_id' => 'multi-price-uuid-1',
+            'external_id' => '00000000-0000-4000-a000-000000000016',
             'base_price' => 5000.00,
         ]);
 
         $product2 = Product::factory()->create([
-            'external_id' => 'multi-price-uuid-2',
+            'external_id' => '00000000-0000-4000-a000-000000000017',
             'base_price' => 8000.00,
         ]);
 
         // Обновляем цену первого товара
         $job1 = $this->makeJob([
             'event' => 'price.updated',
-            'product_uuid' => 'multi-price-uuid-1',
+            'product_uuid' => '00000000-0000-4000-a000-000000000016',
             'price' => 6000.00,
             'message_id' => 'msg-multi-price-1',
         ]);
@@ -377,7 +377,7 @@ class ErpIncomingJobTest extends TestCase
         // Обновляем цену второго товара
         $job2 = $this->makeJob([
             'event' => 'price.updated',
-            'product_uuid' => 'multi-price-uuid-2',
+            'product_uuid' => '00000000-0000-4000-a000-000000000017',
             'price' => 12000.00,
             'message_id' => 'msg-multi-price-2',
         ]);
@@ -598,18 +598,18 @@ class ErpIncomingJobTest extends TestCase
     public function stock_updated_changes_product_quantity_through_job(): void
     {
         $product = Product::factory()->create([
-            'external_id' => 'stock-product-uuid-001',
+            'external_id' => '00000000-0000-4000-a000-000000000038',
         ]);
         $warehouse = Warehouse::factory()->create([
-            'external_id' => 'stock-warehouse-uuid-001',
+            'external_id' => '00000000-0000-4000-a000-00000000003c',
         ]);
 
         $product->warehouses()->attach($warehouse->id, ['quantity' => 10]);
 
         $job = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'stock-product-uuid-001',
-            'warehouse_uuid' => 'stock-warehouse-uuid-001',
+            'product_uuid' => '00000000-0000-4000-a000-000000000038',
+            'warehouse_uuid' => '00000000-0000-4000-a000-00000000003c',
             'quantity' => 42,
             'message_id' => 'msg-stock-001',
             'timestamp' => now()->toIso8601String(),
@@ -632,16 +632,16 @@ class ErpIncomingJobTest extends TestCase
     public function stock_updated_creates_pivot_when_not_exists_through_job(): void
     {
         $product = Product::factory()->create([
-            'external_id' => 'stock-product-uuid-002',
+            'external_id' => '00000000-0000-4000-a000-000000000039',
         ]);
         $warehouse = Warehouse::factory()->create([
-            'external_id' => 'stock-warehouse-uuid-002',
+            'external_id' => '00000000-0000-4000-a000-00000000003d',
         ]);
 
         $job = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'stock-product-uuid-002',
-            'warehouse_uuid' => 'stock-warehouse-uuid-002',
+            'product_uuid' => '00000000-0000-4000-a000-000000000039',
+            'warehouse_uuid' => '00000000-0000-4000-a000-00000000003d',
             'quantity' => 25,
             'message_id' => 'msg-stock-002',
             'timestamp' => now()->toIso8601String(),
@@ -660,10 +660,10 @@ class ErpIncomingJobTest extends TestCase
     public function stock_updated_idempotency_prevents_reprocessing(): void
     {
         $product = Product::factory()->create([
-            'external_id' => 'stock-product-idem',
+            'external_id' => '00000000-0000-4000-a000-000000000036',
         ]);
         $warehouse = Warehouse::factory()->create([
-            'external_id' => 'stock-warehouse-idem',
+            'external_id' => '00000000-0000-4000-a000-00000000003a',
         ]);
 
         $product->warehouses()->attach($warehouse->id, ['quantity' => 10]);
@@ -677,8 +677,8 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'stock-product-idem',
-            'warehouse_uuid' => 'stock-warehouse-idem',
+            'product_uuid' => '00000000-0000-4000-a000-000000000036',
+            'warehouse_uuid' => '00000000-0000-4000-a000-00000000003a',
             'quantity' => 999,
             'message_id' => 'msg-stock-duplicate',
         ]);
@@ -697,13 +697,13 @@ class ErpIncomingJobTest extends TestCase
     public function stock_updated_for_unknown_product_completes_without_error(): void
     {
         $warehouse = Warehouse::factory()->create([
-            'external_id' => 'stock-warehouse-unknown-prod',
+            'external_id' => '00000000-0000-4000-a000-00000000003b',
         ]);
 
         $job = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'nonexistent-stock-product-uuid',
-            'warehouse_uuid' => 'stock-warehouse-unknown-prod',
+            'product_uuid' => '00000000-0000-4000-a000-000000000022',
+            'warehouse_uuid' => '00000000-0000-4000-a000-00000000003b',
             'quantity' => 10,
             'message_id' => 'msg-stock-unknown-prod',
             'timestamp' => now()->toIso8601String(),
@@ -722,13 +722,13 @@ class ErpIncomingJobTest extends TestCase
     public function stock_updated_for_unknown_warehouse_completes_without_error(): void
     {
         $product = Product::factory()->create([
-            'external_id' => 'stock-product-unknown-wh',
+            'external_id' => '00000000-0000-4000-a000-000000000037',
         ]);
 
         $job = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'stock-product-unknown-wh',
-            'warehouse_uuid' => 'nonexistent-stock-warehouse-uuid',
+            'product_uuid' => '00000000-0000-4000-a000-000000000037',
+            'warehouse_uuid' => '00000000-0000-4000-a000-000000000023',
             'quantity' => 10,
             'message_id' => 'msg-stock-unknown-wh',
             'timestamp' => now()->toIso8601String(),
@@ -746,15 +746,15 @@ class ErpIncomingJobTest extends TestCase
     #[Test]
     public function stock_updated_multiple_products_independently(): void
     {
-        $product1 = Product::factory()->create(['external_id' => 'multi-stock-prod-1']);
-        $product2 = Product::factory()->create(['external_id' => 'multi-stock-prod-2']);
-        $warehouse = Warehouse::factory()->create(['external_id' => 'multi-stock-wh-1']);
+        $product1 = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-000000000018']);
+        $product2 = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-000000000019']);
+        $warehouse = Warehouse::factory()->create(['external_id' => '00000000-0000-4000-a000-00000000001a']);
 
         // Обновляем остаток первого товара
         $job1 = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'multi-stock-prod-1',
-            'warehouse_uuid' => 'multi-stock-wh-1',
+            'product_uuid' => '00000000-0000-4000-a000-000000000018',
+            'warehouse_uuid' => '00000000-0000-4000-a000-00000000001a',
             'quantity' => 50,
             'message_id' => 'msg-multi-stock-1',
         ]);
@@ -763,8 +763,8 @@ class ErpIncomingJobTest extends TestCase
         // Обновляем остаток второго товара
         $job2 = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'multi-stock-prod-2',
-            'warehouse_uuid' => 'multi-stock-wh-1',
+            'product_uuid' => '00000000-0000-4000-a000-000000000019',
+            'warehouse_uuid' => '00000000-0000-4000-a000-00000000001a',
             'quantity' => 75,
             'message_id' => 'msg-multi-stock-2',
         ]);
@@ -786,17 +786,17 @@ class ErpIncomingJobTest extends TestCase
     public function full_stock_lifecycle_multiple_updates(): void
     {
         $product = Product::factory()->create([
-            'external_id' => 'life-stock-prod',
+            'external_id' => '00000000-0000-4000-a000-000000000011',
         ]);
         $warehouse = Warehouse::factory()->create([
-            'external_id' => 'life-stock-wh',
+            'external_id' => '00000000-0000-4000-a000-000000000012',
         ]);
 
         // 1. Первое обновление — создание записи
         $job1 = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'life-stock-prod',
-            'warehouse_uuid' => 'life-stock-wh',
+            'product_uuid' => '00000000-0000-4000-a000-000000000011',
+            'warehouse_uuid' => '00000000-0000-4000-a000-000000000012',
             'quantity' => 100,
             'message_id' => 'msg-stock-life-1',
         ]);
@@ -811,8 +811,8 @@ class ErpIncomingJobTest extends TestCase
         // 2. Второе обновление — уменьшение остатка
         $job2 = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'life-stock-prod',
-            'warehouse_uuid' => 'life-stock-wh',
+            'product_uuid' => '00000000-0000-4000-a000-000000000011',
+            'warehouse_uuid' => '00000000-0000-4000-a000-000000000012',
             'quantity' => 60,
             'message_id' => 'msg-stock-life-2',
         ]);
@@ -827,8 +827,8 @@ class ErpIncomingJobTest extends TestCase
         // 3. Третье обновление — обнуление
         $job3 = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'life-stock-prod',
-            'warehouse_uuid' => 'life-stock-wh',
+            'product_uuid' => '00000000-0000-4000-a000-000000000011',
+            'warehouse_uuid' => '00000000-0000-4000-a000-000000000012',
             'quantity' => 0,
             'message_id' => 'msg-stock-life-3',
         ]);
@@ -843,8 +843,8 @@ class ErpIncomingJobTest extends TestCase
         // 4. Дубль первого обновления — не должен откатить остаток
         $duplicateJob = $this->makeJob([
             'event' => 'stock.updated',
-            'product_uuid' => 'life-stock-prod',
-            'warehouse_uuid' => 'life-stock-wh',
+            'product_uuid' => '00000000-0000-4000-a000-000000000011',
+            'warehouse_uuid' => '00000000-0000-4000-a000-000000000012',
             'quantity' => 100,
             'message_id' => 'msg-stock-life-1',
         ]);
@@ -867,7 +867,7 @@ class ErpIncomingJobTest extends TestCase
         $user = User::factory()->create();
         $company = Company::factory()->create(['user_id' => $user->id]);
         $order = Order::factory()->create([
-            'uuid' => 'test-order-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000003f',
             'user_id' => $user->id,
             'company_id' => $company->id,
             'status' => 'pending',
@@ -875,7 +875,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'order.updated',
-            'uuid' => 'test-order-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000003f',
             'status' => 'confirmed',
             'items' => [],
             'message_id' => 'msg-order-upd-001',
@@ -898,11 +898,11 @@ class ErpIncomingJobTest extends TestCase
     {
         $user = User::factory()->create();
         $company = Company::factory()->create(['user_id' => $user->id]);
-        $product1 = Product::factory()->create(['external_id' => 'ord-prod-uuid-001']);
-        $product2 = Product::factory()->create(['external_id' => 'ord-prod-uuid-002']);
+        $product1 = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-000000000024']);
+        $product2 = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-000000000025']);
 
         $order = Order::factory()->create([
-            'uuid' => 'test-order-uuid-items',
+            'uuid' => '00000000-0000-4000-a000-000000000041',
             'user_id' => $user->id,
             'company_id' => $company->id,
             'status' => 'pending',
@@ -920,11 +920,11 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'order.updated',
-            'uuid' => 'test-order-uuid-items',
+            'uuid' => '00000000-0000-4000-a000-000000000041',
             'status' => 'confirmed',
             'items' => [
                 [
-                    'product_uuid' => 'ord-prod-uuid-002',
+                    'product_uuid' => '00000000-0000-4000-a000-000000000025',
                     'quantity' => 4,
                     'price' => 3000.00,
                 ],
@@ -951,7 +951,7 @@ class ErpIncomingJobTest extends TestCase
         $user = User::factory()->create();
         $company = Company::factory()->create(['user_id' => $user->id]);
         $order = Order::factory()->create([
-            'uuid' => 'test-order-uuid-idem',
+            'uuid' => '00000000-0000-4000-a000-000000000040',
             'user_id' => $user->id,
             'company_id' => $company->id,
             'status' => 'pending',
@@ -965,7 +965,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'order.updated',
-            'uuid' => 'test-order-uuid-idem',
+            'uuid' => '00000000-0000-4000-a000-000000000040',
             'status' => 'confirmed',
             'message_id' => 'msg-order-dup',
         ]);
@@ -981,7 +981,7 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event' => 'order.updated',
-            'uuid' => 'nonexistent-order-uuid',
+            'uuid' => '00000000-0000-4000-a000-00000000001d',
             'status' => 'confirmed',
             'message_id' => 'msg-order-unknown',
             'timestamp' => now()->toIso8601String(),
@@ -1001,7 +1001,7 @@ class ErpIncomingJobTest extends TestCase
         $user = User::factory()->create();
         $company = Company::factory()->create(['user_id' => $user->id]);
         $order = Order::factory()->create([
-            'uuid' => 'test-order-del-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000003e',
             'user_id' => $user->id,
             'company_id' => $company->id,
             'status' => 'confirmed',
@@ -1009,7 +1009,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'order.deleted',
-            'uuid' => 'test-order-del-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000003e',
             'message_id' => 'msg-order-del-001',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1020,7 +1020,7 @@ class ErpIncomingJobTest extends TestCase
 
         $this->assertEquals('cancelled', $order->status->value);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => 'test-order-del-uuid-001', 'status' => 'cancelled']);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000003e', 'status' => 'cancelled']);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-order-del-001',
             'event' => 'order.deleted',
@@ -1032,7 +1032,7 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event' => 'order.deleted',
-            'uuid' => 'nonexistent-order-del-uuid',
+            'uuid' => '00000000-0000-4000-a000-00000000001c',
             'message_id' => 'msg-order-del-unknown',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1054,14 +1054,14 @@ class ErpIncomingJobTest extends TestCase
     {
         $user = User::factory()->create();
         $return = ProductReturn::factory()->create([
-            'uuid' => 'test-return-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000043',
             'user_id' => $user->id,
             'status' => 'pending',
         ]);
 
         $job = $this->makeJob([
             'event' => 'return.updated',
-            'uuid' => 'test-return-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000043',
             'status' => 'approved',
             'message_id' => 'msg-return-upd-001',
             'timestamp' => now()->toIso8601String(),
@@ -1082,7 +1082,7 @@ class ErpIncomingJobTest extends TestCase
     public function return_updated_idempotency_prevents_reprocessing(): void
     {
         $return = ProductReturn::factory()->create([
-            'uuid' => 'test-return-uuid-idem',
+            'uuid' => '00000000-0000-4000-a000-000000000044',
             'status' => 'pending',
         ]);
 
@@ -1094,7 +1094,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'return.updated',
-            'uuid' => 'test-return-uuid-idem',
+            'uuid' => '00000000-0000-4000-a000-000000000044',
             'status' => 'approved',
             'message_id' => 'msg-return-dup',
         ]);
@@ -1110,7 +1110,7 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event' => 'return.updated',
-            'uuid' => 'nonexistent-return-uuid',
+            'uuid' => '00000000-0000-4000-a000-000000000021',
             'status' => 'approved',
             'message_id' => 'msg-return-unknown',
             'timestamp' => now()->toIso8601String(),
@@ -1128,20 +1128,20 @@ class ErpIncomingJobTest extends TestCase
     public function return_deleted_soft_deletes_return_through_job(): void
     {
         $return = ProductReturn::factory()->create([
-            'uuid' => 'test-return-del-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000042',
             'status' => 'pending',
         ]);
 
         $job = $this->makeJob([
             'event' => 'return.deleted',
-            'uuid' => 'test-return-del-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000042',
             'message_id' => 'msg-return-del-001',
             'timestamp' => now()->toIso8601String(),
         ]);
 
         $job->fire();
 
-        $this->assertSoftDeleted('returns', ['uuid' => 'test-return-del-uuid-001']);
+        $this->assertSoftDeleted('returns', ['uuid' => '00000000-0000-4000-a000-000000000042']);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-return-del-001',
             'event' => 'return.deleted',
@@ -1153,7 +1153,7 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event' => 'return.deleted',
-            'uuid' => 'nonexistent-return-del-uuid',
+            'uuid' => '00000000-0000-4000-a000-000000000020',
             'message_id' => 'msg-return-del-unknown',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1174,20 +1174,20 @@ class ErpIncomingJobTest extends TestCase
     public function balance_updated_changes_user_balance_through_job(): void
     {
         $user = User::factory()->create([
-            'erp_id' => 'balance-partner-uuid-001',
+            'erp_id' => '00000000-0000-4000-a000-000000000001',
         ]);
 
         $job = $this->makeJob([
             'event'       => 'balance.updated',
-            'partner_uuid' => 'balance-partner-uuid-001',
+            'partner_uuid' => '00000000-0000-4000-a000-000000000001',
             'contractors' => [
                 [
-                    'contractor_uuid' => 'c-uuid-job-001',
+                    'contractor_uuid' => '00000000-0000-4000-a000-000000000005',
                     'contractor_inn'  => '1234567890',
                     'current_balance' => -125000.00,
                     'overdue_debt'    => 50000.00,
                     'overdue_details' => [
-                        ['shipment_uuid' => 's-uuid-job-001', 'amount' => 50000.00, 'due_date' => '2026-01-15'],
+                        ['shipment_uuid' => '00000000-0000-4000-a000-000000000030', 'amount' => 50000.00, 'due_date' => '2026-01-15'],
                     ],
                 ],
             ],
@@ -1219,7 +1219,7 @@ class ErpIncomingJobTest extends TestCase
     public function balance_updated_overwrites_existing_balance_through_job(): void
     {
         $user = User::factory()->create([
-            'erp_id' => 'balance-partner-uuid-002',
+            'erp_id' => '00000000-0000-4000-a000-000000000002',
         ]);
         ContractorBalance::create([
             'user_id'         => $user->id,
@@ -1230,7 +1230,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event'        => 'balance.updated',
-            'partner_uuid' => 'balance-partner-uuid-002',
+            'partner_uuid' => '00000000-0000-4000-a000-000000000002',
             'contractors'  => [
                 [
                     'contractor_inn'  => '9876543210',
@@ -1257,7 +1257,7 @@ class ErpIncomingJobTest extends TestCase
     public function balance_updated_idempotency_prevents_reprocessing(): void
     {
         $user = User::factory()->create([
-            'erp_id' => 'balance-partner-uuid-idem',
+            'erp_id' => '00000000-0000-4000-a000-000000000003',
         ]);
 
         ErpProcessedMessage::create([
@@ -1268,7 +1268,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event'        => 'balance.updated',
-            'partner_uuid' => 'balance-partner-uuid-idem',
+            'partner_uuid' => '00000000-0000-4000-a000-000000000003',
             'contractors'  => [
                 [
                     'contractor_inn'  => '9999999999',
@@ -1293,7 +1293,7 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event' => 'balance.updated',
-            'partner_uuid' => 'nonexistent-partner-uuid',
+            'partner_uuid' => '00000000-0000-4000-a000-00000000001e',
             'current_balance' => -50000.00,
             'overdue_debt' => 10000.00,
             'message_id' => 'msg-balance-unknown',
@@ -1317,10 +1317,10 @@ class ErpIncomingJobTest extends TestCase
     {
         $user = User::factory()->create();
         $company = Company::factory()->create(['user_id' => $user->id]);
-        $product = Product::factory()->create(['external_id' => 'life-ord-prod-001']);
+        $product = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-00000000000e']);
 
         $order = Order::factory()->create([
-            'uuid' => 'life-order-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000000f',
             'user_id' => $user->id,
             'company_id' => $company->id,
             'status' => 'pending',
@@ -1329,10 +1329,10 @@ class ErpIncomingJobTest extends TestCase
         // 1. order.updated — подтверждение + добавление позиций
         $updateJob = $this->makeJob([
             'event' => 'order.updated',
-            'uuid' => 'life-order-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000000f',
             'status' => 'confirmed',
             'items' => [
-                ['product_uuid' => 'life-ord-prod-001', 'quantity' => 5, 'price' => 3000.00],
+                ['product_uuid' => '00000000-0000-4000-a000-00000000000e', 'quantity' => 5, 'price' => 3000.00],
             ],
             'message_id' => 'msg-life-ord-upd',
         ]);
@@ -1345,7 +1345,7 @@ class ErpIncomingJobTest extends TestCase
         // 2. order.deleted — отмена
         $deleteJob = $this->makeJob([
             'event' => 'order.deleted',
-            'uuid' => 'life-order-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000000f',
             'message_id' => 'msg-life-ord-del',
         ]);
         $deleteJob->fire();
@@ -1353,12 +1353,12 @@ class ErpIncomingJobTest extends TestCase
         $order->refresh();
         $this->assertEquals('cancelled', $order->status->value);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => 'life-order-uuid-001', 'status' => 'cancelled']);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000000f', 'status' => 'cancelled']);
 
         // 3. Дубль order.updated — не должен обработаться
         $dupJob = $this->makeJob([
             'event' => 'order.updated',
-            'uuid' => 'life-order-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-00000000000f',
             'status' => 'confirmed',
             'message_id' => 'msg-life-ord-upd',
         ]);
@@ -1376,9 +1376,9 @@ class ErpIncomingJobTest extends TestCase
     #[Test]
     public function full_return_lifecycle_updated_then_deleted(): void
     {
-        $user = User::factory()->create(['erp_id' => 'lifecycle-ret-partner']);
+        $user = User::factory()->create(['erp_id' => '00000000-0000-4000-a000-000000000013']);
         $return = ProductReturn::factory()->create([
-            'uuid' => 'lifecycle-return-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000014',
             'user_id' => $user->id,
             'status' => 'pending',
         ]);
@@ -1386,7 +1386,7 @@ class ErpIncomingJobTest extends TestCase
         // 1. return.updated — смена статуса на approved
         $updJob = $this->makeJob([
             'event' => 'return.updated',
-            'uuid' => 'lifecycle-return-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000014',
             'status' => 'approved',
             'message_id' => 'msg-ret-life-upd',
             'timestamp' => now()->toIso8601String(),
@@ -1403,13 +1403,13 @@ class ErpIncomingJobTest extends TestCase
         // 2. return.deleted — soft-delete
         $delJob = $this->makeJob([
             'event' => 'return.deleted',
-            'uuid' => 'lifecycle-return-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000014',
             'message_id' => 'msg-ret-life-del',
             'timestamp' => now()->toIso8601String(),
         ]);
         $delJob->fire();
 
-        $this->assertSoftDeleted('returns', ['uuid' => 'lifecycle-return-uuid-001']);
+        $this->assertSoftDeleted('returns', ['uuid' => '00000000-0000-4000-a000-000000000014']);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-ret-life-del',
             'event' => 'return.deleted',
@@ -1418,14 +1418,14 @@ class ErpIncomingJobTest extends TestCase
         // 3. Дубль return.updated (тот же message_id) — не должен обработаться
         $dupJob = $this->makeJob([
             'event' => 'return.updated',
-            'uuid' => 'lifecycle-return-uuid-001',
+            'uuid' => '00000000-0000-4000-a000-000000000014',
             'status' => 'completed',
             'message_id' => 'msg-ret-life-upd',
         ]);
         $dupJob->fire();
 
         // Статус остался approved (soft-deleted, но данные в БД)
-        $return = ProductReturn::withTrashed()->where('uuid', 'lifecycle-return-uuid-001')->first();
+        $return = ProductReturn::withTrashed()->where('uuid', '00000000-0000-4000-a000-000000000014')->first();
         $this->assertEquals('approved', $return->status->value);
         $this->assertNotNull($return->deleted_at);
     }
@@ -1437,7 +1437,7 @@ class ErpIncomingJobTest extends TestCase
     #[Test]
     public function shipment_created_creates_shipment_through_job(): void
     {
-        $product = Product::factory()->create(['external_id' => 'int-ship-prod-001']);
+        $product = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-00000000000d']);
         $user = User::factory()->create();
         $company = Company::factory()->create([
             'user_id' => $user->id,
@@ -1446,14 +1446,14 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'shipment.created',
-            'uuid' => 's1a2b3c4-int-001',
+            'uuid' => '00000000-0000-4000-a000-000000000031',
             'contractor_inn' => '1234567890',
             'date' => '2026-02-16',
             'status' => 'completed',
             'currency_code' => 'KZT',
             'items' => [
                 [
-                    'product_uuid' => 'int-ship-prod-001',
+                    'product_uuid' => '00000000-0000-4000-a000-00000000000d',
                     'quantity' => 10,
                     'price' => 3000.00,
                 ],
@@ -1465,14 +1465,14 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertDatabaseHas('shipments', [
-            'uuid' => 's1a2b3c4-int-001',
+            'uuid' => '00000000-0000-4000-a000-000000000031',
             'contractor_inn' => '1234567890',
             'status' => 'completed',
             'company_id' => $company->id,
             'user_id' => $user->id,
         ]);
 
-        $shipment = \App\Models\Shipment::where('uuid', 's1a2b3c4-int-001')->first();
+        $shipment = \App\Models\Shipment::where('uuid', '00000000-0000-4000-a000-000000000031')->first();
         $this->assertCount(1, $shipment->items);
         $this->assertEquals(30000.00, (float) $shipment->total_amount);
 
@@ -1486,13 +1486,13 @@ class ErpIncomingJobTest extends TestCase
     public function shipment_updated_changes_status_through_job(): void
     {
         \App\Models\Shipment::factory()->create([
-            'uuid' => 's1a2b3c4-int-002',
+            'uuid' => '00000000-0000-4000-a000-000000000032',
             'status' => 'new',
         ]);
 
         $job = $this->makeJob([
             'event' => 'shipment.updated',
-            'uuid' => 's1a2b3c4-int-002',
+            'uuid' => '00000000-0000-4000-a000-000000000032',
             'status' => 'completed',
             'message_id' => 'msg-ship-updated-001',
             'timestamp' => now()->toIso8601String(),
@@ -1501,7 +1501,7 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertDatabaseHas('shipments', [
-            'uuid' => 's1a2b3c4-int-002',
+            'uuid' => '00000000-0000-4000-a000-000000000032',
             'status' => 'completed',
         ]);
 
@@ -1515,19 +1515,19 @@ class ErpIncomingJobTest extends TestCase
     public function shipment_deleted_soft_deletes_through_job(): void
     {
         \App\Models\Shipment::factory()->create([
-            'uuid' => 's1a2b3c4-int-003',
+            'uuid' => '00000000-0000-4000-a000-000000000033',
         ]);
 
         $job = $this->makeJob([
             'event' => 'shipment.deleted',
-            'uuid' => 's1a2b3c4-int-003',
+            'uuid' => '00000000-0000-4000-a000-000000000033',
             'message_id' => 'msg-ship-deleted-001',
             'timestamp' => now()->toIso8601String(),
         ]);
 
         $job->fire();
 
-        $this->assertSoftDeleted('shipments', ['uuid' => 's1a2b3c4-int-003']);
+        $this->assertSoftDeleted('shipments', ['uuid' => '00000000-0000-4000-a000-000000000033']);
 
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-ship-deleted-001',
@@ -1546,7 +1546,7 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event' => 'shipment.created',
-            'uuid' => 's1a2b3c4-int-dup',
+            'uuid' => '00000000-0000-4000-a000-000000000034',
             'contractor_inn' => '1234567890',
             'date' => '2026-02-16',
             'status' => 'completed',
@@ -1558,32 +1558,32 @@ class ErpIncomingJobTest extends TestCase
 
         // Реализация не должна быть создана — дубликат проигнорирован
         $this->assertDatabaseMissing('shipments', [
-            'uuid' => 's1a2b3c4-int-dup',
+            'uuid' => '00000000-0000-4000-a000-000000000034',
         ]);
     }
 
     #[Test]
     public function full_shipment_lifecycle_created_updated_deleted(): void
     {
-        $product = Product::factory()->create(['external_id' => 'life-ship-prod-001']);
+        $product = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-000000000010']);
 
         // 1. shipment.created
         $createJob = $this->makeJob([
             'event' => 'shipment.created',
-            'uuid' => 's-lifecycle-001',
+            'uuid' => '00000000-0000-4000-a000-00000000002f',
             'contractor_inn' => '5555555555',
             'date' => '2026-02-16',
             'status' => 'new',
             'currency_code' => 'RUB',
             'items' => [
-                ['product_uuid' => 'life-ship-prod-001', 'quantity' => 5, 'price' => 1000.00],
+                ['product_uuid' => '00000000-0000-4000-a000-000000000010', 'quantity' => 5, 'price' => 1000.00],
             ],
             'message_id' => 'msg-ship-life-create',
             'timestamp' => now()->toIso8601String(),
         ]);
         $createJob->fire();
 
-        $shipment = \App\Models\Shipment::where('uuid', 's-lifecycle-001')->first();
+        $shipment = \App\Models\Shipment::where('uuid', '00000000-0000-4000-a000-00000000002f')->first();
         $this->assertNotNull($shipment);
         $this->assertEquals('new', $shipment->status);
         $this->assertCount(1, $shipment->items);
@@ -1592,10 +1592,10 @@ class ErpIncomingJobTest extends TestCase
         // 2. shipment.updated — изменение статуса и позиций
         $updateJob = $this->makeJob([
             'event' => 'shipment.updated',
-            'uuid' => 's-lifecycle-001',
+            'uuid' => '00000000-0000-4000-a000-00000000002f',
             'status' => 'completed',
             'items' => [
-                ['product_uuid' => 'life-ship-prod-001', 'quantity' => 10, 'price' => 1500.00],
+                ['product_uuid' => '00000000-0000-4000-a000-000000000010', 'quantity' => 10, 'price' => 1500.00],
             ],
             'message_id' => 'msg-ship-life-update',
             'timestamp' => now()->toIso8601String(),
@@ -1610,18 +1610,18 @@ class ErpIncomingJobTest extends TestCase
         // 3. shipment.deleted
         $deleteJob = $this->makeJob([
             'event' => 'shipment.deleted',
-            'uuid' => 's-lifecycle-001',
+            'uuid' => '00000000-0000-4000-a000-00000000002f',
             'message_id' => 'msg-ship-life-delete',
             'timestamp' => now()->toIso8601String(),
         ]);
         $deleteJob->fire();
 
-        $this->assertSoftDeleted('shipments', ['uuid' => 's-lifecycle-001']);
+        $this->assertSoftDeleted('shipments', ['uuid' => '00000000-0000-4000-a000-00000000002f']);
 
         // 4. Дубль shipment.created (тот же message_id) — не должен обработаться
         $dupJob = $this->makeJob([
             'event' => 'shipment.created',
-            'uuid' => 's-lifecycle-001',
+            'uuid' => '00000000-0000-4000-a000-00000000002f',
             'contractor_inn' => '5555555555',
             'items' => [],
             'message_id' => 'msg-ship-life-create',
@@ -1629,7 +1629,7 @@ class ErpIncomingJobTest extends TestCase
         $dupJob->fire();
 
         // Проверяем что реализация осталась soft-deleted
-        $shipment = \App\Models\Shipment::withTrashed()->where('uuid', 's-lifecycle-001')->first();
+        $shipment = \App\Models\Shipment::withTrashed()->where('uuid', '00000000-0000-4000-a000-00000000002f')->first();
         $this->assertNotNull($shipment->deleted_at);
     }
 
@@ -1642,7 +1642,7 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event'       => 'category.created',
-            'uuid'        => 'cat-us13-001',
+            'uuid'        => '00000000-0000-4000-a000-00000000000b',
             'parent_uuid' => null,
             'name'        => 'Бельё и одежда',
             'is_group'    => true,
@@ -1653,7 +1653,7 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertDatabaseHas('categories', [
-            'uuid'     => 'cat-us13-001',
+            'uuid'     => '00000000-0000-4000-a000-00000000000b',
             'name'     => 'Бельё и одежда',
             'is_group' => true,
         ]);
@@ -1669,28 +1669,28 @@ class ErpIncomingJobTest extends TestCase
         // Сначала создаём родительскую категорию
         $parentJob = $this->makeJob([
             'event'      => 'category.created',
-            'uuid'       => 'cat-parent-001',
+            'uuid'       => '00000000-0000-4000-a000-000000000009',
             'name'       => 'Корневая категория',
             'is_group'   => true,
             'message_id' => 'msg-cat-parent-001',
         ]);
         $parentJob->fire();
 
-        $parent = \App\Models\Category::where('uuid', 'cat-parent-001')->first();
+        $parent = \App\Models\Category::where('uuid', '00000000-0000-4000-a000-000000000009')->first();
         $this->assertNotNull($parent);
 
         // Теперь создаём дочернюю категорию
         $childJob = $this->makeJob([
             'event'       => 'category.created',
-            'uuid'        => 'cat-child-001',
-            'parent_uuid' => 'cat-parent-001',
+            'uuid'        => '00000000-0000-4000-a000-000000000006',
+            'parent_uuid' => '00000000-0000-4000-a000-000000000009',
             'name'        => 'Дочерняя категория',
             'is_group'    => false,
             'message_id'  => 'msg-cat-child-001',
         ]);
         $childJob->fire();
 
-        $child = \App\Models\Category::where('uuid', 'cat-child-001')->first();
+        $child = \App\Models\Category::where('uuid', '00000000-0000-4000-a000-000000000006')->first();
         $this->assertNotNull($child);
         $this->assertEquals($parent->id, $child->parent_id);
     }
@@ -1701,7 +1701,7 @@ class ErpIncomingJobTest extends TestCase
         // Создаём исходную категорию
         $createJob = $this->makeJob([
             'event'      => 'category.created',
-            'uuid'       => 'cat-upd-001',
+            'uuid'       => '00000000-0000-4000-a000-00000000000a',
             'name'       => 'Старое название',
             'is_group'   => false,
             'message_id' => 'msg-cat-upd-create',
@@ -1711,7 +1711,7 @@ class ErpIncomingJobTest extends TestCase
         // Обновляем через category.updated
         $updateJob = $this->makeJob([
             'event'      => 'category.updated',
-            'uuid'       => 'cat-upd-001',
+            'uuid'       => '00000000-0000-4000-a000-00000000000a',
             'name'       => 'Новое название',
             'is_group'   => true,
             'message_id' => 'msg-cat-upd-update',
@@ -1719,12 +1719,12 @@ class ErpIncomingJobTest extends TestCase
         $updateJob->fire();
 
         $this->assertDatabaseHas('categories', [
-            'uuid'     => 'cat-upd-001',
+            'uuid'     => '00000000-0000-4000-a000-00000000000a',
             'name'     => 'Новое название',
             'is_group' => true,
         ]);
         // Убедимся, что нет дублей
-        $this->assertEquals(1, \App\Models\Category::where('uuid', 'cat-upd-001')->count());
+        $this->assertEquals(1, \App\Models\Category::where('uuid', '00000000-0000-4000-a000-00000000000a')->count());
     }
 
     #[Test]
@@ -1738,13 +1738,13 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event'      => 'category.created',
-            'uuid'       => 'cat-dup-001',
+            'uuid'       => '00000000-0000-4000-a000-000000000007',
             'name'       => 'Дубликат категории',
             'message_id' => 'msg-cat-dup-001',
         ]);
         $job->fire();
 
-        $this->assertDatabaseMissing('categories', ['uuid' => 'cat-dup-001']);
+        $this->assertDatabaseMissing('categories', ['uuid' => '00000000-0000-4000-a000-000000000007']);
     }
 
     #[Test]
@@ -1754,7 +1754,7 @@ class ErpIncomingJobTest extends TestCase
         Log::shouldReceive('warning')
             ->once()
             ->withArgs(function ($msg) {
-                return str_contains($msg, 'отсутствуют обязательные поля');
+                return str_contains($msg, 'payload не соответствует JSON Schema');
             });
 
         $job = $this->makeJob([
@@ -1777,16 +1777,16 @@ class ErpIncomingJobTest extends TestCase
     {
         // Создаём категорию для привязки
         \App\Models\Category::factory()->create([
-            'uuid' => 'cat-for-product-001',
+            'uuid' => '00000000-0000-4000-a000-000000000008',
         ]);
 
         $job = $this->makeJob([
             'event'         => 'product.created',
-            'uuid'          => 'prod-us13-001',
+            'uuid'          => '00000000-0000-4000-a000-00000000002b',
             'name'          => 'Вибро-яйцо XYZ',
             'code'          => '0T-123213',
             'sku'           => 'AAS-123213',
-            'category_uuid' => 'cat-for-product-001',
+            'category_uuid' => '00000000-0000-4000-a000-000000000008',
             'brand'         => 'BrandTest',
             'description'   => 'Описание товара',
             'barcodes'      => ['4600000000001', '4600000000002'],
@@ -1797,13 +1797,13 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertDatabaseHas('products', [
-            'external_id' => 'prod-us13-001',
+            'external_id' => '00000000-0000-4000-a000-00000000002b',
             'name'        => 'Вибро-яйцо XYZ',
             'code'        => '0T-123213',
             'sku'         => 'AAS-123213',
         ]);
 
-        $product = Product::where('external_id', 'prod-us13-001')->first();
+        $product = Product::where('external_id', '00000000-0000-4000-a000-00000000002b')->first();
         $this->assertNotNull($product);
         $this->assertNotNull($product->category_id);
         $this->assertNotNull($product->brand_id);
@@ -1820,14 +1820,14 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event'      => 'product.created',
-            'uuid'       => 'prod-barcodes-001',
+            'uuid'       => '00000000-0000-4000-a000-000000000027',
             'name'       => 'Товар со штрих-кодами',
             'barcodes'   => ['111', '222', '333'],
             'message_id' => 'msg-prod-barcodes-001',
         ]);
         $job->fire();
 
-        $product = Product::where('external_id', 'prod-barcodes-001')->first();
+        $product = Product::where('external_id', '00000000-0000-4000-a000-000000000027')->first();
         $this->assertNotNull($product);
         $this->assertCount(3, $product->barcodes);
         $this->assertDatabaseHas('product_barcodes', ['product_id' => $product->id, 'barcode' => '111']);
@@ -1840,7 +1840,7 @@ class ErpIncomingJobTest extends TestCase
         // Первое создание с 3 штрих-кодами
         $createJob = $this->makeJob([
             'event'      => 'product.created',
-            'uuid'       => 'prod-upd-barcodes',
+            'uuid'       => '00000000-0000-4000-a000-00000000002a',
             'name'       => 'Товар',
             'barcodes'   => ['aaa', 'bbb', 'ccc'],
             'message_id' => 'msg-prod-upd-barcodes-create',
@@ -1850,14 +1850,14 @@ class ErpIncomingJobTest extends TestCase
         // Обновление с новым набором штрих-кодов
         $updateJob = $this->makeJob([
             'event'      => 'product.updated',
-            'uuid'       => 'prod-upd-barcodes',
+            'uuid'       => '00000000-0000-4000-a000-00000000002a',
             'name'       => 'Товар обновлён',
             'barcodes'   => ['xxx', 'yyy'],
             'message_id' => 'msg-prod-upd-barcodes-update',
         ]);
         $updateJob->fire();
 
-        $product = Product::where('external_id', 'prod-upd-barcodes')->first();
+        $product = Product::where('external_id', '00000000-0000-4000-a000-00000000002a')->first();
         $this->assertNotNull($product);
         $this->assertEquals('Товар обновлён', $product->name);
         // Старые штрих-коды заменены новыми
@@ -1871,10 +1871,10 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event'      => 'product.created',
-            'uuid'       => 'prod-with-model-001',
+            'uuid'       => '00000000-0000-4000-a000-00000000002c',
             'name'       => 'Товар с моделью',
             'model'      => [
-                'uuid' => 'model-uuid-001',
+                'uuid' => '00000000-0000-4000-a000-000000000015',
                 'name' => 'Модель товара А',
             ],
             'message_id' => 'msg-prod-model-001',
@@ -1882,11 +1882,11 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertDatabaseHas('product_models', [
-            'external_id' => 'model-uuid-001',
+            'external_id' => '00000000-0000-4000-a000-000000000015',
             'name'        => 'Модель товара А',
         ]);
 
-        $product = Product::where('external_id', 'prod-with-model-001')->first();
+        $product = Product::where('external_id', '00000000-0000-4000-a000-00000000002c')->first();
         $this->assertNotNull($product);
         $this->assertNotNull($product->model_id);
     }
@@ -1896,25 +1896,25 @@ class ErpIncomingJobTest extends TestCase
     {
         $job = $this->makeJob([
             'event'      => 'product.created',
-            'uuid'       => 'prod-attrs-001',
+            'uuid'       => '00000000-0000-4000-a000-000000000026',
             'name'       => 'Товар с атрибутами',
             'attributes' => [
                 [
-                    'property_uuid'  => 'prop-weight-uuid',
+                    'property_uuid'  => '00000000-0000-4000-a000-000000000066',
                     'property_label' => 'weight',
                     'value_type'     => 'string',
                     'value_uuid'     => null,
                     'value_label'    => '150г',
                 ],
                 [
-                    'property_uuid'  => 'prop-color-uuid',
+                    'property_uuid'  => '00000000-0000-4000-a000-000000000064',
                     'property_label' => 'color',
                     'value_type'     => 'string',
-                    'value_uuid'     => 'val-pink-uuid',
+                    'value_uuid'     => '00000000-0000-4000-a000-000000000067',
                     'value_label'    => 'розовый',
                 ],
                 [
-                    'property_uuid'  => 'prop-material-uuid',
+                    'property_uuid'  => '00000000-0000-4000-a000-000000000065',
                     'property_label' => 'material',
                     'value_type'     => 'string',
                     'value_uuid'     => null,
@@ -1925,7 +1925,7 @@ class ErpIncomingJobTest extends TestCase
         ]);
         $job->fire();
 
-        $product = Product::where('external_id', 'prod-attrs-001')->first();
+        $product = Product::where('external_id', '00000000-0000-4000-a000-000000000026')->first();
         $this->assertNotNull($product);
 
         // Проверяем что атрибуты сохранены
@@ -1952,13 +1952,13 @@ class ErpIncomingJobTest extends TestCase
 
         $job = $this->makeJob([
             'event'      => 'product.created',
-            'uuid'       => 'prod-dup-001',
+            'uuid'       => '00000000-0000-4000-a000-000000000028',
             'name'       => 'Дубликат товара',
             'message_id' => 'msg-prod-dup-001',
         ]);
         $job->fire();
 
-        $this->assertDatabaseMissing('products', ['external_id' => 'prod-dup-001']);
+        $this->assertDatabaseMissing('products', ['external_id' => '00000000-0000-4000-a000-000000000028']);
     }
 
     #[Test]
@@ -1968,7 +1968,7 @@ class ErpIncomingJobTest extends TestCase
         Log::shouldReceive('warning')
             ->once()
             ->withArgs(function ($msg) {
-                return str_contains($msg, 'отсутствуют обязательные поля');
+                return str_contains($msg, 'payload не соответствует JSON Schema');
             });
 
         $job = $this->makeJob([
@@ -1987,13 +1987,13 @@ class ErpIncomingJobTest extends TestCase
     {
         // Создаём товар с ценой вручную (как будто price.updated уже отработал)
         $existing = Product::factory()->create([
-            'external_id' => 'prod-preserve-price',
+            'external_id' => '00000000-0000-4000-a000-000000000029',
             'base_price'  => 12345.00,
         ]);
 
         $job = $this->makeJob([
             'event'      => 'product.created',
-            'uuid'       => 'prod-preserve-price',
+            'uuid'       => '00000000-0000-4000-a000-000000000029',
             'name'       => 'Обновлённое имя',
             'message_id' => 'msg-prod-preserve-price',
         ]);

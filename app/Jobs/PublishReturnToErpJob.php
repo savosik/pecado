@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\Erp\ErpMessageValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -30,6 +31,22 @@ class PublishReturnToErpJob implements ShouldQueue
      */
     public function handle(): void
     {
+        $event = $this->payload['event'] ?? 'return.created';
+
+        // Валидация исходящего payload по JSON Schema перед отправкой
+        /** @var ErpMessageValidator $validator */
+        $validator = app(ErpMessageValidator::class);
+        $validation = $validator->validateOutbound($event, $this->payload);
+
+        if (!$validation['valid']) {
+            Log::warning("Исходящий {$event} payload не соответствует JSON Schema, сообщение не отправлено", [
+                'errors' => $validation['errors'],
+                'uuid'   => $this->payload['uuid'] ?? null,
+            ]);
+            $validator->logValidationError($event, 'outgoing', $validation['errors'], $this->payload);
+            return;
+        }
+
         try {
             Queue::connection('rabbitmq')->pushRaw(
                 json_encode($this->payload, JSON_UNESCAPED_UNICODE),

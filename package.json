@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "asyncapi:validate": "npx -y @asyncapi/cli validate docs/asyncapi/pecado-erp-integration.yaml",
+        "asyncapi:html": "npx -y @asyncapi/cli generate fromTemplate docs/asyncapi/pecado-erp-integration.yaml @asyncapi/html-template@2.3.10 -o docs/asyncapi/html --force-write"
     },
     "devDependencies": {
         "@tailwindcss/typography": "^0.5.19",

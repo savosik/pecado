@@ -1,0 +1,120 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "order.created.to_erp",
+    "title": "order.created (Сайт → 1С)",
+    "description": "Новый заказ — отправка в 1С для обработки",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "number": {
+            "type": ["string", "null"]
+        },
+        "date": {
+            "type": "string"
+        },
+        "status": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string"
+        },
+        "partner_uuid": {
+            "type": ["string", "null"]
+        },
+        "warehouse_uuids": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "comment": {
+            "type": ["string", "null"]
+        },
+        "timestamp": {
+            "type": "string"
+        },
+        "contractor": {
+            "type": ["object", "null"],
+            "properties": {
+                "country": { "type": ["string", "null"] },
+                "name": { "type": ["string", "null"] },
+                "legal_name": { "type": ["string", "null"] },
+                "tax_id": { "type": ["string", "null"] },
+                "registration_number": { "type": ["string", "null"] },
+                "tax_code": { "type": ["string", "null"] },
+                "okpo_code": { "type": ["string", "null"] },
+                "legal_address": { "type": ["string", "null"] },
+                "actual_address": { "type": ["string", "null"] },
+                "phone": { "type": ["string", "null"] },
+                "email": { "type": ["string", "null"] },
+                "latitude": { "type": ["number", "null"] },
+                "longitude": { "type": ["number", "null"] },
+                "bank_accounts": {
+                    "type": ["array", "null"],
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "bank_name": { "type": ["string", "null"] },
+                            "bank_bik": { "type": ["string", "null"] },
+                            "correspondent_account": { "type": ["string", "null"] },
+                            "account_number": { "type": ["string", "null"] },
+                            "is_primary": { "type": ["boolean", "null"] }
+                        }
+                    }
+                }
+            }
+        },
+        "delivery_address": {
+            "type": ["string", "null"]
+        },
+        "currency_code": {
+            "type": ["string", "null"]
+        },
+        "exchange_rate": {
+            "type": ["number", "null"]
+        },
+        "rate_coefficient": {
+            "type": ["number", "null"]
+        },
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "product_uuid": {
+                        "type": ["string", "null"]
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "base_price": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "discount_percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "final_price": {
+                        "type": "number",
+                        "minimum": 0
+                    }
+                }
+            }
+        }
+    },
+    "required": [
+        "event",
+        "uuid",
+        "items"
+    ],
+    "additionalProperties": true
+}

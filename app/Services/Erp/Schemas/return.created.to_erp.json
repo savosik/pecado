@@ -1,0 +1,49 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "return.created.to_erp",
+    "title": "return.created (Сайт → 1С)",
+    "description": "Новый возврат — отправка в 1С для обработки",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "order_uuid": {
+            "type": ["string", "null"]
+        },
+        "partner_uuid": {
+            "type": ["string", "null"]
+        },
+        "timestamp": {
+            "type": "string"
+        },
+        "items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "product_uuid": {
+                        "type": ["string", "null"]
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "reason": {
+                        "type": ["string", "null"]
+                    }
+                }
+            }
+        }
+    },
+    "required": [
+        "event",
+        "uuid",
+        "items"
+    ],
+    "additionalProperties": true
+}

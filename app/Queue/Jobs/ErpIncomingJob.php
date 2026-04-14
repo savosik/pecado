@@ -3,6 +3,7 @@
 namespace App\Queue\Jobs;
 
 use App\Models\ErpProcessedMessage;
+use App\Services\Erp\ErpMessageValidator;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
 use App\Services\Erp\Handlers\HandleCategoryUpdated;
@@ -123,6 +124,28 @@ class ErpIncomingJob extends BaseJob
                     'event' => $event,
                     'payload' => $payload,
                 ]);
+                $this->delete();
+
+                return;
+            }
+
+            // Валидация payload по JSON Schema (AsyncAPI)
+            /** @var ErpMessageValidator $validator */
+            $validator = app(ErpMessageValidator::class);
+            $validation = $validator->validate($event, $payload);
+
+            if (!$validation['valid']) {
+                Log::warning('ERP incoming: payload не соответствует JSON Schema', [
+                    'event' => $event,
+                    'message_id' => $messageId,
+                    'errors' => $validation['errors'],
+                    'payload' => $payload,
+                ]);
+
+                // Сохраняем ошибку в БД для отображения в админке
+                $validator->logValidationError($event, 'incoming', $validation['errors'], $payload);
+
+                // Удаляем невалидное сообщение — повторная обработка не поможет
                 $this->delete();
 
                 return;

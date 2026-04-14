@@ -14,6 +14,7 @@ import {
     IconButton,
     Flex,
     Card,
+    Button,
 } from '@chakra-ui/react';
 import {
     LuRefreshCw,
@@ -24,6 +25,8 @@ import {
     LuInbox,
     LuSend,
     LuSkull,
+    LuTrash2,
+    LuShieldAlert,
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
 import { toaster } from '@/components/ui/toaster';
@@ -146,7 +149,7 @@ const Pagination = ({ data, paramName = 'page' }) => {
     );
 };
 
-export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters }) {
+export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount }) {
     const [search, setSearch] = useState(filters.search || '');
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
@@ -167,6 +170,7 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
         });
     };
     const [eventFilter, setEventFilter] = useState(filters.event || '');
+    const [clearingValidation, setClearingValidation] = useState(false);
 
     const handleRefresh = useCallback(() => {
         router.reload({ preserveScroll: true });
@@ -196,6 +200,21 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
             { preserveState: true, preserveScroll: true }
         );
     }, [search]);
+
+    const handleClearValidationErrors = useCallback(() => {
+        setClearingValidation(true);
+        router.delete(route('admin.erp-bus.clear-validation-errors'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toaster.create({ title: 'Лог ошибок валидации очищен', type: 'success' });
+                setClearingValidation(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при очистке лога', type: 'error' });
+                setClearingValidation(false);
+            },
+        });
+    }, []);
 
     const hasError = queues?.error;
 
@@ -268,6 +287,101 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                     />
                 </VStack>
             )}
+
+            <Separator mb={6} />
+
+            {/* Ошибки валидации JSON Schema */}
+            <Box mb={8}>
+                <HStack justify="space-between" mb={3}>
+                    <HStack gap={2}>
+                        <LuShieldAlert size={18} color="var(--chakra-colors-orange-500)" />
+                        <Text fontWeight="bold" fontSize="md">
+                            Ошибки валидации JSON Schema
+                        </Text>
+                        {validationErrorsCount > 0 && (
+                            <Badge colorPalette="orange" variant="solid" size="sm">
+                                {validationErrorsCount}
+                            </Badge>
+                        )}
+                    </HStack>
+                    {validationErrorsCount > 0 && (
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            colorPalette="red"
+                            loading={clearingValidation}
+                            onClick={handleClearValidationErrors}
+                        >
+                            <LuTrash2 />
+                            Очистить лог
+                        </Button>
+                    )}
+                </HStack>
+
+                {(!validationErrors || validationErrors.data.length === 0) ? (
+                    <Box textAlign="center" py={6} color="fg.muted">
+                        <Text color="green.500" fontWeight="medium">Ошибок валидации нет! ✅</Text>
+                    </Box>
+                ) : (
+                    <>
+                        <Box overflowX="auto">
+                            <Table.Root size="sm">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.ColumnHeader>Направление</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Событие</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Message ID</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Ошибки</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Дата</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {validationErrors.data.map((err) => (
+                                        <Table.Row key={err.id}>
+                                            <Table.Cell>
+                                                <Badge
+                                                    colorPalette={err.direction === 'incoming' ? 'yellow' : 'blue'}
+                                                    size="sm"
+                                                    variant="subtle"
+                                                >
+                                                    {err.direction === 'incoming' ? '1С → Сайт' : 'Сайт → 1С'}
+                                                </Badge>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Badge colorPalette="orange" size="sm" variant="subtle">
+                                                    {err.event}
+                                                </Badge>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Text fontFamily="mono" fontSize="xs" truncate maxW="200px">
+                                                    {err.message_id || '—'}
+                                                </Text>
+                                            </Table.Cell>
+                                            <Table.Cell maxW="400px">
+                                                <VStack align="start" gap={1}>
+                                                    {(err.errors || []).map((e, i) => (
+                                                        <Text key={i} fontSize="xs" color="orange.600" _dark={{ color: 'orange.300' }}>
+                                                            {e}
+                                                        </Text>
+                                                    ))}
+                                                </VStack>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Text fontSize="sm" color="fg.muted">
+                                                    {err.created_at
+                                                        ? new Date(err.created_at).toLocaleString('ru-RU')
+                                                        : '—'}
+                                                </Text>
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
+                        </Box>
+                        <Pagination data={validationErrors} paramName="validation_page" />
+                    </>
+                )}
+            </Box>
 
             <Separator mb={6} />
 

@@ -1,0 +1,76 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "partner.created.from_erp",
+    "title": "partner.created (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "login": {
+            "type": "string",
+            "minLength": 1
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "phone": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "email": {
+            "type": "string",
+            "format": "email"
+        },
+        "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 8
+        },
+        "city": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "region": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+        },
+        "currency": {
+            "type": "string"
+        },
+        "is_active": {
+            "type": "boolean"
+        },
+        "client_status": {
+            "type": [
+                "string",
+                "null"
+            ]
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid"
+    ]
+}

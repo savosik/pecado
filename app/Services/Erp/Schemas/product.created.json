@@ -1,0 +1,120 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "product.created",
+    "title": "product.created (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "code": {
+            "type": "string",
+            "minLength": 1
+        },
+        "sku": {
+            "type": "string",
+            "minLength": 1
+        },
+        "description": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "category_uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "hidden": {
+            "type": "boolean"
+        },
+        "brand": {
+            "type": [
+                "string",
+                "object",
+                "null"
+            ],
+            "properties": {
+                "uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "barcodes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            }
+        },
+        "model": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "properties": {
+                "uuid": {
+                    "type": "string",
+                    "format": "uuid"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "attributes": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "property_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "property_label": {
+                        "type": "string"
+                    },
+                    "value_type": {
+                        "type": "string"
+                    },
+                    "value_uuid": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "value_label": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid"
+    ]
+}

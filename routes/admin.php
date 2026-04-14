@@ -666,6 +666,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
 
     // Шина ERP
     Route::get('/erp-bus', [\App\Http\Controllers\Admin\ErpBusController::class, 'index'])->name('erp-bus.index')->middleware('permission:erp-bus.view');
+    Route::delete('/erp-bus/validation-errors', [\App\Http\Controllers\Admin\ErpBusController::class, 'clearValidationErrors'])->name('erp-bus.clear-validation-errors')->middleware('permission:erp-bus.view');
 
     // Роли
     Route::middleware('permission:roles.view')->group(function () {

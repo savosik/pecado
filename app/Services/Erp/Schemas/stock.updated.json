@@ -1,0 +1,31 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "stock.updated",
+    "title": "stock.updated (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "product_uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "warehouse_uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "quantity": {
+            "type": "number",
+            "minimum": 0
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event"
+    ]
+}

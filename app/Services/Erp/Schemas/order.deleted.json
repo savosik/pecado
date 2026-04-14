@@ -1,0 +1,24 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "order.deleted",
+    "title": "order.deleted (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid"
+    ]
+}

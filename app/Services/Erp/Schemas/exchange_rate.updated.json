@@ -1,0 +1,40 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "exchange_rate.updated",
+    "title": "exchange_rate.updated (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "currency_code": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+        },
+        "official_rate": {
+            "type": "number"
+        },
+        "rate_coefficient": {
+            "type": "number"
+        },
+        "rate": {
+            "type": "number"
+        },
+        "base_currency_code": {
+            "type": "string"
+        },
+        "date": {
+            "type": "string",
+            "format": "date"
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event"
+    ]
+}

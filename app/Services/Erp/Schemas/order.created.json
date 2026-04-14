@@ -1,0 +1,209 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "order.created",
+    "title": "order.created (1С → Сайт / Сайт → 1С)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "number": {
+            "type": "string"
+        },
+        "date": {
+            "type": "string"
+        },
+        "status": {
+            "type": "string"
+        },
+        "type": {
+            "type": "string"
+        },
+        "partner_uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "warehouse_uuids": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "format": "uuid"
+            }
+        },
+        "timestamp": {
+            "type": "string"
+        },
+        "contractor": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "properties": {
+                "country": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 2
+                },
+                "name": {
+                    "type": "string"
+                },
+                "legal_name": {
+                    "type": "string"
+                },
+                "tax_id": {
+                    "type": "string"
+                },
+                "registration_number": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "tax_code": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "okpo_code": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "legal_address": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "actual_address": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "phone": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "email": {
+                    "type": [
+                        "string",
+                        "null"
+                    ]
+                },
+                "latitude": {
+                    "type": [
+                        "number",
+                        "null"
+                    ]
+                },
+                "longitude": {
+                    "type": [
+                        "number",
+                        "null"
+                    ]
+                },
+                "bank_accounts": {
+                    "type": [
+                        "array",
+                        "null"
+                    ],
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "bank_name": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "bank_bik": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "correspondent_account": {
+                                "type": [
+                                    "string",
+                                    "null"
+                                ]
+                            },
+                            "account_number": {
+                                "type": "string"
+                            },
+                            "is_primary": {
+                                "type": "boolean"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "delivery_address": {
+            "type": "string"
+        },
+        "currency_code": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+        },
+        "exchange_rate": {
+            "type": "number"
+        },
+        "rate_coefficient": {
+            "type": "number"
+        },
+        "comment": {
+            "type": "string"
+        },
+        "items": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "product_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "quantity": {
+                        "type": "number",
+                        "minimum": 1
+                    },
+                    "base_price": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "discount_percent": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "final_price": {
+                        "type": "number",
+                        "minimum": 0
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid"
+    ]
+}

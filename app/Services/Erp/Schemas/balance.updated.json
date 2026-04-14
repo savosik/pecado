@@ -1,0 +1,68 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "balance.updated",
+    "title": "balance.updated (1С → Сайт)",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "partner_uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "updated_at": {
+            "type": "string"
+        },
+        "contractors": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "contractor_inn": {
+                        "type": "string"
+                    },
+                    "contractor_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "current_balance": {
+                        "type": "number"
+                    },
+                    "overdue_debt": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "overdue_details": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "shipment_uuid": {
+                                    "type": "string",
+                                    "format": "uuid"
+                                },
+                                "amount": {
+                                    "type": "number"
+                                },
+                                "due_date": {
+                                    "type": "string",
+                                    "format": "date"
+                                }
+                            }
+                        }
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event"
+    ]
+}

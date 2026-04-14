@@ -1,0 +1,2090 @@
+asyncapi: 3.0.0
+
+info:
+  title: Pecado ERP Integration API
+  version: 11.0.0
+  description: |
+    Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
+
+    ## Архитектура
+
+    ```
+    1С → erp.events (exchange, topic, durable) → Очереди сайта (erp_in.*)
+    Сайт → site.events (exchange, topic, durable) → Очереди 1С (erp_out.*)
+    ```
+
+    ## Транспорт
+    - **RabbitMQ** (AMQP 0-9-1) — основной транспорт для событий
+    - **MinIO** (S3) — файловое хранилище для индивидуальных цен (US-14)
+
+    ## Идемпотентность
+    Все сообщения содержат `message_id`. Повторная обработка по тому же `message_id` не приводит к дублированию.
+    Обработанные `message_id` хранятся в таблице `erp_processed_messages`.
+
+    ## Формат
+    Все сообщения — **raw JSON** (не обёрнуты в стандартный Laravel Job payload).
+
+    ## Версионирование
+    Версия спецификации соответствует ACCEPTANCE_CRITERIA v11.0.
+  contact:
+    name: Pecado Dev Team
+  license:
+    name: Proprietary
+
+# ──────────────────────────────────────────────
+# Servers
+# ──────────────────────────────────────────────
+servers:
+  rabbitmq:
+    host: 'rabbitmq:5672'
+    protocol: amqp
+    protocolVersion: 0-9-1
+    description: RabbitMQ брокер для обмена сообщениями между 1С и Сайтом
+    tags:
+      - name: production
+
+# ──────────────────────────────────────────────
+# Channels
+# ──────────────────────────────────────────────
+channels:
+  # ── Входящие (1С → Сайт) ──────────────────
+  erpInPartners:
+    address: erp_in.partners
+    title: Партнёры и контрагенты (1С → Сайт)
+    description: |
+      Очередь для событий партнёров и контрагентов.
+      Routing keys: `partner.*`, `contractor.*`
+    messages:
+      partnerCreatedFromErp:
+        $ref: '#/components/messages/PartnerCreatedFromErp'
+      partnerDeleted:
+        $ref: '#/components/messages/PartnerDeleted'
+      contractorCreated:
+        $ref: '#/components/messages/ContractorCreated'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.partners
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInPrices:
+    address: erp_in.prices
+    title: Цены и курсы валют (1С → Сайт)
+    description: |
+      Очередь для обновления базовых цен, курсов валют и уведомлений об индивидуальных ценах.
+      Routing keys: `price.*`, `exchange_rate.*`, `individual_prices.*`
+    messages:
+      priceUpdated:
+        $ref: '#/components/messages/PriceUpdated'
+      exchangeRateUpdated:
+        $ref: '#/components/messages/ExchangeRateUpdated'
+      individualPricesReady:
+        $ref: '#/components/messages/IndividualPricesReady'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.prices
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInStock:
+    address: erp_in.stock
+    title: Остатки (1С → Сайт)
+    description: |
+      Очередь для обновления остатков товаров на складах.
+      Routing key: `stock.*`
+    messages:
+      stockUpdated:
+        $ref: '#/components/messages/StockUpdated'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.stock
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInOrders:
+    address: erp_in.orders
+    title: Заказы (1С → Сайт)
+    description: |
+      Очередь для событий заказов от 1С (создание менеджером, обновление статуса/позиций, удаление).
+      Routing key: `order.*`
+    messages:
+      orderCreatedFromErp:
+        $ref: '#/components/messages/OrderCreatedFromErp'
+      orderUpdated:
+        $ref: '#/components/messages/OrderUpdated'
+      orderDeleted:
+        $ref: '#/components/messages/OrderDeleted'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.orders
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInReturns:
+    address: erp_in.returns
+    title: Возвраты (1С → Сайт)
+    description: |
+      Очередь для обновления статусов и удаления возвратов.
+      Routing key: `return.*`
+      > US-09 отложен на следующий скоп. JSON-шаблоны созданы.
+    messages:
+      returnUpdated:
+        $ref: '#/components/messages/ReturnUpdated'
+      returnDeleted:
+        $ref: '#/components/messages/ReturnDeleted'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.returns
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInDocuments:
+    address: erp_in.documents
+    title: Реализации (1С → Сайт)
+    description: |
+      Очередь для событий реализаций (shipment).
+      Routing key: `shipment.*`
+    messages:
+      shipmentCreated:
+        $ref: '#/components/messages/ShipmentCreated'
+      shipmentUpdated:
+        $ref: '#/components/messages/ShipmentUpdated'
+      shipmentDeleted:
+        $ref: '#/components/messages/ShipmentDeleted'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.documents
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInBalance:
+    address: erp_in.balance
+    title: Баланс партнёров (1С → Сайт)
+    description: |
+      Очередь для обновления баланса партнёров в разрезе контрагентов.
+      Routing key: `balance.*`
+    messages:
+      balanceUpdated:
+        $ref: '#/components/messages/BalanceUpdated'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.balance
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInCatalog:
+    address: erp_in.catalog
+    title: Каталог товаров (1С → Сайт)
+    description: |
+      Очередь для синхронизации категорий и товаров.
+      Routing keys: `category.*`, `product.*`
+    messages:
+      categoryCreated:
+        $ref: '#/components/messages/CategoryCreated'
+      categoryUpdated:
+        $ref: '#/components/messages/CategoryUpdated'
+      productCreated:
+        $ref: '#/components/messages/ProductCreated'
+      productUpdated:
+        $ref: '#/components/messages/ProductUpdated'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.catalog
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  # ── Исходящие (Сайт → 1С) ────────────────
+  erpOutOrders:
+    address: erp_out.orders
+    title: Заказы (Сайт → 1С)
+    description: |
+      Очередь для новых заказов, созданных на сайте.
+      Routing key: `order.created`
+    messages:
+      orderCreatedFromSite:
+        $ref: '#/components/messages/OrderCreatedFromSite'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_out.orders
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpOutReturns:
+    address: erp_out.returns
+    title: Возвраты (Сайт → 1С)
+    description: |
+      Очередь для возвратов, инициированных на сайте.
+      Routing key: `return.created`
+    messages:
+      returnCreatedFromSite:
+        $ref: '#/components/messages/ReturnCreatedFromSite'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_out.returns
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpOutPartners:
+    address: erp_out.partners
+    title: Партнёры (Сайт → 1С)
+    description: |
+      Очередь для активированных пользователей сайта.
+      Routing key: `partner.created`
+    messages:
+      partnerCreatedFromSite:
+        $ref: '#/components/messages/PartnerCreatedFromSite'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_out.partners
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+# ──────────────────────────────────────────────
+# Operations
+# ──────────────────────────────────────────────
+operations:
+  # ── US-02: Партнёры ────────────────────────
+  receivePartnerCreated:
+    title: Получение партнёра от 1С
+    summary: 1С создаёт/обновляет партнёра → Сайт синхронизирует пользователя
+    description: |
+      Обработчик: `HandlePartnerCreated`
+
+      При получении:
+      - Создаёт или обновляет пользователя по `uuid` (external_id)
+      - Устанавливает `name`, `phone`, `email`, `city`, `region`, `country`
+      - Обрабатывает `is_active` (v10) и `client_status` (v11)
+      - При `client_status` != null — ищет `ClientStatus` по `external_id` и привязывает
+      - При первом входе пользователь обязан сменить пароль
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/partnerCreatedFromErp'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-02
+      - name: partners
+
+  receivePartnerDeleted:
+    title: Удаление партнёра
+    summary: 1С удаляет партнёра → Сайт деактивирует пользователя
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/partnerDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-02
+      - name: partners
+
+  sendPartnerCreated:
+    title: Отправка партнёра в 1С
+    summary: Сайт → 1С при активации пользователя
+    description: |
+      Публикуется через `PublishUserToErpJob`.
+      1С ищет партнёра по email; если не найден — создаёт нового.
+      1С НЕ присваивает UUID из JSON как ссылку — UUID генерирует платформа 1С.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutPartners'
+    messages:
+      - $ref: '#/channels/erpOutPartners/messages/partnerCreatedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-02
+      - name: partners
+
+  # ── US-03: Базовые цены ────────────────────
+  receivePriceUpdated:
+    title: Обновление базовой цены
+    summary: 1С обновляет цену товара
+    description: |
+      Обработчик: `HandlePriceUpdated`
+
+      Сайт обновляет цену товара по `product_uuid`.
+      Если товар не найден — событие игнорируется.
+      Выгрузка использует вид цен из `ОсновнойВидЦен` настроек.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPrices'
+    messages:
+      - $ref: '#/channels/erpInPrices/messages/priceUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-03
+      - name: prices
+
+  # ── US-05: Курсы валют ─────────────────────
+  receiveExchangeRateUpdated:
+    title: Обновление курса валюты
+    summary: 1С обновляет курс валюты
+    description: |
+      Обработчик: `HandleExchangeRateUpdated`
+
+      Сайт принимает все три значения: `official_rate`, `rate_coefficient`, `rate`.
+      Все цены хранятся в базовой валюте (RUB).
+      Сайт НЕ обновляет курсы из сторонних источников — только из 1С.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPrices'
+    messages:
+      - $ref: '#/channels/erpInPrices/messages/exchangeRateUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-05
+      - name: prices
+
+  # ── US-06: Остатки ─────────────────────────
+  receiveStockUpdated:
+    title: Обновление остатков
+    summary: 1С обновляет остаток товара на складе
+    description: |
+      Обработчик: `HandleStockUpdated`
+
+      `quantity` = ВНаличии − КОтгрузке. Отрицательные значения приводятся к 0.
+      Склады заводятся в админке сайта вручную с привязкой к UUID.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInStock'
+    messages:
+      - $ref: '#/channels/erpInStock/messages/stockUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-06
+      - name: stock
+
+  # ── US-07: Контрагенты ─────────────────────
+  receiveContractorCreated:
+    title: Получение контрагента от 1С
+    summary: 1С создаёт/обновляет контрагента → Сайт привязывает к партнёру
+    description: |
+      Обработчик: `HandleContractorCreated`
+
+      Сайт создаёт контрагента с привязкой к партнёру по `partner_uuid`.
+      Поле `country` гарантированно не null.
+      Первый банковский счёт имеет `is_primary = true`.
+      Сопоставление контрагента при заказе — по ИНН (`tax_id`).
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/contractorCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+
+  # ── US-08: Заказы ──────────────────────────
+  receiveOrderCreatedFromErp:
+    title: Получение заказа от 1С
+    summary: 1С создаёт заказ (менеджер) → Сайт синхронизирует
+    description: |
+      Обработчик: `HandleOrderCreated`
+
+      Формат идентичен `order.created` от сайта, но отправляется из 1С.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInOrders'
+    messages:
+      - $ref: '#/channels/erpInOrders/messages/orderCreatedFromErp'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-08
+      - name: orders
+
+  receiveOrderUpdated:
+    title: Обновление заказа
+    summary: 1С обновляет статус и/или позиции заказа
+    description: |
+      Обработчик: `HandleOrderUpdated`
+
+      Если передан `items` — он полностью заменяет текущие позиции.
+      Не передавайте `items`, если обновляете только статус.
+
+      **v11:** При обработке `order.updated` сайт фиксирует diff позиций в `order_change_logs`.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInOrders'
+    messages:
+      - $ref: '#/channels/erpInOrders/messages/orderUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-08
+      - name: orders
+
+  receiveOrderDeleted:
+    title: Удаление заказа
+    summary: 1С удаляет заказ
+    action: receive
+    channel:
+      $ref: '#/channels/erpInOrders'
+    messages:
+      - $ref: '#/channels/erpInOrders/messages/orderDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-08
+      - name: orders
+
+  sendOrderCreated:
+    title: Отправка заказа в 1С
+    summary: Сайт → 1С при оформлении заказа
+    description: |
+      Публикуется через `PublishOrderToErpJob`.
+
+      Корзина разделяется на заказ + предзаказ (по типу `order` / `preorder`).
+      Заказ фиксируется в валюте пользователя с курсом и коэффициентом.
+      После отправки пользователь изменять заказ НЕ может.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutOrders'
+    messages:
+      - $ref: '#/channels/erpOutOrders/messages/orderCreatedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-08
+      - name: orders
+
+  # ── US-09: Возвраты ────────────────────────
+  receiveReturnUpdated:
+    title: Обновление возврата
+    summary: 1С обновляет статус возврата
+    description: |
+      Обработчик: `HandleReturnUpdated`
+      > US-09 отложен на следующий скоп.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInReturns'
+    messages:
+      - $ref: '#/channels/erpInReturns/messages/returnUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-09
+      - name: returns
+
+  receiveReturnDeleted:
+    title: Удаление возврата
+    summary: 1С удаляет возврат
+    action: receive
+    channel:
+      $ref: '#/channels/erpInReturns'
+    messages:
+      - $ref: '#/channels/erpInReturns/messages/returnDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-09
+      - name: returns
+
+  sendReturnCreated:
+    title: Отправка возврата в 1С
+    summary: Сайт → 1С при создании возврата пользователем
+    description: |
+      Публикуется через `PublishReturnToErpJob`.
+      Возврат привязан к заказу через `order_id`.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutReturns'
+    messages:
+      - $ref: '#/channels/erpOutReturns/messages/returnCreatedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-09
+      - name: returns
+
+  # ── US-10: Реализации ──────────────────────
+  receiveShipmentCreated:
+    title: Создание реализации
+    summary: 1С отправляет реализацию при первом проведении
+    description: |
+      Обработчик: `HandleShipmentCreated`
+
+      Одна реализация может включать позиции из нескольких заказов.
+      Расчёт задолженности ведётся по реализациям, не по заказам.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInDocuments'
+    messages:
+      - $ref: '#/channels/erpInDocuments/messages/shipmentCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-10
+      - name: shipments
+
+  receiveShipmentUpdated:
+    title: Обновление реализации
+    summary: 1С обновляет реализацию при перепроведении
+    action: receive
+    channel:
+      $ref: '#/channels/erpInDocuments'
+    messages:
+      - $ref: '#/channels/erpInDocuments/messages/shipmentUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-10
+      - name: shipments
+
+  receiveShipmentDeleted:
+    title: Удаление реализации
+    summary: 1С удаляет реализацию
+    action: receive
+    channel:
+      $ref: '#/channels/erpInDocuments'
+    messages:
+      - $ref: '#/channels/erpInDocuments/messages/shipmentDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-10
+      - name: shipments
+
+  # ── US-11: Баланс ──────────────────────────
+  receiveBalanceUpdated:
+    title: Обновление баланса
+    summary: 1С обновляет баланс партнёра в разрезе контрагентов
+    description: |
+      Обработчик: `HandleBalanceUpdated`
+
+      Баланс отображается в разрезе контрагентов.
+      Просроченная задолженность детализируется по реализациям.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInBalance'
+    messages:
+      - $ref: '#/channels/erpInBalance/messages/balanceUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-11
+      - name: balance
+
+  # ── US-14: Индивидуальные цены ─────────────
+  receiveIndividualPricesReady:
+    title: Уведомление об индивидуальных ценах
+    summary: 1С уведомляет о готовности CSV-файла с индивидуальными ценами
+    description: |
+      Обработчик: `HandleIndividualPricesReady`
+
+      Один файл = один партнёр. Формат CSV: `product_uuid,warehouse_uuid,price` (без заголовка).
+      - `upload_type: "full"` — полное удаление + вставка
+      - `upload_type: "delta"` — UPSERT (v9)
+
+      Дельта-выгрузка: каждые 15–30 минут рабочего дня.
+      Полная выгрузка: ежедневно в 03:00.
+
+      CSV файл удаляется из MinIO после обработки.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPrices'
+    messages:
+      - $ref: '#/channels/erpInPrices/messages/individualPricesReady'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-14
+      - name: prices
+
+  # ── US-15: Каталог ─────────────────────────
+  receiveCategoryCreated:
+    title: Создание категории
+    summary: 1С создаёт категорию (вид номенклатуры)
+    description: |
+      Обработчик: `HandleCategoryCreated`
+
+      Родительская категория создаётся ДО дочерней (BFS-обход по уровням).
+    action: receive
+    channel:
+      $ref: '#/channels/erpInCatalog'
+    messages:
+      - $ref: '#/channels/erpInCatalog/messages/categoryCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-15
+      - name: catalog
+
+  receiveCategoryUpdated:
+    title: Обновление категории
+    summary: 1С обновляет категорию
+    action: receive
+    channel:
+      $ref: '#/channels/erpInCatalog'
+    messages:
+      - $ref: '#/channels/erpInCatalog/messages/categoryUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-15
+      - name: catalog
+
+  receiveProductCreated:
+    title: Создание товара
+    summary: 1С создаёт товар (номенклатура)
+    description: |
+      Обработчик: `HandleProductCreated`
+
+      Массовая выгрузка фильтрует товары по `ВыгружатьНаСайт` вида номенклатуры.
+      Товары с `hidden = true` не отображаются на сайте (v10).
+    action: receive
+    channel:
+      $ref: '#/channels/erpInCatalog'
+    messages:
+      - $ref: '#/channels/erpInCatalog/messages/productCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-15
+      - name: catalog
+
+  receiveProductUpdated:
+    title: Обновление товара
+    summary: 1С обновляет товар (частичное обновление)
+    description: |
+      Обработчик: `HandleProductUpdated`
+
+      Отправляет только изменённые поля. Обязательны: `event`, `message_id`, `uuid`.
+      `attributes` содержит только изменённые атрибуты — сайт мержит по `property_uuid`.
+      Цена НЕ обновляется через `product.updated` — используйте `price.updated`.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInCatalog'
+    messages:
+      - $ref: '#/channels/erpInCatalog/messages/productUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-15
+      - name: catalog
+
+# ──────────────────────────────────────────────
+# Components
+# ──────────────────────────────────────────────
+components:
+  # ════════════════════════════════════════════
+  # Message Traits
+  # ════════════════════════════════════════════
+  messageTraits:
+    erpEnvelope:
+      headers:
+        type: object
+        properties:
+          contentType:
+            type: string
+            const: application/json
+      contentType: application/json
+
+  # ════════════════════════════════════════════
+  # Messages
+  # ════════════════════════════════════════════
+  messages:
+    # ── US-02: partner.created (1С → Сайт) ───
+    PartnerCreatedFromErp:
+      name: partner.created
+      title: Партнёр создан/обновлён (1С → Сайт)
+      summary: Создание или обновление партнёра из 1С
+      description: |
+        Отправляется при:
+        - Первоначальной выгрузке партнёров
+        - Создании нового партнёра в 1С
+        - Смене типового соглашения (обновление `client_status`, v11)
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/PartnerCreatedFromErpPayload'
+
+    # ── US-02: partner.deleted (1С → Сайт) ───
+    PartnerDeleted:
+      name: partner.deleted
+      title: Партнёр удалён (1С → Сайт)
+      summary: Деактивация партнёра
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/EntityDeletedPayload'
+
+    # ── US-02: partner.created (Сайт → 1С) ───
+    PartnerCreatedFromSite:
+      name: partner.created
+      title: Партнёр создан (Сайт → 1С)
+      summary: Активация нового пользователя на сайте
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/PartnerCreatedFromSitePayload'
+
+    # ── US-03: price.updated ─────────────────
+    PriceUpdated:
+      name: price.updated
+      title: Цена обновлена
+      summary: Обновление базовой цены товара
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/PriceUpdatedPayload'
+
+    # ── US-05: exchange_rate.updated ─────────
+    ExchangeRateUpdated:
+      name: exchange_rate.updated
+      title: Курс валюты обновлён
+      summary: Обновление курса валюты из 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ExchangeRateUpdatedPayload'
+
+    # ── US-06: stock.updated ─────────────────
+    StockUpdated:
+      name: stock.updated
+      title: Остаток обновлён
+      summary: Обновление свободного остатка товара на складе
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/StockUpdatedPayload'
+
+    # ── US-07: contractor.created ────────────
+    ContractorCreated:
+      name: contractor.created
+      title: Контрагент создан/обновлён (1С → Сайт)
+      summary: Синхронизация контрагента с привязкой к партнёру
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ContractorCreatedPayload'
+
+    # ── US-08: order.created (1С → Сайт) ─────
+    OrderCreatedFromErp:
+      name: order.created
+      title: Заказ создан (1С → Сайт)
+      summary: Заказ, созданный менеджером в 1С
+      description: Формат идентичен order.created от сайта
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/OrderCreatedPayload'
+
+    # ── US-08: order.created (Сайт → 1С) ─────
+    OrderCreatedFromSite:
+      name: order.created
+      title: Заказ создан (Сайт → 1С)
+      summary: Заказ, оформленный на сайте
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/OrderCreatedPayload'
+
+    # ── US-08: order.updated ─────────────────
+    OrderUpdated:
+      name: order.updated
+      title: Заказ обновлён
+      summary: Обновление статуса и/или позиций заказа из 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/OrderUpdatedPayload'
+
+    # ── US-08: order.deleted ─────────────────
+    OrderDeleted:
+      name: order.deleted
+      title: Заказ удалён
+      summary: Удаление заказа из 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/EntityDeletedPayload'
+
+    # ── US-09: return.updated ────────────────
+    ReturnUpdated:
+      name: return.updated
+      title: Возврат обновлён
+      summary: Обновление статуса возврата из 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ReturnUpdatedPayload'
+
+    # ── US-09: return.deleted ────────────────
+    ReturnDeleted:
+      name: return.deleted
+      title: Возврат удалён
+      summary: Удаление возврата из 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/EntityDeletedPayload'
+
+    # ── US-09: return.created (Сайт → 1С) ────
+    ReturnCreatedFromSite:
+      name: return.created
+      title: Возврат создан (Сайт → 1С)
+      summary: Возврат, инициированный пользователем на сайте
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ReturnCreatedPayload'
+
+    # ── US-10: shipment.created ──────────────
+    ShipmentCreated:
+      name: shipment.created
+      title: Реализация создана
+      summary: Первое проведение реализации в 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ShipmentPayload'
+
+    # ── US-10: shipment.updated ──────────────
+    ShipmentUpdated:
+      name: shipment.updated
+      title: Реализация обновлена
+      summary: Перепроведение реализации в 1С
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ShipmentPayload'
+
+    # ── US-10: shipment.deleted ──────────────
+    ShipmentDeleted:
+      name: shipment.deleted
+      title: Реализация удалена
+      summary: Удаление реализации
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/EntityDeletedPayload'
+
+    # ── US-11: balance.updated ───────────────
+    BalanceUpdated:
+      name: balance.updated
+      title: Баланс обновлён
+      summary: Обновление баланса партнёра по контрагентам
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/BalanceUpdatedPayload'
+
+    # ── US-14: individual_prices.ready ───────
+    IndividualPricesReady:
+      name: individual_prices.ready
+      title: Индивидуальные цены готовы
+      summary: Уведомление о готовности CSV-файла в MinIO
+      description: |
+        Один файл = один партнёр.
+        Формат CSV: `product_uuid,warehouse_uuid,price` (без заголовка).
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/IndividualPricesReadyPayload'
+
+    # ── US-15: category.created ──────────────
+    CategoryCreated:
+      name: category.created
+      title: Категория создана
+      summary: Создание категории (вида номенклатуры)
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/CategoryPayload'
+
+    # ── US-15: category.updated ──────────────
+    CategoryUpdated:
+      name: category.updated
+      title: Категория обновлена
+      summary: Обновление категории
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/CategoryPayload'
+
+    # ── US-15: product.created ───────────────
+    ProductCreated:
+      name: product.created
+      title: Товар создан
+      summary: Полная карточка товара при создании
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ProductCreatedPayload'
+
+    # ── US-15: product.updated ───────────────
+    ProductUpdated:
+      name: product.updated
+      title: Товар обновлён (частичное)
+      summary: Частичное обновление — только изменённые поля
+      description: |
+        Обязательны: `event`, `message_id`, `uuid`.
+        `attributes` содержит только изменённые атрибуты, сайт мержит по `property_uuid`.
+        Цена НЕ передаётся через product.updated.
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ProductUpdatedPayload'
+
+  # ════════════════════════════════════════════
+  # Schemas
+  # ════════════════════════════════════════════
+  schemas:
+    # ── Общие ────────────────────────────────
+    UUID:
+      type: string
+      format: uuid
+      description: UUID строка
+      examples:
+        - '550e8400-e29b-41d4-a716-446655440000'
+
+    ISO8601DateTime:
+      type: string
+      format: date-time
+      description: Дата и время в формате ISO 8601
+      examples:
+        - '2026-03-17T12:00:00+03:00'
+
+    ISO8601Date:
+      type: string
+      format: date
+      description: Дата в формате yyyy-MM-dd
+      examples:
+        - '2026-03-17'
+
+    CountryCode:
+      type: string
+      minLength: 2
+      maxLength: 2
+      description: ISO alpha-2 код страны
+      examples:
+        - 'RU'
+        - 'KZ'
+        - 'BY'
+
+    CurrencyCode:
+      type: string
+      minLength: 3
+      maxLength: 3
+      description: ISO 4217 буквенный код валюты
+      examples:
+        - 'RUB'
+        - 'KZT'
+        - 'BYN'
+
+    # ── Удаление сущности (общий) ────────────
+    EntityDeletedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          $ref: '#/components/schemas/UUID'
+      examples:
+        - event: order.deleted
+          message_id: msg-order-del-o1a2b3c4
+          uuid: o1a2b3c4-d5e6-7890-abcd-ef1234567890
+
+    # ── US-02: Партнёры ──────────────────────
+    PartnerCreatedFromErpPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - login
+        - name
+        - email
+        - password
+        - country
+        - currency
+        - is_active
+      properties:
+        event:
+          type: string
+          const: partner.created
+        message_id:
+          type: string
+          description: Уникальный ID сообщения
+          examples:
+            - 'msg-partner-erp-550e8400'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        login:
+          type: string
+          description: Логин (= email)
+          examples:
+            - 'ivanov@example.com'
+        name:
+          type: string
+          description: ФИО или название организации (НаименованиеПолное)
+          examples:
+            - 'Иванов Иван Иванович'
+        phone:
+          type:
+            - string
+            - 'null'
+          description: Телефон
+          examples:
+            - '+77001234567'
+        email:
+          type: string
+          format: email
+          description: Email
+          examples:
+            - 'ivanov@example.com'
+        password:
+          type: string
+          minLength: 8
+          maxLength: 8
+          description: CRC32-хеш email (8 hex-символов)
+          examples:
+            - '1a2b3c4d'
+        city:
+          type:
+            - string
+            - 'null'
+          description: Город из фактического адреса
+          examples:
+            - 'Екатеринбург'
+        region:
+          type:
+            - string
+            - 'null'
+          description: Регион из фактического адреса
+          examples:
+            - 'Свердловская область'
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        currency:
+          type: string
+          const: RUB
+          description: "Валюта, всегда \"RUB\""
+        is_active:
+          type: boolean
+          description: "Активность партнёра: true — активен, false — закрылся (v10)"
+          examples:
+            - true
+        client_status:
+          type:
+            - string
+            - 'null'
+          description: |
+            Код статуса клиента (уровень лояльности, v11).
+            Допустимые значения: "silver", "gold", "diamond", "individual" или null.
+            Соответствует external_id записи ClientStatus на сайте.
+          enum:
+            - silver
+            - gold
+            - diamond
+            - individual
+            - null
+          examples:
+            - 'gold'
+
+    PartnerCreatedFromSitePayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - login
+        - name
+        - email
+      properties:
+        event:
+          type: string
+          const: partner.created
+        message_id:
+          type: string
+          description: Уникальный ID сообщения
+          examples:
+            - 'msg-partner-created-550e8400'
+        timestamp:
+          $ref: '#/components/schemas/ISO8601DateTime'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        login:
+          type: string
+          description: Логин (= email)
+        name:
+          type: string
+          description: ФИО
+        phone:
+          type:
+            - string
+            - 'null'
+          description: Телефон
+        email:
+          type: string
+          format: email
+          description: Email
+
+    # ── US-03: Цены ──────────────────────────
+    PriceUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - product_uuid
+        - price
+      properties:
+        event:
+          type: string
+          const: price.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-price-a1b2c3d4'
+        product_uuid:
+          $ref: '#/components/schemas/UUID'
+        price:
+          type: number
+          minimum: 0
+          description: Базовая цена
+          examples:
+            - 12500.50
+
+    # ── US-05: Курсы валют ───────────────────
+    ExchangeRateUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - currency_code
+        - official_rate
+        - rate_coefficient
+        - rate
+        - base_currency_code
+        - date
+      properties:
+        event:
+          type: string
+          const: exchange_rate.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-rate-kzt-20260317'
+        currency_code:
+          $ref: '#/components/schemas/CurrencyCode'
+        official_rate:
+          type: number
+          description: Курс нацбанка (с учётом кратности)
+          examples:
+            - 5.40
+        rate_coefficient:
+          type: number
+          description: Поправочный коэффициент из настроек
+          examples:
+            - 1.01
+        rate:
+          type: number
+          description: 'Итоговый курс = official_rate × rate_coefficient'
+          examples:
+            - 5.454
+        base_currency_code:
+          type: string
+          const: RUB
+          description: "Базовая валюта, всегда \"RUB\""
+        date:
+          $ref: '#/components/schemas/ISO8601Date'
+
+    # ── US-06: Остатки ───────────────────────
+    StockUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - product_uuid
+        - warehouse_uuid
+        - quantity
+      properties:
+        event:
+          type: string
+          const: stock.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-stock-a1b2c3d4-w1a2b3c4'
+        product_uuid:
+          $ref: '#/components/schemas/UUID'
+        warehouse_uuid:
+          $ref: '#/components/schemas/UUID'
+        quantity:
+          type: number
+          minimum: 0
+          description: 'Свободный остаток (≥ 0). quantity = ВНаличии − КОтгрузке'
+          examples:
+            - 42
+
+    # ── US-07: Контрагенты ───────────────────
+    BankAccount:
+      type: object
+      required:
+        - account_number
+        - is_primary
+      properties:
+        bank_name:
+          type:
+            - string
+            - 'null'
+          description: Наименование банка
+        bank_bik:
+          type:
+            - string
+            - 'null'
+          description: БИК банка
+        correspondent_account:
+          type:
+            - string
+            - 'null'
+          description: Корреспондентский счёт
+        account_number:
+          type: string
+          description: Номер счёта
+        is_primary:
+          type: boolean
+          description: 'Основной счёт (первый = true, остальные = false)'
+
+    ContractorCreatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - partner_uuid
+        - name
+        - legal_name
+        - tax_id
+        - country
+      properties:
+        event:
+          type: string
+          const: contractor.created
+        message_id:
+          type: string
+          examples:
+            - 'msg-contractor-c1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        partner_uuid:
+          description: UUID партнёра-владельца
+          oneOf:
+            - $ref: '#/components/schemas/UUID'
+            - type: 'null'
+        name:
+          type: string
+          description: Краткое наименование
+          examples:
+            - 'ТОО Компания'
+        legal_name:
+          type: string
+          description: Полное юридическое наименование
+        tax_id:
+          type: string
+          description: ИНН
+          examples:
+            - '1234567890'
+        tax_code:
+          type:
+            - string
+            - 'null'
+          description: КПП
+        registration_number:
+          type:
+            - string
+            - 'null'
+          description: Регистрационный номер (ОГРН, БИН)
+        okpo_code:
+          type:
+            - string
+            - 'null'
+          description: Код ОКПО
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        legal_address:
+          type:
+            - string
+            - 'null'
+          description: Юридический адрес
+        actual_address:
+          type:
+            - string
+            - 'null'
+          description: Фактический адрес
+        phone:
+          type:
+            - string
+            - 'null'
+          description: Телефон
+        email:
+          type:
+            - string
+            - 'null'
+          description: Email
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          description: Массив банковских счетов
+          items:
+            $ref: '#/components/schemas/BankAccount'
+
+    # ── US-08: Заказы ────────────────────────
+    OrderItem:
+      type: object
+      required:
+        - product_uuid
+        - quantity
+        - base_price
+        - discount_percent
+        - final_price
+      properties:
+        product_uuid:
+          $ref: '#/components/schemas/UUID'
+        quantity:
+          type: number
+          minimum: 1
+          description: Количество
+        base_price:
+          type: number
+          minimum: 0
+          description: Базовая цена за единицу (до скидки, v7)
+        discount_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Процент скидки (0 если нет скидки, v7)
+        final_price:
+          type: number
+          minimum: 0
+          description: 'Конечная цена за единицу (после скидки, v7). final_price = base_price × (1 - discount_percent / 100)'
+
+    OrderContractor:
+      type: object
+      properties:
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        name:
+          type: string
+        legal_name:
+          type: string
+        tax_id:
+          type: string
+        registration_number:
+          type:
+            - string
+            - 'null'
+        tax_code:
+          type:
+            - string
+            - 'null'
+        okpo_code:
+          type:
+            - string
+            - 'null'
+        legal_address:
+          type:
+            - string
+            - 'null'
+        actual_address:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        latitude:
+          type:
+            - number
+            - 'null'
+        longitude:
+          type:
+            - number
+            - 'null'
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          items:
+            $ref: '#/components/schemas/BankAccount'
+
+    OrderCreatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - status
+        - type
+        - partner_uuid
+        - items
+      properties:
+        event:
+          type: string
+          const: order.created
+        message_id:
+          type: string
+          examples:
+            - 'msg-order-created-site-o1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        number:
+          type: string
+          description: Номер заказа
+          examples:
+            - 'ORD-2026-0001'
+        date:
+          $ref: '#/components/schemas/ISO8601DateTime'
+        status:
+          type: string
+          description: Статус заказа
+          enum:
+            - pending
+            - confirmed
+            - processing
+            - completed
+            - closed
+          examples:
+            - pending
+        type:
+          type: string
+          description: Тип заказа
+          enum:
+            - order
+            - preorder
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+        warehouse_uuids:
+          type: array
+          description: UUID складов (1С выбирает первый найденный)
+          items:
+            $ref: '#/components/schemas/UUID'
+        timestamp:
+          $ref: '#/components/schemas/ISO8601DateTime'
+        contractor:
+          oneOf:
+            - $ref: '#/components/schemas/OrderContractor'
+            - type: 'null'
+        delivery_address:
+          type: string
+          description: Адрес доставки
+        currency_code:
+          $ref: '#/components/schemas/CurrencyCode'
+        exchange_rate:
+          type: number
+          description: Курс конвертации
+        rate_coefficient:
+          type: number
+          description: Поправочный коэффициент
+        comment:
+          type: string
+          description: Комментарий покупателя
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    OrderUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: order.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-order-upd-o1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        status:
+          type: string
+          description: |
+            Маппинг статусов:
+            - Не согласован → pending
+            - К выполнению → confirmed
+            - В работе → processing
+            - Выполнен → completed
+            - Закрыт → closed
+          enum:
+            - pending
+            - confirmed
+            - processing
+            - completed
+            - closed
+        items:
+          type: array
+          description: |
+            Полностью заменяет текущие позиции.
+            Не передавайте items, если обновляете только статус.
+          items:
+            $ref: '#/components/schemas/OrderItem'
+
+    # ── US-09: Возвраты ──────────────────────
+    ReturnUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: return.updated
+        message_id:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        status:
+          type: string
+          description: Статус возврата
+
+    ReturnCreatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - order_uuid
+        - partner_uuid
+        - items
+      properties:
+        event:
+          type: string
+          const: return.created
+        message_id:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        order_uuid:
+          $ref: '#/components/schemas/UUID'
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+        timestamp:
+          $ref: '#/components/schemas/ISO8601DateTime'
+        comment:
+          type:
+            - string
+            - 'null'
+          description: Комментарий к возврату
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - product_uuid
+              - quantity
+            properties:
+              product_uuid:
+                $ref: '#/components/schemas/UUID'
+              quantity:
+                type: number
+                minimum: 1
+              reason:
+                type:
+                  - string
+                  - 'null'
+
+    # ── US-10: Реализации ────────────────────
+    ShipmentItem:
+      type: object
+      required:
+        - product_uuid
+        - quantity
+        - price
+        - auto_discount_percent
+        - manual_discount_percent
+        - total
+        - vat_rate
+      properties:
+        product_uuid:
+          $ref: '#/components/schemas/UUID'
+        order_uuid:
+          description: UUID исходного заказа
+          oneOf:
+            - $ref: '#/components/schemas/UUID'
+            - type: 'null'
+        quantity:
+          type: number
+          minimum: 0
+        price:
+          type: number
+          minimum: 0
+          description: Базовая цена
+        auto_discount_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Процент автоматической скидки
+        manual_discount_percent:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Процент ручной скидки
+        total:
+          type: number
+          description: Итоговая сумма строки
+        vat_rate:
+          type: number
+          description: Ставка НДС (%)
+          examples:
+            - 20
+
+    ShipmentPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - contractor_inn
+        - date
+        - status
+        - currency_code
+        - items
+      properties:
+        event:
+          type: string
+          enum:
+            - shipment.created
+            - shipment.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-shipment-s1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        contractor_inn:
+          type: string
+          description: ИНН контрагента
+          examples:
+            - '7710140679'
+        date:
+          $ref: '#/components/schemas/ISO8601Date'
+        status:
+          type: string
+          const: completed
+          description: "Всегда \"completed\""
+        currency_code:
+          $ref: '#/components/schemas/CurrencyCode'
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ShipmentItem'
+
+    # ── US-11: Баланс ────────────────────────
+    OverdueDetail:
+      type: object
+      properties:
+        shipment_uuid:
+          $ref: '#/components/schemas/UUID'
+        amount:
+          type: number
+        due_date:
+          $ref: '#/components/schemas/ISO8601Date'
+
+    ContractorBalance:
+      type: object
+      required:
+        - contractor_inn
+        - contractor_uuid
+        - current_balance
+        - overdue_debt
+      properties:
+        contractor_inn:
+          type: string
+        contractor_uuid:
+          $ref: '#/components/schemas/UUID'
+        current_balance:
+          type: number
+          description: Текущий баланс (отрицательное = задолженность)
+        overdue_debt:
+          type: number
+          minimum: 0
+          description: Просроченная задолженность
+        overdue_details:
+          type: array
+          items:
+            $ref: '#/components/schemas/OverdueDetail'
+
+    BalanceUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - partner_uuid
+        - updated_at
+        - contractors
+      properties:
+        event:
+          type: string
+          const: balance.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-balance-550e8400'
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+        updated_at:
+          type: string
+          description: Время обновления
+        contractors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractorBalance'
+
+    # ── US-14: Индивидуальные цены ───────────
+    IndividualPricesReadyPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - upload_type
+        - partner_uuid
+        - file_url
+        - records_count
+        - timestamp
+      properties:
+        event:
+          type: string
+          const: individual_prices.ready
+        message_id:
+          type: string
+          examples:
+            - 'msg-price-dump-a1b2c3d4'
+        upload_type:
+          type: string
+          enum:
+            - full
+            - delta
+          description: |
+            - "full" — полное удаление + вставка (ночная выгрузка, 03:00)
+            - "delta" — UPSERT, только затронутые товары (каждые 15–30 мин, v9)
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+        file_url:
+          type: string
+          format: uri
+          description: URL файла в MinIO (S3)
+          examples:
+            - 's3://prices-exchange/2026-03-26/partner_a1b2c3d4.csv'
+        records_count:
+          type: integer
+          minimum: 0
+          description: Количество записей в файле
+          examples:
+            - 50000
+        timestamp:
+          $ref: '#/components/schemas/ISO8601DateTime'
+
+    # ── US-15: Каталог ───────────────────────
+    CategoryPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - name
+        - is_group
+      properties:
+        event:
+          type: string
+          enum:
+            - category.created
+            - category.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-cat-cat-001'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        parent_uuid:
+          description: UUID родительской категории
+          oneOf:
+            - $ref: '#/components/schemas/UUID'
+            - type: 'null'
+        name:
+          type: string
+          description: Наименование категории
+          examples:
+            - 'Бельё и одежда'
+        is_group:
+          type: boolean
+          description: Является ли группой
+
+    ProductAttribute:
+      type: object
+      required:
+        - property_uuid
+        - property_label
+        - value_type
+      properties:
+        property_uuid:
+          $ref: '#/components/schemas/UUID'
+        property_label:
+          type: string
+          description: Наименование свойства
+          examples:
+            - 'Цвет'
+        value_type:
+          type: string
+          description: Тип значения
+          examples:
+            - 'reference'
+        value_uuid:
+          oneOf:
+            - $ref: '#/components/schemas/UUID'
+            - type: 'null'
+        value_label:
+          type:
+            - string
+            - 'null'
+          description: Отображаемое значение
+          examples:
+            - 'Розовый'
+
+    ProductBrand:
+      type: object
+      required:
+        - uuid
+        - name
+        - label
+      properties:
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+        label:
+          type: string
+          description: Дублирует name
+
+    ProductModel:
+      type: object
+      required:
+        - uuid
+        - name
+      properties:
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+
+    ProductCreatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+        - name
+        - code
+        - sku
+        - category_uuid
+        - hidden
+        - barcodes
+        - attributes
+      properties:
+        event:
+          type: string
+          const: product.created
+        message_id:
+          type: string
+          examples:
+            - 'msg-prod-a1b2c3d4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+          description: Полное наименование
+        code:
+          type: string
+          description: Код номенклатуры
+          examples:
+            - '0T-123213'
+        sku:
+          type: string
+          description: Артикул
+          examples:
+            - 'AAS-123213'
+        description:
+          type:
+            - string
+            - 'null'
+          description: Описание товара
+        category_uuid:
+          $ref: '#/components/schemas/UUID'
+        hidden:
+          type: boolean
+          description: 'Флаг «Скрыть в интернете» (v10). Если true — товар не отображается на сайте'
+        brand:
+          oneOf:
+            - $ref: '#/components/schemas/ProductBrand'
+            - type: 'null'
+        barcodes:
+          type: array
+          items:
+            type: string
+          examples:
+            - ['4600000000001', '4600000000002']
+        model:
+          description: Модель (из доп. реквизита, nullable)
+          oneOf:
+            - $ref: '#/components/schemas/ProductModel'
+            - type: 'null'
+        attributes:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductAttribute'
+
+    ProductUpdatedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: product.updated
+        message_id:
+          type: string
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type: string
+        code:
+          type: string
+        sku:
+          type: string
+        description:
+          type:
+            - string
+            - 'null'
+        category_uuid:
+          $ref: '#/components/schemas/UUID'
+        hidden:
+          type: boolean
+          description: 'Флаг «Скрыть в интернете» (v10)'
+        brand:
+          oneOf:
+            - $ref: '#/components/schemas/ProductBrand'
+            - type: 'null'
+        barcodes:
+          type: array
+          items:
+            type: string
+        model:
+          oneOf:
+            - $ref: '#/components/schemas/ProductModel'
+            - type: 'null'
+        attributes:
+          type: array
+          description: Только изменённые атрибуты. Сайт мержит по property_uuid.
+          items:
+            $ref: '#/components/schemas/ProductAttribute'
