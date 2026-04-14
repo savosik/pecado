@@ -131,17 +131,52 @@
 
 ---
 
-## 1.10 — Обновление статуса партнёра
+## 1.10 — Обновление атрибутов партнёра (`partner.updated`)
 
 **Зависимости:** 1.9
 
-🔵 **1С отправляет** повторный `partner.created` с `client_status: "diamond"`.
+🔵 **1С отправляет** `partner.updated` с обновлёнными атрибутами.
 
-> Структура payload → [JSON Schema](/docs/erp/schemas/partner.created.json)
+> Структура payload → [JSON Schema](/docs/erp/schemas/partner.updated.json)
 
+- [ ] `name` обновлён
+- [ ] `phone` обновлён
+- [ ] `city` обновлён
 - [ ] `client_status_id` обновился → `diamond`
-- [ ] Пароль **НЕ** перезаписан
+- [ ] Пароль **НЕ** изменился
 - [ ] Плашка «Diamond» в ЛК
+
+---
+
+## 1.10а — Обновление статуса партнёра (`partner.updated`)
+
+**Зависимости:** 1.9
+
+🔵 **1С отправляет** `partner.updated` с `is_active: false`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/partner.updated.json)
+
+- [ ] Статус → `BLOCKED`
+- [ ] Пользователь не может авторизоваться
+
+🔵 **1С отправляет** `partner.updated` с `is_active: true`.
+
+- [ ] Статус → `ACTIVE`
+- [ ] Пользователь может авторизоваться
+
+---
+
+## 1.10б — Привязка erp_id по email (`partner.updated`)
+
+**Зависимости:** пользователь зарегистрирован на сайте (без `erp_id`)
+
+🔵 **1С отправляет** `partner.updated` с `uuid` и `login` = email пользователя.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/partner.updated.json)
+
+- [ ] `erp_id` привязан к пользователю
+- [ ] Атрибуты обновлены
+- [ ] Повторный `partner.updated` с тем же `uuid` — идемпотентный (обновление по `erp_id`)
 
 ---
 
@@ -158,7 +193,7 @@
 - [ ] Не может оформлять заказы
 
 !!! warning "После этого теста"
-    Активируйте пользователя обратно (повторный `partner.created` с `is_active: true`).
+    Активируйте пользователя обратно (`partner.updated` с `is_active: true`).
 
 ---
 

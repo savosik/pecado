@@ -1,6 +1,6 @@
 # Партнёры
 
-> **JSON Schema:** [`partner.created.json`](/docs/erp/schemas/partner.created.json) | [`partner.created.to_erp.json`](/docs/erp/schemas/partner.created.to_erp.json) | [`partner.deleted.json`](/docs/erp/schemas/partner.deleted.json)  
+> **JSON Schema:** [`partner.created.json`](/docs/erp/schemas/partner.created.json) | [`partner.updated.json`](/docs/erp/schemas/partner.updated.json) | [`partner.created.to_erp.json`](/docs/erp/schemas/partner.created.to_erp.json) | [`partner.deleted.json`](/docs/erp/schemas/partner.deleted.json)  
 > **AsyncAPI:** [Полная спецификация](/docs/erp/spec.yaml)
 
 ## Направления обмена
@@ -8,6 +8,7 @@
 | Событие | Направление | Очередь |
 |---|---|---|
 | `partner.created` | 1С → Сайт | `erp_in.partners` |
+| `partner.updated` | 1С → Сайт | `erp_in.partners` |
 | `partner.created` | Сайт → 1С | `erp_out.partners` |
 | `partner.deleted` | 1С → Сайт | `erp_in.partners` |
 
@@ -35,9 +36,45 @@
 - [ ] Сайт создаёт/обновляет пользователя с `name` как единое поле
 - [ ] При первом входе — обязательная смена пароля (`must_change_password`)
 - [ ] Партнёры без email пропускаются при выгрузке
-- [ ] При смене типового соглашения — повторный `partner.created` с обновлённым `client_status`
+
+---
+
+## partner.updated (1С → Сайт)
+
+### Бизнес-правила
+
+- Событие предназначено для **обновления атрибутов** существующего партнёра
+- **Не создаёт** нового пользователя — если партнёр не найден, событие игнорируется с предупреждением
+- Поиск пользователя: сначала по `erp_id` (UUID), фолбэк — по `email`/`login`
+- При нахождении по email — привязывает `erp_id` к пользователю
+- Поле `password` **не передаётся** — пароль не изменяется
+- **Частичное обновление**: обновляются только переданные поля
+
+### Обновляемые атрибуты
+
+| Поле payload | Поле User | Описание |
+|---|---|---|
+| `name` | `name` | ФИО или название организации |
+| `phone` | `phone` | Телефон |
+| `city` | `city` | Город |
+| `country` | `country` | ISO alpha-2 код страны (нормализация) |
+| `region` | `region_id` | Регион → `Region.name` |
+| `is_active` | `status` | `true` → ACTIVE, `false` → BLOCKED |
+| `client_status` | `client_status_id` | Код → `ClientStatus.external_id` |
+
+### Версионные изменения
+
+- **(v12)** Новое событие `partner.updated` — выделено из `partner.created` как самостоятельное событие для обновления атрибутов
+
+### Критерии приёмки
+
+- [ ] 1С публикует `partner.updated` через `erp.events` → `erp_in.partners`
+- [ ] Сайт обновляет атрибуты пользователя (name, phone, city, country, region, status, client_status)
+- [ ] При совпадении email — привязывает `erp_id` к существующему пользователю
 - [ ] При `client_status = null` — сброс `client_status_id` пользователя
 - [ ] При неизвестном `client_status` — логирование предупреждения, текущий статус не меняется
+- [ ] При `is_active = false` — пользователь блокируется
+- [ ] Если пользователь не найден ни по `erp_id`, ни по `email` — событие игнорируется с логом
 
 ---
 

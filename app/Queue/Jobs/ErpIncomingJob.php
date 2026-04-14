@@ -15,6 +15,7 @@ use App\Services\Erp\Handlers\HandleOrderDeleted;
 use App\Services\Erp\Handlers\HandleOrderUpdated;
 use App\Services\Erp\Handlers\HandlePartnerCreated;
 use App\Services\Erp\Handlers\HandlePartnerDeleted;
+use App\Services\Erp\Handlers\HandlePartnerUpdated;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
 use App\Services\Erp\Handlers\HandleProductCreated;
 use App\Services\Erp\Handlers\HandleProductUpdated;
@@ -44,6 +45,7 @@ class ErpIncomingJob extends BaseJob
     private const EVENT_HANDLERS = [
         // US-02: Партнёры
         'partner.created'           => HandlePartnerCreated::class,
+        'partner.updated'           => HandlePartnerUpdated::class,
         'partner.deleted'           => HandlePartnerDeleted::class,
         // US-03: Базовые цены
         'price.updated'             => HandlePriceUpdated::class,

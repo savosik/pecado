@@ -28,6 +28,7 @@ class ErpMessageValidator
     private const SCHEMA_MAP = [
         // US-02: Партнёры
         'partner.created'        => 'partner.created.json',
+        'partner.updated'        => 'partner.updated.json',
         'partner.deleted'        => 'partner.deleted.json',
         // US-03: Базовые цены
         'price.updated'          => 'price.updated.json',

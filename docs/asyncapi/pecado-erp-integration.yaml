@@ -57,6 +57,8 @@ channels:
     messages:
       partnerCreatedFromErp:
         $ref: '#/components/messages/PartnerCreatedFromErp'
+      partnerUpdatedFromErp:
+        $ref: '#/components/messages/PartnerUpdatedFromErp'
       partnerDeleted:
         $ref: '#/components/messages/PartnerDeleted'
       contractorCreated:
@@ -316,6 +318,31 @@ operations:
       $ref: '#/channels/erpInPartners'
     messages:
       - $ref: '#/channels/erpInPartners/messages/partnerCreatedFromErp'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-02
+      - name: partners
+
+  receivePartnerUpdated:
+    title: Обновление партнёра
+    summary: 1С обновляет атрибуты партнёра → Сайт синхронизирует пользователя
+    description: |
+      Обработчик: `HandlePartnerUpdated`
+
+      При получении:
+      - Ищет пользователя по `erp_id` (UUID)
+      - Фолбэк: ищет по `email`/`login` → привязывает `erp_id`
+      - Обновляет переданные атрибуты: `name`, `phone`, `city`, `region`, `country`
+      - Обрабатывает `is_active` → статус пользователя
+      - Обрабатывает `client_status` → привязка `ClientStatus`
+      - Не содержит `password` — пароль не меняется
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/partnerUpdatedFromErp'
     bindings:
       amqp:
         bindingVersion: 0.3.0
@@ -786,6 +813,22 @@ components:
       payload:
         $ref: '#/components/schemas/PartnerCreatedFromErpPayload'
 
+    # ── US-02: partner.updated (1С → Сайт) ───
+    PartnerUpdatedFromErp:
+      name: partner.updated
+      title: Партнёр обновлён (1С → Сайт)
+      summary: Обновление атрибутов существующего партнёра
+      description: |
+        Отправляется при:
+        - Изменении реквизитов партнёра (ФИО, телефон, город, страна)
+        - Смене типового соглашения (обновление `client_status`)
+        - Активации/деактивации партнёра (`is_active`)
+        - Привязке erp_id к существующему пользователю по email
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/PartnerUpdatedFromErpPayload'
+
     # ── US-02: partner.deleted (1С → Сайт) ───
     PartnerDeleted:
       name: partner.deleted
@@ -1145,7 +1188,89 @@ components:
           message_id: msg-shipment-del-s1a2b3c4
           uuid: s1a2b3c4-d5e6-7890-abcd-ef1234567890
 
-    # ── US-02: Партнёры ──────────────────────
+    # ── US-02: Партнёры (partner.updated) ────
+    PartnerUpdatedFromErpPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: partner.updated
+        message_id:
+          type: string
+          description: Уникальный ID сообщения
+          examples:
+            - 'msg-partner-upd-550e8400'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        login:
+          type: string
+          description: Логин (= email), используется для сопоставления по email
+          examples:
+            - 'ivanov@example.com'
+        name:
+          type: string
+          description: ФИО или название организации (НаименованиеПолное)
+          examples:
+            - 'Иванов Иван Иванович'
+        phone:
+          type:
+            - string
+            - 'null'
+          description: Телефон
+          examples:
+            - '+77001234567'
+        email:
+          type: string
+          format: email
+          description: Email
+          examples:
+            - 'ivanov@example.com'
+        city:
+          type:
+            - string
+            - 'null'
+          description: Город из фактического адреса
+          examples:
+            - 'Екатеринбург'
+        region:
+          type:
+            - string
+            - 'null'
+          description: Регион из фактического адреса
+          examples:
+            - 'Свердловская область'
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        currency:
+          type: string
+          description: "Валюта (игнорируется, определяется через регион)"
+        is_active:
+          type: boolean
+          description: "Активность партнёра: true — активен, false — заблокирован"
+          examples:
+            - true
+        client_status:
+          type:
+            - string
+            - 'null'
+          description: |
+            Код статуса клиента (уровень лояльности).
+            Допустимые значения: "silver", "gold", "diamond", "individual" или null.
+            Соответствует external_id записи ClientStatus на сайте.
+          enum:
+            - silver
+            - gold
+            - diamond
+            - individual
+            - null
+          examples:
+            - 'gold'
+
+    # ── US-02: Партнёры (partner.created) ────
     PartnerCreatedFromErpPayload:
       type: object
       required:
