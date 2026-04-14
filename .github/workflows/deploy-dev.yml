@@ -140,8 +140,8 @@ jobs:
       - name: "🏗️ Build assets"
         run: npm run build
 
-      - name: "📄 Generate AsyncAPI HTML docs"
-        run: npm run asyncapi:html
+      - name: "📄 Build AsyncAPI docs (validate + bundle + HTML)"
+        run: npm run asyncapi:build
 
       - name: "📤 Upload build artifacts"
         uses: actions/upload-artifact@v4
@@ -154,7 +154,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: asyncapi-docs
-          path: docs/asyncapi/html
+          path: |
+            docs/asyncapi/html
+            docs/asyncapi/pecado-erp-bundled.yaml
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────

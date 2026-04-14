@@ -7,3 +7,12 @@
 3. **Генерации актуального HTML** из AsyncAPI спецификации
 
 Только после этого вносить изменения в код обработчиков, job-ов и listener-ов.
+
+## Важно: два источника схем
+
+Сейчас payload-схемы описаны в двух местах:
+
+- **YAML** (`docs/asyncapi/pecado-erp-integration.yaml`) — полные описания с примерами, вложенными типами, descriptions. Для документации.
+- **JSON** (`app/Services/Erp/Schemas/*.json`) — плоские standalone JSON Schema Draft-07 для runtime-валидации через `ErpMessageValidator`.
+
+**При любом изменении структуры payload нужно обновлять ОБА файла**, чтобы документация и валидация были консистентны.

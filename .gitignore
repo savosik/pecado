@@ -41,3 +41,7 @@ boost.json
 /.claude/skills/
 /reference/\n# Dev server credentials (local only)\ndocs/DEV_SERVER_CREDENTIALS.md
 /reference
+
+# AsyncAPI generated HTML docs
+/docs/asyncapi/html/
+/docs/asyncapi/pecado-erp-bundled.yaml
