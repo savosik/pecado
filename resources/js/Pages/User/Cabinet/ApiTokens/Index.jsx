@@ -294,7 +294,7 @@ const apiMethods = [
         method: 'POST',
         path: '/orders',
         title: 'Создать заказ',
-        description: 'Создаёт заказ от имени вашего аккаунта. Товары идентифицируются по любому из полей: UUID, код (code), артикул (sku) или штрихкод (barcode). Компания определяется по ИНН.',
+        description: 'Создаёт заказ от имени вашего аккаунта. Перед созданием проверяются остатки — если запрошено больше, чем доступно, вернётся ошибка. Товары автоматически разделяются на заказ (в наличии) и предзаказ — создаются отдельные заказы для каждого типа. Идентификация по UUID, code, sku или barcode. Компания определяется по ИНН.',
         icon: LuShoppingCart,
         color: 'blue',
         params: [
@@ -316,11 +316,11 @@ const apiMethods = [
             ],
         }, null, 2),
         responseExample: JSON.stringify({
-            order_id: 1234,
-            order_number: "#1234",
-            total_amount: 25400.00,
-            items_count: 3,
-            status: "pending",
+            orders: [
+                { order_id: 1234, order_number: "ORD-2026-1234", type: "order", total_amount: 18000.00, items_count: 2, status: "pending" },
+                { order_id: 1235, order_number: "ORD-2026-1235", type: "preorder", total_amount: 7400.00, items_count: 1, status: "pending" },
+            ],
+            total_orders: 2,
         }, null, 2),
     },
 ];

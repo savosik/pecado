@@ -109,7 +109,7 @@ class ClientApiController extends Controller
 
     /**
      * POST /api/client-api/{token}/orders
-     * Создать заказ.
+     * Создать заказ (с проверкой остатков и разделением на заказ/предзаказ).
      */
     public function orders(Request $request, string $token): JsonResponse
     {
@@ -148,7 +148,6 @@ class ClientApiController extends Controller
                 ->where('address', $validated['address'])
                 ->first();
 
-            // Если адрес не найден — создать новый
             if (!$deliveryAddress) {
                 $deliveryAddress = $user->deliveryAddresses()->create([
                     'name' => 'API',
@@ -157,9 +156,11 @@ class ClientApiController extends Controller
             }
         }
 
-        // Резолвить товары
-        $resolvedProducts = [];
+        // Резолвить товары и проверить остатки
+        $instockItems = [];
+        $preorderItems = [];
         $errors = [];
+        $insufficientStock = [];
 
         foreach ($validated['products'] as $index => $item) {
             $product = $this->resolveProduct($item['identifier']);
@@ -167,10 +168,32 @@ class ClientApiController extends Controller
                 $errors[] = "Товар \"{$item['identifier']}\" не найден (позиция " . ($index + 1) . ')';
                 continue;
             }
-            $resolvedProducts[] = [
-                'product' => $product,
-                'quantity' => $item['quantity'],
-            ];
+
+            $stock = $this->stockService->getStock($product, $user);
+            $totalAvailable = $stock['available'] + $stock['preorder'];
+            $requestedQty = $item['quantity'];
+
+            // Проверка: хватает ли остатков
+            if ($requestedQty > $totalAvailable) {
+                $insufficientStock[] = [
+                    'identifier' => $item['identifier'],
+                    'name' => $product->name,
+                    'requested' => $requestedQty,
+                    'available' => $totalAvailable,
+                ];
+                continue;
+            }
+
+            // Разделение на instock и preorder (как в CartService)
+            $instockQty = min($requestedQty, $stock['available']);
+            $preorderQty = $requestedQty - $instockQty;
+
+            if ($instockQty > 0) {
+                $instockItems[] = ['product' => $product, 'quantity' => $instockQty];
+            }
+            if ($preorderQty > 0) {
+                $preorderItems[] = ['product' => $product, 'quantity' => $preorderQty];
+            }
         }
 
         if (!empty($errors)) {
@@ -180,63 +203,106 @@ class ClientApiController extends Controller
             ], 422);
         }
 
+        if (!empty($insufficientStock)) {
+            return response()->json([
+                'error' => 'Недостаточно остатков для некоторых товаров',
+                'details' => $insufficientStock,
+            ], 422);
+        }
+
         // Валюта пользователя (как в CheckoutService)
         $currency = $this->currencyResolver->resolve($user);
 
-        // Создать заказ
-        $order = DB::transaction(function () use ($user, $company, $deliveryAddress, $validated, $resolvedProducts, $currency) {
-            $order = Order::create([
-                'user_id' => $user->id,
-                'company_id' => $company->id,
-                'delivery_address_id' => $deliveryAddress?->id,
-                'status' => OrderStatus::PENDING,
-                'type' => OrderType::ORDER,
-                'comment' => $validated['comment'] ?? null,
-                'total_amount' => 0,
-                'exchange_rate' => $currency?->exchange_rate ?? 1.0,
-                'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
-                'currency_code' => $currency?->code ?? 'RUB',
-            ]);
+        $baseOrderData = [
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'delivery_address_id' => $deliveryAddress?->id,
+            'status' => OrderStatus::PENDING,
+            'comment' => $validated['comment'] ?? null,
+            'total_amount' => 0,
+            'exchange_rate' => $currency?->exchange_rate ?? 1.0,
+            'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
+            'currency_code' => $currency?->code ?? 'RUB',
+        ];
 
-            $totalAmount = 0;
+        // Создать заказ(ы) в транзакции
+        $createdOrders = DB::transaction(function () use ($baseOrderData, $instockItems, $preorderItems, $user) {
+            $orders = [];
 
-            foreach ($resolvedProducts as $item) {
-                $product = $item['product'];
-                $quantity = $item['quantity'];
-
-                $priceResult = $this->priceService->getPriceResult($product, $user);
-                $displayPrice = $priceResult->getDisplayPrice();
-                $subtotal = $displayPrice * $quantity;
-                $totalAmount += $subtotal;
-
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'product_id' => $product->id,
-                    'name' => $product->name,
-                    'price' => $displayPrice,
-                    'base_price' => $priceResult->basePrice,
-                    'discount_percent' => $priceResult->discountPercent,
-                    'final_price' => $displayPrice,
-                    'quantity' => $quantity,
-                    'subtotal' => $subtotal,
-                ]);
+            // Заказ (instock)
+            if (!empty($instockItems)) {
+                $order = Order::create(array_merge($baseOrderData, [
+                    'type' => OrderType::ORDER,
+                ]));
+                $total = $this->createOrderItems($order, $instockItems, $user);
+                $order->update(['total_amount' => $total]);
+                $orders[] = $order;
             }
 
-            $order->update(['total_amount' => $totalAmount]);
+            // Предзаказ (preorder)
+            if (!empty($preorderItems)) {
+                $order = Order::create(array_merge($baseOrderData, [
+                    'type' => OrderType::PREORDER,
+                ]));
+                $total = $this->createOrderItems($order, $preorderItems, $user);
+                $order->update(['total_amount' => $total]);
+                $orders[] = $order;
+            }
 
-            return $order;
+            return $orders;
         });
 
-        // Dispatch event после коммита
-        OrderCreated::dispatch($order->fresh());
+        // Dispatch events после коммита
+        foreach ($createdOrders as $order) {
+            OrderCreated::dispatch($order->fresh());
+        }
+
+        // Формируем ответ
+        $responseOrders = array_map(fn(Order $order) => [
+            'order_id' => $order->id,
+            'order_number' => $order->number,
+            'type' => $order->type?->value ?? 'order',
+            'total_amount' => round((float) $order->total_amount, 2),
+            'items_count' => $order->items()->count(),
+            'status' => 'pending',
+        ], $createdOrders);
 
         return response()->json([
-            'order_id' => $order->id,
-            'order_number' => $order->number ?? ('#' . $order->id),
-            'total_amount' => round((float) $order->total_amount, 2),
-            'items_count' => count($resolvedProducts),
-            'status' => 'pending',
+            'orders' => $responseOrders,
+            'total_orders' => count($createdOrders),
         ], 201);
+    }
+
+    /**
+     * Создание позиций заказа.
+     */
+    protected function createOrderItems(Order $order, array $items, $user): float
+    {
+        $total = 0;
+
+        foreach ($items as $item) {
+            $product = $item['product'];
+            $quantity = $item['quantity'];
+
+            $priceResult = $this->priceService->getPriceResult($product, $user);
+            $displayPrice = $priceResult->getDisplayPrice();
+            $subtotal = $displayPrice * $quantity;
+            $total += $subtotal;
+
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'price' => $displayPrice,
+                'base_price' => $priceResult->basePrice,
+                'discount_percent' => $priceResult->discountPercent,
+                'final_price' => $displayPrice,
+                'quantity' => $quantity,
+                'subtotal' => $subtotal,
+            ]);
+        }
+
+        return $total;
     }
 
     /**
