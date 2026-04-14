@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-    Box, Flex, Text, Card, HStack, VStack, Badge, Button,
+    Accordion, Box, Flex, Text, Card, HStack, VStack, Badge, Button,
     IconButton, Heading, Code, SimpleGrid, Separator, Stack,
     Input,
 } from '@chakra-ui/react';
@@ -134,121 +134,6 @@ function TokenCard({ token, onRegenerate, onDelete }) {
 }
 
 /* ──────────────────────────────────────────────── */
-/*  Компонент: блок документации API-метода         */
-/* ──────────────────────────────────────────────── */
-function ApiMethodCard({ method, path, title, description, icon: Icon, color, params, requestBody, responseExample }) {
-    return (
-        <Card.Root
-            bg={{ base: 'white', _dark: 'gray.800' }}
-            borderRadius="xl"
-            border="1px solid"
-            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-            _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
-            overflow="hidden"
-        >
-            {/* Gradient accent header */}
-            <Box
-                h="3px"
-                bg={`linear-gradient(90deg, ${color}.400, ${color}.600)`}
-                bgGradient={`to-r`}
-                style={{
-                    background: `linear-gradient(90deg, var(--chakra-colors-${color}-400), var(--chakra-colors-${color}-600))`
-                }}
-            />
-            <Card.Body p="5">
-                <VStack align="stretch" gap="4">
-                    {/* Title row */}
-                    <HStack gap="3">
-                        <Flex
-                            align="center" justify="center" w="10" h="10" borderRadius="lg"
-                            bg={`${color}.50`} _dark={{ bg: `${color}.900/30` }}
-                            flexShrink="0"
-                        >
-                            <Icon size={20} color={`var(--chakra-colors-${color}-500)`} />
-                        </Flex>
-                        <Box flex="1">
-                            <HStack gap="2" mb="1">
-                                <Badge
-                                    colorPalette={method === 'GET' ? 'green' : 'blue'}
-                                    variant="solid" size="sm" fontFamily="mono" fontWeight="700"
-                                >
-                                    {method}
-                                </Badge>
-                                <Text fontSize="sm" fontFamily="mono" color="gray.600" _dark={{ color: 'gray.300' }}>
-                                    {path}
-                                </Text>
-                            </HStack>
-                            <Text fontWeight="700" fontSize="md">{title}</Text>
-                        </Box>
-                    </HStack>
-
-                    {/* Description */}
-                    <Text fontSize="sm" color="gray.500" lineHeight="1.7">
-                        {description}
-                    </Text>
-
-                    {/* Parameters */}
-                    {params && params.length > 0 && (
-                        <Box>
-                            <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.05em" mb="2">
-                                Параметры запроса
-                            </Text>
-                            <VStack align="stretch" gap="1">
-                                {params.map((p, i) => (
-                                    <HStack key={i} fontSize="xs" gap="2" py="1" px="2" borderRadius="md"
-                                        bg={i % 2 === 0 ? 'gray.50' : 'transparent'}
-                                        _dark={{ bg: i % 2 === 0 ? 'gray.900' : 'transparent' }}
-                                    >
-                                        <Code colorPalette="purple" size="xs" fontWeight="600">{p.name}</Code>
-                                        <Badge size="xs" variant="outline" colorPalette="gray">{p.type}</Badge>
-                                        {p.required && <Badge size="xs" colorPalette="red" variant="subtle">обяз.</Badge>}
-                                        <Text flex="1" color="gray.500" _dark={{ color: 'gray.400' }}>{p.desc}</Text>
-                                    </HStack>
-                                ))}
-                            </VStack>
-                        </Box>
-                    )}
-
-                    {/* Request body */}
-                    {requestBody && (
-                        <Box>
-                            <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.05em" mb="2">
-                                Тело запроса (JSON)
-                            </Text>
-                            <Box
-                                bg="gray.900" _dark={{ bg: 'gray.950' }}
-                                borderRadius="lg" p="4" overflowX="auto"
-                            >
-                                <Text as="pre" fontSize="xs" color="green.300" fontFamily="mono" whiteSpace="pre-wrap">
-                                    {requestBody}
-                                </Text>
-                            </Box>
-                        </Box>
-                    )}
-
-                    {/* Response example */}
-                    {responseExample && (
-                        <Box>
-                            <Text fontSize="xs" fontWeight="700" color="gray.500" textTransform="uppercase" letterSpacing="0.05em" mb="2">
-                                Пример ответа
-                            </Text>
-                            <Box
-                                bg="gray.900" _dark={{ bg: 'gray.950' }}
-                                borderRadius="lg" p="4" overflowX="auto"
-                            >
-                                <Text as="pre" fontSize="xs" color="cyan.300" fontFamily="mono" whiteSpace="pre-wrap">
-                                    {responseExample}
-                                </Text>
-                            </Box>
-                        </Box>
-                    )}
-                </VStack>
-            </Card.Body>
-        </Card.Root>
-    );
-}
-
-/* ──────────────────────────────────────────────── */
 /*  Данные API-документации                         */
 /* ──────────────────────────────────────────────── */
 const apiMethods = [
@@ -256,17 +141,16 @@ const apiMethods = [
         method: 'GET',
         path: '/prices',
         title: 'Получить цены',
-        description: 'Возвращает список всех товаров с вашими индивидуальными ценами. Цены рассчитываются с учётом вашей скидки и партнёрского сегмента. Поддерживает пагинацию.',
+        description: 'Список всех товаров с индивидуальными ценами. Цены рассчитываются с учётом вашей скидки и партнёрского сегмента.',
         icon: LuDollarSign,
         color: 'green',
         params: [
             { name: 'page', type: 'int', desc: 'Номер страницы (по умолчанию: 1)' },
-            { name: 'per_page', type: 'int', desc: 'Количество на страницу (по умолчанию: 500, макс: 1000)' },
+            { name: 'per_page', type: 'int', desc: 'Кол-во на стр. (по умолчанию: 500, макс: 1000)' },
         ],
         responseExample: JSON.stringify({
             data: [
-                { uuid: "00000001-0001-0001-0001-000000000001", code: "ART-001", sku: "SKU-001", barcode: "4600000000001", name: "Товар 1", base_price: 1500.00, price: 1200.00 },
-                { uuid: "00000001-0001-0001-0001-000000000002", code: "ART-002", sku: "SKU-002", barcode: "4600000000002", name: "Товар 2", base_price: 800.00, price: 720.00 },
+                { uuid: "00000001-...-000000000001", code: "ART-001", sku: "SKU-001", barcode: "4600000000001", name: "Товар 1", base_price: 1500.00, price: 1200.00 },
             ],
             meta: { current_page: 1, last_page: 12, per_page: 500, total: 5847 },
         }, null, 2),
@@ -275,17 +159,16 @@ const apiMethods = [
         method: 'GET',
         path: '/stocks',
         title: 'Получить остатки',
-        description: 'Возвращает остатки товаров по складам вашего региона. Поля «available» — доступно сейчас, «preorder» — доступно для предзаказа. Поддерживает пагинацию.',
+        description: 'Остатки товаров по складам вашего региона. «available» — в наличии, «preorder» — доступно для предзаказа.',
         icon: LuWarehouse,
         color: 'teal',
         params: [
             { name: 'page', type: 'int', desc: 'Номер страницы (по умолчанию: 1)' },
-            { name: 'per_page', type: 'int', desc: 'Количество на страницу (по умолчанию: 500, макс: 1000)' },
+            { name: 'per_page', type: 'int', desc: 'Кол-во на стр. (по умолчанию: 500, макс: 1000)' },
         ],
         responseExample: JSON.stringify({
             data: [
-                { uuid: "00000001-0001-0001-0001-000000000001", code: "ART-001", sku: "SKU-001", barcode: "4600000000001", name: "Товар 1", available: 25, preorder: 100 },
-                { uuid: "00000001-0001-0001-0001-000000000002", code: "ART-002", sku: "SKU-002", barcode: "4600000000002", name: "Товар 2", available: 0, preorder: 50 },
+                { uuid: "00000001-...-000000000001", code: "ART-001", sku: "SKU-001", barcode: "4600000000001", name: "Товар 1", available: 25, preorder: 100 },
             ],
             meta: { current_page: 1, last_page: 12, per_page: 500, total: 5847 },
         }, null, 2),
@@ -294,15 +177,15 @@ const apiMethods = [
         method: 'POST',
         path: '/orders',
         title: 'Создать заказ',
-        description: 'Создаёт заказ от имени вашего аккаунта. Перед созданием проверяются остатки — если запрошено больше, чем доступно, вернётся ошибка. Товары автоматически разделяются на заказ (в наличии) и предзаказ — создаются отдельные заказы для каждого типа. Идентификация по UUID, code, sku или barcode. Компания определяется по ИНН.',
+        description: 'Создаёт заказ. Проверяет остатки и автоматически разделяет товары на заказ (в наличии) и предзаказ — создаются отдельные заказы.',
         icon: LuShoppingCart,
         color: 'blue',
         params: [
-            { name: 'inn', type: 'string', required: true, desc: 'ИНН вашей компании' },
-            { name: 'address', type: 'string', desc: 'Адрес доставки (необязательно)' },
-            { name: 'comment', type: 'string', desc: 'Комментарий к заказу (необязательно)' },
-            { name: 'products', type: 'array', required: true, desc: 'Массив товаров с идентификатором и количеством' },
-            { name: 'products[].identifier', type: 'string', required: true, desc: 'UUID, code, sku или barcode товара' },
+            { name: 'inn', type: 'string', required: true, desc: 'ИНН компании' },
+            { name: 'address', type: 'string', desc: 'Адрес доставки' },
+            { name: 'comment', type: 'string', desc: 'Комментарий' },
+            { name: 'products', type: 'array', required: true, desc: 'Массив товаров' },
+            { name: 'products[].identifier', type: 'string', required: true, desc: 'UUID / code / sku / barcode' },
             { name: 'products[].quantity', type: 'int', required: true, desc: 'Количество (мин. 1)' },
         ],
         requestBody: JSON.stringify({
@@ -311,7 +194,6 @@ const apiMethods = [
             comment: "Срочный заказ",
             products: [
                 { identifier: "ART-001", quantity: 5 },
-                { identifier: "00000001-0001-0001-0001-000000000001", quantity: 2 },
                 { identifier: "4600000000003", quantity: 10 },
             ],
         }, null, 2),
@@ -322,6 +204,20 @@ const apiMethods = [
             ],
             total_orders: 2,
         }, null, 2),
+        errorExamples: [
+            {
+                title: 'Товар не найден (422)',
+                body: JSON.stringify({ error: "Некоторые товары не найдены", details: ["Товар \"XYZ-999\" не найден (позиция 2)"] }, null, 2),
+            },
+            {
+                title: 'Недостаточно остатков (422)',
+                body: JSON.stringify({ error: "Недостаточно остатков для некоторых товаров", details: [{ identifier: "ART-001", name: "Товар 1", requested: 100, available: 25 }] }, null, 2),
+            },
+            {
+                title: 'ИНН не найден (422)',
+                body: JSON.stringify({ error: "Компания с указанным ИНН не найдена в вашем аккаунте", inn: "0000000000" }, null, 2),
+            },
+        ],
     },
 ];
 
@@ -502,15 +398,131 @@ export default function Index({ tokens: initialTokens }) {
                     </Card.Root>
                 </VStack>
 
-                {/* API Methods */}
-                <VStack align="stretch" gap="5">
+                {/* API Methods — Accordion */}
+                <Accordion.Root collapsible variant="plain">
                     {apiMethods.map((m, i) => (
-                        <ApiMethodCard key={i} {...m} />
+                        <Accordion.Item key={i} value={`method-${i}`}
+                            borderRadius="xl" mb="3"
+                            border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                            bg={{ base: 'white', _dark: 'gray.800' }}
+                            overflow="hidden"
+                        >
+                            {/* Gradient accent */}
+                            <Box h="3px" style={{ background: `linear-gradient(90deg, var(--chakra-colors-${m.color}-400), var(--chakra-colors-${m.color}-600))` }} />
+
+                            <Accordion.ItemTrigger px="5" py="3.5" cursor="pointer" _hover={{ bg: { base: 'gray.50', _dark: 'gray.750' } }}>
+                                <HStack flex="1" gap="3">
+                                    <Flex
+                                        align="center" justify="center" w="9" h="9" borderRadius="lg"
+                                        bg={`${m.color}.50`} _dark={{ bg: `${m.color}.900/30` }}
+                                        flexShrink="0"
+                                    >
+                                        <m.icon size={18} color={`var(--chakra-colors-${m.color}-500)`} />
+                                    </Flex>
+                                    <HStack gap="2" flex="1">
+                                        <Badge
+                                            colorPalette={m.method === 'GET' ? 'green' : 'blue'}
+                                            variant="solid" size="sm" fontFamily="mono" fontWeight="700"
+                                        >
+                                            {m.method}
+                                        </Badge>
+                                        <Text fontSize="sm" fontFamily="mono" color="gray.500" _dark={{ color: 'gray.400' }}>
+                                            {m.path}
+                                        </Text>
+                                        <Text fontWeight="700" fontSize="sm" ml="1">{m.title}</Text>
+                                    </HStack>
+                                </HStack>
+                                <Accordion.ItemIndicator />
+                            </Accordion.ItemTrigger>
+
+                            <Accordion.ItemContent>
+                                <Accordion.ItemBody px="5" pb="5" pt="0">
+                                    <VStack align="stretch" gap="4">
+                                        {/* Description */}
+                                        <Text fontSize="sm" color="gray.500" lineHeight="1.6">
+                                            {m.description}
+                                        </Text>
+
+                                        {/* Parameters */}
+                                        {m.params && m.params.length > 0 && (
+                                            <Box>
+                                                <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">
+                                                    Параметры
+                                                </Text>
+                                                <VStack align="stretch" gap="0.5">
+                                                    {m.params.map((p, pi) => (
+                                                        <HStack key={pi} fontSize="xs" gap="2" py="1" px="2" borderRadius="md"
+                                                            bg={pi % 2 === 0 ? { base: 'gray.50', _dark: 'gray.900' } : 'transparent'}
+                                                        >
+                                                            <Code colorPalette="purple" size="xs" fontWeight="600">{p.name}</Code>
+                                                            <Badge size="xs" variant="outline" colorPalette="gray">{p.type}</Badge>
+                                                            {p.required && <Badge size="xs" colorPalette="red" variant="subtle">обяз.</Badge>}
+                                                            <Text flex="1" color="gray.500">{p.desc}</Text>
+                                                        </HStack>
+                                                    ))}
+                                                </VStack>
+                                            </Box>
+                                        )}
+
+                                        {/* Request body */}
+                                        {m.requestBody && (
+                                            <Box>
+                                                <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">
+                                                    Тело запроса (JSON)
+                                                </Text>
+                                                <Box bg="gray.900" borderRadius="lg" p="3" overflowX="auto">
+                                                    <Text as="pre" fontSize="xs" color="green.300" fontFamily="mono" whiteSpace="pre-wrap">
+                                                        {m.requestBody}
+                                                    </Text>
+                                                </Box>
+                                            </Box>
+                                        )}
+
+                                        {/* Success response */}
+                                        {m.responseExample && (
+                                            <Box>
+                                                <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">
+                                                    Успешный ответ (200/201)
+                                                </Text>
+                                                <Box bg="gray.900" borderRadius="lg" p="3" overflowX="auto">
+                                                    <Text as="pre" fontSize="xs" color="cyan.300" fontFamily="mono" whiteSpace="pre-wrap">
+                                                        {m.responseExample}
+                                                    </Text>
+                                                </Box>
+                                            </Box>
+                                        )}
+
+                                        {/* Error examples */}
+                                        {m.errorExamples && m.errorExamples.length > 0 && (
+                                            <Box>
+                                                <Text fontSize="2xs" fontWeight="700" color="gray.400" textTransform="uppercase" letterSpacing="0.05em" mb="1.5">
+                                                    Примеры ошибок
+                                                </Text>
+                                                <VStack align="stretch" gap="2">
+                                                    {m.errorExamples.map((err, ei) => (
+                                                        <Box key={ei}>
+                                                            <Text fontSize="2xs" fontWeight="600" color="red.400" mb="1">
+                                                                {err.title}
+                                                            </Text>
+                                                            <Box bg="gray.900" borderRadius="lg" p="3" overflowX="auto">
+                                                                <Text as="pre" fontSize="xs" color="red.300" fontFamily="mono" whiteSpace="pre-wrap">
+                                                                    {err.body}
+                                                                </Text>
+                                                            </Box>
+                                                        </Box>
+                                                    ))}
+                                                </VStack>
+                                            </Box>
+                                        )}
+                                    </VStack>
+                                </Accordion.ItemBody>
+                            </Accordion.ItemContent>
+                        </Accordion.Item>
                     ))}
-                </VStack>
+                </Accordion.Root>
 
                 {/* Rate Limiting Note */}
-                <Card.Root mt="5"
+                <Card.Root mt="3"
                     bg={{ base: 'gray.50', _dark: 'gray.900' }}
                     borderRadius="xl"
                     border="1px solid"
