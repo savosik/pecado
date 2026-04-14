@@ -137,16 +137,6 @@ export default function Create({ regions, countries, statuses, availableRoles, c
                                 </FormField>
                             </SimpleGrid>
 
-                            {data.region_id && (() => {
-                                const selectedRegion = regions.find(r => String(r.id) === String(data.region_id));
-                                const currencyName = selectedRegion?.currency ? `${selectedRegion.currency.code} - ${selectedRegion.currency.name}` : 'Не задана';
-                                return (
-                                    <FormField label="Валюта (определяется регионом)">
-                                        <Input value={currencyName} readOnly disabled />
-                                    </FormField>
-                                );
-                            })()}
-
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Статус клиента" error={errors.client_status_id}>
                                     <select
