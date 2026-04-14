@@ -140,11 +140,21 @@ jobs:
       - name: "🏗️ Build assets"
         run: npm run build
 
+      - name: "📄 Generate AsyncAPI HTML docs"
+        run: npm run asyncapi:html
+
       - name: "📤 Upload build artifacts"
         uses: actions/upload-artifact@v4
         with:
           name: frontend-build
           path: public/build
+          retention-days: 1
+
+      - name: "📤 Upload AsyncAPI docs"
+        uses: actions/upload-artifact@v4
+        with:
+          name: asyncapi-docs
+          path: docs/asyncapi/html
           retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
@@ -166,6 +176,12 @@ jobs:
         with:
           name: frontend-build
           path: public/build
+
+      - name: "📥 Download AsyncAPI docs"
+        uses: actions/download-artifact@v4
+        with:
+          name: asyncapi-docs
+          path: docs/asyncapi/html
 
       - name: "🔧 Fix Docker file ownership"
         run: |
@@ -217,8 +233,8 @@ jobs:
           echo "==> [6/7] Перезапуск очередей..."
           sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
-          echo "==> [7/7] Перезагрузка PHP-FPM и workers..."
-          sg docker -c 'docker compose restart app worker'
+          echo "==> [7/7] Перезагрузка PHP-FPM, workers и nginx..."
+          sg docker -c 'docker compose restart app worker nginx'
 
           echo ""
           echo "✅ Деплой завершён успешно!"
