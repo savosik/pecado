@@ -8,6 +8,7 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
 /**
  * Полный каталог в формате Excel (XLSX).
@@ -16,7 +17,10 @@ use PhpOffice\PhpSpreadsheet\Style\Fill;
  * - «Товары» — все товары с атрибутами, ценами, остатками, изображениями
  * - «Категории» — дерево категорий с полным путём
  *
- * Использует chunk-подход для обработки больших каталогов.
+ * Оптимизация памяти:
+ * - Один проход по данным (атрибуты собираются на лету, колонки дописываются)
+ * - Нет autoSize (дорого по памяти — сканирует все ячейки)
+ * - setPreCalculateFormulas(false) — нет формул, не нужен пересчёт
  */
 class ExcelCatalogPreset extends AbstractPreset
 {
@@ -31,12 +35,12 @@ class ExcelCatalogPreset extends AbstractPreset
     public function writeToStream($stream, ProductExport $export): void
     {
         $spreadsheet = new Spreadsheet();
+        $spreadsheet->getProperties()->setTitle('Каталог товаров');
 
         // ── Лист 1: Товары ──
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Товары');
 
-        // Собираем заголовки: фиксированные + динамические атрибуты
         $fixedHeaders = [
             'ID', 'Артикул (SKU)', 'Код', 'Штрихкод', 'Название', 'Бренд',
             'Категория', 'Путь категории', 'Модель', 'Цена', 'Базовая цена',
@@ -44,41 +48,35 @@ class ExcelCatalogPreset extends AbstractPreset
             'Meta Title', 'Meta Description', 'Главное фото', 'Доп. фото',
             'Новинка', 'Бестселлер', 'URL',
         ];
+        $fixedCount = count($fixedHeaders);
 
-        // Сначала собираем все уникальные имена атрибутов
-        $allAttributeNames = $this->collectAttributeNames($export);
-
-        $headers = array_merge($fixedHeaders, $allAttributeNames);
-
-        // Записываем заголовки
-        $col = 1;
-        foreach ($headers as $header) {
-            $sheet->setCellValue([$col, 1], $header);
-            $col++;
+        // Записываем фиксированные заголовки
+        foreach ($fixedHeaders as $i => $header) {
+            $sheet->setCellValue([$i + 1, 1], $header);
         }
 
-        // Стилизуем заголовки
-        $lastCol = count($headers);
-        $headerRange = 'A1:' . $this->columnLetter($lastCol) . '1';
-        $sheet->getStyle($headerRange)->applyFromArray([
-            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
-            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2B5797']],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
-        ]);
-        $sheet->getRowDimension(1)->setRowHeight(25);
+        // Установим ширину ключевых колонок вручную (вместо autoSize)
+        $columnWidths = [
+            'A' => 8,  'B' => 15, 'C' => 12, 'D' => 15, 'E' => 40, 'F' => 18,
+            'G' => 20, 'H' => 30, 'I' => 15, 'J' => 10, 'K' => 12, 'L' => 10,
+        ];
+        foreach ($columnWidths as $col => $width) {
+            $sheet->getColumnDimension($col)->setWidth($width);
+        }
 
         // Замораживаем первую строку
         $sheet->freezePane('A2');
 
-        // Записываем данные чанками
+        // Один проход: данные + сбор уникальных атрибутов
+        $attrNameIndex = []; // name → column_offset
         $row = 2;
-        $this->eachChunk($export, function ($items) use ($sheet, $allAttributeNames, &$row) {
+
+        $this->eachChunk($export, function ($items) use ($sheet, $fixedCount, &$attrNameIndex, &$row) {
             foreach ($items as $item) {
                 $col = 1;
 
                 // Фиксированные колонки
-                $sheet->setCellValue([$col++, $row], $item['id']);
+                $sheet->setCellValueExplicit([$col++, $row], $item['id'], DataType::TYPE_NUMERIC);
                 $sheet->setCellValue([$col++, $row], $item['sku'] ?? '');
                 $sheet->setCellValue([$col++, $row], $item['code'] ?? '');
                 $sheet->setCellValue([$col++, $row], $item['barcode'] ?? '');
@@ -87,62 +85,74 @@ class ExcelCatalogPreset extends AbstractPreset
                 $sheet->setCellValue([$col++, $row], $item['category_name'] ?? '');
                 $sheet->setCellValue([$col++, $row], $item['category_path'] ?? '');
                 $sheet->setCellValue([$col++, $row], $item['model_name'] ?? '');
-                $sheet->setCellValue([$col++, $row], $item['price']);
-                $sheet->setCellValue([$col++, $row], $item['base_price']);
-                $sheet->setCellValue([$col++, $row], $item['stock']);
+                $sheet->setCellValueExplicit([$col++, $row], $item['price'], DataType::TYPE_NUMERIC);
+                $sheet->setCellValueExplicit([$col++, $row], $item['base_price'], DataType::TYPE_NUMERIC);
+                $sheet->setCellValueExplicit([$col++, $row], $item['stock'], DataType::TYPE_NUMERIC);
                 $sheet->setCellValue([$col++, $row], $item['stock'] > 0 ? 'Да' : 'Нет');
-                $sheet->setCellValue([$col++, $row], strip_tags($item['description'] ?? ''));
+                $sheet->setCellValue([$col++, $row], mb_substr(strip_tags($item['description'] ?? ''), 0, 500));
                 $sheet->setCellValue([$col++, $row], $item['short_description'] ?? '');
                 $sheet->setCellValue([$col++, $row], $item['meta_title'] ?? '');
                 $sheet->setCellValue([$col++, $row], $item['meta_description'] ?? '');
                 $sheet->setCellValue([$col++, $row], $item['main_image'] ?? '');
-                $sheet->setCellValue([$col++, $row], implode("\n", $item['additional_images']));
+                $sheet->setCellValue([$col++, $row], implode(', ', $item['additional_images']));
                 $sheet->setCellValue([$col++, $row], $item['is_new'] ? 'Да' : 'Нет');
                 $sheet->setCellValue([$col++, $row], $item['is_bestseller'] ? 'Да' : 'Нет');
                 $sheet->setCellValue([$col++, $row], $item['url'] ?? '');
 
-                // Атрибуты (в соответствующие колонки)
-                $attrMap = [];
+                // Атрибуты — динамические колонки
                 foreach ($item['attributes'] as $attr) {
+                    $name = $attr['name'];
+
+                    // Регистрируем новый атрибут если впервые встречаем
+                    if (!isset($attrNameIndex[$name])) {
+                        $offset = count($attrNameIndex);
+                        $attrNameIndex[$name] = $offset;
+                        // Записываем заголовок атрибута
+                        $sheet->setCellValue([$fixedCount + $offset + 1, 1], $name);
+                    }
+
                     $val = $attr['value'];
                     if ($attr['unit']) {
                         $val .= ' ' . $attr['unit'];
                     }
-                    $attrMap[$attr['name']] = $val;
-                }
 
-                foreach ($allAttributeNames as $attrName) {
-                    $sheet->setCellValue([$col++, $row], $attrMap[$attrName] ?? '');
+                    $attrCol = $fixedCount + $attrNameIndex[$name] + 1;
+                    $sheet->setCellValue([$attrCol, $row], $val);
                 }
 
                 $row++;
             }
         });
 
-        // Автоширина для ключевых колонок (не все, чтобы не тормозить)
-        foreach (['A', 'B', 'C', 'D', 'E', 'F', 'G', 'I', 'J', 'K', 'L', 'M'] as $colLetter) {
-            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
-        }
+        // Стилизуем заголовки (после записи данных — чтобы знать все колонки)
+        $totalCols = $fixedCount + count($attrNameIndex);
+        $headerRange = 'A1:' . $this->columnLetter($totalCols) . '1';
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2B5797']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER, 'vertical' => Alignment::VERTICAL_CENTER],
+        ]);
+        $sheet->getRowDimension(1)->setRowHeight(25);
 
         // ── Лист 2: Категории ──
         $catSheet = $spreadsheet->createSheet();
         $catSheet->setTitle('Категории');
 
         $catHeaders = ['ID', 'Название', 'ID родителя', 'Полный путь'];
-        $col = 1;
-        foreach ($catHeaders as $h) {
-            $catSheet->setCellValue([$col, 1], $h);
-            $col++;
+        foreach ($catHeaders as $i => $h) {
+            $catSheet->setCellValue([$i + 1, 1], $h);
         }
 
-        $catHeaderRange = 'A1:D1';
-        $catSheet->getStyle($catHeaderRange)->applyFromArray([
+        $catSheet->getStyle('A1:D1')->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2B5797']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
-            'borders' => ['allBorders' => ['borderStyle' => Border::BORDER_THIN]],
         ]);
         $catSheet->freezePane('A2');
+        $catSheet->getColumnDimension('A')->setWidth(8);
+        $catSheet->getColumnDimension('B')->setWidth(30);
+        $catSheet->getColumnDimension('C')->setWidth(12);
+        $catSheet->getColumnDimension('D')->setWidth(50);
 
         $categories = $this->fetchCategories();
         $catRow = 2;
@@ -158,37 +168,16 @@ class ExcelCatalogPreset extends AbstractPreset
             $catRow++;
         }
 
-        foreach (['A', 'B', 'C', 'D'] as $colLetter) {
-            $catSheet->getColumnDimension($colLetter)->setAutoSize(true);
-        }
-
         // Возвращаемся на первый лист
         $spreadsheet->setActiveSheetIndex(0);
 
-        // Записываем в поток
+        // Записываем — без пересчёта формул (нет формул)
         $writer = new Xlsx($spreadsheet);
+        $writer->setPreCalculateFormulas(false);
         $writer->save($stream);
 
         $spreadsheet->disconnectWorksheets();
         unset($spreadsheet);
-    }
-
-    /**
-     * Собрать все уникальные имена атрибутов из каталога.
-     */
-    protected function collectAttributeNames(ProductExport $export): array
-    {
-        $names = [];
-
-        $this->eachChunk($export, function ($items) use (&$names) {
-            foreach ($items as $item) {
-                foreach ($item['attributes'] as $attr) {
-                    $names[$attr['name']] = true;
-                }
-            }
-        });
-
-        return array_keys($names);
     }
 
     /**
