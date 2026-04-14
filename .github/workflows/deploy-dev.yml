@@ -200,7 +200,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: asyncapi-docs
-          path: docs/asyncapi/html
+          path: docs/asyncapi
 
       - name: "📥 Download MkDocs site"
         uses: actions/download-artifact@v4
