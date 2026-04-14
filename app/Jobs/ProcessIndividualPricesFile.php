@@ -30,6 +30,11 @@ class ProcessIndividualPricesFile implements ShouldQueue
 
     public int $tries = 3;
 
+    /**
+     * Выделенная очередь для обработки ценовых файлов.
+     */
+    public string $queue = 'prices';
+
     public function __construct(
         public readonly string $fileUrl,
         public readonly string $uploadType,
@@ -72,9 +77,13 @@ class ProcessIndividualPricesFile implements ShouldQueue
             $partnerId = User::where('erp_id', $this->partnerUuid)->value('id');
 
             if (!$partnerId) {
-                Log::warning('ProcessIndividualPricesFile: партнёр не найден', [
+                Log::warning('ProcessIndividualPricesFile: партнёр не найден, удаляем CSV', [
                     'partner_uuid' => $this->partnerUuid,
+                    'file_path' => $filePath,
                 ]);
+
+                // Удаляем файл, чтобы не копились «зомби» в MinIO
+                $disk->delete($filePath);
 
                 return;
             }
