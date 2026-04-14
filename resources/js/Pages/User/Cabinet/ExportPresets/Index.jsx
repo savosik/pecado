@@ -8,7 +8,7 @@ import CabinetLayout from '../CabinetLayout';
 import {
     LuFileCode, LuShoppingBag, LuGlobe, LuMessageCircle, LuSearch,
     LuPenTool, LuShoppingCart, LuStore, LuFileDown,
-    LuCopy, LuCheck, LuLink, LuX,
+    LuCopy, LuCheck, LuLink, LuX, LuBraces, LuFileSpreadsheet,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
@@ -16,6 +16,7 @@ import axios from 'axios';
 const presetIcons = {
     LuFileCode, LuShoppingBag, LuGlobe, LuMessageCircle,
     LuSearch, LuPenTool, LuShoppingCart, LuStore,
+    LuBraces, LuFileSpreadsheet,
 };
 
 function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
@@ -54,7 +55,7 @@ function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
                     </HStack>
 
                     {/* Description */}
-                    <Text fontSize="xs" color="gray.500" lineClamp={2} minH="32px">
+                    <Text fontSize="xs" color="gray.500" lineHeight="1.5">
                         {preset.description}
                     </Text>
 
@@ -165,7 +166,7 @@ export default function Index({ presets: initialPresets }) {
                 Цены и остатки формируются индивидуально для вашего аккаунта.
             </Text>
 
-            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3, xl: 4 }} gap="4">
+            <SimpleGrid columns={{ base: 1, sm: 2, lg: 3 }} gap="4">
                 {presets.map((preset) => (
                     <PresetCard
                         key={preset.key}
