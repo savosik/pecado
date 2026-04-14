@@ -21,9 +21,10 @@ class PresetRegistry
         TildaCsvPreset $tilda,
         OpenCartCsvPreset $opencart,
         CsCartCsvPreset $cscart,
+        JsonCatalogPreset $json,
     ) {
         $this->presets = collect([
-            $yml, $shopify, $woocommerce, $vk, $google, $tilda, $opencart, $cscart,
+            $yml, $shopify, $woocommerce, $vk, $google, $tilda, $opencart, $cscart, $json,
         ])->keyBy(fn (PresetInterface $p) => $p->key());
     }
 

@@ -15,7 +15,7 @@ use Tests\TestCase;
  * Тест стандартных выгрузок (пресетов) для CMS-движков.
  *
  * Проверяет:
- * - Регистрацию всех 8 пресетов в PresetRegistry
+ * - Регистрацию всех 9 пресетов в PresetRegistry
  * - Генерацию валидных файлов для каждого пресета (YML, Shopify, WooCommerce и т.д.)
  * - API контроллера (получение списка, генерация ссылки, удаление)
  * - Скачивание пресетной выгрузки по hash-ссылке
@@ -57,14 +57,14 @@ class ExportPresetTest extends TestCase
     // Регистрация пресетов
     // ═══════════════════════════════════════════════
 
-    public function test_all_eight_presets_are_registered(): void
+    public function test_all_nine_presets_are_registered(): void
     {
         $registry = app(PresetRegistry::class);
         $all = $registry->all();
 
-        $this->assertCount(8, $all, 'Должно быть зарегистрировано 8 пресетов');
+        $this->assertCount(9, $all, 'Должно быть зарегистрировано 9 пресетов');
 
-        $expectedKeys = ['yml', 'shopify', 'woocommerce', 'vk', 'google_merchant', 'tilda', 'opencart', 'cscart'];
+        $expectedKeys = ['yml', 'shopify', 'woocommerce', 'vk', 'google_merchant', 'tilda', 'opencart', 'cscart', 'json_catalog'];
         foreach ($expectedKeys as $key) {
             $this->assertNotNull($registry->resolve($key), "Пресет '{$key}' не найден в реестре");
         }
@@ -75,7 +75,7 @@ class ExportPresetTest extends TestCase
         $registry = app(PresetRegistry::class);
         $data = $registry->toArray();
 
-        $this->assertCount(8, $data);
+        $this->assertCount(9, $data);
 
         foreach ($data as $preset) {
             $this->assertArrayHasKey('key', $preset);
@@ -105,7 +105,7 @@ class ExportPresetTest extends TestCase
             'user_id' => $this->user->id,
             'client_user_id' => $this->user->id,
             'name' => "Test {$presetKey}",
-            'format' => $preset->fileExtension() === 'xml' ? 'xml' : 'csv',
+            'format' => in_array($preset->fileExtension(), ['xml', 'json']) ? $preset->fileExtension() : 'csv',
             'preset' => $presetKey,
             'filters' => [],
             'fields' => [],
@@ -157,6 +157,7 @@ class ExportPresetTest extends TestCase
             'Tilda CSV' => ['tilda'],
             'OpenCart CSV' => ['opencart'],
             'CS-Cart CSV' => ['cscart'],
+            'JSON Catalog' => ['json_catalog'],
         ];
     }
 
@@ -285,6 +286,52 @@ class ExportPresetTest extends TestCase
     }
 
     // ═══════════════════════════════════════════════
+    // Валидация JSON пресета
+    // ═══════════════════════════════════════════════
+
+    public function test_json_catalog_generates_valid_structure(): void
+    {
+        $registry = app(PresetRegistry::class);
+        $preset = $registry->resolve('json_catalog');
+
+        $export = $this->createPresetExport('json_catalog');
+        $content = $this->generatePresetContent($preset, $export);
+
+        $data = json_decode($content, true);
+        $this->assertNotNull($data, 'JSON Catalog: невалидный JSON — ' . json_last_error_msg());
+
+        $this->assertArrayHasKey('generated_at', $data);
+        $this->assertArrayHasKey('shop', $data);
+        $this->assertArrayHasKey('categories', $data);
+        $this->assertArrayHasKey('products', $data);
+
+        $this->assertIsArray($data['categories']);
+        $this->assertIsArray($data['products']);
+        $this->assertGreaterThan(0, count($data['products']), 'JSON: нет товаров');
+
+        // Проверяем структуру товара
+        $product = $data['products'][0];
+        $this->assertArrayHasKey('id', $product);
+        $this->assertArrayHasKey('name', $product);
+        $this->assertArrayHasKey('price', $product);
+        $this->assertArrayHasKey('stock', $product);
+        $this->assertArrayHasKey('brand', $product);
+        $this->assertArrayHasKey('category', $product);
+        $this->assertArrayHasKey('images', $product);
+        $this->assertArrayHasKey('attributes', $product);
+        $this->assertArrayHasKey('available', $product);
+
+        // Проверяем вложенность категорий
+        if (!empty($data['categories'])) {
+            $firstCat = $data['categories'][0];
+            $this->assertArrayHasKey('id', $firstCat);
+            $this->assertArrayHasKey('name', $firstCat);
+        }
+
+        echo "\n✅ JSON Catalog: " . count($data['products']) . " товаров, " . count($data['categories']) . " корневых категорий\n";
+    }
+
+    // ═══════════════════════════════════════════════
     // API Controller — ExportPresetController
     // ═══════════════════════════════════════════════
 
@@ -302,11 +349,11 @@ class ExportPresetTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('User/Cabinet/ExportPresets/Index')
-            ->has('presets', 8)
+            ->has('presets', 9)
             ->where('presets.0.generated', false)
         );
 
-        echo "\n✅ Inertia page: 8 пресетов, ни один не сгенерирован\n";
+        echo "\n✅ Inertia page: 9 пресетов, ни один не сгенерирован\n";
     }
 
     public function test_presets_not_visible_in_custom_exports_list(): void

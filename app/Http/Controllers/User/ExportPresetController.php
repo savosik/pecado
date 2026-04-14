@@ -67,7 +67,7 @@ class ExportPresetController extends Controller
                 'user_id' => $userId,
                 'client_user_id' => $userId,
                 'name' => $preset->name(),
-                'format' => $preset->fileExtension() === 'xml' ? 'xml' : 'csv',
+                'format' => $preset->fileExtension(),
                 'preset' => $presetKey,
                 'filters' => [],
                 'fields' => [],
