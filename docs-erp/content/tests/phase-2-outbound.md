@@ -8,6 +8,8 @@
 
 🟢 **Разработчик сайта** регистрирует нового пользователя (имя, email, телефон).
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/partner.created.to_erp.json)
+
 **Проверка (1С-ник):**
 
 - [ ] В `erp_out.partners` появилось сообщение
@@ -30,6 +32,8 @@
 3. Указать адрес доставки
 4. Оформить заказ
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/order.created.to_erp.json)
+
 **Проверка (1С-ник):**
 
 - [ ] В `erp_out.orders` появилось сообщение
@@ -49,6 +53,8 @@
 
 🟢 Товар только на складе предзаказа → оформить заказ.
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/order.created.to_erp.json)
+
 - [ ] `type: "preorder"`
 - [ ] `warehouse_uuids` содержит UUID склада предзаказа
 
@@ -62,6 +68,8 @@
 **Зависимости:** 1.13 или 2.2 (заказ в статусе `completed`)
 
 🟢 Создать возврат через ЛК → Заказ → Возврат.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/return.created.to_erp.json)
 
 - [ ] В `erp_out.returns` — сообщение `return.created`
 - [ ] `order_uuid` = UUID оригинального заказа

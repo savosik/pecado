@@ -25,6 +25,8 @@
 
 🔵 **1С отправляет** `category.updated` с новым `name`.
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/category.created.json) (формат идентичен `category.created`)
+
 - [ ] `name` обновлён
 - [ ] `parent_id` НЕ изменился (частичное обновление)
 
@@ -52,6 +54,8 @@
 
 🔵 **1С отправляет** `product.created` с `hidden = true`.
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/product.created.json)
+
 - [ ] Товар создан с `hidden = true`
 - [ ] Товар **НЕ** отображается в каталоге и поиске
 
@@ -62,6 +66,8 @@
 **Зависимости:** 1.3
 
 🔵 **1С отправляет** `product.updated` с новым `name` и новым атрибутом.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/product.updated.json)
 
 - [ ] `name` обновлён
 - [ ] Старые атрибуты **сохранены** (мерж по `property_uuid`)
@@ -76,6 +82,8 @@
 
 🔵 **1С отправляет** `price.updated` с ценой.
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/price.updated.json)
+
 - [ ] Цена товара обновлена
 - [ ] Цена отображается в каталоге
 
@@ -87,6 +95,8 @@
 
 🔵 **1С отправляет** `stock.updated` с `warehouse_uuid` и `quantity`.
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/stock.updated.json)
+
 - [ ] В `product_warehouse` появилась запись
 - [ ] Товар «В наличии» для пользователя из региона
 
@@ -97,6 +107,8 @@
 **Зависимости:** нет
 
 🔵 **1С отправляет** `exchange_rate.updated` для KZT.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/exchange_rate.updated.json)
 
 - [ ] Запись создана/обновлена в `exchange_rates`
 - [ ] Все три значения сохранены: `official_rate`, `rate_coefficient`, `rate`
@@ -125,6 +137,8 @@
 
 🔵 **1С отправляет** повторный `partner.created` с `client_status: "diamond"`.
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/partner.created.json)
+
 - [ ] `client_status_id` обновился → `diamond`
 - [ ] Пароль **НЕ** перезаписан
 - [ ] Плашка «Diamond» в ЛК
@@ -136,6 +150,8 @@
 **Зависимости:** 1.9
 
 🔵 **1С отправляет** `partner.deleted`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/partner.deleted.json)
 
 - [ ] `is_active = false`
 - [ ] Не может авторизоваться
@@ -182,6 +198,8 @@
 
 ### A) Только статус
 
+> Структура payload → [JSON Schema](/docs/erp/schemas/order.updated.json)
+
 🔵 `order.updated` с `status: "processing"` (без `items`).
 
 - [ ] Статус → `processing`
@@ -203,6 +221,8 @@
 **Зависимости:** создать тестовый заказ
 
 🔵 **1С отправляет** `order.deleted`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/order.deleted.json)
 
 - [ ] Заказ → `cancelled` (soft delete)
 - [ ] Не отображается в активных заказах
@@ -248,6 +268,8 @@
 ### Шаг B: Уведомление
 
 🔵 `individual_prices.ready` с `upload_type: "full"`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/individual_prices.ready.json)
 
 - [ ] Цена в `individual_prices`
 - [ ] CSV удалён из MinIO
