@@ -67,7 +67,10 @@ class ExportPresetController extends Controller
                 'user_id' => $userId,
                 'client_user_id' => $userId,
                 'name' => $preset->name(),
-                'format' => $preset->fileExtension(),
+                'format' => match($preset->fileExtension()) {
+                    'xlsx' => 'xls',
+                    default => $preset->fileExtension(),
+                },
                 'preset' => $presetKey,
                 'filters' => [],
                 'fields' => [],

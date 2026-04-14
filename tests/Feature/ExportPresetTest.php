@@ -15,7 +15,7 @@ use Tests\TestCase;
  * Тест стандартных выгрузок (пресетов) для CMS-движков.
  *
  * Проверяет:
- * - Регистрацию всех 9 пресетов в PresetRegistry
+ * - Регистрацию всех 10 пресетов в PresetRegistry
  * - Генерацию валидных файлов для каждого пресета (YML, Shopify, WooCommerce и т.д.)
  * - API контроллера (получение списка, генерация ссылки, удаление)
  * - Скачивание пресетной выгрузки по hash-ссылке
@@ -57,14 +57,14 @@ class ExportPresetTest extends TestCase
     // Регистрация пресетов
     // ═══════════════════════════════════════════════
 
-    public function test_all_nine_presets_are_registered(): void
+    public function test_all_ten_presets_are_registered(): void
     {
         $registry = app(PresetRegistry::class);
         $all = $registry->all();
 
-        $this->assertCount(9, $all, 'Должно быть зарегистрировано 9 пресетов');
+        $this->assertCount(10, $all, 'Должно быть зарегистрировано 10 пресетов');
 
-        $expectedKeys = ['yml', 'shopify', 'woocommerce', 'vk', 'google_merchant', 'tilda', 'opencart', 'cscart', 'json_catalog'];
+        $expectedKeys = ['yml', 'shopify', 'woocommerce', 'vk', 'google_merchant', 'tilda', 'opencart', 'cscart', 'json_catalog', 'excel'];
         foreach ($expectedKeys as $key) {
             $this->assertNotNull($registry->resolve($key), "Пресет '{$key}' не найден в реестре");
         }
@@ -75,7 +75,7 @@ class ExportPresetTest extends TestCase
         $registry = app(PresetRegistry::class);
         $data = $registry->toArray();
 
-        $this->assertCount(9, $data);
+        $this->assertCount(10, $data);
 
         foreach ($data as $preset) {
             $this->assertArrayHasKey('key', $preset);
@@ -105,7 +105,12 @@ class ExportPresetTest extends TestCase
             'user_id' => $this->user->id,
             'client_user_id' => $this->user->id,
             'name' => "Test {$presetKey}",
-            'format' => in_array($preset->fileExtension(), ['xml', 'json']) ? $preset->fileExtension() : 'csv',
+            'format' => match($preset->fileExtension()) {
+                'xml' => 'xml',
+                'json' => 'json',
+                'xlsx' => 'xls',
+                default => 'csv',
+            },
             'preset' => $presetKey,
             'filters' => [],
             'fields' => [],
@@ -158,6 +163,7 @@ class ExportPresetTest extends TestCase
             'OpenCart CSV' => ['opencart'],
             'CS-Cart CSV' => ['cscart'],
             'JSON Catalog' => ['json_catalog'],
+            'Excel Catalog' => ['excel'],
         ];
     }
 
@@ -331,6 +337,39 @@ class ExportPresetTest extends TestCase
         echo "\n✅ JSON Catalog: " . count($data['products']) . " товаров, " . count($data['categories']) . " корневых категорий\n";
     }
 
+    public function test_excel_catalog_generates_valid_xlsx(): void
+    {
+        $registry = app(PresetRegistry::class);
+        $preset = $registry->resolve('excel');
+
+        $export = $this->createPresetExport('excel');
+
+        // Генерируем во временный файл
+        $tempFile = tempnam(sys_get_temp_dir(), 'excel_test_');
+        $stream = fopen($tempFile, 'w');
+        $preset->writeToStream($stream, $export);
+        if (is_resource($stream)) { fclose($stream); }
+
+        $this->assertGreaterThan(0, filesize($tempFile), 'Excel: файл пустой');
+
+        // Проверяем структуру XLSX
+        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($tempFile);
+        $this->assertEquals(2, $spreadsheet->getSheetCount(), 'Excel: должно быть 2 листа');
+        $this->assertEquals('Товары', $spreadsheet->getSheet(0)->getTitle());
+        $this->assertEquals('Категории', $spreadsheet->getSheet(1)->getTitle());
+
+        // Проверяем данные на листе товаров
+        $sheet = $spreadsheet->getSheet(0);
+        $this->assertEquals('ID', $sheet->getCell('A1')->getValue());
+        $this->assertEquals('Название', $sheet->getCell('E1')->getValue());
+        $this->assertGreaterThan(1, $sheet->getHighestRow(), 'Excel: нет строк с данными');
+
+        $spreadsheet->disconnectWorksheets();
+        @unlink($tempFile);
+
+        echo "\n✅ Excel: 2 листа, " . ($sheet->getHighestRow() - 1) . " товаров\n";
+    }
+
     // ═══════════════════════════════════════════════
     // API Controller — ExportPresetController
     // ═══════════════════════════════════════════════
@@ -349,11 +388,11 @@ class ExportPresetTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn ($page) => $page
             ->component('User/Cabinet/ExportPresets/Index')
-            ->has('presets', 9)
+            ->has('presets', 10)
             ->where('presets.0.generated', false)
         );
 
-        echo "\n✅ Inertia page: 9 пресетов, ни один не сгенерирован\n";
+        echo "\n✅ Inertia page: 10 пресетов, ни один не сгенерирован\n";
     }
 
     public function test_presets_not_visible_in_custom_exports_list(): void
