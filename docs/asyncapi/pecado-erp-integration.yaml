@@ -794,7 +794,7 @@ components:
       traits:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
-        $ref: '#/components/schemas/EntityDeletedPayload'
+        $ref: '#/components/schemas/PartnerDeletedPayload'
 
     # ── US-02: partner.created (Сайт → 1С) ───
     PartnerCreatedFromSite:
@@ -885,7 +885,7 @@ components:
       traits:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
-        $ref: '#/components/schemas/EntityDeletedPayload'
+        $ref: '#/components/schemas/OrderDeletedPayload'
 
     # ── US-09: return.updated ────────────────
     ReturnUpdated:
@@ -905,7 +905,7 @@ components:
       traits:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
-        $ref: '#/components/schemas/EntityDeletedPayload'
+        $ref: '#/components/schemas/ReturnDeletedPayload'
 
     # ── US-09: return.created (Сайт → 1С) ────
     ReturnCreatedFromSite:
@@ -945,7 +945,7 @@ components:
       traits:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
-        $ref: '#/components/schemas/EntityDeletedPayload'
+        $ref: '#/components/schemas/ShipmentDeletedPayload'
 
     # ── US-11: balance.updated ───────────────
     BalanceUpdated:
@@ -1060,8 +1060,8 @@ components:
         - 'KZT'
         - 'BYN'
 
-    # ── Удаление сущности (общий) ────────────
-    EntityDeletedPayload:
+    # ── Удаление сущностей ─────────────────────
+    PartnerDeletedPayload:
       type: object
       required:
         - event
@@ -1070,6 +1070,7 @@ components:
       properties:
         event:
           type: string
+          const: partner.deleted
           description: Тип события
         message_id:
           type: string
@@ -1077,26 +1078,72 @@ components:
         uuid:
           $ref: '#/components/schemas/UUID'
       examples:
-        - summary: Удаление партнёра
-          value:
-            event: partner.deleted
-            message_id: msg-partner-del-a1b2c3d4
-            uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
-        - summary: Удаление заказа
-          value:
-            event: order.deleted
-            message_id: msg-order-del-o1a2b3c4
-            uuid: o1a2b3c4-d5e6-7890-abcd-ef1234567890
-        - summary: Удаление возврата
-          value:
-            event: return.deleted
-            message_id: msg-return-del-r1a2b3c4
-            uuid: r1a2b3c4-d5e6-7890-abcd-ef1234567890
-        - summary: Удаление реализации
-          value:
-            event: shipment.deleted
-            message_id: msg-shipment-del-s1a2b3c4
-            uuid: s1a2b3c4-d5e6-7890-abcd-ef1234567890
+        - event: partner.deleted
+          message_id: msg-partner-del-a1b2c3d4
+          uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+
+    OrderDeletedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: order.deleted
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          $ref: '#/components/schemas/UUID'
+      examples:
+        - event: order.deleted
+          message_id: msg-order-del-o1a2b3c4
+          uuid: o1a2b3c4-d5e6-7890-abcd-ef1234567890
+
+    ReturnDeletedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: return.deleted
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          $ref: '#/components/schemas/UUID'
+      examples:
+        - event: return.deleted
+          message_id: msg-return-del-r1a2b3c4
+          uuid: r1a2b3c4-d5e6-7890-abcd-ef1234567890
+
+    ShipmentDeletedPayload:
+      type: object
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: shipment.deleted
+          description: Тип события
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          $ref: '#/components/schemas/UUID'
+      examples:
+        - event: shipment.deleted
+          message_id: msg-shipment-del-s1a2b3c4
+          uuid: s1a2b3c4-d5e6-7890-abcd-ef1234567890
 
     # ── US-02: Партнёры ──────────────────────
     PartnerCreatedFromErpPayload:
