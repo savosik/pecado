@@ -9,6 +9,10 @@ use App\Models\ProductExport;
  * Подходит для: 1С-Битрикс, InSales, Prom.ua, Яндекс.Маркет, OpenCart (через модули).
  *
  * Спецификация: https://yandex.ru/support/merchants/yml/
+ *
+ * Использует chunk-подход для обработки больших каталогов (~10k+ товаров)
+ * без переполнения памяти. XMLWriter пишет в память и периодически
+ * сбрасывается в файловый поток.
  */
 class YmlPreset extends AbstractPreset
 {
@@ -22,11 +26,10 @@ class YmlPreset extends AbstractPreset
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $data = $this->fetchRichData($export);
         $categories = $this->fetchCategories();
 
         $xml = new \XMLWriter();
-        $xml->openURI('php://output');
+        $xml->openMemory();
         $xml->startDocument('1.0', 'UTF-8');
         $xml->setIndent(true);
         $xml->setIndentString('  ');
@@ -61,83 +64,94 @@ class YmlPreset extends AbstractPreset
         }
         $xml->endElement(); // categories
 
+        // Сбросить заголовочную часть в поток
+        fwrite($stream, $xml->flush(true));
+
         // <offers>
         $xml->startElement('offers');
+        fwrite($stream, $xml->flush(true));
 
-        foreach ($data as $item) {
-            $xml->startElement('offer');
-            $xml->writeAttribute('id', (string) $item['id']);
-            $xml->writeAttribute('available', $item['stock'] > 0 ? 'true' : 'false');
+        // Обработка товаров чанками
+        $this->eachChunk($export, function ($items) use ($stream, $xml) {
+            foreach ($items as $item) {
+                $xml->startElement('offer');
+                $xml->writeAttribute('id', (string) $item['id']);
+                $xml->writeAttribute('available', $item['stock'] > 0 ? 'true' : 'false');
 
-            $xml->writeElement('name', $item['name']);
+                $xml->writeElement('name', $item['name']);
 
-            if ($item['url']) {
-                $xml->writeElement('url', $item['url']);
-            }
-
-            $xml->writeElement('price', (string) $item['price']);
-            $xml->writeElement('currencyId', 'RUR');
-
-            if ($item['category_id']) {
-                $xml->writeElement('categoryId', (string) $item['category_id']);
-            }
-
-            // Картинки
-            if ($item['main_image']) {
-                $xml->writeElement('picture', $item['main_image']);
-            }
-            foreach ($item['additional_images'] as $imgUrl) {
-                $xml->writeElement('picture', $imgUrl);
-            }
-
-            if ($item['brand_name']) {
-                $xml->writeElement('vendor', $item['brand_name']);
-            }
-
-            if ($item['sku']) {
-                $xml->writeElement('vendorCode', $item['sku']);
-            }
-
-            if (!empty($item['barcodes'])) {
-                foreach ($item['barcodes'] as $bc) {
-                    $xml->writeElement('barcode', $bc);
+                if ($item['url']) {
+                    $xml->writeElement('url', $item['url']);
                 }
-            } elseif ($item['barcode']) {
-                $xml->writeElement('barcode', $item['barcode']);
-            }
 
-            if ($item['description']) {
-                $xml->startElement('description');
-                $xml->writeCdata($item['description']);
-                $xml->endElement();
-            }
+                $xml->writeElement('price', (string) $item['price']);
+                $xml->writeElement('currencyId', 'RUR');
 
-            if ($item['model_name']) {
-                $xml->writeElement('model', $item['model_name']);
-            }
-
-            // Количество на складе
-            $xml->writeElement('count', (string) $item['stock']);
-
-            // Все атрибуты как <param>
-            foreach ($item['attributes'] as $attr) {
-                $xml->startElement('param');
-                $xml->writeAttribute('name', $attr['name']);
-                if ($attr['unit']) {
-                    $xml->writeAttribute('unit', $attr['unit']);
+                if ($item['category_id']) {
+                    $xml->writeElement('categoryId', (string) $item['category_id']);
                 }
-                $xml->text($attr['value']);
-                $xml->endElement();
+
+                // Картинки
+                if ($item['main_image']) {
+                    $xml->writeElement('picture', $item['main_image']);
+                }
+                foreach ($item['additional_images'] as $imgUrl) {
+                    $xml->writeElement('picture', $imgUrl);
+                }
+
+                if ($item['brand_name']) {
+                    $xml->writeElement('vendor', $item['brand_name']);
+                }
+
+                if ($item['sku']) {
+                    $xml->writeElement('vendorCode', $item['sku']);
+                }
+
+                if (!empty($item['barcodes'])) {
+                    foreach ($item['barcodes'] as $bc) {
+                        $xml->writeElement('barcode', $bc);
+                    }
+                } elseif ($item['barcode']) {
+                    $xml->writeElement('barcode', $item['barcode']);
+                }
+
+                if ($item['description']) {
+                    $xml->startElement('description');
+                    $xml->writeCdata($item['description']);
+                    $xml->endElement();
+                }
+
+                if ($item['model_name']) {
+                    $xml->writeElement('model', $item['model_name']);
+                }
+
+                // Количество на складе
+                $xml->writeElement('count', (string) $item['stock']);
+
+                // Все атрибуты как <param>
+                foreach ($item['attributes'] as $attr) {
+                    $xml->startElement('param');
+                    $xml->writeAttribute('name', $attr['name']);
+                    if ($attr['unit']) {
+                        $xml->writeAttribute('unit', $attr['unit']);
+                    }
+                    $xml->text($attr['value']);
+                    $xml->endElement();
+                }
+
+                $xml->endElement(); // offer
+
+                // Сбрасываем буфер каждого товара в поток
+                fwrite($stream, $xml->flush(true));
             }
+        });
 
-            $xml->endElement(); // offer
-        }
-
+        // Закрываем </offers>, </shop>, </yml_catalog>
         $xml->endElement(); // offers
         $xml->endElement(); // shop
         $xml->endElement(); // yml_catalog
-
         $xml->endDocument();
-        $xml->flush();
+
+        fwrite($stream, $xml->flush(true));
     }
 }
