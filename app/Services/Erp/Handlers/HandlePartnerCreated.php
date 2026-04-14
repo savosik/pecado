@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Region;
 use App\Models\Currency;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 /**
  * US-02 v11: Обработка события partner.created из 1С.
@@ -37,6 +38,9 @@ class HandlePartnerCreated
         $name     = $payload['name'] ?? null;
 
         $phone    = $payload['phone']    ?? null;
+        if ($phone !== null) {
+            $phone = Str::limit(trim($phone), 252); // varchar(255) с запасом
+        }
         $password = $payload['password'] ?? null;
 
         $city     = $payload['city'] ?? null;
