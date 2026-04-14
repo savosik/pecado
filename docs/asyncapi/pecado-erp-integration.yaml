@@ -334,10 +334,10 @@ operations:
       При получении:
       - Ищет пользователя по `erp_id` (UUID)
       - Фолбэк: ищет по `email`/`login` → привязывает `erp_id`
-      - Обновляет переданные атрибуты: `name`, `phone`, `city`, `region`, `country`
+      - Обновляет переданные атрибуты: `name`, `phone`, `city`, `country`
       - Обрабатывает `is_active` → статус пользователя
       - Обрабатывает `client_status` → привязка `ClientStatus`
-      - Не содержит `password` — пароль не меняется
+      - Не содержит `password`, `currency`, `region`
     action: receive
     channel:
       $ref: '#/channels/erpInPartners'
@@ -1236,18 +1236,8 @@ components:
           description: Город из фактического адреса
           examples:
             - 'Екатеринбург'
-        region:
-          type:
-            - string
-            - 'null'
-          description: Регион из фактического адреса
-          examples:
-            - 'Свердловская область'
         country:
           $ref: '#/components/schemas/CountryCode'
-        currency:
-          type: string
-          description: "Валюта (игнорируется, определяется через регион)"
         is_active:
           type: boolean
           description: "Активность партнёра: true — активен, false — заблокирован"
@@ -1282,7 +1272,6 @@ components:
         - email
         - password
         - country
-        - currency
         - is_active
       properties:
         event:
@@ -1332,19 +1321,8 @@ components:
           description: Город из фактического адреса
           examples:
             - 'Екатеринбург'
-        region:
-          type:
-            - string
-            - 'null'
-          description: Регион из фактического адреса
-          examples:
-            - 'Свердловская область'
         country:
           $ref: '#/components/schemas/CountryCode'
-        currency:
-          type: string
-          const: RUB
-          description: "Валюта, всегда \"RUB\""
         is_active:
           type: boolean
           description: "Активность партнёра: true — активен, false — закрылся (v10)"

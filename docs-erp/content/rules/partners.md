@@ -1,6 +1,6 @@
 # Партнёры
 
-> **JSON Schema:** [`partner.created.json`](/docs/erp/schemas/partner.created.json) | [`partner.updated.json`](/docs/erp/schemas/partner.updated.json) | [`partner.created.to_erp.json`](/docs/erp/schemas/partner.created.to_erp.json) | [`partner.deleted.json`](/docs/erp/schemas/partner.deleted.json)  
+> **JSON Schema:** [`partner.created.json`](/docs/erp/schemas/partner.created.json) | [`partner.updated.json`](/docs/erp/schemas/partner.updated.json) | [`partner.created.to_erp.json`](/docs/erp/schemas/partner.created.to_erp.json) | [`partner.deleted.json`](/docs/erp/schemas/partner.deleted.json)
 > **AsyncAPI:** [Полная спецификация](/docs/erp/spec.yaml)
 
 ## Направления обмена
@@ -58,13 +58,17 @@
 | `phone` | `phone` | Телефон |
 | `city` | `city` | Город |
 | `country` | `country` | ISO alpha-2 код страны (нормализация) |
-| `region` | `region_id` | Регион → `Region.name` |
 | `is_active` | `status` | `true` → ACTIVE, `false` → BLOCKED |
 | `client_status` | `client_status_id` | Код → `ClientStatus.external_id` |
+
+!!! info "Поля, не передаваемые в partner.updated"
+    `currency` — определяется через регион пользователя, не передаётся из 1С.
+    `region` — 1С не присылает регион, привязка региона выполняется на стороне сайта.
 
 ### Версионные изменения
 
 - **(v12)** Новое событие `partner.updated` — выделено из `partner.created` как самостоятельное событие для обновления атрибутов
+- **(v12)** Удалены поля `currency` и `region` из входящих событий партнёра
 
 ### Критерии приёмки
 

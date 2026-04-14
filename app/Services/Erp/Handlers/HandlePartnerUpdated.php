@@ -6,7 +6,6 @@ use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
 use App\Models\ClientStatus;
 use App\Models\User;
-use App\Models\Region;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -114,21 +113,7 @@ class HandlePartnerUpdated
             $updateData['country'] = $this->normalizeCountry($payload['country']);
         }
 
-        // region
-        if (isset($payload['region'])) {
-            $regionId = Region::where('name', $payload['region'])->value('id');
-            if ($regionId) {
-                $updateData['region_id'] = $regionId;
-            }
-        }
 
-        // currency — игнорируется (определяется через регион)
-        if (isset($payload['currency'])) {
-            Log::info('partner.updated: валюта из 1С игнорируется, определяется через регион', [
-                'currency' => $payload['currency'],
-                'user_id'  => $user->id,
-            ]);
-        }
 
         // is_active → UserStatus
         if (array_key_exists('is_active', $payload)) {

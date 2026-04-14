@@ -22,6 +22,11 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 - `partner.updated` используется для обновления атрибутов существующего партнёра (ранее это было через повторный `partner.created`)
 - Тест-план: кейсы обновления партнёра переведены на `partner.updated`
 
+### Удалено
+
+- Поле `currency` из входящих событий `partner.created` и `partner.updated` — валюта определяется через регион пользователя
+- Поле `region` из входящих событий `partner.created` и `partner.updated` — 1С не присылает регион
+
 ---
 
 ## [11.0.0] — 2026-04-08

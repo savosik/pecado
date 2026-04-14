@@ -6,8 +6,6 @@ use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
 use App\Models\ClientStatus;
 use App\Models\User;
-use App\Models\Region;
-use App\Models\Currency;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -46,22 +44,6 @@ class HandlePartnerCreated
         $city     = $payload['city'] ?? null;
         $country  = $this->normalizeCountry($payload['country'] ?? null);
 
-        $regionName = $payload['region'] ?? null;
-        $currencyCode = $payload['currency'] ?? null;
-
-        $regionId = null;
-        if ($regionName) {
-            $regionId = Region::where('name', $regionName)->value('id');
-        }
-
-        // Валюта из 1С не привязывается к пользователю — определяется через регион
-        if ($currencyCode) {
-            Log::info('partner.created: валюта из 1С игнорируется, определяется через регион', [
-                'currency' => $currencyCode,
-                'region'   => $regionName,
-            ]);
-        }
-
         // v11: is_active (boolean) → UserStatus
         $isActive = $payload['is_active'] ?? true;
         $userStatus = $isActive ? UserStatus::ACTIVE : UserStatus::BLOCKED;
@@ -79,13 +61,12 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $city, $country, $regionId, $phone, $userStatus, $clientStatusId) {
+            User::withoutEvents(function () use ($user, $uuid, $city, $country, $phone, $userStatus, $clientStatusId) {
                 $updateData = array_filter([
                     'erp_id'      => $uuid,
                     'status'      => $userStatus,
                     'city'        => $city,
                     'country'     => $country,
-                    'region_id'   => $regionId,
                     'phone'       => $phone,
                 ], fn($v) => $v !== null);
 
@@ -147,7 +128,6 @@ class HandlePartnerCreated
             'name'                 => $name ?? $login,
             'city'                 => $city,
             'country'              => $country,
-            'region_id'            => $regionId,
             'email'                => $email,
             'phone'                => $phone,
             'password'             => $password,
