@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\OrderStatus;
@@ -20,7 +21,8 @@ class ClientApiController extends Controller
 {
     public function __construct(
         protected PriceServiceInterface $priceService,
-        protected StockServiceInterface $stockService
+        protected StockServiceInterface $stockService,
+        protected UserCurrencyResolverInterface $currencyResolver
     ) {}
 
     /**
@@ -178,8 +180,11 @@ class ClientApiController extends Controller
             ], 422);
         }
 
+        // Валюта пользователя (как в CheckoutService)
+        $currency = $this->currencyResolver->resolve($user);
+
         // Создать заказ
-        $order = DB::transaction(function () use ($user, $company, $deliveryAddress, $validated, $resolvedProducts) {
+        $order = DB::transaction(function () use ($user, $company, $deliveryAddress, $validated, $resolvedProducts, $currency) {
             $order = Order::create([
                 'user_id' => $user->id,
                 'company_id' => $company->id,
@@ -188,7 +193,9 @@ class ClientApiController extends Controller
                 'type' => OrderType::ORDER,
                 'comment' => $validated['comment'] ?? null,
                 'total_amount' => 0,
-                'currency_code' => 'RUB',
+                'exchange_rate' => $currency?->exchange_rate ?? 1.0,
+                'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
+                'currency_code' => $currency?->code ?? 'RUB',
             ]);
 
             $totalAmount = 0;
