@@ -9,6 +9,3 @@ Artisan::command('inspire', function () {
 
 Schedule::command('currency:update')->daily();
 Schedule::command('app:clean-price-dumps')->dailyAt('04:00');
-
-// Регенерация кэшей стандартных выгрузок каждые 4 часа
-Schedule::job(new \App\Jobs\RegeneratePresetExportsJob)->everyFourHours();

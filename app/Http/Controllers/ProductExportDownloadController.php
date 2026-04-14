@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\RegenerateSinglePresetExportJob;
 use App\Models\ProductExport;
 use App\Services\ProductExport\Presets\PresetRegistry;
 use App\Services\ProductExportService;
@@ -36,17 +37,39 @@ class ProductExportDownloadController extends Controller
     }
 
     /**
-     * Обработка скачивания пресетной выгрузки с поддержкой кэширования.
+     * Стратегия ленивой регенерации:
+     *
+     * 1) Свежий кэш (< 4 часов) → отдаём мгновенно
+     * 2) Стаалый кэш (файл есть, но > 4 часов) → отдаём стаалый + ставим фоновую регенерацию
+     * 3) Нет кэша вообще (первый запрос) → генерируем синхронно, сохраняем, отдаём
+     *
+     * Защита от шторма запросов:
+     * - WithoutOverlapping в Job → один export_id = один Job в очереди
+     * - Очередь 'exports' с 1 воркером → генерация сериализована
+     * - Атомарная замена файла (rename) → читатели не получат полу-файл
      */
     protected function handlePresetDownload(ProductExport $export)
     {
         $preset = $this->presetRegistry->resolve($export->preset);
         abort_if(!$preset, 404, 'Формат выгрузки не найден.');
 
-        // Проверяем свежесть кэша (4 часа)
-        if ($export->hasFreshCache(4)) {
-            $filePath = $export->getCacheFilePath();
-            $filename = "export_{$preset->key()}_" . now()->format('Y-m-d') . ".{$preset->fileExtension()}";
+        $filePath = $export->getCacheFilePath();
+        $filename = "export_{$preset->key()}_" . now()->format('Y-m-d') . ".{$preset->fileExtension()}";
+        $hasCacheFile = file_exists($filePath) && filesize($filePath) > 0;
+
+        // Случай 1: Свежий кэш — отдаём мгновенно
+        if ($export->hasFreshCache(4) && $hasCacheFile) {
+            $export->update(['last_downloaded_at' => now()]);
+
+            return response()->download($filePath, $filename, [
+                'Content-Type' => $preset->mimeType(),
+            ]);
+        }
+
+        // Случай 2: Стаалый кэш (файл есть, но устарел или cached_at пустой)
+        if ($hasCacheFile) {
+            // Ставим фоновую регенерацию (WithoutOverlapping не даст создать дубль)
+            RegenerateSinglePresetExportJob::dispatch($export->id);
 
             $export->update(['last_downloaded_at' => now()]);
 
@@ -55,14 +78,9 @@ class ProductExportDownloadController extends Controller
             ]);
         }
 
-        // Генерируем и кэшируем
+        // Случай 3: Нет кэша вообще — генерируем синхронно (только первый раз)
         $this->generateAndCache($export, $preset);
-
         $export->update(['last_downloaded_at' => now()]);
-
-        // Отдаём кэшированный файл
-        $filePath = $export->getCacheFilePath();
-        $filename = "export_{$preset->key()}_" . now()->format('Y-m-d') . ".{$preset->fileExtension()}";
 
         return response()->download($filePath, $filename, [
             'Content-Type' => $preset->mimeType(),
@@ -70,7 +88,8 @@ class ProductExportDownloadController extends Controller
     }
 
     /**
-     * Генерирует файл пресета и сохраняет в кэш.
+     * Генерирует файл пресета и сохраняет в кэш (синхронно).
+     * Используется только при первом скачивании, когда файла ещё нет.
      */
     protected function generateAndCache(ProductExport $export, $preset): void
     {
