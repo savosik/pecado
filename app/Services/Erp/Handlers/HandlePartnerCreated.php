@@ -54,9 +54,12 @@ class HandlePartnerCreated
             $regionId = Region::where('name', $regionName)->value('id');
         }
 
-        $currencyId = null;
+        // Валюта из 1С не привязывается к пользователю — определяется через регион
         if ($currencyCode) {
-            $currencyId = Currency::where('code', $currencyCode)->value('id');
+            Log::info('partner.created: валюта из 1С игнорируется, определяется через регион', [
+                'currency' => $currencyCode,
+                'region'   => $regionName,
+            ]);
         }
 
         // v11: is_active (boolean) → UserStatus
@@ -76,14 +79,13 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $city, $country, $regionId, $currencyId, $phone, $userStatus, $clientStatusId) {
+            User::withoutEvents(function () use ($user, $uuid, $city, $country, $regionId, $phone, $userStatus, $clientStatusId) {
                 $updateData = array_filter([
                     'erp_id'      => $uuid,
                     'status'      => $userStatus,
                     'city'        => $city,
                     'country'     => $country,
                     'region_id'   => $regionId,
-                    'currency_id' => $currencyId,
                     'phone'       => $phone,
                 ], fn($v) => $v !== null);
 
@@ -146,7 +148,6 @@ class HandlePartnerCreated
             'city'                 => $city,
             'country'              => $country,
             'region_id'            => $regionId,
-            'currency_id'          => $currencyId,
             'email'                => $email,
             'phone'                => $phone,
             'password'             => $password,

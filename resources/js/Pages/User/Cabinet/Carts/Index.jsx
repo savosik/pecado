@@ -3,7 +3,7 @@ import {
     Box, Flex, Text, Card, HStack, VStack, Badge, Button,
     IconButton, Table, Input, Dialog, Portal,
 } from '@chakra-ui/react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import {
     LuPlus, LuEye, LuTrash2, LuShoppingCart, LuStar,
@@ -13,6 +13,8 @@ import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
 
 export default function Index({ carts = [], cartsCount = 0 }) {
+    const { currency } = usePage().props;
+    const currencyCode = currency?.code || 'RUB';
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState('');
 
@@ -25,7 +27,7 @@ export default function Index({ carts = [], cartsCount = 0 }) {
     const [deleteCart, setDeleteCart] = useState(null);
 
     const formatPrice = (val) =>
-        new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', minimumFractionDigits: 0 }).format(val || 0);
+        new Intl.NumberFormat('ru-RU', { style: 'currency', currency: currencyCode, minimumFractionDigits: 0 }).format(val || 0);
 
     // === Create ===
     const openCreateDialog = () => {

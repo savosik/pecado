@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Currency;
 use App\Models\Category;
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
@@ -55,12 +54,9 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'currency' => $request->user() ? fn () => [
-                'code'   => $request->user()->currency?->code ?? 'RUB',
-                'name'   => $request->user()->currency?->name ?? 'Российский рубль',
-                'symbol' => $request->user()->currency?->symbol ?? '₽',
-                'available' => Cache::remember('currencies.list', 3600,
-                    fn () => Currency::select('id', 'code', 'name', 'symbol')->get()
-                ),
+                'code'   => $request->user()->region?->currency?->code ?? 'RUB',
+                'name'   => $request->user()->region?->currency?->name ?? 'Российский рубль',
+                'symbol' => $request->user()->region?->currency?->symbol ?? '₽',
             ] : null,
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

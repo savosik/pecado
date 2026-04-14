@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Currency;
 use App\Models\Region;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class RegionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Region::query()->with(['primaryWarehouses', 'preorderWarehouses']);
+        $query = Region::query()->with(['primaryWarehouses', 'preorderWarehouses', 'currency']);
 
         if ($request->has('search')) {
             $query->where('name', 'like', '%' . $request->search . '%');
@@ -46,6 +47,7 @@ class RegionController extends Controller
     {
         return Inertia::render('Admin/Pages/Regions/Create', [
             'warehouses' => Warehouse::all(),
+            'currencies' => Currency::select('id', 'code', 'name', 'symbol')->orderBy('code')->get(),
         ]);
     }
 
@@ -56,13 +58,17 @@ class RegionController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'currency_id' => 'nullable|exists:currencies,id',
             'primary_warehouse_ids' => 'nullable|array',
             'primary_warehouse_ids.*' => 'exists:warehouses,id',
             'preorder_warehouse_ids' => 'nullable|array',
             'preorder_warehouse_ids.*' => 'exists:warehouses,id',
         ]);
 
-        $region = Region::create(['name' => $validated['name']]);
+        $region = Region::create([
+            'name' => $validated['name'],
+            'currency_id' => $validated['currency_id'] ?? null,
+        ]);
 
         $this->syncWarehouses($region, $request->input('primary_warehouse_ids', []), 'primary');
         $this->syncWarehouses($region, $request->input('preorder_warehouse_ids', []), 'preorder');
@@ -75,11 +81,12 @@ class RegionController extends Controller
      */
     public function edit(Region $region)
     {
-        $region->load(['primaryWarehouses', 'preorderWarehouses']);
+        $region->load(['primaryWarehouses', 'preorderWarehouses', 'currency']);
 
         return Inertia::render('Admin/Pages/Regions/Edit', [
             'region' => $region,
             'warehouses' => Warehouse::all(),
+            'currencies' => Currency::select('id', 'code', 'name', 'symbol')->orderBy('code')->get(),
         ]);
     }
 
@@ -90,13 +97,17 @@ class RegionController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'currency_id' => 'nullable|exists:currencies,id',
             'primary_warehouse_ids' => 'nullable|array',
             'primary_warehouse_ids.*' => 'exists:warehouses,id',
             'preorder_warehouse_ids' => 'nullable|array',
             'preorder_warehouse_ids.*' => 'exists:warehouses,id',
         ]);
 
-        $region->update(['name' => $validated['name']]);
+        $region->update([
+            'name' => $validated['name'],
+            'currency_id' => $validated['currency_id'] ?? null,
+        ]);
 
         $this->syncWarehouses($region, $request->input('primary_warehouse_ids', []), 'primary');
         $this->syncWarehouses($region, $request->input('preorder_warehouse_ids', []), 'preorder');

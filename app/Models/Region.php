@@ -12,6 +12,7 @@ class Region extends Model
 
     protected $fillable = [
         'name',
+        'currency_id',
     ];
 
     /**
@@ -20,6 +21,14 @@ class Region extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * Get the currency for the region.
+     */
+    public function currency(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Currency::class);
     }
 
     /**

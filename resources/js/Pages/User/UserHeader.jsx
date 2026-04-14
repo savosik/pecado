@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
 import { useCartStore } from '@/stores/useCartStore';
 import CatalogPanel from './CatalogPanel';
-import CurrencySwitcher from './Components/CurrencySwitcher';
+
 import CartDropdown from '@/shared/CartDropdown';
 import Search from '@/shared/Search';
 import HeaderIconButton from '@/components/common/HeaderIconButton';
@@ -105,7 +105,7 @@ export default function UserHeader() {
 
                         {/* Desktop Actions — lg+ */}
                         <HStack as="nav" gap="2" display={{ base: 'none', lg: 'flex' }} flexShrink="0">
-                            {user && <CurrencySwitcher />}
+
                             {user && (
                                 <>
                                     <Link href="/favorites" aria-label="Избранное">
@@ -305,9 +305,7 @@ export default function UserHeader() {
                                                 <Text fontWeight="600" fontSize="sm">{user.name}</Text>
                                                 <Text fontSize="xs" color="gray.500">{user.email}</Text>
                                             </Box>
-                                            <Box mb="2">
-                                                <CurrencySwitcher />
-                                            </Box>
+
                                         </>
                                     ) : (
                                         <HStack gap="2" mb="2">

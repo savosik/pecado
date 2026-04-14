@@ -49,6 +49,11 @@ const RegionsIndex = ({ filters }) => {
         { label: "ID", key: "id", sortable: true },
         { label: "Название", key: "name", sortable: true },
         {
+            label: "Валюта",
+            key: "currency",
+            render: (currency) => currency ? `${currency.code} (${currency.symbol})` : '—',
+        },
+        {
             label: "Основные склады",
             key: "primary_warehouses",
             render: (warehouses) => (

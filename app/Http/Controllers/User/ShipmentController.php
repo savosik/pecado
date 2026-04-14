@@ -218,12 +218,11 @@ class ShipmentController extends Controller
     }
 
     /**
-     * Получить текущую валюту из сессии (как в других контроллерах).
+     * Получить текущую валюту пользователя через регион.
      */
     private function getUserCurrency(Request $request): ?Currency
     {
-        $currencyCode = session('currency_code', 'RUB');
-        return Currency::where('code', $currencyCode)->first();
+        return $request->user()?->region?->currency;
     }
 
     /**

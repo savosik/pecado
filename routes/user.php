@@ -9,7 +9,6 @@ use App\Http\Controllers\User\BankAccountController;
 use App\Http\Controllers\User\FavoriteController;
 use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CheckoutController;
-use App\Http\Controllers\User\CurrencyController;
 use App\Http\Controllers\User\FaqController;
 use App\Http\Controllers\User\NewsController;
 use App\Http\Controllers\User\ArticleController;
@@ -95,9 +94,6 @@ Route::prefix('api')->middleware('auth')->group(function () {
     Route::post('/cart/carts/{cart}/switch', [CartController::class, 'apiSwitch']);
     Route::patch('/cart/carts/{cart}', [CartController::class, 'apiUpdate']);
     Route::delete('/cart/carts/{cart}', [CartController::class, 'apiDestroy']);
-
-    // Валюта
-    Route::post('/currency/switch', [CurrencyController::class, 'switch']);
 
     // История поиска
     Route::get('/search/history', [SearchController::class, 'history']);

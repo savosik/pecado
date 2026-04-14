@@ -10,6 +10,7 @@ const businessTypeLabels = {
     online_store: 'Интернет-магазин',
     marketplace: 'Маркетплейс',
     showroom: 'Шоурум',
+    wholesale: 'Оптовый закупщик',
     other: 'Другое',
 };
 

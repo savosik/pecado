@@ -28,11 +28,25 @@ class ClientApiController extends Controller
     /**
      * GET /api/client-api/{token}/prices
      * Получить цены пользователя.
+     *
+     * Цены конвертируются в валюту региона пользователя.
+     * Опциональный GET-параметр ?currency=BYN для явного указания валюты.
      */
     public function prices(Request $request, string $token): JsonResponse
     {
         $apiToken = $this->resolveToken($token);
         $user = $apiToken->user;
+
+        // Определяем целевую валюту: явный параметр или валюта региона
+        $currency = null;
+        if ($currencyCode = $request->query('currency')) {
+            $currency = \App\Models\Currency::where('code', $currencyCode)->first();
+        }
+        if (!$currency) {
+            $currency = $this->currencyResolver->resolve($user);
+        }
+
+        $currencyService = app(\App\Services\CurrencyService::class);
 
         $perPage = min((int) $request->input('per_page', 500), 1000);
 
@@ -41,8 +55,17 @@ class ClientApiController extends Controller
             ->orderBy('id')
             ->paginate($perPage);
 
-        $data = $products->getCollection()->map(function (Product $product) use ($user) {
+        $data = $products->getCollection()->map(function (Product $product) use ($user, $currency, $currencyService) {
             $priceResult = $this->priceService->getPriceResult($product, $user);
+
+            $basePrice = round($priceResult->basePrice, 2);
+            $displayPrice = round($priceResult->getDisplayPrice(), 2);
+
+            // Конвертация в целевую валюту
+            if ($currency && !$currency->is_base) {
+                $basePrice = $currencyService->convertFromBase($basePrice, $currency);
+                $displayPrice = $currencyService->convertFromBase($displayPrice, $currency);
+            }
 
             return [
                 'uuid' => $product->external_id,
@@ -50,8 +73,8 @@ class ClientApiController extends Controller
                 'sku' => $product->sku,
                 'barcode' => $product->barcode,
                 'name' => $product->name,
-                'base_price' => round($priceResult->basePrice, 2),
-                'price' => round($priceResult->getDisplayPrice(), 2),
+                'base_price' => $basePrice,
+                'price' => $displayPrice,
             ];
         });
 
@@ -62,6 +85,8 @@ class ClientApiController extends Controller
                 'last_page' => $products->lastPage(),
                 'per_page' => $products->perPage(),
                 'total' => $products->total(),
+                'currency_code' => $currency?->code ?? 'RUB',
+                'currency_symbol' => $currency?->symbol ?? '₽',
             ],
         ]);
     }

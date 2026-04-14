@@ -17,17 +17,24 @@ const businessTypes = [
 
 const yearsOptions = [
     { value: 'less_1', label: 'Менее 1 года' },
-    { value: '1_3', label: '1-3 года' },
-    { value: '3_5', label: '3-5 лет' },
-    { value: '5_plus', label: '5+ лет' },
+    { value: '1_3', label: '1–3 года' },
+    { value: '3_5', label: '3–5 лет' },
+    { value: '5_plus', label: 'Более 5 лет' },
 ];
 
 const volumeOptions = [
     { value: 'under_50k', label: 'До 50 000 ₽' },
-    { value: '50k_200k', label: '50 000 — 200 000 ₽' },
-    { value: '200k_500k', label: '200 000 — 500 000 ₽' },
-    { value: '500k_1m', label: '500 000 — 1 000 000 ₽' },
-    { value: 'over_1m', label: 'Более 1 000 000 ₽' },
+    { value: '50k_200k', label: '50 – 200 тыс. ₽' },
+    { value: '200k_500k', label: '200 – 500 тыс. ₽' },
+    { value: '500k_1m', label: '500 тыс. – 1 млн ₽' },
+    { value: 'over_1m', label: 'Более 1 млн ₽' },
+];
+
+const storeCountOptions = [
+    { value: '1', label: '1' },
+    { value: '2_5', label: '2–5' },
+    { value: '6_10', label: '6–10' },
+    { value: '10_plus', label: 'Более 10' },
 ];
 
 const howFoundOptions = [
@@ -52,7 +59,7 @@ const selectStyles = {
     _focus: { borderColor: 'blue.500', outline: 'none' },
 };
 
-export default function Create({ selectedUser, users }) {
+export default function Create({ selectedUser, users, rootCategories = [] }) {
     const { data, setData, post, processing, errors } = useForm({
         user_id: selectedUser?.id || '',
         business_type: [],
@@ -90,6 +97,15 @@ export default function Create({ selectedUser, users }) {
         });
     };
 
+    const toggleCategory = (catName) => {
+        const cats = data.product_categories || [];
+        if (cats.includes(catName)) {
+            setData('product_categories', cats.filter((c) => c !== catName));
+        } else {
+            setData('product_categories', [...cats, catName]);
+        }
+    };
+
     return (
         <>
             <PageHeader title="Создать анкету" />
@@ -113,7 +129,7 @@ export default function Create({ selectedUser, users }) {
                             {/* О бизнесе */}
                             <Text fontWeight="bold" fontSize="lg" color="gray.700">О бизнесе</Text>
 
-                            <FormField label="Тип бизнеса" error={errors.business_type}>
+                            <FormField label="Тип бизнеса (множественный выбор)" error={errors.business_type}>
                                 <SimpleGrid columns={{ base: 2, md: 3 }} gap={2}>
                                     {businessTypes.map((t) => (
                                         <Checkbox
@@ -147,7 +163,7 @@ export default function Create({ selectedUser, users }) {
                             <Text fontWeight="bold" fontSize="lg" color="gray.700" mt={2}>Опыт и объёмы</Text>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Опыт работы" error={errors.years_in_business}>
+                                <FormField label="Опыт работы в отрасли" error={errors.years_in_business}>
                                     <Box as="select" value={data.years_in_business} onChange={(e) => setData('years_in_business', e.target.value)} {...selectStyles}>
                                         <option value="">Не указан</option>
                                         {yearsOptions.map((o) => (
@@ -156,7 +172,7 @@ export default function Create({ selectedUser, users }) {
                                     </Box>
                                 </FormField>
 
-                                <FormField label="Ожидаемый объём закупок" error={errors.monthly_order_volume}>
+                                <FormField label="Ожидаемый объём закупок в месяц" error={errors.monthly_order_volume}>
                                     <Box as="select" value={data.monthly_order_volume} onChange={(e) => setData('monthly_order_volume', e.target.value)} {...selectStyles}>
                                         <option value="">Не указан</option>
                                         {volumeOptions.map((o) => (
@@ -166,19 +182,54 @@ export default function Create({ selectedUser, users }) {
                                 </FormField>
                             </SimpleGrid>
 
-                            <FormField label="Физическая точка продаж">
-                                <Checkbox
-                                    checked={data.has_physical_store}
-                                    onCheckedChange={(e) => setData('has_physical_store', e.checked)}
-                                >
-                                    Есть физическая точка
-                                </Checkbox>
-                            </FormField>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                <FormField label="Физическая точка продаж">
+                                    <Checkbox
+                                        checked={data.has_physical_store}
+                                        onCheckedChange={(e) => setData('has_physical_store', e.checked)}
+                                    >
+                                        Есть физическая точка продаж
+                                    </Checkbox>
+                                </FormField>
 
-                            {/* Финал */}
+                                {data.has_physical_store && (
+                                    <FormField label="Сколько торговых точек?" error={errors.store_count}>
+                                        <Box as="select" value={data.store_count} onChange={(e) => setData('store_count', e.target.value)} {...selectStyles}>
+                                            <option value="">Не указано</option>
+                                            {storeCountOptions.map((o) => (
+                                                <option key={o.value} value={o.value}>{o.label}</option>
+                                            ))}
+                                        </Box>
+                                    </FormField>
+                                )}
+                            </SimpleGrid>
+
+                            {/* Категории */}
+                            {rootCategories.length > 0 && (
+                                <>
+                                    <Text fontWeight="bold" fontSize="lg" color="gray.700" mt={2}>Интересующие категории</Text>
+
+                                    <FormField label="Категории товаров" error={errors.product_categories}>
+                                        <SimpleGrid columns={{ base: 2, md: 3, lg: 4 }} gap={2}>
+                                            {rootCategories.map((cat) => (
+                                                <Checkbox
+                                                    key={cat.id}
+                                                    checked={(data.product_categories || []).includes(cat.name)}
+                                                    onCheckedChange={() => toggleCategory(cat.name)}
+                                                    size="sm"
+                                                >
+                                                    {cat.name}
+                                                </Checkbox>
+                                            ))}
+                                        </SimpleGrid>
+                                    </FormField>
+                                </>
+                            )}
+
+                            {/* Дополнительно */}
                             <Text fontWeight="bold" fontSize="lg" color="gray.700" mt={2}>Дополнительно</Text>
 
-                            <FormField label="Как узнали о нас" error={errors.how_found_us}>
+                            <FormField label="Как узнали о Pecado?" error={errors.how_found_us}>
                                 <Box as="select" value={data.how_found_us} onChange={(e) => setData('how_found_us', e.target.value)} {...selectStyles}>
                                     <option value="">Не указано</option>
                                     {howFoundOptions.map((o) => (

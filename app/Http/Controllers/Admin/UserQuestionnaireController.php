@@ -23,9 +23,17 @@ class UserQuestionnaireController extends Controller
             ->orderBy('email')
             ->get(['id', 'name', 'email']);
 
+        // Корневые категории товаров (как в онбординге)
+        $rootCategories = \App\Models\Category::whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->toArray();
+
         return Inertia::render('Admin/Pages/UserQuestionnaires/Create', [
             'selectedUser' => $user ? ['id' => $user->id, 'name' => $user->name, 'email' => $user->email] : null,
             'users' => $usersWithoutQuestionnaire,
+            'rootCategories' => $rootCategories,
         ]);
     }
 
@@ -105,8 +113,16 @@ class UserQuestionnaireController extends Controller
     {
         $userQuestionnaire->load(['user']);
 
+        // Корневые категории товаров (как в онбординге)
+        $rootCategories = \App\Models\Category::whereNull('parent_id')
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->toArray();
+
         return Inertia::render('Admin/Pages/UserQuestionnaires/Edit', [
             'questionnaire' => $userQuestionnaire,
+            'rootCategories' => $rootCategories,
         ]);
     }
 

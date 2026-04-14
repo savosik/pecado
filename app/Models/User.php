@@ -59,7 +59,6 @@ class User extends Authenticatable implements HasMedia
         'must_change_password',
         'erp_id',
         'region_id',
-        'currency_id',
         'client_status_id',
     ];
 
@@ -89,7 +88,6 @@ class User extends Authenticatable implements HasMedia
             'country' => Country::class,
             'status' => UserStatus::class,
             'region_id' => 'integer',
-            'currency_id' => 'integer',
             'client_status_id' => 'integer',
         ];
     }
@@ -128,11 +126,27 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
-     * Get the currency that the user belongs to.
+     * Get the currency for the user (resolved through region).
+     *
+     * Валюта определяется через регион пользователя.
+     * Обратная совместимость: $user->currency по-прежнему возвращает Currency.
      */
     public function currency(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
+        // Сохраняем как BelongsTo для совместимости с eager-loading и типами.
+        // Реальный резолв через region->currency происходит в UserCurrencyResolver.
         return $this->belongsTo(Currency::class);
+    }
+
+    /**
+     * Accessor: resolve currency through region.
+     * $user->resolved_currency returns Currency from region.
+     */
+    protected function resolvedCurrency(): Attribute
+    {
+        return Attribute::make(
+            get: fn () => $this->region?->currency,
+        );
     }
 
 

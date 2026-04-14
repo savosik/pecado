@@ -10,13 +10,12 @@ class UserCurrencyResolver implements UserCurrencyResolverInterface
 {
     /**
      * Resolve the preferred currency for a given user.
+     *
+     * Валюта определяется через регион пользователя: User → Region → Currency.
+     * Пользователь не может переключать валюту вручную.
      */
     public function resolve(User $user): ?Currency
     {
-        if ($user->currency_id) {
-            return $user->currency;
-        }
-
-        return null;
+        return $user->region?->currency;
     }
 }

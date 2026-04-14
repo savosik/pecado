@@ -285,11 +285,11 @@ class ProductQueryService
     public static function convertProductsPrices(array $products): array
     {
         $user = Auth::user();
-        if (!$user || !$user->currency) {
+        if (!$user || !$user->region?->currency) {
             return $products;
         }
 
-        $currency = $user->currency;
+        $currency = $user->region->currency;
         if ($currency->is_base) {
             return $products;
         }

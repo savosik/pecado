@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ user, regions, currencies, countries, statuses, availableRoles, clientStatuses }) {
+export default function Edit({ user, regions, countries, statuses, availableRoles, clientStatuses }) {
     const { data, setData, put, processing, errors, transform } = useForm({
         name: user.name || '',
         email: user.email || '',
@@ -17,7 +17,6 @@ export default function Edit({ user, regions, currencies, countries, statuses, a
         country: user.country || '',
         city: user.city || '',
         region_id: user.region_id || '',
-        currency_id: user.currency_id || '',
         roles: user.role_names || [],
         client_status_id: user.client_status_id || '',
         is_subscribed: user.is_subscribed || false,
@@ -134,29 +133,22 @@ export default function Edit({ user, regions, currencies, countries, statuses, a
                                         <option value="">Выберите регион</option>
                                         {regions.map((region) => (
                                             <option key={region.id} value={region.id}>
-                                                {region.name}
+                                                {region.name}{region.currency ? ` (${region.currency.code})` : ''}
                                             </option>
                                         ))}
                                     </select>
                                 </FormField>
                             </SimpleGrid>
 
-                            <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Валюта" error={errors.currency_id}>
-                                    <select
-                                        value={data.currency_id}
-                                        onChange={(e) => setData('currency_id', e.target.value)}
-                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
-                                    >
-                                        <option value="">Выберите валюту</option>
-                                        {currencies.map((currency) => (
-                                            <option key={currency.id} value={currency.id}>
-                                                {currency.code} - {currency.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </FormField>
-                            </SimpleGrid>
+                            {data.region_id && (() => {
+                                const selectedRegion = regions.find(r => String(r.id) === String(data.region_id));
+                                const currencyName = selectedRegion?.currency ? `${selectedRegion.currency.code} - ${selectedRegion.currency.name}` : 'Не задана';
+                                return (
+                                    <FormField label="Валюта (определяется регионом)">
+                                        <Input value={currencyName} readOnly disabled />
+                                    </FormField>
+                                );
+                            })()}
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Статус клиента" error={errors.client_status_id}>

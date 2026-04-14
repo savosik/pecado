@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\Country;
 use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
-use App\Models\Currency;
 use App\Models\Region;
 use App\Models\User;
 use App\Models\ClientStatus;
@@ -21,7 +20,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $query = User::query()
-            ->with(['region', 'currency', 'roles'])
+            ->with(['region', 'region.currency', 'roles'])
             ->withCount('companies');
 
         // Поиск
@@ -75,8 +74,7 @@ class UserController extends Controller
     public function create()
     {
         return Inertia::render('Admin/Pages/Users/Create', [
-            'regions' => Region::select('id', 'name')->orderBy('name')->get(),
-            'currencies' => Currency::select('id', 'code', 'name')->orderBy('code')->get(),
+            'regions' => Region::select('id', 'name')->with('currency:id,code,name')->orderBy('name')->get(),
             'countries' => collect(Country::cases())->map(fn($country) => [
                 'value' => $country->value,
                 'label' => $country->label(),
@@ -100,7 +98,6 @@ class UserController extends Controller
             'country' => 'nullable|string',
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',
-            'currency_id' => 'nullable|exists:currencies,id',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
             'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),
@@ -122,14 +119,13 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $user->load(['region', 'currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles', 'clientStatus']);
+        $user->load(['region', 'region.currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles', 'clientStatus']);
 
         return Inertia::render('Admin/Pages/Users/Edit', [
             'user' => array_merge($user->toArray(), [
                 'role_names' => $user->getRoleNames()->toArray(),
             ]),
-            'regions' => Region::select('id', 'name')->orderBy('name')->get(),
-            'currencies' => Currency::select('id', 'code', 'name')->orderBy('code')->get(),
+            'regions' => Region::select('id', 'name')->with('currency:id,code,name')->orderBy('name')->get(),
             'countries' => collect(Country::cases())->map(fn($country) => [
                 'value' => $country->value,
                 'label' => $country->label(),
@@ -153,7 +149,6 @@ class UserController extends Controller
             'country' => 'nullable|string',
             'city' => 'nullable|string|max:255',
             'region_id' => 'nullable|exists:regions,id',
-            'currency_id' => 'nullable|exists:currencies,id',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
             'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),

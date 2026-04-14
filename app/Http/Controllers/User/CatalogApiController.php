@@ -170,9 +170,9 @@ class CatalogApiController extends Controller
 
         // Конвертируем цены в валюту пользователя
         $user = Auth::user();
-        if ($user && $user->currency && !$user->currency->is_base) {
+        if ($user && $user->region?->currency && !$user->region->currency->is_base) {
             $currencyService = app(\App\Services\CurrencyService::class);
-            $currency = $user->currency;
+            $currency = $user->region->currency;
 
             $intervals['min'] = $currencyService->convertFromBase($intervals['min'], $currency);
             $intervals['max'] = $currencyService->convertFromBase($intervals['max'], $currency);
@@ -239,13 +239,13 @@ class CatalogApiController extends Controller
             $maxVal = $priceMax !== null ? (float) $priceMax : null;
 
             // Если у пользователя не базовая валюта — конвертируем обратно в базовую
-            if ($user && $user->currency && !$user->currency->is_base) {
+            if ($user && $user->region?->currency && !$user->region->currency->is_base) {
                 $currencyService = app(\App\Services\CurrencyService::class);
                 if ($minVal !== null) {
-                    $minVal = $currencyService->convertToBase($minVal, $user->currency);
+                    $minVal = $currencyService->convertToBase($minVal, $user->region->currency);
                 }
                 if ($maxVal !== null) {
-                    $maxVal = $currencyService->convertToBase($maxVal, $user->currency);
+                    $maxVal = $currencyService->convertToBase($maxVal, $user->region->currency);
                 }
             }
 

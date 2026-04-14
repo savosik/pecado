@@ -27,4 +27,12 @@ class Currency extends Model
         'exchange_rate' => 'decimal:10',
         'exchange_rate_date' => 'date',
     ];
+
+    /**
+     * Get the regions that use this currency.
+     */
+    public function regions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Region::class);
+    }
 }

@@ -265,12 +265,11 @@ class OrderController extends Controller
     }
 
     /**
-     * Получить текущую валюту пользователя из сессии.
+     * Получить текущую валюту пользователя через регион.
      */
     private function getUserCurrency(Request $request): ?Currency
     {
-        $currencyCode = session('currency_code', 'RUB');
-        return Currency::where('code', $currencyCode)->first();
+        return $request->user()?->region?->currency;
     }
 
     /**

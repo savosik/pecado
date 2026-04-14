@@ -1,5 +1,5 @@
 import React, { useRef } from "react";
-import { Box, Button, Input, Stack, Card } from "@chakra-ui/react";
+import { Box, Button, Input, Stack, Card, NativeSelectRoot, NativeSelectField } from "@chakra-ui/react";
 import { Head, useForm, Link } from "@inertiajs/react";
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
@@ -8,9 +8,10 @@ import { FormActions } from "@/Admin/Components/FormActions";
 import { SelectRelation } from "@/Admin/Components/SelectRelation";
 import { toaster } from "@/components/ui/toaster";
 
-const RegionsEdit = ({ region, warehouses }) => {
+const RegionsEdit = ({ region, warehouses, currencies }) => {
     const { data, setData, put, processing, errors , transform } = useForm({
         name: region.name || "",
+        currency_id: region.currency_id || "",
         primary_warehouse_ids: region.primary_warehouses?.map(w => w.id) || [],
         preorder_warehouse_ids: region.preorder_warehouses?.map(w => w.id) || [],
     });
@@ -58,6 +59,22 @@ const RegionsEdit = ({ region, warehouses }) => {
                                     onChange={(e) => setData("name", e.target.value)}
                                     placeholder="Введите название региона"
                                 />
+                            </FormField>
+
+                            <FormField label="Валюта" error={errors.currency_id}>
+                                <NativeSelectRoot>
+                                    <NativeSelectField
+                                        value={data.currency_id}
+                                        onChange={(e) => setData('currency_id', e.target.value)}
+                                    >
+                                        <option value="">— Не выбрана —</option>
+                                        {currencies.map((currency) => (
+                                            <option key={currency.id} value={currency.id}>
+                                                {currency.code} - {currency.name} ({currency.symbol})
+                                            </option>
+                                        ))}
+                                    </NativeSelectField>
+                                </NativeSelectRoot>
                             </FormField>
 
                             <SelectRelation
