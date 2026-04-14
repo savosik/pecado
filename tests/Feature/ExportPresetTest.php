@@ -504,12 +504,25 @@ class ExportPresetTest extends TestCase
 
         $hash = $response->json('hash');
 
-        // Скачиваем (публичный маршрут, без авторизации)
+        // Первый запрос без кеша — 202 (файл формируется в фоне)
         $downloadResponse = $this->get("/export/{$hash}");
-        $downloadResponse->assertStatus(200);
-        $downloadResponse->assertHeader('Content-Type', 'application/xml; charset=utf-8');
+        $downloadResponse->assertStatus(202);
 
-        echo "\n✅ Скачивание YML по hash работает\n";
+        // Эмулируем кеш-файл (как будто job завершился)
+        $export = ProductExport::where('hash', $hash)->first();
+        $cacheDir = dirname($export->getCacheFilePath());
+        if (!is_dir($cacheDir)) { mkdir($cacheDir, 0755, true); }
+        file_put_contents($export->getCacheFilePath(), '<test>cached</test>');
+        $export->update(['cached_at' => now()]);
+
+        // Повторный запрос с кешем — 200
+        $downloadResponse2 = $this->get("/export/{$hash}");
+        $downloadResponse2->assertStatus(200);
+        $downloadResponse2->assertHeader('Content-Type', 'application/xml; charset=utf-8');
+
+        @unlink($export->getCacheFilePath());
+
+        echo "\n✅ Скачивание YML по hash работает (202 → 200 после кеша)\n";
     }
 
     public function test_inactive_preset_returns_404(): void
@@ -533,24 +546,32 @@ class ExportPresetTest extends TestCase
     // Кэширование
     // ═══════════════════════════════════════════════
 
-    public function test_cache_file_is_created_after_download(): void
+    public function test_cache_file_serves_200_after_generation(): void
     {
         $response = $this->actingAs($this->user)
             ->postJson('/cabinet/export-presets/opencart/generate');
 
         $hash = $response->json('hash');
 
-        // Скачиваем — должен создаться кэш
+        // Первый запрос без кеша — 202
+        $this->get("/export/{$hash}")->assertStatus(202);
+
+        // Эмулируем готовый кеш (job завершился)
+        $export = ProductExport::where('hash', $hash)->first();
+        $cacheDir = dirname($export->getCacheFilePath());
+        if (!is_dir($cacheDir)) { mkdir($cacheDir, 0755, true); }
+        file_put_contents($export->getCacheFilePath(), 'id,name\n1,test');
+        $export->update(['cached_at' => now()]);
+
+        // С кешем — 200
         $this->get("/export/{$hash}")->assertOk();
 
-        $export = ProductExport::where('hash', $hash)->first();
-        $this->assertNotNull($export->cached_at, 'cached_at должен быть заполнен');
+        $this->assertNotNull($export->fresh()->cached_at, 'cached_at должен быть заполнен');
         $this->assertFileExists($export->getCacheFilePath(), 'Файл кэша должен существовать');
 
-        // Чистим за собой
         @unlink($export->getCacheFilePath());
 
-        echo "\n✅ Кэш-файл создаётся при первом скачивании\n";
+        echo "\n✅ Кэш-файл: 202 без кеша → 200 с кешем\n";
     }
 
     public function test_product_export_model_has_preset_methods(): void

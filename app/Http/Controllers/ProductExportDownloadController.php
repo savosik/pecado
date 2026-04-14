@@ -78,34 +78,11 @@ class ProductExportDownloadController extends Controller
             ]);
         }
 
-        // Случай 3: Нет кэша вообще — генерируем синхронно (только первый раз)
-        $this->generateAndCache($export, $preset);
-        $export->update(['last_downloaded_at' => now()]);
+        // Случай 3: Нет кэша вообще (первый запрос) — ставим в очередь
+        RegenerateSinglePresetExportJob::dispatch($export->id);
 
-        return response()->download($filePath, $filename, [
-            'Content-Type' => $preset->mimeType(),
-        ]);
-    }
-
-    /**
-     * Генерирует файл пресета и сохраняет в кэш (синхронно).
-     * Используется только при первом скачивании, когда файла ещё нет.
-     */
-    protected function generateAndCache(ProductExport $export, $preset): void
-    {
-        $cacheDir = dirname($export->getCacheFilePath());
-        if (!is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
-        }
-
-        $filePath = $export->getCacheFilePath();
-
-        $stream = fopen($filePath, 'w');
-        $preset->writeToStream($stream, $export);
-        if (is_resource($stream)) {
-            fclose($stream);
-        }
-
-        $export->update(['cached_at' => now()]);
+        return response()->json([
+            'message' => 'Файл выгрузки формируется. Повторите запрос через 1-2 минуты.',
+        ], 202);
     }
 }
