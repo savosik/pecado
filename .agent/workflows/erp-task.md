@@ -118,6 +118,9 @@ docker exec pecado-node npm run asyncapi:validate
 docker exec pecado-node npm run asyncapi:build
 ```
 
+> **ВАЖНО:** Сборка генерирует `docs/asyncapi/html/` и `docs/asyncapi/pecado-erp-bundled.yaml`.
+> Эти файлы **трекаются в git** и деплоятся через rsync. Не забудь включить их в коммит (`git add -A`).
+
 ---
 
 ## Фаза 4: Документация (MkDocs)
@@ -184,6 +187,9 @@ docker exec pecado-node npm run asyncapi:build
 // turbo
 ~/.local/bin/mkdocs build
 ```
+
+> **ВАЖНО:** Сборка генерирует `docs-erp/site/`.
+> Этот каталог **трекается в git** и деплоится через rsync. Не забудь включить его в коммит (`git add -A`).
 
 ---
 
