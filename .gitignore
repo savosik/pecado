@@ -42,9 +42,4 @@ boost.json
 /reference/\n# Dev server credentials (local only)\ndocs/DEV_SERVER_CREDENTIALS.md
 /reference
 
-# AsyncAPI generated HTML docs
-/docs/asyncapi/html/
-/docs/asyncapi/pecado-erp-bundled.yaml
-
-# MkDocs generated site
-/docs-erp/site/
+# AsyncAPI и MkDocs: трекаем сборку в git — деплоится через rsync

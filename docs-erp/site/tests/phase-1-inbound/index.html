@@ -1,0 +1,2357 @@
+
+<!doctype html>
+<html lang="ru" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Документация по интеграции 1С:КА2 и сайта Pecado через RabbitMQ">
+      
+      
+      
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/tests/phase-1-inbound/">
+      
+      
+        <link rel="prev" href="../phase-0-setup/">
+      
+      
+        <link rel="next" href="../phase-2-outbound/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Фаза 1: 1С → Сайт - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#1-1" class="md-skip">
+          Перейти к содержанию
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Верхний колонтитул">
+    <a href="../.." title="Pecado ERP — Интеграция 1С ↔ Сайт" class="md-header__button md-logo" aria-label="Pecado ERP — Интеграция 1С ↔ Сайт" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Pecado ERP — Интеграция 1С ↔ Сайт
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Фаза 1: 1С → Сайт
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Светлая тема"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Светлая тема" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Тёмная тема"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Тёмная тема" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Поиск" placeholder="Поиск" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Поиск">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Очистить" aria-label="Очистить" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Инициализация поиска
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Навигация" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Pecado ERP — Интеграция 1С ↔ Сайт" class="md-nav__button md-logo" aria-label="Pecado ERP — Интеграция 1С ↔ Сайт" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Pecado ERP — Интеграция 1С ↔ Сайт
+  </label>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Обзор
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../changelog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Changelog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../settings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Настройки обмена
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../infrastructure/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Инфраструктура
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Бизнес-правила
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Бизнес-правила
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/partners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Партнёры
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/catalog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Каталог
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Цены
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/stocks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Остатки
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/contractors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Контрагенты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/orders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/returns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Возвраты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/shipments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Реализации
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/balances/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Баланс
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/individual-prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Индивидуальные цены
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/pricing-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ценообразование
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/product-attributes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Атрибуты товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/client-segments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Клиентские сегменты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../rules/data-normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Нормализация данных
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Тест-план
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Тест-план
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../phase-0-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 0: Подготовка
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 1: 1С → Сайт
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 1: 1С → Сайт
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#11-categorycreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 — Категории (category.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-categoryupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 — Обновление категории (category.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-categoryupdated-v12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2а — Деактивация категории (category.updated, v12)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-categorycreated-v12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2б — Создание активной/неактивной категории (category.created, v12)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-is_active-v12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2в — Категория без is_active (обратная совместимость, v12)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-productcreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 — Товары (product.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-hidden-true" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 — Товар со скрытием (hidden = true)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-productupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 — Обновление товара (product.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-priceupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 — Базовые цены (price.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-stockupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 — Остатки (stock.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18-exchange_rateupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.8 — Курсы валют (exchange_rate.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#19-partnercreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.9 — Партнёры (partner.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-partnerupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10 — Обновление атрибутов партнёра (partner.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-partnerupdated_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10а — Обновление статуса партнёра (partner.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-erp_id-email-partnerupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10б — Привязка erp_id по email (partner.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#111-partnerdeleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.11 — Деактивация партнёра (partner.deleted)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-contractorcreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12 — Контрагенты (contractor.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#113-ordercreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.13 — Заказ от менеджера (order.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#114-orderupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.14 — Обновление заказа (order.updated)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.14 — Обновление заказа (order.updated)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-confirmed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A) Только статус → confirmed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B) Статус + позиции
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-ready_to_ship-v123" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C) Обновление статуса → ready_to_ship (v12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-closed-v123" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D) Обновление статуса → closed (v12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#115-orderdeleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.15 — Удаление заказа (order.deleted)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#116-shipmentcreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.16 — Реализации (shipment.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#117-balanceupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.17 — Баланс (balance.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#118-individual_pricesready" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.18 — Индивидуальные цены (individual_prices.ready)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.18 — Индивидуальные цены (individual_prices.ready)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-csv-minio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Шаг A: CSV в MinIO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Шаг B: Уведомление
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#119" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.19 — Дельта индивидуальных цен
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../phase-2-outbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 2: Сайт → 1С
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../phase-3-e2e/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 3: Сквозные сценарии
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../phase-4-edge/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 4: Edge-кейсы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../initial-load/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Первоначальная выгрузка
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../open-questions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Открытые вопросы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ссылки
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Ссылки
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsyncAPI (интерактивная)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/spec.yaml" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AsyncAPI (YAML)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://dev.pecado.ru/docs/erp/schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JSON Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Содержание">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Содержание
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#11-categorycreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 — Категории (category.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-categoryupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 — Обновление категории (category.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-categoryupdated-v12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2а — Деактивация категории (category.updated, v12)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-categorycreated-v12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2б — Создание активной/неактивной категории (category.created, v12)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-is_active-v12" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2в — Категория без is_active (обратная совместимость, v12)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#13-productcreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 — Товары (product.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#14-hidden-true" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 — Товар со скрытием (hidden = true)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#15-productupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 — Обновление товара (product.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#16-priceupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 — Базовые цены (price.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#17-stockupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 — Остатки (stock.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#18-exchange_rateupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.8 — Курсы валют (exchange_rate.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#19-partnercreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.9 — Партнёры (partner.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-partnerupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10 — Обновление атрибутов партнёра (partner.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-partnerupdated_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10а — Обновление статуса партнёра (partner.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#110-erp_id-email-partnerupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.10б — Привязка erp_id по email (partner.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#111-partnerdeleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.11 — Деактивация партнёра (partner.deleted)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-contractorcreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12 — Контрагенты (contractor.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#113-ordercreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.13 — Заказ от менеджера (order.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#114-orderupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.14 — Обновление заказа (order.updated)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.14 — Обновление заказа (order.updated)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-confirmed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A) Только статус → confirmed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B) Статус + позиции
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-ready_to_ship-v123" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C) Обновление статуса → ready_to_ship (v12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-closed-v123" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D) Обновление статуса → closed (v12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#115-orderdeleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.15 — Удаление заказа (order.deleted)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#116-shipmentcreated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.16 — Реализации (shipment.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#117-balanceupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.17 — Баланс (balance.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#118-individual_pricesready" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.18 — Индивидуальные цены (individual_prices.ready)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.18 — Индивидуальные цены (individual_prices.ready)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-csv-minio" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Шаг A: CSV в MinIO
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Шаг B: Уведомление
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#119" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.19 — Дельта индивидуальных цен
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+
+<h1 id="1-1">Фаза 1: 1С → Сайт<a class="headerlink" href="#1-1" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p>Последовательность тестов соответствует порядку первоначальной выгрузки (зависимости сущностей).</p>
+</blockquote>
+<hr />
+<h2 id="11-categorycreated">1.1 — Категории (<code>category.created</code>)<a class="headerlink" href="#11-categorycreated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> нет</p>
+<p>🔵 <strong>1С отправляет</strong> два сообщения в <code>erp.events</code> с routing key <code>category.created</code>: сначала родительскую, затем дочернюю.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/category.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] В <code>categories</code> появились 2 записи</li>
+<li>[ ] У дочерней <code>parent_id</code> указывает на родительскую</li>
+<li>[ ] <code>external_id</code> совпадает с <code>uuid</code> из payload</li>
+<li>[ ] В <code>erp_processed_messages</code> записаны оба <code>message_id</code></li>
+</ul>
+<hr />
+<h2 id="12-categoryupdated">1.2 — Обновление категории (<code>category.updated</code>)<a class="headerlink" href="#12-categoryupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> Тест 1.1</p>
+<p>🔵 <strong>1С отправляет</strong> <code>category.updated</code> с новым <code>name</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/category.created.json">JSON Schema</a> (формат идентичен <code>category.created</code>)</p>
+</blockquote>
+<ul>
+<li>[ ] <code>name</code> обновлён</li>
+<li>[ ] <code>parent_id</code> НЕ изменился (частичное обновление)</li>
+</ul>
+<hr />
+<h2 id="12-categoryupdated-v12">1.2а — Деактивация категории (<code>category.updated</code>, v12)<a class="headerlink" href="#12-categoryupdated-v12" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> Тест 1.1</p>
+<p>🔵 <strong>1С отправляет</strong> <code>category.updated</code> с <code>is_active: false</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/category.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] <code>is_active = false</code> в БД</li>
+<li>[ ] Категория <strong>НЕ</strong> отображается на сайте</li>
+<li>[ ] Товары категории <strong>НЕ</strong> видны в каталоге</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>category.updated</code> с <code>is_active: true</code>.</p>
+<ul>
+<li>[ ] <code>is_active = true</code> в БД</li>
+<li>[ ] Категория снова отображается на сайте</li>
+</ul>
+<hr />
+<h2 id="12-categorycreated-v12">1.2б — Создание активной/неактивной категории (<code>category.created</code>, v12)<a class="headerlink" href="#12-categorycreated-v12" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> нет</p>
+<p>🔵 <strong>1С отправляет</strong> <code>category.created</code> с <code>is_active: true</code>.</p>
+<ul>
+<li>[ ] Категория создана с <code>is_active = true</code></li>
+<li>[ ] Отображается на сайте</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>category.created</code> с <code>is_active: false</code>.</p>
+<ul>
+<li>[ ] Категория создана с <code>is_active = false</code></li>
+<li>[ ] <strong>НЕ</strong> отображается на сайте</li>
+</ul>
+<hr />
+<h2 id="12-is_active-v12">1.2в — Категория без is_active (обратная совместимость, v12)<a class="headerlink" href="#12-is_active-v12" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> нет</p>
+<p>🔵 <strong>1С отправляет</strong> <code>category.created</code> <strong>без</strong> поля <code>is_active</code>.</p>
+<ul>
+<li>[ ] Категория создана с <code>is_active = true</code> (значение по умолчанию)</li>
+</ul>
+<hr />
+<h2 id="13-productcreated">1.3 — Товары (<code>product.created</code>)<a class="headerlink" href="#13-productcreated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.1 (категории)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>product.created</code> с <code>category_uuid</code>, <code>brand</code>, <code>attributes</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/product.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Товар создан с <code>external_id</code></li>
+<li>[ ] <code>category_id</code> указывает на правильную категорию</li>
+<li>[ ] Бренд создан/привязан</li>
+<li>[ ] Атрибуты созданы</li>
+<li>[ ] <code>hidden = false</code> — товар видим</li>
+</ul>
+<hr />
+<h2 id="14-hidden-true">1.4 — Товар со скрытием (<code>hidden = true</code>)<a class="headerlink" href="#14-hidden-true" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.1</p>
+<p>🔵 <strong>1С отправляет</strong> <code>product.created</code> с <code>hidden = true</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/product.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Товар создан с <code>hidden = true</code></li>
+<li>[ ] Товар <strong>НЕ</strong> отображается в каталоге и поиске</li>
+</ul>
+<hr />
+<h2 id="15-productupdated">1.5 — Обновление товара (<code>product.updated</code>)<a class="headerlink" href="#15-productupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3</p>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с новым <code>name</code> и новым атрибутом.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/product.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] <code>name</code> обновлён</li>
+<li>[ ] Старые атрибуты <strong>сохранены</strong> (мерж по <code>property_uuid</code>)</li>
+<li>[ ] Новый атрибут добавлен</li>
+<li>[ ] <code>sku</code>, <code>code</code>, <code>category_uuid</code> НЕ изменились</li>
+</ul>
+<hr />
+<h2 id="16-priceupdated">1.6 — Базовые цены (<code>price.updated</code>)<a class="headerlink" href="#16-priceupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товар)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>price.updated</code> с ценой.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/price.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Цена товара обновлена</li>
+<li>[ ] Цена отображается в каталоге</li>
+</ul>
+<hr />
+<h2 id="17-stockupdated">1.7 — Остатки (<code>stock.updated</code>)<a class="headerlink" href="#17-stockupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товар), 0.4.2 (склады)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>stock.updated</code> с <code>warehouse_uuid</code> и <code>quantity</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/stock.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] В <code>product_warehouse</code> появилась запись</li>
+<li>[ ] Товар «В наличии» для пользователя из региона</li>
+</ul>
+<hr />
+<h2 id="18-exchange_rateupdated">1.8 — Курсы валют (<code>exchange_rate.updated</code>)<a class="headerlink" href="#18-exchange_rateupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> нет</p>
+<p>🔵 <strong>1С отправляет</strong> <code>exchange_rate.updated</code> для KZT.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/exchange_rate.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Запись создана/обновлена в <code>exchange_rates</code></li>
+<li>[ ] Все три значения сохранены: <code>official_rate</code>, <code>rate_coefficient</code>, <code>rate</code></li>
+</ul>
+<hr />
+<h2 id="19-partnercreated">1.9 — Партнёры (<code>partner.created</code>)<a class="headerlink" href="#19-partnercreated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 0.4.4 (статусы клиентов)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>partner.created</code> с <code>client_status: "gold"</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/partner.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Пользователь создан с <code>external_id</code></li>
+<li>[ ] <code>client_status_id</code> → ClientStatus с <code>external_id = gold</code></li>
+<li>[ ] Может войти с паролем из payload</li>
+<li>[ ] Обязательная смена пароля при первом входе</li>
+<li>[ ] Плашка «Gold» в ЛК</li>
+</ul>
+<hr />
+<h2 id="110-partnerupdated">1.10 — Обновление атрибутов партнёра (<code>partner.updated</code>)<a class="headerlink" href="#110-partnerupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.9</p>
+<p>🔵 <strong>1С отправляет</strong> <code>partner.updated</code> с обновлёнными атрибутами.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/partner.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] <code>name</code> обновлён</li>
+<li>[ ] <code>phone</code> обновлён</li>
+<li>[ ] <code>city</code> обновлён</li>
+<li>[ ] <code>client_status_id</code> обновился → <code>diamond</code></li>
+<li>[ ] Пароль <strong>НЕ</strong> изменился</li>
+<li>[ ] Плашка «Diamond» в ЛК</li>
+</ul>
+<hr />
+<h2 id="110-partnerupdated_1">1.10а — Обновление статуса партнёра (<code>partner.updated</code>)<a class="headerlink" href="#110-partnerupdated_1" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.9</p>
+<p>🔵 <strong>1С отправляет</strong> <code>partner.updated</code> с <code>is_active: false</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/partner.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Статус → <code>BLOCKED</code></li>
+<li>[ ] Пользователь не может авторизоваться</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>partner.updated</code> с <code>is_active: true</code>.</p>
+<ul>
+<li>[ ] Статус → <code>ACTIVE</code></li>
+<li>[ ] Пользователь может авторизоваться</li>
+</ul>
+<hr />
+<h2 id="110-erp_id-email-partnerupdated">1.10б — Привязка erp_id по email (<code>partner.updated</code>)<a class="headerlink" href="#110-erp_id-email-partnerupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> пользователь зарегистрирован на сайте (без <code>erp_id</code>)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>partner.updated</code> с <code>uuid</code> и <code>login</code> = email пользователя.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/partner.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] <code>erp_id</code> привязан к пользователю</li>
+<li>[ ] Атрибуты обновлены</li>
+<li>[ ] Повторный <code>partner.updated</code> с тем же <code>uuid</code> — идемпотентный (обновление по <code>erp_id</code>)</li>
+</ul>
+<hr />
+<h2 id="111-partnerdeleted">1.11 — Деактивация партнёра (<code>partner.deleted</code>)<a class="headerlink" href="#111-partnerdeleted" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.9</p>
+<p>🔵 <strong>1С отправляет</strong> <code>partner.deleted</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/partner.deleted.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] <code>is_active = false</code></li>
+<li>[ ] Не может авторизоваться</li>
+<li>[ ] Не может оформлять заказы</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">После этого теста</p>
+<p>Активируйте пользователя обратно (<code>partner.updated</code> с <code>is_active: true</code>).</p>
+</div>
+<hr />
+<h2 id="112-contractorcreated">1.12 — Контрагенты (<code>contractor.created</code>)<a class="headerlink" href="#112-contractorcreated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.9 (партнёр)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>contractor.created</code> с <code>bank_accounts</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/contractor.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Контрагент создан, привязан к пользователю</li>
+<li>[ ] <code>tax_id</code>, <code>legal_name</code> заполнены</li>
+<li>[ ] 2 банковских счёта, первый <code>is_primary = true</code></li>
+<li>[ ] Контрагент в ЛК → «Компании»</li>
+</ul>
+<hr />
+<h2 id="113-ordercreated">1.13 — Заказ от менеджера (<code>order.created</code>)<a class="headerlink" href="#113-ordercreated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товар), 1.9 (партнёр)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>order.created</code> со статусом <code>confirmed</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/order.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Заказ создан с <code>external_id</code></li>
+<li>[ ] Статус = <code>confirmed</code>, тип = <code>order</code></li>
+<li>[ ] Позиции с <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code></li>
+<li>[ ] <code>delivery_address</code> сохранён в текстовое поле <code>orders.delivery_address</code> (v12.1)</li>
+<li>[ ] Заказ в ЛК</li>
+</ul>
+<hr />
+<h2 id="114-orderupdated">1.14 — Обновление заказа (<code>order.updated</code>)<a class="headerlink" href="#114-orderupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.13</p>
+<h3 id="a-confirmed">A) Только статус → confirmed<a class="headerlink" href="#a-confirmed" title="Permanent link">&para;</a></h3>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/order.updated.json">JSON Schema</a></p>
+</blockquote>
+<p>🔵 <code>order.updated</code> с <code>status: "confirmed"</code> (без <code>items</code>).</p>
+<ul>
+<li>[ ] Статус → <code>confirmed</code></li>
+<li>[ ] Запись в <code>order_status_histories</code></li>
+<li>[ ] Позиции НЕ изменились</li>
+</ul>
+<h3 id="b">B) Статус + позиции<a class="headerlink" href="#b" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>items[]</code> (изменённая цена/кол-во).</p>
+<ul>
+<li>[ ] Позиции полностью пересозданы</li>
+<li>[ ] Количество и цены обновлены</li>
+<li>[ ] Diff зафиксирован в <code>order_change_logs</code></li>
+</ul>
+<h3 id="c-ready_to_ship-v123">C) Обновление статуса → ready_to_ship (v12.3)<a class="headerlink" href="#c-ready_to_ship-v123" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "ready_to_ship"</code>.</p>
+<ul>
+<li>[ ] Статус → <code>ready_to_ship</code></li>
+<li>[ ] В интерфейсе отображается лейбл «К отгрузке»</li>
+</ul>
+<h3 id="d-closed-v123">D) Обновление статуса → closed (v12.3)<a class="headerlink" href="#d-closed-v123" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "closed"</code>.</p>
+<ul>
+<li>[ ] Статус → <code>closed</code></li>
+<li>[ ] В интерфейсе отображается лейбл «Закрыт»</li>
+</ul>
+<hr />
+<h2 id="115-orderdeleted">1.15 — Удаление заказа (<code>order.deleted</code>)<a class="headerlink" href="#115-orderdeleted" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> создать тестовый заказ</p>
+<p>🔵 <strong>1С отправляет</strong> <code>order.deleted</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/order.deleted.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Заказ → <code>closed</code> (распроведён, v12.3)</li>
+<li>[ ] Не отображается в активных заказах</li>
+</ul>
+<hr />
+<h2 id="116-shipmentcreated">1.16 — Реализации (<code>shipment.created</code>)<a class="headerlink" href="#116-shipmentcreated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.12 (контрагент), 1.13 (заказ)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>shipment.created</code> с <code>contractor_inn</code> и <code>items</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/shipment.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Реализация создана, привязана к контрагенту по ИНН</li>
+<li>[ ] Позиция связана с заказом через <code>order_uuid</code></li>
+<li>[ ] Реализация в ЛК</li>
+</ul>
+<hr />
+<h2 id="117-balanceupdated">1.17 — Баланс (<code>balance.updated</code>)<a class="headerlink" href="#117-balanceupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.9 (партнёр), 1.12 (контрагент), 1.16 (реализация)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>balance.updated</code> с <code>overdue_details</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/balance.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Баланс обновлён</li>
+<li>[ ] Просрочка детализирована по реализации</li>
+<li>[ ] Баланс в ЛК в разрезе контрагентов</li>
+</ul>
+<hr />
+<h2 id="118-individual_pricesready">1.18 — Индивидуальные цены (<code>individual_prices.ready</code>)<a class="headerlink" href="#118-individual_pricesready" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товар), 1.9 (партнёр), 0.3 (MinIO)</p>
+<h3 id="a-csv-minio">Шаг A: CSV в MinIO<a class="headerlink" href="#a-csv-minio" title="Permanent link">&para;</a></h3>
+<p>🔵 1С загружает CSV: <code>product_uuid,warehouse_uuid,price</code></p>
+<h3 id="b_1">Шаг B: Уведомление<a class="headerlink" href="#b_1" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>individual_prices.ready</code> с <code>upload_type: "full"</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/individual_prices.ready.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Цена в <code>individual_prices</code></li>
+<li>[ ] CSV удалён из MinIO</li>
+<li>[ ] Авторизованный пользователь видит индивидуальную цену</li>
+</ul>
+<hr />
+<h2 id="119">1.19 — Дельта индивидуальных цен<a class="headerlink" href="#119" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.18</p>
+<p>🔵 <code>individual_prices.ready</code> с <code>upload_type: "delta"</code> и новой ценой.</p>
+<ul>
+<li>[ ] Цена <strong>обновлена</strong> (UPSERT)</li>
+<li>[ ] Другие цены партнёра <strong>НЕ удалены</strong></li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  К началу
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "\u0421\u043a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u043d\u043e \u0432 \u0431\u0443\u0444\u0435\u0440", "clipboard.copy": "\u041a\u043e\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u0432 \u0431\u0443\u0444\u0435\u0440", "search.result.more.one": "\u0415\u0449\u0451 1 \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.more.other": "\u0415\u0449\u0451 # \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435", "search.result.none": "\u0421\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e", "search.result.one": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e 1 \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0435", "search.result.other": "\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u0441\u043e\u0432\u043f\u0430\u0434\u0435\u043d\u0438\u0439: #", "search.result.placeholder": "\u041d\u0430\u0447\u043d\u0438\u0442\u0435 \u043f\u0435\u0447\u0430\u0442\u0430\u0442\u044c \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430", "search.result.term.missing": "\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442", "select.version": "\u0412\u044b\u0431\u0435\u0440\u0438\u0442\u0435 \u0432\u0435\u0440\u0441\u0438\u044e"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
