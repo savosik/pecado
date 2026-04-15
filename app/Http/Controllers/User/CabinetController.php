@@ -37,8 +37,8 @@ class CabinetController extends Controller
             ->map(fn ($order) => [
                 'id'           => $order->id,
                 'order_number' => $order->number,
-                'status'       => (string) $order->status,
-                'type'         => (string) ($order->type ?? 'order'),
+                'status'       => $order->status instanceof \BackedEnum ? $order->status->value : (string) $order->status,
+                'type'         => $order->type instanceof \BackedEnum ? $order->type->value : (string) $order->type,
                 'total'        => $order->total_amount,
                 'items_count'  => $order->items_count,
                 'created_at'   => $order->created_at->format('d.m.Y'),

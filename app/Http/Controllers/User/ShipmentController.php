@@ -206,7 +206,7 @@ class ShipmentController extends Controller
                 return [
                     'id'     => $order->id,
                     'number' => $order->number ?? ('#' . $order->id),
-                    'status' => $order->status,
+                    'status' => $order->status?->value,
                 ];
             }),
             'overdue_detail'  => $overdueDetail ? [

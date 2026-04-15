@@ -34,7 +34,7 @@ class HandleOrderUpdated
 
         // Обновление статуса
         if (isset($payload['status'])) {
-            $oldStatus = $order->status;
+            $oldStatus = $order->status?->value;
             $order->status = $payload['status'];
         }
 

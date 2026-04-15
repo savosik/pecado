@@ -20,15 +20,6 @@ class OrderController extends AdminController
 {
     use RedirectsAfterSave;
 
-    private const STATUS_LABELS = [
-        'pending'       => 'Ожидает',
-        'confirmed'     => 'Подтверждён',
-        'ready_to_ship' => 'К отгрузке',
-        'к_отгрузке'    => 'К отгрузке',
-        'closed'        => 'Закрыт',
-        'cancelled'     => 'Отменён',
-    ];
-
     public function __construct(
         protected \App\Services\Pricing\PriceService $priceService
     ) {
@@ -107,9 +98,9 @@ class OrderController extends AdminController
                 'id' => $order->id,
                 'uuid' => $order->uuid,
                 'number' => $order->number,
-                'type' => $order->type,
-                'status' => $order->status,
-                'status_label' => self::STATUS_LABELS[$order->status] ?? $order->status,
+                'type' => $order->type?->value,
+                'status' => $order->status?->value,
+                'status_label' => $this->getStatusLabel($order->status),
                 'total_amount' => $order->total_amount,
                 'currency_code' => $order->currency_code ?? '₽',
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
@@ -141,10 +132,10 @@ class OrderController extends AdminController
                 'sort_order'  => $sortOrder,
                 'per_page'    => $perPage,
             ],
-            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
-                'value' => $value,
-                'label' => $label,
-            ])->values(),
+            'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
+                'value' => $case->value,
+                'label' => $this->getStatusLabel($case),
+            ]),
             'types' => [
                 ['value' => 'order',    'label' => 'Заказ со склада'],
                 ['value' => 'preorder', 'label' => 'Предзаказ'],
@@ -160,10 +151,10 @@ class OrderController extends AdminController
     {
         return Inertia::render('Admin/Pages/Orders/Create', [
             'currencies' => \App\Models\Currency::select('id', 'name', 'code', 'symbol')->orderBy('id')->get(),
-            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
-                'value' => $value,
-                'label' => $label,
-            ])->values(),
+            'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
+                'value' => $case->value,
+                'label' => $this->getStatusLabel($case),
+            ]),
         ]);
     }
 
@@ -176,7 +167,7 @@ class OrderController extends AdminController
             'user_id' => 'required|exists:users,id',
             'company_id' => 'required|exists:companies,id',
             'delivery_address' => 'nullable|string|max:1000',
-            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
+            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'currency_code' => 'nullable|string|max:3',
             'items' => 'required|array|min:1',
@@ -242,9 +233,9 @@ class OrderController extends AdminController
                 'id' => $order->id,
                 'uuid' => $order->uuid,
                 'number' => $order->number,
-                'type' => $order->type,
-                'status' => $order->status,
-                'status_label' => self::STATUS_LABELS[$order->status] ?? $order->status,
+                'type' => $order->type?->value,
+                'status' => $order->status?->value,
+                'status_label' => $this->getStatusLabel($order->status),
                 'total_amount' => $order->total_amount,
                 'currency_code' => $order->currency_code,
                 'comment' => $order->comment,
@@ -288,10 +279,10 @@ class OrderController extends AdminController
                     ];
                 }),
             ],
-            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
-                'value' => $value,
-                'label' => $label,
-            ])->values(),
+            'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
+                'value' => $case->value,
+                'label' => $this->getStatusLabel($case),
+            ]),
         ]);
     }
 
@@ -307,11 +298,11 @@ class OrderController extends AdminController
                 'id' => $order->id,
                 'uuid' => $order->uuid,
                 'number' => $order->number,
-                'type' => $order->type,
+                'type' => $order->type?->value,
                 'user_id' => $order->user_id,
                 'company_id' => $order->company_id,
                 'delivery_address' => $order->delivery_address,
-                'status' => $order->status,
+                'status' => $order->status?->value,
                 'comment' => $order->comment,
                 'currency_code' => $order->currency_code,
                 'total_amount' => $order->total_amount,
@@ -352,10 +343,10 @@ class OrderController extends AdminController
                 }),
             ],
             'currencies' => \App\Models\Currency::select('id', 'name', 'code', 'symbol')->orderBy('id')->get(),
-            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
-                'value' => $value,
-                'label' => $label,
-            ])->values(),
+            'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
+                'value' => $case->value,
+                'label' => $this->getStatusLabel($case),
+            ]),
         ]);
     }
 
@@ -368,7 +359,7 @@ class OrderController extends AdminController
             'user_id' => 'required|exists:users,id',
             'company_id' => 'required|exists:companies,id',
             'delivery_address' => 'nullable|string|max:1000',
-            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
+            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'currency_code' => 'nullable|string|max:3',
             'items' => 'required|array|min:1',
@@ -447,7 +438,7 @@ class OrderController extends AdminController
     public function updateStatus(Request $request, Order $order): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
+            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
         ]);
 
         $order->update([
@@ -467,7 +458,7 @@ class OrderController extends AdminController
         $validated = $request->validate([
             'order_ids' => 'required|array|min:1',
             'order_ids.*' => 'exists:orders,id',
-            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
+            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
         ]);
 
         $count = Order::whereIn('id', $validated['order_ids'])->update([
@@ -600,12 +591,14 @@ class OrderController extends AdminController
     /**
      * Get the status label in Russian.
      */
-    protected function getStatusLabel(?string $status): string
+    protected function getStatusLabel(?OrderStatus $status): string
     {
-        if ($status === null) {
-            return 'Неизвестно';
-        }
-
-        return self::STATUS_LABELS[$status] ?? $status;
+        return match ($status) {
+            OrderStatus::PENDING       => 'Ожидает',
+            OrderStatus::CONFIRMED     => 'Подтверждён',
+            OrderStatus::READY_TO_SHIP => 'К отгрузке',
+            OrderStatus::CLOSED        => 'Закрыт',
+            default                    => 'Неизвестно',
+        };
     }
 }

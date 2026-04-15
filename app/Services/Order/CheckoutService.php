@@ -45,7 +45,7 @@ class CheckoutService implements CheckoutServiceInterface
                 'company_id'          => $company->id,
                 'delivery_address'    => $deliveryAddress,
                 'cart_id'             => $cart->id,
-                'status'              => 'pending',
+                'status'              => \App\Enums\OrderStatus::PENDING,
                 'comment'             => $comment,
                 'total_amount'        => 0,
                 'exchange_rate'       => $currency?->exchange_rate ?? 1.0,
@@ -84,7 +84,7 @@ class CheckoutService implements CheckoutServiceInterface
             // Create instock order
             if ($inStockCartItems->isNotEmpty()) {
                 $instockOrder = Order::create(array_merge($baseOrderData, [
-                    'type' => 'order',
+                    'type' => OrderType::ORDER,
                 ]));
                 $total = $this->createOrderItems($instockOrder, $inStockCartItems, $user);
                 $instockOrder->update(['total_amount' => $total]);
@@ -95,7 +95,7 @@ class CheckoutService implements CheckoutServiceInterface
             // Create preorder order
             if ($preorderCartItems->isNotEmpty()) {
                 $preorderOrder = Order::create(array_merge($baseOrderData, [
-                    'type' => 'preorder',
+                    'type' => OrderType::PREORDER,
                 ]));
                 $total = $this->createOrderItems($preorderOrder, $preorderCartItems, $user);
                 $preorderOrder->update(['total_amount' => $total]);

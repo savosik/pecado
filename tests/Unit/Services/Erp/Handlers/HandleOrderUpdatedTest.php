@@ -60,7 +60,7 @@ class HandleOrderUpdatedTest extends TestCase
             'status' => 'confirmed',
         ]);
 
-        $this->assertEquals('confirmed', $order->fresh()->status);
+        $this->assertEquals('confirmed', $order->fresh()->status->value);
     }
 
     /** @test */

@@ -32,8 +32,8 @@ class PublishOrderToErp
             'uuid' => $order->uuid,
             'number' => $order->number,
             'date' => $order->created_at->toIso8601String(),
-            'status' => $order->status,
-            'type' => $order->type ?? 'order',
+            'status' => $order->status?->value ?? $order->status,
+            'type' => $order->type?->value ?? $order->type ?? 'order',
             'partner_uuid' => $order->user?->erp_id,
             'warehouse_uuids' => $this->resolveWarehouseUuids($order),
             'comment' => $order->comment,
@@ -104,7 +104,7 @@ class PublishOrderToErp
             return [];
         }
 
-        $type = $order->type ?? 'order';
+        $type = $order->type?->value ?? $order->type ?? 'order';
 
         $warehouses = match ($type) {
             'preorder' => $region->preorderWarehouses()->get(),

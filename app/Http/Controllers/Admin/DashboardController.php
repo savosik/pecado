@@ -11,14 +11,6 @@ use Inertia\Response;
 
 class DashboardController extends AdminController
 {
-    private const ORDER_STATUS_LABELS = [
-        'pending'       => 'Ожидает',
-        'confirmed'     => 'Подтверждён',
-        'ready_to_ship' => 'К отгрузке',
-        'к_отгрузке'    => 'К отгрузке',
-        'closed'        => 'Закрыт',
-        'cancelled'     => 'Отменён',
-    ];
     /**
      * Display the admin dashboard.
      */
@@ -64,7 +56,7 @@ class DashboardController extends AdminController
                     'user_name' => $order->user->name ?? 'N/A',
                     'total_amount' => $order->total_amount,
                     'status' => $order->status,
-                    'status_label' => self::ORDER_STATUS_LABELS[$order->status] ?? $order->status,
+                    'status_label' => $order->status_label,
                     'created_at' => $order->created_at->format('d.m.Y H:i'),
                 ];
             });

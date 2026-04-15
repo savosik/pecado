@@ -36,7 +36,7 @@ class HandleReturnUpdatedTest extends TestCase
             'status' => 'approved',
         ]);
 
-        $this->assertEquals('approved', $return->fresh()->status);
+        $this->assertEquals('approved', $return->fresh()->status->value);
     }
 
     #[Test]
@@ -98,6 +98,6 @@ class HandleReturnUpdatedTest extends TestCase
 
         $fresh = $return->fresh();
         $this->assertEquals('ВЗВ-000789', $fresh->erp_number);
-        $this->assertEquals('approved', $fresh->status);
+        $this->assertEquals('approved', $fresh->status->value);
     }
 }

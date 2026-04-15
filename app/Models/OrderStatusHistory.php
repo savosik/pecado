@@ -43,9 +43,8 @@ class OrderStatusHistory extends Model
         return match ($this->old_status) {
             'pending' => 'Ожидает',
             'confirmed' => 'Подтверждён',
-            'ready_to_ship', 'к_отгрузке' => 'К отгрузке',
+            'ready_to_ship' => 'К отгрузке',
             'closed' => 'Закрыт',
-            'cancelled' => 'Отменён',
             default => $this->old_status,
         };
     }
@@ -58,9 +57,8 @@ class OrderStatusHistory extends Model
         return match ($this->new_status) {
             'pending' => 'Ожидает',
             'confirmed' => 'Подтверждён',
-            'ready_to_ship', 'к_отгрузке' => 'К отгрузке',
+            'ready_to_ship' => 'К отгрузке',
             'closed' => 'Закрыт',
-            'cancelled' => 'Отменён',
             default => $this->new_status,
         };
     }
