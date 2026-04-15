@@ -100,7 +100,7 @@ class CheckoutController extends Controller
         } else {
             $address = DeliveryAddress::create([
                 'user_id' => $user->id,
-                'name' => 'Новый адрес',
+                'name' => '',
                 'address' => $request->validated('new_address'),
             ]);
         }

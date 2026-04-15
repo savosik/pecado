@@ -212,7 +212,7 @@ export default function CheckoutIndex({
                                         colorPalette="pecado"
                                         onClick={() => setUseNewAddress(true)}
                                     >
-                                        Новый адрес
+                                        Другой адрес
                                     </Button>
                                 </Flex>
                             )}
