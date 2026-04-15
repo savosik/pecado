@@ -17,10 +17,9 @@ import { DeleteAllButton } from '@/Admin/Components';
 const getStatusColor = (status) => {
     const colors = {
         pending: "yellow",
-        processing: "blue",
-        shipped: "purple",
-        delivered: "green",
-        cancelled: "red",
+        confirmed: "blue",
+        ready_to_ship: "purple",
+        closed: "green",
     };
     return colors[status] || "gray";
 };

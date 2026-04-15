@@ -13,7 +13,7 @@ const emptyDetail = () => ({ shipment_uuid: '', amount: '', due_date: '' });
 const ContractorBalancesEdit = ({ balance }) => {
     const { data, setData, put, processing, errors, transform } = useForm({
         user_id: balance.user_id ?? '',
-        contractor_inn: balance.contractor_inn ?? '',
+        tax_id: balance.tax_id ?? '',
         contractor_uuid: balance.contractor_uuid ?? '',
         current_balance: balance.current_balance ?? '',
         overdue_debt: balance.overdue_debt ?? '',
@@ -61,9 +61,9 @@ const ContractorBalancesEdit = ({ balance }) => {
 
     return (
         <>
-            <Head title={`Редактирование баланса: ${balance.contractor_inn}`} />
+            <Head title={`Редактирование баланса: ${balance.tax_id}`} />
             <PageHeader
-                title={`Редактирование баланса: ${balance.contractor_inn}`}
+                title={`Редактирование баланса: ${balance.tax_id}`}
                 backUrl={route('admin.contractor-balances.show', balance.id)}
             />
 
@@ -90,10 +90,10 @@ const ContractorBalancesEdit = ({ balance }) => {
                                 </FormField>
 
                                 <HStack gap={4} align="flex-start">
-                                    <FormField label="ИНН контрагента" error={errors.contractor_inn} required flex={1}>
+                                    <FormField label="ИНН контрагента" error={errors.tax_id} required flex={1}>
                                         <Input
-                                            value={data.contractor_inn}
-                                            onChange={(e) => setData('contractor_inn', e.target.value)}
+                                            value={data.tax_id}
+                                            onChange={(e) => setData('tax_id', e.target.value)}
                                             placeholder="1234567890"
                                             fontFamily="mono"
                                         />

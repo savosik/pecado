@@ -52,8 +52,7 @@ class HandleBalanceUpdatedTest extends TestCase
             'partner_uuid' => 'partner-001',
             'contractors'  => [
                 [
-                    'contractor_uuid' => 'c-uuid-001',
-                    'contractor_inn'  => '1234567890',
+                    'tax_id'  => '1234567890',
                     'current_balance' => -125000.00,
                     'overdue_debt'    => 50000.00,
                     'overdue_details' => [
@@ -66,13 +65,12 @@ class HandleBalanceUpdatedTest extends TestCase
         ]);
 
         $balance = ContractorBalance::where('user_id', $user->id)
-            ->where('contractor_inn', '1234567890')
+            ->where('tax_id', '1234567890')
             ->first();
 
         $this->assertNotNull($balance);
         $this->assertEquals(-125000.00, (float)$balance->current_balance);
         $this->assertEquals(50000.00, (float)$balance->overdue_debt);
-        $this->assertEquals('c-uuid-001', $balance->contractor_uuid);
         $this->assertCount(2, $balance->overdueDetails);
     }
 
@@ -83,7 +81,7 @@ class HandleBalanceUpdatedTest extends TestCase
 
         ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '9876543210',
+            'tax_id'  => '9876543210',
             'current_balance' => -10000.00,
             'overdue_debt'    => 0,
         ]);
@@ -92,7 +90,7 @@ class HandleBalanceUpdatedTest extends TestCase
             'partner_uuid' => 'partner-002',
             'contractors'  => [
                 [
-                    'contractor_inn'  => '9876543210',
+                    'tax_id'  => '9876543210',
                     'current_balance' => -20000.00,
                     'overdue_debt'    => 5000.00,
                     'overdue_details' => [
@@ -104,7 +102,7 @@ class HandleBalanceUpdatedTest extends TestCase
         ]);
 
         $balance = ContractorBalance::where('user_id', $user->id)
-            ->where('contractor_inn', '9876543210')
+            ->where('tax_id', '9876543210')
             ->first();
 
         $this->assertEquals(-20000.00, (float)$balance->current_balance);
@@ -119,7 +117,7 @@ class HandleBalanceUpdatedTest extends TestCase
 
         $balance = ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '1111111111',
+            'tax_id'  => '1111111111',
             'current_balance' => 0,
             'overdue_debt'    => 0,
         ]);
@@ -135,7 +133,7 @@ class HandleBalanceUpdatedTest extends TestCase
             'partner_uuid' => 'partner-003',
             'contractors'  => [
                 [
-                    'contractor_inn'  => '1111111111',
+                    'tax_id'  => '1111111111',
                     'current_balance' => 0,
                     'overdue_debt'    => 2000.00,
                     'overdue_details' => [
@@ -162,13 +160,13 @@ class HandleBalanceUpdatedTest extends TestCase
             'partner_uuid' => 'partner-004',
             'contractors'  => [
                 [
-                    'contractor_inn'  => 'INN-001',
+                    'tax_id'  => 'INN-001',
                     'current_balance' => -1000.00,
                     'overdue_debt'    => 0,
                     'overdue_details' => [],
                 ],
                 [
-                    'contractor_inn'  => 'INN-002',
+                    'tax_id'  => 'INN-002',
                     'current_balance' => -5000.00,
                     'overdue_debt'    => 2000.00,
                     'overdue_details' => [
@@ -193,7 +191,7 @@ class HandleBalanceUpdatedTest extends TestCase
             'partner_uuid' => 'partner-005',
             'contractors'  => [
                 [
-                    'contractor_inn'  => '5555555555',
+                    'tax_id'  => '5555555555',
                     'current_balance' => -3000.00,
                     'overdue_debt'    => 0,
                     'overdue_details' => [],
@@ -202,7 +200,7 @@ class HandleBalanceUpdatedTest extends TestCase
             'updated_at' => '2026-02-16T10:00:00',
         ]);
 
-        $balance = ContractorBalance::where('contractor_inn', '5555555555')->first();
+        $balance = ContractorBalance::where('tax_id', '5555555555')->first();
         $this->assertEquals($company->id, $balance->company_id);
     }
 }

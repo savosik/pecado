@@ -32,6 +32,9 @@
     },
     "additionalProperties": true,
     "required": [
-        "event"
+        "event",
+        "file_url",
+        "upload_type",
+        "partner_uuid"
     ]
 }

@@ -35,7 +35,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event' => 'partner.created',
             'uuid'  => '550e8400-e29b-41d4-a716-446655440000',
-            'login' => 'partner@example.com',
+            'email' => 'partner@example.com',
         ]);
 
         $user->refresh();
@@ -57,7 +57,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event' => 'partner.created',
             'uuid'  => 'new-uuid-1234',
-            'login' => 'partner@example.com',
+            'email' => 'partner@example.com',
         ]);
 
         $user->refresh();
@@ -77,7 +77,6 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'    => 'partner.created',
             'uuid'     => 'erp-uuid-new-partner',
-            'login'    => 'newuser@example.com',
             'email'    => 'newuser@example.com',
             'name'     => 'Иванов Иван',
             'phone'    => '+77001234567',
@@ -108,7 +107,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'    => 'partner.created',
             'uuid'     => 'erp-uuid-pass-check',
-            'login'    => 'passcheck@example.com',
+            'email'    => 'passcheck@example.com',
             'password' => 'abc123',
         ]);
 
@@ -130,7 +129,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event' => 'partner.created',
             'uuid'  => 'erp-uuid-no-pass',
-            'login' => 'nopass@example.com',
+            'email' => 'nopass@example.com',
         ]);
 
         $this->assertDatabaseMissing('users', [
@@ -148,23 +147,23 @@ class HandlePartnerCreatedTest extends TestCase
         Log::shouldReceive('warning')
             ->once()
             ->withArgs(function ($msg) {
-                return str_contains($msg, 'отсутствует uuid или login');
+                return str_contains($msg, 'отсутствует uuid или email');
             });
 
         $handler = new HandlePartnerCreated();
         $handler->handle([
             'event' => 'partner.created',
-            'login' => 'partner@example.com',
+            'email' => 'partner@example.com',
         ]);
     }
 
     #[Test]
-    public function it_does_nothing_when_login_missing(): void
+    public function it_does_nothing_when_email_missing(): void
     {
         Log::shouldReceive('warning')
             ->once()
             ->withArgs(function ($msg) {
-                return str_contains($msg, 'отсутствует uuid или login');
+                return str_contains($msg, 'отсутствует uuid или email');
             });
 
         $handler = new HandlePartnerCreated();
@@ -195,7 +194,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event' => 'partner.created',
             'uuid'  => 'no-loop-uuid',
-            'login' => 'noevent@example.com',
+            'email' => 'noevent@example.com',
         ]);
 
         Event::assertNotDispatched(UserUpdated::class);
@@ -211,7 +210,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'    => 'partner.created',
             'uuid'     => 'no-loop-create-uuid',
-            'login'    => 'nocreate@example.com',
+            'email'    => 'nocreate@example.com',
             'password' => 'temp123',
         ]);
 
@@ -235,7 +234,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'         => 'partner.created',
             'uuid'          => 'uuid-with-status',
-            'login'         => 'golduser@example.com',
+            'email'         => 'golduser@example.com',
             'password'      => 'temp123',
             'client_status' => 'gold',
         ]);
@@ -263,7 +262,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'         => 'partner.created',
             'uuid'          => 'uuid-reset-status',
-            'login'         => 'reset@example.com',
+            'email'         => 'reset@example.com',
             'client_status' => null,
         ]);
 
@@ -297,7 +296,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'         => 'partner.created',
             'uuid'          => 'uuid-unknown-status',
-            'login'         => 'unknown@example.com',
+            'email'         => 'unknown@example.com',
             'client_status' => 'platinum',
         ]);
 
@@ -328,7 +327,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'         => 'partner.created',
             'uuid'          => 'uuid-upgrade',
-            'login'         => 'upgrade@example.com',
+            'email'         => 'upgrade@example.com',
             'client_status' => 'gold',
         ]);
 
@@ -354,7 +353,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event' => 'partner.created',
             'uuid'  => 'uuid-nochange',
-            'login' => 'nochange@example.com',
+            'email' => 'nochange@example.com',
             // client_status отсутствует — не менять
         ]);
 
@@ -379,7 +378,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'     => 'partner.created',
             'uuid'      => 'uuid-block',
-            'login'     => 'blocked@example.com',
+            'email'     => 'blocked@example.com',
             'is_active' => false,
         ]);
 
@@ -400,7 +399,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'     => 'partner.created',
             'uuid'      => 'uuid-reactivate',
-            'login'     => 'reactivate@example.com',
+            'email'     => 'reactivate@example.com',
             'is_active' => true,
         ]);
 
@@ -415,7 +414,7 @@ class HandlePartnerCreatedTest extends TestCase
         $handler->handle([
             'event'     => 'partner.created',
             'uuid'      => 'uuid-create-blocked',
-            'login'     => 'newblocked@example.com',
+            'email'     => 'newblocked@example.com',
             'password'  => 'temp123',
             'is_active' => false,
         ]);

@@ -26,6 +26,9 @@
     },
     "additionalProperties": true,
     "required": [
-        "event"
+        "event",
+        "product_uuid",
+        "warehouse_uuid",
+        "quantity"
     ]
 }

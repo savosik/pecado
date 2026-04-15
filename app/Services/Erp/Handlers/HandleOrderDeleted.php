@@ -27,9 +27,9 @@ class HandleOrderDeleted
             return;
         }
 
-        $order->status = 'cancelled';
+        $order->status = 'closed';
         $order->save();
 
-        Log::info('HandleOrderDeleted: заказ распроведён (статус cancelled, запись сохранена)', ['uuid' => $uuid]);
+        Log::info('HandleOrderDeleted: заказ распроведён (статус closed, запись сохранена)', ['uuid' => $uuid]);
     }
 }

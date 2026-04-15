@@ -224,20 +224,20 @@ class HandleOrderCreatedTest extends TestCase
     }
 
     #[Test]
-    public function creates_order_with_erp_russian_status(): void
+    public function creates_order_with_ready_to_ship_status(): void
     {
         $this->handler->handle([
             'event'        => 'order.created',
             'message_id'   => 'msg-test-008',
             'uuid'         => 'order-erp-status-001',
-            'status'       => 'к_отгрузке',
+            'status'       => 'ready_to_ship',
             'type'         => 'order',
             'items'        => [],
         ]);
 
         $order = Order::where('uuid', 'order-erp-status-001')->first();
         $this->assertNotNull($order);
-        $this->assertEquals('к_отгрузке', $order->status->value);
+        $this->assertEquals('ready_to_ship', $order->status->value);
     }
 
     #[Test]

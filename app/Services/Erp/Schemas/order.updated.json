@@ -15,6 +15,10 @@
             "type": "string",
             "format": "uuid"
         },
+        "number": {
+            "type": ["string", "null"],
+            "description": "Номер заказа в 1С. Сохраняется как erp_number на сайте для коммуникации с менеджером."
+        },
         "status": {
             "type": "string"
         },

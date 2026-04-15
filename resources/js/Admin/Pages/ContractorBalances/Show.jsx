@@ -14,7 +14,7 @@ export default function Show({ balance }) {
     return (
         <>
             <PageHeader
-                title={`Баланс контрагента: ${balance.contractor_inn}`}
+                title={`Баланс контрагента: ${balance.tax_id}`}
                 backUrl={route('admin.contractor-balances.index')}
                 actions={
                     <Button
@@ -57,7 +57,7 @@ export default function Show({ balance }) {
                             </Box>
                             <Box>
                                 <Text fontSize="xs" color="gray.500" mb={1}>ИНН контрагента</Text>
-                                <Text fontFamily="mono" fontWeight="medium">{balance.contractor_inn}</Text>
+                                <Text fontFamily="mono" fontWeight="medium">{balance.tax_id}</Text>
                             </Box>
                             {balance.contractor_uuid && (
                                 <Box>

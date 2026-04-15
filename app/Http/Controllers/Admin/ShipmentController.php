@@ -27,7 +27,7 @@ class ShipmentController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('uuid', 'like', "%{$search}%")
-                    ->orWhere('contractor_inn', 'like', "%{$search}%")
+                    ->orWhere('tax_id', 'like', "%{$search}%")
                     ->orWhereHas('company', function ($cq) use ($search) {
                         $cq->withoutGlobalScopes()
                             ->where('name', 'like', "%{$search}%")
@@ -81,7 +81,7 @@ class ShipmentController extends Controller
             return [
                 'id'             => $shipment->id,
                 'uuid'           => $shipment->uuid,
-                'contractor_inn' => $shipment->contractor_inn,
+                'tax_id' => $shipment->tax_id,
                 'date'           => $shipment->date?->format('Y-m-d'),
                 'status'         => $shipment->status,
                 'status_label'   => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
@@ -122,7 +122,7 @@ class ShipmentController extends Controller
             'shipment' => [
                 'id'             => $shipment->id,
                 'uuid'           => $shipment->uuid,
-                'contractor_inn' => $shipment->contractor_inn,
+                'tax_id' => $shipment->tax_id,
                 'date'           => $shipment->date?->format('Y-m-d'),
                 'status'         => $shipment->status,
                 'status_label'   => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,

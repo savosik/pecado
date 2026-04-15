@@ -16,10 +16,7 @@
             "format": "uuid"
         },
         "partner_uuid": {
-            "type": [
-                "string",
-                "null"
-            ],
+            "type": "string",
             "format": "uuid"
         },
         "name": {
@@ -32,6 +29,7 @@
         },
         "tax_id": {
             "type": "string",
+            "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
             "minLength": 1
         },
         "tax_code": {
@@ -122,6 +120,9 @@
     "additionalProperties": true,
     "required": [
         "event",
-        "uuid"
+        "uuid",
+        "partner_uuid",
+        "tax_id",
+        "name"
     ]
 }

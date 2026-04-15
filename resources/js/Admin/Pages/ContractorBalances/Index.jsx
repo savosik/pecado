@@ -50,11 +50,11 @@ export default function Index({ balances, filters }) {
             ),
         },
         {
-            key: 'contractor_inn',
+            key: 'tax_id',
             label: 'ИНН',
             sortable: true,
             render: (_, row) => (
-                <Box fontFamily="mono" fontSize="sm">{row.contractor_inn}</Box>
+                <Box fontFamily="mono" fontSize="sm">{row.tax_id}</Box>
             ),
         },
         {

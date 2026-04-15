@@ -6,9 +6,6 @@ enum OrderStatus: string
 {
     case PENDING = 'pending';
     case CONFIRMED = 'confirmed';
-    case PROCESSING = 'processing';
-    case SHIPPED = 'shipped';
-    case DELIVERED = 'delivered';
-    case CANCELLED = 'cancelled';
-    case READY_TO_SHIP = 'к_отгрузке';
+    case READY_TO_SHIP = 'ready_to_ship';
+    case CLOSED = 'closed';
 }

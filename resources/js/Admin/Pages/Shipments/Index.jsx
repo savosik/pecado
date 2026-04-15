@@ -82,10 +82,10 @@ export default function Index({ shipments, filters, statuses }) {
             ),
         },
         {
-            key: 'contractor_inn',
+            key: 'tax_id',
             label: 'ИНН контрагента',
             render: (_, row) => (
-                <Text fontSize="sm" fontFamily="mono">{row.contractor_inn || '—'}</Text>
+                <Text fontSize="sm" fontFamily="mono">{row.tax_id || '—'}</Text>
             ),
         },
         {

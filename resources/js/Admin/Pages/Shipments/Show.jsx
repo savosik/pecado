@@ -64,7 +64,7 @@ export default function Show({ shipment, related_orders }) {
                     <Separator my={4} />
 
                     <SimpleGrid columns={{ base: 1, md: 3 }} gap={6}>
-                        <InfoRow label="ИНН контрагента" value={shipment.contractor_inn} />
+                        <InfoRow label="ИНН контрагента" value={shipment.tax_id} />
                         <Box>
                             <Text fontSize="xs" color="gray.500" mb={1}>Компания</Text>
                             {shipment.company ? (

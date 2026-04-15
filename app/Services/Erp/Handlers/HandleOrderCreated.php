@@ -98,6 +98,7 @@ class HandleOrderCreated
                 return Order::create([
                     'uuid'             => $uuid,
                     'number'           => $payload['number'] ?? null,
+                    'erp_number'       => $payload['number'] ?? null,
                     'user_id'          => $userId,
                     'company_id'       => $companyId,
                     'delivery_address' => $payload['delivery_address'] ?? null,

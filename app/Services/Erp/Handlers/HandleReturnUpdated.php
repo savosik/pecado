@@ -27,8 +27,19 @@ class HandleReturnUpdated
             return;
         }
 
+        $changed = false;
+
+        if (isset($payload['number'])) {
+            $return->erp_number = $payload['number'];
+            $changed = true;
+        }
+
         if (isset($payload['status'])) {
             $return->status = $payload['status'];
+            $changed = true;
+        }
+
+        if ($changed) {
             $return->save();
         }
 

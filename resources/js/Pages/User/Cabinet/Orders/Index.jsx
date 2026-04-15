@@ -14,10 +14,9 @@ import { Select } from '@/components/ui/select';
 
 const STATUS_COLORS = {
     pending: 'yellow',
-    processing: 'blue',
-    shipped: 'purple',
-    delivered: 'green',
-    cancelled: 'red',
+    confirmed: 'blue',
+    ready_to_ship: 'purple',
+    closed: 'green',
 };
 
 export default function OrdersIndex({ filters, statuses, types }) {

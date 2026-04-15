@@ -38,6 +38,11 @@ class HandleOrderUpdated
             $order->status = $payload['status'];
         }
 
+        // Обновление номера из 1С (v12.3)
+        if (isset($payload['number'])) {
+            $order->erp_number = $payload['number'];
+        }
+
         // Обновление адреса доставки (v12.1)
         if (isset($payload['delivery_address'])) {
             $order->delivery_address = $payload['delivery_address'];

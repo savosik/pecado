@@ -57,10 +57,10 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->handler->handle([
             'uuid'   => 'test-uuid-status',
-            'status' => 'processing',
+            'status' => 'confirmed',
         ]);
 
-        $this->assertEquals('processing', $order->fresh()->status->value);
+        $this->assertEquals('confirmed', $order->fresh()->status->value);
     }
 
     /** @test */
@@ -117,7 +117,7 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->handler->handle([
             'uuid'   => 'test-uuid-no-items',
-            'status' => 'processing',
+            'status' => 'confirmed',
         ]);
 
         $this->assertCount(1, $order->fresh()->items);
@@ -380,5 +380,41 @@ class HandleOrderUpdatedTest extends TestCase
         ]);
 
         $this->assertDatabaseCount('order_change_logs', 0);
+    }
+
+    /** @test */
+    public function it_saves_erp_number_from_payload(): void
+    {
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-erp-num',
+            'erp_number' => null,
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid'   => 'test-uuid-erp-num',
+            'number' => 'ЗКП-000123',
+        ]);
+
+        $this->assertEquals('ЗКП-000123', $order->fresh()->erp_number);
+    }
+
+    /** @test */
+    public function it_updates_erp_number_on_redelivery(): void
+    {
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-erp-upd',
+            'erp_number' => 'ЗКП-000100',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid'   => 'test-uuid-erp-upd',
+            'number' => 'ЗКП-000200',
+        ]);
+
+        $this->assertEquals('ЗКП-000200', $order->fresh()->erp_number);
     }
 }

@@ -6,6 +6,42 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.3.1] — 2026-04-15
+
+> Синхронизация номера заказа/возврата из 1С
+
+### Добавлено
+
+- **`erp_number`** — новое поле в таблицах `orders`, `returns` и `shipments` для хранения номера из 1С
+- **`order.updated`** — поле `number` добавлено в payload; сохраняется как `erp_number`
+- **`order.created` (1С → Сайт)** — `number` из payload дублируется в `erp_number`
+- **`return.updated`** — поле `number` добавлено в payload; сохраняется как `erp_number`
+- **`shipment.created` / `shipment.updated`** — поле `number` добавлено в payload; сохраняется как `erp_number`
+- Пользователь видит номер из 1С для коммуникации с менеджером
+
+---
+
+## [12.3.0] — 2026-04-15
+
+> Источник: рефакторинг статусов заказов
+
+### Изменено
+
+- **Статусы заказов** — оставлены только 4: `pending`, `confirmed`, `ready_to_ship`, `closed`
+- Удалены статусы: `processing`, `completed`, `shipped`, `delivered`, `cancelled`
+- `READY_TO_SHIP` — значение исправлено с `к_отгрузке` на `ready_to_ship`
+- Маппинг 1С → Сайт обновлён:
+    - Не согласован → `pending`
+    - К выполнению → `confirmed`
+    - К отгрузке → `ready_to_ship`
+    - Закрыт → `closed`
+- `order.deleted` — заказ теперь получает статус `closed` вместо `cancelled`
+- **`contractor_uuid` удалён** из протокола обмена (`balance.updated`, `ContractorBalance`) — матчинг контрагентов исключительно по ИНН (`contractor_inn`)
+- Версия спецификации обновлена до v12.3.0
+- Добавлены тест-кейсы: order.updated → ready_to_ship, order.updated → closed
+
+---
+
 ## [12.2.0] — 2026-04-15
 
 > Источник: управление активностью категорий из 1С

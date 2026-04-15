@@ -14,7 +14,7 @@ class ShipmentFactory extends Factory
     {
         return [
             'uuid' => (string) Str::uuid(),
-            'contractor_inn' => $this->faker->numerify('##########'),
+            'tax_id' => $this->faker->numerify('##########'),
             'date' => $this->faker->date(),
             'status' => 'completed',
             'currency_code' => $this->faker->randomElement(['RUB', 'KZT', 'BYN']),

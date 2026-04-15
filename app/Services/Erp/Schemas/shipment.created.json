@@ -15,9 +15,14 @@
             "type": "string",
             "format": "uuid"
         },
-        "contractor_inn": {
+        "tax_id": {
             "type": "string",
+            "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
             "minLength": 1
+        },
+        "number": {
+            "type": ["string", "null"],
+            "description": "Номер реализации в 1С. Сохраняется как erp_number на сайте."
         },
         "date": {
             "type": "string",

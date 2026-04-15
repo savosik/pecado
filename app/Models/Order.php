@@ -23,6 +23,7 @@ class Order extends Model
     protected $fillable = [
         'uuid',
         'number',
+        'erp_number',
         'user_id',
         'company_id',
         'cart_id',

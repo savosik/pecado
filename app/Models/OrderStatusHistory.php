@@ -41,12 +41,10 @@ class OrderStatusHistory extends Model
         }
 
         return match ($this->old_status) {
-            'pending' => 'В обработке',
-            'processing' => 'Обрабатывается',
-            'shipped' => 'Отправлен',
-            'delivered' => 'Доставлен',
-            'cancelled' => 'Отменён',
-            'returned' => 'Возвращён',
+            'pending' => 'Ожидает',
+            'confirmed' => 'Подтверждён',
+            'ready_to_ship' => 'К отгрузке',
+            'closed' => 'Закрыт',
             default => $this->old_status,
         };
     }
@@ -57,12 +55,10 @@ class OrderStatusHistory extends Model
     public function getNewStatusLabelAttribute(): string
     {
         return match ($this->new_status) {
-            'pending' => 'В обработке',
-            'processing' => 'Обрабатывается',
-            'shipped' => 'Отправлен',
-            'delivered' => 'Доставлен',
-            'cancelled' => 'Отменён',
-            'returned' => 'Возвращён',
+            'pending' => 'Ожидает',
+            'confirmed' => 'Подтверждён',
+            'ready_to_ship' => 'К отгрузке',
+            'closed' => 'Закрыт',
             default => $this->new_status,
         };
     }

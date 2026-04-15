@@ -19,14 +19,14 @@ class ContractorBalanceTest extends TestCase
 
         $balance = ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '1234567890',
+            'tax_id'  => '1234567890',
             'current_balance' => -15000.50,
             'overdue_debt'    => 5000.00,
         ]);
 
         $this->assertDatabaseHas('contractor_balances', [
             'user_id'        => $user->id,
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
         ]);
 
         $this->assertEquals(-15000.50, (float)$balance->current_balance);
@@ -40,7 +40,7 @@ class ContractorBalanceTest extends TestCase
 
         $balance = ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '9876543210',
+            'tax_id'  => '9876543210',
             'current_balance' => -30000.00,
             'overdue_debt'    => 30000.00,
         ]);
@@ -63,7 +63,7 @@ class ContractorBalanceTest extends TestCase
 
         $balance = ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '1111111111',
+            'tax_id'  => '1111111111',
             'current_balance' => 0,
             'overdue_debt'    => 1000.00,
         ]);
@@ -89,7 +89,7 @@ class ContractorBalanceTest extends TestCase
 
         ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '2222222222',
+            'tax_id'  => '2222222222',
             'current_balance' => 0,
             'overdue_debt'    => 0,
         ]);
@@ -98,7 +98,7 @@ class ContractorBalanceTest extends TestCase
 
         ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '2222222222',
+            'tax_id'  => '2222222222',
             'current_balance' => -5000.00,
             'overdue_debt'    => 0,
         ]);

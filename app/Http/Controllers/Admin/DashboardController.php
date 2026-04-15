@@ -20,15 +20,15 @@ class DashboardController extends AdminController
         $totalOrders = Order::count();
         $totalProducts = Product::count();
         $totalUsers = User::count();
-        $totalRevenue = Order::where('status', 'completed')->sum('total_amount');
+        $totalRevenue = Order::where('status', 'closed')->sum('total_amount');
 
         // Orders by status
         $pendingOrders = Order::where('status', 'pending')->count();
-        $completedOrders = Order::where('status', 'completed')->count();
-        $cancelledOrders = Order::where('status', 'cancelled')->count();
+        $completedOrders = Order::where('status', 'closed')->count();
+        $cancelledOrders = 0; // Статус cancelled удалён в v12.3
 
         // Average order value
-        $avgOrderValue = Order::where('status', 'completed')->avg('total_amount') ?? 0;
+        $avgOrderValue = Order::where('status', 'closed')->avg('total_amount') ?? 0;
 
         // Sales chart data (last 30 days)
         $salesChartData = Order::selectRaw('DATE(created_at) as date, COUNT(*) as count, SUM(total_amount) as revenue')

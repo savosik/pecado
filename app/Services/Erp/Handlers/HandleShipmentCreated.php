@@ -23,7 +23,7 @@ class HandleShipmentCreated
             return;
         }
 
-        $contractorInn = $payload['contractor_inn'] ?? null;
+        $contractorInn = $payload['tax_id'] ?? null;
         $companyId = null;
         $userId = null;
 
@@ -42,9 +42,10 @@ class HandleShipmentCreated
         $shipment = Shipment::updateOrCreate(
             ['uuid' => $uuid],
             [
+                'erp_number'     => $payload['number'] ?? null,
                 'user_id'        => $userId,
                 'company_id'     => $companyId,
-                'contractor_inn' => $contractorInn,
+                'tax_id'         => $contractorInn,
                 'date'           => $payload['date'] ?? null,
                 'status'         => $payload['status'] ?? 'new',
                 'currency_code'  => $payload['currency_code'] ?? null,

@@ -48,11 +48,9 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
 
     const statusColors = {
         pending: 'yellow',
-        processing: 'blue',
-        completed: 'green',
-        cancelled: 'red',
-        shipped: 'cyan',
-        delivered: 'teal',
+        confirmed: 'blue',
+        ready_to_ship: 'purple',
+        closed: 'green',
     };
 
     return (

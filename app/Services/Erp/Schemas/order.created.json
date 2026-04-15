@@ -22,7 +22,8 @@
             "type": "string"
         },
         "status": {
-            "type": "string"
+            "type": "string",
+            "enum": ["pending", "confirmed", "ready_to_ship", "closed"]
         },
         "type": {
             "type": "string"
@@ -59,7 +60,8 @@
                     "type": "string"
                 },
                 "tax_id": {
-                    "type": "string"
+                    "type": "string",
+                    "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
                 },
                 "registration_number": {
                     "type": [

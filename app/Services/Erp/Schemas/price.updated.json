@@ -22,6 +22,8 @@
     },
     "additionalProperties": true,
     "required": [
-        "event"
+        "event",
+        "product_uuid",
+        "price"
     ]
 }

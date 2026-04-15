@@ -27,20 +27,16 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
 
     const statusLabels = {
         pending: 'Ожидает',
-        processing: 'В обработке',
-        shipped: 'В пути',
-        delivered: 'Доставлен',
-        completed: 'Завершён',
-        cancelled: 'Отменён',
+        confirmed: 'Подтверждён',
+        ready_to_ship: 'К отгрузке',
+        closed: 'Закрыт',
     };
 
     const statusColors = {
         pending: 'yellow',
-        processing: 'blue',
-        shipped: 'purple',
-        delivered: 'teal',
-        completed: 'green',
-        cancelled: 'red',
+        confirmed: 'blue',
+        ready_to_ship: 'purple',
+        closed: 'green',
     };
 
     return (

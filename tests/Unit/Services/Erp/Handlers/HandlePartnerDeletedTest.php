@@ -82,4 +82,25 @@ class HandlePartnerDeletedTest extends TestCase
 
         $this->assertEquals(UserStatus::BLOCKED, $user->status);
     }
+
+    #[Test]
+    public function it_blocks_user_by_email_fallback(): void
+    {
+        $user = User::factory()->create([
+            'status' => UserStatus::ACTIVE,
+            'erp_id' => null,
+            'email' => 'fallback@example.com',
+        ]);
+
+        $handler = new HandlePartnerDeleted();
+        $handler->handle([
+            'event' => 'partner.deleted',
+            'uuid' => 'nonexistent-uuid',
+            'email' => 'fallback@example.com',
+        ]);
+
+        $user->refresh();
+
+        $this->assertEquals(UserStatus::BLOCKED, $user->status);
+    }
 }

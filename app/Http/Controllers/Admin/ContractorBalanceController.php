@@ -20,7 +20,7 @@ class ContractorBalanceController extends Controller
         // Поиск по пользователю / ИНН / компании
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('contractor_inn', 'like', "%{$search}%")
+                $q->where('tax_id', 'like', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
                       $uq->where('name', 'like', "%{$search}%")
                          ->orWhere('email', 'like', "%{$search}%");
@@ -40,7 +40,7 @@ class ContractorBalanceController extends Controller
         // Сортировка
         $sortBy    = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        $allowed   = ['id', 'contractor_inn', 'current_balance', 'overdue_debt', 'balance_erp_updated_at'];
+        $allowed   = ['id', 'tax_id', 'current_balance', 'overdue_debt', 'balance_erp_updated_at'];
         if (in_array($sortBy, $allowed)) {
             $query->orderBy($sortBy, $sortOrder);
         }
@@ -64,7 +64,7 @@ class ContractorBalanceController extends Controller
     {
         $validated = $request->validate([
             'user_id'                => 'required|exists:users,id',
-            'contractor_inn'         => [
+            'tax_id'                 => [
                 'required', 'string', 'max:50',
                 Rule::unique('contractor_balances')->where(fn ($q) => $q->where('user_id', $request->user_id)),
             ],
@@ -79,8 +79,8 @@ class ContractorBalanceController extends Controller
         ], [
             'user_id.required'                         => 'Необходимо выбрать пользователя.',
             'user_id.exists'                           => 'Пользователь не найден.',
-            'contractor_inn.required'                  => 'ИНН контрагента обязателен.',
-            'contractor_inn.unique'                    => 'У этого пользователя уже есть баланс с таким ИНН.',
+            'tax_id.required'                          => 'ИНН контрагента обязателен.',
+            'tax_id.unique'                            => 'У этого пользователя уже есть баланс с таким ИНН.',
             'current_balance.required'                 => 'Текущий баланс обязателен.',
             'current_balance.numeric'                  => 'Баланс должен быть числом.',
             'overdue_debt.numeric'                     => 'Просроченная задолженность должна быть числом.',
@@ -95,7 +95,7 @@ class ContractorBalanceController extends Controller
         $balance = DB::transaction(function () use ($validated) {
             $balance = ContractorBalance::create([
                 'user_id'                => $validated['user_id'],
-                'contractor_inn'         => $validated['contractor_inn'],
+                'tax_id'                 => $validated['tax_id'],
                 'contractor_uuid'        => $validated['contractor_uuid'] ?? null,
                 'current_balance'        => $validated['current_balance'],
                 'overdue_debt'           => $validated['overdue_debt'] ?? 0,
@@ -140,7 +140,7 @@ class ContractorBalanceController extends Controller
     {
         $validated = $request->validate([
             'user_id'                => 'required|exists:users,id',
-            'contractor_inn'         => [
+            'tax_id'                 => [
                 'required', 'string', 'max:50',
                 Rule::unique('contractor_balances')
                     ->where(fn ($q) => $q->where('user_id', $request->user_id))
@@ -157,8 +157,8 @@ class ContractorBalanceController extends Controller
         ], [
             'user_id.required'                         => 'Необходимо выбрать пользователя.',
             'user_id.exists'                           => 'Пользователь не найден.',
-            'contractor_inn.required'                  => 'ИНН контрагента обязателен.',
-            'contractor_inn.unique'                    => 'У этого пользователя уже есть баланс с таким ИНН.',
+            'tax_id.required'                          => 'ИНН контрагента обязателен.',
+            'tax_id.unique'                            => 'У этого пользователя уже есть баланс с таким ИНН.',
             'current_balance.required'                 => 'Текущий баланс обязателен.',
             'current_balance.numeric'                  => 'Баланс должен быть числом.',
             'overdue_debt.numeric'                     => 'Просроченная задолженность должна быть числом.',
@@ -173,7 +173,7 @@ class ContractorBalanceController extends Controller
         DB::transaction(function () use ($validated, $contractorBalance) {
             $contractorBalance->update([
                 'user_id'                => $validated['user_id'],
-                'contractor_inn'         => $validated['contractor_inn'],
+                'tax_id'                 => $validated['tax_id'],
                 'contractor_uuid'        => $validated['contractor_uuid'] ?? null,
                 'current_balance'        => $validated['current_balance'],
                 'overdue_debt'           => $validated['overdue_debt'] ?? 0,
@@ -211,7 +211,7 @@ class ContractorBalanceController extends Controller
 
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
-                $q->where('contractor_inn', 'like', "%{$search}%")
+                $q->where('tax_id', 'like', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
                       $uq->where('name', 'like', "%{$search}%")
                          ->orWhere('email', 'like', "%{$search}%");
@@ -222,8 +222,8 @@ class ContractorBalanceController extends Controller
         $balances = $query->limit(20)->get()->map(function ($balance) {
             return [
                 'id'              => $balance->id,
-                'name'            => $balance->user->name . ' (' . $balance->contractor_inn . ')',
-                'contractor_inn'  => $balance->contractor_inn,
+                'name'            => $balance->user->name . ' (' . $balance->tax_id . ')',
+                'tax_id'          => $balance->tax_id,
                 'current_balance' => $balance->current_balance,
             ];
         });

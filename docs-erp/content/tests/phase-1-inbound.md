@@ -277,13 +277,13 @@
 
 **Зависимости:** 1.13
 
-### A) Только статус
+### A) Только статус → confirmed
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/order.updated.json)
 
-🔵 `order.updated` с `status: "processing"` (без `items`).
+🔵 `order.updated` с `status: "confirmed"` (без `items`).
 
-- [ ] Статус → `processing`
+- [ ] Статус → `confirmed`
 - [ ] Запись в `order_status_histories`
 - [ ] Позиции НЕ изменились
 
@@ -295,6 +295,20 @@
 - [ ] Количество и цены обновлены
 - [ ] Diff зафиксирован в `order_change_logs`
 
+### C) Обновление статуса → ready_to_ship (v12.3)
+
+🔵 `order.updated` с `status: "ready_to_ship"`.
+
+- [ ] Статус → `ready_to_ship`
+- [ ] В интерфейсе отображается лейбл «К отгрузке»
+
+### D) Обновление статуса → closed (v12.3)
+
+🔵 `order.updated` с `status: "closed"`.
+
+- [ ] Статус → `closed`
+- [ ] В интерфейсе отображается лейбл «Закрыт»
+
 ---
 
 ## 1.15 — Удаление заказа (`order.deleted`)
@@ -305,7 +319,7 @@
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/order.deleted.json)
 
-- [ ] Заказ → `cancelled` (soft delete)
+- [ ] Заказ → `closed` (распроведён, v12.3)
 - [ ] Не отображается в активных заказах
 
 ---

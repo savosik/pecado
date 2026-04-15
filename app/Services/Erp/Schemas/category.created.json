@@ -32,6 +32,7 @@
     "additionalProperties": true,
     "required": [
         "event",
-        "uuid"
+        "uuid",
+        "name"
     ]
 }

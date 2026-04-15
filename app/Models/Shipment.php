@@ -16,9 +16,10 @@ class Shipment extends Model
 
     protected $fillable = [
         'uuid',
+        'erp_number',
         'user_id',
         'company_id',
-        'contractor_inn',
+        'tax_id',
         'date',
         'status',
         'currency_code',

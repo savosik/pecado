@@ -13,7 +13,7 @@ const emptyDetail = () => ({ shipment_uuid: '', amount: '', due_date: '' });
 const ContractorBalancesCreate = () => {
     const { data, setData, post, processing, errors, transform } = useForm({
         user_id: '',
-        contractor_inn: '',
+        tax_id: '',
         contractor_uuid: '',
         current_balance: '',
         overdue_debt: '',
@@ -78,10 +78,10 @@ const ContractorBalancesCreate = () => {
                                 </FormField>
 
                                 <HStack gap={4} align="flex-start">
-                                    <FormField label="ИНН контрагента" error={errors.contractor_inn} required flex={1}>
+                                    <FormField label="ИНН контрагента" error={errors.tax_id} required flex={1}>
                                         <Input
-                                            value={data.contractor_inn}
-                                            onChange={(e) => setData('contractor_inn', e.target.value)}
+                                            value={data.tax_id}
+                                            onChange={(e) => setData('tax_id', e.target.value)}
                                             placeholder="1234567890"
                                             fontFamily="mono"
                                         />

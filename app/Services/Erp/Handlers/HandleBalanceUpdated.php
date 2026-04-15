@@ -42,11 +42,10 @@ class HandleBalanceUpdated
 
         DB::transaction(function () use ($user, $contractors, $updatedAt) {
             foreach ($contractors as $contractorData) {
-                $contractorInn  = $contractorData['contractor_inn'] ?? null;
-                $contractorUuid = $contractorData['contractor_uuid'] ?? null;
+                $contractorInn  = $contractorData['tax_id'] ?? null;
 
                 if (!$contractorInn) {
-                    Log::warning('HandleBalanceUpdated: отсутствует contractor_inn', ['data' => $contractorData]);
+                    Log::warning('HandleBalanceUpdated: отсутствует tax_id', ['data' => $contractorData]);
                     continue;
                 }
 
@@ -58,7 +57,6 @@ class HandleBalanceUpdated
 
                 $updateData = [
                     'company_id'             => $company?->id,
-                    'contractor_uuid'        => $contractorUuid,
                     'current_balance'        => $contractorData['current_balance'] ?? 0,
                     'overdue_debt'           => $contractorData['overdue_debt'] ?? 0,
                     'balance_erp_updated_at' => $updatedAt,
@@ -68,7 +66,7 @@ class HandleBalanceUpdated
                 $balance = ContractorBalance::updateOrCreate(
                     [
                         'user_id'        => $user->id,
-                        'contractor_inn' => $contractorInn,
+                        'tax_id' => $contractorInn,
                     ],
                     $updateData
                 );
@@ -92,7 +90,7 @@ class HandleBalanceUpdated
                 Log::info('HandleBalanceUpdated: баланс контрагента обновлён', [
                     'partner_uuid'     => $user->erp_id,
                     'user_id'          => $user->id,
-                    'contractor_inn'   => $contractorInn,
+                    'tax_id'           => $contractorInn,
                     'current_balance'  => $updateData['current_balance'],
                     'overdue_debt'     => $updateData['overdue_debt'],
                     'overdue_count'    => count($overdueDetails),

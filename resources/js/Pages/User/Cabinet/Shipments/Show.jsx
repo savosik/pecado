@@ -61,7 +61,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                             label="Дата отгрузки"
                             value={shipment.date ? new Date(shipment.date).toLocaleDateString('ru-RU') : '—'}
                         />
-                        <InfoBlock label="ИНН контрагента" value={shipment.contractor_inn} mono />
+                        <InfoBlock label="ИНН контрагента" value={shipment.tax_id} mono />
                         <InfoBlock label="Компания" value={shipment.company?.name} />
                         <InfoBlock label="Валюта (1С)" value={shipment.currency_code} />
                     </SimpleGrid>

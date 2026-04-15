@@ -25,7 +25,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0001',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
             'date' => '2026-02-16',
             'status' => 'completed',
             'currency_code' => 'KZT',
@@ -40,7 +40,7 @@ class HandleShipmentCreatedTest extends TestCase
 
         $this->assertDatabaseHas('shipments', [
             'uuid' => 's1a2b3c4-test-0001',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
             'status' => 'completed',
             'currency_code' => 'KZT',
         ]);
@@ -65,7 +65,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0002',
-            'contractor_inn' => '9876543210',
+            'tax_id' => '9876543210',
             'date' => '2026-02-16',
             'status' => 'completed',
             'items' => [],
@@ -84,7 +84,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0003',
-            'contractor_inn' => '0000000000',
+            'tax_id' => '0000000000',
             'date' => '2026-02-16',
             'status' => 'new',
             'items' => [],
@@ -105,7 +105,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0004',
-            'contractor_inn' => '1111111111',
+            'tax_id' => '1111111111',
             'date' => '2026-02-16',
             'status' => 'new',
             'items' => [],
@@ -115,7 +115,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0004',
-            'contractor_inn' => '1111111111',
+            'tax_id' => '1111111111',
             'date' => '2026-02-16',
             'status' => 'completed',
             'items' => [],
@@ -138,7 +138,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler = new HandleShipmentCreated();
         $handler->handle([
             'event' => 'shipment.created',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
         ]);
 
         $this->assertDatabaseCount('shipments', 0);
@@ -151,7 +151,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0005',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
             'date' => '2026-02-16',
             'status' => 'completed',
             'items' => [
@@ -179,7 +179,7 @@ class HandleShipmentCreatedTest extends TestCase
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0006',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
             'date' => '2026-02-16',
             'status' => 'completed',
             'currency_code' => 'RUB',

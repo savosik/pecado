@@ -31,8 +31,8 @@ class HandlePartnerCreated
     public function handle(array $payload): void
     {
         $uuid     = $payload['uuid']     ?? null;
-        $login    = $payload['login']    ?? null;
-        $email    = $payload['email']    ?? $login;
+        $email    = $payload['email']    ?? null;
+        $login    = $payload['login']    ?? $email;
         $name     = $payload['name'] ?? null;
 
         $phone    = $payload['phone']    ?? null;
@@ -51,8 +51,8 @@ class HandlePartnerCreated
         // v11: client_status → ClientStatus по external_id
         $clientStatusId = $this->resolveClientStatusId($payload);
 
-        if (!$uuid || !$login) {
-            Log::warning('partner.created: отсутствует uuid или login', ['payload' => $payload]);
+        if (!$uuid || !$email) {
+            Log::warning('partner.created: отсутствует uuid или email', ['payload' => $payload]);
 
             return;
         }

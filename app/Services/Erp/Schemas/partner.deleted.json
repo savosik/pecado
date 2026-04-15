@@ -14,11 +14,16 @@
         "uuid": {
             "type": "string",
             "format": "uuid"
+        },
+        "email": {
+            "type": "string",
+            "format": "email"
         }
     },
     "additionalProperties": true,
     "required": [
         "event",
-        "uuid"
+        "uuid",
+        "email"
     ]
 }

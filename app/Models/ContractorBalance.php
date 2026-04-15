@@ -15,7 +15,7 @@ class ContractorBalance extends Model
         'user_id',
         'company_id',
         'contractor_uuid',
-        'contractor_inn',
+        'tax_id',
         'current_balance',
         'overdue_debt',
         'balance_erp_updated_at',

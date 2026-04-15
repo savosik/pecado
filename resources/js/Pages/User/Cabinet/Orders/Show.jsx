@@ -14,20 +14,16 @@ import CabinetLayout from '../CabinetLayout';
 
 const STATUS_LABELS = {
     pending: 'Ожидает',
-    processing: 'В обработке',
-    shipped: 'Отправлен',
-    delivered: 'Доставлен',
-    cancelled: 'Отменён',
     confirmed: 'Подтверждён',
+    ready_to_ship: 'К отгрузке',
+    closed: 'Закрыт',
 };
 
 const STATUS_COLORS = {
     pending: 'yellow',
-    processing: 'blue',
-    shipped: 'purple',
-    delivered: 'green',
-    cancelled: 'red',
-    confirmed: 'teal',
+    confirmed: 'blue',
+    ready_to_ship: 'purple',
+    closed: 'green',
 };
 
 const TYPE_LABELS = {

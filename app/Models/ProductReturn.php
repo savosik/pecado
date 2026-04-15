@@ -21,6 +21,7 @@ class ProductReturn extends Model
 
     protected $fillable = [
         'uuid',
+        'erp_number',
         'user_id',
         'order_id',
         'status',

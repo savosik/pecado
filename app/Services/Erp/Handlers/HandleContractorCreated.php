@@ -60,25 +60,43 @@ class HandleContractorCreated
         }
 
         // Создать или обновить контрагента (без глобальных скоупов и без событий)
+        // Матчинг: сначала по erp_id (UUID), затем fallback по tax_id + user_id
         $company = Company::withoutEvents(function () use ($uuid, $user, $name, $legalName, $taxId, $regNumber, $taxCode, $okpoCode, $legalAddr, $actualAddr, $phone, $email, $country) {
-            return Company::withoutGlobalScopes()->updateOrCreate(
-                ['erp_id' => $uuid],
-                array_merge(
-                    ['user_id' => $user->id, 'country' => $country],
-                    array_filter([
-                        'name'                => $name,
-                        'legal_name'          => $legalName,
-                        'tax_id'              => $taxId,
-                        'registration_number' => $regNumber,
-                        'tax_code'            => $taxCode,
-                        'okpo_code'           => $okpoCode,
-                        'legal_address'       => $legalAddr,
-                        'actual_address'      => $actualAddr,
-                        'phone'               => $phone,
-                        'email'               => $email,
-                    ], fn ($value) => $value !== null)
-                )
+            $company = Company::withoutGlobalScopes()
+                ->where('erp_id', $uuid)
+                ->first();
+
+            // Fallback: поиск по ИНН + user_id (компания могла быть создана на сайте без erp_id)
+            if (!$company && $taxId) {
+                $company = Company::withoutGlobalScopes()
+                    ->where('user_id', $user->id)
+                    ->where('tax_id', $taxId)
+                    ->first();
+            }
+
+            $attributes = array_merge(
+                ['user_id' => $user->id, 'erp_id' => $uuid, 'country' => $country],
+                array_filter([
+                    'name'                => $name,
+                    'legal_name'          => $legalName,
+                    'tax_id'              => $taxId,
+                    'registration_number' => $regNumber,
+                    'tax_code'            => $taxCode,
+                    'okpo_code'           => $okpoCode,
+                    'legal_address'       => $legalAddr,
+                    'actual_address'      => $actualAddr,
+                    'phone'               => $phone,
+                    'email'               => $email,
+                ], fn ($value) => $value !== null)
             );
+
+            if ($company) {
+                $company->update($attributes);
+            } else {
+                $company = Company::withoutGlobalScopes()->create($attributes);
+            }
+
+            return $company;
         });
 
         // Синхронизация банковских счетов (v5)

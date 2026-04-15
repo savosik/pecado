@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 12.2.0
+  version: 12.3.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -1114,6 +1114,7 @@ components:
         - event
         - message_id
         - uuid
+        - email
       properties:
         event:
           type: string
@@ -1124,10 +1125,15 @@ components:
           description: Уникальный ID сообщения для идемпотентности
         uuid:
           $ref: '#/components/schemas/UUID'
+        email:
+          type: string
+          format: email
+          description: Email партнёра для fallback-поиска, если erp_id ещё не привязан
       examples:
         - event: partner.deleted
           message_id: msg-partner-del-a1b2c3d4
           uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          email: partner@example.com
 
     OrderDeletedPayload:
       type: object
@@ -1535,10 +1541,8 @@ components:
         uuid:
           $ref: '#/components/schemas/UUID'
         partner_uuid:
-          description: UUID партнёра-владельца
-          oneOf:
-            - $ref: '#/components/schemas/UUID'
-            - type: 'null'
+          $ref: '#/components/schemas/UUID'
+          description: UUID партнёра-владельца (обязательный)
         name:
           type: string
           description: Краткое наименование
@@ -1549,7 +1553,7 @@ components:
           description: Полное юридическое наименование
         tax_id:
           type: string
-          description: ИНН
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
           examples:
             - '1234567890'
         tax_code:
@@ -1638,6 +1642,7 @@ components:
           type: string
         tax_id:
           type: string
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
         registration_number:
           type:
             - string
@@ -1714,8 +1719,7 @@ components:
           enum:
             - pending
             - confirmed
-            - processing
-            - completed
+            - ready_to_ship
             - closed
           examples:
             - pending
@@ -1774,20 +1778,23 @@ components:
             - 'msg-order-upd-o1a2b3c4'
         uuid:
           $ref: '#/components/schemas/UUID'
+        number:
+          type:
+            - string
+            - 'null'
+          description: "Номер заказа в 1С. Сохраняется как erp_number на сайте для коммуникации с менеджером."
         status:
           type: string
           description: |
             Маппинг статусов:
             - Не согласован → pending
             - К выполнению → confirmed
-            - В работе → processing
-            - Выполнен → completed
+            - К отгрузке → ready_to_ship
             - Закрыт → closed
           enum:
             - pending
             - confirmed
-            - processing
-            - completed
+            - ready_to_ship
             - closed
         items:
           type: array
@@ -1812,6 +1819,11 @@ components:
           type: string
         uuid:
           $ref: '#/components/schemas/UUID'
+        number:
+          type:
+            - string
+            - 'null'
+          description: "Номер возврата в 1С. Сохраняется как erp_number на сайте."
         status:
           type: string
           description: Статус возврата
@@ -1914,7 +1926,7 @@ components:
         - event
         - message_id
         - uuid
-        - contractor_inn
+        - tax_id
         - date
         - status
         - currency_code
@@ -1931,11 +1943,16 @@ components:
             - 'msg-shipment-s1a2b3c4'
         uuid:
           $ref: '#/components/schemas/UUID'
-        contractor_inn:
+        tax_id:
           type: string
-          description: ИНН контрагента
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
           examples:
             - '7710140679'
+        number:
+          type:
+            - string
+            - 'null'
+          description: "Номер реализации в 1С. Сохраняется как erp_number на сайте."
         date:
           $ref: '#/components/schemas/ISO8601Date'
         status:
@@ -1964,15 +1981,13 @@ components:
     ContractorBalance:
       type: object
       required:
-        - contractor_inn
-        - contractor_uuid
+        - tax_id
         - current_balance
         - overdue_debt
       properties:
-        contractor_inn:
+        tax_id:
           type: string
-        contractor_uuid:
-          $ref: '#/components/schemas/UUID'
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.) — основной идентификатор для матчинга"
         current_balance:
           type: number
           description: Текущий баланс (отрицательное = задолженность)
@@ -2105,7 +2120,8 @@ components:
             - 'Цвет'
         value_type:
           type: string
-          description: Тип значения
+          enum: [string, number, boolean, reference]
+          description: "Тип значения атрибута. Определяет ожидаемый формат в value_label. Строго одно из: string, number, boolean, reference."
           examples:
             - 'reference'
         value_uuid:
@@ -2115,8 +2131,10 @@ components:
         value_label:
           type:
             - string
+            - number
+            - boolean
             - 'null'
-          description: Отображаемое значение
+          description: "Отображаемое значение. Для boolean использовать строго true/false (не 1/0 или 'Да'/'Нет'). Для number — число."
           examples:
             - 'Розовый'
 
@@ -2191,7 +2209,7 @@ components:
           $ref: '#/components/schemas/UUID'
         hidden:
           type: boolean
-          description: 'Флаг «Скрыть в интернете» (v10). Если true — товар не отображается на сайте'
+          description: 'Флаг «Скрыть в интернете» (v10). Если true — товар не отображается на сайте. Строго boolean true/false, строки вида "Да"/"Нет" будут отклонены интерпретатором JSON.'
         brand:
           oneOf:
             - $ref: '#/components/schemas/ProductBrand'
@@ -2199,7 +2217,9 @@ components:
         barcodes:
           type: array
           items:
-            type: string
+            type:
+              - string
+              - number
           examples:
             - ['4600000000001', '4600000000002']
         model:
@@ -2248,7 +2268,9 @@ components:
         barcodes:
           type: array
           items:
-            type: string
+            type:
+              - string
+              - number
         model:
           oneOf:
             - $ref: '#/components/schemas/ProductModel'

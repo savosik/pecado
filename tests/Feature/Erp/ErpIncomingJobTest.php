@@ -996,6 +996,60 @@ class ErpIncomingJobTest extends TestCase
     }
 
     #[Test]
+    public function order_updated_with_ready_to_ship_status(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $order = Order::factory()->create([
+            'uuid' => '00000000-0000-4000-a000-00000000a25a',
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'status' => 'confirmed',
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'order.updated',
+            'uuid' => '00000000-0000-4000-a000-00000000a25a',
+            'status' => 'ready_to_ship',
+            'message_id' => 'msg-order-r2s-001',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
+        $job->fire();
+
+        $order->refresh();
+        $this->assertEquals('ready_to_ship', $order->status->value);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000a25a', 'status' => 'ready_to_ship']);
+    }
+
+    #[Test]
+    public function order_updated_with_closed_status(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $order = Order::factory()->create([
+            'uuid' => '00000000-0000-4000-a000-000000000c15',
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'status' => 'ready_to_ship',
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'order.updated',
+            'uuid' => '00000000-0000-4000-a000-000000000c15',
+            'status' => 'closed',
+            'message_id' => 'msg-order-cls-001',
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
+        $job->fire();
+
+        $order->refresh();
+        $this->assertEquals('closed', $order->status->value);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-000000000c15', 'status' => 'closed']);
+    }
+
+    #[Test]
     public function order_deleted_soft_deletes_order_through_job(): void
     {
         $user = User::factory()->create();
@@ -1018,9 +1072,9 @@ class ErpIncomingJobTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals('cancelled', $order->status->value);
+        $this->assertEquals('closed', $order->status->value);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000003e', 'status' => 'cancelled']);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000003e', 'status' => 'closed']);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-order-del-001',
             'event' => 'order.deleted',
@@ -1182,8 +1236,7 @@ class ErpIncomingJobTest extends TestCase
             'partner_uuid' => '00000000-0000-4000-a000-000000000001',
             'contractors' => [
                 [
-                    'contractor_uuid' => '00000000-0000-4000-a000-000000000005',
-                    'contractor_inn'  => '1234567890',
+                    'tax_id'  => '1234567890',
                     'current_balance' => -125000.00,
                     'overdue_debt'    => 50000.00,
                     'overdue_details' => [
@@ -1200,7 +1253,7 @@ class ErpIncomingJobTest extends TestCase
 
         $this->assertDatabaseHas('contractor_balances', [
             'user_id'         => $user->id,
-            'contractor_inn'  => '1234567890',
+            'tax_id'  => '1234567890',
             'current_balance' => -125000.00,
             'overdue_debt'    => 50000.00,
         ]);
@@ -1223,7 +1276,7 @@ class ErpIncomingJobTest extends TestCase
         ]);
         ContractorBalance::create([
             'user_id'         => $user->id,
-            'contractor_inn'  => '9876543210',
+            'tax_id'  => '9876543210',
             'current_balance' => -50000.00,
             'overdue_debt'    => 10000.00,
         ]);
@@ -1233,7 +1286,7 @@ class ErpIncomingJobTest extends TestCase
             'partner_uuid' => '00000000-0000-4000-a000-000000000002',
             'contractors'  => [
                 [
-                    'contractor_inn'  => '9876543210',
+                    'tax_id'  => '9876543210',
                     'current_balance' => -200000.00,
                     'overdue_debt'    => 75000.00,
                     'overdue_details' => [],
@@ -1271,7 +1324,7 @@ class ErpIncomingJobTest extends TestCase
             'partner_uuid' => '00000000-0000-4000-a000-000000000003',
             'contractors'  => [
                 [
-                    'contractor_inn'  => '9999999999',
+                    'tax_id'  => '9999999999',
                     'current_balance' => -999999.00,
                     'overdue_debt'    => 0,
                     'overdue_details' => [],
@@ -1351,9 +1404,9 @@ class ErpIncomingJobTest extends TestCase
         $deleteJob->fire();
 
         $order->refresh();
-        $this->assertEquals('cancelled', $order->status->value);
+        $this->assertEquals('closed', $order->status->value);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000000f', 'status' => 'cancelled']);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000000f', 'status' => 'closed']);
 
         // 3. Дубль order.updated — не должен обработаться
         $dupJob = $this->makeJob([
@@ -1366,7 +1419,7 @@ class ErpIncomingJobTest extends TestCase
 
         // Статус не должен измениться — дубликат
         $order->refresh();
-        $this->assertEquals('cancelled', $order->status->value);
+        $this->assertEquals('closed', $order->status->value);
     }
 
     // ========================================================
@@ -1447,7 +1500,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-000000000031',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
             'date' => '2026-02-16',
             'status' => 'completed',
             'currency_code' => 'KZT',
@@ -1466,7 +1519,7 @@ class ErpIncomingJobTest extends TestCase
 
         $this->assertDatabaseHas('shipments', [
             'uuid' => '00000000-0000-4000-a000-000000000031',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
             'status' => 'completed',
             'company_id' => $company->id,
             'user_id' => $user->id,
@@ -1547,7 +1600,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-000000000034',
-            'contractor_inn' => '1234567890',
+            'tax_id' => '1234567890',
             'date' => '2026-02-16',
             'status' => 'completed',
             'items' => [],
@@ -1571,7 +1624,7 @@ class ErpIncomingJobTest extends TestCase
         $createJob = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
-            'contractor_inn' => '5555555555',
+            'tax_id' => '5555555555',
             'date' => '2026-02-16',
             'status' => 'new',
             'currency_code' => 'RUB',
@@ -1622,7 +1675,7 @@ class ErpIncomingJobTest extends TestCase
         $dupJob = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
-            'contractor_inn' => '5555555555',
+            'tax_id' => '5555555555',
             'items' => [],
             'message_id' => 'msg-ship-life-create',
         ]);

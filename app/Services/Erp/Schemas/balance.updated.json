@@ -23,19 +23,18 @@
             "items": {
                 "type": "object",
                 "properties": {
-                    "contractor_inn": {
-                        "type": "string"
-                    },
-                    "contractor_uuid": {
+                    "tax_id": {
                         "type": "string",
-                        "format": "uuid"
+                        "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
                     },
                     "current_balance": {
-                        "type": "number"
+                        "type": "number",
+                        "description": "Текущий баланс пользователя. Значение может быть отрицательным"
                     },
                     "overdue_debt": {
                         "type": "number",
-                        "minimum": 0
+                        "minimum": 0,
+                        "description": "Сумма просроченной задолженности. Значение всегда > 0"
                     },
                     "overdue_details": {
                         "type": "array",
@@ -57,6 +56,10 @@
                         }
                     }
                 },
+                "required": [
+                    "tax_id",
+                    "current_balance"
+                ],
                 "additionalProperties": true
             }
         }

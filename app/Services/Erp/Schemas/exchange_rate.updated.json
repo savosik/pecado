@@ -35,6 +35,8 @@
     },
     "additionalProperties": true,
     "required": [
-        "event"
+        "event",
+        "currency_code",
+        "rate"
     ]
 }

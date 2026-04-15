@@ -35,7 +35,8 @@
             "format": "uuid"
         },
         "hidden": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "Признак скрытого товара. Строго boolean (true/false). Строки вида 'Да'/'Нет' будут отклонены JSON-парсером."
         },
         "brand": {
             "type": [
@@ -59,7 +60,7 @@
         "barcodes": {
             "type": "array",
             "items": {
-                "type": "string"
+                "type": ["string", "number"]
             }
         },
         "model": {
@@ -90,7 +91,9 @@
                         "type": "string"
                     },
                     "value_type": {
-                        "type": "string"
+                        "type": "string",
+                        "enum": ["string", "number", "boolean", "reference"],
+                        "description": "Тип значения: string, number, boolean или reference (справочник)"
                     },
                     "value_uuid": {
                         "type": [
@@ -101,8 +104,11 @@
                     "value_label": {
                         "type": [
                             "string",
+                            "number",
+                            "boolean",
                             "null"
-                        ]
+                        ],
+                        "description": "Значение атрибута. Если тип boolean - передавать строго true/false (не 1/0 или 'Да'/'Нет'). Если number - передавать число."
                     }
                 }
             }

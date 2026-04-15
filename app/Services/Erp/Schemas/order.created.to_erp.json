@@ -19,7 +19,8 @@
             "type": "string"
         },
         "status": {
-            "type": "string"
+            "type": "string",
+            "enum": ["pending", "confirmed", "ready_to_ship", "closed"]
         },
         "type": {
             "type": "string"
@@ -45,7 +46,7 @@
                 "country": { "type": ["string", "null"] },
                 "name": { "type": ["string", "null"] },
                 "legal_name": { "type": ["string", "null"] },
-                "tax_id": { "type": ["string", "null"] },
+                "tax_id": { "type": ["string", "null"], "description": "Налоговый идентификатор (ИНН / УНП / БИН и т.д.)" },
                 "registration_number": { "type": ["string", "null"] },
                 "tax_code": { "type": ["string", "null"] },
                 "okpo_code": { "type": ["string", "null"] },
