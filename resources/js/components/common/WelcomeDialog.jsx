@@ -89,7 +89,7 @@ export default function WelcomeDialog({ userName }) {
                         </Text>
 
                         <Flex gap={3} mt={4} w="100%" direction={{ base: 'column', sm: 'row' }} justify="center">
-                            <Link href="/catalog">
+                            <Link href="/products">
                                 <Button
                                     bg="#9e1b32"
                                     color="white"
