@@ -104,18 +104,6 @@
                         "null"
                     ]
                 },
-                "latitude": {
-                    "type": [
-                        "number",
-                        "null"
-                    ]
-                },
-                "longitude": {
-                    "type": [
-                        "number",
-                        "null"
-                    ]
-                },
                 "bank_accounts": {
                     "type": [
                         "array",

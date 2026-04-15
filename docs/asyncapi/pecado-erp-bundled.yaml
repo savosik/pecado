@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 12.5.0
+  version: 12.7.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -849,14 +849,6 @@ channels:
                     email:
                       type:
                         - string
-                        - 'null'
-                    latitude:
-                      type:
-                        - number
-                        - 'null'
-                    longitude:
-                      type:
-                        - number
                         - 'null'
                     bank_accounts:
                       type:
@@ -2155,14 +2147,6 @@ channels:
                     email:
                       type:
                         - string
-                        - 'null'
-                    latitude:
-                      type:
-                        - number
-                        - 'null'
-                    longitude:
-                      type:
-                        - number
                         - 'null'
                     bank_accounts:
                       type:
@@ -3651,14 +3635,6 @@ components:
                     type:
                       - string
                       - 'null'
-                  latitude:
-                    type:
-                      - number
-                      - 'null'
-                  longitude:
-                    type:
-                      - number
-                      - 'null'
                   bank_accounts:
                     type:
                       - array
@@ -3884,14 +3860,6 @@ components:
                   email:
                     type:
                       - string
-                      - 'null'
-                  latitude:
-                    type:
-                      - number
-                      - 'null'
-                  longitude:
-                    type:
-                      - number
                       - 'null'
                   bank_accounts:
                     type:
@@ -5809,14 +5777,6 @@ components:
           type:
             - string
             - 'null'
-        latitude:
-          type:
-            - number
-            - 'null'
-        longitude:
-          type:
-            - number
-            - 'null'
         bank_accounts:
           type:
             - array
@@ -5969,14 +5929,6 @@ components:
                 email:
                   type:
                     - string
-                    - 'null'
-                latitude:
-                  type:
-                    - number
-                    - 'null'
-                longitude:
-                  type:
-                    - number
                     - 'null'
                 bank_accounts:
                   type:

@@ -59,7 +59,6 @@ class CompanyController extends Controller
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
-            'yandexMapsApiKey' => config('services.yandex_maps.api_key'),
         ]);
     }
 
@@ -79,9 +78,6 @@ class CompanyController extends Controller
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id',
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'is_our_company' => 'boolean',
         ]);
 
         $company = Company::create($validated);
@@ -99,7 +95,6 @@ class CompanyController extends Controller
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
-            'yandexMapsApiKey' => config('services.yandex_maps.api_key'),
         ]);
     }
 
@@ -119,9 +114,6 @@ class CompanyController extends Controller
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id,' . $company->id,
-            'latitude' => 'nullable|numeric|between:-90,90',
-            'longitude' => 'nullable|numeric|between:-180,180',
-            'is_our_company' => 'boolean',
         ]);
 
         $company->update($validated);

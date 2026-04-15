@@ -36,9 +36,6 @@ class Company extends Model
         'phone',
         'email',
         'erp_id',
-        'latitude',
-        'longitude',
-        'is_our_company',
     ];
 
     /**
@@ -50,9 +47,6 @@ class Company extends Model
     {
         return [
             'country' => Country::class,
-            'is_our_company' => 'boolean',
-            'latitude' => 'decimal:7',
-            'longitude' => 'decimal:7',
         ];
     }
 

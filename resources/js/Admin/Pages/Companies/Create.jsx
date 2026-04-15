@@ -1,12 +1,12 @@
 import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput, YandexMapPicker } from '@/Admin/Components';
-import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs, Switch } from '@chakra-ui/react';
+import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput } from '@/Admin/Components';
+import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs } from '@chakra-ui/react';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ countries, yandexMapsApiKey }) {
+export default function Create({ countries }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         user_id: '',
         country: '',
@@ -21,9 +21,6 @@ export default function Create({ countries, yandexMapsApiKey }) {
         phone: '',
         email: '',
         erp_id: '',
-        latitude: '',
-        longitude: '',
-        is_our_company: false,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -121,38 +118,11 @@ export default function Create({ countries, yandexMapsApiKey }) {
                                         </FormField>
                                     </SimpleGrid>
 
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                        <FormField label="ERP ID" error={errors.erp_id}>
-                                            <Input
-                                                value={data.erp_id}
-                                                onChange={(e) => setData('erp_id', e.target.value)}
-                                                placeholder="ID из внешней системы"
-                                            />
-                                        </FormField>
-
-                                        <FormField label="Наша компания">
-                                            <Switch.Root
-                                                checked={data.is_our_company}
-                                                onCheckedChange={({ checked }) => setData('is_our_company', checked)}
-                                            >
-                                                <Switch.HiddenInput />
-                                                <Switch.Control>
-                                                    <Switch.Thumb />
-                                                </Switch.Control>
-                                                <Switch.Label>{data.is_our_company ? 'Да' : 'Нет'}</Switch.Label>
-                                            </Switch.Root>
-                                        </FormField>
-                                    </SimpleGrid>
-
-                                    <FormField label="Координаты" error={errors.latitude || errors.longitude}>
-                                        <YandexMapPicker
-                                            latitude={data.latitude}
-                                            longitude={data.longitude}
-                                            onChange={(lat, lng) => {
-                                                setData(prev => ({ ...prev, latitude: lat, longitude: lng }));
-                                            }}
-                                            apiKey={yandexMapsApiKey}
-                                            height="350px"
+                                    <FormField label="ERP ID" error={errors.erp_id}>
+                                        <Input
+                                            value={data.erp_id}
+                                            onChange={(e) => setData('erp_id', e.target.value)}
+                                            placeholder="ID из внешней системы"
                                         />
                                     </FormField>
                                 </Stack>

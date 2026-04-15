@@ -36,9 +36,6 @@ class CompanyFactory extends Factory
             'actual_address' => fake()->optional()->address(),
             'phone' => fake()->phoneNumber(),
             'email' => fake()->companyEmail(),
-            'latitude' => fake()->optional()->latitude(41, 68), // Россия
-            'longitude' => fake()->optional()->longitude(19, 170),
-            'is_our_company' => fake()->boolean(10),
         ];
     }
 

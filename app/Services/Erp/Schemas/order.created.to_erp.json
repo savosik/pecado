@@ -56,8 +56,6 @@
                 "actual_address": { "type": ["string", "null"] },
                 "phone": { "type": ["string", "null"] },
                 "email": { "type": ["string", "null"] },
-                "latitude": { "type": ["number", "null"] },
-                "longitude": { "type": ["number", "null"] },
                 "bank_accounts": {
                     "type": ["array", "null"],
                     "items": {

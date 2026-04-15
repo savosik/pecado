@@ -6,6 +6,18 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.7.0] — 2026-04-15
+
+> Удаление атрибутов «Наша компания» и «Координаты» у контрагентов
+
+### Удалено
+
+- **Поля `latitude` / `longitude`** — убраны из модели `Company`, JSON Schema (`order.created.json`, `order.created.to_erp.json`), AsyncAPI (`OrderContractor`) и payload исходящего `order.created`
+- **Поле `is_our_company`** — убрано из модели `Company`, админки и API
+- **Компонент `YandexMapPicker`** — удалён из админки (использовался только для координат контрагентов)
+
+---
+
 ## [12.6.0] — 2026-04-15
 
 > Логирование сообщений ERP-шины

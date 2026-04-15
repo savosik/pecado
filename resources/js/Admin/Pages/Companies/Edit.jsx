@@ -1,6 +1,6 @@
 import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput, YandexMapPicker } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs, Table, Badge, Button, IconButton, HStack, Text, Flex, Dialog, Portal, Switch } from '@chakra-ui/react';
 import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
 import { useState, useRef } from 'react';
@@ -15,7 +15,7 @@ const emptyBankAccount = {
     is_primary: false,
 };
 
-export default function Edit({ company, countries, yandexMapsApiKey }) {
+export default function Edit({ company, countries }) {
     const { data, setData, put, processing, errors, transform } = useForm({
         user_id: company.user_id || '',
         country: company.country || '',
@@ -30,9 +30,6 @@ export default function Edit({ company, countries, yandexMapsApiKey }) {
         phone: company.phone || '',
         email: company.email || '',
         erp_id: company.erp_id || '',
-        latitude: company.latitude || '',
-        longitude: company.longitude || '',
-        is_our_company: company.is_our_company || false,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -189,37 +186,10 @@ export default function Edit({ company, countries, yandexMapsApiKey }) {
                                         </FormField>
                                     </SimpleGrid>
 
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                        <FormField label="ERP ID" error={errors.erp_id}>
-                                            <Input
-                                                value={data.erp_id}
-                                                onChange={(e) => setData('erp_id', e.target.value)}
-                                            />
-                                        </FormField>
-
-                                        <FormField label="Наша компания">
-                                            <Switch.Root
-                                                checked={data.is_our_company}
-                                                onCheckedChange={({ checked }) => setData('is_our_company', checked)}
-                                            >
-                                                <Switch.HiddenInput />
-                                                <Switch.Control>
-                                                    <Switch.Thumb />
-                                                </Switch.Control>
-                                                <Switch.Label>{data.is_our_company ? 'Да' : 'Нет'}</Switch.Label>
-                                            </Switch.Root>
-                                        </FormField>
-                                    </SimpleGrid>
-
-                                    <FormField label="Координаты" error={errors.latitude || errors.longitude}>
-                                        <YandexMapPicker
-                                            latitude={data.latitude}
-                                            longitude={data.longitude}
-                                            onChange={(lat, lng) => {
-                                                setData(prev => ({ ...prev, latitude: lat, longitude: lng }));
-                                            }}
-                                            apiKey={yandexMapsApiKey}
-                                            height="350px"
+                                    <FormField label="ERP ID" error={errors.erp_id}>
+                                        <Input
+                                            value={data.erp_id}
+                                            onChange={(e) => setData('erp_id', e.target.value)}
                                         />
                                     </FormField>
                                 </Stack>

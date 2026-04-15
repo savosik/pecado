@@ -56,8 +56,6 @@ class PublishOrderToErp
                 'actual_address' => $company->actual_address,
                 'phone' => $company->phone,
                 'email' => $company->email,
-                'latitude' => $company->latitude,
-                'longitude' => $company->longitude,
                 'bank_accounts' => $company->bankAccounts->map(function ($account) {
                     return [
                         'bank_name' => $account->bank_name,
