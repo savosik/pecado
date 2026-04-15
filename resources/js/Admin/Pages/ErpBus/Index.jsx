@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DeleteAllButton } from '@/Admin/Components';
 import {
@@ -27,6 +27,7 @@ import {
     LuSkull,
     LuTrash2,
     LuShieldAlert,
+    LuFileText,
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
 import { toaster } from '@/components/ui/toaster';
@@ -149,7 +150,7 @@ const Pagination = ({ data, paramName = 'page' }) => {
     );
 };
 
-export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount }) {
+export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, busMessagesCount, busLoggingEnabled }) {
     const [search, setSearch] = useState(filters.search || '');
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
@@ -287,6 +288,40 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                     />
                 </VStack>
             )}
+
+            {/* Лог сообщений */}
+            <Card.Root mb={6} borderWidth="1px" borderColor="purple.200" _dark={{ borderColor: 'purple.800' }}>
+                <Card.Body p={4}>
+                    <Flex justify="space-between" align="center">
+                        <HStack gap={3}>
+                            <LuFileText size={22} color="var(--chakra-colors-purple-500)" />
+                            <Box>
+                                <HStack gap={2}>
+                                    <Text fontWeight="bold" fontSize="md">
+                                        Лог сообщений
+                                    </Text>
+                                    {busMessagesCount > 0 && (
+                                        <Badge colorPalette="purple" variant="solid" size="sm">
+                                            {busMessagesCount}
+                                        </Badge>
+                                    )}
+                                </HStack>
+                                <Text fontSize="sm" color="fg.muted">
+                                    {busLoggingEnabled
+                                        ? 'Логирование включено — все сообщения записываются'
+                                        : 'Логирование выключено (ERP_BUS_LOGGING_ENABLED=false)'}
+                                </Text>
+                            </Box>
+                        </HStack>
+                        <Link href={route('admin.erp-bus.messages')}>
+                            <Button size="sm" colorPalette="purple" variant="outline">
+                                <LuFileText />
+                                Открыть лог
+                            </Button>
+                        </Link>
+                    </Flex>
+                </Card.Body>
+            </Card.Root>
 
             <Separator mb={6} />
 

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Models\ErpBusMessage;
 use App\Models\ErpProcessedMessage;
 use App\Models\ErpValidationError;
 use Illuminate\Http\Request;
@@ -96,6 +97,10 @@ class ErpBusController extends AdminController
 
         $validationErrorsCount = ErpValidationError::count();
 
+        // 7. Количество записей в логе сообщений (для бейджа)
+        $busMessagesCount = ErpBusMessage::count();
+        $busLoggingEnabled = (bool) config('erp.bus_logging_enabled', false);
+
         return Inertia::render('Admin/Pages/ErpBus/Index', [
             'queues' => $queues,
             'processed' => $processed,
@@ -104,11 +109,88 @@ class ErpBusController extends AdminController
             'eventTypes' => $eventTypes,
             'validationErrors' => $validationErrors,
             'validationErrorsCount' => $validationErrorsCount,
+            'busMessagesCount' => $busMessagesCount,
+            'busLoggingEnabled' => $busLoggingEnabled,
             'filters' => [
                 'event' => $request->get('event', ''),
                 'search' => $request->get('search', ''),
             ],
         ]);
+    }
+
+    /**
+     * Лог сообщений шины ERP.
+     */
+    public function messages(Request $request): Response
+    {
+        $query = ErpBusMessage::query()->orderByDesc('created_at');
+
+        // Фильтры
+        if ($direction = $request->get('direction')) {
+            $query->where('direction', $direction);
+        }
+
+        if ($event = $request->get('event')) {
+            $query->where('event', $event);
+        }
+
+        if ($status = $request->get('status')) {
+            $query->where('status', $status);
+        }
+
+        if ($search = $request->get('search')) {
+            $query->where(function ($q) use ($search) {
+                $q->where('message_id', 'like', "%{$search}%")
+                  ->orWhere('event', 'like', "%{$search}%")
+                  ->orWhere('routing_key', 'like', "%{$search}%");
+            });
+        }
+
+        if ($dateFrom = $request->get('date_from')) {
+            $query->where('created_at', '>=', $dateFrom);
+        }
+
+        if ($dateTo = $request->get('date_to')) {
+            $query->where('created_at', '<=', $dateTo . ' 23:59:59');
+        }
+
+        $messages = $query->paginate(30)->withQueryString();
+
+        // Уникальные типы событий для фильтра
+        $eventTypes = ErpBusMessage::distinct()->pluck('event')->sort()->values();
+
+        return Inertia::render('Admin/Pages/ErpBus/Messages', [
+            'messages' => $messages,
+            'eventTypes' => $eventTypes,
+            'filters' => [
+                'direction' => $request->get('direction', ''),
+                'event'     => $request->get('event', ''),
+                'status'    => $request->get('status', ''),
+                'search'    => $request->get('search', ''),
+                'date_from' => $request->get('date_from', ''),
+                'date_to'   => $request->get('date_to', ''),
+            ],
+        ]);
+    }
+
+    /**
+     * Просмотр отдельного сообщения.
+     */
+    public function showMessage(ErpBusMessage $message): Response
+    {
+        return Inertia::render('Admin/Pages/ErpBus/ShowMessage', [
+            'message' => $message,
+        ]);
+    }
+
+    /**
+     * Очистить лог сообщений шины.
+     */
+    public function clearMessages(): \Illuminate\Http\RedirectResponse
+    {
+        ErpBusMessage::truncate();
+
+        return back()->with('success', 'Лог сообщений очищен');
     }
 
     /**

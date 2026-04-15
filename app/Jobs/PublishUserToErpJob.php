@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\Erp\ErpBusLogger;
 use App\Services\Erp\ErpMessageValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -45,6 +46,7 @@ class PublishUserToErpJob implements ShouldQueue
                 'uuid'   => $this->payload['uuid'] ?? null,
             ]);
             $validator->logValidationError($event, 'outgoing', $validation['errors'], $this->payload);
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', implode('; ', $validation['errors']), 'erp_out.partners');
             return;
         }
 
@@ -58,10 +60,13 @@ class PublishUserToErpJob implements ShouldQueue
                 'uuid' => $this->payload['uuid'] ?? null,
                 'login' => $this->payload['login'] ?? null,
             ]);
+
+            ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, 'erp_out.partners');
         } catch (\Exception $e) {
             Log::error('Не удалось опубликовать partner.created в ERP: ' . $e->getMessage(), [
                 'payload' => $this->payload,
             ]);
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), 'erp_out.partners');
             throw $e;
         }
     }

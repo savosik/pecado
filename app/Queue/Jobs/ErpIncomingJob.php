@@ -3,6 +3,7 @@
 namespace App\Queue\Jobs;
 
 use App\Models\ErpProcessedMessage;
+use App\Services\Erp\ErpBusLogger;
 use App\Services\Erp\ErpMessageValidator;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
@@ -147,6 +148,14 @@ class ErpIncomingJob extends BaseJob
                 // Сохраняем ошибку в БД для отображения в админке
                 $validator->logValidationError($event, 'incoming', $validation['errors'], $payload);
 
+                // Логируем в шину ERP (failed)
+                ErpBusLogger::logIncoming(
+                    $event,
+                    $payload,
+                    'failed',
+                    implode('; ', $validation['errors']),
+                );
+
                 // Удаляем невалидное сообщение — повторная обработка не поможет
                 $this->delete();
 
@@ -162,12 +171,23 @@ class ErpIncomingJob extends BaseJob
                 $this->markAsProcessed($messageId, $event);
             }
 
+            // Логируем успешную обработку в шину ERP
+            ErpBusLogger::logIncoming($event, $payload);
+
             $this->delete();
         } catch (\Throwable $e) {
             Log::error('ERP incoming: ошибка обработки сообщения', [
                 'error' => $e->getMessage(),
                 'body'  => $rawBody,
             ]);
+
+            // Логируем ошибку в шину ERP
+            ErpBusLogger::logIncoming(
+                $payload['event'] ?? 'unknown',
+                $payload ?? [],
+                'failed',
+                $e->getMessage(),
+            );
 
             // Release back to queue for retry
             $this->release(30);

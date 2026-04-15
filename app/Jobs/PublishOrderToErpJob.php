@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Services\Erp\ErpBusLogger;
 use App\Services\Erp\ErpMessageValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -44,6 +45,7 @@ class PublishOrderToErpJob implements ShouldQueue
                 'uuid'   => $this->payload['uuid'] ?? null,
             ]);
             $validator->logValidationError($event, 'outgoing', $validation['errors'], $this->payload);
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', implode('; ', $validation['errors']), 'erp_out.orders');
             return;
         }
 
@@ -56,10 +58,13 @@ class PublishOrderToErpJob implements ShouldQueue
             Log::info('order.created опубликован в erp_out.orders', [
                 'order_id' => $this->payload['uuid'] ?? null,
             ]);
+
+            ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, 'erp_out.orders');
         } catch (\Exception $e) {
             Log::error('Не удалось опубликовать order.created в ERP: ' . $e->getMessage(), [
                 'payload' => $this->payload,
             ]);
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), 'erp_out.orders');
             throw $e;
         }
     }

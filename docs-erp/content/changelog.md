@@ -6,6 +6,24 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.6.0] — 2026-04-15
+
+> Логирование сообщений ERP-шины
+
+### Добавлено
+
+- **Таблица `erp_bus_messages`** — хранение полного payload всех входящих и исходящих RabbitMQ-сообщений с direction, event, status, error_message
+- **Модель `ErpBusMessage`** — Eloquent-модель с scopes (incoming, outgoing, failed)
+- **Сервис `ErpBusLogger`** — логирование входящих/исходящих сообщений, управляется через `ERP_BUS_LOGGING_ENABLED`
+- **Конфиг `config/erp.php`** — переменная `bus_logging_enabled` (по умолчанию выключено)
+- **Хуки в `ErpIncomingJob`** — логирование успешных, невалидных и ошибочных входящих сообщений
+- **Хуки в `PublishOrderToErpJob`, `PublishReturnToErpJob`, `PublishUserToErpJob`** — логирование исходящих сообщений
+- **Admin UI: Лог сообщений** (`/admin/erp-bus/messages`) — список с фильтрами (направление, событие, статус, дата, поиск)
+- **Admin UI: Просмотр сообщения** (`/admin/erp-bus/messages/{id}`) — интерактивный JSON-вьювер с подсветкой синтаксиса, сворачиванием веток, копированием
+- **Artisan-команда `erp:cleanup-messages`** — автоматическая очистка логов старше N дней (по умолчанию 30)
+
+---
+
 ## [12.5.0] — 2026-04-15
 
 > Уточнение спецификации: order.type и partner.client_status
