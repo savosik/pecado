@@ -17,11 +17,13 @@ class ProductAttributeValue extends Model
         'text_value',
         'number_value',
         'boolean_value',
+        'datetime_value',
     ];
 
     protected $casts = [
         'number_value' => 'decimal:4',
         'boolean_value' => 'boolean',
+        'datetime_value' => 'datetime',
     ];
 
     /**
@@ -59,6 +61,7 @@ class ProductAttributeValue extends Model
             'select' => $this->attributeValue?->value,
             'number' => $this->number_value,
             'boolean' => $this->boolean_value,
+            'date-time' => $this->datetime_value,
             default => $this->text_value,
         };
     }
@@ -77,6 +80,10 @@ class ProductAttributeValue extends Model
 
         if ($this->attribute->isBoolean()) {
             return $value ? 'Да' : 'Нет';
+        }
+
+        if ($this->attribute->type === 'date-time' && $value instanceof \Carbon\Carbon) {
+            return $value->format('d.m.Y H:i');
         }
 
         return $unit ? "{$value} {$unit}" : (string) $value;

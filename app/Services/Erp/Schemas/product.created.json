@@ -95,7 +95,7 @@
                     },
                     "value_type": {
                         "type": "string",
-                        "enum": ["string", "number", "boolean", "reference"],
+                        "enum": ["string", "number", "boolean", "reference", "date-time"],
                         "description": "Тип значения: string, number, boolean или reference (справочник)"
                     },
                     "value_uuid": {

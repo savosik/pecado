@@ -1835,10 +1835,11 @@ channels:
                       - number
                       - boolean
                       - reference
+                      - date-time
                     description: >-
                       Тип значения атрибута. Определяет ожидаемый формат в
                       value_label. Строго одно из: string, number, boolean,
-                      reference.
+                      reference, date-time.
                     examples:
                       - reference
                   value_uuid:
@@ -1986,10 +1987,11 @@ channels:
                       - number
                       - boolean
                       - reference
+                      - date-time
                     description: >-
                       Тип значения атрибута. Определяет ожидаемый формат в
                       value_label. Строго одно из: string, number, boolean,
-                      reference.
+                      reference, date-time.
                     examples:
                       - reference
                   value_uuid:
@@ -4944,10 +4946,11 @@ components:
                     - number
                     - boolean
                     - reference
+                    - date-time
                   description: >-
                     Тип значения атрибута. Определяет ожидаемый формат в
                     value_label. Строго одно из: string, number, boolean,
-                    reference.
+                    reference, date-time.
                   examples:
                     - reference
                 value_uuid:
@@ -5095,10 +5098,11 @@ components:
                     - number
                     - boolean
                     - reference
+                    - date-time
                   description: >-
                     Тип значения атрибута. Определяет ожидаемый формат в
                     value_label. Строго одно из: string, number, boolean,
-                    reference.
+                    reference, date-time.
                   examples:
                     - reference
                 value_uuid:
@@ -6651,9 +6655,10 @@ components:
             - number
             - boolean
             - reference
+            - date-time
           description: >-
             Тип значения атрибута. Определяет ожидаемый формат в value_label.
-            Строго одно из: string, number, boolean, reference.
+            Строго одно из: string, number, boolean, reference, date-time.
           examples:
             - reference
         value_uuid:
@@ -6837,10 +6842,11 @@ components:
                   - number
                   - boolean
                   - reference
+                  - date-time
                 description: >-
                   Тип значения атрибута. Определяет ожидаемый формат в
                   value_label. Строго одно из: string, number, boolean,
-                  reference.
+                  reference, date-time.
                 examples:
                   - reference
               value_uuid:
@@ -6969,10 +6975,11 @@ components:
                   - number
                   - boolean
                   - reference
+                  - date-time
                 description: >-
                   Тип значения атрибута. Определяет ожидаемый формат в
                   value_label. Строго одно из: string, number, boolean,
-                  reference.
+                  reference, date-time.
                 examples:
                   - reference
               value_uuid:

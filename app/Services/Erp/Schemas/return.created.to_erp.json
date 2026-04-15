@@ -19,7 +19,8 @@
             "type": ["string", "null"]
         },
         "timestamp": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
         },
         "items": {
             "type": "array",

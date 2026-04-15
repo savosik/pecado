@@ -27,7 +27,8 @@
             "minimum": 0
         },
         "timestamp": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
         }
     },
     "additionalProperties": true,

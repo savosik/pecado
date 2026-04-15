@@ -6,6 +6,15 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.4.0] — 2026-04-15
+
+> Типизация дат и поддержка date-time для атрибутов товаров
+
+### Изменено
+
+- **Атрибуты товаров** (`product.created`, `product.updated`) — добавлен новый `value_type`: `date-time`. Позволяет передавать даты со временем (в БД сохраняется в `datetime_value`).
+- **Строгая типизация дат** — поля `date`, `timestamp`, `updated_at` теперь строго регламентированы `format: date-time` (ISO 8601) во всех JSON схемах (`order.created`, `balance.updated` и т.д.).
+
 ## [12.3.1] — 2026-04-15
 
 > Синхронизация номера заказа/возврата из 1С

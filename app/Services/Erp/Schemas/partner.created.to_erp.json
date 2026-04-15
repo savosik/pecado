@@ -13,7 +13,8 @@
             "minLength": 1
         },
         "timestamp": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
         },
         "uuid": {
             "type": "string",

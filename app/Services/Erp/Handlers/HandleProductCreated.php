@@ -142,6 +142,7 @@ class HandleProductCreated
                         'number'    => 'number',
                         'boolean'   => 'boolean',
                         'reference' => 'select',
+                        'date-time' => 'date-time',
                         default     => 'string',
                     };
 
@@ -228,11 +229,17 @@ class HandleProductCreated
                         'text_value'         => (string) ($valueLabel ?? ''),
                     ];
 
-                    // Для числовых и булевых типов заполняем соответствующие поля
+                    // Для числовых, булевых и date-time типов заполняем соответствующие поля
                     if ($siteType === 'number' && is_numeric($valueLabel)) {
                         $pivotData['number_value'] = (float) $valueLabel;
                     } elseif ($siteType === 'boolean') {
                         $pivotData['boolean_value'] = filter_var($valueLabel, FILTER_VALIDATE_BOOLEAN);
+                    } elseif ($siteType === 'date-time' && $valueLabel) {
+                        try {
+                            $pivotData['datetime_value'] = \Carbon\Carbon::parse($valueLabel)->toDateTimeString();
+                        } catch (\Exception $e) {
+                            Log::warning('Неверный формат даты атрибута', ['value' => $valueLabel]);
+                        }
                     }
 
                     \App\Models\ProductAttributeValue::updateOrCreate(

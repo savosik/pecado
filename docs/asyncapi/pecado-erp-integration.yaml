@@ -2120,8 +2120,8 @@ components:
             - 'Цвет'
         value_type:
           type: string
-          enum: [string, number, boolean, reference]
-          description: "Тип значения атрибута. Определяет ожидаемый формат в value_label. Строго одно из: string, number, boolean, reference."
+          enum: [string, number, boolean, reference, date-time]
+          description: "Тип значения атрибута. Определяет ожидаемый формат в value_label. Строго одно из: string, number, boolean, reference, date-time."
           examples:
             - 'reference'
         value_uuid:

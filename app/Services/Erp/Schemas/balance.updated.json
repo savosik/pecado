@@ -16,7 +16,8 @@
             "format": "uuid"
         },
         "updated_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
         },
         "contractors": {
             "type": "array",

@@ -771,7 +771,7 @@
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Атрибуты
+        Форматы значений атрибутов (Типизация)
       
     </span>
   </a>
@@ -782,7 +782,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Механизм «Новинка»
+        Атрибуты
       
     </span>
   </a>
@@ -791,6 +791,17 @@
       
         <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Механизм «Новинка»
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1302,7 +1313,7 @@
   <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Атрибуты
+        Форматы значений атрибутов (Типизация)
       
     </span>
   </a>
@@ -1313,7 +1324,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Механизм «Новинка»
+        Атрибуты
       
     </span>
   </a>
@@ -1322,6 +1333,17 @@
       
         <li class="md-nav__item">
   <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Механизм «Новинка»
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1353,7 +1375,14 @@
 <blockquote>
 <p>Источник: митинг 07.04.2026</p>
 </blockquote>
-<h2 id="_2">Атрибуты<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h2 id="_2">Форматы значений атрибутов (Типизация)<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Согласно спецификации обмена, атрибуты товаров (<code>value_type</code>) поддерживают строго типизированные значения:
+- <code>string</code> — текстовое значение (по умолчанию)
+- <code>number</code> — числовое значение
+- <code>boolean</code> — булево значение (<code>true</code>/<code>false</code>)
+- <code>reference</code> — ссылка на значение справочника (сохраняется внешний ID значения)
+- <strong>(v12.4)</strong> <code>date-time</code> — дата и время в формате ISO 8601 (например, <code>2026-04-15T12:00:00Z</code>). Значение сохраняется в отдельную колонку <code>datetime_value</code> для корректной сортировки и фильтрации на сайте.</p>
+<h2 id="_3">Атрибуты<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1390,7 +1419,7 @@
 </tr>
 </tbody>
 </table>
-<h2 id="_3">Механизм «Новинка»<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<h2 id="_4">Механизм «Новинка»<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <p>Галочка «Новинка» <strong>не используется</strong>. Вместо этого:</p>
 <ol>
 <li>Создаётся <strong>маркетинговое мероприятие</strong> с типом «Новинка»</li>
@@ -1398,7 +1427,7 @@
 <li>Устанавливается дата окончания</li>
 <li><strong>Регламентное задание</strong> (ежедневно) снимает флаг по истечении даты</li>
 </ol>
-<h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_5">Критерии приёмки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] В карточке добавлены 4 реквизита</li>
 <li>[ ] «Скрыть в интернете» — <strong>один флаг</strong> (не два)</li>
