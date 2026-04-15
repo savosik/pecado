@@ -131,7 +131,7 @@ class CheckoutControllerTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->user)->post('/checkout', [
-            'delivery_address_id' => 1,
+            'delivery_address' => 'г. Москва, ул. Тестовая, д. 1',
         ]);
 
         $response->assertSessionHasErrors('company_id');
@@ -154,14 +154,13 @@ class CheckoutControllerTest extends TestCase
         ]);
 
         $company = Company::factory()->create(['user_id' => $this->user->id]);
-        $address = DeliveryAddress::factory()->create(['user_id' => $this->user->id]);
 
         // Mock CheckoutService, чтобы не зависеть от реальной логики
         $order = Order::create([
             'uuid' => \Illuminate\Support\Str::uuid(),
             'user_id' => $this->user->id,
             'company_id' => $company->id,
-            'delivery_address_id' => $address->id,
+            'delivery_address' => 'г. Москва, ул. Ленина, д. 5',
             'status' => \App\Enums\OrderStatus::PENDING,
             'total_amount' => 200.00,
             'exchange_rate' => 1,
@@ -177,7 +176,7 @@ class CheckoutControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)->post('/checkout', [
             'company_id' => $company->id,
-            'delivery_address_id' => $address->id,
+            'delivery_address' => 'г. Москва, ул. Ленина, д. 5',
             'comment' => 'Тестовый комментарий',
         ]);
 
@@ -201,12 +200,11 @@ class CheckoutControllerTest extends TestCase
         $company = Company::factory()->create(['user_id' => $this->user->id]);
 
         // Mock CheckoutService
-        $address = DeliveryAddress::factory()->create(['user_id' => $this->user->id]);
         $order = Order::create([
             'uuid' => \Illuminate\Support\Str::uuid(),
             'user_id' => $this->user->id,
             'company_id' => $company->id,
-            'delivery_address_id' => $address->id,
+            'delivery_address' => 'Москва, ул. Тестовая, д. 1',
             'status' => \App\Enums\OrderStatus::PENDING,
             'total_amount' => 100.00,
             'exchange_rate' => 1,
@@ -222,16 +220,11 @@ class CheckoutControllerTest extends TestCase
 
         $response = $this->actingAs($this->user)->post('/checkout', [
             'company_id' => $company->id,
-            'new_address' => 'Москва, ул. Тестовая, д. 1',
+            'delivery_address' => 'Москва, ул. Тестовая, д. 1',
             'comment' => '',
         ]);
 
         $response->assertRedirect(route('cabinet.orders.show', $order));
-
-        $this->assertDatabaseHas('delivery_addresses', [
-            'user_id' => $this->user->id,
-            'address' => 'Москва, ул. Тестовая, д. 1',
-        ]);
     }
 
     public function test_checkout_store_with_two_order_types_redirects_to_orders_index(): void
@@ -249,32 +242,31 @@ class CheckoutControllerTest extends TestCase
         ]);
 
         $company = Company::factory()->create(['user_id' => $this->user->id]);
-        $address = DeliveryAddress::factory()->create(['user_id' => $this->user->id]);
 
         // Мок возвращает два заказа (instock + preorder)
         $order1 = Order::create([
-            'uuid'                => \Illuminate\Support\Str::uuid(),
-            'user_id'             => $this->user->id,
-            'company_id'          => $company->id,
-            'delivery_address_id' => $address->id,
-            'status'              => \App\Enums\OrderStatus::PENDING,
-            'total_amount'        => 100.00,
-            'exchange_rate'       => 1,
-            'rate_coefficient'    => 1,
-            'currency_code'       => 'RUB',
-            'type'                => \App\Enums\OrderType::ORDER,
+            'uuid'             => \Illuminate\Support\Str::uuid(),
+            'user_id'          => $this->user->id,
+            'company_id'       => $company->id,
+            'delivery_address' => 'г. Москва, ул. Мира, д. 10',
+            'status'           => \App\Enums\OrderStatus::PENDING,
+            'total_amount'     => 100.00,
+            'exchange_rate'    => 1,
+            'rate_coefficient' => 1,
+            'currency_code'    => 'RUB',
+            'type'             => \App\Enums\OrderType::ORDER,
         ]);
         $order2 = Order::create([
-            'uuid'                => \Illuminate\Support\Str::uuid(),
-            'user_id'             => $this->user->id,
-            'company_id'          => $company->id,
-            'delivery_address_id' => $address->id,
-            'status'              => \App\Enums\OrderStatus::PENDING,
-            'total_amount'        => 200.00,
-            'exchange_rate'       => 1,
-            'rate_coefficient'    => 1,
-            'currency_code'       => 'RUB',
-            'type'                => \App\Enums\OrderType::PREORDER,
+            'uuid'             => \Illuminate\Support\Str::uuid(),
+            'user_id'          => $this->user->id,
+            'company_id'       => $company->id,
+            'delivery_address' => 'г. Москва, ул. Мира, д. 10',
+            'status'           => \App\Enums\OrderStatus::PENDING,
+            'total_amount'     => 200.00,
+            'exchange_rate'    => 1,
+            'rate_coefficient' => 1,
+            'currency_code'    => 'RUB',
+            'type'             => \App\Enums\OrderType::PREORDER,
         ]);
 
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
@@ -284,8 +276,8 @@ class CheckoutControllerTest extends TestCase
         $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
 
         $response = $this->actingAs($this->user)->post('/checkout', [
-            'company_id'          => $company->id,
-            'delivery_address_id' => $address->id,
+            'company_id'       => $company->id,
+            'delivery_address' => 'г. Москва, ул. Мира, д. 10',
         ]);
 
         // Два заказа → редирект на список заказов, а не на один заказ

@@ -480,6 +480,8 @@ operations:
       Обработчик: `HandleOrderCreated`
 
       Формат идентичен `order.created` от сайта, но отправляется из 1С.
+
+      **v13:** Поле `delivery_address` (строка) сохраняется напрямую в текстовое поле `orders.delivery_address`.
     action: receive
     channel:
       $ref: '#/channels/erpInOrders'
@@ -502,6 +504,8 @@ operations:
       Не передавайте `items`, если обновляете только статус.
 
       **v11:** При обработке `order.updated` сайт фиксирует diff позиций в `order_change_logs`.
+
+      **v13:** Поле `delivery_address` (строка) обновляется напрямую в текстовом поле `orders.delivery_address`.
     action: receive
     channel:
       $ref: '#/channels/erpInOrders'

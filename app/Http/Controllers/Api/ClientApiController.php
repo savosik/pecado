@@ -166,20 +166,7 @@ class ClientApiController extends Controller
             ], 422);
         }
 
-        // Найти адрес доставки (если указан)
-        $deliveryAddress = null;
-        if (!empty($validated['address'])) {
-            $deliveryAddress = $user->deliveryAddresses()
-                ->where('address', $validated['address'])
-                ->first();
 
-            if (!$deliveryAddress) {
-                $deliveryAddress = $user->deliveryAddresses()->create([
-                    'name' => 'API',
-                    'address' => $validated['address'],
-                ]);
-            }
-        }
 
         // Резолвить товары и проверить остатки
         $instockItems = [];
@@ -241,7 +228,7 @@ class ClientApiController extends Controller
         $baseOrderData = [
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'delivery_address_id' => $deliveryAddress?->id,
+            'delivery_address' => $validated['address'] ?? null,
             'status' => OrderStatus::PENDING,
             'comment' => $validated['comment'] ?? null,
             'total_amount' => 0,

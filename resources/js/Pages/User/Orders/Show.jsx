@@ -118,7 +118,7 @@ export default function OrderShow({ order }) {
                             {order.delivery_address && (
                                 <InfoRow
                                     label="Адрес доставки"
-                                    value={`${order.delivery_address.name ? order.delivery_address.name + ': ' : ''}${order.delivery_address.address}`}
+                                    value={order.delivery_address}
                                 />
                             )}
                             {order.comment && (

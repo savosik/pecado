@@ -6,6 +6,21 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.1.0] — 2026-04-15
+
+> Источник: исправление синхронизации адреса доставки при получении заказа из 1С
+
+### Добавлено
+
+- **Обработка `delivery_address`** в `HandleOrderCreated` и `HandleOrderUpdated` — поле из payload (строка) теперь сохраняется напрямую в текстовое поле `orders.delivery_address` (FK `delivery_address_id` удалён)
+- Поле `delivery_address` добавлено в JSON Schema `order.updated.json` (в `order.created.json` уже было)
+
+### Исправлено
+
+- Адрес доставки из заказов 1С ранее полностью игнорировался — теперь корректно сохраняется
+
+---
+
 ## [12.0.0] — 2026-04-15
 
 > Источник: выделение partner.updated как самостоятельного события

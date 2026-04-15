@@ -41,8 +41,7 @@ export default function CheckoutIndex({
     // Form state
     const { data, setData, post, processing, errors } = useForm({
         company_id: companies.length > 0 ? companies[0].id : '',
-        delivery_address_id: addresses.length > 0 ? addresses[0].id : '',
-        new_address: '',
+        delivery_address: addresses.length > 0 ? addresses[0].address : '',
         comment: '',
     });
 
@@ -61,19 +60,7 @@ export default function CheckoutIndex({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        const submitData = {
-            company_id: data.company_id,
-            comment: data.comment || '',
-        };
-
-        if (useNewAddress) {
-            submitData.new_address = data.new_address;
-        } else {
-            submitData.delivery_address_id = data.delivery_address_id;
-        }
-
         post('/checkout', {
-            data: submitData,
             preserveScroll: true,
         });
     };
@@ -202,7 +189,10 @@ export default function CheckoutIndex({
                                         size="sm"
                                         variant={!useNewAddress ? 'solid' : 'outline'}
                                         colorPalette="pecado"
-                                        onClick={() => setUseNewAddress(false)}
+                                        onClick={() => {
+                                            setUseNewAddress(false);
+                                            setData('delivery_address', addresses[0].address);
+                                        }}
                                     >
                                         Сохранённый адрес
                                     </Button>
@@ -210,7 +200,10 @@ export default function CheckoutIndex({
                                         size="sm"
                                         variant={useNewAddress ? 'solid' : 'outline'}
                                         colorPalette="pecado"
-                                        onClick={() => setUseNewAddress(true)}
+                                        onClick={() => {
+                                            setUseNewAddress(true);
+                                            setData('delivery_address', '');
+                                        }}
                                     >
                                         Другой адрес
                                     </Button>
@@ -220,16 +213,16 @@ export default function CheckoutIndex({
                             {!useNewAddress && addresses.length > 0 ? (
                                 <Field
                                     label="Выберите адрес"
-                                    invalid={!!errors.delivery_address_id}
-                                    errorText={errors.delivery_address_id}
+                                    invalid={!!errors.delivery_address}
+                                    errorText={errors.delivery_address}
                                 >
                                     <NativeSelect.Root size="md">
                                         <NativeSelect.Field
-                                            value={data.delivery_address_id}
-                                            onChange={(e) => setData('delivery_address_id', e.target.value)}
+                                            value={data.delivery_address}
+                                            onChange={(e) => setData('delivery_address', e.target.value)}
                                         >
                                             {addresses.map((a) => (
-                                                <option key={a.id} value={a.id}>
+                                                <option key={a.id} value={a.address}>
                                                     {a.name ? `${a.name}: ` : ''}{a.address}
                                                 </option>
                                             ))}
@@ -240,13 +233,13 @@ export default function CheckoutIndex({
                             ) : (
                                 <Field
                                     label="Введите адрес доставки"
-                                    invalid={!!errors.delivery_address_id || !!errors.new_address}
-                                    errorText={errors.delivery_address_id || errors.new_address}
+                                    invalid={!!errors.delivery_address}
+                                    errorText={errors.delivery_address}
                                 >
                                     <Textarea
                                         placeholder="Город, улица, дом, квартира..."
-                                        value={data.new_address}
-                                        onChange={(e) => setData('new_address', e.target.value)}
+                                        value={data.delivery_address}
+                                        onChange={(e) => setData('delivery_address', e.target.value)}
                                         rows={3}
                                     />
                                 </Field>

@@ -240,15 +240,11 @@ class PublishOrderToErpTest extends TestCase
 
         $user = User::factory()->create(['erp_id' => 'delivery-test-erp']);
         $company = Company::factory()->create(['user_id' => $user->id]);
-        $address = \App\Models\DeliveryAddress::factory()->create([
-            'user_id' => $user->id,
-            'address' => 'г. Алматы, ул. Абая, 10',
-        ]);
 
         $order = Order::factory()->create([
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'delivery_address_id' => $address->id,
+            'delivery_address' => 'г. Алматы, ул. Абая, 10',
         ]);
 
         Queue::fake();

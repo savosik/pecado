@@ -18,7 +18,7 @@ class PublishOrderToErp
         $order = $event->order;
 
         // Load relationships to include in the payload
-        $order->load(['items.product', 'deliveryAddress', 'user', 'company.bankAccounts', 'user.region']);
+        $order->load(['items.product', 'user', 'company.bankAccounts', 'user.region']);
 
         $eventName = match (class_basename($event)) {
             'OrderCreated' => 'order.created',
@@ -37,6 +37,7 @@ class PublishOrderToErp
             'partner_uuid' => $order->user?->erp_id,
             'warehouse_uuids' => $this->resolveWarehouseUuids($order),
             'comment' => $order->comment,
+            'delivery_address' => $order->delivery_address,
             'timestamp' => now()->toIso8601String(),
         ];
 
@@ -67,11 +68,6 @@ class PublishOrderToErp
                     ];
                 })->toArray(),
             ];
-        }
-
-        // Адрес доставки
-        if ($order->deliveryAddress) {
-            $payload['delivery_address'] = $order->deliveryAddress->address ?? '';
         }
 
         // Валюта и курс

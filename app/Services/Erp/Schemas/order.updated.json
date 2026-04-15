@@ -18,6 +18,10 @@
         "status": {
             "type": "string"
         },
+        "delivery_address": {
+            "type": ["string", "null"],
+            "description": "Адрес доставки (строка). Сайт создаёт или находит запись в delivery_addresses."
+        },
         "items": {
             "type": "array",
             "items": {

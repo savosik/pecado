@@ -239,4 +239,45 @@ class HandleOrderCreatedTest extends TestCase
         $this->assertNotNull($order);
         $this->assertEquals('к_отгрузке', $order->status->value);
     }
+
+    #[Test]
+    public function saves_delivery_address_as_text_from_payload(): void
+    {
+        $user = User::factory()->create(['erp_id' => 'erp-partner-addr-001']);
+
+        $this->handler->handle([
+            'event'            => 'order.created',
+            'message_id'       => 'msg-test-addr-001',
+            'uuid'             => 'order-with-address-001',
+            'status'           => 'pending',
+            'type'             => 'order',
+            'partner_uuid'     => 'erp-partner-addr-001',
+            'delivery_address' => 'г. Москва, ул. Ленина, д. 1',
+            'items'            => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-with-address-001')->first();
+        $this->assertNotNull($order);
+        $this->assertEquals('г. Москва, ул. Ленина, д. 1', $order->delivery_address);
+    }
+
+    #[Test]
+    public function saves_null_delivery_address_when_not_in_payload(): void
+    {
+        $user = User::factory()->create(['erp_id' => 'erp-partner-addr-002']);
+
+        $this->handler->handle([
+            'event'            => 'order.created',
+            'message_id'       => 'msg-test-addr-002',
+            'uuid'             => 'order-no-address-001',
+            'status'           => 'pending',
+            'type'             => 'order',
+            'partner_uuid'     => 'erp-partner-addr-002',
+            'items'            => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-no-address-001')->first();
+        $this->assertNotNull($order);
+        $this->assertNull($order->delivery_address);
+    }
 }

@@ -151,10 +151,7 @@ export default function OrderShow({ order }) {
                                     <HStack gap="2" align="start">
                                         <LuMapPin size={16} style={{ marginTop: 2, flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
                                         <Box>
-                                            {order.delivery_address.name && (
-                                                <Text fontSize="sm" fontWeight="600">{order.delivery_address.name}</Text>
-                                            )}
-                                            <Text fontSize="sm" color="fg.muted">{order.delivery_address.address}</Text>
+                                            <Text fontSize="sm" color="fg.muted">{order.delivery_address}</Text>
                                         </Box>
                                     </HStack>
                                 )}

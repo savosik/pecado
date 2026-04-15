@@ -4,8 +4,6 @@ namespace App\Contracts\Order;
 
 use App\Models\Cart;
 use App\Models\Company;
-use App\Models\DeliveryAddress;
-use App\Models\Order;
 use Illuminate\Support\Collection;
 
 interface CheckoutServiceInterface
@@ -14,12 +12,12 @@ interface CheckoutServiceInterface
      * Create order(s) from a cart, splitting by stock availability.
      * Returns a Collection of created Orders (1 or 2 depending on cart contents).
      *
-     * @return Collection<int, Order>
+     * @return Collection<int, \App\Models\Order>
      */
     public function checkout(
         Cart $cart,
         Company $company,
-        DeliveryAddress $address,
+        string $deliveryAddress,
         ?string $comment = null
     ): Collection;
 }

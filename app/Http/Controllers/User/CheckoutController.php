@@ -94,22 +94,11 @@ class CheckoutController extends Controller
 
         $company = $user->companies()->findOrFail($request->validated('company_id'));
 
-        // Определить или создать адрес доставки
-        if ($request->filled('delivery_address_id')) {
-            $address = $user->deliveryAddresses()->findOrFail($request->validated('delivery_address_id'));
-        } else {
-            $address = DeliveryAddress::create([
-                'user_id' => $user->id,
-                'name' => '',
-                'address' => $request->validated('new_address'),
-            ]);
-        }
-
         try {
             $orders = $this->checkoutService->checkout(
                 $cart,
                 $company,
-                $address,
+                $request->validated('delivery_address'),
                 $request->validated('comment')
             );
 

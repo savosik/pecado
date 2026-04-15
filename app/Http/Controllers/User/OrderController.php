@@ -142,7 +142,6 @@ class OrderController extends Controller
         // Загрузить все связи
         $order->load([
             'company:id,name,legal_name,tax_id',
-            'deliveryAddress:id,name,address',
             'items.product:id,name,sku,slug',
             'items.product.brand:id,name',
             'items.product.media',
@@ -171,11 +170,7 @@ class OrderController extends Controller
                     'legal_name' => $order->company->legal_name,
                     'tax_id' => $order->company->tax_id,
                 ] : null,
-                'delivery_address' => $order->deliveryAddress ? [
-                    'id' => $order->deliveryAddress->id,
-                    'name' => $order->deliveryAddress->name,
-                    'address' => $order->deliveryAddress->address,
-                ] : null,
+                'delivery_address' => $order->delivery_address,
                 'items' => $order->items->map(function ($item) {
                     return [
                         'id' => $item->id,

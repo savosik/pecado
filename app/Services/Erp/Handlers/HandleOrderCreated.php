@@ -100,6 +100,7 @@ class HandleOrderCreated
                     'number'           => $payload['number'] ?? null,
                     'user_id'          => $userId,
                     'company_id'       => $companyId,
+                    'delivery_address' => $payload['delivery_address'] ?? null,
                     'status'           => $status,
                     'type'             => $type,
                     'currency_code'    => $payload['currency_code'] ?? 'RUB',
@@ -148,12 +149,13 @@ class HandleOrderCreated
             $order->updateQuietly(['total_amount' => $totalAmount]);
 
             Log::info('HandleOrderCreated: заказ создан от менеджера', [
-                'uuid'       => $uuid,
-                'number'     => $order->number,
-                'user_id'    => $userId,
-                'company_id' => $companyId,
-                'items_count' => count($items),
-                'total_amount' => $totalAmount,
+                'uuid'             => $uuid,
+                'number'           => $order->number,
+                'user_id'          => $userId,
+                'company_id'       => $companyId,
+                'delivery_address' => $payload['delivery_address'] ?? null,
+                'items_count'      => count($items),
+                'total_amount'     => $totalAmount,
             ]);
         });
     }

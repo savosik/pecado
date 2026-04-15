@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
  *
  * Обновляет статус заказа и позиции по UUID.
  * v11: Записывает журнал изменений (diff) для прозрачности клиенту.
+ * v12.1: Обновляет адрес доставки, если передан delivery_address.
  */
 class HandleOrderUpdated
 {
@@ -37,6 +38,11 @@ class HandleOrderUpdated
             $order->status = $payload['status'];
         }
 
+        // Обновление адреса доставки (v12.1)
+        if (isset($payload['delivery_address'])) {
+            $order->delivery_address = $payload['delivery_address'];
+        }
+
         $order->save();
 
         // Обновление позиций (если переданы) с журналированием
@@ -47,6 +53,7 @@ class HandleOrderUpdated
         Log::info('HandleOrderUpdated: заказ обновлён', [
             'uuid'   => $uuid,
             'status' => $payload['status'] ?? 'не изменён',
+            'delivery_address' => isset($payload['delivery_address']) ? 'обновлён' : 'не изменён',
         ]);
     }
 

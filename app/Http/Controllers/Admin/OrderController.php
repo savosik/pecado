@@ -251,11 +251,7 @@ class OrderController extends AdminController
                     'id' => $order->company->id,
                     'name' => $order->company->name,
                 ] : null,
-                'delivery_address' => $order->deliveryAddress ? [
-                    'id' => $order->deliveryAddress->id,
-                    'name' => $order->deliveryAddress->name,
-                    'address' => $order->deliveryAddress->address,
-                ] : null,
+                'delivery_address' => $order->delivery_address,
                 'items' => $order->items->map(function ($item) {
                     return [
                         'id' => $item->id,

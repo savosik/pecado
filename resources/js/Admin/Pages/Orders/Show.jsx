@@ -163,8 +163,7 @@ const OrderShow = () => {
                             {order.delivery_address && (
                                 <Box borderTopWidth="1px" pt={3}>
                                     <Text fontWeight="medium" mb={2}>Адрес доставки</Text>
-                                    <Text>{order.delivery_address.name}</Text>
-                                    <Text color="fg.muted" fontSize="sm">{order.delivery_address.address}</Text>
+                                    <Text>{order.delivery_address}</Text>
                                 </Box>
                             )}
                         </VStack>

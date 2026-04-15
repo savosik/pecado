@@ -33,17 +33,17 @@ class CheckoutService implements CheckoutServiceInterface
     public function checkout(
         Cart $cart,
         Company $company,
-        DeliveryAddress $address,
+        string $deliveryAddress,
         ?string $comment = null
     ): Collection {
-        return DB::transaction(function () use ($cart, $company, $address, $comment) {
+        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment) {
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);
 
             $baseOrderData = [
                 'user_id'             => $user->id,
                 'company_id'          => $company->id,
-                'delivery_address_id' => $address->id,
+                'delivery_address'    => $deliveryAddress,
                 'cart_id'             => $cart->id,
                 'status'              => \App\Enums\OrderStatus::PENDING,
                 'comment'             => $comment,
