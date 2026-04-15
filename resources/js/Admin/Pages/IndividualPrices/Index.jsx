@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, EntitySelector, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
@@ -12,18 +12,49 @@ export default function Index({ prices, filters, stats, filterLabels }) {
     const [partnerId, setPartnerId] = useState(filters.partner_id || null);
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const pollingRef = useRef(null);
+
+    const stopPolling = useCallback(() => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    }, []);
+
+    const startPolling = useCallback(() => {
+        if (pollingRef.current) return;
+        pollingRef.current = setInterval(async () => {
+            try {
+                const response = await fetch(route('admin.bulk-delete-status', 'individual-prices'));
+                const data = await response.json();
+                if (data.status === 'completed') {
+                    stopPolling();
+                    setDeleteAllProcessing(false);
+                    toaster.create({ title: data.message || 'Все записи успешно удалены', type: 'success' });
+                    router.reload();
+                } else if (data.status === 'failed') {
+                    stopPolling();
+                    setDeleteAllProcessing(false);
+                    toaster.create({ title: data.message || 'Ошибка при удалении', type: 'error' });
+                }
+            } catch { /* ignore network errors */ }
+        }, 2000);
+    }, [stopPolling]);
+
+    useEffect(() => () => stopPolling(), [stopPolling]);
+
     const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
     const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
     const confirmDeleteAll = () => {
         setDeleteAllProcessing(true);
+        setDeleteAllDialogOpen(false);
         router.delete(route('admin.bulk-delete-all', 'individual-prices'), {
             onSuccess: () => {
-                toaster.create({ title: 'Все записи успешно удалены', type: 'success' });
-                setDeleteAllDialogOpen(false);
-                setDeleteAllProcessing(false);
+                toaster.create({ title: 'Удаление запущено в фоне', description: 'Страница обновится автоматически', type: 'info' });
+                startPolling();
             },
             onError: () => {
-                toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
+                toaster.create({ title: 'Ошибка при запуске удаления', type: 'error' });
                 setDeleteAllProcessing(false);
             },
         });

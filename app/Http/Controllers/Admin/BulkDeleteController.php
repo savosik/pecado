@@ -2,15 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Jobs\BulkDeleteJob;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Массовое удаление всех записей раздела.
  *
- * DELETE /admin/bulk-delete-all/{resource}
+ * DELETE /admin/bulk-delete-all/{resource}  — запускает фоновую Job
+ * GET    /admin/bulk-delete-status/{resource} — проверка прогресса
  */
 class BulkDeleteController extends Controller
 {
@@ -19,7 +20,7 @@ class BulkDeleteController extends Controller
      *
      * method:
      *   'each'     — Model::all()->each->delete()  (каскад через события модели / Spatie Media)
-     *   'truncate' — Model::query()->delete()       (без событий, быстро)
+     *   'truncate' — TRUNCATE TABLE (без событий, мгновенно)
      */
     private function registry(): array
     {
@@ -274,7 +275,8 @@ class BulkDeleteController extends Controller
     }
 
     /**
-     * Удалить все записи ресурса.
+     * Удалить все записи ресурса — всегда через фоновую Job.
+     * Возвращает мгновенный ответ с flash-сообщением.
      */
     public function destroyAll(Request $request, string $resource)
     {
@@ -291,31 +293,39 @@ class BulkDeleteController extends Controller
             abort(403, 'Недостаточно прав для удаления.');
         }
 
-        $modelClass = $config['model'];
-        $method = $config['method'];
+        // Проверяем, не запущено ли уже удаление
+        $cacheKey = BulkDeleteJob::cacheKey($resource);
+        $progress = Cache::get($cacheKey);
 
-        DB::beginTransaction();
-        try {
-            if ($method === 'each') {
-                // Удаление через цикл — срабатывают события модели (deleting, deleted),
-                // Spatie Media Library очищает файлы, каскады через SoftDeletes и т.д.
-                $modelClass::query()->chunkById(100, function ($records) {
-                    foreach ($records as $record) {
-                        $record->delete();
-                    }
-                });
-            } else {
-                // Быстрое удаление без событий
-                $modelClass::query()->delete();
-            }
-
-            DB::commit();
-
-            return back()->with('success', "Все записи раздела «{$config['label']}» успешно удалены.");
-        } catch (\Exception $e) {
-            DB::rollBack();
-
-            return back()->with('error', "Ошибка при удалении: {$e->getMessage()}");
+        if ($progress && $progress['status'] === 'running') {
+            return back()->with('warning', "Удаление «{$config['label']}» уже выполняется. Подождите завершения.");
         }
+
+        // Диспатчим фоновую Job
+        BulkDeleteJob::dispatch(
+            $resource,
+            $config['model'],
+            $config['method'],
+            $config['label']
+        );
+
+        return back()->with('success', "Удаление «{$config['label']}» запущено в фоне. Обновите страницу через несколько секунд.");
+    }
+
+    /**
+     * Проверить статус фонового удаления.
+     *
+     * GET /admin/bulk-delete-status/{resource}
+     */
+    public function status(string $resource)
+    {
+        $cacheKey = BulkDeleteJob::cacheKey($resource);
+        $progress = Cache::get($cacheKey);
+
+        if (!$progress) {
+            return response()->json(['status' => 'idle']);
+        }
+
+        return response()->json($progress);
     }
 }

@@ -19,8 +19,9 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Dashboard — доступен всем с ролью
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
-    // Массовое удаление всех записей раздела
+    // Массовое удаление всех записей раздела (фоновое)
     Route::delete('/bulk-delete-all/{resource}', [\App\Http\Controllers\Admin\BulkDeleteController::class, 'destroyAll'])->name('bulk-delete-all');
+    Route::get('/bulk-delete-status/{resource}', [\App\Http\Controllers\Admin\BulkDeleteController::class, 'status'])->name('bulk-delete-status');
 
     // Editor.js — загрузка изображений
     Route::post('/api/upload-image', [\App\Http\Controllers\Admin\EditorUploadController::class, 'uploadByFile'])->name('api.upload-image');

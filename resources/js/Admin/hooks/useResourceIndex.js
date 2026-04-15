@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { router } from '@inertiajs/react';
 import { toaster } from '@/components/ui/toaster';
 
@@ -29,9 +29,58 @@ export const useResourceIndex = (routeName, filters = {}, options = {}) => {
     // Массовое удаление
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const [deleteAllProgress, setDeleteAllProgress] = useState(null);
+    const pollingRef = useRef(null);
 
     // Определяем slug ресурса: 'admin.brand-stories' => 'brand-stories'
     const resourceSlug = bulkDeleteResource || routeName.replace(/^admin\./, '');
+
+    // Поллинг статуса удаления
+    const startPolling = useCallback(() => {
+        if (pollingRef.current) return;
+
+        pollingRef.current = setInterval(async () => {
+            try {
+                const response = await fetch(route('admin.bulk-delete-status', resourceSlug));
+                const data = await response.json();
+
+                setDeleteAllProgress(data);
+
+                if (data.status === 'completed') {
+                    stopPolling();
+                    setDeleteAllProcessing(false);
+                    setDeleteAllProgress(null);
+                    toaster.create({
+                        title: data.message || 'Все записи успешно удалены',
+                        type: 'success',
+                    });
+                    // Обновляем страницу
+                    router.reload();
+                } else if (data.status === 'failed') {
+                    stopPolling();
+                    setDeleteAllProcessing(false);
+                    toaster.create({
+                        title: data.message || 'Ошибка при массовом удалении',
+                        type: 'error',
+                    });
+                }
+            } catch {
+                // Игнорируем ошибки сети при поллинге
+            }
+        }, 2000);
+    }, [resourceSlug]);
+
+    const stopPolling = useCallback(() => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    }, []);
+
+    // Очищаем поллинг при размонтировании
+    useEffect(() => {
+        return () => stopPolling();
+    }, [stopPolling]);
 
     // Навигация с фильтрами
     const navigate = (params) => {
@@ -111,18 +160,21 @@ export const useResourceIndex = (routeName, filters = {}, options = {}) => {
 
     const confirmDeleteAll = () => {
         setDeleteAllProcessing(true);
+        setDeleteAllDialogOpen(false);
+
         router.delete(route('admin.bulk-delete-all', resourceSlug), {
             onSuccess: () => {
                 toaster.create({
-                    title: 'Все записи успешно удалены',
-                    type: 'success',
+                    title: 'Удаление запущено в фоне',
+                    description: 'Обновите страницу через несколько секунд',
+                    type: 'info',
                 });
-                setDeleteAllDialogOpen(false);
-                setDeleteAllProcessing(false);
+                // Начинаем поллинг статуса
+                startPolling();
             },
             onError: () => {
                 toaster.create({
-                    title: 'Ошибка при массовом удалении',
+                    title: 'Ошибка при запуске удаления',
                     type: 'error',
                 });
                 setDeleteAllProcessing(false);
@@ -156,6 +208,7 @@ export const useResourceIndex = (routeName, filters = {}, options = {}) => {
         // Массовое удаление
         deleteAllDialogOpen,
         deleteAllProcessing,
+        deleteAllProgress,
         openDeleteAllDialog,
         confirmDeleteAll,
         closeDeleteAllDialog,
