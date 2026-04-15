@@ -95,6 +95,18 @@ class HandleOrderCreated
 
             // --- Создание заказа (без диспатча событий — не публикуем обратно в ERP) ---
             $order = Order::withoutEvents(function () use ($uuid, $payload, $userId, $companyId, $status, $type) {
+                // Маппинг статусов из 1С (docs-erp/content/rules/orders.md)
+                $statusMap = [
+                    'не согласован' => 'pending',
+                    'к выполнению'  => 'confirmed',
+                    'к отгрузке'    => 'ready_to_ship',
+                    'к_отгрузке'    => 'ready_to_ship',
+                    'закрыт'        => 'closed',
+                ];
+
+                $normalizedStatus = mb_strtolower(trim($status));
+                $finalStatus = $statusMap[$normalizedStatus] ?? $status;
+
                 return Order::create([
                     'uuid'             => $uuid,
                     'number'           => $payload['number'] ?? null,
@@ -102,7 +114,7 @@ class HandleOrderCreated
                     'user_id'          => $userId,
                     'company_id'       => $companyId,
                     'delivery_address' => $payload['delivery_address'] ?? null,
-                    'status'           => $status,
+                    'status'           => $finalStatus,
                     'type'             => $type,
                     'currency_code'    => $payload['currency_code'] ?? 'RUB',
                     'exchange_rate'    => $payload['exchange_rate'] ?? 1.0,

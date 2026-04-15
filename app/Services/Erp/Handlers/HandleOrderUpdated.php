@@ -34,8 +34,21 @@ class HandleOrderUpdated
 
         // Обновление статуса
         if (isset($payload['status'])) {
-            $oldStatus = $order->status?->value;
-            $order->status = $payload['status'];
+            $rawStatus = $payload['status'];
+            
+            // Маппинг статусов из 1С (docs-erp/content/rules/orders.md)
+            $statusMap = [
+                'не согласован' => 'pending',
+                'к выполнению'  => 'confirmed',
+                'к отгрузке'    => 'ready_to_ship',
+                'к_отгрузке'    => 'ready_to_ship', // Вариант с подчеркиванием
+                'закрыт'        => 'closed',
+            ];
+
+            $normalizedStatus = mb_strtolower(trim($rawStatus));
+            $finalStatus = $statusMap[$normalizedStatus] ?? $rawStatus;
+
+            $order->status = $finalStatus;
         }
 
         // Обновление номера из 1С (v12.3)

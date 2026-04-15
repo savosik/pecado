@@ -35,7 +35,20 @@ class HandleReturnUpdated
         }
 
         if (isset($payload['status'])) {
-            $return->status = $payload['status'];
+            $rawStatus = $payload['status'];
+            
+            // Маппинг статусов возврата из 1С
+            $statusMap = [
+                'ожидает'   => 'pending',
+                'одобрен'   => 'approved',
+                'отклонён'  => 'rejected',
+                'завершён'  => 'completed',
+            ];
+
+            $normalizedStatus = mb_strtolower(trim($rawStatus));
+            $finalStatus = $statusMap[$normalizedStatus] ?? $rawStatus;
+
+            $return->status = $finalStatus;
             $changed = true;
         }
 
