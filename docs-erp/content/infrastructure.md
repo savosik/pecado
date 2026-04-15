@@ -11,7 +11,7 @@
 
 | Очередь | Routing keys | События |
 |---|---|---|
-| `erp_in.partners` | `partner.*`, `contractor.*` | `partner.created`, `partner.deleted`, `contractor.created` |
+| `erp_in.partners` | `partner.*`, `contractor.*` | `partner.created`, `partner.updated`, `partner.deleted`, `contractor.created` |
 | `erp_in.prices` | `price.*`, `exchange_rate.*`, `individual_prices.*` | `price.updated`, `exchange_rate.updated`, `individual_prices.ready` |
 | `erp_in.stock` | `stock.*` | `stock.updated` |
 | `erp_in.orders` | `order.*` | `order.created`, `order.updated`, `order.deleted` |
@@ -46,6 +46,7 @@
 |---|---|---|---|
 | `partner.created` | Сайт → 1С | `site.events` | `erp_out.partners` |
 | `partner.created` | 1С → Сайт | `erp.events` | `erp_in.partners` |
+| `partner.updated` | 1С → Сайт | `erp.events` | `erp_in.partners` |
 | `partner.deleted` | 1С → Сайт | `erp.events` | `erp_in.partners` |
 | `contractor.created` | 1С → Сайт | `erp.events` | `erp_in.partners` |
 | `price.updated` | 1С → Сайт | `erp.events` | `erp_in.prices` |

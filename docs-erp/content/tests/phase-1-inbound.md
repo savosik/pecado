@@ -223,7 +223,7 @@
 - [ ] Заказ создан с `external_id`
 - [ ] Статус = `confirmed`, тип = `order`
 - [ ] Позиции с `base_price`, `discount_percent`, `final_price`
-- [ ] `delivery_address` → запись в `delivery_addresses`, привязана к заказу (v12.1)
+- [ ] `delivery_address` сохранён в текстовое поле `orders.delivery_address` (v12.1)
 - [ ] Заказ в ЛК
 
 ---
