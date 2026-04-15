@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 11.0.0
+  version: 12.2.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -25,7 +25,7 @@ info:
     Все сообщения — **raw JSON** (не обёрнуты в стандартный Laravel Job payload).
 
     ## Версионирование
-    Версия спецификации соответствует ACCEPTANCE_CRITERIA v11.0.
+    Версия спецификации соответствует ACCEPTANCE_CRITERIA v12.0.
   contact:
     name: Pecado Dev Team
   license:
@@ -2063,7 +2063,6 @@ components:
         - message_id
         - uuid
         - name
-        - is_group
       properties:
         event:
           type: string
@@ -2086,9 +2085,9 @@ components:
           description: Наименование категории
           examples:
             - 'Бельё и одежда'
-        is_group:
+        is_active:
           type: boolean
-          description: Является ли группой
+          description: "Активность категории: true — активна, false — скрыта на сайте (v12)"
 
     ProductAttribute:
       type: object

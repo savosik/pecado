@@ -18,7 +18,7 @@ class HandleCategoryCreated
         $uuid = $payload['uuid'] ?? null;
         $name = $payload['name'] ?? null;
         $parentUuid = $payload['parent_uuid'] ?? null;
-        $isGroup = (bool) ($payload['is_group'] ?? false);
+        $isActive = (bool) ($payload['is_active'] ?? true);
 
         if (!$uuid || !$name) {
             Log::warning('category.created: отсутствуют обязательные поля uuid или name', [
@@ -60,7 +60,7 @@ class HandleCategoryCreated
                 'name'        => $name,
                 'slug'        => $slug,
                 'external_id' => $uuid,
-                'is_group'    => $isGroup,
+                'is_active'   => $isActive,
                 'parent_id'   => $parentId,
             ]
         );
@@ -69,7 +69,7 @@ class HandleCategoryCreated
             'uuid'      => $uuid,
             'name'      => $name,
             'slug'      => $slug,
-            'is_group'  => $isGroup,
+            'is_active' => $isActive,
             'parent_id' => $parentId,
             'id'        => $category->id,
         ]);

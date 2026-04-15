@@ -1645,7 +1645,7 @@ class ErpIncomingJobTest extends TestCase
             'uuid'        => '00000000-0000-4000-a000-00000000000b',
             'parent_uuid' => null,
             'name'        => 'Бельё и одежда',
-            'is_group'    => true,
+            'is_active'   => true,
             'message_id'  => 'msg-cat-created-001',
             'timestamp'   => now()->toIso8601String(),
         ]);
@@ -1653,9 +1653,9 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertDatabaseHas('categories', [
-            'uuid'     => '00000000-0000-4000-a000-00000000000b',
-            'name'     => 'Бельё и одежда',
-            'is_group' => true,
+            'uuid'      => '00000000-0000-4000-a000-00000000000b',
+            'name'      => 'Бельё и одежда',
+            'is_active' => true,
         ]);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-cat-created-001',
@@ -1671,7 +1671,7 @@ class ErpIncomingJobTest extends TestCase
             'event'      => 'category.created',
             'uuid'       => '00000000-0000-4000-a000-000000000009',
             'name'       => 'Корневая категория',
-            'is_group'   => true,
+            'is_active'  => true,
             'message_id' => 'msg-cat-parent-001',
         ]);
         $parentJob->fire();
@@ -1685,7 +1685,7 @@ class ErpIncomingJobTest extends TestCase
             'uuid'        => '00000000-0000-4000-a000-000000000006',
             'parent_uuid' => '00000000-0000-4000-a000-000000000009',
             'name'        => 'Дочерняя категория',
-            'is_group'    => false,
+            'is_active'   => true,
             'message_id'  => 'msg-cat-child-001',
         ]);
         $childJob->fire();
@@ -1703,7 +1703,7 @@ class ErpIncomingJobTest extends TestCase
             'event'      => 'category.created',
             'uuid'       => '00000000-0000-4000-a000-00000000000a',
             'name'       => 'Старое название',
-            'is_group'   => false,
+            'is_active'  => true,
             'message_id' => 'msg-cat-upd-create',
         ]);
         $createJob->fire();
@@ -1713,15 +1713,15 @@ class ErpIncomingJobTest extends TestCase
             'event'      => 'category.updated',
             'uuid'       => '00000000-0000-4000-a000-00000000000a',
             'name'       => 'Новое название',
-            'is_group'   => true,
+            'is_active'  => true,
             'message_id' => 'msg-cat-upd-update',
         ]);
         $updateJob->fire();
 
         $this->assertDatabaseHas('categories', [
-            'uuid'     => '00000000-0000-4000-a000-00000000000a',
-            'name'     => 'Новое название',
-            'is_group' => true,
+            'uuid'      => '00000000-0000-4000-a000-00000000000a',
+            'name'      => 'Новое название',
+            'is_active' => true,
         ]);
         // Убедимся, что нет дублей
         $this->assertEquals(1, \App\Models\Category::where('uuid', '00000000-0000-4000-a000-00000000000a')->count());
@@ -1766,6 +1766,76 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertEquals(0, \App\Models\Category::count());
+    }
+
+    #[Test]
+    public function category_created_with_is_active_false_creates_inactive_category(): void
+    {
+        $job = $this->makeJob([
+            'event'      => 'category.created',
+            'uuid'       => '00000000-0000-4000-a000-000000000040',
+            'name'       => 'Неактивная категория',
+            'is_active'  => false,
+            'message_id' => 'msg-cat-inactive-001',
+        ]);
+        $job->fire();
+
+        $this->assertDatabaseHas('categories', [
+            'uuid'      => '00000000-0000-4000-a000-000000000040',
+            'name'      => 'Неактивная категория',
+            'is_active' => false,
+        ]);
+    }
+
+    #[Test]
+    public function category_updated_deactivates_category(): void
+    {
+        // Создаём активную категорию
+        $createJob = $this->makeJob([
+            'event'      => 'category.created',
+            'uuid'       => '00000000-0000-4000-a000-000000000041',
+            'name'       => 'Активная категория',
+            'is_active'  => true,
+            'message_id' => 'msg-cat-deact-create',
+        ]);
+        $createJob->fire();
+
+        $this->assertDatabaseHas('categories', [
+            'uuid'      => '00000000-0000-4000-a000-000000000041',
+            'is_active' => true,
+        ]);
+
+        // Деактивируем через category.updated
+        $updateJob = $this->makeJob([
+            'event'      => 'category.updated',
+            'uuid'       => '00000000-0000-4000-a000-000000000041',
+            'name'       => 'Активная категория',
+            'is_active'  => false,
+            'message_id' => 'msg-cat-deact-update',
+        ]);
+        $updateJob->fire();
+
+        $this->assertDatabaseHas('categories', [
+            'uuid'      => '00000000-0000-4000-a000-000000000041',
+            'is_active' => false,
+        ]);
+    }
+
+    #[Test]
+    public function category_created_without_is_active_defaults_to_true(): void
+    {
+        $job = $this->makeJob([
+            'event'      => 'category.created',
+            'uuid'       => '00000000-0000-4000-a000-000000000042',
+            'name'       => 'Категория без is_active',
+            'message_id' => 'msg-cat-default-active',
+        ]);
+        $job->fire();
+
+        $this->assertDatabaseHas('categories', [
+            'uuid'      => '00000000-0000-4000-a000-000000000042',
+            'is_active' => true,
+        ]);
     }
 
     // ========================================================
