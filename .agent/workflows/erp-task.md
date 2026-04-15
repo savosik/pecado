@@ -50,7 +50,7 @@ description: реализует интеграционную задачу ERP и
 
 ### Спецификация (spec-first)
 - [ ] JSON Schema: `app/Services/Erp/Schemas/<file>.json`
-- [ ] AsyncAPI YAML: `docs/asyncapi/pecado-erp-integration.yaml`
+- [ ] AsyncAPI YAML (включая обновление `version`): `docs/asyncapi/pecado-erp-integration.yaml`
 - [ ] Валидация: `npm run asyncapi:validate`
 
 ### Документация (MkDocs)
@@ -98,6 +98,7 @@ description: реализует интеграционную задачу ERP и
 
 Обнови `docs/asyncapi/pecado-erp-integration.yaml`:
 
+- **ВАЖНО: Обнови поле `version` в блоке `info` (совпадает с версией в changelog)**
 - Добавь/обнови channel, message, schema
 - Используй `$ref` на JSON Schema файлы где возможно
 - Добавь `description` на русском языке
