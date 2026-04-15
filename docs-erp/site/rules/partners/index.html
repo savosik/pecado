@@ -1733,7 +1733,7 @@
 <ul>
 <li><strong>(v8)</strong> Поля <code>first_name</code>, <code>last_name</code>, <code>middle_name</code> удалены. Единое поле <code>name</code> (НаименованиеПолное)</li>
 <li><strong>(v10)</strong> Поле <code>is_active</code> (boolean) — активность партнёра. <code>false</code> → пользователь не может оформлять заказы</li>
-<li><strong>(v11)</strong> Поле <code>client_status</code> — код статуса клиента: <code>silver</code>, <code>gold</code>, <code>diamond</code>, <code>individual</code> или <code>null</code>. Резолвится через <code>ClientStatus.external_id</code></li>
+<li><strong>(v11)</strong> Поле <code>client_status</code> — произвольная строка, код статуса клиента (уровень лояльности). Резолвится через <code>ClientStatus.external_id</code>. Примеры: <code>silver</code>, <code>gold</code>, <code>diamond</code>, <code>individual</code></li>
 </ul>
 <h3 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <ul>

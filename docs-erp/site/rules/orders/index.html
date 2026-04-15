@@ -1636,6 +1636,7 @@
 <h3 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Корзина разделяется на заказ (<code>type: "order"</code>) + предзаказ (<code>type: "preorder"</code>)</li>
+<li>Поле <code>type</code> — внутреннее понятие сайта. 1С <strong>не знает</strong> о типах заказов и <strong>не передаёт</strong> это поле обратно</li>
 <li>Заказ фиксируется в валюте пользователя с курсом и коэффициентом</li>
 <li>После отправки пользователь изменять заказ <strong>не может</strong></li>
 <li>Если ни один склад из <code>warehouse_uuids</code> не найден — используется <code>ОсновнойСклад</code></li>
@@ -1651,7 +1652,8 @@
 <h2 id="ordercreated-1_1">order.created (1С → Сайт)<a class="headerlink" href="#ordercreated-1_1" title="Permanent link">&para;</a></h2>
 <h3 id="-_1">Бизнес-правила<a class="headerlink" href="#-_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Формат идентичен <code>order.created</code> от сайта</li>
+<li>Формат идентичен <code>order.created</code> от сайта, <strong>кроме поля <code>type</code></strong> — 1С его не передаёт</li>
+<li>При отсутствии <code>type</code> в payload сайт использует значение по умолчанию <code>"order"</code></li>
 <li>Используется когда менеджер создал заказ вручную в 1С</li>
 <li><strong>(v12.1)</strong> Если передан <code>delivery_address</code> (строка) — сайт сохраняет значение напрямую в текстовое поле <code>orders.delivery_address</code></li>
 </ul>
@@ -1683,12 +1685,8 @@
 <td><code>confirmed</code></td>
 </tr>
 <tr>
-<td>В работе</td>
-<td><code>processing</code></td>
-</tr>
-<tr>
-<td>Выполнен</td>
-<td><code>completed</code></td>
+<td>К отгрузке</td>
+<td><code>ready_to_ship</code></td>
 </tr>
 <tr>
 <td>Закрыт</td>
@@ -1700,7 +1698,7 @@
 <h2 id="orderdeleted-1">order.deleted (1С → Сайт)<a class="headerlink" href="#orderdeleted-1" title="Permanent link">&para;</a></h2>
 <h3 id="-_3">Бизнес-правила<a class="headerlink" href="#-_3" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Заказ помечается как <code>cancelled</code> (soft delete), не удаляется физически</li>
+<li>Заказ переводится в статус <code>closed</code> (soft delete), не удаляется физически</li>
 </ul>
 <hr />
 <h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
@@ -1709,7 +1707,7 @@
 <li>[ ] Каждая позиция содержит <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code> (v7)</li>
 <li>[ ] Сайт принимает <code>order.created</code> (от менеджера), <code>order.updated</code>, <code>order.deleted</code></li>
 <li>[ ] <code>order.updated</code> с <code>items</code> полностью заменяет позиции</li>
-<li>[ ] <code>order.deleted</code> ставит статус <code>cancelled</code> (soft delete)</li>
+<li>[ ] <code>order.deleted</code> ставит статус <code>closed</code> (soft delete)</li>
 <li>[ ] История изменений позиций фиксируется в <code>order_change_logs</code> (v11)</li>
 <li>[ ] <code>delivery_address</code> сохраняется напрямую в текстовое поле <code>orders.delivery_address</code> (v12.1)</li>
 </ul>

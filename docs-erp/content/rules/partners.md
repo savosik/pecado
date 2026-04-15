@@ -28,7 +28,7 @@
 
 - **(v8)** Поля `first_name`, `last_name`, `middle_name` удалены. Единое поле `name` (НаименованиеПолное)
 - **(v10)** Поле `is_active` (boolean) — активность партнёра. `false` → пользователь не может оформлять заказы
-- **(v11)** Поле `client_status` — код статуса клиента: `silver`, `gold`, `diamond`, `individual` или `null`. Резолвится через `ClientStatus.external_id`
+- **(v11)** Поле `client_status` — произвольная строка, код статуса клиента (уровень лояльности). Резолвится через `ClientStatus.external_id`. Примеры: `silver`, `gold`, `diamond`, `individual`
 
 ### Критерии приёмки
 

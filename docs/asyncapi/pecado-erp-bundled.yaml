@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 12.4.0
+  version: 12.5.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -165,16 +165,10 @@ channels:
               description: >
                 Код статуса клиента (уровень лояльности, v11).
 
-                Допустимые значения: "silver", "gold", "diamond", "individual"
-                или null.
+                Произвольная строка — соответствует external_id записи
+                ClientStatus на сайте.
 
-                Соответствует external_id записи ClientStatus на сайте.
-              enum:
-                - silver
-                - gold
-                - diamond
-                - individual
-                - null
+                Примеры: "silver", "gold", "diamond", "individual".
               examples:
                 - gold
       partnerUpdatedFromErp:
@@ -267,16 +261,10 @@ channels:
               description: >
                 Код статуса клиента (уровень лояльности).
 
-                Допустимые значения: "silver", "gold", "diamond", "individual"
-                или null.
+                Произвольная строка — соответствует external_id записи
+                ClientStatus на сайте.
 
-                Соответствует external_id записи ClientStatus на сайте.
-              enum:
-                - silver
-                - gold
-                - diamond
-                - individual
-                - null
+                Примеры: "silver", "gold", "diamond", "individual".
               examples:
                 - gold
       partnerDeleted:
@@ -745,7 +733,6 @@ channels:
             - message_id
             - uuid
             - status
-            - type
             - partner_uuid
             - items
           properties:
@@ -785,10 +772,13 @@ channels:
                 - pending
             type:
               type: string
-              description: Тип заказа
-              enum:
-                - order
-                - preorder
+              description: >
+                Тип заказа. Отправляется сайтом → 1С.
+
+                1С НЕ передаёт это поле — сайт определяет тип самостоятельно.
+
+                При получении из 1С, если поле отсутствует, используется
+                значение по умолчанию "order".
             partner_uuid:
               type: string
               format: uuid
@@ -2049,7 +2039,6 @@ channels:
             - message_id
             - uuid
             - status
-            - type
             - partner_uuid
             - items
           properties:
@@ -2089,10 +2078,13 @@ channels:
                 - pending
             type:
               type: string
-              description: Тип заказа
-              enum:
-                - order
-                - preorder
+              description: >
+                Тип заказа. Отправляется сайтом → 1С.
+
+                1С НЕ передаёт это поле — сайт определяет тип самостоятельно.
+
+                При получении из 1С, если поле отсутствует, используется
+                значение по умолчанию "order".
             partner_uuid:
               type: string
               format: uuid
@@ -2681,11 +2673,17 @@ operations:
   sendOrderCreated:
     title: Отправка заказа в 1С
     summary: Сайт → 1С при оформлении заказа
-    description: |
+    description: >
       Публикуется через `PublishOrderToErpJob`.
 
+
       Корзина разделяется на заказ + предзаказ (по типу `order` / `preorder`).
+
+      Поле `type` отправляется **только** от сайта — 1С не использует и не
+      возвращает это поле.
+
       Заказ фиксируется в валюте пользователя с курсом и коэффициентом.
+
       После отправки пользователь изменять заказ НЕ может.
     action: send
     channel:
@@ -3033,16 +3031,10 @@ components:
             description: >
               Код статуса клиента (уровень лояльности, v11).
 
-              Допустимые значения: "silver", "gold", "diamond", "individual" или
-              null.
+              Произвольная строка — соответствует external_id записи
+              ClientStatus на сайте.
 
-              Соответствует external_id записи ClientStatus на сайте.
-            enum:
-              - silver
-              - gold
-              - diamond
-              - individual
-              - null
+              Примеры: "silver", "gold", "diamond", "individual".
             examples:
               - gold
     PartnerUpdatedFromErp:
@@ -3135,16 +3127,10 @@ components:
             description: >
               Код статуса клиента (уровень лояльности).
 
-              Допустимые значения: "silver", "gold", "diamond", "individual" или
-              null.
+              Произвольная строка — соответствует external_id записи
+              ClientStatus на сайте.
 
-              Соответствует external_id записи ClientStatus на сайте.
-            enum:
-              - silver
-              - gold
-              - diamond
-              - individual
-              - null
+              Примеры: "silver", "gold", "diamond", "individual".
             examples:
               - gold
     PartnerDeleted:
@@ -3548,7 +3534,6 @@ components:
           - message_id
           - uuid
           - status
-          - type
           - partner_uuid
           - items
         properties:
@@ -3588,10 +3573,13 @@ components:
               - pending
           type:
             type: string
-            description: Тип заказа
-            enum:
-              - order
-              - preorder
+            description: >
+              Тип заказа. Отправляется сайтом → 1С.
+
+              1С НЕ передаёт это поле — сайт определяет тип самостоятельно.
+
+              При получении из 1С, если поле отсутствует, используется значение
+              по умолчанию "order".
           partner_uuid:
             type: string
             format: uuid
@@ -3780,7 +3768,6 @@ components:
           - message_id
           - uuid
           - status
-          - type
           - partner_uuid
           - items
         properties:
@@ -3820,10 +3807,13 @@ components:
               - pending
           type:
             type: string
-            description: Тип заказа
-            enum:
-              - order
-              - preorder
+            description: >
+              Тип заказа. Отправляется сайтом → 1С.
+
+              1С НЕ передаёт это поле — сайт определяет тип самостоятельно.
+
+              При получении из 1С, если поле отсутствует, используется значение
+              по умолчанию "order".
           partner_uuid:
             type: string
             format: uuid
@@ -5335,16 +5325,10 @@ components:
           description: >
             Код статуса клиента (уровень лояльности).
 
-            Допустимые значения: "silver", "gold", "diamond", "individual" или
-            null.
+            Произвольная строка — соответствует external_id записи ClientStatus
+            на сайте.
 
-            Соответствует external_id записи ClientStatus на сайте.
-          enum:
-            - silver
-            - gold
-            - diamond
-            - individual
-            - null
+            Примеры: "silver", "gold", "diamond", "individual".
           examples:
             - gold
     PartnerCreatedFromErpPayload:
@@ -5432,16 +5416,10 @@ components:
           description: >
             Код статуса клиента (уровень лояльности, v11).
 
-            Допустимые значения: "silver", "gold", "diamond", "individual" или
-            null.
+            Произвольная строка — соответствует external_id записи ClientStatus
+            на сайте.
 
-            Соответствует external_id записи ClientStatus на сайте.
-          enum:
-            - silver
-            - gold
-            - diamond
-            - individual
-            - null
+            Примеры: "silver", "gold", "diamond", "individual".
           examples:
             - gold
     PartnerCreatedFromSitePayload:
@@ -5877,7 +5855,6 @@ components:
         - message_id
         - uuid
         - status
-        - type
         - partner_uuid
         - items
       properties:
@@ -5917,10 +5894,13 @@ components:
             - pending
         type:
           type: string
-          description: Тип заказа
-          enum:
-            - order
-            - preorder
+          description: >
+            Тип заказа. Отправляется сайтом → 1С.
+
+            1С НЕ передаёт это поле — сайт определяет тип самостоятельно.
+
+            При получении из 1С, если поле отсутствует, используется значение по
+            умолчанию "order".
         partner_uuid:
           type: string
           format: uuid

@@ -6,6 +6,17 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.5.0] — 2026-04-15
+
+> Уточнение спецификации: order.type и partner.client_status
+
+### Изменено
+
+- **Поле `type`** удалено из обязательных (`required`) в `order.created` (1С → Сайт) — 1С не знает о типах заказов (order/preorder), это внутреннее понятие сайта. При отсутствии поля сайт использует значение по умолчанию `"order"`. Исходящее направление (Сайт → 1С) не затронуто.
+- **Поле `client_status`** в `partner.created` и `partner.updated` — убрано ограничение `enum`. Статус партнёра теперь произвольная строка, резолвится через `ClientStatus.external_id`. Примеры: `silver`, `gold`, `diamond`, `individual`.
+
+---
+
 ## [12.4.0] — 2026-04-15
 
 > Типизация дат и поддержка date-time для атрибутов товаров

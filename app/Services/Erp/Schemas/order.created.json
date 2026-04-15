@@ -26,9 +26,6 @@
             "type": "string",
             "enum": ["pending", "confirmed", "ready_to_ship", "closed"]
         },
-        "type": {
-            "type": "string"
-        },
         "partner_uuid": {
             "type": "string",
             "format": "uuid"
