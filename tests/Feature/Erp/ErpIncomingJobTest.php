@@ -892,7 +892,7 @@ class ErpIncomingJobTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('confirmed', $order->status);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-order-upd-001',
             'event' => 'order.updated',
@@ -979,7 +979,7 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $order->refresh();
-        $this->assertEquals('pending', $order->status->value);
+        $this->assertEquals('pending', $order->status);
     }
 
     #[Test]
@@ -1024,7 +1024,7 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $order->refresh();
-        $this->assertEquals('ready_to_ship', $order->status->value);
+        $this->assertEquals('ready_to_ship', $order->status);
         $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000a25a', 'status' => 'ready_to_ship']);
     }
 
@@ -1051,7 +1051,7 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $order->refresh();
-        $this->assertEquals('closed', $order->status->value);
+        $this->assertEquals('closed', $order->status);
         $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-000000000c15', 'status' => 'closed']);
     }
 
@@ -1078,7 +1078,7 @@ class ErpIncomingJobTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals('closed', $order->status->value);
+        $this->assertEquals('closed', $order->status);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
         $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000003e', 'status' => 'closed']);
         $this->assertDatabaseHas('erp_processed_messages', [
@@ -1131,7 +1131,7 @@ class ErpIncomingJobTest extends TestCase
 
         $return->refresh();
 
-        $this->assertEquals('approved', $return->status->value);
+        $this->assertEquals('approved', $return->status);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-return-upd-001',
             'event' => 'return.updated',
@@ -1162,7 +1162,7 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $return->refresh();
-        $this->assertEquals('pending', $return->status->value);
+        $this->assertEquals('pending', $return->status);
     }
 
     #[Test]
@@ -1398,7 +1398,7 @@ class ErpIncomingJobTest extends TestCase
         $updateJob->fire();
 
         $order->refresh();
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('confirmed', $order->status);
         $this->assertCount(1, $order->items);
 
         // 2. order.deleted — отмена
@@ -1410,7 +1410,7 @@ class ErpIncomingJobTest extends TestCase
         $deleteJob->fire();
 
         $order->refresh();
-        $this->assertEquals('closed', $order->status->value);
+        $this->assertEquals('closed', $order->status);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
         $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000000f', 'status' => 'closed']);
 
@@ -1425,7 +1425,7 @@ class ErpIncomingJobTest extends TestCase
 
         // Статус не должен измениться — дубликат
         $order->refresh();
-        $this->assertEquals('closed', $order->status->value);
+        $this->assertEquals('closed', $order->status);
     }
 
     // ========================================================
@@ -1453,7 +1453,7 @@ class ErpIncomingJobTest extends TestCase
         $updJob->fire();
 
         $return->refresh();
-        $this->assertEquals('approved', $return->status->value);
+        $this->assertEquals('approved', $return->status);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-ret-life-upd',
             'event' => 'return.updated',
@@ -1485,7 +1485,7 @@ class ErpIncomingJobTest extends TestCase
 
         // Статус остался approved (soft-deleted, но данные в БД)
         $return = ProductReturn::withTrashed()->where('uuid', '00000000-0000-4000-a000-000000000014')->first();
-        $this->assertEquals('approved', $return->status->value);
+        $this->assertEquals('approved', $return->status);
         $this->assertNotNull($return->deleted_at);
     }
 

@@ -20,6 +20,13 @@ class ReturnController extends AdminController
 {
     use RedirectsAfterSave;
 
+    private const STATUS_LABELS = [
+        'pending'   => 'Ожидает',
+        'approved'  => 'Одобрен',
+        'rejected'  => 'Отклонён',
+        'completed' => 'Завершён',
+    ];
+
     /**
      * Display a listing of returns.
      */
@@ -88,7 +95,7 @@ class ReturnController extends AdminController
             return [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
-                'status' => $return->status?->value,
+                'status' => $return->status,
                 'status_label' => $this->getStatusLabel($return->status),
                 'total_amount' => $return->total_amount,
                 'created_at' => $return->created_at?->format('d.m.Y H:i'),
@@ -122,10 +129,10 @@ class ReturnController extends AdminController
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
             ],
-            'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
+            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
+                'value' => $value,
+                'label' => $label,
+            ])->values(),
             'reasons' => collect(ReturnReason::cases())->map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $this->getReasonLabel($case),
@@ -159,7 +166,7 @@ class ReturnController extends AdminController
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'order_id' => 'nullable|exists:orders,id',
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
             'comment' => 'nullable|string',
             'admin_comment' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -229,7 +236,7 @@ class ReturnController extends AdminController
                 'uuid' => $return->uuid,
                 'user_id' => $return->user_id,
                 'order_id' => $return->order_id,
-                'status' => $return->status?->value,
+                'status' => $return->status,
                 'comment' => $return->comment,
                 'admin_comment' => $return->admin_comment,
                 'total_amount' => $return->total_amount,
@@ -270,7 +277,7 @@ class ReturnController extends AdminController
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'order_id' => 'nullable|exists:orders,id',
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
             'comment' => 'nullable|string',
             'admin_comment' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -360,7 +367,7 @@ class ReturnController extends AdminController
                 'id' => $return->id,
                 'uuid' => $return->uuid,
                 'order_id' => $return->order_id,
-                'status' => $return->status?->value,
+                'status' => $return->status,
                 'status_label' => $this->getStatusLabel($return->status),
                 'total_amount' => $return->total_amount,
                 'comment' => $return->comment,
@@ -406,7 +413,7 @@ class ReturnController extends AdminController
     public function updateStatus(Request $request, ProductReturn $return): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
         ]);
 
         $return->update([
@@ -444,7 +451,7 @@ class ReturnController extends AdminController
         $validated = $request->validate([
             'return_ids' => 'required|array|min:1',
             'return_ids.*' => 'exists:returns,id',
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:' . implode(',', array_keys(self::STATUS_LABELS)),
         ]);
 
         $count = ProductReturn::whereIn('id', $validated['return_ids'])->update([
@@ -549,15 +556,13 @@ class ReturnController extends AdminController
     /**
      * Get the status label in Russian.
      */
-    protected function getStatusLabel(?ReturnStatus $status): string
+    protected function getStatusLabel(?string $status): string
     {
-        return match ($status) {
-            ReturnStatus::PENDING => 'Ожидает',
-            ReturnStatus::APPROVED => 'Одобрен',
-            ReturnStatus::REJECTED => 'Отклонён',
-            ReturnStatus::COMPLETED => 'Завершён',
-            default => 'Неизвестно',
-        };
+        if ($status === null) {
+            return 'Неизвестно';
+        }
+
+        return self::STATUS_LABELS[$status] ?? $status;
     }
 
     /**

@@ -162,7 +162,7 @@ class ShipmentController extends Controller
                     'id'     => $order->id,
                     'uuid'   => $order->uuid,
                     'number' => $order->number,
-                    'status' => $order->status?->value,
+                    'status' => $order->status,
                 ];
             }),
         ]);

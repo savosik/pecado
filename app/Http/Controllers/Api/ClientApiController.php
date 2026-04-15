@@ -229,7 +229,7 @@ class ClientApiController extends Controller
             'user_id' => $user->id,
             'company_id' => $company->id,
             'delivery_address' => $validated['address'] ?? null,
-            'status' => OrderStatus::PENDING,
+            'status' => 'pending',
             'comment' => $validated['comment'] ?? null,
             'total_amount' => 0,
             'exchange_rate' => $currency?->exchange_rate ?? 1.0,
@@ -244,7 +244,7 @@ class ClientApiController extends Controller
             // Заказ (instock)
             if (!empty($instockItems)) {
                 $order = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::ORDER,
+                    'type' => 'order',
                 ]));
                 $total = $this->createOrderItems($order, $instockItems, $user);
                 $order->update(['total_amount' => $total]);
@@ -254,7 +254,7 @@ class ClientApiController extends Controller
             // Предзаказ (preorder)
             if (!empty($preorderItems)) {
                 $order = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::PREORDER,
+                    'type' => 'preorder',
                 ]));
                 $total = $this->createOrderItems($order, $preorderItems, $user);
                 $order->update(['total_amount' => $total]);
@@ -273,7 +273,7 @@ class ClientApiController extends Controller
         $responseOrders = array_map(fn(Order $order) => [
             'order_id' => $order->id,
             'order_number' => $order->number,
-            'type' => $order->type?->value ?? 'order',
+            'type' => $order->type ?? 'order',
             'total_amount' => round((float) $order->total_amount, 2),
             'items_count' => $order->items()->count(),
             'status' => 'pending',

@@ -161,12 +161,12 @@ class CheckoutControllerTest extends TestCase
             'user_id' => $this->user->id,
             'company_id' => $company->id,
             'delivery_address' => 'г. Москва, ул. Ленина, д. 5',
-            'status' => \App\Enums\OrderStatus::PENDING,
+            'status' => 'pending',
             'total_amount' => 200.00,
             'exchange_rate' => 1,
             'rate_coefficient' => 1,
             'currency_code' => 'RUB',
-            'type' => \App\Enums\OrderType::ORDER,
+            'type' => 'order',
         ]);
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
         $checkoutMock->expects($this->once())
@@ -205,12 +205,12 @@ class CheckoutControllerTest extends TestCase
             'user_id' => $this->user->id,
             'company_id' => $company->id,
             'delivery_address' => 'Москва, ул. Тестовая, д. 1',
-            'status' => \App\Enums\OrderStatus::PENDING,
+            'status' => 'pending',
             'total_amount' => 100.00,
             'exchange_rate' => 1,
             'rate_coefficient' => 1,
             'currency_code' => 'RUB',
-            'type' => \App\Enums\OrderType::ORDER,
+            'type' => 'order',
         ]);
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
         $checkoutMock->expects($this->once())
@@ -249,24 +249,24 @@ class CheckoutControllerTest extends TestCase
             'user_id'          => $this->user->id,
             'company_id'       => $company->id,
             'delivery_address' => 'г. Москва, ул. Мира, д. 10',
-            'status'           => \App\Enums\OrderStatus::PENDING,
+            'status'           => 'pending',
             'total_amount'     => 100.00,
             'exchange_rate'    => 1,
             'rate_coefficient' => 1,
             'currency_code'    => 'RUB',
-            'type'             => \App\Enums\OrderType::ORDER,
+            'type'             => 'order',
         ]);
         $order2 = Order::create([
             'uuid'             => \Illuminate\Support\Str::uuid(),
             'user_id'          => $this->user->id,
             'company_id'       => $company->id,
             'delivery_address' => 'г. Москва, ул. Мира, д. 10',
-            'status'           => \App\Enums\OrderStatus::PENDING,
+            'status'           => 'pending',
             'total_amount'     => 200.00,
             'exchange_rate'    => 1,
             'rate_coefficient' => 1,
             'currency_code'    => 'RUB',
-            'type'             => \App\Enums\OrderType::PREORDER,
+            'type'             => 'preorder',
         ]);
 
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);

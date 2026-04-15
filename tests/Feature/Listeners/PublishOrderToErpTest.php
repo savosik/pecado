@@ -160,7 +160,7 @@ class PublishOrderToErpTest extends TestCase
             'user_id' => $user->id,
             'company_id' => $company->id,
             'number' => 'ORD-2026-0042',
-            'type' => \App\Enums\OrderType::ORDER,
+            'type' => 'order',
         ]);
 
         Queue::fake();
@@ -188,7 +188,7 @@ class PublishOrderToErpTest extends TestCase
         $order = Order::factory()->create([
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'type' => \App\Enums\OrderType::PREORDER,
+            'type' => 'preorder',
         ]);
 
         Queue::fake();
@@ -331,7 +331,7 @@ class PublishOrderToErpTest extends TestCase
         $order = Order::factory()->create([
             'user_id'    => $user->id,
             'company_id' => $company->id,
-            'type'       => \App\Enums\OrderType::ORDER,
+            'type'       => 'order',
         ]);
 
         Queue::fake();
@@ -364,7 +364,7 @@ class PublishOrderToErpTest extends TestCase
         $order = Order::factory()->create([
             'user_id'    => $user->id,
             'company_id' => $company->id,
-            'type'       => \App\Enums\OrderType::PREORDER,
+            'type'       => 'preorder',
         ]);
 
         Queue::fake();
@@ -393,7 +393,7 @@ class PublishOrderToErpTest extends TestCase
         $order = Order::factory()->create([
             'user_id'    => $user->id,
             'company_id' => $company->id,
-            'type'       => \App\Enums\OrderType::ORDER,
+            'type'       => 'order',
         ]);
 
         Queue::fake();

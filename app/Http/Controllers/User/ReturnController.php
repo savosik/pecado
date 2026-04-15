@@ -17,6 +17,12 @@ use Illuminate\Http\JsonResponse;
 
 class ReturnController extends Controller
 {
+    private const STATUS_LABELS = [
+        'pending'   => 'Ожидает',
+        'approved'  => 'Одобрен',
+        'rejected'  => 'Отклонён',
+        'completed' => 'Завершён',
+    ];
     /**
      * Список возвратов текущего пользователя.
      */
@@ -84,7 +90,7 @@ class ReturnController extends Controller
             return [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
-                'status' => $return->status?->value,
+                'status' => $return->status,
                 'status_label' => $this->getStatusLabel($return->status),
                 'total_amount' => $return->total_amount,
                 'created_at' => $return->created_at?->format('d.m.Y H:i'),
@@ -108,10 +114,10 @@ class ReturnController extends Controller
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
             ],
-            'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
+            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
+                'value' => $value,
+                'label' => $label,
+            ])->values(),
             'reasons' => collect(ReturnReason::cases())->map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $this->getReasonLabel($case),
@@ -181,7 +187,7 @@ class ReturnController extends Controller
 
             $return = ProductReturn::create([
                 'user_id' => $user->id,
-                'status' => ReturnStatus::PENDING->value,
+                'status' => 'pending',
                 'comment' => $validated['comment'] ?? null,
                 'total_amount' => $totalAmount,
             ]);
@@ -229,7 +235,7 @@ class ReturnController extends Controller
             'return' => [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
-                'status' => $return->status?->value,
+                'status' => $return->status,
                 'status_label' => $this->getStatusLabel($return->status),
                 'total_amount' => $return->total_amount,
                 'comment' => $return->comment,
@@ -258,10 +264,10 @@ class ReturnController extends Controller
                     ];
                 }),
             ],
-            'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
+            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
+                'value' => $value,
+                'label' => $label,
+            ])->values(),
         ]);
     }
 
@@ -344,15 +350,13 @@ class ReturnController extends Controller
     /**
      * Метка статуса на русском.
      */
-    protected function getStatusLabel(?ReturnStatus $status): string
+    protected function getStatusLabel(?string $status): string
     {
-        return match ($status) {
-            ReturnStatus::PENDING => 'Ожидает',
-            ReturnStatus::APPROVED => 'Одобрен',
-            ReturnStatus::REJECTED => 'Отклонён',
-            ReturnStatus::COMPLETED => 'Завершён',
-            default => 'Неизвестно',
-        };
+        if ($status === null) {
+            return 'Неизвестно';
+        }
+
+        return self::STATUS_LABELS[$status] ?? $status;
     }
 
     /**

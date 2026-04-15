@@ -22,12 +22,12 @@ class OrderFactory extends Factory
             'user_id' => \App\Models\User::factory(),
             'company_id' => \App\Models\Company::factory(),
             'delivery_address' => fake()->address(),
-            'status' => \App\Enums\OrderStatus::PENDING,
+            'status' => 'pending',
             'total_amount' => $this->faker->randomFloat(2, 100, 1000),
             'exchange_rate' => 1.0,
             'rate_coefficient' => 1.0,
             'currency_code' => 'RUB',
-            'type' => \App\Enums\OrderType::ORDER,
+            'type' => 'order',
         ];
     }
 }

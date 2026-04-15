@@ -13,6 +13,15 @@ use Inertia\Response as InertiaResponse;
 
 class OrderController extends Controller
 {
+    private const STATUS_LABELS = [
+        'pending'       => 'Ожидает',
+        'confirmed'     => 'Подтверждён',
+        'ready_to_ship' => 'К отгрузке',
+        'к_отгрузке'    => 'К отгрузке',
+        'closed'        => 'Закрыт',
+        'cancelled'     => 'Отменён',
+    ];
+
     public function __construct(
         protected CurrencyService $currencyService
     ) {}
@@ -87,9 +96,9 @@ class OrderController extends Controller
                 'id'              => $order->id,
                 'number'          => $order->number ?? ('#' . $order->id),
                 'uuid'            => $order->uuid,
-                'status'          => $order->status?->value,
+                'status'          => $order->status,
                 'status_label'    => $this->getStatusLabel($order->status),
-                'type'            => $order->type?->value,
+                'type'            => $order->type,
                 'total_amount'    => $order->total_amount,
                 'total_converted' => $totalConverted,
                 'currency_code'   => $order->currency_code,
@@ -117,10 +126,10 @@ class OrderController extends Controller
                 'sort_order'  => $sortOrder,
                 'per_page'    => $perPage,
             ],
-            'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
+            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
+                'value' => $value,
+                'label' => $label,
+            ])->values(),
             'types' => [
                 ['value' => 'order',    'label' => 'Заказ со склада'],
                 ['value' => 'preorder', 'label' => 'Предзаказ'],
@@ -155,9 +164,9 @@ class OrderController extends Controller
             'order' => [
                 'id'                  => $order->id,
                 'uuid'                => $order->uuid,
-                'status'              => $order->status?->value,
+                'status'              => $order->status,
                 'status_label'        => $this->getStatusLabel($order->status),
-                'type'                => $order->type?->value,
+                'type'                => $order->type,
                 'comment'             => $order->comment,
                 'total_amount'        => $order->total_amount,
                 'total_converted'     => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
@@ -236,25 +245,23 @@ class OrderController extends Controller
                     ];
                 }),
             ],
-            'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
+            'statuses' => collect(self::STATUS_LABELS)->map(fn ($label, $value) => [
+                'value' => $value,
+                'label' => $label,
+            ])->values(),
         ]);
     }
 
     /**
      * Получить метку статуса на русском.
      */
-    protected function getStatusLabel(?OrderStatus $status): string
+    protected function getStatusLabel(?string $status): string
     {
-        return match ($status) {
-            OrderStatus::PENDING       => 'Ожидает',
-            OrderStatus::CONFIRMED     => 'Подтверждён',
-            OrderStatus::READY_TO_SHIP => 'К отгрузке',
-            OrderStatus::CLOSED        => 'Закрыт',
-            default                    => 'Неизвестно',
-        };
+        if ($status === null) {
+            return 'Неизвестно';
+        }
+
+        return self::STATUS_LABELS[$status] ?? $status;
     }
 
     /**

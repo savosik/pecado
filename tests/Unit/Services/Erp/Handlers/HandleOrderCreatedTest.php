@@ -198,7 +198,7 @@ class HandleOrderCreatedTest extends TestCase
 
         $order = Order::where('uuid', 'existing-order-001')->first();
         // Статус не должен измениться
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('confirmed', $order->status);
     }
 
     #[Test]
@@ -237,7 +237,7 @@ class HandleOrderCreatedTest extends TestCase
 
         $order = Order::where('uuid', 'order-erp-status-001')->first();
         $this->assertNotNull($order);
-        $this->assertEquals('ready_to_ship', $order->status->value);
+        $this->assertEquals('ready_to_ship', $order->status);
     }
 
     #[Test]

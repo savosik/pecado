@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\ReturnStatus;
+
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -31,7 +31,6 @@ class ProductReturn extends Model
     ];
 
     protected $casts = [
-        'status' => ReturnStatus::class,
         'total_amount' => 'decimal:2',
     ];
 
