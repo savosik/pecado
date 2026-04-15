@@ -65,6 +65,8 @@ class ErpIncomingJobTest extends TestCase
             'event'      => 'partner.created',
             'uuid'       => '00000000-0000-4000-a000-000000000045',
             'login'      => 'partner-test@example.com',
+            'name'       => 'Test Partner',
+            'email'      => 'partner-test@example.com',
             'message_id' => 'msg-001',
             'timestamp'  => now()->toIso8601String(),
         ]);
@@ -91,10 +93,11 @@ class ErpIncomingJobTest extends TestCase
         ]);
 
         $job = $this->makeJob([
-            'event' => 'partner.deleted',
-            'uuid' => '00000000-0000-4000-a000-000000000046',
+            'event'      => 'partner.deleted',
+            'uuid'       => '00000000-0000-4000-a000-000000000046',
+            'email'      => $user->email,
             'message_id' => 'msg-002',
-            'timestamp' => now()->toIso8601String(),
+            'timestamp'  => now()->toIso8601String(),
         ]);
 
         $job->fire();
@@ -223,6 +226,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'partner.deleted',
             'uuid'  => '00000000-0000-4000-a000-000000000047',
+            'email' => $user->email,
             // no message_id
         ]);
 
@@ -250,6 +254,7 @@ class ErpIncomingJobTest extends TestCase
         $deletedJob = $this->makeJob([
             'event'      => 'partner.deleted',
             'uuid'       => '00000000-0000-4000-a000-00000000000c',
+            'email'      => 'full-cycle@example.com',
             'message_id' => 'msg-cycle-deleted',
         ]);
         $deletedJob->fire();
@@ -261,6 +266,7 @@ class ErpIncomingJobTest extends TestCase
         $duplicateJob = $this->makeJob([
             'event'      => 'partner.deleted',
             'uuid'       => '00000000-0000-4000-a000-00000000000c',
+            'email'      => 'full-cycle@example.com',
             'message_id' => 'msg-cycle-deleted',
         ]);
         $duplicateJob->fire();
