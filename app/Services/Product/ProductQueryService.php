@@ -198,15 +198,7 @@ class ProductQueryService
         }
 
         // Запрос по числовым ID — в 3-5x быстрее чем по UUID
-        $prices = DB::table('individual_prices')
-            ->where('partner_id', $user->id)
-            ->whereIn('product_id', $productIds)
-            ->select('product_id', 'price')
-            ->get();
-
-        return $prices->mapWithKeys(function ($row) {
-            return [(int) $row->product_id => (float) $row->price];
-        });
+        return \App\Services\Pricing\IndividualPriceProxy::loadPriceMap($user->id, $productIds);
     }
 
     /**

@@ -35,6 +35,21 @@ jobs:
           --health-timeout=5s
           --health-retries=3
 
+      mysql-prices:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: pecado_prices_test
+          MYSQL_ROOT_PASSWORD: secret
+          MYSQL_USER: pecado
+          MYSQL_PASSWORD: secret
+        ports:
+          - "3307:3306"
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+
       redis:
         image: redis:alpine
         ports:
@@ -90,6 +105,11 @@ jobs:
           DB_DATABASE=pecado_test
           DB_USERNAME=pecado
           DB_PASSWORD=secret
+          DB_PRICES_HOST=127.0.0.1
+          DB_PRICES_PORT=3307
+          DB_PRICES_DATABASE=pecado_prices_test
+          DB_PRICES_USERNAME=pecado
+          DB_PRICES_PASSWORD=secret
           REDIS_HOST=127.0.0.1
           REDIS_PORT=6379
           QUEUE_CONNECTION=sync
@@ -236,6 +256,19 @@ jobs:
           set -euo pipefail
           cd /srv/pecado
 
+          echo "==> [0/7] Настройка переменных prices DB..."
+          if ! grep -q "DB_PRICES_HOST" /srv/pecado/.env; then
+            cat >> /srv/pecado/.env << 'ENVEOF'
+
+# Individual Prices Database (отдельный контейнер)
+DB_PRICES_HOST=mysql-prices
+DB_PRICES_PORT=3306
+DB_PRICES_DATABASE=pecado_prices
+DB_PRICES_USERNAME=pecado
+DB_PRICES_PASSWORD=secret
+ENVEOF
+          fi
+
           echo "==> [1/7] Установка PHP зависимостей..."
           sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
 
@@ -246,7 +279,10 @@ jobs:
           sg docker -c 'docker compose exec -T app php artisan view:cache'
           sg docker -c 'docker compose exec -T app php artisan optimize'
 
-          echo "==> [3/7] Выполнение миграций..."
+          echo "==> [2.5/7] Запуск prices DB контейнера..."
+          sg docker -c 'docker compose up -d --wait mysql-prices' || sg docker -c 'docker compose up -d mysql-prices'
+
+          echo "==> [3/7] Выполнение миграций (main DB + prices DB)..."
           sg docker -c 'docker compose exec -T app php artisan migrate --force'
 
           echo "==> [4/7] Синхронизация ролей и прав..."

@@ -13,6 +13,7 @@ services:
       - pecado-network
     depends_on:
       - mysql
+      - mysql-prices
       - meilisearch
       - rabbitmq
       - redis
@@ -50,6 +51,7 @@ services:
     depends_on:
       - app
       - mysql
+      - mysql-prices
       - rabbitmq
       - redis
 
@@ -68,6 +70,29 @@ services:
       - mysql-data:/var/lib/mysql
     networks:
       - pecado-network
+
+  mysql-prices:
+    image: mysql:8.0
+    container_name: pecado-mysql-prices
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: pecado_prices
+      MYSQL_ROOT_PASSWORD: secret
+      MYSQL_USER: pecado
+      MYSQL_PASSWORD: secret
+    ports:
+      - "3309:3306"
+    volumes:
+      - mysql-prices-data:/var/lib/mysql
+      - ./docker/mysql-prices/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    networks:
+      - pecado-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-psecret"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   meilisearch:
     image: getmeili/meilisearch:v1.14
@@ -176,5 +201,6 @@ networks:
 
 volumes:
   mysql-data:
+  mysql-prices-data:
   meilisearch-data:
   redis-data:

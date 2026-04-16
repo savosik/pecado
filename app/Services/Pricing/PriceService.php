@@ -7,7 +7,6 @@ use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Pricing\PriceResult;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Models\Currency;
-use App\Models\IndividualPrice;
 use App\Models\Product;
 use App\Models\User;
 
@@ -77,14 +76,8 @@ class PriceService implements PriceServiceInterface
         }
 
         // v7.1: Ищем по числовым ID (partner_id = user.id, product_id = product.id)
-        $query = IndividualPrice::where('partner_id', $user->id)
-            ->where('product_id', $product->id);
-
-        if ($warehouseId) {
-            $query->where('warehouse_id', $warehouseId);
-        }
-
-        $individualPrice = $query->first();
+        // Через proxy для graceful degradation при недоступности prices DB
+        $individualPrice = IndividualPriceProxy::findPrice($user->id, $product->id, $warehouseId);
 
         if (!$individualPrice) {
             return PriceResult::withoutDiscount($basePrice);

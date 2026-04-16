@@ -90,13 +90,14 @@ class BulkDeleteJob implements ShouldQueue
     {
         $model = new $this->modelClass;
         $table = $model->getTable();
+        $connection = $model->getConnectionName();
 
         $this->updateProgress($cacheKey, 'running', 'Выполняется TRUNCATE TABLE...');
 
         // TRUNCATE TABLE — мгновенно, не генерирует undo-логи
-        Schema::disableForeignKeyConstraints();
-        DB::table($table)->truncate();
-        Schema::enableForeignKeyConstraints();
+        Schema::connection($connection)->disableForeignKeyConstraints();
+        DB::connection($connection)->table($table)->truncate();
+        Schema::connection($connection)->enableForeignKeyConstraints();
     }
 
     /**

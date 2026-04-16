@@ -11,6 +11,7 @@ use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IndividualPriceController extends Controller
@@ -70,18 +71,25 @@ class IndividualPriceController extends Controller
             return $item;
         });
 
-        // Статистика — быстрая оценка без COUNT(*) по таблице ~3M строк
+        // Статистика — быстрая оценка без COUNT(*) по таблице
         $stats = cache()->remember('individual_prices_stats', 3600, function () {
-            $approx = DB::selectOne(
-                "SELECT TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'individual_prices'"
-            );
-            $partnerCardinality = DB::selectOne(
-                "SELECT CARDINALITY FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'individual_prices' AND INDEX_NAME = 'idx_individual_prices_partner' LIMIT 1"
-            );
-            return [
-                'total_prices' => $approx?->TABLE_ROWS ?? 0,
-                'total_partners' => $partnerCardinality?->CARDINALITY ?? 0,
-            ];
+            $pricesDb = config('database.connections.prices.database');
+            try {
+                $approx = DB::connection('prices')->selectOne(
+                    "SELECT TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'individual_prices'",
+                    [$pricesDb]
+                );
+                $partnerCardinality = DB::connection('prices')->selectOne(
+                    "SELECT CARDINALITY FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'individual_prices' AND INDEX_NAME = 'idx_individual_prices_partner' LIMIT 1",
+                    [$pricesDb]
+                );
+                return [
+                    'total_prices' => $approx?->TABLE_ROWS ?? 0,
+                    'total_partners' => $partnerCardinality?->CARDINALITY ?? 0,
+                ];
+            } catch (\Illuminate\Database\QueryException $e) {
+                return ['total_prices' => 0, 'total_partners' => 0];
+            }
         });
 
         return Inertia::render('Admin/Pages/IndividualPrices/Index', [
@@ -224,9 +232,8 @@ class IndividualPriceController extends Controller
 
         // При создании — ищем среди всех; при фильтрации — только тех, у кого есть цены
         if ($request->boolean('only_with_prices')) {
-            $query->whereIn('id', function ($q) {
-                $q->select('partner_id')->from('individual_prices')->distinct();
-            });
+            $partnerIds = DB::connection('prices')->table('individual_prices')->distinct()->pluck('partner_id');
+            $query->whereIn('id', $partnerIds);
         }
 
         if ($search = $request->input('query')) {
@@ -256,9 +263,8 @@ class IndividualPriceController extends Controller
         $query = Product::query();
 
         if ($request->boolean('only_with_prices')) {
-            $query->whereIn('id', function ($q) {
-                $q->select('product_id')->from('individual_prices')->distinct();
-            });
+            $productIds = DB::connection('prices')->table('individual_prices')->distinct()->pluck('product_id');
+            $query->whereIn('id', $productIds);
         }
 
         if ($search = $request->input('query')) {
@@ -289,9 +295,8 @@ class IndividualPriceController extends Controller
         $query = Warehouse::query();
 
         if ($request->boolean('only_with_prices')) {
-            $query->whereIn('id', function ($q) {
-                $q->select('warehouse_id')->from('individual_prices')->distinct();
-            });
+            $warehouseIds = DB::connection('prices')->table('individual_prices')->distinct()->pluck('warehouse_id');
+            $query->whereIn('id', $warehouseIds);
         }
 
         if ($search = $request->input('query')) {
@@ -318,31 +323,21 @@ class IndividualPriceController extends Controller
             abort(422, 'Для экспорта необходимо выбрать партнёра или товар');
         }
 
-        $query = IndividualPrice::query()
-            ->join('users', 'individual_prices.partner_id', '=', 'users.id')
-            ->join('products', 'individual_prices.product_id', '=', 'products.id')
-            ->join('warehouses', 'individual_prices.warehouse_id', '=', 'warehouses.id')
-            ->select([
-                'users.name as partner_name',
-                'users.email as partner_email',
-                'products.name as product_name',
-                'products.sku as product_sku',
-                'warehouses.name as warehouse_name',
-                'individual_prices.price',
-                'individual_prices.updated_at',
-            ]);
+        // individual_prices живёт в отдельной prices DB — JOIN с main DB невозможен.
+        // Подгружаем цены из prices DB, имена сущностей — из main DB отдельными запросами.
+        $query = DB::connection('prices')->table('individual_prices');
 
         if ($request->filled('partner_id')) {
-            $query->where('individual_prices.partner_id', $request->input('partner_id'));
+            $query->where('partner_id', $request->input('partner_id'));
         }
         if ($request->filled('product_id')) {
-            $query->where('individual_prices.product_id', $request->input('product_id'));
+            $query->where('product_id', $request->input('product_id'));
         }
         if ($request->filled('warehouse_id')) {
-            $query->where('individual_prices.warehouse_id', $request->input('warehouse_id'));
+            $query->where('warehouse_id', $request->input('warehouse_id'));
         }
 
-        $query->orderBy('individual_prices.updated_at', 'desc');
+        $query->orderBy('updated_at', 'desc');
 
         $filename = 'individual_prices_' . now()->format('Y-m-d_H-i') . '.csv';
 
@@ -356,15 +351,25 @@ class IndividualPriceController extends Controller
             fputcsv($handle, ['Партнёр', 'Email', 'Товар', 'Артикул', 'Склад', 'Цена', 'Обновлено'], ';');
 
             $query->chunk(1000, function ($rows) use ($handle) {
+                $partnerIds = $rows->pluck('partner_id')->unique();
+                $productIds = $rows->pluck('product_id')->unique();
+                $warehouseIds = $rows->pluck('warehouse_id')->unique();
+
+                $partners = User::whereIn('id', $partnerIds)->get()->keyBy('id');
+                $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+                $warehouses = Warehouse::whereIn('id', $warehouseIds)->pluck('name', 'id');
+
                 foreach ($rows as $row) {
+                    $partner = $partners[$row->partner_id] ?? null;
+                    $product = $products[$row->product_id] ?? null;
                     fputcsv($handle, [
-                        $row->partner_name,
-                        $row->partner_email,
-                        $row->product_name,
-                        $row->product_sku,
-                        $row->warehouse_name,
-                        number_format($row->price, 2, ',', ''),
-                        $row->updated_at?->format('d.m.Y H:i:s'),
+                        $partner?->name ?? "ID: {$row->partner_id}",
+                        $partner?->email ?? '',
+                        $product?->name ?? "ID: {$row->product_id}",
+                        $product?->sku ?? '',
+                        $warehouses[$row->warehouse_id] ?? "ID: {$row->warehouse_id}",
+                        number_format((float) $row->price, 2, ',', ''),
+                        $row->updated_at ? Carbon::parse($row->updated_at)->format('d.m.Y H:i:s') : '',
                     ], ';');
                 }
             });

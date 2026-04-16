@@ -174,7 +174,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
             if (count($batch) >= self::BATCH_SIZE) {
                 // Первый батч — удаляем старые цены партнёра
                 if ($totalProcessed === 0) {
-                    DB::table('individual_prices')
+                    DB::connection('prices')->table('individual_prices')
                         ->where('partner_id', $partnerId)
                         ->delete();
                 }
@@ -187,7 +187,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
 
         // Если первый батч ещё не начался — удаляем старые цены
         if ($totalProcessed === 0) {
-            DB::table('individual_prices')
+            DB::connection('prices')->table('individual_prices')
                 ->where('partner_id', $partnerId)
                 ->delete();
         }
@@ -316,7 +316,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
         $sql = 'INSERT INTO `individual_prices` (`partner_id`, `product_id`, `warehouse_id`, `price`) VALUES '
             . implode(', ', $values);
 
-        DB::statement($sql);
+        DB::connection('prices')->statement($sql);
     }
 
     /**
@@ -341,7 +341,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
             . implode(', ', $values)
             . ' ON DUPLICATE KEY UPDATE `price` = VALUES(`price`), `updated_at` = NOW()';
 
-        DB::statement($sql);
+        DB::connection('prices')->statement($sql);
     }
 
     /**

@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class IndividualPrice extends Model
 {
+    protected $connection = 'prices';
+
     public $incrementing = false;
     public $timestamps = false;
 

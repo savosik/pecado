@@ -232,17 +232,22 @@ trait ProductQueryScopes
             return $value ? $query->whereRaw('1 = 0') : $query;
         }
 
-        // v7.1: JOIN по числовым ID вместо UUID
-        $sub = function ($sub) use ($user) {
-            $sub->select(DB::raw(1))
-                ->from('individual_prices')
-                ->whereColumn('individual_prices.product_id', 'products.id')
-                ->where('individual_prices.partner_id', $user->id);
-        };
+        // individual_prices живёт в отдельной prices DB — cross-DB subquery невозможен.
+        // Получаем product_id из prices DB, фильтруем через whereIn на основной БД.
+        try {
+            $productIds = DB::connection('prices')
+                ->table('individual_prices')
+                ->where('partner_id', $user->id)
+                ->distinct()
+                ->pluck('product_id');
+        } catch (\Illuminate\Database\QueryException $e) {
+            // prices DB недоступна — graceful degradation: нет данных о скидках
+            return $value ? $query->whereRaw('1 = 0') : $query;
+        }
 
         return $value
-            ? $query->whereExists($sub)
-            : $query->whereNotExists($sub);
+            ? $query->whereIn('id', $productIds)
+            : $query->whereNotIn('id', $productIds);
     }
 
     /**

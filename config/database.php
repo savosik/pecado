@@ -63,6 +63,25 @@ return [
             ]) : [],
         ],
 
+        'prices' => [
+            'driver' => 'mysql',
+            'host' => env('DB_PRICES_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_PRICES_PORT', env('DB_PORT', '3306')),
+            'database' => env('DB_PRICES_DATABASE', 'pecado_prices'),
+            'username' => env('DB_PRICES_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_PRICES_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
