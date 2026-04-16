@@ -5,11 +5,12 @@ namespace App\Services\Erp\Handlers;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductBarcode;
 use App\Models\ProductModel;
+use Illuminate\Database\ConcurrencyErrorDetector;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * US-13: Обработка события product.created из 1С.
@@ -23,6 +24,38 @@ class HandleProductCreated
     {
         $uuid         = $payload['uuid']          ?? null;
         $name         = $payload['name']          ?? null;
+
+        if (!$uuid || !$name) {
+            Log::warning('product.created: отсутствуют обязательные поля uuid или name', [
+                'payload' => $payload,
+            ]);
+            return;
+        }
+
+        retry([100, 250], function () use ($payload): void {
+            $this->processPayload($payload);
+        }, function (int $attempt, Throwable $e) use ($uuid): int {
+            Log::warning('product.created: deadlock, повторная попытка обработки', [
+                'product_uuid' => $uuid,
+                'attempt' => $attempt + 1,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $attempt === 1 ? 100 : 250;
+        }, function (Throwable $e): bool {
+            return $this->shouldRetryOnDeadlock($e);
+        });
+    }
+
+    protected function runInTransaction(callable $callback): void
+    {
+        DB::transaction($callback);
+    }
+
+    protected function processPayload(array $payload): void
+    {
+        $uuid         = $payload['uuid']          ?? null;
+        $name         = $payload['name']          ?? null;
         $code         = $payload['code']          ?? null;
         $sku          = $payload['sku']           ?? null;
         $categoryUuid = $payload['category_uuid'] ?? null;
@@ -33,16 +66,13 @@ class HandleProductCreated
         $attributes   = $payload['attributes']    ?? [];
         $hidden       = (bool) ($payload['hidden'] ?? false);
 
-        if (!$uuid || !$name) {
-            Log::warning('product.created: отсутствуют обязательные поля uuid или name', [
-                'payload' => $payload,
-            ]);
-            return;
-        }
+        $category = null;
 
-        DB::transaction(function () use (
+        // retry() перезапускает всю транзакцию целиком, что сохраняет идемпотентность
+        // и позволяет безопасно пережить кратковременный deadlock при массовой выгрузке.
+        $this->runInTransaction(function () use (
             $uuid, $name, $code, $sku, $categoryUuid, $brandData,
-            $description, $barcodes, $modelData, $attributes, $hidden
+            $description, $barcodes, $modelData, $attributes, $hidden, &$category
         ) {
             // --- Категория ---
             $categoryId = null;
@@ -213,11 +243,11 @@ class HandleProductCreated
                             if ($attrValue) {
                                 $attrValue->update(['external_id' => $valueUuid]);
                             } else {
-                                $attrValue = \App\Models\AttributeValue::create([
-                                    'external_id'  => $valueUuid,
-                                    'attribute_id' => $attribute->id,
-                                    'value'        => $valueStr,
-                                ]);
+                                // Атомарный upsert — защита от гонки при параллельных воркерах
+                                $attrValue = \App\Models\AttributeValue::updateOrCreate(
+                                    ['attribute_id' => $attribute->id, 'value' => $valueStr],
+                                    ['external_id' => $valueUuid]
+                                );
                             }
                         }
                         $attributeValueId = $attrValue->id;
@@ -272,6 +302,14 @@ class HandleProductCreated
         });
     }
 
+    protected function shouldRetryOnDeadlock(Throwable $e): bool
+    {
+        /** @var ConcurrencyErrorDetector $detector */
+        $detector = app(ConcurrencyErrorDetector::class);
+
+        return $detector->causedByConcurrencyError($e);
+    }
+
     /**
      * Поиск/создание бренда.
      * v4: объект {uuid, name} → updateOrCreate по external_id
@@ -293,24 +331,14 @@ class HandleProductCreated
             // 1С — мастер. При конфликте slug перезаписываем external_id.
             $brand = Brand::where('external_id', $uuid)->first();
 
-            if (!$brand) {
-                // Ищем по slug — возможно бренд пришёл из sex-opt.ru с другим external_id
-                $brand = Brand::where('slug', $slug)->first();
-
-                if ($brand) {
-                    $brand->update([
-                        'external_id' => $uuid,
-                        'name'        => $name,
-                    ]);
-                } else {
-                    $brand = Brand::create([
-                        'external_id' => $uuid,
-                        'name'        => $name,
-                        'slug'        => $slug,
-                    ]);
-                }
-            } else {
+            if ($brand) {
                 $brand->update(['name' => $name]);
+            } else {
+                // Атомарный upsert по slug — защита от гонки и дедупликация с sex-opt.ru
+                $brand = Brand::updateOrCreate(
+                    ['slug' => $slug],
+                    ['external_id' => $uuid, 'name' => $name]
+                );
             }
 
             return $brand->id;
@@ -378,12 +406,18 @@ class HandleProductCreated
             }
         }
 
-        // 3. Создаём новую модель
-        $productModel = ProductModel::create(array_filter([
-            'external_id' => $uuid,
-            'name'        => $name ?? $uuid,
-            'code'        => $code,
-        ]));
+        // 3. Атомарный upsert — защита от гонки при параллельных воркерах
+        if ($uuid) {
+            $productModel = ProductModel::updateOrCreate(
+                ['external_id' => $uuid],
+                array_filter(['name' => $name ?? $uuid, 'code' => $code])
+            );
+        } else {
+            $productModel = ProductModel::create(array_filter([
+                'name' => $name,
+                'code' => $code,
+            ]));
+        }
 
         return $productModel->id;
     }

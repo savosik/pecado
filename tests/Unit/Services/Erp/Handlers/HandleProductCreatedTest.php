@@ -8,6 +8,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductAttributeValue;
 use App\Services\Erp\Handlers\HandleProductCreated;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -328,5 +329,91 @@ class HandleProductCreatedTest extends TestCase
         $p1 = Product::where('external_id', 'prod-model-name-001')->first();
         $p2 = Product::where('external_id', 'prod-model-name-002')->first();
         $this->assertEquals($p1->model_id, $p2->model_id);
+    }
+
+    #[Test]
+    public function retries_product_created_on_deadlock_and_finishes_on_third_attempt(): void
+    {
+        $handler = \Mockery::mock(HandleProductCreated::class)
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $attempts = 0;
+
+        $handler->shouldReceive('runInTransaction')
+            ->times(3)
+            ->andReturnUsing(function (callable $callback) use (&$attempts): void {
+                $attempts++;
+
+                if ($attempts < 3) {
+                    throw new QueryException(
+                        'update `attribute_values` set `external_id` = ? where `id` = ?',
+                        [],
+                        new \PDOException('SQLSTATE[40001]: Serialization failure: 1213 Deadlock found when trying to get lock; try restarting transaction', '40001')
+                    );
+                }
+
+                $callback();
+            });
+
+        $handler->shouldReceive('shouldRetryOnDeadlock')
+            ->times(2)
+            ->andReturnTrue();
+
+        $handler->shouldReceive('processPayload')
+            ->passthru();
+
+        $handler->handle([
+            'event' => 'product.created',
+            'uuid'  => 'prod-deadlock-retry-001',
+            'name'  => 'Товар с retry',
+        ]);
+
+        $this->assertSame(3, $attempts);
+        $this->assertDatabaseHas('products', [
+            'external_id' => 'prod-deadlock-retry-001',
+            'name' => 'Товар с retry',
+        ]);
+    }
+
+    #[Test]
+    public function does_not_retry_product_created_on_non_deadlock_error(): void
+    {
+        $handler = \Mockery::mock(HandleProductCreated::class)
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $attempts = 0;
+
+        $handler->shouldReceive('runInTransaction')
+            ->once()
+            ->andReturnUsing(function () use (&$attempts): void {
+                $attempts++;
+
+                throw new \RuntimeException('Обычная ошибка обработки');
+            });
+
+        $handler->shouldReceive('shouldRetryOnDeadlock')
+            ->once()
+            ->andReturnFalse();
+
+        $handler->shouldReceive('processPayload')
+            ->passthru();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Обычная ошибка обработки');
+
+        try {
+            $handler->handle([
+                'event' => 'product.created',
+                'uuid'  => 'prod-no-retry-001',
+                'name'  => 'Товар без retry',
+            ]);
+        } finally {
+            $this->assertSame(1, $attempts);
+            $this->assertDatabaseMissing('products', [
+                'external_id' => 'prod-no-retry-001',
+            ]);
+        }
     }
 }
