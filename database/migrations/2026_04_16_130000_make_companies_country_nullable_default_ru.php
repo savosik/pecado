@@ -14,14 +14,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('companies', function (Blueprint $table) {
-            $table->enum('country', ['RU', 'BY', 'KZ'])->nullable()->default('RU')->change();
+            $table->enum('country', ['RU', 'BY', 'KZ', 'UA', 'UZ', 'AZ', 'AM', 'GE', 'KG', 'MD', 'TJ', 'TM'])->nullable()->default('RU')->change();
         });
     }
 
     public function down(): void
     {
         Schema::table('companies', function (Blueprint $table) {
-            $table->enum('country', ['RU', 'BY', 'KZ'])->nullable(false)->default(null)->change();
+            $table->enum('country', ['RU', 'BY', 'KZ', 'UA', 'UZ', 'AZ', 'AM', 'GE', 'KG', 'MD', 'TJ', 'TM'])->nullable(false)->default(null)->change();
         });
     }
 };
