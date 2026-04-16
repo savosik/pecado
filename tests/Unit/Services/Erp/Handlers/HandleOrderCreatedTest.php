@@ -175,13 +175,14 @@ class HandleOrderCreatedTest extends TestCase
     }
 
     #[Test]
-    public function skips_if_order_already_exists_idempotency(): void
+    public function upserts_existing_order_on_duplicate_uuid(): void
     {
         $user = User::factory()->create();
 
         Order::withoutEvents(function () use ($user) {
             Order::create([
                 'uuid'         => 'existing-order-001',
+                'number'       => 'ORD-OLD',
                 'user_id'      => $user->id,
                 'status'       => 'confirmed',
                 'total_amount' => 1000,
@@ -189,16 +190,47 @@ class HandleOrderCreatedTest extends TestCase
         });
 
         $this->handler->handle([
-            'event'        => 'order.created',
-            'message_id'   => 'msg-test-006',
-            'uuid'         => 'existing-order-001',
-            'status'       => 'pending',
-            'items'        => [],
+            'event'      => 'order.created',
+            'message_id' => 'msg-test-006',
+            'uuid'       => 'existing-order-001',
+            'number'     => 'ORD-NEW',
+            'status'     => 'pending',
+            'items'      => [],
         ]);
 
+        // Заказ один — дубля нет
+        $this->assertEquals(1, Order::where('uuid', 'existing-order-001')->count());
+
         $order = Order::where('uuid', 'existing-order-001')->first();
-        // Статус не должен измениться
-        $this->assertEquals('confirmed', $order->status->value);
+        // Поля обновлены из нового payload
+        $this->assertEquals('pending', $order->status->value);
+        $this->assertEquals('ORD-NEW', $order->number);
+    }
+
+    #[Test]
+    public function allows_different_uuid_with_same_number(): void
+    {
+        // 1С при retry может послать новый uuid для того же number
+        // После снятия unique с orders.number — это не должно падать
+        Order::withoutEvents(function () {
+            Order::create([
+                'uuid'         => 'order-uuid-first',
+                'number'       => 'ORD-SAME-NUMBER',
+                'status'       => 'pending',
+                'total_amount' => 0,
+            ]);
+        });
+
+        $this->handler->handle([
+            'event'      => 'order.created',
+            'message_id' => 'msg-test-006b',
+            'uuid'       => 'order-uuid-second',
+            'number'     => 'ORD-SAME-NUMBER',
+            'status'     => 'pending',
+            'items'      => [],
+        ]);
+
+        $this->assertEquals(2, Order::withoutGlobalScopes()->where('number', 'ORD-SAME-NUMBER')->count());
     }
 
     #[Test]

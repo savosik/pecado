@@ -1314,12 +1314,12 @@ components:
           examples:
             - 'ivanov@example.com'
         password:
-          type: integer
-          minimum: 0
-          maximum: 4294967295
-          description: Десятичное значение CRC32 от email партнёра
+          type: string
+          minLength: 1
+          maxLength: 32
+          description: Пароль пользователя (строка, до 32 символов). Типовое значение — десятичное представление CRC32 от email партнёра
           examples:
-            - 2926704424
+            - '2926704424'
         city:
           type:
             - string

@@ -32,13 +32,6 @@ class HandleOrderCreated
             return;
         }
 
-        // Идемпотентность: проверяем, что заказ ещё не существует
-        $existingOrder = Order::where('uuid', $uuid)->first();
-        if ($existingOrder) {
-            Log::info('HandleOrderCreated: заказ уже существует, пропускаем', ['uuid' => $uuid]);
-            return;
-        }
-
         DB::transaction(function () use ($payload, $uuid) {
             $partnerUuid    = $payload['partner_uuid']    ?? null;
             $contractorData = $payload['contractor']      ?? null;
@@ -65,7 +58,7 @@ class HandleOrderCreated
                     $company = Company::withoutEvents(function () use ($contractorData, $userId) {
                         return Company::create([
                             'user_id'             => $userId,
-                            'country'             => $contractorData['country'] ?? null,
+                            'country'             => $contractorData['country'] ?? 'RU',
                             'name'                => $contractorData['name'] ?? null,
                             'legal_name'          => $contractorData['legal_name'] ?? $contractorData['name'] ?? null,
                             'tax_id'              => $contractorData['tax_id'],
@@ -93,25 +86,26 @@ class HandleOrderCreated
                 }
             }
 
-            // --- Создание заказа (без диспатча событий — не публикуем обратно в ERP) ---
-            $order = Order::withoutEvents(function () use ($uuid, $payload, $userId, $companyId, $status, $type) {
-                // Маппинг статусов из 1С (docs-erp/content/rules/orders.md)
-                $statusMap = [
-                    'не согласован' => 'pending',
-                    'к выполнению'  => 'confirmed',
-                    'к отгрузке'    => 'ready_to_ship',
-                    'к_отгрузке'    => 'ready_to_ship',
-                    'закрыт'        => 'closed',
-                    'удален'        => 'deleted',
-                    'удалён'        => 'deleted',
-                    'deleted'       => 'deleted',
-                ];
+            // Маппинг статусов из 1С (docs-erp/content/rules/orders.md)
+            $statusMap = [
+                'не согласован' => 'pending',
+                'к выполнению'  => 'confirmed',
+                'к отгрузке'    => 'ready_to_ship',
+                'к_отгрузке'    => 'ready_to_ship',
+                'закрыт'        => 'closed',
+                'удален'        => 'deleted',
+                'удалён'        => 'deleted',
+                'deleted'       => 'deleted',
+            ];
 
-                $normalizedStatus = mb_strtolower(trim($status));
-                $finalStatus = $statusMap[$normalizedStatus] ?? $status;
+            $normalizedStatus = mb_strtolower(trim($status));
+            $finalStatus = $statusMap[$normalizedStatus] ?? $status;
 
-                return Order::create([
-                    'uuid'             => $uuid,
+            // --- Upsert заказа по uuid (без диспатча событий — не публикуем обратно в ERP) ---
+            $existingOrder = Order::where('uuid', $uuid)->first();
+
+            $order = Order::withoutEvents(function () use ($existingOrder, $uuid, $payload, $userId, $companyId, $finalStatus, $type) {
+                $fields = [
                     'number'           => $payload['number'] ?? null,
                     'erp_number'       => $payload['number'] ?? null,
                     'user_id'          => $userId,
@@ -122,12 +116,25 @@ class HandleOrderCreated
                     'currency_code'    => $payload['currency_code'] ?? 'RUB',
                     'exchange_rate'    => $payload['exchange_rate'] ?? 1.0,
                     'rate_coefficient' => $payload['rate_coefficient'] ?? 1.0,
-                    'total_amount'     => 0,
                     'comment'          => $payload['comment'] ?? null,
-                ]);
+                ];
+
+                if ($existingOrder) {
+                    $existingOrder->updateQuietly($fields);
+                    return $existingOrder;
+                }
+
+                return Order::create(array_merge($fields, [
+                    'uuid'         => $uuid,
+                    'total_amount' => 0,
+                ]));
             });
 
-            // --- Позиции заказа ---
+            // --- Позиции заказа (полная замена при upsert) ---
+            if ($existingOrder) {
+                $order->items()->delete();
+            }
+
             $totalAmount = 0;
 
             foreach ($items as $item) {
@@ -164,7 +171,8 @@ class HandleOrderCreated
             // Обновляем сумму заказа
             $order->updateQuietly(['total_amount' => $totalAmount]);
 
-            Log::info('HandleOrderCreated: заказ создан от менеджера', [
+            $action = $existingOrder ? 'обновлён (upsert)' : 'создан от менеджера';
+            Log::info("HandleOrderCreated: заказ {$action}", [
                 'uuid'             => $uuid,
                 'number'           => $order->number,
                 'user_id'          => $userId,

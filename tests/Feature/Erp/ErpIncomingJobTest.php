@@ -864,6 +864,111 @@ class ErpIncomingJobTest extends TestCase
     }
 
     // ========================================================
+    // US-07: order.created — upsert при повторной доставке
+    // ========================================================
+
+    #[Test]
+    public function order_created_same_uuid_twice_upserts_and_no_error(): void
+    {
+        // Регрессионный тест: 1975 failed-сообщений из-за duplicate entry на orders.number.
+        // Повторная доставка order.created с тем же uuid должна обновить заказ, не упасть.
+        $payload = [
+            'event'      => 'order.created',
+            'uuid'       => '00000000-0000-4000-a000-000000000b01',
+            'number'     => 'ORD-UPSERT-001',
+            'status'     => 'pending',
+            'type'       => 'order',
+            'message_id' => 'msg-order-upsert-first',
+        ];
+
+        $this->makeJob($payload)->fire();
+
+        $this->assertDatabaseHas('orders', [
+            'uuid'   => '00000000-0000-4000-a000-000000000b01',
+            'status' => 'pending',
+        ]);
+
+        // Вторая доставка того же сообщения — но с другим message_id (RabbitMQ retry)
+        $retryPayload = array_merge($payload, [
+            'status'     => 'confirmed',
+            'message_id' => 'msg-order-upsert-retry',
+        ]);
+
+        $this->makeJob($retryPayload)->fire();
+
+        // Заказ один — дубля нет
+        $this->assertEquals(1, Order::where('uuid', '00000000-0000-4000-a000-000000000b01')->count());
+
+        $order = Order::where('uuid', '00000000-0000-4000-a000-000000000b01')->first();
+        // Статус обновлён из второго payload
+        $this->assertEquals('confirmed', $order->status->value);
+    }
+
+    #[Test]
+    public function order_created_different_uuid_same_number_no_duplicate_error(): void
+    {
+        // 1С при retry генерирует новый uuid для того же заказа — number совпадает.
+        // До фикса: SQLSTATE[23000] Duplicate entry на orders_number_unique.
+        $firstPayload = [
+            'event'      => 'order.created',
+            'uuid'       => '00000000-0000-4000-a000-000000000b02',
+            'number'     => 'ORD-DUP-NUMBER-001',
+            'status'     => 'pending',
+            'type'       => 'order',
+            'message_id' => 'msg-order-dupnumber-first',
+        ];
+
+        $this->makeJob($firstPayload)->fire();
+
+        $secondPayload = [
+            'event'      => 'order.created',
+            'uuid'       => '00000000-0000-4000-a000-000000000b03',
+            'number'     => 'ORD-DUP-NUMBER-001',
+            'status'     => 'pending',
+            'type'       => 'order',
+            'message_id' => 'msg-order-dupnumber-second',
+        ];
+
+        // Не должно бросить исключение
+        $this->makeJob($secondPayload)->fire();
+
+        // Оба заказа сохранены с одинаковым number
+        $this->assertEquals(2, Order::where('number', 'ORD-DUP-NUMBER-001')->count());
+    }
+
+    #[Test]
+    public function order_created_without_country_creates_company_with_default_ru(): void
+    {
+        // Регрессионный тест: 200 failed-сообщений из-за SQLSTATE[23000]: Column 'country' cannot be null.
+        // order.created без поля country у контрагента — заказ создаётся, company.country = 'RU'.
+        $payload = [
+            'event'      => 'order.created',
+            'uuid'       => '00000000-0000-4000-a000-000000000c01',
+            'number'     => 'ORD-NO-COUNTRY-001',
+            'status'     => 'pending',
+            'type'       => 'order',
+            'message_id' => 'msg-order-no-country',
+            'contractor' => [
+                'tax_id' => '7701234567',
+                'name'   => 'ООО Без страны',
+                // поле country намеренно отсутствует
+            ],
+        ];
+
+        $this->makeJob($payload)->fire();
+
+        $this->assertDatabaseHas('orders', [
+            'uuid'   => '00000000-0000-4000-a000-000000000c01',
+            'number' => 'ORD-NO-COUNTRY-001',
+        ]);
+
+        $this->assertDatabaseHas('companies', [
+            'tax_id'  => '7701234567',
+            'country' => 'RU',
+        ]);
+    }
+
+    // ========================================================
     // US-06/07: order.updated / order.deleted — синхронизация заказов
     // ========================================================
 
@@ -2132,6 +2237,55 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $this->assertDatabaseMissing('products', ['external_id' => '00000000-0000-4000-a000-000000000028']);
+    }
+
+    #[Test]
+    public function product_created_twice_is_idempotent_no_duplicate_key_error(): void
+    {
+        // Регрессионный тест: повторная доставка product.created не должна падать
+        // с ConstraintViolation на product_models, brands, attribute_values, attribute_category.
+        \App\Models\Category::factory()->create([
+            'uuid' => '00000000-0000-4000-a000-000000000099',
+        ]);
+
+        $payload = [
+            'event'         => 'product.created',
+            'uuid'          => '00000000-0000-4000-a000-000000000091',
+            'name'          => 'Товар дубль',
+            'category_uuid' => '00000000-0000-4000-a000-000000000099',
+            'brand'         => [
+                'uuid' => '00000000-0000-4000-a000-000000000092',
+                'name' => 'Бренд Дубль',
+            ],
+            'model'         => [
+                'uuid' => '00000000-0000-4000-a000-000000000093',
+                'name' => 'Модель Дубль',
+            ],
+            'attributes'    => [
+                [
+                    'property_uuid'  => '00000000-0000-4000-a000-000000000094',
+                    'property_label' => 'Цвет',
+                    'value_type'     => 'reference',
+                    'value_uuid'     => '00000000-0000-4000-a000-000000000095',
+                    'value_label'    => 'синий',
+                ],
+            ],
+            'message_id'    => 'msg-prod-dedup-first',
+            'timestamp'     => now()->toIso8601String(),
+        ];
+
+        // Первая доставка
+        $this->makeJob($payload)->fire();
+
+        // Вторая доставка (другой message_id, иначе сработает идемпотентность по message_id)
+        $payload['message_id'] = 'msg-prod-dedup-second';
+        $this->makeJob($payload)->fire();
+
+        // Должен быть ровно один продукт, один бренд, одна модель, одно значение атрибута
+        $this->assertSame(1, Product::where('external_id', '00000000-0000-4000-a000-000000000091')->count());
+        $this->assertSame(1, \App\Models\Brand::where('external_id', '00000000-0000-4000-a000-000000000092')->count());
+        $this->assertSame(1, \App\Models\ProductModel::where('external_id', '00000000-0000-4000-a000-000000000093')->count());
+        $this->assertSame(1, \App\Models\AttributeValue::where('external_id', '00000000-0000-4000-a000-000000000095')->count());
     }
 
     #[Test]
