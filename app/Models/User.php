@@ -41,6 +41,16 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Временный пароль для пользователей, которым требуется смена пароля.
+     */
+    protected function temporaryPassword(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => filled($this->email) ? sprintf('%u', crc32($this->email)) : null,
+        );
+    }
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var list<string>

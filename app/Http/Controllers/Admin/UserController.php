@@ -124,6 +124,7 @@ class UserController extends Controller
         return Inertia::render('Admin/Pages/Users/Edit', [
             'user' => array_merge($user->toArray(), [
                 'role_names' => $user->getRoleNames()->toArray(),
+                'temporary_password' => $user->must_change_password ? $user->temporary_password : null,
             ]),
             'regions' => Region::select('id', 'name')->with('currency:id,code,name')->orderBy('name')->get(),
             'countries' => collect(Country::cases())->map(fn($country) => [

@@ -2,9 +2,10 @@ import { useRef } from 'react';
 import { useForm, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, PhoneInput } from '@/Admin/Components';
-import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text, HStack, Badge, Button, Flex } from '@chakra-ui/react';
+import { Box, Card, Input, Textarea, Stack, SimpleGrid, Text, HStack, Badge, Button, Flex, Alert, Code } from '@chakra-ui/react';
 import PasswordInput from '@/components/ui/password-input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { LuShieldAlert } from 'react-icons/lu';
 
 import { toaster } from '@/components/ui/toaster';
 
@@ -62,6 +63,31 @@ export default function Edit({ user, regions, countries, statuses, availableRole
                 <Card.Root>
                     <Card.Body>
                         <Stack gap={6}>
+                            {user.must_change_password && user.temporary_password && (
+                                <Alert.Root
+                                    status="warning"
+                                    variant="subtle"
+                                    borderRadius="xl"
+                                    borderWidth="1px"
+                                    borderColor="orange.200"
+                                    bg="orange.50"
+                                >
+                                    <Alert.Indicator asChild>
+                                        <LuShieldAlert />
+                                    </Alert.Indicator>
+                                    <Alert.Content>
+                                        <Alert.Title>У пользователя активен временный пароль</Alert.Title>
+                                        <Alert.Description>
+                                            Вход в систему возможен по временному паролю{' '}
+                                            <Code colorPalette="orange" fontSize="sm">
+                                                {user.temporary_password}
+                                            </Code>
+                                            . После входа пользователь должен сменить пароль.
+                                        </Alert.Description>
+                                    </Alert.Content>
+                                </Alert.Root>
+                            )}
+
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="Имя / Название" error={errors.name} required>
                                     <Input
