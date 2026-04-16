@@ -170,7 +170,7 @@
 
 - [ ] Пользователь создан с `external_id`
 - [ ] `client_status_id` → ClientStatus с `external_id = gold`
-- [ ] Может войти с паролем из payload
+- [ ] Может войти с паролем из payload (десятичный CRC32 от email)
 - [ ] Обязательная смена пароля при первом входе
 - [ ] Плашка «Gold» в ЛК
 

@@ -131,12 +131,12 @@ channels:
               examples:
                 - ivanov@example.com
             password:
-              type: string
-              minLength: 8
-              maxLength: 8
-              description: CRC32-хеш email (8 hex-символов)
+              type: integer
+              minimum: 0
+              maximum: 4294967295
+              description: Десятичное значение CRC32 от email партнёра
               examples:
-                - 1a2b3c4d
+                - 2926704424
             city:
               type:
                 - string
@@ -2436,6 +2436,8 @@ operations:
       - При `client_status` != null — ищет `ClientStatus` по `external_id` и
       привязывает
 
+      - Поле `password` — это десятичное число CRC32 от `email` партнёра
+
       - При первом входе пользователь обязан сменить пароль
     action: receive
     channel:
@@ -2981,12 +2983,12 @@ components:
             examples:
               - ivanov@example.com
           password:
-            type: string
-            minLength: 8
-            maxLength: 8
-            description: CRC32-хеш email (8 hex-символов)
+            type: integer
+            minimum: 0
+            maximum: 4294967295
+            description: Десятичное значение CRC32 от email партнёра
             examples:
-              - 1a2b3c4d
+              - 2926704424
           city:
             type:
               - string
@@ -5350,12 +5352,12 @@ components:
           examples:
             - ivanov@example.com
         password:
-          type: string
-          minLength: 8
-          maxLength: 8
-          description: CRC32-хеш email (8 hex-символов)
+          type: integer
+          minimum: 0
+          maximum: 4294967295
+          description: Десятичное значение CRC32 от email партнёра
           examples:
-            - 1a2b3c4d
+            - 2926704424
         city:
           type:
             - string
