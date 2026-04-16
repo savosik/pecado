@@ -1692,6 +1692,50 @@ class ErpIncomingJobTest extends TestCase
         $this->assertNotNull($shipment->deleted_at);
     }
 
+    #[Test]
+    public function shipment_created_with_negative_discount_passes_schema_validation(): void
+    {
+        // Регрессионный тест: до v12.7.4 схема требовала minimum: 0 для discount_percent
+        // и auto_discount_percent, что блокировало 15 сообщений от 1С.
+        $product = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-000000000a01']);
+
+        $job = $this->makeJob([
+            'event'         => 'shipment.created',
+            'uuid'          => '00000000-0000-4000-a000-000000000a02',
+            'message_id'    => 'msg-ship-neg-disc-001',
+            'tax_id'        => '1234567890',
+            'date'          => '2026-04-16',
+            'status'        => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [
+                [
+                    'product_uuid'          => '00000000-0000-4000-a000-000000000a01',
+                    'quantity'              => 3,
+                    'price'                 => 2000.00,
+                    'auto_discount_percent' => -15,
+                    'discount_percent'      => -10,
+                    'total'                 => 6900.00,
+                ],
+            ],
+            'timestamp' => now()->toIso8601String(),
+        ]);
+
+        $job->fire();
+
+        $this->assertDatabaseHas('shipments', [
+            'uuid' => '00000000-0000-4000-a000-000000000a02',
+        ]);
+
+        $shipment = \App\Models\Shipment::where('uuid', '00000000-0000-4000-a000-000000000a02')->first();
+        $this->assertNotNull($shipment);
+        $this->assertEquals(-15.00, (float) $shipment->items->first()->auto_discount_percent);
+
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-ship-neg-disc-001',
+            'event'      => 'shipment.created',
+        ]);
+    }
+
     // ========================================================
     // US-13: category.* — синхронизация категорий
     // ========================================================

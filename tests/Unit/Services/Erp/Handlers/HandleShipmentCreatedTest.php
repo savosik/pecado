@@ -193,4 +193,41 @@ class HandleShipmentCreatedTest extends TestCase
         $this->assertCount(2, $shipment->items);
         $this->assertEquals(20000.00, (float) $shipment->total_amount);
     }
+
+    #[Test]
+    public function it_accepts_negative_auto_discount_percent_as_markup(): void
+    {
+        // Регрессионный тест: 1С передаёт отрицательный auto_discount_percent (наценка).
+        // Схема shipment.created не должна требовать minimum: 0 (исправлено в v12.7.4).
+        $product = Product::factory()->create(['external_id' => 'ship-neg-discount-001']);
+
+        $handler = new HandleShipmentCreated();
+        $handler->handle([
+            'event' => 'shipment.created',
+            'uuid' => 's1a2b3c4-neg-disc-001',
+            'tax_id' => '1234567890',
+            'date' => '2026-04-16',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [
+                [
+                    'product_uuid'          => 'ship-neg-discount-001',
+                    'quantity'              => 5,
+                    'price'                 => 1000.00,
+                    'auto_discount_percent' => -10,
+                    'manual_discount_percent' => -5,
+                    'total'                 => 5750.00,
+                ],
+            ],
+        ]);
+
+        $shipment = Shipment::where('uuid', 's1a2b3c4-neg-disc-001')->first();
+        $this->assertNotNull($shipment);
+
+        $item = $shipment->items->first();
+        $this->assertNotNull($item);
+        $this->assertEquals(-10.00, (float) $item->auto_discount_percent);
+        $this->assertEquals(-5.00, (float) $item->manual_discount_percent);
+        $this->assertEquals(5750.00, (float) $shipment->total_amount);
+    }
 }
