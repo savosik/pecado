@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 12.7.3
+  version: 12.7.4
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -932,12 +932,11 @@ channels:
                     description: Базовая цена за единицу (до скидки, v7)
                   discount_percent:
                     type: number
-                    minimum: -100
                     maximum: 100
                     description: >-
                       Процент корректировки цены: положительное значение
-                      означает скидку, отрицательное — наценку, 0 — без
-                      корректировки (v12.7.1)
+                      означает скидку, отрицательное — наценку без ограничений,
+                      0 — без корректировки (v12.7.1)
                   final_price:
                     type: number
                     minimum: 0
@@ -1030,12 +1029,11 @@ channels:
                     description: Базовая цена за единицу (до скидки, v7)
                   discount_percent:
                     type: number
-                    minimum: -100
                     maximum: 100
                     description: >-
                       Процент корректировки цены: положительное значение
-                      означает скидку, отрицательное — наценку, 0 — без
-                      корректировки (v12.7.1)
+                      означает скидку, отрицательное — наценку без ограничений,
+                      0 — без корректировки (v12.7.1)
                   final_price:
                     type: number
                     minimum: 0
@@ -1295,16 +1293,16 @@ channels:
                     description: Базовая цена
                   auto_discount_percent:
                     type: number
-                    minimum: -100
                     maximum: 100
                     description: >-
                       Процент автоматической скидки (отрицательное значение —
-                      наценка)
+                      наценка без ограничений)
                   manual_discount_percent:
                     type: number
-                    minimum: -100
                     maximum: 100
-                    description: Процент ручной скидки (отрицательное значение — наценка)
+                    description: >-
+                      Процент ручной скидки (отрицательное значение — наценка
+                      без ограничений)
                   total:
                     type: number
                     description: Итоговая сумма строки
@@ -1419,16 +1417,16 @@ channels:
                     description: Базовая цена
                   auto_discount_percent:
                     type: number
-                    minimum: -100
                     maximum: 100
                     description: >-
                       Процент автоматической скидки (отрицательное значение —
-                      наценка)
+                      наценка без ограничений)
                   manual_discount_percent:
                     type: number
-                    minimum: -100
                     maximum: 100
-                    description: Процент ручной скидки (отрицательное значение — наценка)
+                    description: >-
+                      Процент ручной скидки (отрицательное значение — наценка
+                      без ограничений)
                   total:
                     type: number
                     description: Итоговая сумма строки
@@ -2247,12 +2245,11 @@ channels:
                     description: Базовая цена за единицу (до скидки, v7)
                   discount_percent:
                     type: number
-                    minimum: -100
                     maximum: 100
                     description: >-
                       Процент корректировки цены: положительное значение
-                      означает скидку, отрицательное — наценку, 0 — без
-                      корректировки (v12.7.1)
+                      означает скидку, отрицательное — наценку без ограничений,
+                      0 — без корректировки (v12.7.1)
                   final_price:
                     type: number
                     minimum: 0
@@ -3742,12 +3739,11 @@ components:
                   description: Базовая цена за единицу (до скидки, v7)
                 discount_percent:
                   type: number
-                  minimum: -100
                   maximum: 100
                   description: >-
                     Процент корректировки цены: положительное значение означает
-                    скидку, отрицательное — наценку, 0 — без корректировки
-                    (v12.7.1)
+                    скидку, отрицательное — наценку без ограничений, 0 — без
+                    корректировки (v12.7.1)
                 final_price:
                   type: number
                   minimum: 0
@@ -3974,12 +3970,11 @@ components:
                   description: Базовая цена за единицу (до скидки, v7)
                 discount_percent:
                   type: number
-                  minimum: -100
                   maximum: 100
                   description: >-
                     Процент корректировки цены: положительное значение означает
-                    скидку, отрицательное — наценку, 0 — без корректировки
-                    (v12.7.1)
+                    скидку, отрицательное — наценку без ограничений, 0 — без
+                    корректировки (v12.7.1)
                 final_price:
                   type: number
                   minimum: 0
@@ -4072,12 +4067,11 @@ components:
                   description: Базовая цена за единицу (до скидки, v7)
                 discount_percent:
                   type: number
-                  minimum: -100
                   maximum: 100
                   description: >-
                     Процент корректировки цены: положительное значение означает
-                    скидку, отрицательное — наценку, 0 — без корректировки
-                    (v12.7.1)
+                    скидку, отрицательное — наценку без ограничений, 0 — без
+                    корректировки (v12.7.1)
                 final_price:
                   type: number
                   minimum: 0
@@ -4380,16 +4374,16 @@ components:
                   description: Базовая цена
                 auto_discount_percent:
                   type: number
-                  minimum: -100
                   maximum: 100
                   description: >-
                     Процент автоматической скидки (отрицательное значение —
-                    наценка)
+                    наценка без ограничений)
                 manual_discount_percent:
                   type: number
-                  minimum: -100
                   maximum: 100
-                  description: Процент ручной скидки (отрицательное значение — наценка)
+                  description: >-
+                    Процент ручной скидки (отрицательное значение — наценка без
+                    ограничений)
                 total:
                   type: number
                   description: Итоговая сумма строки
@@ -4504,16 +4498,16 @@ components:
                   description: Базовая цена
                 auto_discount_percent:
                   type: number
-                  minimum: -100
                   maximum: 100
                   description: >-
                     Процент автоматической скидки (отрицательное значение —
-                    наценка)
+                    наценка без ограничений)
                 manual_discount_percent:
                   type: number
-                  minimum: -100
                   maximum: 100
-                  description: Процент ручной скидки (отрицательное значение — наценка)
+                  description: >-
+                    Процент ручной скидки (отрицательное значение — наценка без
+                    ограничений)
                 total:
                   type: number
                   description: Итоговая сумма строки
@@ -5769,11 +5763,11 @@ components:
           description: Базовая цена за единицу (до скидки, v7)
         discount_percent:
           type: number
-          minimum: -100
           maximum: 100
           description: >-
             Процент корректировки цены: положительное значение означает скидку,
-            отрицательное — наценку, 0 — без корректировки (v12.7.1)
+            отрицательное — наценку без ограничений, 0 — без корректировки
+            (v12.7.1)
         final_price:
           type: number
           minimum: 0
@@ -6063,12 +6057,11 @@ components:
                 description: Базовая цена за единицу (до скидки, v7)
               discount_percent:
                 type: number
-                minimum: -100
                 maximum: 100
                 description: >-
                   Процент корректировки цены: положительное значение означает
-                  скидку, отрицательное — наценку, 0 — без корректировки
-                  (v12.7.1)
+                  скидку, отрицательное — наценку без ограничений, 0 — без
+                  корректировки (v12.7.1)
               final_price:
                 type: number
                 minimum: 0
@@ -6149,12 +6142,11 @@ components:
                 description: Базовая цена за единицу (до скидки, v7)
               discount_percent:
                 type: number
-                minimum: -100
                 maximum: 100
                 description: >-
                   Процент корректировки цены: положительное значение означает
-                  скидку, отрицательное — наценку, 0 — без корректировки
-                  (v12.7.1)
+                  скидку, отрицательное — наценку без ограничений, 0 — без
+                  корректировки (v12.7.1)
               final_price:
                 type: number
                 minimum: 0
@@ -6290,14 +6282,16 @@ components:
           description: Базовая цена
         auto_discount_percent:
           type: number
-          minimum: -100
           maximum: 100
-          description: Процент автоматической скидки (отрицательное значение — наценка)
+          description: >-
+            Процент автоматической скидки (отрицательное значение — наценка без
+            ограничений)
         manual_discount_percent:
           type: number
-          minimum: -100
           maximum: 100
-          description: Процент ручной скидки (отрицательное значение — наценка)
+          description: >-
+            Процент ручной скидки (отрицательное значение — наценка без
+            ограничений)
         total:
           type: number
           description: Итоговая сумма строки
@@ -6400,16 +6394,16 @@ components:
                 description: Базовая цена
               auto_discount_percent:
                 type: number
-                minimum: -100
                 maximum: 100
                 description: >-
                   Процент автоматической скидки (отрицательное значение —
-                  наценка)
+                  наценка без ограничений)
               manual_discount_percent:
                 type: number
-                minimum: -100
                 maximum: 100
-                description: Процент ручной скидки (отрицательное значение — наценка)
+                description: >-
+                  Процент ручной скидки (отрицательное значение — наценка без
+                  ограничений)
               total:
                 type: number
                 description: Итоговая сумма строки

@@ -178,7 +178,6 @@
                     },
                     "discount_percent": {
                         "type": "number",
-                        "minimum": -100,
                         "maximum": 100
                     },
                     "final_price": {

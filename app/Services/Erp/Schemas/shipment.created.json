@@ -62,12 +62,10 @@
                     },
                     "auto_discount_percent": {
                         "type": "number",
-                        "minimum": -100,
                         "maximum": 100
                     },
                     "manual_discount_percent": {
                         "type": "number",
-                        "minimum": -100,
                         "maximum": 100
                     },
                     "total": {
