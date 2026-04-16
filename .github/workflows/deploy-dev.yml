@@ -258,15 +258,15 @@ jobs:
 
           echo "==> [0/7] Настройка переменных prices DB..."
           if ! grep -q "DB_PRICES_HOST" /srv/pecado/.env; then
-            cat >> /srv/pecado/.env << 'ENVEOF'
-
-# Individual Prices Database (отдельный контейнер)
-DB_PRICES_HOST=mysql-prices
-DB_PRICES_PORT=3306
-DB_PRICES_DATABASE=pecado_prices
-DB_PRICES_USERNAME=pecado
-DB_PRICES_PASSWORD=secret
-ENVEOF
+            {
+              echo ""
+              echo "# Individual Prices Database (отдельный контейнер)"
+              echo "DB_PRICES_HOST=mysql-prices"
+              echo "DB_PRICES_PORT=3306"
+              echo "DB_PRICES_DATABASE=pecado_prices"
+              echo "DB_PRICES_USERNAME=pecado"
+              echo "DB_PRICES_PASSWORD=secret"
+            } >> /srv/pecado/.env
           fi
 
           echo "==> [1/7] Установка PHP зависимостей..."
