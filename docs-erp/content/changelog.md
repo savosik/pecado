@@ -6,6 +6,17 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.7.3] — 2026-04-16
+
+> Отрицательные скидки разрешены во всех схемах
+
+### Изменено
+
+- **`discount_percent` в `order.created` / `order.updated` / `order.created.to_erp`** — добавлено `minimum: -100` в JSON Schema и AsyncAPI
+- **`auto_discount_percent` / `manual_discount_percent` в `shipment.created`** — `minimum` изменён с `0` на `-100`; описания обновлены (отрицательное значение — наценка)
+
+---
+
 ## [12.7.2] — 2026-04-16
 
 > Новый статус заказа `deleted`
