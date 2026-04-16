@@ -8,6 +8,7 @@ use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class HandleBalanceUpdatedTest extends TestCase
@@ -22,7 +23,7 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->handler = new HandleBalanceUpdated();
     }
 
-    /** @test */
+    #[Test]
     public function it_does_nothing_when_partner_uuid_missing(): void
     {
         $this->handler->handle([
@@ -32,7 +33,7 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertDatabaseCount('contractor_balances', 0);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_nothing_when_user_not_found(): void
     {
         $this->handler->handle([
@@ -43,7 +44,7 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertDatabaseCount('contractor_balances', 0);
     }
 
-    /** @test */
+    #[Test]
     public function it_creates_contractor_balance_from_event(): void
     {
         $user = User::factory()->create(['erp_id' => 'partner-001']);
@@ -74,7 +75,7 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertCount(2, $balance->overdueDetails);
     }
 
-    /** @test */
+    #[Test]
     public function it_updates_existing_contractor_balance(): void
     {
         $user = User::factory()->create(['erp_id' => 'partner-002']);
@@ -110,7 +111,7 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertCount(1, $balance->overdueDetails);
     }
 
-    /** @test */
+    #[Test]
     public function it_replaces_overdue_details_on_update(): void
     {
         $user = User::factory()->create(['erp_id' => 'partner-003']);
@@ -151,7 +152,7 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertFalse($details->pluck('shipment_uuid')->contains('old-shipment'));
     }
 
-    /** @test */
+    #[Test]
     public function it_handles_multiple_contractors(): void
     {
         $user = User::factory()->create(['erp_id' => 'partner-004']);
@@ -181,7 +182,7 @@ class HandleBalanceUpdatedTest extends TestCase
         $this->assertDatabaseCount('contractor_balance_overdue_details', 1);
     }
 
-    /** @test */
+    #[Test]
     public function it_links_company_by_inn_when_found(): void
     {
         $user    = User::factory()->create(['erp_id' => 'partner-005']);

@@ -9,6 +9,7 @@ use App\Models\ProductExport;
 use App\Models\User;
 use App\Services\ProductExport\Presets\PresetRegistry;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 /**
@@ -93,9 +94,7 @@ class ExportPresetTest extends TestCase
     // Генерация файлов пресетов
     // ═══════════════════════════════════════════════
 
-    /**
-     * @dataProvider presetKeysProvider
-     */
+    #[DataProvider('presetKeysProvider')]
     public function test_preset_generates_valid_file(string $presetKey): void
     {
         $registry = app(PresetRegistry::class);

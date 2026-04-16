@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Services\Erp\Handlers\HandleOrderUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class HandleOrderUpdatedTest extends TestCase
@@ -23,7 +24,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->handler = new HandleOrderUpdated();
     }
 
-    /** @test */
+    #[Test]
     public function it_does_nothing_when_uuid_missing(): void
     {
         Log::shouldReceive('warning')->once();
@@ -33,7 +34,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertDatabaseCount('order_change_logs', 0);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_nothing_when_order_not_found(): void
     {
         Log::shouldReceive('info')->once();
@@ -44,7 +45,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertDatabaseCount('order_change_logs', 0);
     }
 
-    /** @test */
+    #[Test]
     public function it_updates_order_status(): void
     {
         $order = Order::factory()->create([
@@ -63,7 +64,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals('confirmed', $order->fresh()->status->value);
     }
 
-    /** @test */
+    #[Test]
     public function it_syncs_items_when_items_provided(): void
     {
         $order = Order::factory()->create(['uuid' => 'test-uuid-sync']);
@@ -103,7 +104,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals(5, $order->items->first()->quantity);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_touch_items_when_items_absent(): void
     {
         $order = Order::factory()->create(['uuid' => 'test-uuid-no-items']);
@@ -124,7 +125,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals(3, $order->fresh()->items->first()->quantity);
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_item_added(): void
     {
         $order = Order::factory()->create([
@@ -161,7 +162,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals('Новый товар', $changes['added'][0]['product_name']);
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_item_removed(): void
     {
         $order = Order::factory()->create([
@@ -199,7 +200,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals('Удаляемый товар', $log->changes['removed'][0]['product_name']);
     }
 
-    /** @test */
+    #[Test]
     public function it_logs_item_modified(): void
     {
         $order = Order::factory()->create([
@@ -249,7 +250,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals(400, $mod['changes']['final_price']['new']);
     }
 
-    /** @test */
+    #[Test]
     public function it_records_old_and_new_total(): void
     {
         $order = Order::factory()->create([
@@ -294,7 +295,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals(1500, $log->new_total);
     }
 
-    /** @test */
+    #[Test]
     public function it_generates_russian_summary(): void
     {
         $order = Order::factory()->create([
@@ -340,7 +341,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertStringContainsString('→', $log->summary);
     }
 
-    /** @test */
+    #[Test]
     public function it_does_not_log_when_items_unchanged(): void
     {
         $order = Order::factory()->create([
@@ -382,7 +383,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertDatabaseCount('order_change_logs', 0);
     }
 
-    /** @test */
+    #[Test]
     public function it_saves_erp_number_from_payload(): void
     {
         $order = Order::factory()->create([
@@ -400,7 +401,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals('ЗКП-000123', $order->fresh()->erp_number);
     }
 
-    /** @test */
+    #[Test]
     public function it_updates_erp_number_on_redelivery(): void
     {
         $order = Order::factory()->create([
@@ -418,7 +419,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals('ЗКП-000200', $order->fresh()->erp_number);
     }
 
-    /** @test */
+    #[Test]
     public function it_updates_order_status_to_deleted(): void
     {
         $order = Order::factory()->create([
@@ -437,7 +438,7 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals('deleted', $order->fresh()->status->value);
     }
 
-    /** @test */
+    #[Test]
     public function it_accepts_negative_discount_percent_as_markup_and_logs_neutral_summary(): void
     {
         $order = Order::factory()->create([

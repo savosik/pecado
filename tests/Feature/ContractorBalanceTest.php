@@ -6,13 +6,14 @@ use App\Models\ContractorBalance;
 use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 class ContractorBalanceTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @test */
+    #[Test]
     public function it_can_create_contractor_balance(): void
     {
         $user = User::factory()->create();
@@ -33,7 +34,7 @@ class ContractorBalanceTest extends TestCase
         $this->assertEquals(5000.00, (float)$balance->overdue_debt);
     }
 
-    /** @test */
+    #[Test]
     public function it_can_store_overdue_details(): void
     {
         $user = User::factory()->create();
@@ -56,7 +57,7 @@ class ContractorBalanceTest extends TestCase
         $this->assertEquals('ship-aaa-bbb', $balance->overdueDetails->first()->shipment_uuid);
     }
 
-    /** @test */
+    #[Test]
     public function it_cascades_delete_of_overdue_details(): void
     {
         $user = User::factory()->create();
@@ -82,7 +83,7 @@ class ContractorBalanceTest extends TestCase
         ]);
     }
 
-    /** @test */
+    #[Test]
     public function it_enforces_unique_user_contractor_inn(): void
     {
         $user = User::factory()->create();
