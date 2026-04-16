@@ -36,7 +36,7 @@
         "password": {
             "type": "string",
             "minLength": 8,
-            "maxLength": 8
+            "maxLength": 14
         },
         "city": {
             "type": [

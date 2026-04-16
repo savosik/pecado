@@ -46,7 +46,7 @@ class MeController extends Controller
                     'catalog_read_only' => [
                         'products', 'brands', 'categories',
                     ],
-                    'other' => ['tags', 'me'],
+                    'other' => ['tags', 'media', 'me'],
                 ],
             ],
         ]);

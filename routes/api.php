@@ -35,6 +35,9 @@ Route::prefix('content')
         // Информация об агенте
         Route::get('me', [\App\Http\Controllers\Api\Content\MeController::class, 'index'])->name('me');
 
+        // Загрузка медиафайлов (картинки, видео)
+        Route::post('media', [\App\Http\Controllers\Api\Content\MediaUploadController::class, 'store'])->name('media.store');
+
         // ── Контент — полный CRUD ──────────────────────────────────
         Route::apiResource('news', \App\Http\Controllers\Api\Content\NewsController::class)->parameters(['news' => 'news']);
         Route::apiResource('articles', \App\Http\Controllers\Api\Content\ArticleController::class);

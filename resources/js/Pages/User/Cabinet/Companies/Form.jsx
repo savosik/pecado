@@ -2,14 +2,25 @@ import { useState } from 'react';
 import {
     Box, Flex, VStack, HStack, Text, Input, Textarea, Button, Card,
     Field, SimpleGrid, Badge, Table, IconButton,
-    Tabs, Dialog, Portal, Switch,
+    Dialog, Portal, Switch, Separator,
 } from '@chakra-ui/react';
 import { Head, router, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import { PhoneInput } from '@/components/common/PhoneInput';
-import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft } from 'react-icons/lu';
+import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
+
+function SectionHeading({ icon: Icon, children }) {
+    return (
+        <HStack gap="2" pt="2" pb="1">
+            {Icon && <Icon size={18} style={{ color: '#9e1b32', flexShrink: 0 }} />}
+            <Text fontSize="md" fontWeight="700" color={{ base: 'gray.800', _dark: 'gray.100' }}>
+                {children}
+            </Text>
+        </HStack>
+    );
+}
 
 export default function Form({ company, countries = [] }) {
     const { errors: serverErrors } = usePage().props;
@@ -147,132 +158,141 @@ export default function Form({ company, countries = [] }) {
                 <LuArrowLeft /> Назад к списку
             </Button>
 
-            <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
-                <Card.Body p="5">
-                    <Tabs.Root defaultValue="general" variant="enclosed">
-                        <Tabs.List>
-                            <Tabs.Trigger value="general">Данные компании</Tabs.Trigger>
-                            <Tabs.Trigger value="legal">Юридические реквизиты</Tabs.Trigger>
-                            {isEditing && <Tabs.Trigger value="bank">Банковские реквизиты</Tabs.Trigger>}
-                        </Tabs.List>
+            <form onSubmit={handleSubmit}>
+                <VStack gap="6" align="stretch" maxW="720px">
 
-                        <Tabs.Content value="general">
-                            <form onSubmit={handleSubmit}>
-                                <VStack gap="4" align="stretch" pt="4" maxW="600px">
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
-                                        <Field.Root invalid={!!errors.name}>
-                                            <Field.Label fontSize="sm" fontWeight="600">Название *</Field.Label>
-                                            <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="ООО Компания" />
-                                            {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
-                                        </Field.Root>
-
-                                        <Field.Root invalid={!!errors.country}>
-                                            <Field.Label fontSize="sm" fontWeight="600">Страна *</Field.Label>
-                                            <select
-                                                value={form.country}
-                                                onChange={(e) => handleChange('country', e.target.value)}
-                                                style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border-subtle)' }}
-                                            >
-                                                <option value="">Выберите страну</option>
-                                                {countries.map((c) => (
-                                                    <option key={c.value} value={c.value}>{c.label}</option>
-                                                ))}
-                                            </select>
-                                            {errors.country && <Field.ErrorText>{errors.country}</Field.ErrorText>}
-                                        </Field.Root>
-                                    </SimpleGrid>
-
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
-                                        <Field.Root invalid={!!errors.phone}>
-                                            <Field.Label fontSize="sm" fontWeight="600">Телефон</Field.Label>
-                                            <PhoneInput value={form.phone} onChange={(val) => handleChange('phone', val)} />
-                                            {errors.phone && <Field.ErrorText>{errors.phone}</Field.ErrorText>}
-                                        </Field.Root>
-
-                                        <Field.Root invalid={!!errors.email}>
-                                            <Field.Label fontSize="sm" fontWeight="600">Email</Field.Label>
-                                            <Input type="email" value={form.email} onChange={(e) => handleChange('email', e.target.value)} placeholder="company@example.com" />
-                                            {errors.email && <Field.ErrorText>{errors.email}</Field.ErrorText>}
-                                        </Field.Root>
-                                    </SimpleGrid>
-
-                                    <Flex justify="flex-start" pt="2">
-                                        <Button type="submit" bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }} size="md" loading={processing} loadingText="Сохранение...">
-                                            <LuSave /> Сохранить
-                                        </Button>
-                                    </Flex>
-                                </VStack>
-                            </form>
-                        </Tabs.Content>
-
-                        <Tabs.Content value="legal">
-                            <form onSubmit={handleSubmit}>
-                                <VStack gap="4" align="stretch" pt="4" maxW="600px">
-                                    <Field.Root invalid={!!errors.legal_name}>
-                                        <Field.Label fontSize="sm" fontWeight="600">Юридическое название</Field.Label>
-                                        <Input value={form.legal_name} onChange={(e) => handleChange('legal_name', e.target.value)} />
-                                        {errors.legal_name && <Field.ErrorText>{errors.legal_name}</Field.ErrorText>}
+                    {/* === Основная информация === */}
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                        <Card.Body p="5">
+                            <SectionHeading icon={LuBuilding2}>Основная информация</SectionHeading>
+                            <VStack gap="4" align="stretch" pt="3">
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+                                    <Field.Root invalid={!!errors.name} required>
+                                        <Field.Label fontSize="sm" fontWeight="600">Название *</Field.Label>
+                                        <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="ООО Компания" />
+                                        {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
                                     </Field.Root>
 
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
-                                        <Field.Root invalid={!!errors.tax_id}>
-                                            <Field.Label fontSize="sm" fontWeight="600">ИНН</Field.Label>
-                                            <Input value={form.tax_id} onChange={(e) => handleChange('tax_id', e.target.value)} />
-                                            {errors.tax_id && <Field.ErrorText>{errors.tax_id}</Field.ErrorText>}
-                                        </Field.Root>
+                                    <Field.Root invalid={!!errors.country} required>
+                                        <Field.Label fontSize="sm" fontWeight="600">Страна *</Field.Label>
+                                        <select
+                                            value={form.country}
+                                            onChange={(e) => handleChange('country', e.target.value)}
+                                            style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border-subtle)' }}
+                                        >
+                                            <option value="">Выберите страну</option>
+                                            {countries.map((c) => (
+                                                <option key={c.value} value={c.value}>{c.label}</option>
+                                            ))}
+                                        </select>
+                                        {errors.country && <Field.ErrorText>{errors.country}</Field.ErrorText>}
+                                    </Field.Root>
+                                </SimpleGrid>
 
-                                        <Field.Root invalid={!!errors.registration_number}>
-                                            <Field.Label fontSize="sm" fontWeight="600">ОГРН</Field.Label>
-                                            <Input value={form.registration_number} onChange={(e) => handleChange('registration_number', e.target.value)} />
-                                            {errors.registration_number && <Field.ErrorText>{errors.registration_number}</Field.ErrorText>}
-                                        </Field.Root>
-                                    </SimpleGrid>
+                                <Field.Root invalid={!!errors.legal_name}>
+                                    <Field.Label fontSize="sm" fontWeight="600">Юридическое название</Field.Label>
+                                    <Input value={form.legal_name} onChange={(e) => handleChange('legal_name', e.target.value)} placeholder="ООО «Компания»" />
+                                    {errors.legal_name && <Field.ErrorText>{errors.legal_name}</Field.ErrorText>}
+                                </Field.Root>
+                            </VStack>
+                        </Card.Body>
+                    </Card.Root>
 
-                                    <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
-                                        <Field.Root invalid={!!errors.tax_code}>
-                                            <Field.Label fontSize="sm" fontWeight="600">КПП</Field.Label>
-                                            <Input value={form.tax_code} onChange={(e) => handleChange('tax_code', e.target.value)} />
-                                            {errors.tax_code && <Field.ErrorText>{errors.tax_code}</Field.ErrorText>}
-                                        </Field.Root>
-
-                                        <Field.Root invalid={!!errors.okpo_code}>
-                                            <Field.Label fontSize="sm" fontWeight="600">ОКПО</Field.Label>
-                                            <Input value={form.okpo_code} onChange={(e) => handleChange('okpo_code', e.target.value)} />
-                                            {errors.okpo_code && <Field.ErrorText>{errors.okpo_code}</Field.ErrorText>}
-                                        </Field.Root>
-                                    </SimpleGrid>
-
-                                    <Field.Root invalid={!!errors.legal_address}>
-                                        <Field.Label fontSize="sm" fontWeight="600">Юридический адрес</Field.Label>
-                                        <Textarea value={form.legal_address} onChange={(e) => handleChange('legal_address', e.target.value)} rows={2} />
-                                        {errors.legal_address && <Field.ErrorText>{errors.legal_address}</Field.ErrorText>}
+                    {/* === Юридические реквизиты === */}
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                        <Card.Body p="5">
+                            <SectionHeading icon={LuFileText}>Юридические реквизиты</SectionHeading>
+                            <VStack gap="4" align="stretch" pt="3">
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+                                    <Field.Root invalid={!!errors.tax_id}>
+                                        <Field.Label fontSize="sm" fontWeight="600">ИНН</Field.Label>
+                                        <Input value={form.tax_id} onChange={(e) => handleChange('tax_id', e.target.value)} placeholder="7707083893" />
+                                        {errors.tax_id && <Field.ErrorText>{errors.tax_id}</Field.ErrorText>}
                                     </Field.Root>
 
-                                    <Field.Root invalid={!!errors.actual_address}>
-                                        <Field.Label fontSize="sm" fontWeight="600">Фактический адрес</Field.Label>
-                                        <Textarea value={form.actual_address} onChange={(e) => handleChange('actual_address', e.target.value)} rows={2} />
-                                        {errors.actual_address && <Field.ErrorText>{errors.actual_address}</Field.ErrorText>}
+                                    <Field.Root invalid={!!errors.registration_number}>
+                                        <Field.Label fontSize="sm" fontWeight="600">ОГРН</Field.Label>
+                                        <Input value={form.registration_number} onChange={(e) => handleChange('registration_number', e.target.value)} placeholder="1027700132195" />
+                                        {errors.registration_number && <Field.ErrorText>{errors.registration_number}</Field.ErrorText>}
+                                    </Field.Root>
+                                </SimpleGrid>
+
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+                                    <Field.Root invalid={!!errors.tax_code}>
+                                        <Field.Label fontSize="sm" fontWeight="600">КПП</Field.Label>
+                                        <Input value={form.tax_code} onChange={(e) => handleChange('tax_code', e.target.value)} placeholder="770701001" />
+                                        {errors.tax_code && <Field.ErrorText>{errors.tax_code}</Field.ErrorText>}
                                     </Field.Root>
 
-                                    <Flex justify="flex-start" pt="2">
-                                        <Button type="submit" bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }} size="md" loading={processing} loadingText="Сохранение...">
-                                            <LuSave /> Сохранить
-                                        </Button>
-                                    </Flex>
-                                </VStack>
-                            </form>
-                        </Tabs.Content>
+                                    <Field.Root invalid={!!errors.okpo_code}>
+                                        <Field.Label fontSize="sm" fontWeight="600">ОКПО</Field.Label>
+                                        <Input value={form.okpo_code} onChange={(e) => handleChange('okpo_code', e.target.value)} placeholder="00032537" />
+                                        {errors.okpo_code && <Field.ErrorText>{errors.okpo_code}</Field.ErrorText>}
+                                    </Field.Root>
+                                </SimpleGrid>
+                            </VStack>
+                        </Card.Body>
+                    </Card.Root>
 
-                        {isEditing && (
-                            <Tabs.Content value="bank">
-                                <VStack gap="4" align="stretch" pt="4">
-                                    <Flex justify="space-between" align="center">
-                                        <Text fontSize="md" fontWeight="700">Банковские счета</Text>
-                                        <Button size="sm" bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }} onClick={openAddBankDialog}>
-                                            <LuPlus /> Добавить счёт
-                                        </Button>
-                                    </Flex>
+                    {/* === Адреса === */}
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                        <Card.Body p="5">
+                            <SectionHeading icon={LuMapPin}>Адреса</SectionHeading>
+                            <VStack gap="4" align="stretch" pt="3">
+                                <Field.Root invalid={!!errors.legal_address}>
+                                    <Field.Label fontSize="sm" fontWeight="600">Юридический адрес</Field.Label>
+                                    <Textarea value={form.legal_address} onChange={(e) => handleChange('legal_address', e.target.value)} rows={2} placeholder="г. Москва, ул. Примерная, д. 1" />
+                                    {errors.legal_address && <Field.ErrorText>{errors.legal_address}</Field.ErrorText>}
+                                </Field.Root>
 
+                                <Field.Root invalid={!!errors.actual_address}>
+                                    <Field.Label fontSize="sm" fontWeight="600">Фактический адрес</Field.Label>
+                                    <Textarea value={form.actual_address} onChange={(e) => handleChange('actual_address', e.target.value)} rows={2} placeholder="г. Москва, ул. Примерная, д. 1, оф. 100" />
+                                    {errors.actual_address && <Field.ErrorText>{errors.actual_address}</Field.ErrorText>}
+                                </Field.Root>
+                            </VStack>
+                        </Card.Body>
+                    </Card.Root>
+
+                    {/* === Контакты === */}
+                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                        <Card.Body p="5">
+                            <SectionHeading icon={LuPhone}>Контакты</SectionHeading>
+                            <SimpleGrid columns={{ base: 1, md: 2 }} gap="4" pt="3">
+                                <Field.Root invalid={!!errors.phone}>
+                                    <Field.Label fontSize="sm" fontWeight="600">Телефон</Field.Label>
+                                    <PhoneInput value={form.phone} onChange={(val) => handleChange('phone', val)} />
+                                    {errors.phone && <Field.ErrorText>{errors.phone}</Field.ErrorText>}
+                                </Field.Root>
+
+                                <Field.Root invalid={!!errors.email}>
+                                    <Field.Label fontSize="sm" fontWeight="600">Email</Field.Label>
+                                    <Input type="email" value={form.email} onChange={(e) => handleChange('email', e.target.value)} placeholder="company@example.com" />
+                                    {errors.email && <Field.ErrorText>{errors.email}</Field.ErrorText>}
+                                </Field.Root>
+                            </SimpleGrid>
+                        </Card.Body>
+                    </Card.Root>
+
+                    {/* === Кнопка сохранения === */}
+                    <Flex justify="flex-start">
+                        <Button type="submit" bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }} size="md" loading={processing} loadingText="Сохранение...">
+                            <LuSave /> Сохранить
+                        </Button>
+                    </Flex>
+
+                    {/* === Банковские счета (только при редактировании) === */}
+                    {isEditing && (
+                        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                            <Card.Body p="5">
+                                <Flex justify="space-between" align="center">
+                                    <SectionHeading icon={LuLandmark}>Банковские счета</SectionHeading>
+                                    <Button size="sm" bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }} onClick={openAddBankDialog}>
+                                        <LuPlus /> Добавить счёт
+                                    </Button>
+                                </Flex>
+
+                                <Box pt="3">
                                     {bankAccounts.length === 0 ? (
                                         <Box p="8" textAlign="center" borderWidth="1px" borderRadius="md" borderStyle="dashed" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}>
                                             <Text color="gray.400">Банковские счета не добавлены</Text>
@@ -349,12 +369,12 @@ export default function Form({ company, countries = [] }) {
                                             </VStack>
                                         </>
                                     )}
-                                </VStack>
-                            </Tabs.Content>
-                        )}
-                    </Tabs.Root>
-                </Card.Body>
-            </Card.Root>
+                                </Box>
+                            </Card.Body>
+                        </Card.Root>
+                    )}
+                </VStack>
+            </form>
 
             {/* Bank Account Dialog */}
             <Dialog.Root open={bankDialogOpen} onOpenChange={({ open }) => !open && setBankDialogOpen(false)}>

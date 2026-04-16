@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions } from '@/Admin/Components';
-import { Card, Input, Stack, SimpleGrid, Textarea } from '@chakra-ui/react';
+import { Card, Input, Stack, SimpleGrid, Textarea, Button, Box, Text, HStack, Code, Alert } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 import { Switch } from '@/components/ui/switch';
+import axios from 'axios';
 
 export default function Index({ settings }) {
     // Формируем объект для useForm из всех настроек
@@ -16,6 +18,11 @@ export default function Index({ settings }) {
     });
 
     const { data, setData, put, processing, errors } = useForm(initialData);
+
+    // Состояние для генерации токена
+    const [tokenGenerating, setTokenGenerating] = useState(false);
+    const [generatedToken, setGeneratedToken] = useState(null);
+    const [copied, setCopied] = useState(false);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -36,6 +43,50 @@ export default function Index({ settings }) {
                 });
             },
         });
+    };
+
+    const handleGenerateToken = async () => {
+        setTokenGenerating(true);
+        setGeneratedToken(null);
+        setCopied(false);
+
+        try {
+            const response = await axios.post(route('admin.settings.generate-content-token'));
+            setGeneratedToken(response.data.token);
+            toaster.create({
+                title: 'Токен успешно сгенерирован',
+                description: 'Скопируйте токен — он показывается только один раз',
+                type: 'success',
+            });
+        } catch (error) {
+            toaster.create({
+                title: 'Ошибка при генерации токена',
+                description: error.response?.data?.message || 'Не удалось сгенерировать токен',
+                type: 'error',
+            });
+        } finally {
+            setTokenGenerating(false);
+        }
+    };
+
+    const handleCopyToken = async () => {
+        if (!generatedToken) return;
+
+        try {
+            await navigator.clipboard.writeText(generatedToken);
+            setCopied(true);
+            toaster.create({
+                title: 'Токен скопирован в буфер обмена',
+                type: 'success',
+            });
+            setTimeout(() => setCopied(false), 3000);
+        } catch {
+            toaster.create({
+                title: 'Не удалось скопировать',
+                description: 'Скопируйте токен вручную',
+                type: 'error',
+            });
+        }
     };
 
     const renderField = (key, settingData) => {
@@ -94,6 +145,7 @@ export default function Index({ settings }) {
         { id: 'email', label: 'Email' },
         { id: 'limits', label: 'Лимиты' },
         { id: 'api', label: 'API' },
+        { id: 'integrations', label: 'Интеграции' },
     ];
 
     return (
@@ -112,7 +164,7 @@ export default function Index({ settings }) {
                                 ))}
                             </Tabs.List>
 
-                            {tabs.map(tab => (
+                            {tabs.filter(t => t.id !== 'integrations').map(tab => (
                                 <Tabs.Content key={tab.id} value={tab.id}>
                                     <Stack gap={6} mt={6}>
                                         {settings[tab.id] && Object.keys(settings[tab.id]).map(key =>
@@ -121,6 +173,70 @@ export default function Index({ settings }) {
                                     </Stack>
                                 </Tabs.Content>
                             ))}
+
+                            <Tabs.Content value="integrations">
+                                <Stack gap={6} mt={6}>
+                                    {/* Секция AI Content API Token */}
+                                    <Box
+                                        borderWidth="1px"
+                                        borderRadius="lg"
+                                        p={6}
+                                    >
+                                        <Text fontWeight="bold" fontSize="lg" mb={2}>
+                                            AI Content API — Токен доступа
+                                        </Text>
+                                        <Text fontSize="sm" color="fg.muted" mb={4}>
+                                            Sanctum-токен для сервисного пользователя <Code>ai-content-bot@pecado.ru</Code>.
+                                            Используется внешним AI-агентом для управления контентом через Content API.
+                                            При генерации нового токена все предыдущие токены будут автоматически отозваны.
+                                        </Text>
+
+                                        {generatedToken && (
+                                            <Box
+                                                mb={4}
+                                                p={4}
+                                                borderWidth="1px"
+                                                borderRadius="md"
+                                                borderColor="green.500"
+                                                bg="green.50"
+                                                _dark={{ bg: 'green.900/20' }}
+                                            >
+                                                <Text fontSize="sm" fontWeight="semibold" color="green.700" _dark={{ color: 'green.300' }} mb={2}>
+                                                    ⚠ Сохраните токен — он показывается только один раз!
+                                                </Text>
+                                                <HStack gap={2}>
+                                                    <Code
+                                                        flex="1"
+                                                        p={2}
+                                                        fontSize="sm"
+                                                        wordBreak="break-all"
+                                                    >
+                                                        {generatedToken}
+                                                    </Code>
+                                                    <Button
+                                                        size="sm"
+                                                        variant={copied ? 'solid' : 'outline'}
+                                                        colorPalette={copied ? 'green' : 'gray'}
+                                                        onClick={handleCopyToken}
+                                                        minW="140px"
+                                                    >
+                                                        {copied ? '✓ Скопировано' : 'Копировать'}
+                                                    </Button>
+                                                </HStack>
+                                            </Box>
+                                        )}
+
+                                        <Button
+                                            colorPalette="blue"
+                                            onClick={handleGenerateToken}
+                                            loading={tokenGenerating}
+                                            loadingText="Генерация..."
+                                        >
+                                            Сгенерировать токен
+                                        </Button>
+                                    </Box>
+                                </Stack>
+                            </Tabs.Content>
                         </Tabs.Root>
 
                         <FormActions

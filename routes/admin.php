@@ -209,6 +209,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // =====================================================================
     Route::get('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'index'])->name('settings.index')->middleware('permission:settings.view');
     Route::put('/settings', [\App\Http\Controllers\Admin\SettingsController::class, 'update'])->name('settings.update')->middleware('permission:settings.edit');
+    Route::post('/settings/generate-content-token', [\App\Http\Controllers\Admin\SettingsController::class, 'generateContentToken'])->name('settings.generate-content-token')->middleware('permission:settings.edit');
 
     // =====================================================================
     // Контент
