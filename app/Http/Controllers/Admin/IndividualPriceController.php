@@ -8,6 +8,7 @@ use App\Models\IndividualPrice;
 use App\Models\User;
 use App\Models\Product;
 use App\Models\Warehouse;
+use App\Services\Pricing\IndividualPriceStatsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
@@ -17,6 +18,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class IndividualPriceController extends Controller
 {
     use RedirectsAfterSave;
+
+    public function __construct(
+        private readonly IndividualPriceStatsService $statsService
+    ) {}
 
     public function index(Request $request)
     {
@@ -71,26 +76,7 @@ class IndividualPriceController extends Controller
             return $item;
         });
 
-        // Статистика — быстрая оценка без COUNT(*) по таблице
-        $stats = cache()->remember('individual_prices_stats', 3600, function () {
-            $pricesDb = config('database.connections.prices.database');
-            try {
-                $approx = DB::connection('prices')->selectOne(
-                    "SELECT TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'individual_prices'",
-                    [$pricesDb]
-                );
-                $partnerCardinality = DB::connection('prices')->selectOne(
-                    "SELECT CARDINALITY FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'individual_prices' AND INDEX_NAME = 'idx_individual_prices_partner' LIMIT 1",
-                    [$pricesDb]
-                );
-                return [
-                    'total_prices' => $approx?->TABLE_ROWS ?? 0,
-                    'total_partners' => $partnerCardinality?->CARDINALITY ?? 0,
-                ];
-            } catch (\Illuminate\Database\QueryException $e) {
-                return ['total_prices' => 0, 'total_partners' => 0];
-            }
-        });
+        $stats = $this->statsService->get();
 
         return Inertia::render('Admin/Pages/IndividualPrices/Index', [
             'prices' => $prices,
@@ -136,6 +122,8 @@ class IndividualPriceController extends Controller
             ['partner_id', 'product_id', 'warehouse_id'],
             ['price']
         );
+
+        $this->statsService->forget();
 
         return redirect()->route('admin.individual-prices.index', [
             'partner_id' => $validated['partner_id'],
@@ -199,6 +187,8 @@ class IndividualPriceController extends Controller
             ->where('warehouse_id', $validated['warehouse_id'])
             ->update(['price' => $validated['price']]);
 
+        $this->statsService->forget();
+
         return redirect()->route('admin.individual-prices.index', [
             'partner_id' => $validated['partner_id'],
         ])->with('success', 'Цена обновлена');
@@ -219,6 +209,8 @@ class IndividualPriceController extends Controller
             ->where('product_id', $request->product_id)
             ->where('warehouse_id', $request->warehouse_id)
             ->delete();
+
+        $this->statsService->forget();
 
         return redirect()->back()->with('success', 'Цена удалена');
     }

@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Product;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Pricing\IndividualPriceStatsService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -92,6 +93,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
             $maps = $this->loadMaps();
 
             $this->processFile($disk, $filePath, $partnerId, $maps);
+            app(IndividualPriceStatsService::class)->forget();
 
             // Удаляем CSV из MinIO после успешной обработки
             $disk->delete($filePath);

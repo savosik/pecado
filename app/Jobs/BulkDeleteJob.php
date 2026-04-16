@@ -7,6 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use App\Services\Pricing\IndividualPriceStatsService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -61,7 +62,7 @@ class BulkDeleteJob implements ShouldQueue
             }
 
             // Очищаем связанный кеш статистики
-            Cache::forget('individual_prices_stats');
+            app(IndividualPriceStatsService::class)->forget();
 
             $this->updateProgress($cacheKey, 'completed', "Все записи раздела «{$this->label}» успешно удалены.");
 
