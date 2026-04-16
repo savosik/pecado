@@ -280,7 +280,26 @@ jobs:
           sg docker -c 'docker compose exec -T app php artisan optimize'
 
           echo "==> [2.5/7] Запуск prices DB контейнера..."
-          sg docker -c 'docker compose up -d --wait mysql-prices' || sg docker -c 'docker compose up -d mysql-prices'
+          sg docker -c 'docker compose up -d mysql-prices'
+
+          echo "==> [2.6/7] Ожидание готовности prices DB..."
+          for i in $(seq 1 30); do
+            STATUS=$(sg docker -c "docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' pecado-mysql-prices" 2>/dev/null || echo "missing")
+
+            if [ "$STATUS" = "healthy" ]; then
+              echo "prices DB готова"
+              break
+            fi
+
+            if [ "$i" -eq 30 ]; then
+              echo "❌ mysql-prices не перешёл в healthy. Текущий статус: $STATUS"
+              sg docker -c 'docker logs --tail 100 pecado-mysql-prices' || true
+              exit 1
+            fi
+
+            echo "Ожидание mysql-prices: статус $STATUS ($i/30)"
+            sleep 2
+          done
 
           echo "==> [3/7] Выполнение миграций (main DB + prices DB)..."
           sg docker -c 'docker compose exec -T app php artisan migrate --force'
