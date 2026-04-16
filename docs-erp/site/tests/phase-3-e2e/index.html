@@ -1376,8 +1376,8 @@
 <tr>
 <td>3</td>
 <td>🔵 1С</td>
-<td>В работу → <code>order.updated</code> <code>processing</code></td>
-<td>Статус → <code>processing</code></td>
+<td>Готовит к отгрузке → <code>order.updated</code> <code>ready_to_ship</code></td>
+<td>Статус → <code>ready_to_ship</code></td>
 </tr>
 <tr>
 <td>4</td>
@@ -1394,11 +1394,17 @@
 <tr>
 <td>6</td>
 <td>🔵 1С</td>
-<td>Завершает → <code>order.updated</code> <code>completed</code></td>
-<td>Статус → <code>completed</code></td>
+<td>Закрывает → <code>order.updated</code> <code>closed</code></td>
+<td>Статус → <code>closed</code></td>
 </tr>
 <tr>
 <td>7</td>
+<td>🔵 1С</td>
+<td>Удаляет → <code>order.deleted</code></td>
+<td>Статус → <code>deleted</code></td>
+</tr>
+<tr>
+<td>8</td>
 <td>🔵 1С</td>
 <td>Баланс → <code>balance.updated</code></td>
 <td>Баланс обновлён</td>
@@ -1407,7 +1413,7 @@
 </table>
 <p><strong>Итоговая проверка:</strong></p>
 <ul>
-<li>[ ] <code>order_status_histories</code>: <code>pending</code> → <code>confirmed</code> → <code>processing</code> → <code>completed</code></li>
+<li>[ ] <code>order_status_histories</code>: <code>pending</code> → <code>confirmed</code> → <code>ready_to_ship</code> → <code>closed</code> → <code>deleted</code></li>
 <li>[ ] <code>order_change_logs</code>: изменения позиций зафиксированы</li>
 <li>[ ] Реализация привязана к заказу</li>
 <li>[ ] Баланс отражает задолженность</li>

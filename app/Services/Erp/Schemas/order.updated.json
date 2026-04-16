@@ -20,7 +20,8 @@
             "description": "Номер заказа в 1С. Сохраняется как erp_number на сайте для коммуникации с менеджером."
         },
         "status": {
-            "type": "string"
+            "type": "string",
+            "enum": ["pending", "confirmed", "ready_to_ship", "closed", "deleted"]
         },
         "delivery_address": {
             "type": ["string", "null"],
@@ -45,7 +46,6 @@
                     },
                     "discount_percent": {
                         "type": "number",
-                        "minimum": 0,
                         "maximum": 100
                     },
                     "final_price": {

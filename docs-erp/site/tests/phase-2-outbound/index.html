@@ -1381,8 +1381,9 @@
 <p><strong>Проверка (1С-ник):</strong></p>
 <ul>
 <li>[ ] В <code>erp_out.partners</code> появилось сообщение</li>
-<li>[ ] Payload: <code>event: "partner.created"</code>, <code>uuid</code>, <code>login</code>, <code>name</code>, <code>phone</code>, <code>email</code></li>
-<li>[ ] <code>uuid</code> — валидный UUID</li>
+<li>[ ] Обязательные поля по схеме: <code>event</code>, <code>uuid</code>, <code>login</code>, <code>name</code>, <code>email</code></li>
+<li>[ ] <code>phone</code>, <code>message_id</code>, <code>timestamp</code> передаются опционально</li>
+<li>[ ] <code>uuid</code> заполнен</li>
 <li>[ ] <code>login = email</code></li>
 <li>[ ] 1С ищет по email → если не найден — создаёт нового</li>
 <li>[ ] 1С <strong>НЕ</strong> использует <code>uuid</code> из payload — генерирует свой</li>
@@ -1403,11 +1404,14 @@
 <p><strong>Проверка (1С-ник):</strong></p>
 <ul>
 <li>[ ] В <code>erp_out.orders</code> появилось сообщение</li>
-<li>[ ] Все обязательные поля: <code>event</code>, <code>uuid</code>, <code>status: "pending"</code>, <code>type</code>, <code>partner_uuid</code>, <code>items</code></li>
-<li>[ ] <code>partner_uuid</code> = UUID партнёра из 1С</li>
-<li>[ ] <code>contractor</code> содержит: <code>tax_id</code>, <code>legal_name</code>, <code>bank_accounts</code></li>
-<li>[ ] <code>items[]</code> с <code>product_uuid</code>, <code>quantity</code>, <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code></li>
-<li>[ ] <code>currency_code</code>, <code>exchange_rate</code>, <code>rate_coefficient</code> заполнены</li>
+<li>[ ] Обязательные поля по схеме: <code>event</code>, <code>uuid</code>, <code>items</code></li>
+<li>[ ] Если передан <code>status</code> — он из enum: <code>pending</code>, <code>confirmed</code>, <code>ready_to_ship</code>, <code>closed</code>, <code>deleted</code></li>
+<li>[ ] <code>type</code> передаётся строкой; для обычного заказа ожидается <code>order</code></li>
+<li>[ ] <code>partner_uuid</code> может быть строкой или <code>null</code></li>
+<li>[ ] <code>contractor</code> может быть объектом или <code>null</code>; если объект передан, в нём есть <code>tax_id</code>, <code>legal_name</code>, <code>bank_accounts</code></li>
+<li>[ ] <code>items[]</code> содержит <code>quantity</code>, <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code>; <code>product_uuid</code> может быть <code>null</code></li>
+<li>[ ] <code>discount_percent &gt; 0</code> трактуется как скидка, <code>discount_percent &lt; 0</code> — как наценка; при расхождении источником истины считается <code>final_price</code></li>
+<li>[ ] <code>currency_code</code>, <code>exchange_rate</code>, <code>rate_coefficient</code>, <code>delivery_address</code>, <code>comment</code> могут быть заполнены либо <code>null</code></li>
 <li>[ ] 1С сопоставляет контрагента по ИНН</li>
 <li>[ ] Если склад не найден — <code>ОсновнойСклад</code></li>
 </ul>
@@ -1428,15 +1432,16 @@
 <p class="admonition-title">Отложено</p>
 <p>US-09 отложен на следующий скоп.</p>
 </div>
-<p><strong>Зависимости:</strong> 1.13 или 2.2 (заказ в статусе <code>completed</code>)</p>
+<p><strong>Зависимости:</strong> 1.13 или 2.2 (заказ в статусе <code>closed</code>)</p>
 <p>🟢 Создать возврат через ЛК → Заказ → Возврат.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/return.created.to_erp.json">JSON Schema</a></p>
 </blockquote>
 <ul>
 <li>[ ] В <code>erp_out.returns</code> — сообщение <code>return.created</code></li>
-<li>[ ] <code>order_uuid</code> = UUID оригинального заказа</li>
-<li>[ ] <code>items[]</code> с <code>product_uuid</code>, <code>quantity</code>, <code>reason</code></li>
+<li>[ ] Обязательные поля по схеме: <code>event</code>, <code>uuid</code>, <code>items</code></li>
+<li>[ ] <code>order_uuid</code> и <code>partner_uuid</code> могут быть строкой или <code>null</code></li>
+<li>[ ] <code>items[]</code> содержит <code>quantity</code>; <code>product_uuid</code> и <code>reason</code> могут быть <code>null</code></li>
 </ul>
 
 

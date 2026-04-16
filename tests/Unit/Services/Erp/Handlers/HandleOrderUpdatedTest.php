@@ -417,4 +417,73 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->assertEquals('ЗКП-000200', $order->fresh()->erp_number);
     }
+
+    /** @test */
+    public function it_updates_order_status_to_deleted(): void
+    {
+        $order = Order::factory()->create([
+            'uuid'   => 'test-uuid-status-deleted',
+            'status' => 'confirmed',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid'   => 'test-uuid-status-deleted',
+            'status' => 'deleted',
+        ]);
+
+        $this->assertEquals('deleted', $order->fresh()->status->value);
+    }
+
+    /** @test */
+    public function it_accepts_negative_discount_percent_as_markup_and_logs_neutral_summary(): void
+    {
+        $order = Order::factory()->create([
+            'uuid'         => 'test-uuid-negative-discount',
+            'total_amount' => 1000,
+        ]);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-negative-1',
+            'name'        => 'Товар с наценкой',
+        ]);
+        OrderItem::factory()->create([
+            'order_id'         => $order->id,
+            'product_id'       => $product->id,
+            'name'             => 'Товар с наценкой',
+            'price'            => 1000,
+            'base_price'       => 1000,
+            'final_price'      => 1000,
+            'discount_percent' => 0,
+            'quantity'         => 1,
+            'subtotal'         => 1000,
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid'  => 'test-uuid-negative-discount',
+            'items' => [
+                [
+                    'product_uuid'     => 'prod-negative-1',
+                    'quantity'         => 1,
+                    'base_price'       => 1000,
+                    'final_price'      => 1150,
+                    'discount_percent' => -15,
+                ],
+            ],
+        ]);
+
+        $order->refresh();
+        $item = $order->items->first();
+        $log = OrderChangeLog::where('order_id', $order->id)->first();
+
+        $this->assertEquals(-15.00, (float) $item->discount_percent);
+        $this->assertEquals(1150.00, (float) $item->final_price);
+        $this->assertEquals(1150.00, (float) $order->total_amount);
+        $this->assertNotNull($log);
+        $this->assertStringContainsString('корректировка цены: 0% → -15%', $log->summary);
+    }
 }

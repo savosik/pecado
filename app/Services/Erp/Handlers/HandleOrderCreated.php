@@ -102,6 +102,9 @@ class HandleOrderCreated
                     'к отгрузке'    => 'ready_to_ship',
                     'к_отгрузке'    => 'ready_to_ship',
                     'закрыт'        => 'closed',
+                    'удален'        => 'deleted',
+                    'удалён'        => 'deleted',
+                    'deleted'       => 'deleted',
                 ];
 
                 $normalizedStatus = mb_strtolower(trim($status));

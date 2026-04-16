@@ -241,6 +241,23 @@ class HandleOrderCreatedTest extends TestCase
     }
 
     #[Test]
+    public function creates_order_with_deleted_status(): void
+    {
+        $this->handler->handle([
+            'event'        => 'order.created',
+            'message_id'   => 'msg-test-009',
+            'uuid'         => 'order-erp-status-deleted-001',
+            'status'       => 'deleted',
+            'type'         => 'order',
+            'items'        => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-erp-status-deleted-001')->first();
+        $this->assertNotNull($order);
+        $this->assertEquals('deleted', $order->status->value);
+    }
+
+    #[Test]
     public function saves_delivery_address_as_text_from_payload(): void
     {
         $user = User::factory()->create(['erp_id' => 'erp-partner-addr-001']);
@@ -279,5 +296,33 @@ class HandleOrderCreatedTest extends TestCase
         $order = Order::where('uuid', 'order-no-address-001')->first();
         $this->assertNotNull($order);
         $this->assertNull($order->delivery_address);
+    }
+
+    #[Test]
+    public function accepts_negative_discount_percent_as_markup_and_uses_final_price_for_total(): void
+    {
+        $product = Product::factory()->create(['external_id' => 'prod-negative-discount-001']);
+
+        $this->handler->handle([
+            'event'      => 'order.created',
+            'message_id' => 'msg-test-negative-discount-001',
+            'uuid'       => 'order-negative-discount-001',
+            'status'     => 'pending',
+            'items'      => [
+                [
+                    'product_uuid'      => 'prod-negative-discount-001',
+                    'quantity'          => 2,
+                    'base_price'        => 1000.00,
+                    'discount_percent'  => -15,
+                    'final_price'       => 1150.00,
+                ],
+            ],
+        ]);
+
+        $order = Order::where('uuid', 'order-negative-discount-001')->first();
+        $this->assertNotNull($order);
+        $this->assertEquals(2300.00, (float) $order->total_amount);
+        $this->assertEquals(-15.00, (float) $order->items->first()->discount_percent);
+        $this->assertEquals(1150.00, (float) $order->items->first()->final_price);
     }
 }

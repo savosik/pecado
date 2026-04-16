@@ -13,8 +13,9 @@
 **Проверка (1С-ник):**
 
 - [ ] В `erp_out.partners` появилось сообщение
-- [ ] Payload: `event: "partner.created"`, `uuid`, `login`, `name`, `phone`, `email`
-- [ ] `uuid` — валидный UUID
+- [ ] Обязательные поля по схеме: `event`, `uuid`, `login`, `name`, `email`
+- [ ] `phone`, `message_id`, `timestamp` передаются опционально
+- [ ] `uuid` заполнен
 - [ ] `login = email`
 - [ ] 1С ищет по email → если не найден — создаёт нового
 - [ ] 1С **НЕ** использует `uuid` из payload — генерирует свой
@@ -37,11 +38,14 @@
 **Проверка (1С-ник):**
 
 - [ ] В `erp_out.orders` появилось сообщение
-- [ ] Все обязательные поля: `event`, `uuid`, `status: "pending"`, `type`, `partner_uuid`, `items`
-- [ ] `partner_uuid` = UUID партнёра из 1С
-- [ ] `contractor` содержит: `tax_id`, `legal_name`, `bank_accounts`
-- [ ] `items[]` с `product_uuid`, `quantity`, `base_price`, `discount_percent`, `final_price`
-- [ ] `currency_code`, `exchange_rate`, `rate_coefficient` заполнены
+- [ ] Обязательные поля по схеме: `event`, `uuid`, `items`
+- [ ] Если передан `status` — он из enum: `pending`, `confirmed`, `ready_to_ship`, `closed`, `deleted`
+- [ ] `type` передаётся строкой; для обычного заказа ожидается `order`
+- [ ] `partner_uuid` может быть строкой или `null`
+- [ ] `contractor` может быть объектом или `null`; если объект передан, в нём есть `tax_id`, `legal_name`, `bank_accounts`
+- [ ] `items[]` содержит `quantity`, `base_price`, `discount_percent`, `final_price`; `product_uuid` может быть `null`
+- [ ] `discount_percent > 0` трактуется как скидка, `discount_percent < 0` — как наценка; при расхождении источником истины считается `final_price`
+- [ ] `currency_code`, `exchange_rate`, `rate_coefficient`, `delivery_address`, `comment` могут быть заполнены либо `null`
 - [ ] 1С сопоставляет контрагента по ИНН
 - [ ] Если склад не найден — `ОсновнойСклад`
 
@@ -65,12 +69,13 @@
 !!! warning "Отложено"
     US-09 отложен на следующий скоп.
 
-**Зависимости:** 1.13 или 2.2 (заказ в статусе `completed`)
+**Зависимости:** 1.13 или 2.2 (заказ в статусе `closed`)
 
 🟢 Создать возврат через ЛК → Заказ → Возврат.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/return.created.to_erp.json)
 
 - [ ] В `erp_out.returns` — сообщение `return.created`
-- [ ] `order_uuid` = UUID оригинального заказа
-- [ ] `items[]` с `product_uuid`, `quantity`, `reason`
+- [ ] Обязательные поля по схеме: `event`, `uuid`, `items`
+- [ ] `order_uuid` и `partner_uuid` могут быть строкой или `null`
+- [ ] `items[]` содержит `quantity`; `product_uuid` и `reason` могут быть `null`

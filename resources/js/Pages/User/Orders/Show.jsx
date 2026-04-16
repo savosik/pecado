@@ -13,6 +13,7 @@ const STATUS_LABELS = {
     confirmed: 'Подтверждён',
     ready_to_ship: 'К отгрузке',
     closed: 'Закрыт',
+    deleted: 'Удалён',
 };
 
 const STATUS_COLORS = {
@@ -20,6 +21,7 @@ const STATUS_COLORS = {
     confirmed: 'blue',
     ready_to_ship: 'purple',
     closed: 'green',
+    deleted: 'red',
 };
 
 const TYPE_LABELS = {

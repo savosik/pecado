@@ -45,6 +45,7 @@ class OrderStatusHistory extends Model
             'confirmed' => 'Подтверждён',
             'ready_to_ship' => 'К отгрузке',
             'closed' => 'Закрыт',
+            'deleted' => 'Удалён',
             default => $this->old_status,
         };
     }
@@ -59,6 +60,7 @@ class OrderStatusHistory extends Model
             'confirmed' => 'Подтверждён',
             'ready_to_ship' => 'К отгрузке',
             'closed' => 'Закрыт',
+            'deleted' => 'Удалён',
             default => $this->new_status,
         };
     }

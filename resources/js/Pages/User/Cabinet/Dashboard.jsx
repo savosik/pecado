@@ -30,6 +30,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
         confirmed: 'Подтверждён',
         ready_to_ship: 'К отгрузке',
         closed: 'Закрыт',
+        deleted: 'Удалён',
     };
 
     const statusColors = {
@@ -37,6 +38,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
         confirmed: 'blue',
         ready_to_ship: 'purple',
         closed: 'green',
+        deleted: 'red',
     };
 
     return (

@@ -21,7 +21,7 @@
         },
         "status": {
             "type": "string",
-            "enum": ["pending", "confirmed", "ready_to_ship", "closed"]
+            "enum": ["pending", "confirmed", "ready_to_ship", "closed", "deleted"]
         },
         "type": {
             "type": "string"
@@ -101,7 +101,6 @@
                     },
                     "discount_percent": {
                         "type": "number",
-                        "minimum": 0,
                         "maximum": 100
                     },
                     "final_price": {

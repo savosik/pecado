@@ -51,6 +51,7 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
         confirmed: 'blue',
         ready_to_ship: 'purple',
         closed: 'green',
+        deleted: 'red',
     };
 
     return (

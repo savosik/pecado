@@ -43,6 +43,9 @@ class HandleOrderUpdated
                 'к отгрузке'    => 'ready_to_ship',
                 'к_отгрузке'    => 'ready_to_ship', // Вариант с подчеркиванием
                 'закрыт'        => 'closed',
+                'удален'        => 'deleted',
+                'удалён'        => 'deleted',
+                'deleted'       => 'deleted',
             ];
 
             $normalizedStatus = mb_strtolower(trim($rawStatus));
@@ -283,7 +286,7 @@ class HandleOrderUpdated
                 $parts[] = "кол-во: {$ch['quantity']['old']} → {$ch['quantity']['new']}";
             }
             if (isset($ch['discount_percent'])) {
-                $parts[] = "скидка: {$ch['discount_percent']['old']}% → {$ch['discount_percent']['new']}%";
+                $parts[] = "корректировка цены: {$ch['discount_percent']['old']}% → {$ch['discount_percent']['new']}%";
             }
             if (isset($ch['final_price'])) {
                 $parts[] = "цена: {$ch['final_price']['old']} → {$ch['final_price']['new']} ₽";

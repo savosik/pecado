@@ -1641,6 +1641,7 @@
 <li>После отправки пользователь изменять заказ <strong>не может</strong></li>
 <li>Если ни один склад из <code>warehouse_uuids</code> не найден — используется <code>ОсновнойСклад</code></li>
 <li><code>comment</code> включается в комментарий к заказу в 1С</li>
+<li><code>discount_percent</code> может быть отрицательным: положительное значение означает скидку, отрицательное — наценку; источник истины для суммы позиции — <code>final_price</code></li>
 </ul>
 <h3 id="1">Сторона 1С<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1656,6 +1657,7 @@
 <li>При отсутствии <code>type</code> в payload сайт использует значение по умолчанию <code>"order"</code></li>
 <li>Используется когда менеджер создал заказ вручную в 1С</li>
 <li><strong>(v12.1)</strong> Если передан <code>delivery_address</code> (строка) — сайт сохраняет значение напрямую в текстовое поле <code>orders.delivery_address</code></li>
+<li><code>discount_percent</code> может быть отрицательным: положительное значение означает скидку, отрицательное — наценку; сайт сохраняет значение как есть и рассчитывает сумму по <code>final_price</code></li>
 </ul>
 <hr />
 <h2 id="orderupdated-1">order.updated (1С → Сайт)<a class="headerlink" href="#orderupdated-1" title="Permanent link">&para;</a></h2>
@@ -1666,6 +1668,8 @@
 <li><strong>(v11)</strong> При изменении позиций сайт фиксирует diff в <code>order_change_logs</code></li>
 <li><strong>(v12.1)</strong> Если передан <code>delivery_address</code> — сайт сохраняет значение напрямую в текстовое поле <code>orders.delivery_address</code></li>
 <li><strong>(v12.3)</strong> Если передан <code>number</code> — сайт сохраняет его как <code>erp_number</code>. Это номер заказа из 1С, который отображается пользователю для коммуникации с менеджером</li>
+<li><code>discount_percent</code> может быть отрицательным: положительное значение означает скидку, отрицательное — наценку; сайт считает сумму по <code>final_price</code></li>
+<li>Статус <code>deleted</code> означает, что заказ удалён на стороне 1С; он сохраняется в БД сайта как отдельный финальный статус</li>
 </ul>
 <h3 id="_3">Маппинг статусов<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <table>
@@ -1692,22 +1696,28 @@
 <td>Закрыт</td>
 <td><code>closed</code></td>
 </tr>
+<tr>
+<td>Удалён</td>
+<td><code>deleted</code></td>
+</tr>
 </tbody>
 </table>
 <hr />
 <h2 id="orderdeleted-1">order.deleted (1С → Сайт)<a class="headerlink" href="#orderdeleted-1" title="Permanent link">&para;</a></h2>
 <h3 id="-_3">Бизнес-правила<a class="headerlink" href="#-_3" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Заказ переводится в статус <code>closed</code> (soft delete), не удаляется физически</li>
+<li>Заказ переводится в статус <code>deleted</code>, не удаляется физически</li>
+<li><code>deleted</code> — отдельный финальный статус заказа, отличающийся от <code>closed</code></li>
 </ul>
 <hr />
 <h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] Сайт публикует <code>order.created</code> при оформлении заказа</li>
 <li>[ ] Каждая позиция содержит <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code> (v7)</li>
+<li>[ ] <code>discount_percent</code> поддерживает как скидку (<code>&gt; 0</code>), так и наценку (<code>&lt; 0</code>); сумма позиции определяется по <code>final_price</code> (v12.7.1)</li>
 <li>[ ] Сайт принимает <code>order.created</code> (от менеджера), <code>order.updated</code>, <code>order.deleted</code></li>
 <li>[ ] <code>order.updated</code> с <code>items</code> полностью заменяет позиции</li>
-<li>[ ] <code>order.deleted</code> ставит статус <code>closed</code> (soft delete)</li>
+<li>[ ] <code>order.deleted</code> ставит статус <code>deleted</code> без физического удаления записи</li>
 <li>[ ] История изменений позиций фиксируется в <code>order_change_logs</code> (v11)</li>
 <li>[ ] <code>delivery_address</code> сохраняется напрямую в текстовое поле <code>orders.delivery_address</code> (v12.1)</li>
 </ul>

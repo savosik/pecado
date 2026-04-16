@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 12.7.0
+  version: 12.7.2
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -931,15 +931,16 @@ channels:
                     description: Базовая цена за единицу (до скидки, v7)
                   discount_percent:
                     type: number
-                    minimum: 0
                     maximum: 100
-                    description: Процент скидки (0 если нет скидки, v7)
+                    description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
                   final_price:
                     type: number
                     minimum: 0
                     description: >-
-                      Конечная цена за единицу (после скидки, v7). final_price =
-                      base_price × (1 - discount_percent / 100)
+                      Конечная цена за единицу после корректировки (v12.7.1).
+                      final_price = base_price × (1 - discount_percent / 100);
+                      при отрицательном discount_percent итоговая цена может быть выше
+                      base_price
       orderUpdated:
         name: order.updated
         title: Заказ обновлён
@@ -987,11 +988,13 @@ channels:
                 - К выполнению → confirmed
                 - К отгрузке → ready_to_ship
                 - Закрыт → closed
+                - Удалён → deleted
               enum:
                 - pending
                 - confirmed
                 - ready_to_ship
                 - closed
+                - deleted
             items:
               type: array
               description: |
@@ -1022,15 +1025,16 @@ channels:
                     description: Базовая цена за единицу (до скидки, v7)
                   discount_percent:
                     type: number
-                    minimum: 0
                     maximum: 100
-                    description: Процент скидки (0 если нет скидки, v7)
+                    description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
                   final_price:
                     type: number
                     minimum: 0
                     description: >-
-                      Конечная цена за единицу (после скидки, v7). final_price =
-                      base_price × (1 - discount_percent / 100)
+                      Конечная цена за единицу после корректировки (v12.7.1).
+                      final_price = base_price × (1 - discount_percent / 100);
+                      при отрицательном discount_percent итоговая цена может быть выше
+                      base_price
       orderDeleted:
         name: order.deleted
         title: Заказ удалён
@@ -2229,15 +2233,16 @@ channels:
                     description: Базовая цена за единицу (до скидки, v7)
                   discount_percent:
                     type: number
-                    minimum: 0
                     maximum: 100
-                    description: Процент скидки (0 если нет скидки, v7)
+                    description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
                   final_price:
                     type: number
                     minimum: 0
                     description: >-
-                      Конечная цена за единицу (после скидки, v7). final_price =
-                      base_price × (1 - discount_percent / 100)
+                      Конечная цена за единицу после корректировки (v12.7.1).
+                      final_price = base_price × (1 - discount_percent / 100);
+                      при отрицательном discount_percent итоговая цена может быть выше
+                      base_price
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -3718,15 +3723,16 @@ components:
                   description: Базовая цена за единицу (до скидки, v7)
                 discount_percent:
                   type: number
-                  minimum: 0
                   maximum: 100
-                  description: Процент скидки (0 если нет скидки, v7)
+                  description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
                 final_price:
                   type: number
                   minimum: 0
                   description: >-
-                    Конечная цена за единицу (после скидки, v7). final_price =
-                    base_price × (1 - discount_percent / 100)
+                    Конечная цена за единицу после корректировки (v12.7.1).
+                    final_price = base_price × (1 - discount_percent / 100);
+                    при отрицательном discount_percent итоговая цена может быть выше
+                    base_price
     OrderCreatedFromSite:
       name: order.created
       title: Заказ создан (Сайт → 1С)
@@ -3944,15 +3950,16 @@ components:
                   description: Базовая цена за единицу (до скидки, v7)
                 discount_percent:
                   type: number
-                  minimum: 0
                   maximum: 100
-                  description: Процент скидки (0 если нет скидки, v7)
+                  description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
                 final_price:
                   type: number
                   minimum: 0
                   description: >-
-                    Конечная цена за единицу (после скидки, v7). final_price =
-                    base_price × (1 - discount_percent / 100)
+                    Конечная цена за единицу после корректировки (v12.7.1).
+                    final_price = base_price × (1 - discount_percent / 100);
+                    при отрицательном discount_percent итоговая цена может быть выше
+                    base_price
     OrderUpdated:
       name: order.updated
       title: Заказ обновлён
@@ -4000,11 +4007,13 @@ components:
               - К выполнению → confirmed
               - К отгрузке → ready_to_ship
               - Закрыт → closed
+              - Удалён → deleted
             enum:
               - pending
               - confirmed
               - ready_to_ship
               - closed
+              - deleted
           items:
             type: array
             description: |
@@ -4035,15 +4044,16 @@ components:
                   description: Базовая цена за единицу (до скидки, v7)
                 discount_percent:
                   type: number
-                  minimum: 0
                   maximum: 100
-                  description: Процент скидки (0 если нет скидки, v7)
+                  description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
                 final_price:
                   type: number
                   minimum: 0
                   description: >-
-                    Конечная цена за единицу (после скидки, v7). final_price =
-                    base_price × (1 - discount_percent / 100)
+                    Конечная цена за единицу после корректировки (v12.7.1).
+                    final_price = base_price × (1 - discount_percent / 100);
+                    при отрицательном discount_percent итоговая цена может быть выше
+                    base_price
     OrderDeleted:
       name: order.deleted
       title: Заказ удалён
@@ -5723,15 +5733,16 @@ components:
           description: Базовая цена за единицу (до скидки, v7)
         discount_percent:
           type: number
-          minimum: 0
           maximum: 100
-          description: Процент скидки (0 если нет скидки, v7)
+          description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
         final_price:
           type: number
           minimum: 0
           description: >-
-            Конечная цена за единицу (после скидки, v7). final_price =
-            base_price × (1 - discount_percent / 100)
+            Конечная цена за единицу после корректировки (v12.7.1).
+            final_price = base_price × (1 - discount_percent / 100);
+            при отрицательном discount_percent итоговая цена может быть выше
+            base_price
     OrderContractor:
       type: object
       properties:
@@ -5852,6 +5863,7 @@ components:
             - confirmed
             - ready_to_ship
             - closed
+            - deleted
           examples:
             - pending
         type:
@@ -6013,15 +6025,16 @@ components:
                 description: Базовая цена за единицу (до скидки, v7)
               discount_percent:
                 type: number
-                minimum: 0
                 maximum: 100
-                description: Процент скидки (0 если нет скидки, v7)
+                description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
               final_price:
                 type: number
                 minimum: 0
                 description: >-
-                  Конечная цена за единицу (после скидки, v7). final_price =
-                  base_price × (1 - discount_percent / 100)
+                  Конечная цена за единицу после корректировки (v12.7.1).
+                  final_price = base_price × (1 - discount_percent / 100);
+                  при отрицательном discount_percent итоговая цена может быть выше
+                  base_price
     OrderUpdatedPayload:
       type: object
       required:
@@ -6057,11 +6070,13 @@ components:
             - К выполнению → confirmed
             - К отгрузке → ready_to_ship
             - Закрыт → closed
+            - Удалён → deleted
           enum:
             - pending
             - confirmed
             - ready_to_ship
             - closed
+            - deleted
         items:
           type: array
           description: |
@@ -6092,15 +6107,16 @@ components:
                 description: Базовая цена за единицу (до скидки, v7)
               discount_percent:
                 type: number
-                minimum: 0
                 maximum: 100
-                description: Процент скидки (0 если нет скидки, v7)
+                description: Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку, 0 — без корректировки (v12.7.1)
               final_price:
                 type: number
                 minimum: 0
                 description: >-
-                  Конечная цена за единицу (после скидки, v7). final_price =
-                  base_price × (1 - discount_percent / 100)
+                  Конечная цена за единицу после корректировки (v12.7.1).
+                  final_price = base_price × (1 - discount_percent / 100);
+                  при отрицательном discount_percent итоговая цена может быть выше
+                  base_price
     ReturnUpdatedPayload:
       type: object
       required:

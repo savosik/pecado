@@ -17,6 +17,7 @@ const STATUS_COLORS = {
     confirmed: 'blue',
     ready_to_ship: 'purple',
     closed: 'green',
+    deleted: 'red',
 };
 
 export default function OrdersIndex({ filters, statuses, types }) {

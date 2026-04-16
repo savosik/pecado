@@ -266,8 +266,9 @@
 > Структура payload → [JSON Schema](/docs/erp/schemas/order.created.json)
 
 - [ ] Заказ создан с `external_id`
-- [ ] Статус = `confirmed`, тип = `order`
-- [ ] Позиции с `base_price`, `discount_percent`, `final_price`
+- [ ] Статус = `confirmed`
+- [ ] Поле `type` в payload 1С отсутствует; сайт использует значение по умолчанию `"order"`
+- [ ] Позиции с `base_price`, `discount_percent`, `final_price`; `discount_percent < 0` трактуется как наценка
 - [ ] `delivery_address` сохранён в текстовое поле `orders.delivery_address` (v12.1)
 - [ ] Заказ в ЛК
 
@@ -309,6 +310,13 @@
 - [ ] Статус → `closed`
 - [ ] В интерфейсе отображается лейбл «Закрыт»
 
+### E) Обновление статуса → deleted
+
+🔵 `order.updated` с `status: "deleted"`.
+
+- [ ] Статус → `deleted`
+- [ ] В интерфейсе отображается лейбл «Удалён»
+
 ---
 
 ## 1.15 — Удаление заказа (`order.deleted`)
@@ -319,7 +327,7 @@
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/order.deleted.json)
 
-- [ ] Заказ → `closed` (распроведён, v12.3)
+- [ ] Заказ → `deleted`
 - [ ] Не отображается в активных заказах
 
 ---
@@ -328,11 +336,11 @@
 
 **Зависимости:** 1.12 (контрагент), 1.13 (заказ)
 
-🔵 **1С отправляет** `shipment.created` с `contractor_inn` и `items`.
+🔵 **1С отправляет** `shipment.created` с `tax_id` и `items`.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/shipment.created.json)
 
-- [ ] Реализация создана, привязана к контрагенту по ИНН
+- [ ] Реализация создана, привязана к контрагенту по `tax_id`
 - [ ] Позиция связана с заказом через `order_uuid`
 - [ ] Реализация в ЛК
 

@@ -17,6 +17,7 @@ const STATUS_LABELS = {
     confirmed: 'Подтверждён',
     ready_to_ship: 'К отгрузке',
     closed: 'Закрыт',
+    deleted: 'Удалён',
 };
 
 const STATUS_COLORS = {
@@ -24,6 +25,7 @@ const STATUS_COLORS = {
     confirmed: 'blue',
     ready_to_ship: 'purple',
     closed: 'green',
+    deleted: 'red',
 };
 
 const TYPE_LABELS = {
@@ -602,7 +604,7 @@ function ItemsChangedEntry({ entry }) {
                                                 )}
                                                 {item.changes?.discount_percent && (
                                                     <Text fontSize="xs" color="fg.muted">
-                                                        Скидка: {item.changes.discount_percent.old}% → {item.changes.discount_percent.new}%
+                                                        Корректировка цены: {item.changes.discount_percent.old}% → {item.changes.discount_percent.new}%
                                                     </Text>
                                                 )}
                                                 {item.changes?.final_price && (
@@ -627,4 +629,3 @@ function ItemsChangedEntry({ entry }) {
         </Stack>
     );
 }
-

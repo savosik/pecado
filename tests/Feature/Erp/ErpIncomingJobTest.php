@@ -1078,9 +1078,9 @@ class ErpIncomingJobTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals('closed', $order->status->value);
+        $this->assertEquals('deleted', $order->status->value);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000003e', 'status' => 'closed']);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000003e', 'status' => 'deleted']);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-order-del-001',
             'event' => 'order.deleted',
@@ -1410,9 +1410,9 @@ class ErpIncomingJobTest extends TestCase
         $deleteJob->fire();
 
         $order->refresh();
-        $this->assertEquals('closed', $order->status->value);
+        $this->assertEquals('deleted', $order->status->value);
         $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000000f', 'status' => 'closed']);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000000f', 'status' => 'deleted']);
 
         // 3. Дубль order.updated — не должен обработаться
         $dupJob = $this->makeJob([
@@ -1425,7 +1425,7 @@ class ErpIncomingJobTest extends TestCase
 
         // Статус не должен измениться — дубликат
         $order->refresh();
-        $this->assertEquals('closed', $order->status->value);
+        $this->assertEquals('deleted', $order->status->value);
     }
 
     // ========================================================

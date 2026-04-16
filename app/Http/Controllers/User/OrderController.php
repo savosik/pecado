@@ -253,6 +253,7 @@ class OrderController extends Controller
             OrderStatus::CONFIRMED     => 'Подтверждён',
             OrderStatus::READY_TO_SHIP => 'К отгрузке',
             OrderStatus::CLOSED        => 'Закрыт',
+            OrderStatus::DELETED       => 'Удалён',
             default                    => 'Неизвестно',
         };
     }

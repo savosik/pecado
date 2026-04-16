@@ -8,15 +8,16 @@
 |-----|-----|----------|----------|
 | 1 | 🟢 Сайт | Пользователь оформляет заказ | `order.created` в `erp_out.orders`, статус `pending` |
 | 2 | 🔵 1С | Подтверждает → `order.updated` `confirmed` | Статус → `confirmed`, запись в `order_status_histories` |
-| 3 | 🔵 1С | В работу → `order.updated` `processing` | Статус → `processing` |
+| 3 | 🔵 1С | Готовит к отгрузке → `order.updated` `ready_to_ship` | Статус → `ready_to_ship` |
 | 4 | 🔵 1С | Изменил позиции → `order.updated` с `items[]` | Позиции пересозданы, diff в `order_change_logs` |
 | 5 | 🔵 1С | Реализация → `shipment.created` | Реализация в ЛК |
-| 6 | 🔵 1С | Завершает → `order.updated` `completed` | Статус → `completed` |
-| 7 | 🔵 1С | Баланс → `balance.updated` | Баланс обновлён |
+| 6 | 🔵 1С | Закрывает → `order.updated` `closed` | Статус → `closed` |
+| 7 | 🔵 1С | Удаляет → `order.deleted` | Статус → `deleted` |
+| 8 | 🔵 1С | Баланс → `balance.updated` | Баланс обновлён |
 
 **Итоговая проверка:**
 
-- [ ] `order_status_histories`: `pending` → `confirmed` → `processing` → `completed`
+- [ ] `order_status_histories`: `pending` → `confirmed` → `ready_to_ship` → `closed` → `deleted`
 - [ ] `order_change_logs`: изменения позиций зафиксированы
 - [ ] Реализация привязана к заказу
 - [ ] Баланс отражает задолженность

@@ -1194,6 +1194,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#e-deleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E) Обновление статуса → deleted
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1861,6 +1872,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#e-deleted" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        E) Обновление статуса → deleted
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2112,7 +2134,7 @@
 <ul>
 <li>[ ] Пользователь создан с <code>external_id</code></li>
 <li>[ ] <code>client_status_id</code> → ClientStatus с <code>external_id = gold</code></li>
-<li>[ ] Может войти с паролем из payload</li>
+<li>[ ] Может войти с паролем из payload (десятичный CRC32 от email)</li>
 <li>[ ] Обязательная смена пароля при первом входе</li>
 <li>[ ] Плашка «Gold» в ЛК</li>
 </ul>
@@ -2197,8 +2219,9 @@
 </blockquote>
 <ul>
 <li>[ ] Заказ создан с <code>external_id</code></li>
-<li>[ ] Статус = <code>confirmed</code>, тип = <code>order</code></li>
-<li>[ ] Позиции с <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code></li>
+<li>[ ] Статус = <code>confirmed</code></li>
+<li>[ ] Поле <code>type</code> в payload 1С отсутствует; сайт использует значение по умолчанию <code>"order"</code></li>
+<li>[ ] Позиции с <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code>; <code>discount_percent &lt; 0</code> трактуется как наценка</li>
 <li>[ ] <code>delivery_address</code> сохранён в текстовое поле <code>orders.delivery_address</code> (v12.1)</li>
 <li>[ ] Заказ в ЛК</li>
 </ul>
@@ -2234,6 +2257,12 @@
 <li>[ ] Статус → <code>closed</code></li>
 <li>[ ] В интерфейсе отображается лейбл «Закрыт»</li>
 </ul>
+<h3 id="e-deleted">E) Обновление статуса → deleted<a class="headerlink" href="#e-deleted" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "deleted"</code>.</p>
+<ul>
+<li>[ ] Статус → <code>deleted</code></li>
+<li>[ ] В интерфейсе отображается лейбл «Удалён»</li>
+</ul>
 <hr />
 <h2 id="115-orderdeleted">1.15 — Удаление заказа (<code>order.deleted</code>)<a class="headerlink" href="#115-orderdeleted" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> создать тестовый заказ</p>
@@ -2242,18 +2271,18 @@
 <p>Структура payload → <a href="/docs/erp/schemas/order.deleted.json">JSON Schema</a></p>
 </blockquote>
 <ul>
-<li>[ ] Заказ → <code>closed</code> (распроведён, v12.3)</li>
+<li>[ ] Заказ → <code>deleted</code></li>
 <li>[ ] Не отображается в активных заказах</li>
 </ul>
 <hr />
 <h2 id="116-shipmentcreated">1.16 — Реализации (<code>shipment.created</code>)<a class="headerlink" href="#116-shipmentcreated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.12 (контрагент), 1.13 (заказ)</p>
-<p>🔵 <strong>1С отправляет</strong> <code>shipment.created</code> с <code>contractor_inn</code> и <code>items</code>.</p>
+<p>🔵 <strong>1С отправляет</strong> <code>shipment.created</code> с <code>tax_id</code> и <code>items</code>.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/shipment.created.json">JSON Schema</a></p>
 </blockquote>
 <ul>
-<li>[ ] Реализация создана, привязана к контрагенту по ИНН</li>
+<li>[ ] Реализация создана, привязана к контрагенту по <code>tax_id</code></li>
 <li>[ ] Позиция связана с заказом через <code>order_uuid</code></li>
 <li>[ ] Реализация в ЛК</li>
 </ul>

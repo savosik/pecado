@@ -9,7 +9,7 @@ class HandleOrderDeleted
 {
     /**
      * Обработка события order.deleted из 1С.
-     * Soft-delete заказа по UUID.
+     * Переводит заказ в статус deleted по UUID.
      */
     public function handle(array $payload): void
     {
@@ -27,9 +27,9 @@ class HandleOrderDeleted
             return;
         }
 
-        $order->status = 'closed';
+        $order->status = 'deleted';
         $order->save();
 
-        Log::info('HandleOrderDeleted: заказ распроведён (статус closed, запись сохранена)', ['uuid' => $uuid]);
+        Log::info('HandleOrderDeleted: заказ помечен как deleted, запись сохранена', ['uuid' => $uuid]);
     }
 }
