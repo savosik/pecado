@@ -103,7 +103,8 @@ class HandleOrderCreated
             $finalStatus = $statusMap[$normalizedStatus] ?? $status;
 
             // --- Upsert заказа по uuid (без диспатча событий — не публикуем обратно в ERP) ---
-            $existingOrder = Order::where('uuid', $uuid)->first();
+            // withTrashed: если заказ был soft-deleted и 1С повторно шлёт его — восстанавливаем.
+            $existingOrder = Order::withTrashed()->where('uuid', $uuid)->first();
 
             $order = Order::withoutEvents(function () use ($existingOrder, $uuid, $payload, $userId, $companyId, $finalStatus, $type) {
                 $fields = [
@@ -121,6 +122,9 @@ class HandleOrderCreated
                 ];
 
                 if ($existingOrder) {
+                    if ($existingOrder->trashed()) {
+                        $existingOrder->restoreQuietly();
+                    }
                     $existingOrder->updateQuietly($fields);
 
                     return $existingOrder;

@@ -40,19 +40,27 @@ class HandleShipmentCreated
             }
         }
 
-        $shipment = Shipment::updateOrCreate(
-            ['uuid' => $uuid],
-            [
-                'number' => $payload['number'] ?? null,
-                'erp_number' => $payload['number'] ?? null,
-                'user_id' => $userId,
-                'company_id' => $companyId,
-                'tax_id' => $contractorInn,
-                'date' => $payload['date'] ?? null,
-                'status' => $payload['status'] ?? 'new',
-                'currency_code' => $payload['currency_code'] ?? null,
-            ]
-        );
+        $fields = [
+            'number' => $payload['number'] ?? null,
+            'erp_number' => $payload['number'] ?? null,
+            'user_id' => $userId,
+            'company_id' => $companyId,
+            'tax_id' => $contractorInn,
+            'date' => $payload['date'] ?? null,
+            'status' => $payload['status'] ?? 'new',
+            'currency_code' => $payload['currency_code'] ?? null,
+        ];
+
+        $shipment = Shipment::withTrashed()->where('uuid', $uuid)->first();
+
+        if ($shipment) {
+            if ($shipment->trashed()) {
+                $shipment->restore();
+            }
+            $shipment->update($fields);
+        } else {
+            $shipment = Shipment::create($fields + ['uuid' => $uuid]);
+        }
 
         // Синхронизация позиций
         if (isset($payload['items']) && is_array($payload['items'])) {
