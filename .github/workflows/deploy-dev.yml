@@ -121,10 +121,10 @@ jobs:
           RABBITMQ_USER=guest
           RABBITMQ_PASSWORD=guest
           EOF
-          php artisan key:generate
-          # Создаём необходимые директории storage
+          # Создаём необходимые директории storage до первого вызова artisan
           mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions
           mkdir -p bootstrap/cache
+          php artisan key:generate
           # Регистрируем пакеты (после создания storage и .env)
           php artisan package:discover --ansi
 
