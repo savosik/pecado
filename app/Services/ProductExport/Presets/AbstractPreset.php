@@ -44,8 +44,7 @@ abstract class AbstractPreset implements PresetInterface
      * Обработка товаров чанками через callback.
      * Вызывает $callback для каждого чанка mapped-данных.
      *
-     * @param ProductExport $export
-     * @param callable(Collection<int, array>): void $callback получает коллекцию rich-data массивов
+     * @param  callable(Collection<int, array>): void  $callback  получает коллекцию rich-data массивов
      */
     protected function eachChunk(ProductExport $export, callable $callback): void
     {
@@ -229,6 +228,7 @@ abstract class AbstractPreset implements PresetInterface
     protected function generateFilename(ProductExport $export): string
     {
         $date = now()->format('Y-m-d');
+
         return "export_{$this->key()}_{$date}.{$this->fileExtension()}";
     }
 

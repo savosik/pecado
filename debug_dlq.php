@@ -1,4 +1,5 @@
 <?php
+
 try {
     $factory = new \PhpAmqpLib\Connection\AMQPStreamConnection(
         env('RABBITMQ_HOST', 'rabbitmq'),
@@ -8,7 +9,7 @@ try {
         env('RABBITMQ_VHOST', '/')
     );
     $channel = $factory->channel();
-    
+
     if ($msg = $channel->basic_get('erp_dlq.catalog')) {
         $headers = [];
         if (isset($msg->get_properties()['application_headers'])) {
@@ -16,21 +17,21 @@ try {
         }
         $payloadStr = $msg->getBody();
         $payload = json_decode($payloadStr, true);
-        
-        echo "Found message with uuid: " . ($payload['uuid'] ?? 'no-uuid') . "\n";
-        
+
+        echo 'Found message with uuid: '.($payload['uuid'] ?? 'no-uuid')."\n";
+
         try {
             app(\App\Services\Erp\Handlers\HandleProductCreated::class)->handle($payload);
             echo "SUCCESS\n";
         } catch (\Throwable $e) {
-            echo "EXCEPTION: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine() . "\n";
+            echo 'EXCEPTION: '.$e->getMessage().' in '.$e->getFile().':'.$e->getLine()."\n";
         }
     } else {
         echo "Queue is empty!\n";
     }
-    
+
     $channel->close();
     $factory->close();
 } catch (\Throwable $e) {
-    echo "RABBIT ERROR: " . $e->getMessage() . "\n";
+    echo 'RABBIT ERROR: '.$e->getMessage()."\n";
 }

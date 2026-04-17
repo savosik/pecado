@@ -42,6 +42,7 @@ class SyncMeilisearchSynonyms extends Command
         $synonymsFile = resource_path('meilisearch/synonyms.php');
         if (! file_exists($synonymsFile)) {
             $this->error("Файл синонимов не найден: {$synonymsFile}");
+
             return self::FAILURE;
         }
 
@@ -65,22 +66,25 @@ class SyncMeilisearchSynonyms extends Command
             }
         }
 
-        $this->info("📚 Загружено синонимов:");
-        $this->info("   Групп (двусторонние): " . count($groups));
-        $this->info("   Однонаправленных: " . count($oneWay));
-        $this->info("   Итого записей для Meilisearch: " . count($synonyms));
+        $this->info('📚 Загружено синонимов:');
+        $this->info('   Групп (двусторонние): '.count($groups));
+        $this->info('   Однонаправленных: '.count($oneWay));
+        $this->info('   Итого записей для Meilisearch: '.count($synonyms));
 
         if ($this->option('dry-run')) {
             $this->newLine();
-            $this->info("Пример (первые 10 записей):");
+            $this->info('Пример (первые 10 записей):');
             $i = 0;
             foreach ($synonyms as $word => $syns) {
-                if ($i >= 10) break;
-                $this->line("   {$word} → " . implode(', ', $syns));
+                if ($i >= 10) {
+                    break;
+                }
+                $this->line("   {$word} → ".implode(', ', $syns));
                 $i++;
             }
             $this->newLine();
-            $this->warn("Режим dry-run: синонимы НЕ отправлены в Meilisearch.");
+            $this->warn('Режим dry-run: синонимы НЕ отправлены в Meilisearch.');
+
             return self::SUCCESS;
         }
 
@@ -89,7 +93,7 @@ class SyncMeilisearchSynonyms extends Command
         }
 
         $this->newLine();
-        $this->info("✅ Синонимы синхронизированы.");
+        $this->info('✅ Синонимы синхронизированы.');
 
         return self::SUCCESS;
     }
@@ -117,7 +121,9 @@ class SyncMeilisearchSynonyms extends Command
 
             foreach ($group as $word) {
                 $others = array_values(array_filter($group, fn ($w) => $w !== $word));
-                if (empty($others)) continue;
+                if (empty($others)) {
+                    continue;
+                }
 
                 if (isset($synonyms[$word])) {
                     $synonyms[$word] = array_values(array_unique(
@@ -137,7 +143,7 @@ class SyncMeilisearchSynonyms extends Command
         $this->info("📦 Индекс: {$indexName}");
 
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $key,
+            'Authorization' => 'Bearer '.$key,
             'Content-Type' => 'application/json',
         ])->put("{$host}/indexes/{$indexName}/settings/synonyms", $synonyms);
 
@@ -152,31 +158,34 @@ class SyncMeilisearchSynonyms extends Command
 
     private function waitForTask(string $host, string $key, int $taskUid): void
     {
-        $this->info("   ⏳ Ожидание...");
+        $this->info('   ⏳ Ожидание...');
 
         $maxAttempts = 60;
         $attempt = 0;
 
         while ($attempt < $maxAttempts) {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $key,
+                'Authorization' => 'Bearer '.$key,
             ])->get("{$host}/tasks/{$taskUid}");
 
             if (! $response->successful()) {
                 $this->error("   ✗ Не удалось проверить задачу: {$response->status()}");
+
                 return;
             }
 
             $status = $response->json('status');
 
             if ($status === 'succeeded') {
-                $this->info("   ✅ Готово");
+                $this->info('   ✅ Готово');
+
                 return;
             }
 
             if ($status === 'failed') {
                 $error = $response->json('error.message', 'Неизвестная ошибка');
                 $this->error("   ✗ Ошибка: {$error}");
+
                 return;
             }
 
@@ -184,7 +193,7 @@ class SyncMeilisearchSynonyms extends Command
             sleep(2);
         }
 
-        $this->warn("   ⚠ Таймаут. Задача ещё выполняется.");
+        $this->warn('   ⚠ Таймаут. Задача ещё выполняется.');
     }
 
     private function resetSynonyms(string $host, string $key, array $indexes): int
@@ -193,7 +202,7 @@ class SyncMeilisearchSynonyms extends Command
 
         foreach ($indexes as $indexName) {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $key,
+                'Authorization' => 'Bearer '.$key,
                 'Content-Type' => 'application/json',
             ])->put("{$host}/indexes/{$indexName}/settings/synonyms", (object) []);
 

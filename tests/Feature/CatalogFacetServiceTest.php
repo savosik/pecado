@@ -20,7 +20,7 @@ class CatalogFacetServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CatalogFacetService();
+        $this->service = new CatalogFacetService;
     }
 
     // ─── getAttributeFacets ─────────────────────────────────

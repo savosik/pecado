@@ -33,6 +33,9 @@ const getStatusColor = (status) => {
 const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Заказ со склада';
 const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';
 
+const fmt = (v) =>
+    parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 const OrderShow = () => {
     const { order, statuses } = usePage().props;
 
@@ -52,12 +55,12 @@ const OrderShow = () => {
 
     return (
         <>
-            <Head title={`Заказ #${order.id}`} />
+            <Head title={`Заказ ${order.number || ("#" + order.id)}`} />
 
             <PageHeader
                 title={
                     <HStack gap={2}>
-                        <span>{`Заказ #${order.id}`}</span>
+                        <span>{`Заказ ${order.number || ("#" + order.id)}`}</span>
                         <Badge colorPalette={getTypeColor(order.type)} variant="subtle" fontSize="sm">
                             {getTypeLabel(order.type)}
                         </Badge>
@@ -90,6 +93,10 @@ const OrderShow = () => {
                     <Card.Body>
                         <VStack align="stretch" gap={4}>
                             <HStack justify="space-between">
+                                <Text color="fg.muted">Номер:</Text>
+                                <Text fontFamily="mono" fontSize="sm">{order.number || ("#" + order.id)}</Text>
+                            </HStack>
+                            <HStack justify="space-between">
                                 <Text color="fg.muted">UUID:</Text>
                                 <Text fontFamily="mono" fontSize="sm">{order.uuid}</Text>
                             </HStack>
@@ -107,7 +114,7 @@ const OrderShow = () => {
                             </HStack>
                             <HStack justify="space-between">
                                 <Text color="fg.muted">Сумма:</Text>
-                                <Text fontWeight="bold">{order.total_amount} {order.currency_code || "₽"}</Text>
+                                <Text fontWeight="bold">{fmt(order.total_amount)} {order.currency_code || "₽"}</Text>
                             </HStack>
                             <HStack justify="space-between">
                                 <Text color="fg.muted">Дата создания:</Text>
@@ -200,34 +207,69 @@ const OrderShow = () => {
                     <Heading size="md">Позиции заказа ({order.items.length})</Heading>
                 </Card.Header>
                 <Card.Body p={0}>
-                    <Table.Root size="sm">
-                        <Table.Header>
-                            <Table.Row>
-                                <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="right">Цена</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
-                                <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
-                            </Table.Row>
-                        </Table.Header>
-                        <Table.Body>
-                            {order.items.map((item) => (
-                                <Table.Row key={item.id}>
-                                    <Table.Cell>
-                                        <Text>{item.name}</Text>
-                                        {item.product && (
-                                            <Text color="fg.muted" fontSize="xs">
-                                                ID: {item.product.id}
-                                            </Text>
-                                        )}
-                                    </Table.Cell>
-                                    <Table.Cell textAlign="right">{item.price} ₽</Table.Cell>
-                                    <Table.Cell textAlign="right">{item.quantity}</Table.Cell>
-                                    <Table.Cell textAlign="right" fontWeight="medium">{item.subtotal} ₽</Table.Cell>
+                    <Box overflowX="auto">
+                        <Table.Root size="sm">
+                            <Table.Header>
+                                <Table.Row>
+                                    <Table.ColumnHeader>Товар</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Баз. цена</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Инд. цена</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Скидка</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
                                 </Table.Row>
-                            ))}
-                        </Table.Body>
-                    </Table.Root>
+                            </Table.Header>
+                            <Table.Body>
+                                {order.items.map((item) => {
+                                    const hasDiscount = parseFloat(item.discount_percent) > 0;
+                                    const basePrice = parseFloat(item.base_price) || parseFloat(item.price) || 0;
+                                    const finalPrice = parseFloat(item.final_price) || parseFloat(item.price) || 0;
+
+                                    return (
+                                        <Table.Row key={item.id}>
+                                            <Table.Cell>
+                                                <Text>{item.name}</Text>
+                                                {item.product && (
+                                                    <Text color="fg.muted" fontSize="xs">
+                                                        ID: {item.product.id}
+                                                    </Text>
+                                                )}
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="right">
+                                                <Text fontFamily="mono" color="fg.muted">{fmt(basePrice)} ₽</Text>
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="right">
+                                                <Text fontFamily="mono" fontWeight="medium">{fmt(finalPrice)} ₽</Text>
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="right">
+                                                {hasDiscount ? (
+                                                    <Badge colorPalette="green" variant="subtle">
+                                                        −{parseFloat(item.discount_percent).toFixed(1)}%
+                                                    </Badge>
+                                                ) : (
+                                                    <Text fontFamily="mono" color="fg.muted">0%</Text>
+                                                )}
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="right">
+                                                <Text fontFamily="mono">{item.quantity}</Text>
+                                            </Table.Cell>
+                                            <Table.Cell textAlign="right">
+                                                <Text fontFamily="mono" fontWeight="bold">{fmt(item.subtotal)} ₽</Text>
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    );
+                                })}
+                            </Table.Body>
+                        </Table.Root>
+                    </Box>
                 </Card.Body>
+                <Card.Footer>
+                    <HStack justify="flex-end" width="100%">
+                        <Text fontSize="lg" fontWeight="bold">
+                            Итого: {fmt(order.total_amount)} {order.currency_code || "₽"}
+                        </Text>
+                    </HStack>
+                </Card.Footer>
             </Card.Root>
 
             {/* История статусов */}

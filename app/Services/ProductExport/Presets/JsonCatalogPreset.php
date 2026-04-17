@@ -17,13 +17,40 @@ use App\Models\ProductExport;
  */
 class JsonCatalogPreset extends AbstractPreset
 {
-    public function key(): string { return 'json_catalog'; }
-    public function name(): string { return 'Полный каталог (JSON)'; }
-    public function description(): string { return 'JSON-файл с полным каталогом товаров, деревом категорий, атрибутами, изображениями и ценами. Универсальный формат для любых интеграций.'; }
-    public function fileExtension(): string { return 'json'; }
-    public function mimeType(): string { return 'application/json; charset=utf-8'; }
-    public function color(): string { return 'purple'; }
-    public function icon(): string { return 'LuBraces'; }
+    public function key(): string
+    {
+        return 'json_catalog';
+    }
+
+    public function name(): string
+    {
+        return 'Полный каталог (JSON)';
+    }
+
+    public function description(): string
+    {
+        return 'JSON-файл с полным каталогом товаров, деревом категорий, атрибутами, изображениями и ценами. Универсальный формат для любых интеграций.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'json';
+    }
+
+    public function mimeType(): string
+    {
+        return 'application/json; charset=utf-8';
+    }
+
+    public function color(): string
+    {
+        return 'purple';
+    }
+
+    public function icon(): string
+    {
+        return 'LuBraces';
+    }
 
     public function writeToStream($stream, ProductExport $export): void
     {
@@ -33,23 +60,23 @@ class JsonCatalogPreset extends AbstractPreset
 
         // Начало JSON: метаданные + категории
         fwrite($stream, "{\n");
-        fwrite($stream, '  "generated_at": ' . json_encode(now()->toISOString(), JSON_UNESCAPED_UNICODE) . ",\n");
-        fwrite($stream, '  "shop": ' . json_encode(config('app.name', 'Pecado'), JSON_UNESCAPED_UNICODE) . ",\n");
-        fwrite($stream, '  "url": ' . json_encode(config('app.url'), JSON_UNESCAPED_UNICODE) . ",\n");
-        fwrite($stream, '  "categories": ' . json_encode($categoryTree, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT) . ",\n");
+        fwrite($stream, '  "generated_at": '.json_encode(now()->toISOString(), JSON_UNESCAPED_UNICODE).",\n");
+        fwrite($stream, '  "shop": '.json_encode(config('app.name', 'Pecado'), JSON_UNESCAPED_UNICODE).",\n");
+        fwrite($stream, '  "url": '.json_encode(config('app.url'), JSON_UNESCAPED_UNICODE).",\n");
+        fwrite($stream, '  "categories": '.json_encode($categoryTree, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT).",\n");
         fwrite($stream, "  \"products\": [\n");
 
         // Товары чанками
         $isFirst = true;
         $this->eachChunk($export, function ($items) use ($stream, &$isFirst) {
             foreach ($items as $item) {
-                if (!$isFirst) {
+                if (! $isFirst) {
                     fwrite($stream, ",\n");
                 }
                 $isFirst = false;
 
                 $product = $this->formatProduct($item);
-                fwrite($stream, '    ' . json_encode($product, JSON_UNESCAPED_UNICODE));
+                fwrite($stream, '    '.json_encode($product, JSON_UNESCAPED_UNICODE));
             }
         });
 
@@ -150,7 +177,7 @@ class JsonCatalogPreset extends AbstractPreset
     {
         foreach ($nodes as &$node) {
             unset($node['parent_id']);
-            if (!empty($node['children'])) {
+            if (! empty($node['children'])) {
                 $this->cleanParentIds($node['children']);
             } else {
                 unset($node['children']);

@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\WishlistItem;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\User;
-use Illuminate\Http\Request;
+use App\Models\WishlistItem;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class WishlistController extends AdminController
 {
@@ -28,11 +28,11 @@ class WishlistController extends AdminController
             $query->where(function ($q) use ($search) {
                 $q->whereHas('user', function ($userQuery) use ($search) {
                     $userQuery->where('name', 'like', "%{$search}%")
-                              ->orWhere('email', 'like', "%{$search}%");
+                        ->orWhere('email', 'like', "%{$search}%");
                 })
-                ->orWhereHas('product', function ($productQuery) use ($search) {
-                    $productQuery->where('name', 'like', "%{$search}%");
-                });
+                    ->orWhereHas('product', function ($productQuery) use ($search) {
+                        $productQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -59,7 +59,7 @@ class WishlistController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -270,11 +270,11 @@ class WishlistController extends AdminController
     public function searchUsers(Request $request): JsonResponse
     {
         $query = $request->input('query', '');
-        
+
         $users = User::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%");
+                    ->orWhere('email', 'like', "%{$query}%");
             })
             ->select('id', 'name', 'email')
             ->orderBy('name')
@@ -288,7 +288,7 @@ class WishlistController extends AdminController
                     'label' => "{$user->name} ({$user->email})",
                 ];
             });
-            
+
         return response()->json($users);
     }
 }

@@ -39,7 +39,7 @@ class ClientStatus extends Model implements HasMedia
     {
         $this->addMediaCollection('image')
             ->acceptsMimeTypes([
-                'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'
+                'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
             ])
             ->singleFile();
     }

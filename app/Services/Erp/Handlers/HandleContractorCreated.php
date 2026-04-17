@@ -18,44 +18,48 @@ use Illuminate\Support\Facades\Log;
 class HandleContractorCreated
 {
     use NormalizesCountry;
+
     public function handle(array $payload): void
     {
-        $uuid        = $payload['uuid']         ?? null;
+        $uuid = $payload['uuid'] ?? null;
         $partnerUuid = $payload['partner_uuid'] ?? null;
-        $name        = $payload['name']         ?? null;
-        $legalName   = $payload['legal_name']   ?? null;
-        $taxId       = $payload['tax_id']       ?? null; // ИНН
-        $regNumber   = $payload['registration_number'] ?? null;
-        $taxCode     = $payload['tax_code']     ?? null; // КПП
-        $okpoCode    = $payload['okpo_code']    ?? null; // ОКПО
-        $legalAddr   = $payload['legal_address']   ?? null;
-        $actualAddr  = $payload['actual_address']  ?? null;
-        $phone       = $payload['phone']           ?? null;
-        $email       = $payload['email']           ?? null;
-        $country     = $this->normalizeCountry($payload['country'] ?? null, 'RU'); // default: Россия
-        $bankAccounts = $payload['bank_accounts']  ?? null;
+        $name = $payload['name'] ?? null;
+        $legalName = $payload['legal_name'] ?? null;
+        $taxId = $payload['tax_id'] ?? null; // ИНН
+        $regNumber = $payload['registration_number'] ?? null;
+        $taxCode = $payload['tax_code'] ?? null; // КПП
+        $okpoCode = $payload['okpo_code'] ?? null; // ОКПО
+        $legalAddr = $payload['legal_address'] ?? null;
+        $actualAddr = $payload['actual_address'] ?? null;
+        $phone = $payload['phone'] ?? null;
+        $email = $payload['email'] ?? null;
+        $country = $this->normalizeCountry($payload['country'] ?? null, 'RU'); // default: Россия
+        $bankAccounts = $payload['bank_accounts'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('contractor.created: отсутствует uuid', ['payload' => $payload]);
+
             return;
         }
 
-        if (!$partnerUuid) {
+        if (! $partnerUuid) {
             Log::warning('contractor.created: отсутствует partner_uuid', [
                 'uuid' => $uuid,
                 'payload' => $payload,
             ]);
+
             return;
         }
 
         // Найти пользователя по erp_id партнёра
         $user = User::where('erp_id', $partnerUuid)->first();
 
-        if (!$user) {
+        if (! $user) {
             Log::warning('contractor.created: партнёр не найден', [
-                'uuid'         => $uuid,
+                'uuid' => $uuid,
                 'partner_uuid' => $partnerUuid,
             ]);
+
             return;
         }
 
@@ -67,7 +71,7 @@ class HandleContractorCreated
                 ->first();
 
             // Fallback: поиск по ИНН + user_id (компания могла быть создана на сайте без erp_id)
-            if (!$company && $taxId) {
+            if (! $company && $taxId) {
                 $company = Company::withoutGlobalScopes()
                     ->where('user_id', $user->id)
                     ->where('tax_id', $taxId)
@@ -77,16 +81,16 @@ class HandleContractorCreated
             $attributes = array_merge(
                 ['user_id' => $user->id, 'erp_id' => $uuid, 'country' => $country],
                 array_filter([
-                    'name'                => $name,
-                    'legal_name'          => $legalName,
-                    'tax_id'              => $taxId,
+                    'name' => $name,
+                    'legal_name' => $legalName,
+                    'tax_id' => $taxId,
                     'registration_number' => $regNumber,
-                    'tax_code'            => $taxCode,
-                    'okpo_code'           => $okpoCode,
-                    'legal_address'       => $legalAddr,
-                    'actual_address'      => $actualAddr,
-                    'phone'               => $phone,
-                    'email'               => $email,
+                    'tax_code' => $taxCode,
+                    'okpo_code' => $okpoCode,
+                    'legal_address' => $legalAddr,
+                    'actual_address' => $actualAddr,
+                    'phone' => $phone,
+                    'email' => $email,
                 ], fn ($value) => $value !== null)
             );
 
@@ -105,11 +109,11 @@ class HandleContractorCreated
 
             foreach ($bankAccounts as $account) {
                 $company->bankAccounts()->create([
-                    'bank_name'             => $account['bank_name'] ?? null,
-                    'bank_bik'              => $account['bank_bik'] ?? null,
+                    'bank_name' => $account['bank_name'] ?? null,
+                    'bank_bik' => $account['bank_bik'] ?? null,
                     'correspondent_account' => $account['correspondent_account'] ?? null,
-                    'account_number'        => $account['account_number'] ?? '',
-                    'is_primary'            => $account['is_primary'] ?? false,
+                    'account_number' => $account['account_number'] ?? '',
+                    'is_primary' => $account['is_primary'] ?? false,
                 ]);
             }
         }
@@ -117,11 +121,11 @@ class HandleContractorCreated
         $action = $company->wasRecentlyCreated ? 'создан' : 'обновлён';
 
         Log::info("contractor.created: контрагент {$action}", [
-            'company_id'     => $company->id,
-            'erp_id'         => $uuid,
-            'user_id'        => $user->id,
-            'partner_uuid'   => $partnerUuid,
-            'bank_accounts'  => is_array($bankAccounts) ? count($bankAccounts) : 0,
+            'company_id' => $company->id,
+            'erp_id' => $uuid,
+            'user_id' => $user->id,
+            'partner_uuid' => $partnerUuid,
+            'bank_accounts' => is_array($bankAccounts) ? count($bankAccounts) : 0,
         ]);
 
         NormalizeCompanyDataJob::dispatch($company->id);

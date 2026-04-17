@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\ClientStatus;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ClientStatusController extends AdminController
 {
@@ -130,7 +130,7 @@ class ClientStatusController extends AdminController
             'color' => ['nullable', 'string', 'max:7', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'description' => 'nullable|string',
             'amount_from' => 'nullable|numeric|min:0',
-            'external_id' => 'nullable|string|max:255|unique:client_statuses,external_id,' . $clientStatus->id,
+            'external_id' => 'nullable|string|max:255|unique:client_statuses,external_id,'.$clientStatus->id,
             'image' => 'nullable|image|max:20480',
         ], [
             'name.required' => 'Название обязательно для заполнения.',

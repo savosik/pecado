@@ -51,7 +51,7 @@ class RabbitMQStatus extends Command
         $this->info('');
         $this->info('═══════════════════════════════════════════════════');
         $this->info('   📡 Диагностика RabbitMQ / ERP');
-        $this->info('   ' . now()->format('d.m.Y H:i:s'));
+        $this->info('   '.now()->format('d.m.Y H:i:s'));
         $this->info('═══════════════════════════════════════════════════');
 
         // 1. Статус очередей
@@ -89,9 +89,11 @@ class RabbitMQStatus extends Command
             }
 
             $this->error("RabbitMQ Management API вернул статус: {$response->status()}");
+
             return [];
         } catch (\Exception $e) {
             $this->error("Не удалось подключиться к RabbitMQ Management API: {$e->getMessage()}");
+
             return [];
         }
     }
@@ -109,6 +111,7 @@ class RabbitMQStatus extends Command
 
         if (empty($queues)) {
             $this->warn('  Не удалось получить данные из RabbitMQ.');
+
             return;
         }
 
@@ -129,7 +132,7 @@ class RabbitMQStatus extends Command
                 $unacked = $q['messages_unacknowledged'] ?? 0;
                 $total = $ready + $unacked;
 
-                if (!$q) {
+                if (! $q) {
                     $status = '⚠️  Не найдена';
                 } elseif (str_starts_with($name, 'erp_dlq.') && $total > 0) {
                     $status = "🔴 {$total} мёртвых";
@@ -162,6 +165,7 @@ class RabbitMQStatus extends Command
         if ($messages->isEmpty()) {
             $this->warn('  Нет обработанных сообщений в таблице erp_processed_messages.');
             $this->warn('  → Это может означать, что 1С не посылала сообщений!');
+
             return;
         }
 
@@ -208,6 +212,7 @@ class RabbitMQStatus extends Command
 
         if ($failed->isEmpty()) {
             $this->line('  <fg=green>Ошибок нет! 🎉</>');
+
             return;
         }
 

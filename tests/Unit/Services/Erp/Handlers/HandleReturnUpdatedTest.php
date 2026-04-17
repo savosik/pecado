@@ -18,21 +18,21 @@ class HandleReturnUpdatedTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->handler = new HandleReturnUpdated();
+        $this->handler = new HandleReturnUpdated;
     }
 
     #[Test]
     public function it_updates_status(): void
     {
         $return = ProductReturn::factory()->create([
-            'uuid'   => 'ret-uuid-001',
+            'uuid' => 'ret-uuid-001',
             'status' => 'pending',
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'ret-uuid-001',
+            'uuid' => 'ret-uuid-001',
             'status' => 'approved',
         ]);
 
@@ -65,14 +65,14 @@ class HandleReturnUpdatedTest extends TestCase
     public function it_saves_erp_number_from_payload(): void
     {
         $return = ProductReturn::factory()->create([
-            'uuid'       => 'ret-uuid-erp-num',
+            'uuid' => 'ret-uuid-erp-num',
             'erp_number' => null,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'ret-uuid-erp-num',
+            'uuid' => 'ret-uuid-erp-num',
             'number' => 'ВЗВ-000456',
         ]);
 
@@ -83,15 +83,15 @@ class HandleReturnUpdatedTest extends TestCase
     public function it_saves_erp_number_and_status_together(): void
     {
         $return = ProductReturn::factory()->create([
-            'uuid'       => 'ret-uuid-combo',
-            'status'     => 'pending',
+            'uuid' => 'ret-uuid-combo',
+            'status' => 'pending',
             'erp_number' => null,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'ret-uuid-combo',
+            'uuid' => 'ret-uuid-combo',
             'number' => 'ВЗВ-000789',
             'status' => 'approved',
         ]);

@@ -379,6 +379,7 @@ class ProductExportService
                     if (str_starts_with($key, 'attribute.') && $value === null) {
                         return false;
                     }
+
                     return true;
                 }, ARRAY_FILTER_USE_BOTH);
             });

@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Brand;
 use App\Models\Category;
-use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -42,18 +41,17 @@ class ProductControllerTest extends TestCase
         $response = $this->get('/brands/testbrand');
 
         $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) =>
-            $page->component('User/Products/Index')
-                ->has('seo')
-                ->has('initialFilters')
-                ->where('initialFilters.brand_ids', [$brand->id])
-                ->has('brand')
-                ->where('brand.id', $brand->id)
-                ->where('brand.name', 'TestBrand')
-                ->where('brand.slug', 'testbrand')
-                ->has('breadcrumbs')
-                ->where('seo.canonical', route('products.brand', $brand))
-                ->where('seo.url', route('products.brand', $brand))
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->has('seo')
+            ->has('initialFilters')
+            ->where('initialFilters.brand_ids', [$brand->id])
+            ->has('brand')
+            ->where('brand.id', $brand->id)
+            ->where('brand.name', 'TestBrand')
+            ->where('brand.slug', 'testbrand')
+            ->has('breadcrumbs')
+            ->where('seo.canonical', route('products.brand', $brand))
+            ->where('seo.url', route('products.brand', $brand))
         );
     }
 
@@ -70,28 +68,27 @@ class ProductControllerTest extends TestCase
     {
         $parent = Category::factory()->create(['name' => 'Родительская', 'slug' => 'parent']);
         $child = Category::factory()->create([
-            'name'      => 'Дочерняя',
-            'slug'      => 'child',
+            'name' => 'Дочерняя',
+            'slug' => 'child',
             'parent_id' => $parent->id,
         ]);
 
         $response = $this->get('/categories/child');
 
         $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) =>
-            $page->component('User/Products/Index')
-                ->has('seo')
-                ->where('initialFilters.category_id', $child->id)
-                ->has('category')
-                ->where('category.id', $child->id)
-                ->where('category.name', 'Дочерняя')
-                ->has('breadcrumbs', 3) // Каталог → Родительская → Дочерняя
-                ->where('breadcrumbs.0.label', 'Каталог')
-                ->where('breadcrumbs.1.label', 'Родительская')
-                ->where('breadcrumbs.2.label', 'Дочерняя')
-                ->where('breadcrumbs.2.url', null)
-                ->where('seo.canonical', route('products.category', $child))
-                ->where('seo.url', route('products.category', $child))
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->has('seo')
+            ->where('initialFilters.category_id', $child->id)
+            ->has('category')
+            ->where('category.id', $child->id)
+            ->where('category.name', 'Дочерняя')
+            ->has('breadcrumbs', 3) // Каталог → Родительская → Дочерняя
+            ->where('breadcrumbs.0.label', 'Каталог')
+            ->where('breadcrumbs.1.label', 'Родительская')
+            ->where('breadcrumbs.2.label', 'Дочерняя')
+            ->where('breadcrumbs.2.url', null)
+            ->where('seo.canonical', route('products.category', $child))
+            ->where('seo.url', route('products.category', $child))
         );
     }
 
@@ -114,16 +111,15 @@ class ProductControllerTest extends TestCase
         $response = $this->get('/collections/test-selection');
 
         $response->assertOk();
-        $response->assertInertia(fn (AssertableInertia $page) =>
-            $page->component('User/Products/Index')
-                ->has('seo')
-                ->where('initialFilters.collection_ids', [$selection->id])
-                ->has('selection')
-                ->where('selection.id', $selection->id)
-                ->where('selection.name', 'Тест подборка')
-                ->has('breadcrumbs')
-                ->where('seo.canonical', route('products.selection', $selection))
-                ->where('seo.url', route('products.selection', $selection))
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->has('seo')
+            ->where('initialFilters.collection_ids', [$selection->id])
+            ->has('selection')
+            ->where('selection.id', $selection->id)
+            ->where('selection.name', 'Тест подборка')
+            ->has('breadcrumbs')
+            ->where('seo.canonical', route('products.selection', $selection))
+            ->where('seo.url', route('products.selection', $selection))
         );
     }
 

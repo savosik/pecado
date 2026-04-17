@@ -11,15 +11,37 @@ class UserStockAvailableField extends ExportField
 {
     public function __construct(protected StockServiceInterface $stockService) {}
 
-    public function key(): string { return 'user_stock_available'; }
-    public function name(): string { return 'Остаток (основной, по региону клиента)'; }
-    public function description(): string { return 'Доступный остаток товара для клиента по региону'; }
-    public function group(): string { return 'Пользовательские (по клиенту)'; }
-    public function isFilterable(): bool { return false; }
+    public function key(): string
+    {
+        return 'user_stock_available';
+    }
+
+    public function name(): string
+    {
+        return 'Остаток (основной, по региону клиента)';
+    }
+
+    public function description(): string
+    {
+        return 'Доступный остаток товара для клиента по региону';
+    }
+
+    public function group(): string
+    {
+        return 'Пользовательские (по клиенту)';
+    }
+
+    public function isFilterable(): bool
+    {
+        return false;
+    }
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        if (!$clientUser) return 0;
+        if (! $clientUser) {
+            return 0;
+        }
+
         return $this->stockService->getAvailableStock($product, $clientUser);
     }
 }

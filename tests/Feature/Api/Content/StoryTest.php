@@ -6,8 +6,6 @@ use App\Models\Story;
 use App\Models\StorySlide;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class StoryTest extends TestCase
@@ -15,6 +13,7 @@ class StoryTest extends TestCase
     use RefreshDatabase;
 
     protected User $user;
+
     protected string $token;
 
     protected function setUp(): void

@@ -67,6 +67,7 @@ class CurrencyService
             if (isset($product['sale_price'])) {
                 $product['sale_price'] = $this->convertFromBase((float) $product['sale_price'], $currency);
             }
+
             return $product;
         }, $products);
     }

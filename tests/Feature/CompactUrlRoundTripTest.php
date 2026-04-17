@@ -24,9 +24,9 @@ class CompactUrlRoundTripTest extends TestCase
         Product::factory()->count(2)->create(); // другой бренд
 
         // Compact: b[]
-        $compactResponse = $this->getJson('/api/catalog/products?b[]=' . $brand->id);
+        $compactResponse = $this->getJson('/api/catalog/products?b[]='.$brand->id);
         // Full: brand_ids[]
-        $fullResponse = $this->getJson('/api/catalog/products?brand_ids[]=' . $brand->id);
+        $fullResponse = $this->getJson('/api/catalog/products?brand_ids[]='.$brand->id);
 
         $compactResponse->assertOk();
         $fullResponse->assertOk();
@@ -51,9 +51,9 @@ class CompactUrlRoundTripTest extends TestCase
         Product::factory()->count(1)->create();
 
         // Compact: c[]
-        $compactResponse = $this->getJson('/api/catalog/products?c[]=' . $cat->id . '&include_descendants=0');
+        $compactResponse = $this->getJson('/api/catalog/products?c[]='.$cat->id.'&include_descendants=0');
         // Full: category_ids[]
-        $fullResponse = $this->getJson('/api/catalog/products?category_ids[]=' . $cat->id . '&include_descendants=0');
+        $fullResponse = $this->getJson('/api/catalog/products?category_ids[]='.$cat->id.'&include_descendants=0');
 
         $compactResponse->assertOk();
         $fullResponse->assertOk();
@@ -145,9 +145,9 @@ class CompactUrlRoundTripTest extends TestCase
         Product::factory()->count(2)->create(); // без атрибута
 
         // Compact: fv[]
-        $compactResponse = $this->getJson('/api/catalog/products?fv[]=' . $val->id);
+        $compactResponse = $this->getJson('/api/catalog/products?fv[]='.$val->id);
         // Full: attribute_value_ids[]
-        $fullResponse = $this->getJson('/api/catalog/products?attribute_value_ids[]=' . $val->id);
+        $fullResponse = $this->getJson('/api/catalog/products?attribute_value_ids[]='.$val->id);
 
         $compactResponse->assertOk();
         $fullResponse->assertOk();
@@ -170,9 +170,9 @@ class CompactUrlRoundTripTest extends TestCase
         $selection->products()->attach([$p1->id, $p2->id]);
 
         // Compact: cl[]
-        $compactResponse = $this->getJson('/api/catalog/products?cl[]=' . $selection->id);
+        $compactResponse = $this->getJson('/api/catalog/products?cl[]='.$selection->id);
         // Full: collection_ids[]
-        $fullResponse = $this->getJson('/api/catalog/products?collection_ids[]=' . $selection->id);
+        $fullResponse = $this->getJson('/api/catalog/products?collection_ids[]='.$selection->id);
 
         $compactResponse->assertOk();
         $fullResponse->assertOk();
@@ -229,11 +229,11 @@ class CompactUrlRoundTripTest extends TestCase
 
         // Compact: b[] + c[] + price_min + s=price_desc + pp=10
         $response = $this->getJson(
-            '/api/catalog/products?b[]=' . $brand->id .
-            '&c[]=' . $cat->id .
-            '&include_descendants=0' .
-            '&price_min=200' .
-            '&s=price_desc' .
+            '/api/catalog/products?b[]='.$brand->id.
+            '&c[]='.$cat->id.
+            '&include_descendants=0'.
+            '&price_min=200'.
+            '&s=price_desc'.
             '&pp=10'
         );
 

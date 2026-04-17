@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null'); // Кто изменил
             $table->text('comment')->nullable(); // Опциональный комментарий
             $table->timestamps();
-            
+
             $table->index(['order_id', 'created_at']);
         });
     }

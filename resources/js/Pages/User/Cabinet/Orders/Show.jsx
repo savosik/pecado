@@ -57,7 +57,7 @@ export default function OrderShow({ order }) {
 
     return (
         <CabinetLayout
-            title={`Заказ #${order.id}`}
+            title={`Заказ ${order.number}`}
             actions={
                 <Button asChild variant="outline" size="sm">
                     <Link href="/cabinet/orders">
@@ -67,7 +67,7 @@ export default function OrderShow({ order }) {
                 </Button>
             }
         >
-            <Head title={`Заказ #${order.id} — Pecado`} />
+            <Head title={`Заказ ${order.number} — Pecado`} />
 
             <Stack gap="5">
                 {/* ═══ Тип заказа + статус ═══ */}
@@ -93,7 +93,7 @@ export default function OrderShow({ order }) {
                         {STATUS_LABELS[order.status] ?? order.status}
                     </Badge>
                     <Text fontSize="sm" color="fg.muted">
-                        UUID: {order.uuid?.substring(0, 8)}...
+                        Заказ {order.number} от {createdAt.split(',')[0]}
                     </Text>
                 </Flex>
 

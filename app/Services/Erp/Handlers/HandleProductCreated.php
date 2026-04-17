@@ -22,13 +22,14 @@ class HandleProductCreated
 {
     public function handle(array $payload): void
     {
-        $uuid         = $payload['uuid']          ?? null;
-        $name         = $payload['name']          ?? null;
+        $uuid = $payload['uuid'] ?? null;
+        $name = $payload['name'] ?? null;
 
-        if (!$uuid || !$name) {
+        if (! $uuid || ! $name) {
             Log::warning('product.created: отсутствуют обязательные поля uuid или name', [
                 'payload' => $payload,
             ]);
+
             return;
         }
 
@@ -54,17 +55,17 @@ class HandleProductCreated
 
     protected function processPayload(array $payload): void
     {
-        $uuid         = $payload['uuid']          ?? null;
-        $name         = $payload['name']          ?? null;
-        $code         = $payload['code']          ?? null;
-        $sku          = $payload['sku']           ?? null;
+        $uuid = $payload['uuid'] ?? null;
+        $name = $payload['name'] ?? null;
+        $code = $payload['code'] ?? null;
+        $sku = $payload['sku'] ?? null;
         $categoryUuid = $payload['category_uuid'] ?? null;
-        $brandData    = $payload['brand']         ?? null;
-        $description  = $payload['description']   ?? null;
-        $barcodes     = $payload['barcodes']      ?? [];
-        $modelData    = $payload['model']         ?? null;
-        $attributes   = $payload['attributes']    ?? [];
-        $hidden       = (bool) ($payload['hidden'] ?? false);
+        $brandData = $payload['brand'] ?? null;
+        $description = $payload['description'] ?? null;
+        $barcodes = $payload['barcodes'] ?? [];
+        $modelData = $payload['model'] ?? null;
+        $attributes = $payload['attributes'] ?? [];
+        $hidden = (bool) ($payload['hidden'] ?? false);
 
         $category = null;
 
@@ -82,7 +83,7 @@ class HandleProductCreated
                     $categoryId = $category->id;
                 } else {
                     Log::warning('product.created: категория не найдена', [
-                        'product_uuid'  => $uuid,
+                        'product_uuid' => $uuid,
                         'category_uuid' => $categoryUuid,
                     ]);
                 }
@@ -96,45 +97,45 @@ class HandleProductCreated
 
             // --- Модель товара ---
             $modelId = null;
-            if (!empty($modelData)) {
+            if (! empty($modelData)) {
                 $modelId = $this->resolveModelId($modelData);
             }
 
             // --- Upsert товара ---
             // Сохраняем существующую base_price — она управляется через price.updated (US-02)
-            $existing   = Product::where('external_id', $uuid)->first();
-            $basePrice  = $existing?->base_price ?? 0;
+            $existing = Product::where('external_id', $uuid)->first();
+            $basePrice = $existing?->base_price ?? 0;
 
             $product = Product::updateOrCreate(
                 ['external_id' => $uuid],
                 [
-                    'name'        => $name,
-                    'code'        => $code,
-                    'sku'         => $sku,
+                    'name' => $name,
+                    'code' => $code,
+                    'sku' => $sku,
                     'description' => $description,
                     'category_id' => $categoryId,
-                    'brand_id'    => $brandId,
-                    'model_id'    => $modelId,
-                    'hidden'      => $hidden,
+                    'brand_id' => $brandId,
+                    'model_id' => $modelId,
+                    'hidden' => $hidden,
                     // Цена не перезаписывается здесь — она управляется через price.updated (US-02)
-                    'base_price'  => $basePrice,
+                    'base_price' => $basePrice,
                 ]
             );
 
             // --- Штрих-коды ---
             // Upsert: вставляем новые, удаляем отсутствующие — избегаем deadlock при параллельных воркерах
-            if (!empty($barcodes)) {
+            if (! empty($barcodes)) {
                 $barcodeValues = collect($barcodes)
-                    ->map(fn($v) => trim((string) $v))
-                    ->filter(fn($v) => $v !== '')
+                    ->map(fn ($v) => trim((string) $v))
+                    ->filter(fn ($v) => $v !== '')
                     ->values();
 
                 if ($barcodeValues->isNotEmpty()) {
                     // Upsert всех штрихкодов (insert or ignore)
                     $now = now();
-                    $rows = $barcodeValues->map(fn($b) => [
+                    $rows = $barcodeValues->map(fn ($b) => [
                         'product_id' => $product->id,
-                        'barcode'    => $b,
+                        'barcode' => $b,
                         'created_at' => $now,
                         'updated_at' => $now,
                     ])->toArray();
@@ -145,35 +146,34 @@ class HandleProductCreated
                 }
             }
 
-
             // --- Атрибуты (v4: мерж, не полная замена) ---
             // Формат: [{ property_uuid, property_label, value_type, value_uuid, value_label }]
             $processedAttributeIds = [];
 
-            if (!empty($attributes) && is_array($attributes)) {
+            if (! empty($attributes) && is_array($attributes)) {
 
                 foreach ($attributes as $attrData) {
-                    if (!is_array($attrData)) {
+                    if (! is_array($attrData)) {
                         continue;
                     }
 
-                    $propertyUuid  = $attrData['property_uuid']  ?? null;
+                    $propertyUuid = $attrData['property_uuid'] ?? null;
                     $propertyLabel = $attrData['property_label'] ?? null;
-                    $valueType     = $attrData['value_type']     ?? 'string';
-                    $valueUuid     = $attrData['value_uuid']     ?? null;
-                    $valueLabel    = $attrData['value_label']    ?? null;
+                    $valueType = $attrData['value_type'] ?? 'string';
+                    $valueUuid = $attrData['value_uuid'] ?? null;
+                    $valueLabel = $attrData['value_label'] ?? null;
 
-                    if (!$propertyUuid || !$propertyLabel) {
+                    if (! $propertyUuid || ! $propertyLabel) {
                         continue;
                     }
 
                     // Маппинг value_type из 1С в тип атрибута на сайте
                     $siteType = match ($valueType) {
-                        'number'    => 'number',
-                        'boolean'   => 'boolean',
+                        'number' => 'number',
+                        'boolean' => 'boolean',
                         'reference' => 'select',
                         'date-time' => 'date-time',
-                        default     => 'string',
+                        default => 'string',
                     };
 
                     // Найти или создать атрибут по external_id (property_uuid)
@@ -181,8 +181,8 @@ class HandleProductCreated
                     // перезаписываем external_id на значение из 1С.
                     $attribute = \App\Models\Attribute::where('external_id', $propertyUuid)->first();
 
-                    if (!$attribute) {
-                        $baseSlug = Str::slug($propertyLabel) ?: 'attr-' . Str::slug($propertyUuid);
+                    if (! $attribute) {
+                        $baseSlug = Str::slug($propertyLabel) ?: 'attr-'.Str::slug($propertyUuid);
 
                         // Ищем по slug — возможно сущность пришла из sex-opt.ru с другим external_id
                         $attribute = \App\Models\Attribute::where('slug', $baseSlug)->first();
@@ -191,15 +191,15 @@ class HandleProductCreated
                             // Перезаписываем external_id на значение из 1С (1С — мастер)
                             $attribute->update([
                                 'external_id' => $propertyUuid,
-                                'name'        => $propertyLabel,
-                                'type'        => $siteType,
+                                'name' => $propertyLabel,
+                                'type' => $siteType,
                             ]);
                         } else {
                             $attribute = \App\Models\Attribute::create([
                                 'external_id' => $propertyUuid,
-                                'name'        => $propertyLabel,
-                                'slug'        => $baseSlug,
-                                'type'        => $siteType,
+                                'name' => $propertyLabel,
+                                'slug' => $baseSlug,
+                                'type' => $siteType,
                             ]);
                         }
                     } else {
@@ -232,7 +232,7 @@ class HandleProductCreated
                             } else {
                                 $attrValue->update([
                                     'attribute_id' => $attribute->id,
-                                    'value'        => $valueStr,
+                                    'value' => $valueStr,
                                 ]);
                             }
                         } else {
@@ -256,7 +256,7 @@ class HandleProductCreated
                     // Записываем значение атрибута для товара
                     $pivotData = [
                         'attribute_value_id' => $attributeValueId,
-                        'text_value'         => (string) ($valueLabel ?? ''),
+                        'text_value' => (string) ($valueLabel ?? ''),
                     ];
 
                     // Для числовых, булевых и date-time типов заполняем соответствующие поля
@@ -274,7 +274,7 @@ class HandleProductCreated
 
                     \App\Models\ProductAttributeValue::updateOrCreate(
                         [
-                            'product_id'   => $product->id,
+                            'product_id' => $product->id,
                             'attribute_id' => $attribute->id,
                         ],
                         $pivotData
@@ -283,7 +283,7 @@ class HandleProductCreated
             }
 
             // --- Привязка атрибутов к категории товара ---
-            if ($categoryId && !empty($processedAttributeIds)) {
+            if ($categoryId && ! empty($processedAttributeIds)) {
                 $category = $category ?? Category::find($categoryId);
                 if ($category) {
                     $category->attributes()->syncWithoutDetaching($processedAttributeIds);
@@ -291,13 +291,13 @@ class HandleProductCreated
             }
 
             Log::info('product.created: товар создан/обновлён', [
-                'uuid'        => $uuid,
-                'name'        => $name,
+                'uuid' => $uuid,
+                'name' => $name,
                 'category_id' => $categoryId,
-                'brand_id'    => $brandId,
-                'model_id'    => $modelId,
-                'barcodes'    => count($barcodes),
-                'attributes'  => count($attributes),
+                'brand_id' => $brandId,
+                'model_id' => $modelId,
+                'barcodes' => count($barcodes),
+                'attributes' => count($attributes),
             ]);
         });
     }
@@ -322,11 +322,11 @@ class HandleProductCreated
             $uuid = $brandData['uuid'] ?? null;
             $name = $brandData['name'] ?? null;
 
-            if (!$uuid || !$name) {
+            if (! $uuid || ! $name) {
                 return null;
             }
 
-            $slug = Str::slug($name) ?: 'brand-' . Str::slug($uuid);
+            $slug = Str::slug($name) ?: 'brand-'.Str::slug($uuid);
 
             // 1С — мастер. При конфликте slug перезаписываем external_id.
             $brand = Brand::where('external_id', $uuid)->first();
@@ -347,12 +347,12 @@ class HandleProductCreated
         // v3: строка (обратная совместимость)
         if (is_string($brandData) && $brandData !== '') {
             $brand = Brand::where('name', $brandData)->first();
-            if (!$brand) {
-                $baseSlug = Str::slug($brandData) ?: 'brand-' . Str::uuid();
+            if (! $brand) {
+                $baseSlug = Str::slug($brandData) ?: 'brand-'.Str::uuid();
                 $slug = $baseSlug;
                 $counter = 1;
                 while (Brand::where('slug', $slug)->exists()) {
-                    $slug = $baseSlug . '-' . $counter++;
+                    $slug = $baseSlug.'-'.$counter++;
                 }
                 $brand = Brand::create(['name' => $brandData, 'slug' => $slug]);
             }
@@ -374,7 +374,7 @@ class HandleProductCreated
         $name = $modelData['name'] ?? null;
         $code = $modelData['code'] ?? null;
 
-        if (!$uuid && !$name) {
+        if (! $uuid && ! $name) {
             return null;
         }
 
@@ -399,7 +399,7 @@ class HandleProductCreated
             if ($productModel) {
                 $productModel->update(array_filter([
                     'external_id' => $uuid,
-                    'code'        => $code,
+                    'code' => $code,
                 ]));
 
                 return $productModel->id;

@@ -76,10 +76,10 @@ const ReturnShow = () => {
 
     return (
         <>
-            <Head title={`Возврат #${returnData.id}`} />
+            <Head title={`Возврат ${returnData.number || ("#" + returnData.id)}`} />
 
             <PageHeader
-                title={`Возврат #${returnData.id}`}
+                title={`Возврат ${returnData.number || ("#" + returnData.id)}`}
                 actions={
                     <HStack>
                         <Button
@@ -106,6 +106,10 @@ const ReturnShow = () => {
                     </Card.Header>
                     <Card.Body>
                         <VStack align="stretch" gap={4}>
+                            <HStack justify="space-between">
+                                <Text color="fg.muted">Номер:</Text>
+                                <Text fontFamily="mono" fontSize="sm">{returnData.number || ("#" + returnData.id)}</Text>
+                            </HStack>
                             <HStack justify="space-between">
                                 <Text color="fg.muted">UUID:</Text>
                                 <Text fontFamily="mono" fontSize="sm">{returnData.uuid}</Text>
@@ -269,9 +273,14 @@ const ReturnShow = () => {
                                     </Table.Cell>
                                     <Table.Cell>
                                         {item.order ? (
-                                            <Text fontSize="sm" fontFamily="mono">
-                                                #{item.order.id}
-                                            </Text>
+                                            <VStack align="start" gap={0}>
+                                                <Text fontSize="sm" fontFamily="mono">
+                                                    {item.order.number || ("#" + item.order.id)}
+                                                </Text>
+                                                <Text fontSize="xs" color="gray.500" fontFamily="mono">
+                                                    {item.order.uuid?.substring(0, 8)}…
+                                                </Text>
+                                            </VStack>
                                         ) : "—"}
                                     </Table.Cell>
                                     <Table.Cell>

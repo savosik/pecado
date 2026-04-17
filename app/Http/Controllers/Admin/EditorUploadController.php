@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * Контроллер загрузки изображений для Editor.js.
@@ -29,7 +28,7 @@ class EditorUploadController extends Controller
         ]);
 
         $file = $request->file('image');
-        $path = $file->store('editor-images/' . date('Y/m'), 's3');
+        $path = $file->store('editor-images/'.date('Y/m'), 's3');
 
         return response()->json([
             'success' => 1,

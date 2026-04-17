@@ -4,12 +4,11 @@ namespace Tests\Feature\Erp;
 
 use App\Events\ReturnCreated;
 use App\Jobs\PublishReturnToErpJob;
+use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductReturn;
-use App\Models\ReturnItem;
 use App\Models\User;
-use App\Models\Company;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;

@@ -3,12 +3,11 @@
 namespace App\Services\ProductExport\Presets;
 
 use App\Models\ProductExport;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\Border;
-use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 
 /**
  * Полный каталог в формате Excel (XLSX).
@@ -24,17 +23,44 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
  */
 class ExcelCatalogPreset extends AbstractPreset
 {
-    public function key(): string { return 'excel'; }
-    public function name(): string { return 'Полный каталог (Excel)'; }
-    public function description(): string { return 'XLSX-файл с полным каталогом товаров на двух листах: товары с атрибутами и дерево категорий. Удобен для работы в Excel, Google Sheets, LibreOffice.'; }
-    public function fileExtension(): string { return 'xlsx'; }
-    public function mimeType(): string { return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; }
-    public function color(): string { return 'green'; }
-    public function icon(): string { return 'LuFileSpreadsheet'; }
+    public function key(): string
+    {
+        return 'excel';
+    }
+
+    public function name(): string
+    {
+        return 'Полный каталог (Excel)';
+    }
+
+    public function description(): string
+    {
+        return 'XLSX-файл с полным каталогом товаров на двух листах: товары с атрибутами и дерево категорий. Удобен для работы в Excel, Google Sheets, LibreOffice.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'xlsx';
+    }
+
+    public function mimeType(): string
+    {
+        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    }
+
+    public function color(): string
+    {
+        return 'green';
+    }
+
+    public function icon(): string
+    {
+        return 'LuFileSpreadsheet';
+    }
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $spreadsheet->getProperties()->setTitle('Каталог товаров');
 
         // ── Лист 1: Товары ──
@@ -104,7 +130,7 @@ class ExcelCatalogPreset extends AbstractPreset
                     $name = $attr['name'];
 
                     // Регистрируем новый атрибут если впервые встречаем
-                    if (!isset($attrNameIndex[$name])) {
+                    if (! isset($attrNameIndex[$name])) {
                         $offset = count($attrNameIndex);
                         $attrNameIndex[$name] = $offset;
                         // Записываем заголовок атрибута
@@ -113,7 +139,7 @@ class ExcelCatalogPreset extends AbstractPreset
 
                     $val = $attr['value'];
                     if ($attr['unit']) {
-                        $val .= ' ' . $attr['unit'];
+                        $val .= ' '.$attr['unit'];
                     }
 
                     $attrCol = $fixedCount + $attrNameIndex[$name] + 1;
@@ -126,7 +152,7 @@ class ExcelCatalogPreset extends AbstractPreset
 
         // Стилизуем заголовки (после записи данных — чтобы знать все колонки)
         $totalCols = $fixedCount + count($attrNameIndex);
-        $headerRange = 'A1:' . $this->columnLetter($totalCols) . '1';
+        $headerRange = 'A1:'.$this->columnLetter($totalCols).'1';
         $sheet->getStyle($headerRange)->applyFromArray([
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF'], 'size' => 11],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '2B5797']],
@@ -188,9 +214,10 @@ class ExcelCatalogPreset extends AbstractPreset
         $letter = '';
         while ($num > 0) {
             $num--;
-            $letter = chr(65 + ($num % 26)) . $letter;
+            $letter = chr(65 + ($num % 26)).$letter;
             $num = intdiv($num, 26);
         }
+
         return $letter;
     }
 }

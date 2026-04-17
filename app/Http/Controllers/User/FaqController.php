@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Helpers\ContentHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Faq;
-use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;

@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Http\Controllers\Controller;
-use App\Models\Promotion;
-use App\Models\Product;
 use App\Helpers\ContentHelper;
+use App\Http\Controllers\Controller;
+use App\Models\Product;
+use App\Models\Promotion;
 use App\Services\Product\ProductQueryService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -65,7 +64,7 @@ class PromotionController extends Controller
         $productIds = $promotion->products()->pluck('products.id')->toArray();
         $productItems = [];
 
-        if (!empty($productIds)) {
+        if (! empty($productIds)) {
             $query = Product::query()
                 ->whereIn('products.id', $productIds)
                 ->select('products.*')
@@ -122,4 +121,3 @@ class PromotionController extends Controller
         ]);
     }
 }
-

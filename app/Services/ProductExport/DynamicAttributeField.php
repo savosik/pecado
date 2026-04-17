@@ -49,6 +49,7 @@ class DynamicAttributeField extends ExportField
         if ($this->attribute->unit) {
             $label .= " ({$this->attribute->unit})";
         }
+
         return $label;
     }
 
@@ -164,7 +165,7 @@ class DynamicAttributeField extends ExportField
     {
         $attrValue = $product->attributeValues->firstWhere('attribute_id', $this->attribute->id);
 
-        if (!$attrValue) {
+        if (! $attrValue) {
             return null;
         }
 

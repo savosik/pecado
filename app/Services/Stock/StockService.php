@@ -28,7 +28,7 @@ class StockService implements StockServiceInterface
      */
     public function getAvailableStock(Product $product, ?User $user = null): int
     {
-        if (!$user || !$user->region) {
+        if (! $user || ! $user->region) {
             return 0;
         }
 
@@ -49,7 +49,7 @@ class StockService implements StockServiceInterface
      */
     public function getPreorderStock(Product $product, ?User $user = null): int
     {
-        if (!$user || !$user->region) {
+        if (! $user || ! $user->region) {
             return 0;
         }
 

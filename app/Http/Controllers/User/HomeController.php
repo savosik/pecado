@@ -14,7 +14,7 @@ class HomeController extends Controller
     public function index()
     {
         $regionId = Auth::user()?->region_id;
-        $selections  = ProductSelectionController::getCachedSelections($regionId);
+        $selections = ProductSelectionController::getCachedSelections($regionId);
 
         // Новинки и бестселлеры — запрос с фильтрацией по остаткам региона пользователя
         $wh = ProductQueryService::getRegionWarehouseIds();
@@ -24,31 +24,31 @@ class HomeController extends Controller
         $bestsellers = $this->getProductsWithStock('is_bestseller', $allWarehouseIds, 10);
 
         // Обогащаем остатками (для отображения stock_quantity/preorder_quantity на карточках)
-        $selections  = ProductQueryService::enrichSelectionsWithStock($selections);
+        $selections = ProductQueryService::enrichSelectionsWithStock($selections);
         $newProducts = ProductQueryService::enrichProductsWithStock($newProducts);
         $bestsellers = ProductQueryService::enrichProductsWithStock($bestsellers);
 
         // Обогащаем скидками
-        $selections  = ProductQueryService::enrichSelectionsWithDiscounts($selections);
+        $selections = ProductQueryService::enrichSelectionsWithDiscounts($selections);
         $newProducts = ProductQueryService::enrichProductsWithDiscounts($newProducts);
         $bestsellers = ProductQueryService::enrichProductsWithDiscounts($bestsellers);
 
         // Конвертируем валюту
-        $selections  = ProductQueryService::convertSelectionsPrices($selections);
+        $selections = ProductQueryService::convertSelectionsPrices($selections);
         $newProducts = ProductQueryService::convertProductsPrices($newProducts);
         $bestsellers = ProductQueryService::convertProductsPrices($bestsellers);
 
         return Inertia::render('User/Home', [
-            'banners'            => BannerController::getCachedBanners($regionId),
-            'stories'            => StoryController::getCachedStories($regionId),
-            'productSelections'  => $selections,
-            'newProducts'        => $newProducts,
+            'banners' => BannerController::getCachedBanners($regionId),
+            'stories' => StoryController::getCachedStories($regionId),
+            'productSelections' => $selections,
+            'newProducts' => $newProducts,
             'bestsellerProducts' => $bestsellers,
-            'seo'                => [
-                'title'       => 'Pecado — Интернет-магазин для взрослых',
+            'seo' => [
+                'title' => 'Pecado — Интернет-магазин для взрослых',
                 'description' => 'Pecado — широкий ассортимент товаров для взрослых. Доставка по всей России.',
-                'url'         => url('/'),
-                'type'        => 'website',
+                'url' => url('/'),
+                'type' => 'website',
             ],
         ]);
     }
@@ -57,10 +57,8 @@ class HomeController extends Controller
      * Загрузить товары с флагом ($flag = is_new / is_bestseller),
      * у которых есть остатки на складах региона пользователя.
      *
-     * @param  string  $flag           Название boolean-столбца (is_new, is_bestseller)
-     * @param  int[]   $warehouseIds   Все склады региона (primary + preorder)
-     * @param  int     $limit
-     * @return array
+     * @param  string  $flag  Название boolean-столбца (is_new, is_bestseller)
+     * @param  int[]  $warehouseIds  Все склады региона (primary + preorder)
      */
     private function getProductsWithStock(string $flag, array $warehouseIds, int $limit): array
     {
@@ -69,7 +67,7 @@ class HomeController extends Controller
             ->latest();
 
         // Если есть склады региона — оставляем только товары с остатками > 0
-        if (!empty($warehouseIds)) {
+        if (! empty($warehouseIds)) {
             $query->whereExists(function ($sub) use ($warehouseIds) {
                 $sub->select(DB::raw(1))
                     ->from('product_warehouse')

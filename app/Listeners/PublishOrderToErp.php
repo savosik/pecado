@@ -11,7 +11,7 @@ class PublishOrderToErp
      */
     public function handle(object $event): void
     {
-        if (!isset($event->order)) {
+        if (! isset($event->order)) {
             return;
         }
 
@@ -76,11 +76,11 @@ class PublishOrderToErp
         // Позиции заказа (v7: base_price, discount_percent, final_price)
         $payload['items'] = $order->items->map(function ($item) {
             return [
-                'product_uuid'     => $item->product?->external_id,
-                'quantity'         => $item->quantity,
-                'base_price'       => (float) ($item->base_price ?? $item->price),
+                'product_uuid' => $item->product?->external_id,
+                'quantity' => $item->quantity,
+                'base_price' => (float) ($item->base_price ?? $item->price),
                 'discount_percent' => (float) ($item->discount_percent ?? 0),
-                'final_price'      => (float) ($item->final_price ?? $item->price),
+                'final_price' => (float) ($item->final_price ?? $item->price),
             ];
         })->toArray();
 
@@ -100,7 +100,7 @@ class PublishOrderToErp
     {
         $region = $order->user?->region;
 
-        if (!$region) {
+        if (! $region) {
             return [];
         }
 
@@ -108,7 +108,7 @@ class PublishOrderToErp
 
         $warehouses = match ($type) {
             'preorder' => $region->preorderWarehouses()->get(),
-            default    => $region->primaryWarehouses()->get(),
+            default => $region->primaryWarehouses()->get(),
         };
 
         return $warehouses

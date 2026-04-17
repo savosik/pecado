@@ -16,13 +16,13 @@ class EnsureQuestionnaireCompleted
     {
         $user = Auth::user();
 
-        if (!$user || $user->roles->isNotEmpty()) {
+        if (! $user || $user->roles->isNotEmpty()) {
             return $next($request);
         }
 
         // Если у пользователя нет завершённой анкеты — редирект на onboarding
         $questionnaire = $user->questionnaire;
-        if (!$questionnaire || !$questionnaire->isCompleted()) {
+        if (! $questionnaire || ! $questionnaire->isCompleted()) {
             // Не редиректим если уже на onboarding, logout или API
             $path = $request->path();
             $excluded = ['onboarding', 'logout'];

@@ -18,7 +18,7 @@ class OrderFactory extends Factory
     {
         return [
             'uuid' => $this->faker->uuid(),
-            'number' => 'ORD-' . now()->format('Y') . '-' . str_pad($this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
+            'number' => 'ORD-'.now()->format('Y').'-'.str_pad($this->faker->unique()->numberBetween(1, 9999), 4, '0', STR_PAD_LEFT),
             'user_id' => \App\Models\User::factory(),
             'company_id' => \App\Models\Company::factory(),
             'delivery_address' => fake()->address(),

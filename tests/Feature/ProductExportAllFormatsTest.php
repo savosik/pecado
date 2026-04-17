@@ -31,6 +31,7 @@ class ProductExportAllFormatsTest extends TestCase
         // Создаём несколько товаров для тестирования форматов экспорта
         \App\Models\Product::factory()->count(3)->create();
     }
+
     /**
      * Все доступные поля для экспорта (статические + динамические атрибуты).
      */
@@ -174,6 +175,7 @@ class ProductExportAllFormatsTest extends TestCase
 
         ob_start();
         $response->sendContent();
+
         return ob_get_clean();
     }
 
@@ -204,7 +206,7 @@ class ProductExportAllFormatsTest extends TestCase
 
         // JSON-парсинг без ошибок
         $decoded = json_decode($content, true);
-        $this->assertNotNull($decoded, 'JSON decode failed: ' . json_last_error_msg());
+        $this->assertNotNull($decoded, 'JSON decode failed: '.json_last_error_msg());
         $this->assertIsArray($decoded);
 
         // Должен содержать записи (146 товаров в БД)
@@ -217,7 +219,7 @@ class ProductExportAllFormatsTest extends TestCase
         $this->assertArrayHasKey('sku', $firstRow);
         $this->assertArrayHasKey('brand.name', $firstRow);
 
-        echo "\n✅ JSON: " . count($decoded) . " строк, " . strlen($content) . " байт\n";
+        echo "\n✅ JSON: ".count($decoded).' строк, '.strlen($content)." байт\n";
     }
 
     // ─── CSV ───────────────────────────────────────
@@ -257,7 +259,7 @@ class ProductExportAllFormatsTest extends TestCase
         $this->assertStringNotContainsString('Fatal error', $content);
         $this->assertStringNotContainsString('could not be converted to string', $content);
 
-        echo "\n✅ CSV: " . (count($lines) - 1) . " строк данных, " . count($header) . " колонок, " . strlen($content) . " байт\n";
+        echo "\n✅ CSV: ".(count($lines) - 1).' строк данных, '.count($header).' колонок, '.strlen($content)." байт\n";
     }
 
     // ─── XML ───────────────────────────────────────
@@ -282,7 +284,7 @@ class ProductExportAllFormatsTest extends TestCase
         $errors = libxml_get_errors();
         libxml_clear_errors();
 
-        $this->assertNotFalse($xml, 'XML parse failed: ' . ($errors ? $errors[0]->message : 'unknown error'));
+        $this->assertNotFalse($xml, 'XML parse failed: '.($errors ? $errors[0]->message : 'unknown error'));
 
         // Корневой элемент — <products>
         $this->assertEquals('products', $xml->getName());
@@ -299,7 +301,7 @@ class ProductExportAllFormatsTest extends TestCase
         // Проверяем что нет ошибок в XML
         $this->assertStringNotContainsString('Fatal error', $content);
 
-        echo "\n✅ XML: " . count($products) . " продуктов, " . strlen($content) . " байт\n";
+        echo "\n✅ XML: ".count($products).' продуктов, '.strlen($content)." байт\n";
     }
 
     // ─── XLS (Excel) ──────────────────────────────
@@ -353,7 +355,7 @@ class ProductExportAllFormatsTest extends TestCase
         $zip->close();
         unlink($tmpFile);
 
-        echo "\n✅ XLSX: {$highestRow} строк, колонки A-{$highestColumn}, " . strlen($content) . " байт\n";
+        echo "\n✅ XLSX: {$highestRow} строк, колонки A-{$highestColumn}, ".strlen($content)." байт\n";
     }
 
     // ─── HTTP Download ─────────────────────────────
@@ -362,9 +364,9 @@ class ProductExportAllFormatsTest extends TestCase
     {
         $formats = [
             ExportFormat::JSON->value => ['format' => ExportFormat::JSON, 'contentType' => 'application/json'],
-            ExportFormat::CSV->value  => ['format' => ExportFormat::CSV,  'contentType' => 'text/csv'],
-            ExportFormat::XML->value  => ['format' => ExportFormat::XML,  'contentType' => 'application/xml'],
-            ExportFormat::XLS->value  => ['format' => ExportFormat::XLS,  'contentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
+            ExportFormat::CSV->value => ['format' => ExportFormat::CSV,  'contentType' => 'text/csv'],
+            ExportFormat::XML->value => ['format' => ExportFormat::XML,  'contentType' => 'application/xml'],
+            ExportFormat::XLS->value => ['format' => ExportFormat::XLS,  'contentType' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'],
         ];
 
         foreach ($formats as $formatValue => $config) {

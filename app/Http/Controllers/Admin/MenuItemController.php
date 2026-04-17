@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\MenuItem;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class MenuItemController extends Controller
 {
@@ -53,16 +53,16 @@ class MenuItemController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'title'          => 'required|string|max:255',
-            'url'            => 'required|string|max:500',
-            'icon'           => 'nullable|string|max:100',
-            'badge_text'     => 'nullable|string|max:50',
-            'badge_color'    => 'nullable|string|max:20',
-            'location'       => 'required|in:header,footer,both',
-            'footer_group'   => 'nullable|string|in:company,buyers',
-            'sort_order'     => 'nullable|integer|min:0',
-            'is_published'   => 'boolean',
-            'open_in_new_tab'=> 'boolean',
+            'title' => 'required|string|max:255',
+            'url' => 'required|string|max:500',
+            'icon' => 'nullable|string|max:100',
+            'badge_text' => 'nullable|string|max:50',
+            'badge_color' => 'nullable|string|max:20',
+            'location' => 'required|in:header,footer,both',
+            'footer_group' => 'nullable|string|in:company,buyers',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_published' => 'boolean',
+            'open_in_new_tab' => 'boolean',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;
@@ -86,16 +86,16 @@ class MenuItemController extends Controller
     public function update(Request $request, MenuItem $menuItem)
     {
         $validated = $request->validate([
-            'title'          => 'required|string|max:255',
-            'url'            => 'required|string|max:500',
-            'icon'           => 'nullable|string|max:100',
-            'badge_text'     => 'nullable|string|max:50',
-            'badge_color'    => 'nullable|string|max:20',
-            'location'       => 'required|in:header,footer,both',
-            'footer_group'   => 'nullable|string|in:company,buyers',
-            'sort_order'     => 'nullable|integer|min:0',
-            'is_published'   => 'boolean',
-            'open_in_new_tab'=> 'boolean',
+            'title' => 'required|string|max:255',
+            'url' => 'required|string|max:500',
+            'icon' => 'nullable|string|max:100',
+            'badge_text' => 'nullable|string|max:50',
+            'badge_color' => 'nullable|string|max:20',
+            'location' => 'required|in:header,footer,both',
+            'footer_group' => 'nullable|string|in:company,buyers',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_published' => 'boolean',
+            'open_in_new_tab' => 'boolean',
         ]);
 
         $validated['sort_order'] = $validated['sort_order'] ?? 0;

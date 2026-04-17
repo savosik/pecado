@@ -20,10 +20,11 @@ class HandleCategoryCreated
         $parentUuid = $payload['parent_uuid'] ?? null;
         $isActive = (bool) ($payload['is_active'] ?? true);
 
-        if (!$uuid || !$name) {
+        if (! $uuid || ! $name) {
             Log::warning('category.created: отсутствуют обязательные поля uuid или name', [
                 'payload' => $payload,
             ]);
+
             return;
         }
 
@@ -38,7 +39,7 @@ class HandleCategoryCreated
                 $parentId = $parent->id;
             } else {
                 Log::warning('category.created: родительская категория не найдена', [
-                    'uuid'        => $uuid,
+                    'uuid' => $uuid,
                     'parent_uuid' => $parentUuid,
                 ]);
             }
@@ -49,7 +50,7 @@ class HandleCategoryCreated
 
         // Генерируем уникальный slug (только при создании новой категории или если slug пуст)
         $slug = $existing?->slug;
-        if (!$slug) {
+        if (! $slug) {
             $slug = $this->generateUniqueSlug($name, $existing?->id);
         }
 
@@ -57,21 +58,21 @@ class HandleCategoryCreated
         $category = Category::updateOrCreate(
             ['uuid' => $uuid],
             [
-                'name'        => $name,
-                'slug'        => $slug,
+                'name' => $name,
+                'slug' => $slug,
                 'external_id' => $uuid,
-                'is_active'   => $isActive,
-                'parent_id'   => $parentId,
+                'is_active' => $isActive,
+                'parent_id' => $parentId,
             ]
         );
 
         Log::info('category.created: категория создана/обновлена', [
-            'uuid'      => $uuid,
-            'name'      => $name,
-            'slug'      => $slug,
+            'uuid' => $uuid,
+            'name' => $name,
+            'slug' => $slug,
             'is_active' => $isActive,
             'parent_id' => $parentId,
-            'id'        => $category->id,
+            'id' => $category->id,
         ]);
     }
 
@@ -81,7 +82,7 @@ class HandleCategoryCreated
      */
     private function generateUniqueSlug(string $name, ?int $excludeId = null): string
     {
-        $baseSlug = Str::slug($name) ?: 'category-' . Str::random(6);
+        $baseSlug = Str::slug($name) ?: 'category-'.Str::random(6);
         $slug = $baseSlug;
         $counter = 1;
 
@@ -90,11 +91,11 @@ class HandleCategoryCreated
             if ($excludeId) {
                 $query->where('id', '!=', $excludeId);
             }
-            if (!$query->exists()) {
+            if (! $query->exists()) {
                 break;
             }
             $counter++;
-            $slug = $baseSlug . '-' . $counter;
+            $slug = $baseSlug.'-'.$counter;
         }
 
         return $slug;

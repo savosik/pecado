@@ -1,8 +1,9 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
-import { Box, Text, Button, Badge, HStack } from '@chakra-ui/react';
-import { LuPlus } from 'react-icons/lu';
+import { Box, Text, Button, Badge, HStack, Icon } from '@chakra-ui/react';
+import { LuPlus, LuKeyRound } from 'react-icons/lu';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { usePermission } from '@/Admin/hooks/usePermission';
@@ -60,7 +61,19 @@ export default function Index({ users, filters, statuses, statusCounts, availabl
             sortable: false,
             render: (fullName, item) => (
                 <Box>
-                    <Text fontWeight="medium">{fullName}</Text>
+                    <HStack gap={1}>
+                        <Text fontWeight="medium">{fullName}</Text>
+                        {item.temporary_password && (
+                            <Tooltip
+                                content={`Временный пароль: ${item.temporary_password}`}
+                                showArrow
+                            >
+                                <Icon asChild color="orange.500" cursor="help">
+                                    <LuKeyRound />
+                                </Icon>
+                            </Tooltip>
+                        )}
+                    </HStack>
                     {item.email && <Text fontSize="xs" color="fg.muted">{item.email}</Text>}
                 </Box>
             ),

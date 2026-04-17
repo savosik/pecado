@@ -32,7 +32,7 @@ class ErpBusLogger
         ?string $errorMessage = null,
         ?string $routingKey = null,
     ): void {
-        if (!self::isEnabled()) {
+        if (! self::isEnabled()) {
             return;
         }
 
@@ -49,7 +49,7 @@ class ErpBusLogger
         ?string $errorMessage = null,
         ?string $routingKey = null,
     ): void {
-        if (!self::isEnabled()) {
+        if (! self::isEnabled()) {
             return;
         }
 
@@ -69,12 +69,12 @@ class ErpBusLogger
     ): void {
         try {
             ErpBusMessage::create([
-                'direction'     => $direction,
-                'routing_key'   => $routingKey,
-                'event'         => $event,
-                'message_id'    => $payload['message_id'] ?? null,
-                'payload'       => $payload,
-                'status'        => $status,
+                'direction' => $direction,
+                'routing_key' => $routingKey,
+                'event' => $event,
+                'message_id' => $payload['message_id'] ?? null,
+                'payload' => $payload,
+                'status' => $status,
                 'error_message' => $errorMessage,
             ]);
         } catch (\Throwable $e) {

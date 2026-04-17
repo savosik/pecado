@@ -4,7 +4,6 @@ namespace Tests\Unit\Services\Erp\Handlers;
 
 use App\Models\Company;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandleOrderCreated;
@@ -31,40 +30,40 @@ class HandleOrderCreatedTest extends TestCase
         $user = User::factory()->create(['erp_id' => 'erp-partner-001']);
         $company = Company::factory()->create([
             'user_id' => $user->id,
-            'tax_id'  => '7710140679',
+            'tax_id' => '7710140679',
         ]);
         $product = Product::factory()->create(['external_id' => 'prod-uuid-001']);
 
         $this->handler->handle([
-            'event'            => 'order.created',
-            'message_id'       => 'msg-test-001',
-            'uuid'             => 'order-from-manager-001',
-            'number'           => 'ORD-2026-0100',
-            'date'             => '2026-03-17T14:00:00+03:00',
-            'status'           => 'pending',
-            'type'             => 'order',
-            'partner_uuid'     => 'erp-partner-001',
-            'currency_code'    => 'RUB',
-            'exchange_rate'    => 1.0,
+            'event' => 'order.created',
+            'message_id' => 'msg-test-001',
+            'uuid' => 'order-from-manager-001',
+            'number' => 'ORD-2026-0100',
+            'date' => '2026-03-17T14:00:00+03:00',
+            'status' => 'pending',
+            'type' => 'order',
+            'partner_uuid' => 'erp-partner-001',
+            'currency_code' => 'RUB',
+            'exchange_rate' => 1.0,
             'rate_coefficient' => 1.0,
-            'contractor'       => [
+            'contractor' => [
                 'country' => 'RU',
-                'name'    => 'ООО Тест',
-                'tax_id'  => '7710140679',
+                'name' => 'ООО Тест',
+                'tax_id' => '7710140679',
             ],
             'items' => [
                 [
                     'product_uuid' => 'prod-uuid-001',
-                    'quantity'     => 3,
-                    'price'        => 1500.00,
+                    'quantity' => 3,
+                    'price' => 1500.00,
                 ],
             ],
         ]);
 
         $this->assertDatabaseHas('orders', [
-            'uuid'       => 'order-from-manager-001',
-            'number'     => 'ORD-2026-0100',
-            'user_id'    => $user->id,
+            'uuid' => 'order-from-manager-001',
+            'number' => 'ORD-2026-0100',
+            'user_id' => $user->id,
             'company_id' => $company->id,
         ]);
 
@@ -80,24 +79,24 @@ class HandleOrderCreatedTest extends TestCase
         $user = User::factory()->create(['erp_id' => 'erp-partner-002']);
 
         $this->handler->handle([
-            'event'        => 'order.created',
-            'message_id'   => 'msg-test-002',
-            'uuid'         => 'order-auto-company-001',
-            'status'       => 'pending',
-            'type'         => 'order',
+            'event' => 'order.created',
+            'message_id' => 'msg-test-002',
+            'uuid' => 'order-auto-company-001',
+            'status' => 'pending',
+            'type' => 'order',
             'partner_uuid' => 'erp-partner-002',
-            'contractor'   => [
+            'contractor' => [
                 'country' => 'RU',
-                'name'    => 'ООО Новая Компания',
-                'tax_id'  => '9999999999',
+                'name' => 'ООО Новая Компания',
+                'tax_id' => '9999999999',
             ],
             'items' => [],
         ]);
 
         // Контрагент должен быть создан
         $this->assertDatabaseHas('companies', [
-            'tax_id'  => '9999999999',
-            'name'    => 'ООО Новая Компания',
+            'tax_id' => '9999999999',
+            'name' => 'ООО Новая Компания',
             'user_id' => $user->id,
         ]);
 
@@ -106,7 +105,7 @@ class HandleOrderCreatedTest extends TestCase
             ->first();
 
         $this->assertDatabaseHas('orders', [
-            'uuid'       => 'order-auto-company-001',
+            'uuid' => 'order-auto-company-001',
             'company_id' => $company->id,
         ]);
     }
@@ -117,18 +116,18 @@ class HandleOrderCreatedTest extends TestCase
         $user = User::factory()->create(['erp_id' => 'erp-partner-003']);
 
         $this->handler->handle([
-            'event'        => 'order.created',
-            'message_id'   => 'msg-test-003',
-            'uuid'         => 'order-missing-product-001',
-            'status'       => 'pending',
-            'type'         => 'order',
+            'event' => 'order.created',
+            'message_id' => 'msg-test-003',
+            'uuid' => 'order-missing-product-001',
+            'status' => 'pending',
+            'type' => 'order',
             'partner_uuid' => 'erp-partner-003',
-            'items'        => [
+            'items' => [
                 [
                     'product_uuid' => 'nonexistent-product-uuid',
-                    'name'         => 'Товар которого нет',
-                    'quantity'     => 2,
-                    'price'        => 500.00,
+                    'name' => 'Товар которого нет',
+                    'quantity' => 2,
+                    'price' => 500.00,
                 ],
             ],
         ]);
@@ -147,17 +146,17 @@ class HandleOrderCreatedTest extends TestCase
     public function creates_order_when_partner_not_found(): void
     {
         $this->handler->handle([
-            'event'        => 'order.created',
-            'message_id'   => 'msg-test-004',
-            'uuid'         => 'order-no-partner-001',
-            'status'       => 'pending',
-            'type'         => 'order',
+            'event' => 'order.created',
+            'message_id' => 'msg-test-004',
+            'uuid' => 'order-no-partner-001',
+            'status' => 'pending',
+            'type' => 'order',
             'partner_uuid' => 'nonexistent-partner',
-            'items'        => [],
+            'items' => [],
         ]);
 
         $this->assertDatabaseHas('orders', [
-            'uuid'    => 'order-no-partner-001',
+            'uuid' => 'order-no-partner-001',
             'user_id' => null,
         ]);
     }
@@ -166,9 +165,9 @@ class HandleOrderCreatedTest extends TestCase
     public function skips_if_uuid_missing(): void
     {
         $this->handler->handle([
-            'event'      => 'order.created',
+            'event' => 'order.created',
             'message_id' => 'msg-test-005',
-            'status'     => 'pending',
+            'status' => 'pending',
         ]);
 
         $this->assertEquals(0, Order::count());
@@ -181,21 +180,21 @@ class HandleOrderCreatedTest extends TestCase
 
         Order::withoutEvents(function () use ($user) {
             Order::create([
-                'uuid'         => 'existing-order-001',
-                'number'       => 'ORD-OLD',
-                'user_id'      => $user->id,
-                'status'       => 'confirmed',
+                'uuid' => 'existing-order-001',
+                'number' => 'ORD-OLD',
+                'user_id' => $user->id,
+                'status' => 'confirmed',
                 'total_amount' => 1000,
             ]);
         });
 
         $this->handler->handle([
-            'event'      => 'order.created',
+            'event' => 'order.created',
             'message_id' => 'msg-test-006',
-            'uuid'       => 'existing-order-001',
-            'number'     => 'ORD-NEW',
-            'status'     => 'pending',
-            'items'      => [],
+            'uuid' => 'existing-order-001',
+            'number' => 'ORD-NEW',
+            'status' => 'pending',
+            'items' => [],
         ]);
 
         // Заказ один — дубля нет
@@ -214,20 +213,20 @@ class HandleOrderCreatedTest extends TestCase
         // После снятия unique с orders.number — это не должно падать
         Order::withoutEvents(function () {
             Order::create([
-                'uuid'         => 'order-uuid-first',
-                'number'       => 'ORD-SAME-NUMBER',
-                'status'       => 'pending',
+                'uuid' => 'order-uuid-first',
+                'number' => 'ORD-SAME-NUMBER',
+                'status' => 'pending',
                 'total_amount' => 0,
             ]);
         });
 
         $this->handler->handle([
-            'event'      => 'order.created',
+            'event' => 'order.created',
             'message_id' => 'msg-test-006b',
-            'uuid'       => 'order-uuid-second',
-            'number'     => 'ORD-SAME-NUMBER',
-            'status'     => 'pending',
-            'items'      => [],
+            'uuid' => 'order-uuid-second',
+            'number' => 'ORD-SAME-NUMBER',
+            'status' => 'pending',
+            'items' => [],
         ]);
 
         $this->assertEquals(2, Order::withoutGlobalScopes()->where('number', 'ORD-SAME-NUMBER')->count());
@@ -240,12 +239,12 @@ class HandleOrderCreatedTest extends TestCase
         Bus::fake();
 
         $this->handler->handle([
-            'event'        => 'order.created',
-            'message_id'   => 'msg-test-007',
-            'uuid'         => 'order-no-circular-001',
-            'status'       => 'pending',
-            'type'         => 'order',
-            'items'        => [],
+            'event' => 'order.created',
+            'message_id' => 'msg-test-007',
+            'uuid' => 'order-no-circular-001',
+            'status' => 'pending',
+            'type' => 'order',
+            'items' => [],
         ]);
 
         $this->assertDatabaseHas('orders', [
@@ -259,12 +258,12 @@ class HandleOrderCreatedTest extends TestCase
     public function creates_order_with_ready_to_ship_status(): void
     {
         $this->handler->handle([
-            'event'        => 'order.created',
-            'message_id'   => 'msg-test-008',
-            'uuid'         => 'order-erp-status-001',
-            'status'       => 'ready_to_ship',
-            'type'         => 'order',
-            'items'        => [],
+            'event' => 'order.created',
+            'message_id' => 'msg-test-008',
+            'uuid' => 'order-erp-status-001',
+            'status' => 'ready_to_ship',
+            'type' => 'order',
+            'items' => [],
         ]);
 
         $order = Order::where('uuid', 'order-erp-status-001')->first();
@@ -276,12 +275,12 @@ class HandleOrderCreatedTest extends TestCase
     public function creates_order_with_deleted_status(): void
     {
         $this->handler->handle([
-            'event'        => 'order.created',
-            'message_id'   => 'msg-test-009',
-            'uuid'         => 'order-erp-status-deleted-001',
-            'status'       => 'deleted',
-            'type'         => 'order',
-            'items'        => [],
+            'event' => 'order.created',
+            'message_id' => 'msg-test-009',
+            'uuid' => 'order-erp-status-deleted-001',
+            'status' => 'deleted',
+            'type' => 'order',
+            'items' => [],
         ]);
 
         $order = Order::where('uuid', 'order-erp-status-deleted-001')->first();
@@ -295,14 +294,14 @@ class HandleOrderCreatedTest extends TestCase
         $user = User::factory()->create(['erp_id' => 'erp-partner-addr-001']);
 
         $this->handler->handle([
-            'event'            => 'order.created',
-            'message_id'       => 'msg-test-addr-001',
-            'uuid'             => 'order-with-address-001',
-            'status'           => 'pending',
-            'type'             => 'order',
-            'partner_uuid'     => 'erp-partner-addr-001',
+            'event' => 'order.created',
+            'message_id' => 'msg-test-addr-001',
+            'uuid' => 'order-with-address-001',
+            'status' => 'pending',
+            'type' => 'order',
+            'partner_uuid' => 'erp-partner-addr-001',
             'delivery_address' => 'г. Москва, ул. Ленина, д. 1',
-            'items'            => [],
+            'items' => [],
         ]);
 
         $order = Order::where('uuid', 'order-with-address-001')->first();
@@ -316,13 +315,13 @@ class HandleOrderCreatedTest extends TestCase
         $user = User::factory()->create(['erp_id' => 'erp-partner-addr-002']);
 
         $this->handler->handle([
-            'event'            => 'order.created',
-            'message_id'       => 'msg-test-addr-002',
-            'uuid'             => 'order-no-address-001',
-            'status'           => 'pending',
-            'type'             => 'order',
-            'partner_uuid'     => 'erp-partner-addr-002',
-            'items'            => [],
+            'event' => 'order.created',
+            'message_id' => 'msg-test-addr-002',
+            'uuid' => 'order-no-address-001',
+            'status' => 'pending',
+            'type' => 'order',
+            'partner_uuid' => 'erp-partner-addr-002',
+            'items' => [],
         ]);
 
         $order = Order::where('uuid', 'order-no-address-001')->first();
@@ -336,17 +335,17 @@ class HandleOrderCreatedTest extends TestCase
         $product = Product::factory()->create(['external_id' => 'prod-negative-discount-001']);
 
         $this->handler->handle([
-            'event'      => 'order.created',
+            'event' => 'order.created',
             'message_id' => 'msg-test-negative-discount-001',
-            'uuid'       => 'order-negative-discount-001',
-            'status'     => 'pending',
-            'items'      => [
+            'uuid' => 'order-negative-discount-001',
+            'status' => 'pending',
+            'items' => [
                 [
-                    'product_uuid'      => 'prod-negative-discount-001',
-                    'quantity'          => 2,
-                    'base_price'        => 1000.00,
-                    'discount_percent'  => -15,
-                    'final_price'       => 1150.00,
+                    'product_uuid' => 'prod-negative-discount-001',
+                    'quantity' => 2,
+                    'base_price' => 1000.00,
+                    'discount_percent' => -15,
+                    'final_price' => 1150.00,
                 ],
             ],
         ]);

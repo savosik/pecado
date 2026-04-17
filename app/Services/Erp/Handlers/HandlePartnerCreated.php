@@ -30,19 +30,19 @@ class HandlePartnerCreated
 
     public function handle(array $payload): void
     {
-        $uuid     = $payload['uuid']     ?? null;
-        $email    = $payload['email']    ?? null;
-        $login    = $payload['login']    ?? $email;
-        $name     = $payload['name'] ?? null;
+        $uuid = $payload['uuid'] ?? null;
+        $email = $payload['email'] ?? null;
+        $login = $payload['login'] ?? $email;
+        $name = $payload['name'] ?? null;
 
-        $phone    = $payload['phone']    ?? null;
+        $phone = $payload['phone'] ?? null;
         if ($phone !== null) {
             $phone = Str::limit(trim($phone), 252); // varchar(255) с запасом
         }
         $password = $payload['password'] ?? null;
 
-        $city     = $payload['city'] ?? null;
-        $country  = $this->normalizeCountry($payload['country'] ?? null);
+        $city = $payload['city'] ?? null;
+        $country = $this->normalizeCountry($payload['country'] ?? null);
 
         // v11: is_active (boolean) → UserStatus
         $isActive = $payload['is_active'] ?? true;
@@ -51,7 +51,7 @@ class HandlePartnerCreated
         // v11: client_status → ClientStatus по external_id
         $clientStatusId = $this->resolveClientStatusId($payload);
 
-        if (!$uuid || !$email) {
+        if (! $uuid || ! $email) {
             Log::warning('partner.created: отсутствует uuid или email', ['payload' => $payload]);
 
             return;
@@ -63,12 +63,12 @@ class HandlePartnerCreated
         if ($user) {
             User::withoutEvents(function () use ($user, $uuid, $city, $country, $phone, $userStatus, $clientStatusId) {
                 $updateData = array_filter([
-                    'erp_id'      => $uuid,
-                    'status'      => $userStatus,
-                    'city'        => $city,
-                    'country'     => $country,
-                    'phone'       => $phone,
-                ], fn($v) => $v !== null);
+                    'erp_id' => $uuid,
+                    'status' => $userStatus,
+                    'city' => $city,
+                    'country' => $country,
+                    'phone' => $phone,
+                ], fn ($v) => $v !== null);
 
                 // client_status_id может быть null (сброс) — не фильтруем
                 if ($clientStatusId !== false) {
@@ -80,7 +80,7 @@ class HandlePartnerCreated
 
             Log::info('partner.created: пользователь найден по erp_id, обновлён', [
                 'user_id' => $user->id,
-                'erp_id'  => $uuid,
+                'erp_id' => $uuid,
             ]);
 
             NormalizeUserDataJob::dispatch($user->id);
@@ -107,33 +107,33 @@ class HandlePartnerCreated
 
             Log::info('partner.created: пользователь найден по email, активирован', [
                 'user_id' => $user->id,
-                'login'   => $user->email,
-                'erp_id'  => $uuid,
+                'login' => $user->email,
+                'erp_id' => $uuid,
             ]);
 
             return;
         }
 
         // Сценарий 2: Создание нового пользователя из 1С
-        if (!$password) {
+        if (! $password) {
             Log::warning('partner.created: пользователь не найден и нет пароля для создания', [
                 'login' => $login,
-                'uuid'  => $uuid,
+                'uuid' => $uuid,
             ]);
 
             return;
         }
 
         $createData = [
-            'name'                 => $name ?? $login,
-            'city'                 => $city,
-            'country'              => $country,
-            'email'                => $email,
-            'phone'                => $phone,
-            'password'             => $password,
+            'name' => $name ?? $login,
+            'city' => $city,
+            'country' => $country,
+            'email' => $email,
+            'phone' => $phone,
+            'password' => $password,
             'must_change_password' => true,
-            'erp_id'               => $uuid,
-            'status'               => $userStatus,
+            'erp_id' => $uuid,
+            'status' => $userStatus,
         ];
 
         if ($clientStatusId !== false) {
@@ -145,9 +145,9 @@ class HandlePartnerCreated
         });
 
         Log::info('partner.created: новый пользователь создан из 1С', [
-            'user_id'              => $newUser->id,
-            'login'                => $newUser->email,
-            'erp_id'               => $uuid,
+            'user_id' => $newUser->id,
+            'login' => $newUser->email,
+            'erp_id' => $uuid,
             'must_change_password' => true,
         ]);
 
@@ -157,12 +157,12 @@ class HandlePartnerCreated
     /**
      * Резолвит client_status из payload в client_status_id.
      *
-     * @return int|null|false  int — найден, null — сбросить, false — не менять
+     * @return int|null|false int — найден, null — сбросить, false — не менять
      */
     private function resolveClientStatusId(array $payload): int|null|false
     {
         // Поле отсутствует в payload — не менять текущий статус
-        if (!array_key_exists('client_status', $payload)) {
+        if (! array_key_exists('client_status', $payload)) {
             return false;
         }
 
@@ -178,7 +178,7 @@ class HandlePartnerCreated
         if ($clientStatusId === null) {
             Log::warning('partner.created: неизвестный client_status, статус не изменён', [
                 'client_status' => $clientStatusCode,
-                'uuid'          => $payload['uuid'] ?? null,
+                'uuid' => $payload['uuid'] ?? null,
             ]);
 
             return false;

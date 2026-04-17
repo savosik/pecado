@@ -161,7 +161,7 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
             ),
         },
         { label: "ID", key: "id", sortable: true },
-        { label: "UUID", key: "uuid", sortable: true, render: (value) => value ? value.substring(0, 8) + "..." : "—" },
+        { label: "Номер", key: "number", sortable: true, render: (value, order) => value || ("#" + order.id) },
         {
             label: "Пользователь",
             key: "user",

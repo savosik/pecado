@@ -1,16 +1,15 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 echo "Checking if database is empty (already wiped by migrate:fresh)...\n";
 echo "Creating Admin user...\n";
 User::updateOrCreate(
     ['email' => 'admin@pecado.ru'],
     [
-        'name'     => 'Admin',
+        'name' => 'Admin',
         'password' => Hash::make('Admin2024!'),
         'is_admin' => true,
     ]
@@ -23,7 +22,7 @@ try {
     $files = $disk->allFiles();
     $directories = $disk->allDirectories();
 
-    echo "Found " . count($files) . " files and " . count($directories) . " directories in S3.\n";
+    echo 'Found '.count($files).' files and '.count($directories)." directories in S3.\n";
 
     if (count($files) > 0) {
         $chunks = array_chunk($files, 1000);
@@ -39,5 +38,5 @@ try {
     echo "Deleted all directories.\n";
     echo "S3 cleanup completed!\n";
 } catch (\Exception $e) {
-    echo "Error cleaning S3: " . $e->getMessage() . "\n";
+    echo 'Error cleaning S3: '.$e->getMessage()."\n";
 }

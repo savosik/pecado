@@ -2,13 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\ProductModel;
-
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ProductModelController extends AdminController
 {
@@ -28,13 +27,11 @@ class ProductModelController extends AdminController
                     ->orWhere('code', 'like', "%{$search}%");
             });
         }
-        
-
 
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'created_at', 'code'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -86,7 +83,7 @@ class ProductModelController extends AdminController
         $productModel = ProductModel::create(\Illuminate\Support\Arr::except($validated, ['products']));
 
         // Assign products to this model
-        if (!empty($validated['products'])) {
+        if (! empty($validated['products'])) {
             \App\Models\Product::whereIn('id', $validated['products'])->update(['model_id' => $productModel->id]);
         }
 
@@ -112,7 +109,7 @@ class ProductModelController extends AdminController
 
         return Inertia::render('Admin/Pages/ProductModels/Edit', [
             'productModel' => array_merge($productModel->toArray(), [
-                 'products' => $products
+                'products' => $products,
             ]),
 
         ]);
@@ -138,15 +135,15 @@ class ProductModelController extends AdminController
         if (isset($validated['products'])) {
             // Detach products that are no longer in the list
             $productModel->products()->whereNotIn('id', $validated['products'])->update(['model_id' => null]);
-            
+
             // Attach selected products
-            if (!empty($validated['products'])) {
+            if (! empty($validated['products'])) {
                 \App\Models\Product::whereIn('id', $validated['products'])->update(['model_id' => $productModel->id]);
             }
         } else {
-             // If products field is present (and null/empty implied if not caught above, but here we cover case if isset but maybe explicit null sent differently? 
-             // Actually, if it's not in validated, we skip. If it is in validated and empty, we detach all.
-             $productModel->products()->update(['model_id' => null]);
+            // If products field is present (and null/empty implied if not caught above, but here we cover case if isset but maybe explicit null sent differently?
+            // Actually, if it's not in validated, we skip. If it is in validated and empty, we detach all.
+            $productModel->products()->update(['model_id' => null]);
         }
 
         return $this->redirectAfterSave($request, 'admin.product-models.index', 'admin.product-models.edit', $productModel, 'Модель товара успешно обновлена');

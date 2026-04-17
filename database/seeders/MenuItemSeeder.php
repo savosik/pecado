@@ -17,7 +17,7 @@ class MenuItemSeeder extends Seeder
             ['title' => 'Акции',      'url' => '/promotions',   'icon' => null,            'location' => 'header', 'sort_order' => 20],
             ['title' => 'Новости',    'url' => '/news',         'icon' => 'LuNewspaper',   'location' => 'header', 'sort_order' => 30],
             ['title' => 'Статьи',     'url' => '/articles',     'icon' => 'LuFileText',    'location' => 'header', 'sort_order' => 40],
-            ['title' => 'О брендах',  'url' => '/brand-stories','icon' => 'LuBadge',       'location' => 'header', 'sort_order' => 50],
+            ['title' => 'О брендах',  'url' => '/brand-stories', 'icon' => 'LuBadge',       'location' => 'header', 'sort_order' => 50],
             ['title' => 'FAQ',        'url' => '/faq',          'icon' => 'LuCircleHelp',  'location' => 'header', 'sort_order' => 60],
             ['title' => 'Где купить', 'url' => '/where-to-buy', 'icon' => 'LuMapPin',      'location' => 'header', 'sort_order' => 70],
 
@@ -53,6 +53,6 @@ class MenuItemSeeder extends Seeder
             );
         }
 
-        $this->command->info('Создано ' . MenuItem::count() . ' пунктов меню.');
+        $this->command->info('Создано '.MenuItem::count().' пунктов меню.');
     }
 }

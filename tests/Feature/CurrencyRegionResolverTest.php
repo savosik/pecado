@@ -18,7 +18,7 @@ class CurrencyRegionResolverTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->resolver = new UserCurrencyResolver();
+        $this->resolver = new UserCurrencyResolver;
     }
 
     public function test_resolves_currency_through_region(): void

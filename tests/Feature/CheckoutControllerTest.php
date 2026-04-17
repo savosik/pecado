@@ -9,7 +9,6 @@ use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Company;
-use App\Models\DeliveryAddress;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -245,28 +244,28 @@ class CheckoutControllerTest extends TestCase
 
         // Мок возвращает два заказа (instock + preorder)
         $order1 = Order::create([
-            'uuid'             => \Illuminate\Support\Str::uuid(),
-            'user_id'          => $this->user->id,
-            'company_id'       => $company->id,
+            'uuid' => \Illuminate\Support\Str::uuid(),
+            'user_id' => $this->user->id,
+            'company_id' => $company->id,
             'delivery_address' => 'г. Москва, ул. Мира, д. 10',
-            'status'           => \App\Enums\OrderStatus::PENDING,
-            'total_amount'     => 100.00,
-            'exchange_rate'    => 1,
+            'status' => \App\Enums\OrderStatus::PENDING,
+            'total_amount' => 100.00,
+            'exchange_rate' => 1,
             'rate_coefficient' => 1,
-            'currency_code'    => 'RUB',
-            'type'             => \App\Enums\OrderType::ORDER,
+            'currency_code' => 'RUB',
+            'type' => \App\Enums\OrderType::ORDER,
         ]);
         $order2 = Order::create([
-            'uuid'             => \Illuminate\Support\Str::uuid(),
-            'user_id'          => $this->user->id,
-            'company_id'       => $company->id,
+            'uuid' => \Illuminate\Support\Str::uuid(),
+            'user_id' => $this->user->id,
+            'company_id' => $company->id,
             'delivery_address' => 'г. Москва, ул. Мира, д. 10',
-            'status'           => \App\Enums\OrderStatus::PENDING,
-            'total_amount'     => 200.00,
-            'exchange_rate'    => 1,
+            'status' => \App\Enums\OrderStatus::PENDING,
+            'total_amount' => 200.00,
+            'exchange_rate' => 1,
             'rate_coefficient' => 1,
-            'currency_code'    => 'RUB',
-            'type'             => \App\Enums\OrderType::PREORDER,
+            'currency_code' => 'RUB',
+            'type' => \App\Enums\OrderType::PREORDER,
         ]);
 
         $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
@@ -276,7 +275,7 @@ class CheckoutControllerTest extends TestCase
         $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
 
         $response = $this->actingAs($this->user)->post('/checkout', [
-            'company_id'       => $company->id,
+            'company_id' => $company->id,
             'delivery_address' => 'г. Москва, ул. Мира, д. 10',
         ]);
 

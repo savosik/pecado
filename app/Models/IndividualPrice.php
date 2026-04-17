@@ -10,6 +10,7 @@ class IndividualPrice extends Model
     protected $connection = 'prices';
 
     public $incrementing = false;
+
     public $timestamps = false;
 
     protected $table = 'individual_prices';

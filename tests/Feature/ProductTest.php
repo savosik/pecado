@@ -22,7 +22,7 @@ class ProductTest extends TestCase
         $this->assertInstanceOf(Product::class, $product);
         $this->assertEquals('Test Product', $product->name);
         $this->assertEquals(100.50, $product->base_price);
-        
+
         $this->assertDatabaseHas('products', [
             'name' => 'Test Product',
             'base_price' => 100.50,

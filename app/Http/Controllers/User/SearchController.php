@@ -35,26 +35,26 @@ class SearchController extends Controller
     public function index(Request $request): JsonResponse|InertiaResponse
     {
         $validated = $request->validate([
-            'q'                    => ['nullable', 'string', 'min:2', 'max:255'],
-            'type'                 => ['sometimes', 'string', 'in:all,products,categories,brands,articles'],
-            'limit'                => ['sometimes', 'integer', 'min:1', 'max:50'],
-            'page'                 => ['sometimes', 'integer', 'min:1'],
-            'include_unavailable'  => ['sometimes', 'boolean'],
+            'q' => ['nullable', 'string', 'min:2', 'max:255'],
+            'type' => ['sometimes', 'string', 'in:all,products,categories,brands,articles'],
+            'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'include_unavailable' => ['sometimes', 'boolean'],
         ], [
-            'q.min'  => 'Минимум 2 символа для поиска.',
-            'q.max'  => 'Запрос не может быть длиннее 255 символов.',
+            'q.min' => 'Минимум 2 символа для поиска.',
+            'q.max' => 'Запрос не может быть длиннее 255 символов.',
         ]);
 
-        $query              = $validated['q'] ?? null;
-        $type               = $validated['type'] ?? 'all';
-        $limit              = $validated['limit'] ?? null;
-        $page               = (int) ($validated['page'] ?? 1);
+        $query = $validated['q'] ?? null;
+        $type = $validated['type'] ?? 'all';
+        $limit = $validated['limit'] ?? null;
+        $page = (int) ($validated['page'] ?? 1);
         $includeUnavailable = (bool) ($validated['include_unavailable'] ?? true);
 
         // Без запроса — пустые результаты (страница /search без параметров)
-        $results      = [];
+        $results = [];
         $productsMeta = null;
-        $totalCount   = 0;
+        $totalCount = 0;
 
         if ($query) {
             $results = $this->performSearch($query, $type, $limit, $page, $includeUnavailable);
@@ -78,18 +78,18 @@ class SearchController extends Controller
                     ->delete();
 
                 SearchHistory::create([
-                    'user_id'       => $request->user()->id,
-                    'query'         => $query,
+                    'user_id' => $request->user()->id,
+                    'query' => $query,
                     'results_count' => $totalCount,
-                    'ip_address'    => $request->ip(),
+                    'ip_address' => $request->ip(),
                 ]);
             }
         }
 
         $responseData = [
-            'query'        => $query,
-            'type'         => $type,
-            'results'      => $results,
+            'query' => $query,
+            'type' => $type,
+            'results' => $results,
             'productsMeta' => $productsMeta,
         ];
 
@@ -111,7 +111,7 @@ class SearchController extends Controller
             'q' => ['required', 'string', 'min:2', 'max:255'],
         ], [
             'q.required' => 'Введите поисковый запрос.',
-            'q.min'      => 'Минимум 2 символа для поиска.',
+            'q.min' => 'Минимум 2 символа для поиска.',
         ]);
 
         try {
@@ -234,14 +234,14 @@ class SearchController extends Controller
                 // Мета-данные пагинации
                 $results['_products_meta'] = [
                     'current_page' => $paginated->currentPage(),
-                    'last_page'    => $paginated->lastPage(),
-                    'per_page'     => $paginated->perPage(),
-                    'total'        => $paginated->total(),
-                    'from'         => $paginated->firstItem(),
-                    'to'           => $paginated->lastItem(),
+                    'last_page' => $paginated->lastPage(),
+                    'per_page' => $paginated->perPage(),
+                    'total' => $paginated->total(),
+                    'from' => $paginated->firstItem(),
+                    'to' => $paginated->lastItem(),
                 ];
             } catch (\Throwable) {
-                $results['products']      = [];
+                $results['products'] = [];
                 $results['_products_meta'] = null;
             }
         }
@@ -256,7 +256,7 @@ class SearchController extends Controller
                     ->get()
                     ->filter(fn (Category $category) => $category->is_active)
                     ->map(fn (Category $category) => [
-                        'id'   => $category->id,
+                        'id' => $category->id,
                         'name' => $category->name,
                         'slug' => $category->slug,
                     ])->values()->toArray();
@@ -274,7 +274,7 @@ class SearchController extends Controller
                     ->take($brandLimit)
                     ->get()
                     ->map(fn (Brand $brand) => [
-                        'id'   => $brand->id,
+                        'id' => $brand->id,
                         'name' => $brand->name,
                         'slug' => $brand->slug,
                     ])->toArray();
@@ -293,14 +293,14 @@ class SearchController extends Controller
                     ->take($contentLimit)
                     ->get()
                     ->map(fn (Article $article) => [
-                        'id'           => $article->id,
-                        'title'        => $article->title,
-                        'slug'         => $article->slug,
-                        'excerpt'      => $article->short_description,
-                        'image_url'    => $article->getFirstMediaUrl('cover', 'thumb') ?: $article->getFirstMediaUrl('cover'),
+                        'id' => $article->id,
+                        'title' => $article->title,
+                        'slug' => $article->slug,
+                        'excerpt' => $article->short_description,
+                        'image_url' => $article->getFirstMediaUrl('cover', 'thumb') ?: $article->getFirstMediaUrl('cover'),
                         'published_at' => $article->published_at?->format('d.m.Y'),
-                        'type'         => 'article',
-                        'type_label'   => 'Статья',
+                        'type' => 'article',
+                        'type_label' => 'Статья',
                     ])->toArray();
             } catch (\Throwable) {
                 $articles = [];
@@ -312,20 +312,20 @@ class SearchController extends Controller
                     ->take($contentLimit)
                     ->get()
                     ->map(fn (News $newsItem) => [
-                        'id'           => $newsItem->id,
-                        'title'        => $newsItem->title,
-                        'slug'         => $newsItem->slug,
-                        'excerpt'      => $this->truncateText($newsItem->detailed_description),
+                        'id' => $newsItem->id,
+                        'title' => $newsItem->title,
+                        'slug' => $newsItem->slug,
+                        'excerpt' => $this->truncateText($newsItem->detailed_description),
                         'published_at' => $newsItem->published_at?->format('d.m.Y'),
-                        'type'         => 'news',
-                        'type_label'   => 'Новость',
+                        'type' => 'news',
+                        'type_label' => 'Новость',
                     ])->toArray();
             } catch (\Throwable) {
                 $news = [];
             }
 
             $results['articles'] = $articles;
-            $results['news']     = $news;
+            $results['news'] = $news;
         }
 
         return $results;
@@ -337,10 +337,10 @@ class SearchController extends Controller
     private function formatProductCompact(Product $product): array
     {
         return [
-            'id'        => $product->id,
-            'name'      => $product->name,
-            'slug'      => $product->slug,
-            'price'     => (float) $product->base_price,
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'price' => (float) $product->base_price,
             'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
         ];
     }
@@ -377,6 +377,6 @@ class SearchController extends Controller
             return $text;
         }
 
-        return mb_substr($text, 0, $length) . '…';
+        return mb_substr($text, 0, $length).'…';
     }
 }

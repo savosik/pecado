@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Brand;
 use App\Enums\BrandCategory;
-use Illuminate\Validation\Rule;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Models\Brand;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class BrandController extends AdminController
 {
@@ -35,7 +35,7 @@ class BrandController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'created_at', 'slug'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -65,7 +65,7 @@ class BrandController extends AdminController
     {
         return Inertia::render('Admin/Pages/Brands/Create', [
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
-            'categories' => collect(BrandCategory::cases())->map(fn($c) => ['value' => $c->value, 'label' => $c->label()]),
+            'categories' => collect(BrandCategory::cases())->map(fn ($c) => ['value' => $c->value, 'label' => $c->label()]),
         ]);
     }
 
@@ -103,14 +103,16 @@ class BrandController extends AdminController
 
         // Теги
         if ($request->has('tags')) {
-             $tagNames = collect($request->tags)->map(function ($tag) {
+            $tagNames = collect($request->tags)->map(function ($tag) {
                 if (is_array($tag)) {
                     $name = $tag['name'] ?? $tag;
                     if (is_array($name)) {
                         return $name['ru'] ?? $name['en'] ?? array_values($name)[0] ?? '';
                     }
+
                     return $name;
                 }
+
                 return $tag;
             })->filter()->values()->toArray();
             $brand->syncTags($tagNames);
@@ -147,7 +149,7 @@ class BrandController extends AdminController
                 ->where('id', '!=', $brand->id)
                 ->orderBy('name')
                 ->get(),
-            'categories' => collect(BrandCategory::cases())->map(fn($c) => ['value' => $c->value, 'label' => $c->label()]),
+            'categories' => collect(BrandCategory::cases())->map(fn ($c) => ['value' => $c->value, 'label' => $c->label()]),
         ]);
     }
 
@@ -158,7 +160,7 @@ class BrandController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:brands,slug,' . $brand->id,
+            'slug' => 'nullable|string|max:255|unique:brands,slug,'.$brand->id,
             'parent_id' => 'nullable|exists:brands,id',
             'external_id' => 'nullable|string|max:255',
             'short_description' => 'nullable|string',
@@ -171,12 +173,12 @@ class BrandController extends AdminController
             'is_featured' => 'boolean',
         ]);
 
-         if (isset($validated['parent_id']) && $validated['parent_id'] == $brand->id) {
+        if (isset($validated['parent_id']) && $validated['parent_id'] == $brand->id) {
             return redirect()
                 ->back()
                 ->withErrors(['parent_id' => 'Бренд не может быть родителем самого себя']);
         }
-        
+
         if (empty($validated['slug'])) {
             $validated['slug'] = \Illuminate\Support\Str::slug(\App\Helpers\SearchHelper::transliterate($validated['name']));
         }
@@ -190,16 +192,18 @@ class BrandController extends AdminController
                 ->toMediaCollection('logo');
         }
 
-         // Теги
+        // Теги
         if ($request->has('tags')) {
-             $tagNames = collect($request->tags)->map(function ($tag) {
+            $tagNames = collect($request->tags)->map(function ($tag) {
                 if (is_array($tag)) {
                     $name = $tag['name'] ?? $tag;
                     if (is_array($name)) {
                         return $name['ru'] ?? $name['en'] ?? array_values($name)[0] ?? '';
                     }
+
                     return $name;
                 }
+
                 return $tag;
             })->filter()->values()->toArray();
             $brand->syncTags($tagNames);
@@ -217,8 +221,8 @@ class BrandController extends AdminController
 
         return redirect()->route('admin.brands.index')->with('success', 'Бренд успешно удален');
     }
-    
-     /**
+
+    /**
      * Delete a specific media file from the brand (logo).
      */
     public function deleteMedia(Brand $brand, Request $request): \Illuminate\Http\JsonResponse

@@ -6,9 +6,9 @@ use App\Contracts\Cart\CartServiceInterface;
 use App\Contracts\Order\CheckoutServiceInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
+use App\Enums\Country;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreCheckoutRequest;
-use App\Models\DeliveryAddress;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -41,8 +41,8 @@ class CheckoutController extends Controller
 
         // Разделить товары на instock и preorder
         $items = $cartDetails['items'] ?? [];
-        $instockItems = array_values(array_filter($items, fn($it) => ($it['item_type'] ?? '') === 'instock'));
-        $preorderItems = array_values(array_filter($items, fn($it) => ($it['item_type'] ?? '') === 'preorder'));
+        $instockItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'instock'));
+        $preorderItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'preorder'));
 
         // Подытоги
         $instockTotals = [
@@ -76,6 +76,10 @@ class CheckoutController extends Controller
             ],
             'companies' => $companies,
             'addresses' => $addresses,
+            'countries' => collect(Country::cases())->map(fn ($c) => [
+                'value' => $c->value,
+                'label' => $c->label(),
+            ]),
         ]);
     }
 
@@ -118,7 +122,7 @@ class CheckoutController extends Controller
                 ->with('success', 'Заказ успешно оформлен!');
         } catch (\App\Exceptions\InsufficientStockException $e) {
             return back()->withErrors([
-                'stock' => 'Недостаточно товара на складе: ' . collect($e->getItems())
+                'stock' => 'Недостаточно товара на складе: '.collect($e->getItems())
                     ->pluck('product')
                     ->join(', '),
             ]);

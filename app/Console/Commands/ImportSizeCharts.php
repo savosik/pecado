@@ -38,15 +38,17 @@ class ImportSizeCharts extends Command
 
         $response = Http::timeout(120)->get($url);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             $this->error("Ошибка загрузки. HTTP код: {$response->status()}");
+
             return self::FAILURE;
         }
 
         $items = $response->json();
 
-        if (json_last_error() !== JSON_ERROR_NONE || !is_array($items)) {
-            $this->error("Ошибка парсинга JSON: " . json_last_error_msg());
+        if (json_last_error() !== JSON_ERROR_NONE || ! is_array($items)) {
+            $this->error('Ошибка парсинга JSON: '.json_last_error_msg());
+
             return self::FAILURE;
         }
 
@@ -54,6 +56,7 @@ class ImportSizeCharts extends Command
 
         if ($totalItems === 0) {
             $this->warn('JSON пуст. Нет сеток для загрузки.');
+
             return self::SUCCESS;
         }
 
@@ -72,8 +75,9 @@ class ImportSizeCharts extends Command
             $table = $item['size_chart_table'] ?? [];
             $brandExternalIds = $item['size_chart_brands'] ?? [];
 
-            if (!$uid || !$name) {
+            if (! $uid || ! $name) {
                 $bar->advance();
+
                 continue;
             }
 
@@ -90,7 +94,7 @@ class ImportSizeCharts extends Command
                 );
 
                 // Привязываем бренды
-                if (!empty($brandExternalIds)) {
+                if (! empty($brandExternalIds)) {
                     $brandIds = Brand::whereIn('external_id', $brandExternalIds)->pluck('id')->toArray();
                     $sizeChart->brands()->sync($brandIds);
                 } else {
@@ -99,7 +103,7 @@ class ImportSizeCharts extends Command
 
                 $imported++;
             } catch (\Exception $e) {
-                Log::error("Ошибка импорта размерной сетки {$uid}: " . $e->getMessage());
+                Log::error("Ошибка импорта размерной сетки {$uid}: ".$e->getMessage());
             }
 
             $bar->advance();

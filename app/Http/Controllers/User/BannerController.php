@@ -25,7 +25,7 @@ class BannerController extends Controller
      */
     public static function getCachedBanners(?int $regionId = null): array
     {
-        $cacheKey = 'user.banners.active.' . ($regionId ?? 'all');
+        $cacheKey = 'user.banners.active.'.($regionId ?? 'all');
 
         return Cache::remember($cacheKey, 600, function () use ($regionId) {
             return Banner::active()
@@ -35,12 +35,12 @@ class BannerController extends Controller
                 ->get()
                 ->map(function (Banner $banner) {
                     return [
-                        'id'               => $banner->id,
-                        'title'            => $banner->title,
-                        'desktop_image'    => $banner->getFirstMediaUrl('desktop'),
-                        'mobile_image'     => $banner->getFirstMediaUrl('mobile'),
-                        'link_url'         => self::resolveLinkUrl($banner),
-                        'sort_order'       => $banner->sort_order,
+                        'id' => $banner->id,
+                        'title' => $banner->title,
+                        'desktop_image' => $banner->getFirstMediaUrl('desktop'),
+                        'mobile_image' => $banner->getFirstMediaUrl('mobile'),
+                        'link_url' => self::resolveLinkUrl($banner),
+                        'sort_order' => $banner->sort_order,
                     ];
                 })
                 ->toArray();
@@ -54,25 +54,25 @@ class BannerController extends Controller
     {
         $linkable = $banner->linkable;
 
-        if (!$linkable) {
+        if (! $linkable) {
             return null;
         }
 
         $slug = $linkable->slug ?? null;
 
-        if (!$slug) {
+        if (! $slug) {
             return null;
         }
 
         return match (get_class($linkable)) {
-            \App\Models\Product::class   => "/products/{$slug}",
-            \App\Models\Category::class  => "/categories/{$slug}",
-            \App\Models\Brand::class     => "/brands/{$slug}",
+            \App\Models\Product::class => "/products/{$slug}",
+            \App\Models\Category::class => "/categories/{$slug}",
+            \App\Models\Brand::class => "/brands/{$slug}",
             \App\Models\Promotion::class => "/promotions/{$slug}",
-            \App\Models\News::class      => "/news/{$slug}",
-            \App\Models\Article::class   => "/articles/{$slug}",
-            \App\Models\Page::class      => "/pages/{$slug}",
-            default                      => null,
+            \App\Models\News::class => "/news/{$slug}",
+            \App\Models\Article::class => "/articles/{$slug}",
+            \App\Models\Page::class => "/pages/{$slug}",
+            default => null,
         };
     }
 }

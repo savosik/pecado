@@ -294,7 +294,9 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                                             transition="background 0.15s"
                                         >
                                             <Table.Cell>
-                                                <Text fontWeight="600">#{ret.id}</Text>
+                                                <Text fontWeight="600" noOfLines={1} maxW="150px" title={ret.number}>
+                                                    {ret.number}
+                                                </Text>
                                             </Table.Cell>
                                             <Table.Cell>
                                                 <Badge
@@ -355,7 +357,7 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                                 >
                                     <Card.Body p="4">
                                         <Flex justify="space-between" align="center" mb="2">
-                                            <Text fontWeight="700" fontSize="md">Возврат #{ret.id}</Text>
+                                            <Text fontWeight="700" fontSize="md" noOfLines={1} pr="2">Возврат {ret.number}</Text>
                                             <Badge
                                                 colorPalette={STATUS_COLORS[ret.status] || 'gray'}
                                                 variant="subtle"

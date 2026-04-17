@@ -28,7 +28,7 @@ class ErpBusMessage extends Model
     protected function casts(): array
     {
         return [
-            'payload'    => 'array',
+            'payload' => 'array',
             'created_at' => 'datetime',
         ];
     }

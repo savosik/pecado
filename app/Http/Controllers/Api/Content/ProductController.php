@@ -268,8 +268,8 @@ class ProductController extends Controller
 
         $selectedBrandIds = array_map('intval', $validated['brand_ids'] ?? []);
         $selectedCategoryIds = array_map('intval', $validated['category_ids'] ?? []);
-        if (!empty($validated['category_id']) && !in_array((int)$validated['category_id'], $selectedCategoryIds)) {
-            $selectedCategoryIds[] = (int)$validated['category_id'];
+        if (! empty($validated['category_id']) && ! in_array((int) $validated['category_id'], $selectedCategoryIds)) {
+            $selectedCategoryIds[] = (int) $validated['category_id'];
         }
 
         $selectedAttributeValueIds = array_map('intval', $validated['attribute_value_ids'] ?? []);
@@ -313,25 +313,25 @@ class ProductController extends Controller
                 ->orWhereHas('category', fn ($cq) => $cq->where('is_active', true));
         });
 
-        if (!empty($validated['q'])) {
+        if (! empty($validated['q'])) {
             $query->search($validated['q']);
         }
 
-        if (!empty($validated['category_id'])) {
+        if (! empty($validated['category_id'])) {
             $descendants = ($validated['include_descendants'] ?? true);
             $query->inCategory((int) $validated['category_id'], (bool) $descendants);
         }
 
-        if (!empty($validated['category_ids'])) {
+        if (! empty($validated['category_ids'])) {
             $descendants = ($validated['include_descendants'] ?? true);
             $query->inCategories(array_map('intval', $validated['category_ids']), (bool) $descendants);
         }
 
-        if (!empty($validated['brand_ids'])) {
+        if (! empty($validated['brand_ids'])) {
             $query->inBrands(array_map('intval', $validated['brand_ids']));
         }
 
-        if (!empty($validated['collection_ids'])) {
+        if (! empty($validated['collection_ids'])) {
             $query->inCollections(array_map('intval', $validated['collection_ids']));
         }
 
@@ -344,28 +344,28 @@ class ProductController extends Controller
             );
         }
 
-        if (!empty($validated['in_stock'])) {
+        if (! empty($validated['in_stock'])) {
             $query->inStock('instock');
         }
 
-        if (!empty($validated['in_sale'])) {
+        if (! empty($validated['in_sale'])) {
             $query->inSale(true);
         }
 
-        if (!empty($validated['is_new'])) {
+        if (! empty($validated['is_new'])) {
             $query->where('is_new', true);
         }
 
-        if (!empty($validated['is_bestseller'])) {
+        if (! empty($validated['is_bestseller'])) {
             $query->where('is_bestseller', true);
         }
 
-        if (!empty($validated['attribute_value_ids'])) {
+        if (! empty($validated['attribute_value_ids'])) {
             $any = (bool) ($validated['attribute_any'] ?? false);
             $query->byAttributes(array_map('intval', $validated['attribute_value_ids']), $any);
         }
 
-        if (!empty($validated['attribute_inline_filters'])) {
+        if (! empty($validated['attribute_inline_filters'])) {
             $query->byInlineAttributes($validated['attribute_inline_filters']);
         }
 
@@ -374,7 +374,7 @@ class ProductController extends Controller
 
     private function getHybridSearchOptions(): ?array
     {
-        if (!config('search.hybrid.enabled')) {
+        if (! config('search.hybrid.enabled')) {
             return null;
         }
 

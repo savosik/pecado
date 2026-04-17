@@ -6,8 +6,8 @@ use App\Events\OrderDeleted;
 use App\Models\Order;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class OrderSoftDeleteTest extends TestCase
 {

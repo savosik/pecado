@@ -3,12 +3,11 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Enums\Country;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CompanyController extends Controller
 {
@@ -55,7 +54,7 @@ class CompanyController extends Controller
     public function create()
     {
         return Inertia::render('Admin/Pages/Companies/Create', [
-            'countries' => collect(Country::cases())->map(fn($country) => [
+            'countries' => collect(Country::cases())->map(fn ($country) => [
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
@@ -91,7 +90,7 @@ class CompanyController extends Controller
 
         return Inertia::render('Admin/Pages/Companies/Edit', [
             'company' => $company,
-            'countries' => collect(Country::cases())->map(fn($country) => [
+            'countries' => collect(Country::cases())->map(fn ($country) => [
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
@@ -113,7 +112,7 @@ class CompanyController extends Controller
             'actual_address' => 'nullable|string',
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email' => 'nullable|email|max:255',
-            'erp_id' => 'nullable|string|max:255|unique:companies,erp_id,' . $company->id,
+            'erp_id' => 'nullable|string|max:255|unique:companies,erp_id,'.$company->id,
         ]);
 
         $company->update($validated);
@@ -149,7 +148,7 @@ class CompanyController extends Controller
             ->map(function ($company) {
                 return [
                     'id' => $company->id,
-                    'name' => $company->name . ' (' . ($company->user ? $company->user->name : 'No user') . ')',
+                    'name' => $company->name.' ('.($company->user ? $company->user->name : 'No user').')',
                     'display_name' => $company->name,
                     'user_name' => $company->user?->name,
                 ];

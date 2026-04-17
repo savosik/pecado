@@ -27,6 +27,7 @@ class ConfigureMeilisearchEmbedders extends Command
 
         if (! $searchConfig['hybrid']['enabled']) {
             $this->warn('Гибридный поиск выключен (SEARCH_HYBRID_ENABLED=false). Включите и запустите снова.');
+
             return self::FAILURE;
         }
 
@@ -35,12 +36,13 @@ class ConfigureMeilisearchEmbedders extends Command
 
         if (empty($embedderConfig['api_key'])) {
             $this->error('OPENROUTER_API_KEY не задан в .env');
+
             return self::FAILURE;
         }
 
         // Индексы, для которых настраиваем embedders
         $indexes = [
-            'products' => "Товар: {{doc.name}}. Бренд: {{doc.brand}}. Категория: {{doc.category}}. {{doc.description}}",
+            'products' => 'Товар: {{doc.name}}. Бренд: {{doc.brand}}. Категория: {{doc.category}}. {{doc.description}}',
         ];
 
         if ($this->option('reset')) {
@@ -63,7 +65,7 @@ class ConfigureMeilisearchEmbedders extends Command
 
         $this->newLine();
         $this->info('✅ Embedders настроены. Meilisearch начнёт генерацию embeddings в фоне.');
-        $this->info('Отслеживайте прогресс: curl -s ' . $host . '/tasks?types=settingsUpdate -H "Authorization: Bearer ' . $key . '" | jq');
+        $this->info('Отслеживайте прогресс: curl -s '.$host.'/tasks?types=settingsUpdate -H "Authorization: Bearer '.$key.'" | jq');
 
         return self::SUCCESS;
     }
@@ -100,7 +102,7 @@ class ConfigureMeilisearchEmbedders extends Command
         ];
 
         $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $key,
+            'Authorization' => 'Bearer '.$key,
             'Content-Type' => 'application/json',
         ])->patch("{$host}/indexes/{$indexName}/settings/embedders", $payload);
 
@@ -115,18 +117,19 @@ class ConfigureMeilisearchEmbedders extends Command
 
     private function waitForTask(string $host, string $key, int $taskUid): void
     {
-        $this->info("  ⏳ Ожидание завершения задачи...");
+        $this->info('  ⏳ Ожидание завершения задачи...');
 
         $maxAttempts = 120; // 10 минут (120 * 5s)
         $attempt = 0;
 
         while ($attempt < $maxAttempts) {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $key,
+                'Authorization' => 'Bearer '.$key,
             ])->get("{$host}/tasks/{$taskUid}");
 
             if (! $response->successful()) {
                 $this->error("  ✗ Не удалось получить статус задачи: {$response->status()}");
+
                 return;
             }
 
@@ -134,13 +137,15 @@ class ConfigureMeilisearchEmbedders extends Command
             $status = $task['status'] ?? 'unknown';
 
             if ($status === 'succeeded') {
-                $this->info("  ✅ Задача завершена успешно");
+                $this->info('  ✅ Задача завершена успешно');
+
                 return;
             }
 
             if ($status === 'failed') {
                 $error = $task['error']['message'] ?? 'Неизвестная ошибка';
                 $this->error("  ✗ Задача завершена с ошибкой: {$error}");
+
                 return;
             }
 
@@ -149,7 +154,7 @@ class ConfigureMeilisearchEmbedders extends Command
             sleep(5);
         }
 
-        $this->warn("  ⚠ Превышен таймаут ожидания. Задача ещё выполняется в фоне.");
+        $this->warn('  ⚠ Превышен таймаут ожидания. Задача ещё выполняется в фоне.');
     }
 
     private function resetEmbedders(string $host, string $key, array $indexes): int
@@ -158,7 +163,7 @@ class ConfigureMeilisearchEmbedders extends Command
 
         foreach (array_keys($indexes) as $indexName) {
             $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $key,
+                'Authorization' => 'Bearer '.$key,
                 'Content-Type' => 'application/json',
             ])->delete("{$host}/indexes/{$indexName}/settings/embedders");
 

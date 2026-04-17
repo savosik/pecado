@@ -2,15 +2,14 @@
 
 namespace App\Services\Order;
 
+use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Order\CheckoutServiceInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
-use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\OrderType;
 use App\Events\OrderCreated;
 use App\Models\Cart;
 use App\Models\Company;
-use App\Models\DeliveryAddress;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Support\Collection;
@@ -41,16 +40,16 @@ class CheckoutService implements CheckoutServiceInterface
             $currency = $this->currencyResolver->resolve($user);
 
             $baseOrderData = [
-                'user_id'             => $user->id,
-                'company_id'          => $company->id,
-                'delivery_address'    => $deliveryAddress,
-                'cart_id'             => $cart->id,
-                'status'              => \App\Enums\OrderStatus::PENDING,
-                'comment'             => $comment,
-                'total_amount'        => 0,
-                'exchange_rate'       => $currency?->exchange_rate ?? 1.0,
-                'rate_coefficient'    => $currency?->rate_coefficient ?? 1.0,
-                'currency_code'       => $currency?->code ?? 'RUB',
+                'user_id' => $user->id,
+                'company_id' => $company->id,
+                'delivery_address' => $deliveryAddress,
+                'cart_id' => $cart->id,
+                'status' => \App\Enums\OrderStatus::PENDING,
+                'comment' => $comment,
+                'total_amount' => 0,
+                'exchange_rate' => $currency?->exchange_rate ?? 1.0,
+                'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
+                'currency_code' => $currency?->code ?? 'RUB',
             ];
 
             // Validate stock availability before proceeding
@@ -61,14 +60,14 @@ class CheckoutService implements CheckoutServiceInterface
 
                 if ($item->quantity > $totalAvailable) {
                     $insufficientStockItems[] = [
-                        'product'   => $item->product->name,
+                        'product' => $item->product->name,
                         'requested' => $item->quantity,
                         'available' => $totalAvailable,
                     ];
                 }
             }
 
-            if (!empty($insufficientStockItems)) {
+            if (! empty($insufficientStockItems)) {
                 throw new \App\Exceptions\InsufficientStockException(
                     'Insufficient stock for some items',
                     $insufficientStockItems
@@ -76,8 +75,8 @@ class CheckoutService implements CheckoutServiceInterface
             }
 
             // Separate cart items by item_type (already split by CartService at add-to-cart time)
-            $inStockCartItems = $cart->items->filter(fn($item) => $item->item_type === 'instock')->values();
-            $preorderCartItems = $cart->items->filter(fn($item) => $item->item_type === 'preorder')->values();
+            $inStockCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'instock')->values();
+            $preorderCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'preorder')->values();
 
             $orders = collect();
 
@@ -117,20 +116,21 @@ class CheckoutService implements CheckoutServiceInterface
             $priceResult = $this->priceService->getPriceResult($item->product, $user);
             $displayPrice = $priceResult->getDisplayPrice();
             $subtotal = $displayPrice * $item->quantity;
-            $total   += $subtotal;
+            $total += $subtotal;
 
             OrderItem::create([
-                'order_id'         => $order->id,
-                'product_id'       => $item->product_id,
-                'name'             => $item->product->name,
-                'price'            => $displayPrice,
-                'base_price'       => $priceResult->basePrice,
+                'order_id' => $order->id,
+                'product_id' => $item->product_id,
+                'name' => $item->product->name,
+                'price' => $displayPrice,
+                'base_price' => $priceResult->basePrice,
                 'discount_percent' => $priceResult->discountPercent,
-                'final_price'      => $displayPrice,
-                'quantity'         => $item->quantity,
-                'subtotal'         => $subtotal,
+                'final_price' => $displayPrice,
+                'quantity' => $item->quantity,
+                'subtotal' => $subtotal,
             ]);
         }
+
         return $total;
     }
 }

@@ -26,7 +26,7 @@ class ProductFilterRequestTest extends TestCase
 
     private function filterRequest(array $params = []): \Illuminate\Testing\TestResponse
     {
-        return $this->getJson('/_test/catalog-filter?' . http_build_query($params));
+        return $this->getJson('/_test/catalog-filter?'.http_build_query($params));
     }
 
     // ─── prepareForValidation (compact URL) ─────────────────

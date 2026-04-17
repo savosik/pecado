@@ -24,13 +24,13 @@ class ShipmentItem extends Model
     ];
 
     protected $casts = [
-        'price'                  => 'decimal:2',
-        'auto_discount_percent'  => 'decimal:2',
-        'manual_discount_percent'=> 'decimal:2',
-        'total'                  => 'decimal:2',
-        'subtotal'               => 'decimal:2',
-        'quantity'               => 'integer',
-        'vat_rate'               => 'integer',
+        'price' => 'decimal:2',
+        'auto_discount_percent' => 'decimal:2',
+        'manual_discount_percent' => 'decimal:2',
+        'total' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'quantity' => 'integer',
+        'vat_rate' => 'integer',
     ];
 
     public function shipment(): BelongsTo

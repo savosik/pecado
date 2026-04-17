@@ -106,7 +106,7 @@ class ArticleController extends Controller
 
         $article = Article::create($validated);
 
-        if (!empty($validated['tags'])) {
+        if (! empty($validated['tags'])) {
             $article->attachTags($validated['tags']);
         }
 
@@ -127,7 +127,7 @@ class ArticleController extends Controller
     {
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|string|max:255|unique:articles,slug,' . $article->id,
+            'slug' => 'sometimes|string|max:255|unique:articles,slug,'.$article->id,
             'short_description' => 'sometimes|required|string',
             'detailed_description' => 'sometimes|required|string',
             'is_published' => 'boolean',
@@ -163,6 +163,7 @@ class ArticleController extends Controller
     public function destroy(Article $article): JsonResponse
     {
         $article->delete();
+
         return response()->json(null, 204);
     }
 

@@ -2,12 +2,12 @@
 
 namespace App\Jobs;
 
+use App\Services\Pricing\IndividualPriceStatsService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Services\Pricing\IndividualPriceStatsService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -66,14 +66,14 @@ class BulkDeleteJob implements ShouldQueue
 
             $this->updateProgress($cacheKey, 'completed', "Все записи раздела «{$this->label}» успешно удалены.");
 
-            Log::info("BulkDeleteJob completed", [
+            Log::info('BulkDeleteJob completed', [
                 'resource' => $this->resourceSlug,
                 'model' => $this->modelClass,
             ]);
         } catch (\Throwable $e) {
             $this->updateProgress($cacheKey, 'failed', "Ошибка при удалении: {$e->getMessage()}");
 
-            Log::error("BulkDeleteJob failed", [
+            Log::error('BulkDeleteJob failed', [
                 'resource' => $this->resourceSlug,
                 'model' => $this->modelClass,
                 'error' => $e->getMessage(),

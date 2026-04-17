@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Brand;
 use App\Models\BrandStory;
 use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class BrandStoryController extends Controller
 {
@@ -41,6 +41,7 @@ class BrandStoryController extends Controller
             $brandStory->tag_list = $brandStory->tags->pluck('name')->toArray();
             $brandStory->list_image = $brandStory->getFirstMediaUrl('list-item');
             $brandStory->region_names = $brandStory->regions->pluck('name')->toArray();
+
             return $brandStory;
         });
 
@@ -101,7 +102,7 @@ class BrandStoryController extends Controller
         // Синхронизировать регионы
         $brandStory->regions()->sync($validated['region_ids'] ?? []);
 
-        if (!empty($validated['tags'])) {
+        if (! empty($validated['tags'])) {
             $brandStory->attachTags($validated['tags']);
         }
 
@@ -141,7 +142,7 @@ class BrandStoryController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:brand_stories,slug,' . $brandStory->id,
+            'slug' => 'required|string|max:255|unique:brand_stories,slug,'.$brandStory->id,
             'short_description' => 'required|string',
             'detailed_description' => 'required|string',
             'is_published' => 'boolean',

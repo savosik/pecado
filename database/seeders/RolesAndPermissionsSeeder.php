@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use App\Models\User;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
@@ -14,112 +14,112 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     protected array $resources = [
         // Каталог
-        'products'          => ['view', 'create', 'edit', 'delete'],
-        'categories'        => ['view', 'create', 'edit', 'delete'],
-        'brands'            => ['view', 'create', 'edit', 'delete'],
-        'product-models'    => ['view', 'create', 'edit', 'delete'],
-        'attributes'        => ['view', 'create', 'edit', 'delete'],
-        'attribute-groups'  => ['view', 'create', 'edit', 'delete'],
-        'size-charts'       => ['view', 'create', 'edit', 'delete'],
-        'product-barcodes'  => ['view', 'create', 'edit', 'delete'],
-        'certificates'      => ['view', 'create', 'edit', 'delete'],
-        'product-exports'   => ['view', 'create', 'edit', 'delete'],
+        'products' => ['view', 'create', 'edit', 'delete'],
+        'categories' => ['view', 'create', 'edit', 'delete'],
+        'brands' => ['view', 'create', 'edit', 'delete'],
+        'product-models' => ['view', 'create', 'edit', 'delete'],
+        'attributes' => ['view', 'create', 'edit', 'delete'],
+        'attribute-groups' => ['view', 'create', 'edit', 'delete'],
+        'size-charts' => ['view', 'create', 'edit', 'delete'],
+        'product-barcodes' => ['view', 'create', 'edit', 'delete'],
+        'certificates' => ['view', 'create', 'edit', 'delete'],
+        'product-exports' => ['view', 'create', 'edit', 'delete'],
 
         // Склады
-        'warehouses'        => ['view', 'create', 'edit', 'delete'],
-        'regions'           => ['view', 'create', 'edit', 'delete'],
+        'warehouses' => ['view', 'create', 'edit', 'delete'],
+        'regions' => ['view', 'create', 'edit', 'delete'],
 
         // Продажи
-        'orders'            => ['view', 'create', 'edit', 'delete'],
-        'carts'             => ['view', 'create', 'edit', 'delete'],
-        'returns'           => ['view', 'create', 'edit', 'delete'],
-        'shipments'         => ['view', 'delete'],
-        'favorites'         => ['view', 'create', 'edit', 'delete'],
-        'wishlist'          => ['view', 'create', 'edit', 'delete'],
+        'orders' => ['view', 'create', 'edit', 'delete'],
+        'carts' => ['view', 'create', 'edit', 'delete'],
+        'returns' => ['view', 'create', 'edit', 'delete'],
+        'shipments' => ['view', 'delete'],
+        'favorites' => ['view', 'create', 'edit', 'delete'],
+        'wishlist' => ['view', 'create', 'edit', 'delete'],
 
         // Маркетинг
-        'promotions'        => ['view', 'create', 'edit', 'delete'],
-        'product-selections'=> ['view', 'create', 'edit', 'delete'],
+        'promotions' => ['view', 'create', 'edit', 'delete'],
+        'product-selections' => ['view', 'create', 'edit', 'delete'],
 
         // Пользователи
-        'users'             => ['view', 'create', 'edit', 'delete'],
-        'user-questionnaires'=> ['view', 'create', 'edit', 'delete'],
-        'client-statuses'   => ['view', 'create', 'edit', 'delete'],
-        'companies'         => ['view', 'create', 'edit', 'delete'],
+        'users' => ['view', 'create', 'edit', 'delete'],
+        'user-questionnaires' => ['view', 'create', 'edit', 'delete'],
+        'client-statuses' => ['view', 'create', 'edit', 'delete'],
+        'companies' => ['view', 'create', 'edit', 'delete'],
         'company-bank-accounts' => ['view', 'create', 'edit', 'delete'],
-        'delivery-addresses'=> ['view', 'create', 'edit', 'delete'],
+        'delivery-addresses' => ['view', 'create', 'edit', 'delete'],
 
         // Финансы
-        'currencies'        => ['view', 'create', 'edit', 'delete'],
-        'contractor-balances'=> ['view', 'create', 'edit', 'delete'],
+        'currencies' => ['view', 'create', 'edit', 'delete'],
+        'contractor-balances' => ['view', 'create', 'edit', 'delete'],
         'individual-prices' => ['view', 'create', 'edit', 'delete'],
 
         // Контент
-        'articles'          => ['view', 'create', 'edit', 'delete'],
-        'brand-stories'     => ['view', 'create', 'edit', 'delete'],
-        'news'              => ['view', 'create', 'edit', 'delete'],
-        'faqs'              => ['view', 'create', 'edit', 'delete'],
-        'banners'           => ['view', 'create', 'edit', 'delete'],
-        'pages'             => ['view', 'create', 'edit', 'delete'],
-        'stories'           => ['view', 'create', 'edit', 'delete'],
-        'menu-items'        => ['view', 'create', 'edit', 'delete'],
+        'articles' => ['view', 'create', 'edit', 'delete'],
+        'brand-stories' => ['view', 'create', 'edit', 'delete'],
+        'news' => ['view', 'create', 'edit', 'delete'],
+        'faqs' => ['view', 'create', 'edit', 'delete'],
+        'banners' => ['view', 'create', 'edit', 'delete'],
+        'pages' => ['view', 'create', 'edit', 'delete'],
+        'stories' => ['view', 'create', 'edit', 'delete'],
+        'menu-items' => ['view', 'create', 'edit', 'delete'],
 
         // Теги
-        'tags'              => ['view', 'create', 'edit', 'delete'],
+        'tags' => ['view', 'create', 'edit', 'delete'],
 
         // Система
-        'erp-bus'           => ['view'],
-        'media'             => ['view', 'delete'],
-        'settings'          => ['view', 'edit'],
-        'roles'             => ['view', 'create', 'edit', 'delete'],
+        'erp-bus' => ['view'],
+        'media' => ['view', 'delete'],
+        'settings' => ['view', 'edit'],
+        'roles' => ['view', 'create', 'edit', 'delete'],
     ];
 
     /**
      * Русские названия ресурсов для отображения.
      */
     protected array $resourceLabels = [
-        'products'          => 'Товары',
-        'categories'        => 'Категории',
-        'brands'            => 'Бренды',
-        'product-models'    => 'Модели товаров',
-        'attributes'        => 'Атрибуты',
-        'attribute-groups'  => 'Группы атрибутов',
-        'size-charts'       => 'Размерные сетки',
-        'product-barcodes'  => 'Штрихкоды',
-        'certificates'      => 'Сертификаты',
-        'product-exports'   => 'Выгрузки',
-        'warehouses'        => 'Склады',
-        'regions'           => 'Регионы',
-        'orders'            => 'Заказы',
-        'carts'             => 'Корзины',
-        'returns'           => 'Возвраты',
-        'shipments'         => 'Реализации',
-        'favorites'         => 'Избранное',
-        'wishlist'          => 'Список желаний',
-        'promotions'        => 'Акции',
-        'product-selections'=> 'Подборки',
-        'users'             => 'Пользователи',
-        'user-questionnaires'=> 'Анкеты',
-        'client-statuses'   => 'Статусы клиентов',
-        'companies'         => 'Компании',
+        'products' => 'Товары',
+        'categories' => 'Категории',
+        'brands' => 'Бренды',
+        'product-models' => 'Модели товаров',
+        'attributes' => 'Атрибуты',
+        'attribute-groups' => 'Группы атрибутов',
+        'size-charts' => 'Размерные сетки',
+        'product-barcodes' => 'Штрихкоды',
+        'certificates' => 'Сертификаты',
+        'product-exports' => 'Выгрузки',
+        'warehouses' => 'Склады',
+        'regions' => 'Регионы',
+        'orders' => 'Заказы',
+        'carts' => 'Корзины',
+        'returns' => 'Возвраты',
+        'shipments' => 'Реализации',
+        'favorites' => 'Избранное',
+        'wishlist' => 'Список желаний',
+        'promotions' => 'Акции',
+        'product-selections' => 'Подборки',
+        'users' => 'Пользователи',
+        'user-questionnaires' => 'Анкеты',
+        'client-statuses' => 'Статусы клиентов',
+        'companies' => 'Компании',
         'company-bank-accounts' => 'Банковские счета',
-        'delivery-addresses'=> 'Адреса доставки',
-        'currencies'        => 'Валюты',
-        'contractor-balances'=> 'Балансы контрагентов',
+        'delivery-addresses' => 'Адреса доставки',
+        'currencies' => 'Валюты',
+        'contractor-balances' => 'Балансы контрагентов',
         'individual-prices' => 'Инд. цены',
-        'articles'          => 'Статьи',
-        'brand-stories'     => 'О брендах',
-        'news'              => 'Новости',
-        'faqs'              => 'FAQ',
-        'banners'           => 'Баннеры',
-        'pages'             => 'Страницы',
-        'stories'           => 'Истории',
-        'menu-items'        => 'Меню',
-        'tags'              => 'Теги',
-        'erp-bus'           => 'Шина ERP',
-        'media'             => 'Медиа',
-        'settings'          => 'Настройки',
-        'roles'             => 'Роли',
+        'articles' => 'Статьи',
+        'brand-stories' => 'О брендах',
+        'news' => 'Новости',
+        'faqs' => 'FAQ',
+        'banners' => 'Баннеры',
+        'pages' => 'Страницы',
+        'stories' => 'Истории',
+        'menu-items' => 'Меню',
+        'tags' => 'Теги',
+        'erp-bus' => 'Шина ERP',
+        'media' => 'Медиа',
+        'settings' => 'Настройки',
+        'roles' => 'Роли',
     ];
 
     /**
@@ -173,7 +173,7 @@ class RolesAndPermissionsSeeder extends Seeder
             }
         }
 
-        $this->command->info('Создано ' . count($allPermissions) . ' прав.');
+        $this->command->info('Создано '.count($allPermissions).' прав.');
 
         // 2. Создаём роли и назначаем permissions
         foreach ($this->presetRoles as $roleName => $config) {
@@ -190,7 +190,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 // Собираем permissions для конкретных ресурсов
                 $rolePermissions = [];
                 foreach ($config['resources'] as $resource) {
-                    if (!isset($this->resources[$resource])) {
+                    if (! isset($this->resources[$resource])) {
                         continue;
                     }
                     foreach ($this->resources[$resource] as $action) {
@@ -211,7 +211,7 @@ class RolesAndPermissionsSeeder extends Seeder
             $superAdminRole = Role::findByName('super-admin', 'web');
 
             foreach ($adminUsers as $user) {
-                if (!$user->hasRole('super-admin')) {
+                if (! $user->hasRole('super-admin')) {
                     $user->assignRole($superAdminRole);
                 }
             }

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Certificate;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CertificateController extends AdminController
 {
@@ -29,7 +29,7 @@ class CertificateController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'external_id', 'created_at', 'issued_at', 'expires_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -87,7 +87,7 @@ class CertificateController extends AdminController
         }
 
         // Sync products
-        if (!empty($validated['products'])) {
+        if (! empty($validated['products'])) {
             $certificate->products()->sync($validated['products']);
         }
 
@@ -119,7 +119,7 @@ class CertificateController extends AdminController
                 'type' => $certificate->type,
                 'issued_at' => $certificate->issued_at?->format('Y-m-d'),
                 'expires_at' => $certificate->expires_at?->format('Y-m-d'),
-                'media' => $certificate->getMedia('files')->map(fn($m) => [
+                'media' => $certificate->getMedia('files')->map(fn ($m) => [
                     'id' => $m->id,
                     'url' => $m->getUrl(),
                     'name' => $m->file_name,

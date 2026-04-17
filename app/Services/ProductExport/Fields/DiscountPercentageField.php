@@ -11,16 +11,38 @@ class DiscountPercentageField extends ExportField
 {
     public function __construct(protected PriceServiceInterface $priceService) {}
 
-    public function key(): string { return 'discount_percentage'; }
-    public function name(): string { return 'Процент скидки клиента'; }
-    public function description(): string { return 'Размер персональной скидки клиента в процентах'; }
-    public function group(): string { return 'Пользовательские (по клиенту)'; }
-    public function isFilterable(): bool { return false; }
+    public function key(): string
+    {
+        return 'discount_percentage';
+    }
+
+    public function name(): string
+    {
+        return 'Процент скидки клиента';
+    }
+
+    public function description(): string
+    {
+        return 'Размер персональной скидки клиента в процентах';
+    }
+
+    public function group(): string
+    {
+        return 'Пользовательские (по клиенту)';
+    }
+
+    public function isFilterable(): bool
+    {
+        return false;
+    }
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        if (!$clientUser) return 0;
+        if (! $clientUser) {
+            return 0;
+        }
         $priceResult = $this->priceService->getPriceResult($product, $clientUser);
+
         return $priceResult->discountPercent;
     }
 }

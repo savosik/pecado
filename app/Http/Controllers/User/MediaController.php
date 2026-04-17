@@ -147,8 +147,8 @@ class MediaController extends Controller
             return response()->json(['message' => 'Файлы не найдены'], 404);
         }
 
-        $zipFileName = 'media-' . now()->format('Y-m-d-His') . '.zip';
-        $zipPath = storage_path('app/temp/' . $zipFileName);
+        $zipFileName = 'media-'.now()->format('Y-m-d-His').'.zip';
+        $zipPath = storage_path('app/temp/'.$zipFileName);
 
         // Убедиться, что директория temp существует
         if (! file_exists(storage_path('app/temp'))) {
@@ -168,7 +168,7 @@ class MediaController extends Controller
             if (Storage::disk($disk)->exists($path)) {
                 $fileContent = Storage::disk($disk)->get($path);
                 // Префикс ID, чтобы избежать конфликтов имён
-                $zip->addFromString($media->id . '-' . $media->file_name, $fileContent);
+                $zip->addFromString($media->id.'-'.$media->file_name, $fileContent);
             }
         }
 
@@ -185,15 +185,15 @@ class MediaController extends Controller
         $filters = [];
 
         if ($type) {
-            $filters[] = 'mime_type_group = "' . addslashes($type) . '"';
+            $filters[] = 'mime_type_group = "'.addslashes($type).'"';
         }
 
         if ($collection) {
-            $filters[] = 'collection_name = "' . addslashes($collection) . '"';
+            $filters[] = 'collection_name = "'.addslashes($collection).'"';
         }
 
         if ($modelType) {
-            $filters[] = 'model_type = "' . addslashes($modelType) . '"';
+            $filters[] = 'model_type = "'.addslashes($modelType).'"';
         }
 
         return implode(' AND ', $filters);

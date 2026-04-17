@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\AttributeGroup;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class AttributeGroupController extends Controller
 {

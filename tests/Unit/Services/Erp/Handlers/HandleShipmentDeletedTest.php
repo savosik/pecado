@@ -20,7 +20,7 @@ class HandleShipmentDeletedTest extends TestCase
             'uuid' => 'del-ship-test-001',
         ]);
 
-        $handler = new HandleShipmentDeleted();
+        $handler = new HandleShipmentDeleted;
         $handler->handle([
             'event' => 'shipment.deleted',
             'uuid' => 'del-ship-test-001',
@@ -38,7 +38,7 @@ class HandleShipmentDeletedTest extends TestCase
                 return str_contains($msg, 'реализация не найдена');
             });
 
-        $handler = new HandleShipmentDeleted();
+        $handler = new HandleShipmentDeleted;
         $handler->handle([
             'event' => 'shipment.deleted',
             'uuid' => 'nonexistent-shipment-uuid',
@@ -54,7 +54,7 @@ class HandleShipmentDeletedTest extends TestCase
                 return str_contains($msg, 'отсутствует uuid');
             });
 
-        $handler = new HandleShipmentDeleted();
+        $handler = new HandleShipmentDeleted;
         $handler->handle([
             'event' => 'shipment.deleted',
         ]);

@@ -2,22 +2,20 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Product;
-use App\Models\Scopes\HiddenScope;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Models\Attribute;
 use App\Models\Brand;
 use App\Models\Category;
-
+use App\Models\Certificate;
+use App\Models\Product;
+use App\Models\ProductSelection;
+use App\Models\Scopes\HiddenScope;
 use App\Models\SizeChart;
 use App\Models\Warehouse;
-use App\Models\Attribute;
-use App\Models\Certificate;
-use App\Models\ProductSelection;
-
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ProductController extends AdminController
 {
@@ -44,7 +42,7 @@ class ProductController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'base_price', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -138,13 +136,13 @@ class ProductController extends AdminController
         }
 
         // Устанавливаем основной штрихкод как первый из списка для совместимости
-        if (!empty($validated['barcodes'])) {
+        if (! empty($validated['barcodes'])) {
             $validated['barcode'] = $validated['barcodes'][0];
         }
 
         // Декодируем rich_content из JSON-строки в массив для корректной работы с кастом
         if (isset($validated['rich_content'])) {
-            $validated['rich_content'] = !empty($validated['rich_content'])
+            $validated['rich_content'] = ! empty($validated['rich_content'])
                 ? json_decode($validated['rich_content'], true)
                 : null;
         }
@@ -152,7 +150,7 @@ class ProductController extends AdminController
         $product = Product::create($validated);
 
         // Сохраняем все штрихкоды в связанную таблицу
-        if (!empty($validated['barcodes'])) {
+        if (! empty($validated['barcodes'])) {
             foreach ($validated['barcodes'] as $barcode) {
                 $product->barcodes()->create(['barcode' => $barcode]);
             }
@@ -212,13 +210,13 @@ class ProductController extends AdminController
         $product = Product::withoutGlobalScope(HiddenScope::class)->findOrFail($id);
 
         $product->load([
-            'brand', 
-            'model', 
-            'category', 
-            'sizeChart', 
-            'media', 
-            'tags', 
-            'barcodes', 
+            'brand',
+            'model',
+            'category',
+            'sizeChart',
+            'media',
+            'tags',
+            'barcodes',
             'certificates',
             'warehouses',
             'attributeValues.attribute',
@@ -296,7 +294,7 @@ class ProductController extends AdminController
                         'number_value' => $attrValue->number_value,
                         'boolean_value' => $attrValue->boolean_value,
                     ];
-                   }),
+                }),
                 'product_selections' => $product->productSelections->pluck('id')->toArray(),
             ],
             'brands' => Brand::select('id', 'name')->orderBy('name')->get(),
@@ -322,7 +320,7 @@ class ProductController extends AdminController
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:products,slug,' . $product->id,
+            'slug' => 'nullable|string|max:255|unique:products,slug,'.$product->id,
             'base_price' => 'required|numeric|min:0',
             'category_id' => 'nullable|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
@@ -359,11 +357,11 @@ class ProductController extends AdminController
 
             'product_selections' => 'nullable|array',
             'product_selections.*' => 'exists:product_selections,id',
-            
+
             'warehouses' => 'nullable|array',
             'warehouses.*.id' => 'required|exists:warehouses,id',
             'warehouses.*.quantity' => 'required|integer|min:0',
-            
+
             'attributes' => 'nullable|array',
             'attributes.*.attribute_id' => 'required|exists:attributes,id',
             'attributes.*.attribute_value_id' => 'nullable|exists:attribute_values,id',
@@ -379,12 +377,12 @@ class ProductController extends AdminController
 
         // Устанавливаем основной штрихкод как первый из списка для совместимости
         if (isset($validated['barcodes'])) {
-            $validated['barcode'] = !empty($validated['barcodes']) ? $validated['barcodes'][0] : null;
+            $validated['barcode'] = ! empty($validated['barcodes']) ? $validated['barcodes'][0] : null;
         }
 
         // Декодируем rich_content из JSON-строки в массив для корректной работы с кастом
         if (isset($validated['rich_content'])) {
-            $validated['rich_content'] = !empty($validated['rich_content'])
+            $validated['rich_content'] = ! empty($validated['rich_content'])
                 ? json_decode($validated['rich_content'], true)
                 : null;
         }
@@ -395,7 +393,7 @@ class ProductController extends AdminController
         if (isset($validated['barcodes'])) {
             $product->barcodes()->delete();
             foreach ($validated['barcodes'] as $barcode) {
-                if (!empty($barcode)) {
+                if (! empty($barcode)) {
                     $product->barcodes()->create(['barcode' => $barcode]);
                 }
             }
@@ -434,7 +432,7 @@ class ProductController extends AdminController
         } else {
             $product->certificates()->detach();
         }
-        
+
         // Синхронизация складов с количеством
         if (isset($validated['warehouses'])) {
             $warehouseData = [];
@@ -452,12 +450,12 @@ class ProductController extends AdminController
         } else {
             $product->productSelections()->detach();
         }
-        
+
         // Синхронизация атрибутов
         if (isset($validated['attributes'])) {
             // Удалить старые значения атрибутов
             $product->attributeValues()->delete();
-            
+
             // Создать новые
             foreach ($validated['attributes'] as $attr) {
                 $product->attributeValues()->create([
@@ -510,7 +508,7 @@ class ProductController extends AdminController
     {
         $query = $request->input('query');
 
-        if (!$query) {
+        if (! $query) {
             return response()->json([]);
         }
 

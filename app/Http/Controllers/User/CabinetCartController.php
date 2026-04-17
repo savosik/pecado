@@ -36,20 +36,20 @@ class CabinetCartController extends Controller
             $summary = $this->cartService->getCartSummary($cart, $user);
 
             return [
-                'id'             => $cart->id,
-                'name'           => $cart->name,
-                'is_active'      => $cart->is_active,
-                'items_count'    => $cart->items_count,
+                'id' => $cart->id,
+                'name' => $cart->name,
+                'is_active' => $cart->is_active,
+                'items_count' => $cart->items_count,
                 'total_quantity' => $cart->items->sum('quantity'),
-                'total_amount'   => round($summary['total_price'] ?? 0, 2),
-                'created_at'     => $cart->created_at?->format('d.m.Y H:i'),
-                'updated_at'     => $cart->updated_at?->format('d.m.Y H:i'),
-                'can_delete'     => $cartsCount > 1,
+                'total_amount' => round($summary['total_price'] ?? 0, 2),
+                'created_at' => $cart->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $cart->updated_at?->format('d.m.Y H:i'),
+                'can_delete' => $cartsCount > 1,
             ];
         });
 
         return Inertia::render('User/Cabinet/Carts/Index', [
-            'carts'      => $cartsData,
+            'carts' => $cartsData,
             'cartsCount' => $cartsCount,
         ]);
     }
@@ -68,8 +68,8 @@ class CabinetCartController extends Controller
 
         return Inertia::render('User/Cabinet/Carts/Show', [
             'cart' => [
-                'id'        => $cart->id,
-                'name'      => $cart->name,
+                'id' => $cart->id,
+                'name' => $cart->name,
                 'is_active' => $cart->is_active,
                 'created_at' => $cart->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $cart->updated_at?->format('d.m.Y H:i'),
@@ -143,22 +143,22 @@ class CabinetCartController extends Controller
         $products = Product::query()
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('sku', 'like', "%{$query}%")
-                  ->orWhere('code', 'like', "%{$query}%")
-                  ->orWhereHas('barcodes', function ($bq) use ($query) {
-                      $bq->where('barcode', 'like', "%{$query}%");
-                  });
+                    ->orWhere('sku', 'like', "%{$query}%")
+                    ->orWhere('code', 'like', "%{$query}%")
+                    ->orWhereHas('barcodes', function ($bq) use ($query) {
+                        $bq->where('barcode', 'like', "%{$query}%");
+                    });
             })
             ->with(['brand', 'media'])
             ->limit(15)
             ->get()
             ->map(function ($product) {
                 return [
-                    'id'         => $product->id,
-                    'name'       => $product->name,
-                    'sku'        => $product->sku,
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
                     'base_price' => $product->base_price,
-                    'image_url'  => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
+                    'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
                     'brand_name' => $product->brand?->name,
                 ];
             });

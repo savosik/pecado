@@ -8,12 +8,35 @@ use App\Services\ProductExport\ExportField;
 
 class ModelNameField extends ExportField
 {
-    public function key(): string { return 'model.name'; }
-    public function name(): string { return 'Модель (название)'; }
-    public function description(): string { return 'Название модели товара'; }
-    public function group(): string { return 'Модель'; }
-    public function isFilterable(): bool { return false; }
-    public function eagerLoad(): array { return ['model']; }
+    public function key(): string
+    {
+        return 'model.name';
+    }
+
+    public function name(): string
+    {
+        return 'Модель (название)';
+    }
+
+    public function description(): string
+    {
+        return 'Название модели товара';
+    }
+
+    public function group(): string
+    {
+        return 'Модель';
+    }
+
+    public function isFilterable(): bool
+    {
+        return false;
+    }
+
+    public function eagerLoad(): array
+    {
+        return ['model'];
+    }
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {

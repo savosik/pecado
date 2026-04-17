@@ -10,16 +10,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Scout\Searchable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Tags\HasTags;
 
-use Laravel\Scout\Searchable;
-
 class Product extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, HasTags, Searchable, ProductQueryScopes;
+    use HasFactory, HasTags, InteractsWithMedia, ProductQueryScopes, Searchable;
 
     /**
      * Автоматическая очистка HTML-сущностей при сохранении.
@@ -29,7 +28,7 @@ class Product extends Model implements HasMedia
     {
         // v10: Скрытые товары не отображаются на сайте.
         // В Admin-контроллерах снимается через withoutGlobalScope(HiddenScope::class).
-        static::addGlobalScope(new HiddenScope());
+        static::addGlobalScope(new HiddenScope);
 
         static::saving(function (Product $product) {
             foreach (['name', 'description', 'short_description'] as $field) {
@@ -39,24 +38,24 @@ class Product extends Model implements HasMedia
             }
 
             // Автогенерация slug, если не задан
-            if (empty($product->slug) && !empty($product->name)) {
+            if (empty($product->slug) && ! empty($product->name)) {
                 $transliterated = \App\Helpers\SearchHelper::transliterate($product->name);
                 $baseSlug = \Illuminate\Support\Str::slug($transliterated);
 
                 if (empty($baseSlug)) {
-                    $baseSlug = 'product-' . ($product->sku ?: \Illuminate\Support\Str::random(8));
+                    $baseSlug = 'product-'.($product->sku ?: \Illuminate\Support\Str::random(8));
                 }
 
                 // Добавляем суффикс из внутреннего кода для уникальности
                 if ($product->sku) {
-                    $baseSlug .= '-' . \Illuminate\Support\Str::slug($product->sku);
+                    $baseSlug .= '-'.\Illuminate\Support\Str::slug($product->sku);
                 }
 
                 // Гарантируем уникальность
                 $slug = $baseSlug;
                 $counter = 1;
                 while (static::where('slug', $slug)->where('id', '!=', $product->id ?? 0)->exists()) {
-                    $slug = $baseSlug . '-' . $counter++;
+                    $slug = $baseSlug.'-'.$counter++;
                 }
                 $product->slug = $slug;
             }
@@ -267,14 +266,12 @@ class Product extends Model implements HasMedia
         return $this->hasMany(ReturnItem::class);
     }
 
-
-
     /**
      * Define if the model should be searchable.
      */
     public function shouldBeSearchable(): bool
     {
-        return !$this->hidden;
+        return ! $this->hidden;
     }
 
     /**

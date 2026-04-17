@@ -77,11 +77,11 @@ class DeliveryAddressController extends Controller
     private function validateAddress(Request $request): array
     {
         return $request->validate([
-            'name'    => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string'],
         ], [
-            'name.required'    => 'Название обязательно.',
-            'name.max'         => 'Название не должно превышать 255 символов.',
+            'name.required' => 'Название обязательно.',
+            'name.max' => 'Название не должно превышать 255 символов.',
             'address.required' => 'Адрес обязателен.',
         ]);
     }

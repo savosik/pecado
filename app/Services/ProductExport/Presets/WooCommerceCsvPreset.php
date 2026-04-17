@@ -10,13 +10,40 @@ use App\Models\ProductExport;
  */
 class WooCommerceCsvPreset extends AbstractPreset
 {
-    public function key(): string { return 'woocommerce'; }
-    public function name(): string { return 'WooCommerce / WordPress (CSV)'; }
-    public function description(): string { return 'CSV-файл для встроенного импортера WooCommerce. Товары, цены, остатки, картинки и атрибуты.'; }
-    public function fileExtension(): string { return 'csv'; }
-    public function mimeType(): string { return 'text/csv; charset=utf-8'; }
-    public function color(): string { return 'purple'; }
-    public function icon(): string { return 'LuGlobe'; }
+    public function key(): string
+    {
+        return 'woocommerce';
+    }
+
+    public function name(): string
+    {
+        return 'WooCommerce / WordPress (CSV)';
+    }
+
+    public function description(): string
+    {
+        return 'CSV-файл для встроенного импортера WooCommerce. Товары, цены, остатки, картинки и атрибуты.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'csv';
+    }
+
+    public function mimeType(): string
+    {
+        return 'text/csv; charset=utf-8';
+    }
+
+    public function color(): string
+    {
+        return 'purple';
+    }
+
+    public function icon(): string
+    {
+        return 'LuGlobe';
+    }
 
     public function writeToStream($stream, ProductExport $export): void
     {
@@ -28,7 +55,7 @@ class WooCommerceCsvPreset extends AbstractPreset
         $this->eachChunk($export, function ($items) use ($stream, &$headersWritten) {
             $maxAttrs = $items->max(fn ($item) => count($item['attributes']));
 
-            if (!$headersWritten) {
+            if (! $headersWritten) {
                 $headers = [
                     'ID', 'Type', 'SKU', 'Name', 'Published', 'Featured',
                     'Short description', 'Description', 'Sale price', 'Regular price',
@@ -62,7 +89,7 @@ class WooCommerceCsvPreset extends AbstractPreset
 
                 foreach ($item['attributes'] as $attr) {
                     $row[] = $attr['name'];
-                    $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+                    $row[] = $attr['value'].($attr['unit'] ? " {$attr['unit']}" : '');
                 }
                 $remaining = ($maxAttrs - count($item['attributes'])) * 2;
                 for ($i = 0; $i < $remaining; $i++) {

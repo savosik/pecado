@@ -9,6 +9,7 @@ use Illuminate\Console\Command;
 class GenerateHomepageMedia extends Command
 {
     protected $signature = 'app:generate-homepage-media';
+
     protected $description = 'Генерация placeholder-изображений для баннеров и сторис';
 
     /**
@@ -123,13 +124,13 @@ class GenerateHomepageMedia extends Command
      * Создаёт PNG-изображение с градиентным фоном и текстом.
      */
     private function createGradientImage(
-        int    $width,
-        int    $height,
+        int $width,
+        int $height,
         string $colorFrom,
         string $colorTo,
         string $text,
-        int    $fontSize = 40,
-        bool   $vertical = false
+        int $fontSize = 40,
+        bool $vertical = false
     ): string {
         $image = imagecreatetruecolor($width, $height);
         imagealphablending($image, false);
@@ -143,18 +144,18 @@ class GenerateHomepageMedia extends Command
         if ($vertical) {
             for ($y = 0; $y < $height; $y++) {
                 $ratio = $y / max($height - 1, 1);
-                $r = (int)($from[0] + ($to[0] - $from[0]) * $ratio);
-                $g = (int)($from[1] + ($to[1] - $from[1]) * $ratio);
-                $b = (int)($from[2] + ($to[2] - $from[2]) * $ratio);
+                $r = (int) ($from[0] + ($to[0] - $from[0]) * $ratio);
+                $g = (int) ($from[1] + ($to[1] - $from[1]) * $ratio);
+                $b = (int) ($from[2] + ($to[2] - $from[2]) * $ratio);
                 $color = imagecolorallocate($image, $r, $g, $b);
                 imageline($image, 0, $y, $width - 1, $y, $color);
             }
         } else {
             for ($x = 0; $x < $width; $x++) {
                 $ratio = $x / max($width - 1, 1);
-                $r = (int)($from[0] + ($to[0] - $from[0]) * $ratio);
-                $g = (int)($from[1] + ($to[1] - $from[1]) * $ratio);
-                $b = (int)($from[2] + ($to[2] - $from[2]) * $ratio);
+                $r = (int) ($from[0] + ($to[0] - $from[0]) * $ratio);
+                $g = (int) ($from[1] + ($to[1] - $from[1]) * $ratio);
+                $b = (int) ($from[2] + ($to[2] - $from[2]) * $ratio);
                 $color = imagecolorallocate($image, $r, $g, $b);
                 imageline($image, $x, 0, $x, $height - 1, $color);
             }
@@ -171,7 +172,7 @@ class GenerateHomepageMedia extends Command
         $this->drawCenteredText($image, $text, $width, $height, $white, $shadow, $fontSize);
 
         // Save to temp file
-        $path = tempnam(sys_get_temp_dir(), 'pecado_img_') . '.png';
+        $path = tempnam(sys_get_temp_dir(), 'pecado_img_').'.png';
         imagepng($image, $path);
         imagedestroy($image);
 
@@ -202,11 +203,11 @@ class GenerateHomepageMedia extends Command
 
         $lineHeight = imagefontheight($gdFont) + 4;
         $totalHeight = count($lines) * $lineHeight;
-        $startY = (int)(($height - $totalHeight) / 2);
+        $startY = (int) (($height - $totalHeight) / 2);
 
         foreach ($lines as $i => $line) {
             $lineWidth = imagefontwidth($gdFont) * mb_strlen($line);
-            $x = (int)(($width - $lineWidth) / 2);
+            $x = (int) (($width - $lineWidth) / 2);
             $y = $startY + $i * $lineHeight;
 
             // Shadow
@@ -219,6 +220,7 @@ class GenerateHomepageMedia extends Command
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
+
         return [
             hexdec(substr($hex, 0, 2)),
             hexdec(substr($hex, 2, 2)),

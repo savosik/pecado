@@ -41,8 +41,8 @@ class SearchControllerTest extends TestCase
         $brand = Brand::factory()->create(['name' => 'TestBrand Alpha']);
         $category = Category::factory()->create(['name' => 'TestCategory Alpha']);
         $product = Product::factory()->create([
-            'name'        => 'TestProduct Alpha',
-            'brand_id'    => $brand->id,
+            'name' => 'TestProduct Alpha',
+            'brand_id' => $brand->id,
             'category_id' => $category->id,
         ]);
 
@@ -50,13 +50,13 @@ class SearchControllerTest extends TestCase
         $this->addStock($product);
 
         $article = Article::factory()->create([
-            'title'        => 'TestArticle Alpha',
+            'title' => 'TestArticle Alpha',
             'is_published' => true,
             'published_at' => now()->subDay(),
         ]);
 
         $news = News::factory()->create([
-            'title'        => 'TestNews Alpha',
+            'title' => 'TestNews Alpha',
             'is_published' => true,
             'published_at' => now()->subDay(),
         ]);
@@ -195,7 +195,7 @@ class SearchControllerTest extends TestCase
 
         $this->assertDatabaseHas('search_histories', [
             'user_id' => $user->id,
-            'query'   => 'Zeta',
+            'query' => 'Zeta',
         ]);
     }
 

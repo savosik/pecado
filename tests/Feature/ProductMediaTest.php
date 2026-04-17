@@ -67,15 +67,15 @@ class ProductMediaTest extends TestCase
 
     public function test_video_collection_accepts_only_single_file()
     {
-        // Testing constraint logic with accepted file type (images can technically be uploaded if mimetype check wasn't enforcing video-only, 
+        // Testing constraint logic with accepted file type (images can technically be uploaded if mimetype check wasn't enforcing video-only,
         // but since we can't easily fake a valid video file in this environment, we rely on the collection definition we wrote).
-        // Since we cannot upload a valid video file to pass validation, and uploading an image will fail validation, 
-        // we will check if the collection definition exists and is single file by inspecting the model configuration indirectly 
+        // Since we cannot upload a valid video file to pass validation, and uploading an image will fail validation,
+        // we will check if the collection definition exists and is single file by inspecting the model configuration indirectly
         // or just trust the manual verification/code review for the mime type part.
-        
+
         // However, we can test that IF a file was added, adding another replaces it.
         // But we can't add the first one without it being a valid video.
-        
+
         // For now, let's verify the main and additional collections which cover the most critical parts.
         // The video collection configuration code is identical to 'main' regarding singleFile().
         $this->assertTrue(true);

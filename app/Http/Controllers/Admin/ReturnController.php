@@ -4,17 +4,17 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\ReturnReason;
 use App\Enums\ReturnStatus;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Models\Order;
+use App\Models\Product;
 use App\Models\ProductReturn;
 use App\Models\User;
-use App\Models\Product;
-use App\Models\Order;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\JsonResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ReturnController extends AdminController
 {
@@ -32,11 +32,12 @@ class ReturnController extends AdminController
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('uuid', 'like', "%{$search}%")
-                  ->orWhere('id', $search)
-                  ->orWhereHas('user', function ($userQuery) use ($search) {
-                      $userQuery->where('name', 'like', "%{$search}%")
-                                ->orWhere('email', 'like', "%{$search}%");
-                  });
+                    ->orWhere('erp_number', 'like', "%{$search}%")
+                    ->orWhere('id', $search)
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -71,7 +72,7 @@ class ReturnController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'uuid', 'total_amount', 'status', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -88,6 +89,7 @@ class ReturnController extends AdminController
             return [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
+                'number' => $return->erp_number,
                 'status' => $return->status?->value,
                 'status_label' => $this->getStatusLabel($return->status),
                 'total_amount' => $return->total_amount,
@@ -159,7 +161,7 @@ class ReturnController extends AdminController
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'order_id' => 'nullable|exists:orders,id',
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(ReturnStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'admin_comment' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -167,7 +169,7 @@ class ReturnController extends AdminController
             'items.*.order_id' => 'nullable|exists:orders,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.reason' => 'required|string|in:' . implode(',', array_column(ReturnReason::cases(), 'value')),
+            'items.*.reason' => 'required|string|in:'.implode(',', array_column(ReturnReason::cases(), 'value')),
             'items.*.reason_comment' => 'nullable|string',
         ]);
 
@@ -209,10 +211,11 @@ class ReturnController extends AdminController
             return $this->redirectAfterSave($request, 'admin.returns.index', 'admin.returns.edit', $return, 'Возврат успешно создан');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Ошибка при создании возврата: ' . $e->getMessage());
+                ->with('error', 'Ошибка при создании возврата: '.$e->getMessage());
         }
     }
 
@@ -227,6 +230,7 @@ class ReturnController extends AdminController
             'return' => [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
+                'number' => $return->erp_number,
                 'user_id' => $return->user_id,
                 'order_id' => $return->order_id,
                 'status' => $return->status?->value,
@@ -270,7 +274,7 @@ class ReturnController extends AdminController
         $validated = $request->validate([
             'user_id' => 'required|exists:users,id',
             'order_id' => 'nullable|exists:orders,id',
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(ReturnStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'admin_comment' => 'nullable|string',
             'items' => 'required|array|min:1',
@@ -279,7 +283,7 @@ class ReturnController extends AdminController
             'items.*.order_id' => 'nullable|exists:orders,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.reason' => 'required|string|in:' . implode(',', array_column(ReturnReason::cases(), 'value')),
+            'items.*.reason' => 'required|string|in:'.implode(',', array_column(ReturnReason::cases(), 'value')),
             'items.*.reason_comment' => 'nullable|string',
         ]);
 
@@ -303,7 +307,7 @@ class ReturnController extends AdminController
             // Синхронизация позиций возврата
             $existingItemIds = [];
             foreach ($validated['items'] as $item) {
-                if (!empty($item['id'])) {
+                if (! empty($item['id'])) {
                     // Обновление существующей позиции
                     $returnItem = $return->items()->find($item['id']);
                     if ($returnItem) {
@@ -341,10 +345,11 @@ class ReturnController extends AdminController
             return $this->redirectAfterSave($request, 'admin.returns.index', 'admin.returns.edit', $return, 'Возврат успешно обновлён');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Ошибка при обновлении возврата: ' . $e->getMessage());
+                ->with('error', 'Ошибка при обновлении возврата: '.$e->getMessage());
         }
     }
 
@@ -359,6 +364,7 @@ class ReturnController extends AdminController
             'return' => [
                 'id' => $return->id,
                 'uuid' => $return->uuid,
+                'number' => $return->erp_number,
                 'order_id' => $return->order_id,
                 'status' => $return->status?->value,
                 'status_label' => $this->getStatusLabel($return->status),
@@ -388,6 +394,7 @@ class ReturnController extends AdminController
                         ] : null,
                         'order' => $item->order ? [
                             'id' => $item->order->id,
+                            'number' => $item->order->number,
                             'uuid' => $item->order->uuid,
                         ] : null,
                     ];
@@ -406,7 +413,7 @@ class ReturnController extends AdminController
     public function updateStatus(Request $request, ProductReturn $return): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(ReturnStatus::cases(), 'value')),
         ]);
 
         $return->update([
@@ -444,7 +451,7 @@ class ReturnController extends AdminController
         $validated = $request->validate([
             'return_ids' => 'required|array|min:1',
             'return_ids.*' => 'exists:returns,id',
-            'status' => 'required|string|in:' . implode(',', array_column(ReturnStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(ReturnStatus::cases(), 'value')),
         ]);
 
         $count = ProductReturn::whereIn('id', $validated['return_ids'])->update([
@@ -474,7 +481,7 @@ class ReturnController extends AdminController
         $query = $request->input('query');
         $userId = $request->input('user_id');
 
-        if (!$query) {
+        if (! $query) {
             return response()->json([]);
         }
 
@@ -517,7 +524,7 @@ class ReturnController extends AdminController
         $productId = $request->input('product_id');
         $userId = $request->input('user_id');
 
-        if (!$productId || !$userId) {
+        if (! $productId || ! $userId) {
             return response()->json([]);
         }
 
@@ -531,12 +538,13 @@ class ReturnController extends AdminController
             }])
             ->orderBy('created_at', 'desc')
             ->get()
-            ->map(function ($order) use ($productId) {
+            ->map(function ($order) {
                 $item = $order->items->first();
+
                 return [
                     'id' => $order->id,
                     'uuid' => $order->uuid,
-                    'label' => "Заказ #{$order->id} от " . $order->created_at->format('d.m.Y'),
+                    'label' => "Заказ #{$order->id} от ".$order->created_at->format('d.m.Y'),
                     'price' => $item?->price ?? 0,
                     'quantity' => $item?->quantity ?? 0,
                     'created_at' => $order->created_at->format('d.m.Y H:i'),

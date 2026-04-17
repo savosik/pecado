@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Helpers\ContentHelper;
 use App\Http\Controllers\Controller;
 use App\Models\BrandStory;
-use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
@@ -22,7 +21,7 @@ class BrandStoryController extends Controller
         $query = BrandStory::published()->with(['tags', 'brand'])->orderByDesc('published_at')
             ->forRegion(Auth::user()?->region_id);
 
-        if (!empty($selectedTags)) {
+        if (! empty($selectedTags)) {
             $query->withAnyTags($selectedTags);
         }
 

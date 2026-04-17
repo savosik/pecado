@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
@@ -60,7 +59,7 @@ class StorySlide extends Model implements HasMedia
         $this->addMediaCollection('default')
             ->acceptsMimeTypes([
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
-                'video/mp4', 'video/webm', 'video/quicktime'
+                'video/mp4', 'video/webm', 'video/quicktime',
             ])
             ->singleFile();
     }

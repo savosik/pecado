@@ -10,13 +10,15 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\Cart\CartService;
 use Illuminate\Database\Eloquent\Collection;
-use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use PHPUnit\Framework\TestCase;
 
 class CartServiceTest extends TestCase
 {
     private CartService $service;
+
     private PriceServiceInterface $priceService;
+
     private StockServiceInterface $stockService;
 
     protected function setUp(): void
@@ -34,7 +36,7 @@ class CartServiceTest extends TestCase
         $product = $this->createMock(Product::class);
 
         $item = $this->createMock(CartItem::class);
-        $item->method('__get')->willReturnCallback(fn($key) => match($key) {
+        $item->method('__get')->willReturnCallback(fn ($key) => match ($key) {
             'product' => $product,
             'quantity' => 3,
             'item_type' => 'instock',
@@ -46,7 +48,7 @@ class CartServiceTest extends TestCase
 
         $cart = $this->createMock(Cart::class);
         $cart->method('loadMissing')->willReturnSelf();
-        $cart->method('__get')->willReturnCallback(fn($key) => $key === 'items' ? $items : null);
+        $cart->method('__get')->willReturnCallback(fn ($key) => $key === 'items' ? $items : null);
 
         $this->priceService->method('getUserPrice')->with($product, $user)->willReturn(100.0);
 
@@ -63,7 +65,7 @@ class CartServiceTest extends TestCase
         $product = $this->createMock(Product::class);
 
         $item = $this->createMock(CartItem::class);
-        $item->method('__get')->willReturnCallback(fn($key) => match($key) {
+        $item->method('__get')->willReturnCallback(fn ($key) => match ($key) {
             'product' => $product,
             'quantity' => 5,
             'item_type' => 'instock',
@@ -75,7 +77,7 @@ class CartServiceTest extends TestCase
 
         $cart = $this->createMock(Cart::class);
         $cart->method('loadMissing')->willReturnSelf();
-        $cart->method('__get')->willReturnCallback(fn($key) => $key === 'items' ? $items : null);
+        $cart->method('__get')->willReturnCallback(fn ($key) => $key === 'items' ? $items : null);
 
         $this->priceService->method('getUserPrice')->willReturn(100.0);
 
@@ -92,7 +94,7 @@ class CartServiceTest extends TestCase
         $product = $this->createMock(Product::class);
 
         $instockItem = $this->createMock(CartItem::class);
-        $instockItem->method('__get')->willReturnCallback(fn($key) => match($key) {
+        $instockItem->method('__get')->willReturnCallback(fn ($key) => match ($key) {
             'product' => $product,
             'quantity' => 3,
             'item_type' => 'instock',
@@ -101,7 +103,7 @@ class CartServiceTest extends TestCase
         $instockItem->method('isInstock')->willReturn(true);
 
         $preorderItem = $this->createMock(CartItem::class);
-        $preorderItem->method('__get')->willReturnCallback(fn($key) => match($key) {
+        $preorderItem->method('__get')->willReturnCallback(fn ($key) => match ($key) {
             'product' => $product,
             'quantity' => 5,
             'item_type' => 'preorder',
@@ -113,7 +115,7 @@ class CartServiceTest extends TestCase
 
         $cart = $this->createMock(Cart::class);
         $cart->method('loadMissing')->willReturnSelf();
-        $cart->method('__get')->willReturnCallback(fn($key) => $key === 'items' ? $items : null);
+        $cart->method('__get')->willReturnCallback(fn ($key) => $key === 'items' ? $items : null);
 
         $this->priceService->method('getUserPrice')->willReturn(100.0);
 
@@ -130,7 +132,7 @@ class CartServiceTest extends TestCase
 
         $cart = $this->createMock(Cart::class);
         $cart->method('loadMissing')->willReturnSelf();
-        $cart->method('__get')->willReturnCallback(fn($key) => $key === 'items' ? new Collection([]) : null);
+        $cart->method('__get')->willReturnCallback(fn ($key) => $key === 'items' ? new Collection([]) : null);
 
         $result = $this->service->getCartSummary($cart, $user);
 
@@ -144,10 +146,10 @@ class CartServiceTest extends TestCase
     public function get_carts_summary_returns_summary_for_each_cart(): void
     {
         $user = $this->createMock(User::class);
-        
+
         $cart1 = $this->createMock(Cart::class);
         $cart1->method('loadMissing')->willReturnSelf();
-        $cart1->method('__get')->willReturnCallback(fn($key) => match($key) {
+        $cart1->method('__get')->willReturnCallback(fn ($key) => match ($key) {
             'id' => 1,
             'items' => new Collection([]),
             default => null
@@ -155,7 +157,7 @@ class CartServiceTest extends TestCase
 
         $cart2 = $this->createMock(Cart::class);
         $cart2->method('loadMissing')->willReturnSelf();
-        $cart2->method('__get')->willReturnCallback(fn($key) => match($key) {
+        $cart2->method('__get')->willReturnCallback(fn ($key) => match ($key) {
             'id' => 2,
             'items' => new Collection([]),
             default => null

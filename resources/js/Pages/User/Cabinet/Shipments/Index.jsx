@@ -235,7 +235,9 @@ export default function ShipmentsIndex({ filters, statuses }) {
                                             transition="background 0.15s"
                                         >
                                             <Table.Cell>
-                                                <Text fontWeight="600">#{shipment.id}</Text>
+                                                <Text fontWeight="600" noOfLines={1} maxW="150px" title={shipment.number}>
+                                                    {shipment.number}
+                                                </Text>
                                             </Table.Cell>
                                             <Table.Cell>
                                                 <Text fontSize="sm" color="fg.muted">
@@ -294,7 +296,7 @@ export default function ShipmentsIndex({ filters, statuses }) {
                                 >
                                     <Card.Body p="4">
                                         <Flex justify="space-between" align="center" mb="2">
-                                            <Text fontWeight="700" fontSize="md">Отгрузка #{shipment.id}</Text>
+                                            <Text fontWeight="700" fontSize="md" noOfLines={1} pr="2">Отгрузка {shipment.number}</Text>
                                             <Badge
                                                 colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
                                                 variant="subtle" borderRadius="full" px="2.5" fontSize="xs"

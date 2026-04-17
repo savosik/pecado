@@ -8,7 +8,7 @@ use Spatie\Tags\HasTags;
 
 class Media extends SpatieMedia
 {
-    use Searchable, HasTags;
+    use HasTags, Searchable;
 
     /**
      * Get the indexable data array for the model.
@@ -47,7 +47,7 @@ class Media extends SpatieMedia
     {
         $model = $this->model;
 
-        if (!$model) {
+        if (! $model) {
             return [];
         }
 
@@ -73,7 +73,7 @@ class Media extends SpatieMedia
         // Для StorySlide — подтянуть название сториса
         if ($model instanceof StorySlide) {
             $storyName = $model->story?->name ?? '';
-            $data['name'] = trim($storyName . ' ' . ($model->title ?? ''));
+            $data['name'] = trim($storyName.' '.($model->title ?? ''));
             $data['description'] = $model->content ?? '';
         }
 
@@ -92,9 +92,15 @@ class Media extends SpatieMedia
     {
         $mime = $this->mime_type ?? '';
 
-        if (str_starts_with($mime, 'image/')) return 'images';
-        if (str_starts_with($mime, 'video/')) return 'videos';
-        if (str_starts_with($mime, 'application/')) return 'documents';
+        if (str_starts_with($mime, 'image/')) {
+            return 'images';
+        }
+        if (str_starts_with($mime, 'video/')) {
+            return 'videos';
+        }
+        if (str_starts_with($mime, 'application/')) {
+            return 'documents';
+        }
 
         return 'other';
     }

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Banner;
 use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class BannerController extends Controller
 {
@@ -40,20 +40,21 @@ class BannerController extends Controller
         $banners->getCollection()->transform(function ($banner) {
             $banner->desktop_image = $banner->getFirstMediaUrl('desktop');
             $banner->mobile_image = $banner->getFirstMediaUrl('mobile');
-            
+
             // Загружаем linkable и получаем название
             if ($banner->linkable) {
                 $banner->linkable_name = $banner->linkable->title ?? $banner->linkable->name ?? null;
             } else {
                 $banner->linkable_name = null;
             }
-            
+
             return $banner;
         });
 
         // Добавить регионы
         $banners->getCollection()->transform(function ($banner) {
             $banner->region_names = $banner->regions->pluck('name')->toArray();
+
             return $banner;
         });
 
@@ -106,7 +107,7 @@ class BannerController extends Controller
         $banner->desktop_image = $banner->getFirstMediaUrl('desktop');
         $banner->mobile_image = $banner->getFirstMediaUrl('mobile');
         $banner->region_ids = $banner->regions->pluck('id')->toArray();
-        
+
         // Загружаем linkable для отображения в форме
         if ($banner->linkable) {
             $banner->linkable_name = $banner->linkable->title ?? $banner->linkable->name ?? null;

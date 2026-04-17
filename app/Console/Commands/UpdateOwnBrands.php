@@ -35,10 +35,10 @@ class UpdateOwnBrands extends Command
             'Qli by Flovetta', 'Qvibry', 'RealStick Brutal', 'RealStick Caliber', 'RealStick Elite',
             'RealStick Elite Mulatto', 'RealStick Nude', 'RealStick Silicone', 'RealStick Strap-On',
             'Sexus Glass', 'Sexus Men', 'Sosuсki', 'Theatre by TOYFA', 'ToDo by Toyfa', 'TOYFA Basic',
-            'Waname Apparel', 'Waname D-splash', 'Waname Lubricant', 'XLover by TOYFA', 'Yovee', 'Штучки-Дрючки'
+            'Waname Apparel', 'Waname D-splash', 'Waname Lubricant', 'XLover by TOYFA', 'Yovee', 'Штучки-Дрючки',
         ];
 
-        $this->info("Starting brand updates...");
+        $this->info('Starting brand updates...');
 
         // 1. Устанавливаем категорию own для всех этих брендов
         foreach ($brandsList as $name) {
@@ -47,7 +47,7 @@ class UpdateOwnBrands extends Command
                 $brand->update(['category' => \App\Enums\BrandCategory::Own]);
             }
         }
-        $this->info("Categories updated to Own.");
+        $this->info('Categories updated to Own.');
 
         // 2. Группируем те, что начинаются с одного и того же первого слова
         $groupByFirstWord = [];
@@ -58,7 +58,7 @@ class UpdateOwnBrands extends Command
         }
 
         foreach ($groupByFirstWord as $firstWord => $names) {
-            // Если брендов, начинающихся с этого слова, больше одного 
+            // Если брендов, начинающихся с этого слова, больше одного
             if (count($names) > 1) {
                 // Создаем или находим родительский бренд по первому слову
                 $parent = \App\Models\Brand::firstOrCreate(
@@ -66,7 +66,7 @@ class UpdateOwnBrands extends Command
                     [
                         'slug' => \Illuminate\Support\Str::slug($firstWord),
                         'category' => \App\Enums\BrandCategory::Own,
-                        'is_featured' => 0
+                        'is_featured' => 0,
                     ]
                 );
 
@@ -83,6 +83,6 @@ class UpdateOwnBrands extends Command
             }
         }
 
-        $this->info("Brand updates completed.");
+        $this->info('Brand updates completed.');
     }
 }

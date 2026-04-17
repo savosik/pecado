@@ -43,7 +43,7 @@ class ProductExport extends Model
      */
     public function isPreset(): bool
     {
-        return !empty($this->preset);
+        return ! empty($this->preset);
     }
 
     /**
@@ -59,12 +59,12 @@ class ProductExport extends Model
      */
     public function hasFreshCache(int $maxAgeHours = 4): bool
     {
-        if (!$this->cached_at) {
+        if (! $this->cached_at) {
             return false;
         }
 
         $filePath = $this->getCacheFilePath();
-        if (!file_exists($filePath)) {
+        if (! file_exists($filePath)) {
             return false;
         }
 
@@ -80,7 +80,7 @@ class ProductExport extends Model
 
         static::creating(function (ProductExport $model) {
             if (empty($model->hash)) {
-                $model->hash = hash('sha256', $model->user_id . microtime(true) . Str::random(32));
+                $model->hash = hash('sha256', $model->user_id.microtime(true).Str::random(32));
             }
         });
     }

@@ -25,12 +25,12 @@ class HandlePartnerCreatedCurrencyTest extends TestCase
             'currency_id' => $rub->id,
         ]);
 
-        $handler = new \App\Services\Erp\Handlers\HandlePartnerCreated();
+        $handler = new \App\Services\Erp\Handlers\HandlePartnerCreated;
 
-        $email = 'partner-test-' . time() . '@example.com';
+        $email = 'partner-test-'.time().'@example.com';
 
         $payload = [
-            'uuid' => 'test-uuid-' . time(),
+            'uuid' => 'test-uuid-'.time(),
             'name' => 'ООО Тест',
             'login' => $email,
             'email' => $email,
@@ -65,17 +65,17 @@ class HandlePartnerCreatedCurrencyTest extends TestCase
         ]);
 
         // Создаём пользователя заранее с привязанным регионом
-        $email = 'byn-partner-' . time() . '@example.com';
+        $email = 'byn-partner-'.time().'@example.com';
         $user = User::factory()->create([
             'email' => $email,
             'region_id' => $region->id,
             'erp_id' => null,
         ]);
 
-        $handler = new \App\Services\Erp\Handlers\HandlePartnerCreated();
+        $handler = new \App\Services\Erp\Handlers\HandlePartnerCreated;
 
         $payload = [
-            'uuid' => 'test-byn-' . time(),
+            'uuid' => 'test-byn-'.time(),
             'name' => 'ООО Бел-Тест',
             'login' => $email,
             'email' => $email,

@@ -36,7 +36,7 @@ class OrderStatusHistory extends Model
      */
     public function getOldStatusLabelAttribute(): ?string
     {
-        if (!$this->old_status) {
+        if (! $this->old_status) {
             return null;
         }
 

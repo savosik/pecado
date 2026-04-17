@@ -11,17 +11,43 @@ class DiscountedPriceField extends ExportField
 {
     public function __construct(protected PriceServiceInterface $priceService) {}
 
-    public function key(): string { return 'discounted_price'; }
-    public function name(): string { return 'Индивидуальная цена клиента'; }
-    public function description(): string { return 'Цена с учётом персональной скидки клиента'; }
-    public function group(): string { return 'Пользовательские (по клиенту)'; }
-    public function isFilterable(): bool { return false; }
-    public function modifierType(): ?string { return 'price'; }
+    public function key(): string
+    {
+        return 'discounted_price';
+    }
+
+    public function name(): string
+    {
+        return 'Индивидуальная цена клиента';
+    }
+
+    public function description(): string
+    {
+        return 'Цена с учётом персональной скидки клиента';
+    }
+
+    public function group(): string
+    {
+        return 'Пользовательские (по клиенту)';
+    }
+
+    public function isFilterable(): bool
+    {
+        return false;
+    }
+
+    public function modifierType(): ?string
+    {
+        return 'price';
+    }
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        if (!$clientUser) return $product->base_price;
+        if (! $clientUser) {
+            return $product->base_price;
+        }
         $priceResult = $this->priceService->getPriceResult($product, $clientUser);
+
         return round($priceResult->getDisplayPrice(), 2);
     }
 }

@@ -17,6 +17,7 @@ class PublishUserToErpJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 5;
+
     public int $backoff = 30;
 
     /**
@@ -40,13 +41,14 @@ class PublishUserToErpJob implements ShouldQueue
         $validator = app(ErpMessageValidator::class);
         $validation = $validator->validateOutbound($event, $this->payload);
 
-        if (!$validation['valid']) {
+        if (! $validation['valid']) {
             Log::warning("Исходящий {$event} payload не соответствует JSON Schema, сообщение не отправлено", [
                 'errors' => $validation['errors'],
-                'uuid'   => $this->payload['uuid'] ?? null,
+                'uuid' => $this->payload['uuid'] ?? null,
             ]);
             $validator->logValidationError($event, 'outgoing', $validation['errors'], $this->payload);
             ErpBusLogger::logOutgoing($event, $this->payload, 'failed', implode('; ', $validation['errors']), 'erp_out.partners');
+
             return;
         }
 
@@ -63,7 +65,7 @@ class PublishUserToErpJob implements ShouldQueue
 
             ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, 'erp_out.partners');
         } catch (\Exception $e) {
-            Log::error('Не удалось опубликовать partner.created в ERP: ' . $e->getMessage(), [
+            Log::error('Не удалось опубликовать partner.created в ERP: '.$e->getMessage(), [
                 'payload' => $this->payload,
             ]);
             ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), 'erp_out.partners');

@@ -15,15 +15,17 @@ class HandleReturnUpdated
     {
         $uuid = $payload['uuid'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('HandleReturnUpdated: отсутствует uuid', ['payload' => $payload]);
+
             return;
         }
 
         $return = ProductReturn::where('uuid', $uuid)->first();
 
-        if (!$return) {
+        if (! $return) {
             Log::info('HandleReturnUpdated: возврат не найден', ['uuid' => $uuid]);
+
             return;
         }
 
@@ -36,13 +38,13 @@ class HandleReturnUpdated
 
         if (isset($payload['status'])) {
             $rawStatus = $payload['status'];
-            
+
             // Маппинг статусов возврата из 1С
             $statusMap = [
-                'ожидает'   => 'pending',
-                'одобрен'   => 'approved',
-                'отклонён'  => 'rejected',
-                'завершён'  => 'completed',
+                'ожидает' => 'pending',
+                'одобрен' => 'approved',
+                'отклонён' => 'rejected',
+                'завершён' => 'completed',
             ];
 
             $normalizedStatus = mb_strtolower(trim($rawStatus));

@@ -26,8 +26,8 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     return (
-        <CabinetLayout title={`Отгрузка #${shipment.id}`}>
-            <Head title={`Отгрузка #${shipment.id} — Pecado`} />
+        <CabinetLayout title={`Отгрузка ${shipment.number}`}>
+            <Head title={`Отгрузка ${shipment.number} — Pecado`} />
 
             {/* Назад */}
             <Box mb="4">
@@ -44,8 +44,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                 <Card.Header>
                     <Flex justify="space-between" align="center" flexWrap="wrap" gap="3">
                         <VStack align="start" gap="1">
-                            <Text fontWeight="700" fontSize="xl">Отгрузка #{shipment.id}</Text>
-                            <Text fontFamily="mono" fontSize="xs" color="gray.400">{shipment.uuid}</Text>
+                            <Text fontWeight="700" fontSize="xl">Отгрузка {shipment.number}</Text>
                         </VStack>
                         <Badge
                             colorPalette={STATUS_COLORS[shipment.status] || 'gray'}

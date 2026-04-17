@@ -15,7 +15,7 @@ class BankAccountController extends Controller
         $validated = $this->validateBankAccount($request);
         $this->authorizeCompany($validated['company_id']);
 
-        if (!empty($validated['is_primary'])) {
+        if (! empty($validated['is_primary'])) {
             CompanyBankAccount::where('company_id', $validated['company_id'])
                 ->update(['is_primary' => false]);
         }
@@ -31,7 +31,7 @@ class BankAccountController extends Controller
 
         $validated = $this->validateBankAccount($request);
 
-        if (!empty($validated['is_primary'])) {
+        if (! empty($validated['is_primary'])) {
             CompanyBankAccount::where('company_id', $bankAccount->company_id)
                 ->where('id', '!=', $bankAccount->id)
                 ->update(['is_primary' => false]);
@@ -53,22 +53,22 @@ class BankAccountController extends Controller
     private function authorizeCompany(int $companyId): void
     {
         $company = Company::find($companyId);
-        abort_if(!$company || $company->user_id !== Auth::id(), 403, 'Доступ запрещён.');
+        abort_if(! $company || $company->user_id !== Auth::id(), 403, 'Доступ запрещён.');
     }
 
     private function validateBankAccount(Request $request): array
     {
         return $request->validate([
-            'company_id'            => ['required', 'exists:companies,id'],
-            'bank_name'             => ['required', 'string', 'max:255'],
-            'bank_bik'              => ['nullable', 'string', 'max:20'],
+            'company_id' => ['required', 'exists:companies,id'],
+            'bank_name' => ['required', 'string', 'max:255'],
+            'bank_bik' => ['nullable', 'string', 'max:20'],
             'correspondent_account' => ['nullable', 'string', 'max:30'],
-            'account_number'        => ['required', 'string', 'max:30'],
-            'is_primary'            => ['boolean'],
+            'account_number' => ['required', 'string', 'max:30'],
+            'is_primary' => ['boolean'],
         ], [
-            'company_id.required'    => 'Компания обязательна.',
-            'company_id.exists'      => 'Компания не найдена.',
-            'bank_name.required'     => 'Название банка обязательно.',
+            'company_id.required' => 'Компания обязательна.',
+            'company_id.exists' => 'Компания не найдена.',
+            'bank_name.required' => 'Название банка обязательно.',
             'account_number.required' => 'Расчётный счёт обязателен.',
         ]);
     }

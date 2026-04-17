@@ -11,13 +11,40 @@ use Illuminate\Support\Str;
  */
 class ShopifyCsvPreset extends AbstractPreset
 {
-    public function key(): string { return 'shopify'; }
-    public function name(): string { return 'Shopify (CSV)'; }
-    public function description(): string { return 'CSV-файл для импорта каталога в Shopify. Включает Handle, описание, бренд, цены, остатки, картинки.'; }
-    public function fileExtension(): string { return 'csv'; }
-    public function mimeType(): string { return 'text/csv; charset=utf-8'; }
-    public function color(): string { return 'green'; }
-    public function icon(): string { return 'LuShoppingBag'; }
+    public function key(): string
+    {
+        return 'shopify';
+    }
+
+    public function name(): string
+    {
+        return 'Shopify (CSV)';
+    }
+
+    public function description(): string
+    {
+        return 'CSV-файл для импорта каталога в Shopify. Включает Handle, описание, бренд, цены, остатки, картинки.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'csv';
+    }
+
+    public function mimeType(): string
+    {
+        return 'text/csv; charset=utf-8';
+    }
+
+    public function color(): string
+    {
+        return 'green';
+    }
+
+    public function icon(): string
+    {
+        return 'LuShoppingBag';
+    }
 
     protected function getHeaders(): array
     {
@@ -40,7 +67,7 @@ class ShopifyCsvPreset extends AbstractPreset
 
         $this->eachChunk($export, function ($items) use ($stream, $headers) {
             foreach ($items as $item) {
-                $handle = Str::slug($item['name'] . '-' . ($item['sku'] ?: $item['id']));
+                $handle = Str::slug($item['name'].'-'.($item['sku'] ?: $item['id']));
 
                 $tags = collect($item['attributes'])
                     ->map(fn ($a) => "{$a['name']}:{$a['value']}")
@@ -66,7 +93,7 @@ class ShopifyCsvPreset extends AbstractPreset
                     $imgRow[0] = $handle;
                     $imgRow[array_search('Image Src', $headers)] = $imgUrl;
                     $imgRow[array_search('Image Position', $headers)] = (string) ($i + 2);
-                    $imgRow[array_search('Image Alt Text', $headers)] = $item['name'] . ' — фото ' . ($i + 2);
+                    $imgRow[array_search('Image Alt Text', $headers)] = $item['name'].' — фото '.($i + 2);
                     fputcsv($stream, $imgRow);
                 }
             }

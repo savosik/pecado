@@ -26,11 +26,11 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title'       => "Каталог товаров — {$appName}",
+                'title' => "Каталог товаров — {$appName}",
                 'description' => "Каталог товаров интернет-магазина {$appName}",
-                'h1'          => 'Каталог товаров',
-                'canonical'   => $canonical,
-                'url'         => $canonical,
+                'h1' => 'Каталог товаров',
+                'canonical' => $canonical,
+                'url' => $canonical,
             ],
         ]);
     }
@@ -47,18 +47,18 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title'       => $brand->meta_title ?: "{$brand->name} — каталог в {$appName}",
+                'title' => $brand->meta_title ?: "{$brand->name} — каталог в {$appName}",
                 'description' => $brand->meta_description ?: "Товары бренда {$brand->name} в интернет-магазине {$appName}",
-                'h1'          => $brand->name,
-                'canonical'   => $canonical,
-                'url'         => $canonical,
+                'h1' => $brand->name,
+                'canonical' => $canonical,
+                'url' => $canonical,
             ],
             'pageDescription' => $brand->short_description,
             'initialFilters' => [
                 'brand_ids' => [$brand->id],
             ],
             'brand' => [
-                'id'   => $brand->id,
+                'id' => $brand->id,
                 'name' => $brand->name,
                 'slug' => $brand->slug,
             ],
@@ -76,7 +76,7 @@ class ProductController extends Controller
     public function byCategory(Category $category): Response
     {
         // Неактивная категория — 404 для пользователя
-        abort_if(!$category->is_active, 404);
+        abort_if(! $category->is_active, 404);
 
         $appName = config('app.name');
 
@@ -93,20 +93,20 @@ class ProductController extends Controller
         foreach ($ancestors as $ancestor) {
             $breadcrumbs[] = [
                 'label' => $ancestor->name,
-                'url'   => route('products.category', $ancestor->slug),
+                'url' => route('products.category', $ancestor->slug),
             ];
             $categoryTrail[] = [
-                'id'        => $ancestor->id,
-                'name'      => $ancestor->name,
-                'slug'      => $ancestor->slug,
+                'id' => $ancestor->id,
+                'name' => $ancestor->name,
+                'slug' => $ancestor->slug,
                 'parent_id' => $ancestor->parent_id,
             ];
         }
         $breadcrumbs[] = ['label' => $category->name, 'url' => null];
         $categoryTrail[] = [
-            'id'        => $category->id,
-            'name'      => $category->name,
-            'slug'      => $category->slug,
+            'id' => $category->id,
+            'name' => $category->name,
+            'slug' => $category->slug,
             'parent_id' => $category->parent_id,
         ];
 
@@ -114,23 +114,23 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title'       => $category->meta_title ?: "{$category->name} — купить в {$appName}",
+                'title' => $category->meta_title ?: "{$category->name} — купить в {$appName}",
                 'description' => $category->meta_description ?: "Купить {$category->name} в интернет-магазине {$appName}",
-                'h1'          => $category->name,
-                'canonical'   => $canonical,
-                'url'         => $canonical,
+                'h1' => $category->name,
+                'canonical' => $canonical,
+                'url' => $canonical,
             ],
             'pageDescription' => $category->description,
             'initialFilters' => [
                 'category_id' => $category->id,
             ],
             'category' => [
-                'id'   => $category->id,
+                'id' => $category->id,
                 'name' => $category->name,
                 'slug' => $category->slug,
             ],
-            'categoryTrail'  => $categoryTrail,
-            'breadcrumbs'    => $breadcrumbs,
+            'categoryTrail' => $categoryTrail,
+            'breadcrumbs' => $breadcrumbs,
         ]);
     }
 
@@ -146,18 +146,18 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title'       => $selection->meta_title ?: "{$selection->name} — {$appName}",
+                'title' => $selection->meta_title ?: "{$selection->name} — {$appName}",
                 'description' => $selection->meta_description ?: "{$selection->name} — подборка товаров в {$appName}",
-                'h1'          => $selection->name,
-                'canonical'   => $canonical,
-                'url'         => $canonical,
+                'h1' => $selection->name,
+                'canonical' => $canonical,
+                'url' => $canonical,
             ],
             'pageDescription' => $selection->description,
             'initialFilters' => [
                 'collection_ids' => [$selection->id],
             ],
             'selection' => [
-                'id'   => $selection->id,
+                'id' => $selection->id,
                 'name' => $selection->name,
                 'slug' => $selection->slug,
             ],
@@ -180,11 +180,11 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title'       => "Избранные товары — {$appName}",
+                'title' => "Избранные товары — {$appName}",
                 'description' => "Ваши избранные товары в {$appName}",
-                'h1'          => 'Избранные товары',
-                'canonical'   => $canonical,
-                'url'         => $canonical,
+                'h1' => 'Избранные товары',
+                'canonical' => $canonical,
+                'url' => $canonical,
             ],
             'initialFilters' => [
                 'in_favourites' => 1,
@@ -204,11 +204,11 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title'       => "Новинки — {$appName}",
+                'title' => "Новинки — {$appName}",
                 'description' => "Новинки интернет-магазина {$appName}",
-                'h1'          => 'Новинки',
-                'canonical'   => $canonical,
-                'url'         => $canonical,
+                'h1' => 'Новинки',
+                'canonical' => $canonical,
+                'url' => $canonical,
             ],
             'initialFilters' => [
                 'is_new' => 1,
@@ -232,11 +232,11 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title'       => "Бестселлеры — {$appName}",
+                'title' => "Бестселлеры — {$appName}",
                 'description' => "Бестселлеры интернет-магазина {$appName}",
-                'h1'          => 'Бестселлеры',
-                'canonical'   => $canonical,
-                'url'         => $canonical,
+                'h1' => 'Бестселлеры',
+                'canonical' => $canonical,
+                'url' => $canonical,
             ],
             'initialFilters' => [
                 'is_bestseller' => 1,
@@ -295,16 +295,16 @@ class ProductController extends Controller
             $ancestors = $product->category->ancestors->sortBy('_lft');
             foreach ($ancestors as $ancestor) {
                 $categoryTrail[] = [
-                    'id'        => $ancestor->id,
-                    'name'      => $ancestor->name,
-                    'slug'      => $ancestor->slug,
+                    'id' => $ancestor->id,
+                    'name' => $ancestor->name,
+                    'slug' => $ancestor->slug,
                     'parent_id' => $ancestor->parent_id,
                 ];
             }
             $categoryTrail[] = [
-                'id'        => $product->category->id,
-                'name'      => $product->category->name,
-                'slug'      => $product->category->slug,
+                'id' => $product->category->id,
+                'name' => $product->category->name,
+                'slug' => $product->category->slug,
                 'parent_id' => $product->category->parent_id,
             ];
         }
@@ -331,9 +331,15 @@ class ProductController extends Controller
             foreach ($allProducts as $p) {
                 foreach ($p->attributeValues as $av) {
                     $attr = $av->attribute;
-                    if (!$attr) continue;
-                    if (in_array($attr->type, $excludedTypes)) continue;
-                    if (in_array($attr->name, $excludedNames)) continue;
+                    if (! $attr) {
+                        continue;
+                    }
+                    if (in_array($attr->type, $excludedTypes)) {
+                        continue;
+                    }
+                    if (in_array($attr->name, $excludedNames)) {
+                        continue;
+                    }
 
                     $value = $av->attributeValue?->value ?? $av->text_value;
                     if ($value !== null && $value !== '') {
@@ -363,7 +369,7 @@ class ProductController extends Controller
                 foreach ($diffAttrNames as $an) {
                     if (isset($attrMap[$an][$va['id']])) {
                         $va['diff_attrs'][] = [
-                            'name'  => $an,
+                            'name' => $an,
                             'value' => $attrMap[$an][$va['id']],
                         ];
                     }
@@ -382,6 +388,7 @@ class ProductController extends Controller
                 if ($va['id'] === $product->id) {
                     return true;
                 }
+
                 return ($va['stock_quantity'] ?? 0) > 0 || ($va['preorder_quantity'] ?? 0) > 0;
             }));
 
@@ -405,10 +412,11 @@ class ProductController extends Controller
         // Сертификаты
         $certificates = $product->certificates->map(function ($cert) {
             $file = $cert->getFirstMedia('files');
+
             return [
-                'id'   => $cert->id,
+                'id' => $cert->id,
                 'name' => $cert->name,
-                'url'  => $file ? $file->getUrl() : null,
+                'url' => $file ? $file->getUrl() : null,
             ];
         })->values()->toArray();
 
@@ -416,7 +424,9 @@ class ProductController extends Controller
         $specifications = [];
         foreach ($product->attributeValues as $av) {
             $attrName = $av->attribute?->name;
-            if (!$attrName) continue;
+            if (! $attrName) {
+                continue;
+            }
 
             // Значение: берём из справочника или текстовое/числовое/булево
             $value = $av->attributeValue?->value
@@ -446,7 +456,7 @@ class ProductController extends Controller
         $productData['rich_content'] = $product->rich_content;
         $productData['short_description'] = $product->short_description;
         $productData['barcodes'] = $product->barcodes->map(fn ($b) => [
-            'id'      => $b->id,
+            'id' => $b->id,
             'barcode' => $b->barcode,
         ])->values()->toArray();
         $productData['brand'] = $product->brand ? [
@@ -463,19 +473,19 @@ class ProductController extends Controller
         $sizeChart = null;
         if ($product->sizeChart) {
             $sizeChart = [
-                'name'   => $product->sizeChart->name,
+                'name' => $product->sizeChart->name,
                 'values' => $product->sizeChart->values,
             ];
         }
 
         return [
-            'product'        => $productData,
-            'media'          => $media,
-            'categoryTrail'  => $categoryTrail,
-            'variants'       => $variants,
-            'certificates'   => $certificates,
+            'product' => $productData,
+            'media' => $media,
+            'categoryTrail' => $categoryTrail,
+            'variants' => $variants,
+            'certificates' => $certificates,
             'specifications' => $specifications,
-            'sizeChart'      => $sizeChart,
+            'sizeChart' => $sizeChart,
         ];
     }
 
@@ -498,7 +508,7 @@ class ProductController extends Controller
      */
     public function categoryShow(Category $category): \Illuminate\Http\JsonResponse
     {
-        abort_if(!$category->is_active, 404);
+        abort_if(! $category->is_active, 404);
 
         $children = $category->children()
             ->where('is_active', true)

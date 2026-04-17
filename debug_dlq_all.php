@@ -1,4 +1,5 @@
 <?php
+
 try {
     $factory = new \PhpAmqpLib\Connection\AMQPStreamConnection(
         env('RABBITMQ_HOST', 'rabbitmq'),
@@ -8,7 +9,7 @@ try {
         env('RABBITMQ_VHOST', '/')
     );
     $channel = $factory->channel();
-    
+
     $errors = [];
     $total = 0;
 
@@ -18,29 +19,29 @@ try {
         $total++;
         $payloadStr = $msg->getBody();
         $payload = json_decode($payloadStr, true);
-        
+
         $uuid = $payload['uuid'] ?? 'no-uuid';
-        
+
         try {
             DB::beginTransaction();
             app(\App\Services\Erp\Handlers\HandleProductCreated::class)->handle($payload);
             DB::rollBack(); // roll back so we don't actually commit during debug
-            
+
             // If we're here, it succeeded
             // Let's just track successes? No just errors
         } catch (\Throwable $e) {
             DB::rollBack();
-            $err = $e->getMessage() . " at " . $e->getFile() . ":" . $e->getLine();
-            if (!isset($errors[$err])) {
+            $err = $e->getMessage().' at '.$e->getFile().':'.$e->getLine();
+            if (! isset($errors[$err])) {
                 $errors[$err] = 0;
             }
             $errors[$err]++;
         }
     }
-    
+
     $channel->close();
     $factory->close();
-    
+
     echo "Checked $total messages.\n";
     if (empty($errors)) {
         echo "No errors found! They all succeeded.\n";
@@ -51,5 +52,5 @@ try {
         }
     }
 } catch (\Throwable $e) {
-    echo "RABBIT ERROR: " . $e->getMessage() . "\n";
+    echo 'RABBIT ERROR: '.$e->getMessage()."\n";
 }

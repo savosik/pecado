@@ -51,10 +51,10 @@ class ProductExportDownloadController extends Controller
     protected function handlePresetDownload(ProductExport $export)
     {
         $preset = $this->presetRegistry->resolve($export->preset);
-        abort_if(!$preset, 404, 'Формат выгрузки не найден.');
+        abort_if(! $preset, 404, 'Формат выгрузки не найден.');
 
         $filePath = $export->getCacheFilePath();
-        $filename = "export_{$preset->key()}_" . now()->format('Y-m-d') . ".{$preset->fileExtension()}";
+        $filename = "export_{$preset->key()}_".now()->format('Y-m-d').".{$preset->fileExtension()}";
         $hasCacheFile = file_exists($filePath) && filesize($filePath) > 0;
 
         // Случай 1: Свежий кэш — отдаём мгновенно

@@ -22,7 +22,7 @@ class HandleShipmentUpdatedTest extends TestCase
             'status' => 'new',
         ]);
 
-        $handler = new HandleShipmentUpdated();
+        $handler = new HandleShipmentUpdated;
         $handler->handle([
             'event' => 'shipment.updated',
             'uuid' => 'upd-ship-test-001',
@@ -42,7 +42,7 @@ class HandleShipmentUpdatedTest extends TestCase
             'total_amount' => 0,
         ]);
 
-        $handler = new HandleShipmentUpdated();
+        $handler = new HandleShipmentUpdated;
         $handler->handle([
             'event' => 'shipment.updated',
             'uuid' => 'upd-ship-test-002',
@@ -71,7 +71,7 @@ class HandleShipmentUpdatedTest extends TestCase
             'subtotal' => 10000,
         ]);
 
-        $handler = new HandleShipmentUpdated();
+        $handler = new HandleShipmentUpdated;
         $handler->handle([
             'event' => 'shipment.updated',
             'uuid' => 'upd-ship-test-003',
@@ -95,7 +95,7 @@ class HandleShipmentUpdatedTest extends TestCase
                 return str_contains($msg, 'реализация не найдена');
             });
 
-        $handler = new HandleShipmentUpdated();
+        $handler = new HandleShipmentUpdated;
         $handler->handle([
             'event' => 'shipment.updated',
             'uuid' => 'nonexistent-shipment-uuid',
@@ -112,7 +112,7 @@ class HandleShipmentUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует uuid');
             });
 
-        $handler = new HandleShipmentUpdated();
+        $handler = new HandleShipmentUpdated;
         $handler->handle([
             'event' => 'shipment.updated',
             'status' => 'completed',
@@ -128,7 +128,7 @@ class HandleShipmentUpdatedTest extends TestCase
             'currency_code' => 'RUB',
         ]);
 
-        $handler = new HandleShipmentUpdated();
+        $handler = new HandleShipmentUpdated;
         $handler->handle([
             'event' => 'shipment.updated',
             'uuid' => 'upd-ship-test-004',

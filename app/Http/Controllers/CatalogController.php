@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Category;
-use Illuminate\Http\Request;
+use App\Models\Product;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class CatalogController extends Controller
 {
@@ -85,7 +85,7 @@ class CatalogController extends Controller
                 'name' => $product->name,
                 'price' => (float) $product->base_price,
                 'image' => $product->getFirstMediaUrl('main'),
-                'url' => '/catalog/' . $product->slug,
+                'url' => '/catalog/'.$product->slug,
                 'brand' => $product->brand?->name,
                 'sku' => $product->sku,
             ]);
@@ -99,7 +99,7 @@ class CatalogController extends Controller
                 'id' => $category->id,
                 'name' => $category->name,
                 'icon' => $category->getFirstMediaUrl('icon'),
-                'url' => '/catalog?category=' . $category->id,
+                'url' => '/catalog?category='.$category->id,
             ]);
 
         return response()->json([

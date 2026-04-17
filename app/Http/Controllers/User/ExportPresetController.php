@@ -7,7 +7,6 @@ use App\Models\ProductExport;
 use App\Services\ProductExport\Presets\PresetRegistry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class ExportPresetController extends Controller
@@ -53,7 +52,7 @@ class ExportPresetController extends Controller
     public function generate(Request $request, string $presetKey)
     {
         $preset = $this->presetRegistry->resolve($presetKey);
-        abort_if(!$preset, 404, 'Формат выгрузки не найден.');
+        abort_if(! $preset, 404, 'Формат выгрузки не найден.');
 
         $userId = Auth::id();
 
@@ -62,12 +61,12 @@ class ExportPresetController extends Controller
             ->where('preset', $presetKey)
             ->first();
 
-        if (!$export) {
+        if (! $export) {
             $export = ProductExport::create([
                 'user_id' => $userId,
                 'client_user_id' => $userId,
                 'name' => $preset->name(),
-                'format' => match($preset->fileExtension()) {
+                'format' => match ($preset->fileExtension()) {
                     'xlsx' => 'xls',
                     default => $preset->fileExtension(),
                 },

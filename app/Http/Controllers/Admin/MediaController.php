@@ -105,15 +105,15 @@ class MediaController extends Controller
         $filters = [];
 
         if ($type) {
-            $filters[] = 'mime_type_group = "' . addslashes($type) . '"';
+            $filters[] = 'mime_type_group = "'.addslashes($type).'"';
         }
 
         if ($collection) {
-            $filters[] = 'collection_name = "' . addslashes($collection) . '"';
+            $filters[] = 'collection_name = "'.addslashes($collection).'"';
         }
 
         if ($modelType) {
-            $filters[] = 'model_type = "' . addslashes($modelType) . '"';
+            $filters[] = 'model_type = "'.addslashes($modelType).'"';
         }
 
         return implode(' AND ', $filters);

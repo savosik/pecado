@@ -47,7 +47,7 @@ class PriceServiceTest extends TestCase
 
         // Mock Resolver
         $currencyResolver->shouldReceive('resolve')
-            ->with(Mockery::on(fn($u) => $u->id === $user->id))
+            ->with(Mockery::on(fn ($u) => $u->id === $user->id))
             ->once()
             ->andReturn($currency);
 
@@ -71,7 +71,7 @@ class PriceServiceTest extends TestCase
 
         // Mock Resolver returning null
         $currencyResolver->shouldReceive('resolve')
-            ->with(Mockery::on(fn($u) => $u->id === $user->id))
+            ->with(Mockery::on(fn ($u) => $u->id === $user->id))
             ->once()
             ->andReturn(null);
 

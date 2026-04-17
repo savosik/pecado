@@ -9,13 +9,40 @@ use App\Models\ProductExport;
  */
 class TildaCsvPreset extends AbstractPreset
 {
-    public function key(): string { return 'tilda'; }
-    public function name(): string { return 'Tilda Publishing (CSV)'; }
-    public function description(): string { return 'CSV-файл для импорта товаров в интернет-магазин на платформе Tilda.'; }
-    public function fileExtension(): string { return 'csv'; }
-    public function mimeType(): string { return 'text/csv; charset=utf-8'; }
-    public function color(): string { return 'yellow'; }
-    public function icon(): string { return 'LuPenTool'; }
+    public function key(): string
+    {
+        return 'tilda';
+    }
+
+    public function name(): string
+    {
+        return 'Tilda Publishing (CSV)';
+    }
+
+    public function description(): string
+    {
+        return 'CSV-файл для импорта товаров в интернет-магазин на платформе Tilda.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'csv';
+    }
+
+    public function mimeType(): string
+    {
+        return 'text/csv; charset=utf-8';
+    }
+
+    public function color(): string
+    {
+        return 'yellow';
+    }
+
+    public function icon(): string
+    {
+        return 'LuPenTool';
+    }
 
     public function writeToStream($stream, ProductExport $export): void
     {
@@ -26,7 +53,7 @@ class TildaCsvPreset extends AbstractPreset
         $this->eachChunk($export, function ($items) use ($stream, &$headersWritten) {
             $maxAttrs = $items->max(fn ($item) => count($item['attributes']));
 
-            if (!$headersWritten) {
+            if (! $headersWritten) {
                 $headers = [
                     'Brand', 'SKU', 'Category', 'Title', 'Description', 'Text',
                     'Photo', 'Price', 'Price Old', 'Quantity', 'External ID',
@@ -45,8 +72,12 @@ class TildaCsvPreset extends AbstractPreset
                     ->merge($item['additional_images'])->filter()->implode(';');
 
                 $marks = [];
-                if ($item['is_new']) $marks[] = 'new';
-                if ($item['is_bestseller']) $marks[] = 'bestseller';
+                if ($item['is_new']) {
+                    $marks[] = 'new';
+                }
+                if ($item['is_bestseller']) {
+                    $marks[] = 'bestseller';
+                }
 
                 $row = [
                     $item['brand_name'] ?? '', $item['sku'] ?? '',
@@ -61,10 +92,12 @@ class TildaCsvPreset extends AbstractPreset
 
                 foreach ($item['attributes'] as $attr) {
                     $row[] = $attr['name'];
-                    $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+                    $row[] = $attr['value'].($attr['unit'] ? " {$attr['unit']}" : '');
                 }
                 $remaining = ($maxAttrs - count($item['attributes'])) * 2;
-                for ($i = 0; $i < $remaining; $i++) { $row[] = ''; }
+                for ($i = 0; $i < $remaining; $i++) {
+                    $row[] = '';
+                }
 
                 fputcsv($stream, $row, ';');
             }

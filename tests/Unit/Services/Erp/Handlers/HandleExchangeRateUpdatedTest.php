@@ -24,7 +24,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
             'exchange_rate_date' => null,
         ]);
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'currency_code' => 'KZT',
@@ -53,7 +53,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
             'exchange_rate' => 30.00,
         ]);
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'currency_code' => 'BYN',
@@ -79,7 +79,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
             'exchange_rate' => 5.00,
         ]);
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'currency_code' => 'KZT',
@@ -105,7 +105,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
             'exchange_rate' => 30.00,
         ]);
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'currency_code' => 'BYN',
@@ -127,7 +127,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
                 return str_contains($msg, 'валюта не найдена по коду');
             });
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'currency_code' => 'USD',
@@ -150,7 +150,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует currency_code или rate');
             });
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'rate' => 5.45,
@@ -166,7 +166,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует currency_code или rate');
             });
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'currency_code' => 'KZT',
@@ -184,7 +184,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
             'exchange_rate_date' => '2026-01-01',
         ]);
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
 
         // Первое обновление
         $handler->handle([
@@ -228,7 +228,7 @@ class HandleExchangeRateUpdatedTest extends TestCase
             'exchange_rate' => 5.00,
         ]);
 
-        $handler = new HandleExchangeRateUpdated();
+        $handler = new HandleExchangeRateUpdated;
         $handler->handle([
             'event' => 'exchange_rate.updated',
             'currency_code' => 'KZT',

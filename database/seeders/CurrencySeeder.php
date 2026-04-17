@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\Currency;
+use Illuminate\Database\Seeder;
 
 class CurrencySeeder extends Seeder
 {
@@ -26,7 +26,7 @@ class CurrencySeeder extends Seeder
                 'name' => 'Белорусский рубль',
                 'symbol' => 'Br',
                 'is_base' => false,
-                'exchange_rate' => 1.0000000000, 
+                'exchange_rate' => 1.0000000000,
                 'rate_coefficient' => 1.0000,
             ],
             [

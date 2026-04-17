@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Region;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class RegionController extends Controller
 {
@@ -22,7 +22,7 @@ class RegionController extends Controller
         $query = Region::query()->with(['primaryWarehouses', 'preorderWarehouses', 'currency']);
 
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
         if ($request->has('sort_by') && $request->has('sort_order')) {
@@ -143,8 +143,8 @@ class RegionController extends Controller
         }
 
         // Attach new ones with the type
-        if (!empty($warehouseIds)) {
-             $region->belongsToMany(Warehouse::class, 'region_warehouse')
+        if (! empty($warehouseIds)) {
+            $region->belongsToMany(Warehouse::class, 'region_warehouse')
                 ->attach($warehouseIds, ['type' => $type]);
         }
     }

@@ -13,7 +13,7 @@ class EnsureUserIsAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user()) {
+        if (! $request->user()) {
             return redirect('/login')->with('error', 'Необходимо войти в систему');
         }
 

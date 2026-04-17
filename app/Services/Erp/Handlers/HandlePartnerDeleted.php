@@ -17,10 +17,10 @@ class HandlePartnerDeleted
      */
     public function handle(array $payload): void
     {
-        $uuid  = $payload['uuid']  ?? null;
+        $uuid = $payload['uuid'] ?? null;
         $email = $payload['email'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('partner.deleted: отсутствует uuid', ['payload' => $payload]);
 
             return;
@@ -30,13 +30,13 @@ class HandlePartnerDeleted
         $user = User::where('erp_id', $uuid)->first();
 
         // Fallback — по email (erp_id мог ещё не быть привязан)
-        if (!$user && $email) {
+        if (! $user && $email) {
             $user = User::where('email', $email)->first();
         }
 
-        if (!$user) {
+        if (! $user) {
             Log::warning('partner.deleted: пользователь не найден по erp_id или email', [
-                'uuid'  => $uuid,
+                'uuid' => $uuid,
                 'email' => $email,
             ]);
 
@@ -51,8 +51,8 @@ class HandlePartnerDeleted
 
         Log::info('partner.deleted: пользователь деактивирован', [
             'user_id' => $user->id,
-            'erp_id'  => $uuid,
-            'email'   => $user->email,
+            'erp_id' => $uuid,
+            'email' => $user->email,
         ]);
     }
 }

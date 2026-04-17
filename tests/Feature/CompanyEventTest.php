@@ -3,14 +3,14 @@
 namespace Tests\Feature;
 
 use App\Events\CompanyCreated;
-use App\Events\CompanyUpdated;
 use App\Events\CompanyDeleted;
+use App\Events\CompanyUpdated;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
-use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class CompanyEventTest extends TestCase
 {

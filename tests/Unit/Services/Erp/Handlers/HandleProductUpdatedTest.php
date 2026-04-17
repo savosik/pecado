@@ -29,15 +29,15 @@ class HandleProductUpdatedTest extends TestCase
     {
         $product = Product::factory()->create([
             'external_id' => 'partial-upd-001',
-            'name'        => 'Старое название',
-            'sku'         => 'OLD-SKU',
+            'name' => 'Старое название',
+            'sku' => 'OLD-SKU',
         ]);
 
         $this->handler->handle([
-            'event'      => 'product.updated',
+            'event' => 'product.updated',
             'message_id' => 'msg-upd-001',
-            'uuid'       => 'partial-upd-001',
-            'name'       => 'Новое название',
+            'uuid' => 'partial-upd-001',
+            'name' => 'Новое название',
         ]);
 
         $product->refresh();
@@ -50,14 +50,14 @@ class HandleProductUpdatedTest extends TestCase
     {
         $product = Product::factory()->create([
             'external_id' => 'partial-upd-002',
-            'base_price'  => 9999.00,
+            'base_price' => 9999.00,
         ]);
 
         $this->handler->handle([
-            'event'      => 'product.updated',
+            'event' => 'product.updated',
             'message_id' => 'msg-upd-002',
-            'uuid'       => 'partial-upd-002',
-            'name'       => 'Другое название',
+            'uuid' => 'partial-upd-002',
+            'name' => 'Другое название',
         ]);
 
         $product->refresh();
@@ -74,29 +74,29 @@ class HandleProductUpdatedTest extends TestCase
         // Сначала добавляем старый атрибут
         $oldAttr = Attribute::create([
             'external_id' => 'old-prop-uuid',
-            'name'        => 'Старый',
-            'slug'        => 'staryj',
-            'type'        => 'string',
+            'name' => 'Старый',
+            'slug' => 'staryj',
+            'type' => 'string',
         ]);
         $product->attributeValues()->create([
             'attribute_id' => $oldAttr->id,
-            'text_value'   => 'старое значение',
+            'text_value' => 'старое значение',
         ]);
 
         $this->assertEquals(1, $product->attributeValues()->count());
 
         // Обновляем атрибуты через product.updated
         $this->handler->handle([
-            'event'      => 'product.updated',
+            'event' => 'product.updated',
             'message_id' => 'msg-upd-003',
-            'uuid'       => 'partial-upd-003',
+            'uuid' => 'partial-upd-003',
             'attributes' => [
                 [
-                    'property_uuid'  => 'new-prop-uuid',
+                    'property_uuid' => 'new-prop-uuid',
                     'property_label' => 'Новый',
-                    'value_type'     => 'string',
-                    'value_uuid'     => null,
-                    'value_label'    => 'новое значение',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'новое значение',
                 ],
             ],
         ]);
@@ -127,21 +127,21 @@ class HandleProductUpdatedTest extends TestCase
 
         $attr = Attribute::create([
             'external_id' => 'keep-prop-uuid',
-            'name'        => 'Сохранить',
-            'slug'        => 'sohranit',
-            'type'        => 'string',
+            'name' => 'Сохранить',
+            'slug' => 'sohranit',
+            'type' => 'string',
         ]);
         $product->attributeValues()->create([
             'attribute_id' => $attr->id,
-            'text_value'   => 'оставить',
+            'text_value' => 'оставить',
         ]);
 
         // Обновляем только name (без attributes)
         $this->handler->handle([
-            'event'      => 'product.updated',
+            'event' => 'product.updated',
             'message_id' => 'msg-upd-004',
-            'uuid'       => 'partial-upd-004',
-            'name'       => 'Только имя',
+            'uuid' => 'partial-upd-004',
+            'name' => 'Только имя',
         ]);
 
         // Атрибуты должны остаться
@@ -153,10 +153,10 @@ class HandleProductUpdatedTest extends TestCase
     public function warns_when_product_not_found(): void
     {
         $this->handler->handle([
-            'event'      => 'product.updated',
+            'event' => 'product.updated',
             'message_id' => 'msg-upd-005',
-            'uuid'       => 'nonexistent-product',
-            'name'       => 'Не найден',
+            'uuid' => 'nonexistent-product',
+            'name' => 'Не найден',
         ]);
 
         // Товар не должен быть создан
@@ -172,14 +172,14 @@ class HandleProductUpdatedTest extends TestCase
 
         ProductBarcode::create([
             'product_id' => $product->id,
-            'barcode'    => 'OLD-BARCODE',
+            'barcode' => 'OLD-BARCODE',
         ]);
 
         $this->handler->handle([
-            'event'      => 'product.updated',
+            'event' => 'product.updated',
             'message_id' => 'msg-upd-006',
-            'uuid'       => 'partial-upd-006',
-            'barcodes'   => ['NEW-BARCODE-1', 'NEW-BARCODE-2'],
+            'uuid' => 'partial-upd-006',
+            'barcodes' => ['NEW-BARCODE-1', 'NEW-BARCODE-2'],
         ]);
 
         $this->assertEquals(2, $product->barcodes()->count());
@@ -196,12 +196,12 @@ class HandleProductUpdatedTest extends TestCase
     {
         $product = Product::factory()->create([
             'external_id' => 'brand-obj-upd-001',
-            'brand_id'    => null,
+            'brand_id' => null,
         ]);
 
         $this->handler->handle([
             'event' => 'product.updated',
-            'uuid'  => 'brand-obj-upd-001',
+            'uuid' => 'brand-obj-upd-001',
             'brand' => ['uuid' => 'brand-uuid-v4', 'name' => 'Бренд V4'],
         ]);
 
@@ -222,13 +222,13 @@ class HandleProductUpdatedTest extends TestCase
 
         $this->handler->handle([
             'event' => 'product.updated',
-            'uuid'  => 'brand-obj-upd-002',
+            'uuid' => 'brand-obj-upd-002',
             'brand' => ['uuid' => 'same-brand-uuid', 'name' => 'Тот же бренд'],
         ]);
 
         $this->handler->handle([
             'event' => 'product.updated',
-            'uuid'  => 'brand-obj-upd-002',
+            'uuid' => 'brand-obj-upd-002',
             'brand' => ['uuid' => 'same-brand-uuid', 'name' => 'Тот же бренд обновлённый'],
         ]);
 
@@ -243,12 +243,12 @@ class HandleProductUpdatedTest extends TestCase
         $brand = Brand::create(['name' => 'Удаляемый', 'slug' => 'udalyaemiy']);
         $product = Product::factory()->create([
             'external_id' => 'brand-null-upd',
-            'brand_id'    => $brand->id,
+            'brand_id' => $brand->id,
         ]);
 
         $this->handler->handle([
             'event' => 'product.updated',
-            'uuid'  => 'brand-null-upd',
+            'uuid' => 'brand-null-upd',
             'brand' => null,
         ]);
 
@@ -269,26 +269,26 @@ class HandleProductUpdatedTest extends TestCase
 
         $attr = Attribute::create([
             'external_id' => 'merge-prop-uuid',
-            'name'        => 'Цвет',
-            'slug'        => 'tsvet',
-            'type'        => 'string',
+            'name' => 'Цвет',
+            'slug' => 'tsvet',
+            'type' => 'string',
         ]);
         $product->attributeValues()->create([
             'attribute_id' => $attr->id,
-            'text_value'   => 'Красный',
+            'text_value' => 'Красный',
         ]);
 
         // Обновляем тот же атрибут через product.updated
         $this->handler->handle([
-            'event'      => 'product.updated',
-            'uuid'       => 'attr-merge-upd-001',
+            'event' => 'product.updated',
+            'uuid' => 'attr-merge-upd-001',
             'attributes' => [
                 [
-                    'property_uuid'  => 'merge-prop-uuid',
+                    'property_uuid' => 'merge-prop-uuid',
                     'property_label' => 'Цвет',
-                    'value_type'     => 'string',
-                    'value_uuid'     => null,
-                    'value_label'    => 'Синий',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Синий',
                 ],
             ],
         ]);
@@ -309,15 +309,15 @@ class HandleProductUpdatedTest extends TestCase
         ]);
 
         $this->handler->handle([
-            'event'      => 'product.updated',
-            'uuid'       => 'prod-upd-bind-001',
+            'event' => 'product.updated',
+            'uuid' => 'prod-upd-bind-001',
             'attributes' => [
                 [
-                    'property_uuid'  => 'prop-color-upd-bind',
+                    'property_uuid' => 'prop-color-upd-bind',
                     'property_label' => 'Цвет',
-                    'value_type'     => 'string',
-                    'value_uuid'     => 'val-blue-upd-bind',
-                    'value_label'    => 'Синий',
+                    'value_type' => 'string',
+                    'value_uuid' => 'val-blue-upd-bind',
+                    'value_label' => 'Синий',
                 ],
             ],
         ]);

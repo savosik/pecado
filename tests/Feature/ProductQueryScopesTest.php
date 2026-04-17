@@ -21,7 +21,7 @@ class ProductQueryScopesTest extends TestCase
 
     public function test_scope_search_finds_by_name(): void
     {
-        $hit  = Product::factory()->create(['name' => 'Красное платье']);
+        $hit = Product::factory()->create(['name' => 'Красное платье']);
         $miss = Product::factory()->create(['name' => 'Синий ремень']);
 
         $results = Product::query()->search('платье')->pluck('id');
@@ -32,7 +32,7 @@ class ProductQueryScopesTest extends TestCase
 
     public function test_scope_search_finds_by_sku(): void
     {
-        $hit  = Product::factory()->create(['sku' => 'ABC-123']);
+        $hit = Product::factory()->create(['sku' => 'ABC-123']);
         $miss = Product::factory()->create(['sku' => 'XYZ-999']);
 
         $results = Product::query()->search('abc-123')->pluck('id');
@@ -43,7 +43,7 @@ class ProductQueryScopesTest extends TestCase
 
     public function test_scope_search_finds_by_barcode(): void
     {
-        $hit  = Product::factory()->create(['barcode' => '4607001234567']);
+        $hit = Product::factory()->create(['barcode' => '4607001234567']);
         $miss = Product::factory()->create(['barcode' => '9999999999999']);
 
         $results = Product::query()->search('4607001234567')->pluck('id');
@@ -59,7 +59,7 @@ class ProductQueryScopesTest extends TestCase
         $brand1 = Brand::factory()->create();
         $brand2 = Brand::factory()->create();
 
-        $hit  = Product::factory()->create(['brand_id' => $brand1->id]);
+        $hit = Product::factory()->create(['brand_id' => $brand1->id]);
         $miss = Product::factory()->create(['brand_id' => $brand2->id]);
 
         $results = Product::inBrands([$brand1->id])->pluck('id');
@@ -81,7 +81,7 @@ class ProductQueryScopesTest extends TestCase
 
     public function test_scope_by_price_min(): void
     {
-        $cheap    = Product::factory()->create(['base_price' => 50]);
+        $cheap = Product::factory()->create(['base_price' => 50]);
         $expensive = Product::factory()->create(['base_price' => 500]);
 
         $results = Product::byPrice(100)->pluck('id');
@@ -92,7 +92,7 @@ class ProductQueryScopesTest extends TestCase
 
     public function test_scope_by_price_max(): void
     {
-        $cheap    = Product::factory()->create(['base_price' => 50]);
+        $cheap = Product::factory()->create(['base_price' => 50]);
         $expensive = Product::factory()->create(['base_price' => 500]);
 
         $results = Product::byPrice(null, 100)->pluck('id');
@@ -103,8 +103,8 @@ class ProductQueryScopesTest extends TestCase
 
     public function test_scope_by_price_range(): void
     {
-        $low  = Product::factory()->create(['base_price' => 10]);
-        $mid  = Product::factory()->create(['base_price' => 150]);
+        $low = Product::factory()->create(['base_price' => 10]);
+        $mid = Product::factory()->create(['base_price' => 150]);
         $high = Product::factory()->create(['base_price' => 1000]);
 
         $results = Product::byPrice(100, 500)->pluck('id');
@@ -121,9 +121,9 @@ class ProductQueryScopesTest extends TestCase
         $user = User::factory()->create(['erp_id' => 'test-partner-001']);
         $this->actingAs($user);
 
-        $withPrice    = Product::factory()->create(['external_id' => 'prod-ext-001']);
+        $withPrice = Product::factory()->create(['external_id' => 'prod-ext-001']);
         $withoutPrice = Product::factory()->create(['external_id' => 'prod-ext-002']);
-        $warehouse    = \App\Models\Warehouse::factory()->create(['external_id' => 'wh-001']);
+        $warehouse = \App\Models\Warehouse::factory()->create(['external_id' => 'wh-001']);
 
         // v7.1: Создаём индивидуальную цену с числовыми ID
         IndividualPrice::create([
@@ -144,8 +144,8 @@ class ProductQueryScopesTest extends TestCase
     public function test_scope_in_favourites_filters_by_user(): void
     {
         $user = User::factory()->create();
-        $fav      = Product::factory()->create();
-        $notFav   = Product::factory()->create();
+        $fav = Product::factory()->create();
+        $notFav = Product::factory()->create();
 
         $fav->favoritedByUsers()->attach($user);
 
@@ -160,12 +160,12 @@ class ProductQueryScopesTest extends TestCase
     public function test_scope_in_category_without_descendants(): void
     {
         $parent = Category::factory()->create();
-        $child  = Category::factory()->create(['parent_id' => $parent->id]);
+        $child = Category::factory()->create(['parent_id' => $parent->id]);
 
         Category::fixTree();
 
         $inParent = Product::factory()->create(['category_id' => $parent->id]);
-        $inChild  = Product::factory()->create(['category_id' => $child->id]);
+        $inChild = Product::factory()->create(['category_id' => $child->id]);
 
         $results = Product::inCategory($parent->id, false)->pluck('id');
 
@@ -176,13 +176,13 @@ class ProductQueryScopesTest extends TestCase
     public function test_scope_in_category_with_descendants(): void
     {
         $parent = Category::factory()->create();
-        $child  = Category::factory()->create(['parent_id' => $parent->id]);
+        $child = Category::factory()->create(['parent_id' => $parent->id]);
 
         Category::fixTree();
 
         $inParent = Product::factory()->create(['category_id' => $parent->id]);
-        $inChild  = Product::factory()->create(['category_id' => $child->id]);
-        $other    = Product::factory()->create(['category_id' => Category::factory()->create()->id]);
+        $inChild = Product::factory()->create(['category_id' => $child->id]);
+        $other = Product::factory()->create(['category_id' => Category::factory()->create()->id]);
 
         $results = Product::inCategory($parent->id, true)->pluck('id');
 
@@ -205,7 +205,7 @@ class ProductQueryScopesTest extends TestCase
     public function test_scope_in_collections_filters_correctly(): void
     {
         $selection = ProductSelection::factory()->create(['slug' => 'test-selection']);
-        $hit  = Product::factory()->create();
+        $hit = Product::factory()->create();
         $miss = Product::factory()->create();
 
         $hit->productSelections()->attach($selection);
@@ -228,8 +228,8 @@ class ProductQueryScopesTest extends TestCase
     public function test_scope_by_attributes_or_logic(): void
     {
         $attr = Attribute::create(['name' => 'Цвет', 'slug' => 'color', 'type' => 'select']);
-        $red   = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Красный']);
-        $blue  = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Синий']);
+        $red = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Красный']);
+        $blue = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Синий']);
         $green = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Зелёный']);
 
         $p1 = Product::factory()->create();

@@ -46,12 +46,12 @@ class ContentHelper
                 case 'paragraph':
                 case 'quote':
                 case 'pullQuote':
-                    if (!empty($data['text'])) {
+                    if (! empty($data['text'])) {
                         $parts[] = strip_tags($data['text']);
                     }
                     break;
                 case 'header':
-                    if (!empty($data['text'])) {
+                    if (! empty($data['text'])) {
                         $parts[] = strip_tags($data['text']);
                     }
                     break;
@@ -63,8 +63,12 @@ class ContentHelper
                     break;
                 case 'warning':
                 case 'infoBox':
-                    if (!empty($data['title'])) $parts[] = strip_tags($data['title']);
-                    if (!empty($data['message'])) $parts[] = strip_tags($data['message']);
+                    if (! empty($data['title'])) {
+                        $parts[] = strip_tags($data['title']);
+                    }
+                    if (! empty($data['message'])) {
+                        $parts[] = strip_tags($data['message']);
+                    }
                     break;
             }
 

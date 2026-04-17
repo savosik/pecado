@@ -11,7 +11,7 @@ class PublishReturnToErp
      */
     public function handle(object $event): void
     {
-        if (!isset($event->productReturn)) {
+        if (! isset($event->productReturn)) {
             return;
         }
 

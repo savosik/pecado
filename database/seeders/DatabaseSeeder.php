@@ -39,7 +39,7 @@ class DatabaseSeeder extends Seeder
             $user = User::updateOrCreate(
                 ['email' => $data['email']],
                 [
-                    'name'     => $data['name'],
+                    'name' => $data['name'],
                     'password' => $data['password'],
                 ]
             );

@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Faq;
 use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class FaqController extends Controller
 {
@@ -36,6 +36,7 @@ class FaqController extends Controller
 
         $faqs->getCollection()->transform(function ($faq) {
             $faq->region_names = $faq->regions->pluck('name')->toArray();
+
             return $faq;
         });
 

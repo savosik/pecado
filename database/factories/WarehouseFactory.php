@@ -21,7 +21,7 @@ class WarehouseFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->company() . ' — Склад',
+            'name' => fake()->company().' — Склад',
             'external_id' => (string) Str::uuid(),
         ];
     }

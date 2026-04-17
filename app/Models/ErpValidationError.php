@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * @property int $id
  * @property string $event
- * @property string $direction  incoming | outgoing
+ * @property string $direction incoming | outgoing
  * @property string|null $message_id
  * @property array $errors
  * @property array|null $payload

@@ -34,7 +34,7 @@ class ProductByIdsController extends Controller
         ProductQueryService::withRegionStockSums($query);
 
         $products = $query->get()
-            ->map(fn(Product $p) => ProductQueryService::productToArray($p))
+            ->map(fn (Product $p) => ProductQueryService::productToArray($p))
             ->values()
             ->toArray();
 

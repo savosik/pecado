@@ -1,9 +1,9 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\User\PasswordResetController;
 use App\Http\Controllers\User\SocialAuthController;
-use App\Http\Controllers\CatalogController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -61,4 +61,3 @@ Route::get('/content-blueprint', fn () => Inertia::render('ContentBlueprint'))->
 Route::get('/export/{hash}', [\App\Http\Controllers\ProductExportDownloadController::class, 'download'])->name('export.download');
 
 Route::post('/api/products/{slug}/pros-cons/generate', [\App\Http\Controllers\User\ProductProsConsController::class, 'generate'])->middleware('auth')->name('products.pros_cons.generate');
-

@@ -141,8 +141,8 @@ class ErpBusController extends AdminController
         if ($search = $request->get('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('message_id', 'like', "%{$search}%")
-                  ->orWhere('event', 'like', "%{$search}%")
-                  ->orWhere('routing_key', 'like', "%{$search}%");
+                    ->orWhere('event', 'like', "%{$search}%")
+                    ->orWhere('routing_key', 'like', "%{$search}%");
             });
         }
 
@@ -151,7 +151,7 @@ class ErpBusController extends AdminController
         }
 
         if ($dateTo = $request->get('date_to')) {
-            $query->where('created_at', '<=', $dateTo . ' 23:59:59');
+            $query->where('created_at', '<=', $dateTo.' 23:59:59');
         }
 
         $messages = $query->paginate(30)->withQueryString();
@@ -164,11 +164,11 @@ class ErpBusController extends AdminController
             'eventTypes' => $eventTypes,
             'filters' => [
                 'direction' => $request->get('direction', ''),
-                'event'     => $request->get('event', ''),
-                'status'    => $request->get('status', ''),
-                'search'    => $request->get('search', ''),
+                'event' => $request->get('event', ''),
+                'status' => $request->get('status', ''),
+                'search' => $request->get('search', ''),
                 'date_from' => $request->get('date_from', ''),
-                'date_to'   => $request->get('date_to', ''),
+                'date_to' => $request->get('date_to', ''),
             ],
         ]);
     }

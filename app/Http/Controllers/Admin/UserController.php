@@ -4,14 +4,14 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\Country;
 use App\Enums\UserStatus;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
+use App\Models\ClientStatus;
 use App\Models\Region;
 use App\Models\User;
-use App\Models\ClientStatus;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class UserController extends Controller
 {
@@ -38,7 +38,7 @@ class UserController extends Controller
         }
 
         if ($request->filled('role')) {
-            $query->whereHas('roles', fn($q) => $q->where('name', $request->input('role')));
+            $query->whereHas('roles', fn ($q) => $q->where('name', $request->input('role')));
         }
 
         if ($request->filled('status')) {
@@ -52,6 +52,12 @@ class UserController extends Controller
 
         $users = $query->paginate($request->input('per_page', 15));
 
+        $users->through(function ($user) {
+            $user->temporary_password = $user->must_change_password ? $user->temporary_password : null;
+
+            return $user;
+        });
+
         // Подсчёт пользователей по статусам (без фильтров)
         $statusCounts = [];
         foreach (UserStatus::cases() as $status) {
@@ -62,7 +68,7 @@ class UserController extends Controller
         return Inertia::render('Admin/Pages/Users/Index', [
             'users' => $users,
             'filters' => $request->only(['search', 'region_id', 'role', 'status', 'sort_by', 'sort_order', 'per_page']),
-            'statuses' => collect(UserStatus::cases())->map(fn($status) => [
+            'statuses' => collect(UserStatus::cases())->map(fn ($status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
@@ -75,15 +81,15 @@ class UserController extends Controller
     {
         return Inertia::render('Admin/Pages/Users/Create', [
             'regions' => Region::select('id', 'name')->with('currency:id,code,name')->orderBy('name')->get(),
-            'countries' => collect(Country::cases())->map(fn($country) => [
+            'countries' => collect(Country::cases())->map(fn ($country) => [
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
-            'statuses' => collect(UserStatus::cases())->map(fn($status) => [
+            'statuses' => collect(UserStatus::cases())->map(fn ($status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
-            'availableRoles' => Role::orderBy('name')->get()->map(fn($r) => ['id' => $r->id, 'name' => $r->name]),
+            'availableRoles' => Role::orderBy('name')->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
@@ -100,7 +106,7 @@ class UserController extends Controller
             'region_id' => 'nullable|exists:regions,id',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
-            'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),
+            'status' => 'nullable|string|in:'.implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'erp_id' => 'nullable|string|max:255|unique:users,erp_id',
             'roles' => 'array',
@@ -127,15 +133,15 @@ class UserController extends Controller
                 'temporary_password' => $user->must_change_password ? $user->temporary_password : null,
             ]),
             'regions' => Region::select('id', 'name')->with('currency:id,code,name')->orderBy('name')->get(),
-            'countries' => collect(Country::cases())->map(fn($country) => [
+            'countries' => collect(Country::cases())->map(fn ($country) => [
                 'value' => $country->value,
                 'label' => $country->label(),
             ]),
-            'statuses' => collect(UserStatus::cases())->map(fn($status) => [
+            'statuses' => collect(UserStatus::cases())->map(fn ($status) => [
                 'value' => $status->value,
                 'label' => $status->label(),
             ]),
-            'availableRoles' => Role::orderBy('name')->get()->map(fn($r) => ['id' => $r->id, 'name' => $r->name]),
+            'availableRoles' => Role::orderBy('name')->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
@@ -144,7 +150,7 @@ class UserController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'password' => 'nullable|string|min:8', // Опционально при обновлении
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'country' => 'nullable|string',
@@ -152,9 +158,9 @@ class UserController extends Controller
             'region_id' => 'nullable|exists:regions,id',
             'is_subscribed' => 'boolean',
             'terms_accepted' => 'boolean',
-            'status' => 'nullable|string|in:' . implode(',', array_column(UserStatus::cases(), 'value')),
+            'status' => 'nullable|string|in:'.implode(',', array_column(UserStatus::cases(), 'value')),
             'comment' => 'nullable|string',
-            'erp_id' => 'nullable|string|max:255|unique:users,erp_id,' . $user->id,
+            'erp_id' => 'nullable|string|max:255|unique:users,erp_id,'.$user->id,
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',
             'client_status_id' => 'nullable|exists:client_statuses,id',

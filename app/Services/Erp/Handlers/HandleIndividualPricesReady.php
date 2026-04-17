@@ -27,7 +27,7 @@ class HandleIndividualPricesReady
         $recordsCount = $payload['records_count'] ?? 0;
         $timestamp = $payload['timestamp'] ?? null;
 
-        if (!$fileUrl || !$uploadType || !$partnerUuid) {
+        if (! $fileUrl || ! $uploadType || ! $partnerUuid) {
             Log::warning('individual_prices.ready: отсутствует file_url, upload_type или partner_uuid', [
                 'payload' => $payload,
             ]);
@@ -35,7 +35,7 @@ class HandleIndividualPricesReady
             return;
         }
 
-        if (!in_array($uploadType, ['full', 'delta'])) {
+        if (! in_array($uploadType, ['full', 'delta'])) {
             Log::warning('individual_prices.ready: неизвестный upload_type', [
                 'upload_type' => $uploadType,
                 'payload' => $payload,

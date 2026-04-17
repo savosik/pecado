@@ -125,7 +125,7 @@ class StoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|string|unique:stories,slug,' . $story->id,
+            'slug' => 'sometimes|string|unique:stories,slug,'.$story->id,
             'is_active' => 'boolean',
             'is_published' => 'boolean',
             'show_name' => 'boolean',
@@ -145,6 +145,7 @@ class StoryController extends Controller
     public function destroy(Story $story): JsonResponse
     {
         $story->delete();
+
         return response()->json(null, 204);
     }
 

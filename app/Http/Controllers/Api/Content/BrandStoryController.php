@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Content;
 
 use App\Http\Controllers\Api\Content\Traits\HandlesMediaUpload;
 use App\Http\Controllers\Controller;
-use App\Models\Brand;
 use App\Models\BrandStory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -77,6 +76,7 @@ class BrandStoryController extends Controller
     public function show(BrandStory $brandStory): JsonResponse
     {
         $brandStory->load('brand');
+
         return response()->json(['data' => $this->format($brandStory)]);
     }
 
@@ -112,7 +112,7 @@ class BrandStoryController extends Controller
 
         $brandStory = BrandStory::create($validated);
 
-        if (!empty($validated['tags'])) {
+        if (! empty($validated['tags'])) {
             $brandStory->attachTags($validated['tags']);
         }
 
@@ -132,7 +132,7 @@ class BrandStoryController extends Controller
     {
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|string|max:255|unique:brand_stories,slug,' . $brandStory->id,
+            'slug' => 'sometimes|string|max:255|unique:brand_stories,slug,'.$brandStory->id,
             'short_description' => 'sometimes|required|string',
             'detailed_description' => 'sometimes|required|string',
             'is_published' => 'boolean',
@@ -169,6 +169,7 @@ class BrandStoryController extends Controller
     public function destroy(BrandStory $brandStory): JsonResponse
     {
         $brandStory->delete();
+
         return response()->json(null, 204);
     }
 

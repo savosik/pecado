@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CurrencyController extends Controller
 {
@@ -78,7 +78,7 @@ class CurrencyController extends Controller
     public function update(Request $request, Currency $currency)
     {
         $validated = $request->validate([
-            'code' => 'required|string|max:10|unique:currencies,code,' . $currency->id,
+            'code' => 'required|string|max:10|unique:currencies,code,'.$currency->id,
             'name' => 'required|string|max:255',
             'symbol' => 'required|string|max:10',
             'is_base' => 'boolean',
@@ -131,7 +131,7 @@ class CurrencyController extends Controller
         } catch (\Exception $e) {
             return redirect()
                 ->route('admin.currencies.index')
-                ->with('error', 'Ошибка при обновлении курсов: ' . $e->getMessage());
+                ->with('error', 'Ошибка при обновлении курсов: '.$e->getMessage());
         }
     }
 
@@ -162,4 +162,3 @@ class CurrencyController extends Controller
         return response()->json($currencies);
     }
 }
-

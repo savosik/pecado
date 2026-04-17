@@ -12,7 +12,9 @@ class DownloadProductMediaJob implements ShouldQueue
     use Queueable;
 
     public int $tries = 2;
+
     public int $timeout = 300;
+
     public int $backoff = 10;
 
     public function __construct(
@@ -26,8 +28,9 @@ class DownloadProductMediaJob implements ShouldQueue
     {
         $product = Product::find($this->productId);
 
-        if (!$product) {
+        if (! $product) {
             Log::warning("DownloadProductMediaJob: товар #{$this->productId} не найден");
+
             return;
         }
 
@@ -40,7 +43,7 @@ class DownloadProductMediaJob implements ShouldQueue
 
         // Main image
         $mainImage = $data['image_main'] ?? '';
-        if (!empty($mainImage)) {
+        if (! empty($mainImage)) {
             try {
                 $product->addMediaFromUrl($mainImage)->toMediaCollection('main');
             } catch (\Exception $e) {
@@ -50,7 +53,7 @@ class DownloadProductMediaJob implements ShouldQueue
 
         // Additional images
         foreach ($data['additional_images'] ?? [] as $imgUrl) {
-            if (!empty($imgUrl)) {
+            if (! empty($imgUrl)) {
                 try {
                     $product->addMediaFromUrl($imgUrl)->toMediaCollection('additional');
                 } catch (\Exception $e) {
@@ -61,7 +64,7 @@ class DownloadProductMediaJob implements ShouldQueue
 
         // Videos
         foreach ($data['product_videos'] ?? [] as $videoUrl) {
-            if (!empty($videoUrl)) {
+            if (! empty($videoUrl)) {
                 try {
                     $product->addMediaFromUrl($videoUrl)->toMediaCollection('video');
                 } catch (\Exception $e) {

@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Laravel\Scout\Searchable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -62,7 +61,7 @@ class Certificate extends Model implements HasMedia
 
         // Convert date to timestamp for better Meilisearch handling if needed,
         // or keep as string. Meilisearch handles ISO8601 well.
-        
+
         return $array;
     }
 

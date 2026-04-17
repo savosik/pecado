@@ -39,7 +39,7 @@ class SocialAuthController extends Controller
         try {
             $socialUser = Socialite::driver($provider)->user();
         } catch (\Exception $e) {
-            return redirect('/login')->with('error', 'Не удалось авторизоваться через ' . $this->getProviderLabel($provider));
+            return redirect('/login')->with('error', 'Не удалось авторизоваться через '.$this->getProviderLabel($provider));
         }
 
         // Find or create user
@@ -57,7 +57,7 @@ class SocialAuthController extends Controller
      */
     protected function validateProvider(string $provider): void
     {
-        if (!in_array($provider, self::ALLOWED_PROVIDERS, true)) {
+        if (! in_array($provider, self::ALLOWED_PROVIDERS, true)) {
             abort(404);
         }
     }
@@ -89,7 +89,7 @@ class SocialAuthController extends Controller
         // Check if user exists with same email
         $user = User::query()->where('email', $socialUser->getEmail())->first();
 
-        if (!$user) {
+        if (! $user) {
             // Create new user
             $user = User::create([
                 'name' => $socialUser->getName() ?? Str::before($socialUser->getEmail(), '@'),

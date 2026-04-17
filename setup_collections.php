@@ -1,4 +1,5 @@
 <?php
+
 use App\Models\ProductSelection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -9,38 +10,38 @@ $collections = [
     [
         'name' => 'Для незабываемого вечера',
         'short_description' => 'Сногсшибательное белье, платья и боди, в которых вы будете неотразимы. Создайте романтическую атмосферу.',
-        'categories' => ['Эротические платья, юбки', 'Боди и комбинезоны', 'Комплекты одежды и белья Ж']
+        'categories' => ['Эротические платья, юбки', 'Боди и комбинезоны', 'Комплекты одежды и белья Ж'],
     ],
     [
         'name' => 'Идеальные лубриканты',
         'short_description' => 'Увлажняющие и согревающие смазки, а также съедобные гели для самых страстных моментов.',
-        'categories' => ['Гели и смазки для вагинального секса', 'Съедобные гели и смазки', 'Гели и смазки для анального секса']
+        'categories' => ['Гели и смазки для вагинального секса', 'Съедобные гели и смазки', 'Гели и смазки для анального секса'],
     ],
     [
         'name' => 'БДСМ и игры для двоих',
         'short_description' => 'Наручники, оковы и эротические игры, которые добавят остроты и незабываемых впечатлений в вашу спальню.',
-        'categories' => ['Наручники, манжеты', 'Оковы и поножи', 'Эротические подарки, игры и сувениры']
+        'categories' => ['Наручники, манжеты', 'Оковы и поножи', 'Эротические подарки, игры и сувениры'],
     ],
     [
         'name' => 'Хиты: мужские мастурбаторы',
         'short_description' => 'Реалистичные мастурбаторы для максимального удовольствия. Самые популярные модели среди мужчин.',
-        'categories' => ['Реалистичные мастурбаторы', 'Реалистичные фаллоимитаторы']
+        'categories' => ['Реалистичные мастурбаторы', 'Реалистичные фаллоимитаторы'],
     ],
     [
         'name' => 'Новый уровень стимуляции',
         'short_description' => 'Вакуумные стимуляторы клитора и вибраторы, которые открывают новые горизонты наслаждения.',
-        'categories' => ['Вибраторы с клиторальным стимулятором', 'Вакуумные стимуляторы клитора', 'Нереалистичные вибраторы', 'Реалистичные вибраторы']
+        'categories' => ['Вибраторы с клиторальным стимулятором', 'Вакуумные стимуляторы клитора', 'Нереалистичные вибраторы', 'Реалистичные вибраторы'],
     ],
 ];
 
 foreach ($collections as $idx => $data) {
     echo "Creating collection: {$data['name']}\n";
     $slug = Str::slug($data['name']);
-    
+
     // Check if sluggable exists, otherwise create unique
     $exists = ProductSelection::where('slug', $slug)->exists();
     if ($exists) {
-        $slug = $slug . '-' . rand(100, 999);
+        $slug = $slug.'-'.rand(100, 999);
     }
 
     $selection = ProductSelection::firstOrCreate(
@@ -72,15 +73,15 @@ foreach ($collections as $idx => $data) {
         ->limit(10)
         ->pluck('p.id')
         ->toArray();
-    
+
     // Sync with featured=true
     $syncData = [];
-    foreach($productIds as $pid) {
+    foreach ($productIds as $pid) {
         $syncData[$pid] = ['featured' => true];
     }
     $selection->products()->syncWithoutDetaching($syncData);
 
-    echo "  Added/Synced " . count($productIds) . " featured products.\n";
+    echo '  Added/Synced '.count($productIds)." featured products.\n";
 }
 
 echo "Done.\n";

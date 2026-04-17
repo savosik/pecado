@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\ProductSelection;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Http\Controllers\User\ProductSelectionController as UserProductSelectionController;
 use App\Models\Product;
+use App\Models\ProductSelection;
 use App\Models\Region;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
-use App\Http\Controllers\User\ProductSelectionController as UserProductSelectionController;
 
 class ProductSelectionController extends AdminController
 {
@@ -29,14 +29,14 @@ class ProductSelectionController extends AdminController
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'created_at', 'updated_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -51,6 +51,7 @@ class ProductSelectionController extends AdminController
         $productSelections->through(function ($selection) {
             $selection->desktop_image_url = $selection->getFirstMediaUrl('desktop');
             $selection->region_names = $selection->regions->pluck('name')->toArray();
+
             return $selection;
         });
 
@@ -110,7 +111,7 @@ class ProductSelectionController extends AdminController
             ]);
 
             // Привязка товаров с featured
-            if (!empty($validated['product_ids'])) {
+            if (! empty($validated['product_ids'])) {
                 $featuredIds = $validated['featured_ids'] ?? [];
                 $syncData = [];
                 foreach ($validated['product_ids'] as $productId) {
@@ -139,10 +140,11 @@ class ProductSelectionController extends AdminController
             return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при создании подборки: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при создании подборки: '.$e->getMessage()]);
         }
     }
 
@@ -264,7 +266,7 @@ class ProductSelectionController extends AdminController
             $productSelection->regions()->sync($validated['region_ids'] ?? []);
 
             // Удаление desktop изображения
-            if (!empty($validated['delete_desktop_image'])) {
+            if (! empty($validated['delete_desktop_image'])) {
                 $productSelection->clearMediaCollection('desktop');
             }
 
@@ -276,7 +278,7 @@ class ProductSelectionController extends AdminController
             }
 
             // Удаление mobile изображения
-            if (!empty($validated['delete_mobile_image'])) {
+            if (! empty($validated['delete_mobile_image'])) {
                 $productSelection->clearMediaCollection('mobile');
             }
 
@@ -293,10 +295,11 @@ class ProductSelectionController extends AdminController
             return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при обновлении подборки: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при обновлении подборки: '.$e->getMessage()]);
         }
     }
 
@@ -313,7 +316,7 @@ class ProductSelectionController extends AdminController
         } catch (\Exception $e) {
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'Ошибка при удалении подборки: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при удалении подборки: '.$e->getMessage()]);
         }
     }
 
@@ -327,10 +330,11 @@ class ProductSelectionController extends AdminController
         ]);
 
         $media = $productSelection->media()->find($validated['media_id']);
-        
+
         if ($media) {
             $media->delete();
             UserProductSelectionController::clearHomeCache();
+
             return redirect()->back()->with('success', 'Медиафайл успешно удалён');
         }
 

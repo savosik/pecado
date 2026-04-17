@@ -108,7 +108,7 @@ PROMPT;
 
         // Исправить +78... → +7...
         if (preg_match('/^\+78(\d{10})$/', $phone, $m)) {
-            $phone = '+7' . $m[1];
+            $phone = '+7'.$m[1];
         }
 
         // Должно быть ровно +7XXXXXXXXXX
@@ -148,13 +148,13 @@ PROMPT;
                 ->make();
 
             $response = $client->chat()->create([
-                'model'       => config('normalizer.model', 'openai/gpt-4o-mini'),
-                'messages'    => [
+                'model' => config('normalizer.model', 'openai/gpt-4o-mini'),
+                'messages' => [
                     ['role' => 'system', 'content' => $systemPrompt],
                     ['role' => 'user', 'content' => $userMessage],
                 ],
                 'temperature' => 0,
-                'max_tokens'  => 400,
+                'max_tokens' => 400,
             ]);
 
             $content = $response->choices[0]->message->content;
@@ -168,7 +168,7 @@ PROMPT;
             if (json_last_error() !== JSON_ERROR_NONE) {
                 Log::warning('DataNormalizerService: невалидный JSON от AI', [
                     'content' => $content,
-                    'input'   => $userMessage,
+                    'input' => $userMessage,
                 ]);
 
                 return null;

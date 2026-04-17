@@ -4,15 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
-
 use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Promotion extends Model implements HasMedia
 {
-    use \Illuminate\Database\Eloquent\Factories\HasFactory;
     use \App\Traits\HasContentMedia;
     use \App\Traits\HasRegions;
+    use \Illuminate\Database\Eloquent\Factories\HasFactory;
 
     protected $fillable = [
         'name',
@@ -32,7 +30,7 @@ class Promotion extends Model implements HasMedia
                 $original = $promotion->slug;
                 $counter = 1;
                 while (static::where('slug', $promotion->slug)->exists()) {
-                    $promotion->slug = $original . '-' . $counter++;
+                    $promotion->slug = $original.'-'.$counter++;
                 }
             }
         });

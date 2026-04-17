@@ -54,7 +54,7 @@ class MediaUploadController extends Controller
         $file = $request->file('file');
 
         $extension = $file->getClientOriginalExtension();
-        $filename = Str::ulid() . '.' . $extension;
+        $filename = Str::ulid().'.'.$extension;
 
         $path = $file->storeAs('content-uploads', $filename, 's3');
 

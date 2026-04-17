@@ -2,15 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Promotion;
-use App\Models\Product;
 use App\Models\Region;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class PromotionController extends AdminController
 {
@@ -27,14 +26,14 @@ class PromotionController extends AdminController
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'created_at', 'updated_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -49,6 +48,7 @@ class PromotionController extends AdminController
         $promotions->getCollection()->transform(function ($promotion) {
             $promotion->list_image = $promotion->getFirstMediaUrl('list-item');
             $promotion->region_names = $promotion->regions->pluck('name')->toArray();
+
             return $promotion;
         });
 
@@ -104,7 +104,7 @@ class PromotionController extends AdminController
             ]);
 
             // Привязка товаров
-            if (!empty($validated['product_ids'])) {
+            if (! empty($validated['product_ids'])) {
                 $promotion->products()->sync($validated['product_ids']);
             }
 
@@ -133,10 +133,11 @@ class PromotionController extends AdminController
             return $this->redirectAfterSave($request, 'admin.promotions.index', 'admin.promotions.edit', $promotion, 'Акция успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при создании акции: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при создании акции: '.$e->getMessage()]);
         }
     }
 
@@ -264,7 +265,7 @@ class PromotionController extends AdminController
             }
 
             // Удаление изображений галереи
-            if (!empty($validated['delete_gallery_ids'])) {
+            if (! empty($validated['delete_gallery_ids'])) {
                 foreach ($validated['delete_gallery_ids'] as $mediaId) {
                     $media = $promotion->getMedia('gallery')->firstWhere('id', $mediaId);
                     $media?->delete();
@@ -283,10 +284,11 @@ class PromotionController extends AdminController
             return $this->redirectAfterSave($request, 'admin.promotions.index', 'admin.promotions.edit', $promotion, 'Акция успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при обновлении акции: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при обновлении акции: '.$e->getMessage()]);
         }
     }
 
@@ -302,7 +304,7 @@ class PromotionController extends AdminController
         } catch (\Exception $e) {
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'Ошибка при удалении акции: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при удалении акции: '.$e->getMessage()]);
         }
     }
 
@@ -316,9 +318,10 @@ class PromotionController extends AdminController
         ]);
 
         $media = $promotion->media()->find($validated['media_id']);
-        
+
         if ($media) {
             $media->delete();
+
             return redirect()->back()->with('success', 'Медиафайл успешно удалён');
         }
 

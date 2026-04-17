@@ -33,7 +33,7 @@ class FavoriteUserTest extends TestCase
         $product = Product::factory()->create();
 
         Favorite::create([
-            'user_id'    => $user->id,
+            'user_id' => $user->id,
             'product_id' => $product->id,
         ]);
 
@@ -58,7 +58,7 @@ class FavoriteUserTest extends TestCase
             ->assertJson(['added' => true]);
 
         $this->assertDatabaseHas('favorites', [
-            'user_id'    => $user->id,
+            'user_id' => $user->id,
             'product_id' => $product->id,
         ]);
     }
@@ -69,7 +69,7 @@ class FavoriteUserTest extends TestCase
         $product = Product::factory()->create();
 
         Favorite::create([
-            'user_id'    => $user->id,
+            'user_id' => $user->id,
             'product_id' => $product->id,
         ]);
 
@@ -80,7 +80,7 @@ class FavoriteUserTest extends TestCase
             ->assertJson(['removed' => true]);
 
         $this->assertDatabaseMissing('favorites', [
-            'user_id'    => $user->id,
+            'user_id' => $user->id,
             'product_id' => $product->id,
         ]);
     }

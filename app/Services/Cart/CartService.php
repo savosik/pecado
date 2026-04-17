@@ -39,7 +39,7 @@ class CartService implements CartServiceInterface
     /**
      * Get summary information for multiple carts.
      *
-     * @param Collection<int, Cart> $carts
+     * @param  Collection<int, Cart>  $carts
      * @return array<int, array{total_price: float, items_count: int, available_count: int, preorder_count: int}>
      */
     public function getCartsSummary(Collection $carts, User $user): array
@@ -57,7 +57,7 @@ class CartService implements CartServiceInterface
     {
         $itemsQuery = $sourceCart->items();
 
-        if (!empty($itemIds)) {
+        if (! empty($itemIds)) {
             $itemsQuery->whereIn('product_id', $itemIds);
         }
 
@@ -90,7 +90,7 @@ class CartService implements CartServiceInterface
     {
         $cart = $user->carts()->active()->first();
 
-        if (!$cart) {
+        if (! $cart) {
             $cart = $user->carts()->create([
                 'name' => 'Корзина',
                 'is_active' => true,
@@ -310,7 +310,7 @@ class CartService implements CartServiceInterface
         $items = $cart->items->map(function (CartItem $item) use ($user) {
             $product = $item->product;
 
-            if (!$product) {
+            if (! $product) {
                 return null;
             }
 
@@ -378,7 +378,7 @@ class CartService implements CartServiceInterface
 
         foreach ($cart->items as $item) {
             $product = $item->product;
-            if (!$product) {
+            if (! $product) {
                 continue;
             }
 

@@ -28,8 +28,7 @@ class EnsurePasswordChangedTest extends TestCase
         $response = $this->actingAs($user)->get('/cabinet/dashboard');
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) =>
-            $page->where('auth.user.must_change_password', true)
+        $response->assertInertia(fn ($page) => $page->where('auth.user.must_change_password', true)
         );
     }
 
@@ -44,8 +43,7 @@ class EnsurePasswordChangedTest extends TestCase
         $response = $this->actingAs($user)->get('/cabinet/dashboard');
 
         $response->assertStatus(200);
-        $response->assertInertia(fn ($page) =>
-            $page->where('auth.user.must_change_password', false)
+        $response->assertInertia(fn ($page) => $page->where('auth.user.must_change_password', false)
         );
     }
 
@@ -82,14 +80,14 @@ class EnsurePasswordChangedTest extends TestCase
     public function it_resets_must_change_password_after_password_update(): void
     {
         $user = User::factory()->create([
-            'password'             => Hash::make('old-password'),
+            'password' => Hash::make('old-password'),
             'must_change_password' => true,
-            'status'               => UserStatus::ACTIVE,
+            'status' => UserStatus::ACTIVE,
         ]);
 
         $response = $this->actingAs($user)->put('/cabinet/change-password', [
-            'current_password'      => 'old-password',
-            'password'              => 'new-secure-password',
+            'current_password' => 'old-password',
+            'password' => 'new-secure-password',
             'password_confirmation' => 'new-secure-password',
         ]);
 
@@ -104,14 +102,14 @@ class EnsurePasswordChangedTest extends TestCase
     public function it_rejects_wrong_current_password(): void
     {
         $user = User::factory()->create([
-            'password'             => Hash::make('old-password'),
+            'password' => Hash::make('old-password'),
             'must_change_password' => true,
-            'status'               => UserStatus::ACTIVE,
+            'status' => UserStatus::ACTIVE,
         ]);
 
         $response = $this->actingAs($user)->put('/cabinet/change-password', [
-            'current_password'      => 'wrong-password',
-            'password'              => 'new-secure-password',
+            'current_password' => 'wrong-password',
+            'password' => 'new-secure-password',
             'password_confirmation' => 'new-secure-password',
         ]);
 

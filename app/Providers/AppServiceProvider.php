@@ -21,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
             \App\Contracts\Pricing\PriceServiceInterface::class,
             \App\Services\Pricing\PriceService::class
         );
-        
+
         $this->app->bind(
             \App\Contracts\Currency\CurrencyConversionServiceInterface::class,
             \App\Services\Currency\CurrencyConversionService::class

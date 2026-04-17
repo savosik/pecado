@@ -71,7 +71,7 @@ class PriceService implements PriceServiceInterface
     {
         $basePrice = $this->getBasePrice($product);
 
-        if (!$user || !$user->erp_id) {
+        if (! $user || ! $user->erp_id) {
             return PriceResult::withoutDiscount($basePrice);
         }
 
@@ -79,7 +79,7 @@ class PriceService implements PriceServiceInterface
         // Через proxy для graceful degradation при недоступности prices DB
         $individualPrice = IndividualPriceProxy::findPrice($user->id, $product->id, $warehouseId);
 
-        if (!$individualPrice) {
+        if (! $individualPrice) {
             return PriceResult::withoutDiscount($basePrice);
         }
 
@@ -92,6 +92,7 @@ class PriceService implements PriceServiceInterface
     public function getCurrencyPrice(Product $product, Currency $currency): float
     {
         $basePrice = $this->getBasePrice($product);
+
         return $this->convertPrice($basePrice, $currency);
     }
 

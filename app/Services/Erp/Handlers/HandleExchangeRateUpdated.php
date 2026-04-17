@@ -20,13 +20,13 @@ class HandleExchangeRateUpdated
      */
     public function handle(array $payload): void
     {
-        $currencyCode   = $payload['currency_code'] ?? null;
-        $rate           = $payload['rate'] ?? null;
-        $officialRate   = $payload['official_rate'] ?? null;
+        $currencyCode = $payload['currency_code'] ?? null;
+        $rate = $payload['rate'] ?? null;
+        $officialRate = $payload['official_rate'] ?? null;
         $rateCoefficient = $payload['rate_coefficient'] ?? null;
-        $date           = $payload['date'] ?? null;
+        $date = $payload['date'] ?? null;
 
-        if (!$currencyCode || $rate === null) {
+        if (! $currencyCode || $rate === null) {
             Log::warning('exchange_rate.updated: отсутствует currency_code или rate', ['payload' => $payload]);
 
             return;
@@ -34,7 +34,7 @@ class HandleExchangeRateUpdated
 
         $currency = Currency::where('code', $currencyCode)->first();
 
-        if (!$currency) {
+        if (! $currency) {
             Log::info('exchange_rate.updated: валюта не найдена по коду, событие проигнорировано', [
                 'currency_code' => $currencyCode,
             ]);
@@ -63,13 +63,13 @@ class HandleExchangeRateUpdated
         $currency->update($updateData);
 
         Log::info('exchange_rate.updated: курс валюты обновлён', [
-            'currency_id'        => $currency->id,
-            'currency_code'      => $currencyCode,
-            'old_rate'           => $oldRate,
-            'new_rate'           => $rate,
-            'official_rate'      => $officialRate,
-            'rate_coefficient'   => $rateCoefficient,
-            'date'               => $date,
+            'currency_id' => $currency->id,
+            'currency_code' => $currencyCode,
+            'old_rate' => $oldRate,
+            'new_rate' => $rate,
+            'official_rate' => $officialRate,
+            'rate_coefficient' => $rateCoefficient,
+            'date' => $date,
         ]);
     }
 }

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Spatie\Tags\Tag;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use Spatie\Tags\Tag;
 
 class TagController extends Controller
 {
@@ -35,9 +35,10 @@ class TagController extends Controller
 
         // Преобразуем name для отображения
         $tags->getCollection()->transform(function ($tag) {
-            $tag->display_name = is_array($tag->name) 
+            $tag->display_name = is_array($tag->name)
                 ? ($tag->name['ru'] ?? $tag->name['en'] ?? implode(', ', $tag->name))
                 : $tag->name;
+
             return $tag;
         });
 
@@ -74,7 +75,7 @@ class TagController extends Controller
     public function edit(Tag $tag)
     {
         // Преобразуем name для редактирования
-        $tag->display_name = is_array($tag->name) 
+        $tag->display_name = is_array($tag->name)
             ? ($tag->name['ru'] ?? $tag->name['en'] ?? implode(', ', $tag->name))
             : $tag->name;
 

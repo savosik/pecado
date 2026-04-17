@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Story;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Region;
+use App\Models\Story;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class StoryController extends Controller
 {
@@ -31,6 +31,7 @@ class StoryController extends Controller
 
         $stories->getCollection()->transform(function ($story) {
             $story->region_names = $story->regions->pluck('name')->toArray();
+
             return $story;
         });
 
@@ -43,7 +44,7 @@ class StoryController extends Controller
     public function search(Request $request)
     {
         $query = $request->input('q', '');
-        
+
         $stories = Story::query()
             ->where('name', 'like', "%{$query}%")
             ->limit(10)
@@ -90,13 +91,13 @@ class StoryController extends Controller
         $story->slides->transform(function ($slide) {
             $slide->media_url = $slide->getFirstMediaUrl('default');
             $slide->media_thumbnail = $slide->getFirstMediaUrl('default');
-            
+
             if ($slide->linkable) {
                 $slide->linkable_name = $slide->linkable->title ?? $slide->linkable->name ?? null;
             } else {
                 $slide->linkable_name = null;
             }
-            
+
             return $slide;
         });
 
@@ -112,7 +113,7 @@ class StoryController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|unique:stories,slug,' . $story->id,
+            'slug' => 'nullable|string|unique:stories,slug,'.$story->id,
             'is_active' => 'boolean',
             'is_published' => 'boolean',
             'show_name' => 'boolean',

@@ -2,18 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Attribute;
 use App\Models\AttributeGroup;
 use App\Models\AttributeValue;
 use App\Models\Category;
 use App\Models\ProductAttributeValue;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Str;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class AttributeController extends AdminController
 {
@@ -37,7 +36,7 @@ class AttributeController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'sort_order');
         $sortOrder = $request->input('sort_order', 'asc');
-        
+
         $allowedSortFields = ['id', 'name', 'slug', 'type', 'sort_order', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -103,7 +102,7 @@ class AttributeController extends AdminController
 
         $attribute = Attribute::create($validated);
 
-        if ($validated['type'] === 'select' && !empty($validated['values'])) {
+        if ($validated['type'] === 'select' && ! empty($validated['values'])) {
             foreach ($validated['values'] as $index => $valueData) {
                 $attribute->values()->create([
                     'value' => $valueData['value'],
@@ -112,7 +111,7 @@ class AttributeController extends AdminController
             }
         }
 
-        if (!empty($validated['category_ids'])) {
+        if (! empty($validated['category_ids'])) {
             $attribute->categories()->sync($validated['category_ids']);
         }
 
@@ -148,7 +147,7 @@ class AttributeController extends AdminController
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:attributes,slug,' . $attribute->id,
+            'slug' => 'nullable|string|max:255|unique:attributes,slug,'.$attribute->id,
             'type' => 'required|string|in:string,number,boolean,select',
             'unit' => 'nullable|string|max:50',
             'is_filterable' => 'boolean',
@@ -172,11 +171,11 @@ class AttributeController extends AdminController
 
         $convertToSelect = $oldType !== 'select'
             && $validated['type'] === 'select'
-            && !empty($validated['_convert_to_select']);
+            && ! empty($validated['_convert_to_select']);
 
         $convertToBoolean = $oldType !== 'boolean'
             && $validated['type'] === 'boolean'
-            && !empty($validated['_convert_to_boolean']);
+            && ! empty($validated['_convert_to_boolean']);
 
         if ($convertToSelect) {
             // Автоматическая конвертация: собираем значения из товаров

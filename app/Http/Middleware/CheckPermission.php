@@ -19,7 +19,7 @@ class CheckPermission
     {
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             abort(403, 'Необходима авторизация.');
         }
 
@@ -28,7 +28,7 @@ class CheckPermission
             return $next($request);
         }
 
-        if (!$user->hasPermissionTo($permission)) {
+        if (! $user->hasPermissionTo($permission)) {
             abort(403, 'Недостаточно прав для выполнения этого действия.');
         }
 

@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\ContractorBalance;
 use App\Models\ContractorBalanceOverdueDetail;
+use App\Models\Currency;
 use App\Models\Shipment;
 use App\Services\CurrencyService;
-use App\Models\Currency;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -15,9 +14,9 @@ use Inertia\Response as InertiaResponse;
 class ShipmentController extends Controller
 {
     private const STATUS_LABELS = [
-        'new'         => 'Новая',
-        'completed'   => 'Выполнена',
-        'cancelled'   => 'Отменена',
+        'new' => 'Новая',
+        'completed' => 'Выполнена',
+        'cancelled' => 'Отменена',
         'in_progress' => 'В обработке',
     ];
 
@@ -41,6 +40,8 @@ class ShipmentController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('uuid', 'like', "%{$search}%")
+                    ->orWhere('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%")
                     ->orWhere('tax_id', 'like', "%{$search}%")
                     ->orWhereHas('items.product', function ($pq) use ($search) {
                         $pq->where('name', 'like', "%{$search}%")
@@ -71,7 +72,7 @@ class ShipmentController extends Controller
         }
 
         // Сортировка
-        $sortBy    = $request->input('sort_by', 'id');
+        $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
 
         $allowed = ['id', 'date', 'total_amount', 'status'];
@@ -80,7 +81,7 @@ class ShipmentController extends Controller
         }
 
         // Пагинация
-        $perPage   = min(max((int) $request->input('per_page', 15), 5), 100);
+        $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
         $shipments = $query->paginate($perPage)->withQueryString();
 
         // Получить текущую валюту пользователя
@@ -88,22 +89,22 @@ class ShipmentController extends Controller
 
         // Трансформация данных
         $shipments->getCollection()->transform(function ($shipment) use ($currency) {
-            $totalConverted = $this->convertAmount((float)$shipment->total_amount, $shipment->currency_code, $currency);
+            $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
 
             return [
-                'id'              => $shipment->id,
-                'number'          => $shipment->number ?? ('#' . $shipment->id),
-                'tax_id'  => $shipment->tax_id,
-                'date'            => $shipment->date?->format('Y-m-d'),
-                'updated_at'      => $shipment->updated_at?->format('d.m.Y H:i'),
-                'status'          => $shipment->status,
-                'status_label'    => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
-                'currency_code'   => $shipment->currency_code,
-                'total_amount'    => $shipment->total_amount,
+                'id' => $shipment->id,
+                'number' => $shipment->number ?? $shipment->erp_number ?? ('#'.$shipment->id),
+                'tax_id' => $shipment->tax_id,
+                'date' => $shipment->date?->format('Y-m-d'),
+                'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
+                'status' => $shipment->status,
+                'status_label' => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
+                'currency_code' => $shipment->currency_code,
+                'total_amount' => $shipment->total_amount,
                 'total_converted' => $totalConverted,
-                'items_count'     => $shipment->items->count(),
-                'company'         => $shipment->company ? [
-                    'id'   => $shipment->company->id,
+                'items_count' => $shipment->items->count(),
+                'company' => $shipment->company ? [
+                    'id' => $shipment->company->id,
                     'name' => $shipment->company->name,
                 ] : null,
             ];
@@ -111,18 +112,18 @@ class ShipmentController extends Controller
 
         return Inertia::render('User/Cabinet/Shipments/Index', [
             'shipments' => $shipments,
-            'filters'   => [
-                'search'      => $search,
-                'status'      => $status,
-                'date_from'   => $dateFrom,
-                'date_to'     => $dateTo,
+            'filters' => [
+                'search' => $search,
+                'status' => $status,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
-                'amount_to'   => $amountTo,
-                'sort_by'     => $sortBy,
-                'sort_order'  => $sortOrder,
-                'per_page'    => $perPage,
+                'amount_to' => $amountTo,
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
+                'per_page' => $perPage,
             ],
-            'statuses'  => array_map(
+            'statuses' => array_map(
                 fn ($k, $v) => ['value' => $k, 'label' => $v],
                 array_keys(self::STATUS_LABELS),
                 self::STATUS_LABELS
@@ -146,73 +147,73 @@ class ShipmentController extends Controller
 
         $relatedOrders = $shipment->getRelatedOrders();
 
-        $totalConverted = $this->convertAmount((float)$shipment->total_amount, $shipment->currency_code, $currency);
+        $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
 
         // Получить деталь просрочки для этой реализации (если есть)
         $overdueDetail = null;
         if ($shipment->uuid) {
             $overdueDetail = ContractorBalanceOverdueDetail::whereHas(
                 'contractorBalance',
-                fn($q) => $q->where('user_id', $user->id)
+                fn ($q) => $q->where('user_id', $user->id)
             )->where('shipment_uuid', $shipment->uuid)->first();
         }
 
         return Inertia::render('User/Cabinet/Shipments/Show', [
-            'shipment'       => [
-                'id'              => $shipment->id,
-                'number'          => $shipment->number ?? ('#' . $shipment->id),
-                'uuid'            => $shipment->uuid,
-                'tax_id'  => $shipment->tax_id,
-                'date'            => $shipment->date?->format('Y-m-d'),
-                'updated_at'      => $shipment->updated_at?->format('d.m.Y H:i'),
-                'status'          => $shipment->status,
-                'status_label'    => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
-                'currency_code'   => $shipment->currency_code,
-                'total_amount'    => $shipment->total_amount,
+            'shipment' => [
+                'id' => $shipment->id,
+                'number' => $shipment->number ?? $shipment->erp_number ?? ('#'.$shipment->id),
+                'uuid' => $shipment->uuid,
+                'tax_id' => $shipment->tax_id,
+                'date' => $shipment->date?->format('Y-m-d'),
+                'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
+                'status' => $shipment->status,
+                'status_label' => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
+                'currency_code' => $shipment->currency_code,
+                'total_amount' => $shipment->total_amount,
                 'total_converted' => $totalConverted,
-                'company'         => $shipment->company ? [
-                    'id'         => $shipment->company->id,
-                    'name'       => $shipment->company->name,
+                'company' => $shipment->company ? [
+                    'id' => $shipment->company->id,
+                    'name' => $shipment->company->name,
                     'legal_name' => $shipment->company->legal_name,
-                    'tax_id'     => $shipment->company->tax_id,
+                    'tax_id' => $shipment->company->tax_id,
                 ] : null,
-                'items'           => $shipment->items->map(function ($item) use ($currency) {
-                    $priceConverted = $this->convertAmount((float)$item->price, null, $currency);
-                    $totalConverted = $this->convertAmount((float)$item->total, null, $currency);
+                'items' => $shipment->items->map(function ($item) use ($currency) {
+                    $priceConverted = $this->convertAmount((float) $item->price, null, $currency);
+                    $totalConverted = $this->convertAmount((float) $item->total, null, $currency);
 
                     return [
-                        'id'                      => $item->id,
-                        'order_uuid'              => $item->order_uuid,
-                        'quantity'                => $item->quantity,
-                        'price'                   => $item->price,
-                        'price_converted'         => $priceConverted,
-                        'auto_discount_percent'   => $item->auto_discount_percent,
+                        'id' => $item->id,
+                        'order_uuid' => $item->order_uuid,
+                        'quantity' => $item->quantity,
+                        'price' => $item->price,
+                        'price_converted' => $priceConverted,
+                        'auto_discount_percent' => $item->auto_discount_percent,
                         'manual_discount_percent' => $item->manual_discount_percent,
-                        'total'                   => $item->total,
-                        'total_converted'         => $totalConverted,
-                        'vat_rate'                => $item->vat_rate,
-                        'product'                 => $item->product ? [
-                            'id'        => $item->product->id,
-                            'name'      => $item->product->name,
-                            'sku'       => $item->product->sku,
-                            'slug'      => $item->product->slug,
+                        'total' => $item->total,
+                        'total_converted' => $totalConverted,
+                        'vat_rate' => $item->vat_rate,
+                        'product' => $item->product ? [
+                            'id' => $item->product->id,
+                            'name' => $item->product->name,
+                            'sku' => $item->product->sku,
+                            'slug' => $item->product->slug,
                             'image_url' => $item->product->getFirstMediaUrl('main'),
-                            'brand'     => $item->product->brand ? ['name' => $item->product->brand->name] : null,
+                            'brand' => $item->product->brand ? ['name' => $item->product->brand->name] : null,
                         ] : null,
                     ];
                 }),
             ],
             'related_orders' => $relatedOrders->map(function ($order) {
                 return [
-                    'id'     => $order->id,
-                    'number' => $order->number ?? ('#' . $order->id),
+                    'id' => $order->id,
+                    'number' => $order->number ?? ('#'.$order->id),
                     'status' => $order->status?->value,
                 ];
             }),
-            'overdue_detail'  => $overdueDetail ? [
+            'overdue_detail' => $overdueDetail ? [
                 'shipment_uuid' => $overdueDetail->shipment_uuid,
-                'amount'        => $overdueDetail->amount,
-                'due_date'      => $overdueDetail->due_date?->format('Y-m-d'),
+                'amount' => $overdueDetail->amount,
+                'due_date' => $overdueDetail->due_date?->format('Y-m-d'),
             ] : null,
         ]);
     }
@@ -231,16 +232,17 @@ class ShipmentController extends Controller
      */
     private function convertAmount(float $amount, ?string $sourceCurrencyCode, ?Currency $targetCurrency): float
     {
-        if (!$targetCurrency || $targetCurrency->is_base) {
+        if (! $targetCurrency || $targetCurrency->is_base) {
             // Если целевая валюта — базовая (RUB), возвращаем как есть
             // Но если источник не RUB — нужно конвертировать в RUB через курс источника
             if ($sourceCurrencyCode && $sourceCurrencyCode !== 'RUB') {
                 $sourceCurrency = Currency::where('code', $sourceCurrencyCode)->first();
                 if ($sourceCurrency) {
                     // amount in source_currency → RUB: amount * exchange_rate
-                    return round($amount * (float)$sourceCurrency->exchange_rate, 2);
+                    return round($amount * (float) $sourceCurrency->exchange_rate, 2);
                 }
             }
+
             return $amount;
         }
 
@@ -249,7 +251,7 @@ class ShipmentController extends Controller
         if ($sourceCurrencyCode && $sourceCurrencyCode !== 'RUB') {
             $sourceCurrency = Currency::where('code', $sourceCurrencyCode)->first();
             if ($sourceCurrency) {
-                $amountInRub = round($amount * (float)$sourceCurrency->exchange_rate, 2);
+                $amountInRub = round($amount * (float) $sourceCurrency->exchange_rate, 2);
             }
         }
 

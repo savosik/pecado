@@ -163,7 +163,7 @@ return [
                     'owner_sku',        // 3. Артикул товара
                     'owner_brand',      // 4. Бренд
                     'owner_category',   // 5. Категория
-                    'owner_description',// 6. Описание владельца
+                    'owner_description', // 6. Описание владельца
                     'name',             // 7. Название медиафайла
                     'file_name',        // 8. Имя файла
                     'tags',             // 9. Теги

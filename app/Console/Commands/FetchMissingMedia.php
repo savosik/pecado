@@ -6,7 +6,6 @@ use App\Jobs\DownloadProductMediaJob;
 use App\Models\Product;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class FetchMissingMedia extends Command
 {
@@ -16,6 +15,7 @@ class FetchMissingMedia extends Command
     protected $description = 'Поиск и загрузка медиа для товаров без главного изображения через API sex-opt.ru';
 
     private string $baseUrl = 'https://backend.sex-opt.ru/api/v3/shop/products';
+
     private string $token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvYmFja2VuZC5zZXgtb3B0LnJ1XC9hcGlcL3YzXC9hdXRoXC9qd3QiLCJpYXQiOjE3NzQzNTQ1NjgsImV4cCI6MTc4OTkwNjU2OCwibmJmIjoxNzc0MzU0NTY4LCJqdGkiOiI4VmRuMTlBS0VUb1FlWXhCIiwic3ViIjo0NDQ2LCJwcnYiOiI0YWMwNWMwZjhhYzA4ZjM2NGNiNGQwM2ZiOGUxZjYzMWZlYzMyMmU4Iiwic2Vzc2lvbl90b2tlbiI6IjcyODgzNTBjNjEwYWViNDdmNmZhNjZkZTc2ODVlZjM1In0.V2AB5xn2qHIeTFN6eSMmxjMy6VIJf5QDZt0ze9QPkuA';
 
     public function handle(): int
@@ -31,6 +31,7 @@ class FetchMissingMedia extends Command
 
         if ($total === 0) {
             $this->info('Все товары имеют главное изображение.');
+
             return self::SUCCESS;
         }
 
@@ -45,7 +46,7 @@ class FetchMissingMedia extends Command
         $searchTerms = [];
         foreach ($products as $product) {
             $term = $product->sku ?: $product->code;
-            if (!empty($term)) {
+            if (! empty($term)) {
                 $searchTerms[$product->id] = [
                     'term' => $term,
                     'product' => $product,
@@ -75,9 +76,9 @@ class FetchMissingMedia extends Command
             foreach ($chunk as $productId => $info) {
                 $response = $responses["search_{$productId}"] ?? null;
 
-                if ($response && !($response instanceof \Exception) && $response->successful()) {
+                if ($response && ! ($response instanceof \Exception) && $response->successful()) {
                     $payload = $response->json('payload', []);
-                    if (!empty($payload) && isset($payload[0]['id'])) {
+                    if (! empty($payload) && isset($payload[0]['id'])) {
                         $remoteIds[$productId] = [
                             'remoteId' => $payload[0]['id'],
                             'product' => $info['product'],
@@ -88,10 +89,11 @@ class FetchMissingMedia extends Command
             }
         }
 
-        $this->info("  Найдено на sex-opt.ru: " . count($remoteIds) . " из " . count($searchTerms));
+        $this->info('  Найдено на sex-opt.ru: '.count($remoteIds).' из '.count($searchTerms));
 
         if (empty($remoteIds)) {
             $this->warn('Ни один товар не найден на sex-opt.ru');
+
             return self::SUCCESS;
         }
 
@@ -116,7 +118,7 @@ class FetchMissingMedia extends Command
             foreach ($chunk as $productId => $info) {
                 $response = $responses["detail_{$productId}"] ?? null;
 
-                if (!$response || ($response instanceof \Exception) || !$response->successful()) {
+                if (! $response || ($response instanceof \Exception) || ! $response->successful()) {
                     continue;
                 }
 
@@ -125,6 +127,7 @@ class FetchMissingMedia extends Command
 
                 if (empty($images)) {
                     $noImages++;
+
                     continue;
                 }
 
@@ -142,7 +145,7 @@ class FetchMissingMedia extends Command
                     ->toArray();
 
                 if ($dryRun) {
-                    $this->line("  ✓ [{$info['term']}] → ID {$info['remoteId']}: главная + " . count($additionalImages) . " доп.");
+                    $this->line("  ✓ [{$info['term']}] → ID {$info['remoteId']}: главная + ".count($additionalImages).' доп.');
                 } else {
                     DownloadProductMediaJob::dispatch($info['product']->id, [
                         'image_main' => $mainImage,
@@ -162,9 +165,9 @@ class FetchMissingMedia extends Command
         $this->line("  Всего без медиа:       {$total}");
         $this->line("  Найдено и отправлено:  {$dispatched}");
         $this->line("  Без изображений:       {$noImages}");
-        $this->line("  Не найдено:            " . ($total - $dispatched - $noImages));
-        if (!$dryRun && $dispatched > 0) {
-            $this->line("  Очередь:               catalog-media");
+        $this->line('  Не найдено:            '.($total - $dispatched - $noImages));
+        if (! $dryRun && $dispatched > 0) {
+            $this->line('  Очередь:               catalog-media');
         }
         $this->info('═══════════════════════════════════════');
 

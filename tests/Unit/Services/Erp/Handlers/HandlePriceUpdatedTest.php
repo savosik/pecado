@@ -21,7 +21,7 @@ class HandlePriceUpdatedTest extends TestCase
             'base_price' => 10000.00,
         ]);
 
-        $handler = new HandlePriceUpdated();
+        $handler = new HandlePriceUpdated;
         $handler->handle([
             'event' => 'price.updated',
             'product_uuid' => '550e8400-e29b-41d4-a716-446655440000',
@@ -42,7 +42,7 @@ class HandlePriceUpdatedTest extends TestCase
                 return str_contains($msg, 'товар не найден по UUID');
             });
 
-        $handler = new HandlePriceUpdated();
+        $handler = new HandlePriceUpdated;
         $handler->handle([
             'event' => 'price.updated',
             'product_uuid' => 'nonexistent-uuid-1234',
@@ -61,7 +61,7 @@ class HandlePriceUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует product_uuid или price');
             });
 
-        $handler = new HandlePriceUpdated();
+        $handler = new HandlePriceUpdated;
         $handler->handle([
             'event' => 'price.updated',
             'price' => 15000.00,
@@ -77,7 +77,7 @@ class HandlePriceUpdatedTest extends TestCase
                 return str_contains($msg, 'отсутствует product_uuid или price');
             });
 
-        $handler = new HandlePriceUpdated();
+        $handler = new HandlePriceUpdated;
         $handler->handle([
             'event' => 'price.updated',
             'product_uuid' => '550e8400-e29b-41d4-a716-446655440000',
@@ -92,7 +92,7 @@ class HandlePriceUpdatedTest extends TestCase
             'base_price' => 5000.00,
         ]);
 
-        $handler = new HandlePriceUpdated();
+        $handler = new HandlePriceUpdated;
         $handler->handle([
             'event' => 'price.updated',
             'product_uuid' => 'zero-price-uuid',
@@ -112,7 +112,7 @@ class HandlePriceUpdatedTest extends TestCase
             'base_price' => 10000.00,
         ]);
 
-        $handler = new HandlePriceUpdated();
+        $handler = new HandlePriceUpdated;
 
         // Первое обновление
         $handler->handle([

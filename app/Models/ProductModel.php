@@ -17,8 +17,6 @@ class ProductModel extends Model
 
     ];
 
-
-
     /**
      * Get the products for this model.
      */

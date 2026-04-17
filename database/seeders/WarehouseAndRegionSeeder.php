@@ -19,16 +19,16 @@ class WarehouseAndRegionSeeder extends Seeder
             Region::firstOrCreate(['name' => $data['name']]);
         }
 
-        $this->command->info('Создано/найдено регионов: ' . count($regions));
+        $this->command->info('Создано/найдено регионов: '.count($regions));
 
         // ─── Склады ───
         $warehouses = [
             [
-                'name'        => 'Москва Основной',
+                'name' => 'Москва Основной',
                 'external_id' => '40301d16-3847-11e1-8034-001e6711ed1d',
             ],
             [
-                'name'        => 'Москва Предзаказы',
+                'name' => 'Москва Предзаказы',
                 'external_id' => '3d0a3eb9-0c23-11ee-8ddc-ee348b24c7ce',
             ],
         ];
@@ -40,6 +40,6 @@ class WarehouseAndRegionSeeder extends Seeder
             );
         }
 
-        $this->command->info('Создано/найдено складов: ' . count($warehouses));
+        $this->command->info('Создано/найдено складов: '.count($warehouses));
     }
 }

@@ -42,7 +42,7 @@ class ClientApiController extends Controller
         if ($currencyCode = $request->query('currency')) {
             $currency = \App\Models\Currency::where('code', $currencyCode)->first();
         }
-        if (!$currency) {
+        if (! $currency) {
             $currency = $this->currencyResolver->resolve($user);
         }
 
@@ -62,7 +62,7 @@ class ClientApiController extends Controller
             $displayPrice = round($priceResult->getDisplayPrice(), 2);
 
             // Конвертация в целевую валюту
-            if ($currency && !$currency->is_base) {
+            if ($currency && ! $currency->is_base) {
                 $basePrice = $currencyService->convertFromBase($basePrice, $currency);
                 $displayPrice = $currencyService->convertFromBase($displayPrice, $currency);
             }
@@ -159,14 +159,12 @@ class ClientApiController extends Controller
 
         // Найти компанию по ИНН
         $company = $user->companies()->where('tax_id', $validated['inn'])->first();
-        if (!$company) {
+        if (! $company) {
             return response()->json([
                 'error' => 'Компания с указанным ИНН не найдена в вашем аккаунте',
                 'inn' => $validated['inn'],
             ], 422);
         }
-
-
 
         // Резолвить товары и проверить остатки
         $instockItems = [];
@@ -176,8 +174,9 @@ class ClientApiController extends Controller
 
         foreach ($validated['products'] as $index => $item) {
             $product = $this->resolveProduct($item['identifier']);
-            if (!$product) {
-                $errors[] = "Товар \"{$item['identifier']}\" не найден (позиция " . ($index + 1) . ')';
+            if (! $product) {
+                $errors[] = "Товар \"{$item['identifier']}\" не найден (позиция ".($index + 1).')';
+
                 continue;
             }
 
@@ -193,6 +192,7 @@ class ClientApiController extends Controller
                     'requested' => $requestedQty,
                     'available' => $totalAvailable,
                 ];
+
                 continue;
             }
 
@@ -208,14 +208,14 @@ class ClientApiController extends Controller
             }
         }
 
-        if (!empty($errors)) {
+        if (! empty($errors)) {
             return response()->json([
                 'error' => 'Некоторые товары не найдены',
                 'details' => $errors,
             ], 422);
         }
 
-        if (!empty($insufficientStock)) {
+        if (! empty($insufficientStock)) {
             return response()->json([
                 'error' => 'Недостаточно остатков для некоторых товаров',
                 'details' => $insufficientStock,
@@ -242,7 +242,7 @@ class ClientApiController extends Controller
             $orders = [];
 
             // Заказ (instock)
-            if (!empty($instockItems)) {
+            if (! empty($instockItems)) {
                 $order = Order::create(array_merge($baseOrderData, [
                     'type' => OrderType::ORDER,
                 ]));
@@ -252,7 +252,7 @@ class ClientApiController extends Controller
             }
 
             // Предзаказ (preorder)
-            if (!empty($preorderItems)) {
+            if (! empty($preorderItems)) {
                 $order = Order::create(array_merge($baseOrderData, [
                     'type' => OrderType::PREORDER,
                 ]));
@@ -270,7 +270,7 @@ class ClientApiController extends Controller
         }
 
         // Формируем ответ
-        $responseOrders = array_map(fn(Order $order) => [
+        $responseOrders = array_map(fn (Order $order) => [
             'order_id' => $order->id,
             'order_number' => $order->number,
             'type' => $order->type?->value ?? 'order',
@@ -326,10 +326,10 @@ class ClientApiController extends Controller
             ->where('is_active', true)
             ->first();
 
-        abort_if(!$apiToken, 404, 'API-ключ не найден или деактивирован.');
+        abort_if(! $apiToken, 404, 'API-ключ не найден или деактивирован.');
 
         // Обновить last_used_at, не чаще 1 раза в минуту
-        if (!$apiToken->last_used_at || $apiToken->last_used_at->diffInMinutes(now()) >= 1) {
+        if (! $apiToken->last_used_at || $apiToken->last_used_at->diffInMinutes(now()) >= 1) {
             $apiToken->touchLastUsed();
         }
 

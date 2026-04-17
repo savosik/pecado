@@ -45,39 +45,38 @@ class ErpIncomingJob extends BaseJob
      */
     private const EVENT_HANDLERS = [
         // US-02: Партнёры
-        'partner.created'           => HandlePartnerCreated::class,
-        'partner.updated'           => HandlePartnerUpdated::class,
-        'partner.deleted'           => HandlePartnerDeleted::class,
+        'partner.created' => HandlePartnerCreated::class,
+        'partner.updated' => HandlePartnerUpdated::class,
+        'partner.deleted' => HandlePartnerDeleted::class,
         // US-03: Базовые цены
-        'price.updated'             => HandlePriceUpdated::class,
+        'price.updated' => HandlePriceUpdated::class,
         // US-05: Курсы валют
-        'exchange_rate.updated'     => HandleExchangeRateUpdated::class,
+        'exchange_rate.updated' => HandleExchangeRateUpdated::class,
         // US-06: Остатки
-        'stock.updated'             => HandleStockUpdated::class,
+        'stock.updated' => HandleStockUpdated::class,
         // US-07: Контрагенты
-        'contractor.created'        => HandleContractorCreated::class,
+        'contractor.created' => HandleContractorCreated::class,
         // US-08: Заказы
-        'order.created'             => HandleOrderCreated::class,
-        'order.updated'             => HandleOrderUpdated::class,
-        'order.deleted'             => HandleOrderDeleted::class,
+        'order.created' => HandleOrderCreated::class,
+        'order.updated' => HandleOrderUpdated::class,
+        'order.deleted' => HandleOrderDeleted::class,
         // US-09: Возвраты (отложено)
-        'return.updated'            => HandleReturnUpdated::class,
-        'return.deleted'            => HandleReturnDeleted::class,
+        'return.updated' => HandleReturnUpdated::class,
+        'return.deleted' => HandleReturnDeleted::class,
         // US-10: Реализации
-        'shipment.created'          => HandleShipmentCreated::class,
-        'shipment.updated'          => HandleShipmentUpdated::class,
-        'shipment.deleted'          => HandleShipmentDeleted::class,
+        'shipment.created' => HandleShipmentCreated::class,
+        'shipment.updated' => HandleShipmentUpdated::class,
+        'shipment.deleted' => HandleShipmentDeleted::class,
         // US-11: Баланс
-        'balance.updated'           => HandleBalanceUpdated::class,
+        'balance.updated' => HandleBalanceUpdated::class,
         // US-14: Индивидуальные цены (v7)
-        'individual_prices.ready'   => HandleIndividualPricesReady::class,
+        'individual_prices.ready' => HandleIndividualPricesReady::class,
         // US-15: Каталог
-        'category.created'          => HandleCategoryCreated::class,
-        'category.updated'          => HandleCategoryUpdated::class,
-        'product.created'           => HandleProductCreated::class,
-        'product.updated'           => HandleProductUpdated::class,
+        'category.created' => HandleCategoryCreated::class,
+        'category.updated' => HandleCategoryUpdated::class,
+        'product.created' => HandleProductCreated::class,
+        'product.updated' => HandleProductUpdated::class,
     ];
-
 
     /**
      * Fire the job.
@@ -101,7 +100,7 @@ class ErpIncomingJob extends BaseJob
             $event = $payload['event'] ?? null;
             $messageId = $payload['message_id'] ?? null;
 
-            if (!$event) {
+            if (! $event) {
                 Log::warning('ERP incoming: отсутствует поле event', ['payload' => $payload]);
                 $this->delete();
 
@@ -122,7 +121,7 @@ class ErpIncomingJob extends BaseJob
             // Маршрутизация по типу события
             $handlerClass = self::EVENT_HANDLERS[$event] ?? null;
 
-            if (!$handlerClass) {
+            if (! $handlerClass) {
                 Log::warning('ERP incoming: неизвестный тип события', [
                     'event' => $event,
                     'payload' => $payload,
@@ -137,7 +136,7 @@ class ErpIncomingJob extends BaseJob
             $validator = app(ErpMessageValidator::class);
             $validation = $validator->validate($event, $payload);
 
-            if (!$validation['valid']) {
+            if (! $validation['valid']) {
                 Log::warning('ERP incoming: payload не соответствует JSON Schema', [
                     'event' => $event,
                     'message_id' => $messageId,
@@ -178,7 +177,7 @@ class ErpIncomingJob extends BaseJob
         } catch (\Throwable $e) {
             Log::error('ERP incoming: ошибка обработки сообщения', [
                 'error' => $e->getMessage(),
-                'body'  => $rawBody,
+                'body' => $rawBody,
             ]);
 
             // Логируем ошибку в шину ERP

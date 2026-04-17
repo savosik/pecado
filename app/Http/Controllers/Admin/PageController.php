@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Page;
 use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class PageController extends Controller
 {
@@ -39,6 +39,7 @@ class PageController extends Controller
         $pages->getCollection()->transform(function ($page) {
             $page->list_image = $page->getFirstMediaUrl('list-item');
             $page->region_names = $page->regions->pluck('name')->toArray();
+
             return $page;
         });
 
@@ -106,7 +107,7 @@ class PageController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:pages,slug,' . $page->id,
+            'slug' => 'required|string|max:255|unique:pages,slug,'.$page->id,
             'content' => 'required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',

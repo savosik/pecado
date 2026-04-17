@@ -19,12 +19,12 @@ class CurrencyConversionServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->service = new CurrencyConversionService();
+        $this->service = new CurrencyConversionService;
     }
 
     public function test_it_converts_from_base(): void
     {
-        $targetCurrency = new Currency();
+        $targetCurrency = new Currency;
         $targetCurrency->is_base = false;
         $targetCurrency->code = 'KZT';
         // exchange_rate = уже итоговый курс (official_rate × rate_coefficient)
@@ -38,7 +38,7 @@ class CurrencyConversionServiceTest extends TestCase
 
     public function test_it_converts_from_base_byn(): void
     {
-        $targetCurrency = new Currency();
+        $targetCurrency = new Currency;
         $targetCurrency->is_base = false;
         $targetCurrency->code = 'BYN';
         $targetCurrency->exchange_rate = 28.5; // 1 BYN = 28.5 RUB
@@ -51,7 +51,7 @@ class CurrencyConversionServiceTest extends TestCase
 
     public function test_it_returns_same_amount_for_base_currency(): void
     {
-        $baseCurrency = new Currency();
+        $baseCurrency = new Currency;
         $baseCurrency->is_base = true;
         $baseCurrency->exchange_rate = 1.0;
 
@@ -64,7 +64,7 @@ class CurrencyConversionServiceTest extends TestCase
     {
         // По US-04: exchange_rate = official_rate × rate_coefficient
         // official_rate=5.40, rate_coefficient=1.01 → exchange_rate=5.454
-        $targetCurrency = new Currency();
+        $targetCurrency = new Currency;
         $targetCurrency->is_base = false;
         $targetCurrency->exchange_rate = 5.454; // уже итоговый
 

@@ -282,14 +282,14 @@ class BulkDeleteController extends Controller
     {
         $registry = $this->registry();
 
-        if (!isset($registry[$resource])) {
+        if (! isset($registry[$resource])) {
             abort(404, "Ресурс «{$resource}» не найден.");
         }
 
         $config = $registry[$resource];
 
         // Проверка прав
-        if (!$request->user()->can($config['permission'])) {
+        if (! $request->user()->can($config['permission'])) {
             abort(403, 'Недостаточно прав для удаления.');
         }
 
@@ -322,7 +322,7 @@ class BulkDeleteController extends Controller
         $cacheKey = BulkDeleteJob::cacheKey($resource);
         $progress = Cache::get($cacheKey);
 
-        if (!$progress) {
+        if (! $progress) {
             return response()->json(['status' => 'idle']);
         }
 

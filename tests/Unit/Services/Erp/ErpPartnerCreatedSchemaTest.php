@@ -20,21 +20,21 @@ class ErpPartnerCreatedSchemaTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->validator = new ErpMessageValidator();
+        $this->validator = new ErpMessageValidator;
     }
 
     private function basePayload(array $override = []): array
     {
         return array_merge([
-            'event'      => 'partner.created',
+            'event' => 'partner.created',
             'message_id' => 'msg-test-001',
-            'uuid'       => '550e8400-e29b-41d4-a716-446655440000',
-            'login'      => 'test@example.com',
-            'name'       => 'Иванов Иван',
-            'email'      => 'test@example.com',
-            'password'   => '12345678',
-            'country'    => 'RU',
-            'is_active'  => true,
+            'uuid' => '550e8400-e29b-41d4-a716-446655440000',
+            'login' => 'test@example.com',
+            'name' => 'Иванов Иван',
+            'email' => 'test@example.com',
+            'password' => '12345678',
+            'country' => 'RU',
+            'is_active' => true,
         ], $override);
     }
 
@@ -50,13 +50,13 @@ class ErpPartnerCreatedSchemaTest extends TestCase
             'password' => $password,
         ]));
 
-        $this->assertTrue($result['valid'], "Пароль длиной " . strlen($password) . " символов должен проходить валидацию: " . implode(', ', $result['errors']));
+        $this->assertTrue($result['valid'], 'Пароль длиной '.strlen($password).' символов должен проходить валидацию: '.implode(', ', $result['errors']));
     }
 
     public static function validPasswordLengths(): array
     {
         return [
-            '1 символ'   => ['1'],
+            '1 символ' => ['1'],
             '8 символов' => ['12345678'],
             '9 символов' => ['123456789'],      // регрессия: ранее отвергался
             '10 символов' => ['2926704424'],    // регрессия: реальное значение CRC32

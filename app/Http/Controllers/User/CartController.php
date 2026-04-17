@@ -242,7 +242,7 @@ class CartController extends Controller
 
         $productBarcode = ProductBarcode::where('barcode', $validated['barcode'])->first();
 
-        if (!$productBarcode) {
+        if (! $productBarcode) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Товар с таким штрихкодом не найден.',

@@ -117,7 +117,7 @@ class PromotionController extends Controller
                 'description' => $validated['description'] ?? null,
             ]);
 
-            if (!empty($validated['product_ids'])) {
+            if (! empty($validated['product_ids'])) {
                 $promotion->products()->sync($validated['product_ids']);
             }
 
@@ -131,6 +131,7 @@ class PromotionController extends Controller
             return response()->json(['data' => $this->format($promotion->fresh())], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['message' => 'Ошибка при создании акции', 'error' => $e->getMessage()], 500);
         }
     }
@@ -177,7 +178,7 @@ class PromotionController extends Controller
             $this->handleMediaUpload($request, $promotion, 'detail_mobile', 'detail-item-mobile', clearFirst: true);
 
             // Удаление из галереи
-            if (!empty($validated['delete_gallery_ids'])) {
+            if (! empty($validated['delete_gallery_ids'])) {
                 foreach ($validated['delete_gallery_ids'] as $mediaId) {
                     $promotion->getMedia('gallery')->firstWhere('id', $mediaId)?->delete();
                 }
@@ -190,6 +191,7 @@ class PromotionController extends Controller
             return response()->json(['data' => $this->format($promotion->fresh())]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['message' => 'Ошибка при обновлении акции', 'error' => $e->getMessage()], 500);
         }
     }
@@ -220,6 +222,7 @@ class PromotionController extends Controller
     public function destroy(Promotion $promotion): JsonResponse
     {
         $promotion->delete();
+
         return response()->json(null, 204);
     }
 

@@ -2,9 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\Order;
 use App\Models\Shipment;
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -12,9 +10,9 @@ use Inertia\Inertia;
 class ShipmentController extends Controller
 {
     private const STATUS_LABELS = [
-        'new'         => 'Новая',
-        'completed'   => 'Выполнена',
-        'cancelled'   => 'Отменена',
+        'new' => 'Новая',
+        'completed' => 'Выполнена',
+        'cancelled' => 'Отменена',
         'in_progress' => 'В обработке',
     ];
 
@@ -27,6 +25,7 @@ class ShipmentController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('uuid', 'like', "%{$search}%")
+                    ->orWhere('number', 'like', "%{$search}%")
                     ->orWhere('tax_id', 'like', "%{$search}%")
                     ->orWhereHas('company', function ($cq) use ($search) {
                         $cq->withoutGlobalScopes()
@@ -64,7 +63,7 @@ class ShipmentController extends Controller
         }
 
         // Сортировка
-        $sortBy    = $request->input('sort_by', 'id');
+        $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
 
         $allowed = ['id', 'date', 'total_amount', 'status', 'created_at'];
@@ -73,29 +72,30 @@ class ShipmentController extends Controller
         }
 
         // Пагинация
-        $perPage   = min(max((int) $request->input('per_page', 15), 5), 100);
+        $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
         $shipments = $query->paginate($perPage)->withQueryString();
 
         // Трансформация данных
         $shipments->getCollection()->transform(function ($shipment) {
             return [
-                'id'             => $shipment->id,
-                'uuid'           => $shipment->uuid,
+                'id' => $shipment->id,
+                'uuid' => $shipment->uuid,
+                'number' => $shipment->number,
                 'tax_id' => $shipment->tax_id,
-                'date'           => $shipment->date?->format('Y-m-d'),
-                'status'         => $shipment->status,
-                'status_label'   => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
-                'currency_code'  => $shipment->currency_code,
-                'total_amount'   => $shipment->total_amount,
-                'items_count'    => $shipment->items->count(),
-                'created_at'     => $shipment->created_at->format('d.m.Y H:i'),
-                'user'           => $shipment->user ? [
-                    'id'    => $shipment->user->id,
-                    'name'  => $shipment->user->name,
+                'date' => $shipment->date?->format('Y-m-d'),
+                'status' => $shipment->status,
+                'status_label' => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
+                'currency_code' => $shipment->currency_code,
+                'total_amount' => $shipment->total_amount,
+                'items_count' => $shipment->items->count(),
+                'created_at' => $shipment->created_at->format('d.m.Y H:i'),
+                'user' => $shipment->user ? [
+                    'id' => $shipment->user->id,
+                    'name' => $shipment->user->name,
                     'email' => $shipment->user->email,
                 ] : null,
-                'company'        => $shipment->company ? [
-                    'id'   => $shipment->company->id,
+                'company' => $shipment->company ? [
+                    'id' => $shipment->company->id,
                     'name' => $shipment->company->name,
                 ] : null,
             ];
@@ -103,64 +103,66 @@ class ShipmentController extends Controller
 
         return Inertia::render('Admin/Pages/Shipments/Index', [
             'shipments' => $shipments,
-            'filters'   => $request->only([
+            'filters' => $request->only([
                 'search', 'status', 'user_id', 'date_from', 'date_to',
                 'currency_code', 'sort_by', 'sort_order', 'per_page',
             ]),
-            'statuses'  => array_map(fn ($k, $v) => ['value' => $k, 'label' => $v], array_keys(self::STATUS_LABELS), self::STATUS_LABELS),
+            'statuses' => array_map(fn ($k, $v) => ['value' => $k, 'label' => $v], array_keys(self::STATUS_LABELS), self::STATUS_LABELS),
         ]);
     }
 
     public function show(Shipment $shipment)
     {
-        $shipment->load(['user', 'company', 'items.product']);
+        $shipment->load(['user', 'company', 'items.product', 'items.order']);
 
         // Получить связанные заказы
         $relatedOrders = $shipment->getRelatedOrders();
 
         return Inertia::render('Admin/Pages/Shipments/Show', [
             'shipment' => [
-                'id'             => $shipment->id,
-                'uuid'           => $shipment->uuid,
+                'id' => $shipment->id,
+                'uuid' => $shipment->uuid,
+                'number' => $shipment->number,
                 'tax_id' => $shipment->tax_id,
-                'date'           => $shipment->date?->format('Y-m-d'),
-                'status'         => $shipment->status,
-                'status_label'   => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
-                'currency_code'  => $shipment->currency_code,
-                'total_amount'   => $shipment->total_amount,
-                'created_at'     => $shipment->created_at->format('d.m.Y H:i'),
-                'user'           => $shipment->user ? [
-                    'id'    => $shipment->user->id,
-                    'name'  => $shipment->user->name,
+                'date' => $shipment->date?->format('Y-m-d'),
+                'status' => $shipment->status,
+                'status_label' => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
+                'currency_code' => $shipment->currency_code,
+                'total_amount' => $shipment->total_amount,
+                'created_at' => $shipment->created_at->format('d.m.Y H:i'),
+                'user' => $shipment->user ? [
+                    'id' => $shipment->user->id,
+                    'name' => $shipment->user->name,
                     'email' => $shipment->user->email,
                 ] : null,
-                'company'        => $shipment->company ? [
-                    'id'   => $shipment->company->id,
+                'company' => $shipment->company ? [
+                    'id' => $shipment->company->id,
                     'name' => $shipment->company->name,
                 ] : null,
-                'items'          => $shipment->items->map(function ($item) {
+                'items' => $shipment->items->map(function ($item) {
                     return [
-                        'id'                     => $item->id,
-                        'order_uuid'             => $item->order_uuid,
-                        'quantity'               => $item->quantity,
-                        'price'                  => $item->price,
-                        'auto_discount_percent'  => $item->auto_discount_percent,
-                        'manual_discount_percent'=> $item->manual_discount_percent,
-                        'total'                  => $item->total,
-                        'subtotal'               => $item->subtotal,
-                        'vat_rate'               => $item->vat_rate,
-                        'product'                => $item->product ? [
-                            'id'   => $item->product->id,
+                        'id' => $item->id,
+                        'order_uuid' => $item->order_uuid,
+                        'order_number' => $item->order?->number,
+                        'quantity' => $item->quantity,
+                        'price' => $item->price,
+                        'auto_discount_percent' => $item->auto_discount_percent,
+                        'manual_discount_percent' => $item->manual_discount_percent,
+                        'total' => $item->total,
+                        'subtotal' => $item->subtotal,
+                        'vat_rate' => $item->vat_rate,
+                        'product' => $item->product ? [
+                            'id' => $item->product->id,
                             'name' => $item->product->name,
-                            'sku'  => $item->product->sku,
+                            'sku' => $item->product->sku,
                         ] : null,
                     ];
                 }),
             ],
             'related_orders' => $relatedOrders->map(function ($order) {
                 return [
-                    'id'     => $order->id,
-                    'uuid'   => $order->uuid,
+                    'id' => $order->id,
+                    'uuid' => $order->uuid,
                     'number' => $order->number,
                     'status' => $order->status?->value,
                 ];

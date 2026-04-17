@@ -13,6 +13,7 @@ class RegionCurrencyAdminTest extends TestCase
     use RefreshDatabase;
 
     private User $admin;
+
     private Currency $rub;
 
     protected function setUp(): void

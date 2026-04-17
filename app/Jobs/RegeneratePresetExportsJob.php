@@ -33,13 +33,14 @@ class RegeneratePresetExportsJob implements ShouldQueue
         foreach ($exports as $export) {
             try {
                 $preset = $presetRegistry->resolve($export->preset);
-                if (!$preset) {
+                if (! $preset) {
                     Log::warning("[PresetExports] Неизвестный пресет: {$export->preset} (export #{$export->id})");
+
                     continue;
                 }
 
                 $cacheDir = dirname($export->getCacheFilePath());
-                if (!is_dir($cacheDir)) {
+                if (! is_dir($cacheDir)) {
                     mkdir($cacheDir, 0755, true);
                 }
 

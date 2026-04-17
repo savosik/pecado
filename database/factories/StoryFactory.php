@@ -16,7 +16,7 @@ class StoryFactory extends Factory
 
         return [
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . fake()->unique()->randomNumber(4),
+            'slug' => Str::slug($name).'-'.fake()->unique()->randomNumber(4),
             'is_active' => true,
             'is_published' => true,
             'show_name' => fake()->boolean(),

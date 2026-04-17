@@ -109,7 +109,7 @@ class NewsController extends Controller
 
         $news = News::create($validated);
 
-        if (!empty($validated['tags'])) {
+        if (! empty($validated['tags'])) {
             $news->attachTags($validated['tags']);
         }
 
@@ -129,7 +129,7 @@ class NewsController extends Controller
     {
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|string|max:255|unique:news,slug,' . $news->id,
+            'slug' => 'sometimes|string|max:255|unique:news,slug,'.$news->id,
             'detailed_description' => 'sometimes|required|string',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',

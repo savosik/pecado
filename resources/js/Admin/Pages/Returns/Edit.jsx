@@ -116,14 +116,14 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
 
     return (
         <>
-            <Head title={`Редактирование возврата #${returnData.id}`} />
+            <Head title={`Редактирование возврата ${returnData.number || ("#" + returnData.id)}`} />
 
             <PageHeader
                 title={
                     <VStack align="start" gap={1}>
-                        <Text>Редактирование возврата #{returnData.id}</Text>
+                        <Text>Редактирование возврата {returnData.number || ("#" + returnData.id)}</Text>
                         <Text fontSize="sm" color="fg.muted" fontWeight="normal">
-                            UUID: {returnData.uuid}
+                            Номер: {returnData.number || ("#" + returnData.id)} | UUID: {returnData.uuid}
                         </Text>
                     </VStack>
                 }

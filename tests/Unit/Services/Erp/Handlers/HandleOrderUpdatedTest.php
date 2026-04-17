@@ -21,7 +21,7 @@ class HandleOrderUpdatedTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->handler = new HandleOrderUpdated();
+        $this->handler = new HandleOrderUpdated;
     }
 
     #[Test]
@@ -49,7 +49,7 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_updates_order_status(): void
     {
         $order = Order::factory()->create([
-            'uuid'   => 'test-uuid-status',
+            'uuid' => 'test-uuid-status',
             'status' => 'pending',
         ]);
 
@@ -57,7 +57,7 @@ class HandleOrderUpdatedTest extends TestCase
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'test-uuid-status',
+            'uuid' => 'test-uuid-status',
             'status' => 'confirmed',
         ]);
 
@@ -72,28 +72,28 @@ class HandleOrderUpdatedTest extends TestCase
 
         // Существующая позиция
         OrderItem::factory()->create([
-            'order_id'   => $order->id,
+            'order_id' => $order->id,
             'product_id' => $product->id,
-            'name'       => 'Старый товар',
-            'price'      => 100,
+            'name' => 'Старый товар',
+            'price' => 100,
             'base_price' => 100,
             'final_price' => 100,
             'discount_percent' => 0,
-            'quantity'   => 2,
-            'subtotal'   => 200,
+            'quantity' => 2,
+            'subtotal' => 200,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'  => 'test-uuid-sync',
+            'uuid' => 'test-uuid-sync',
             'items' => [
                 [
                     'product_uuid' => 'prod-uuid-1',
-                    'quantity'     => 5,
-                    'base_price'   => 100,
-                    'final_price'  => 100,
+                    'quantity' => 5,
+                    'base_price' => 100,
+                    'final_price' => 100,
                     'discount_percent' => 0,
                 ],
             ],
@@ -117,7 +117,7 @@ class HandleOrderUpdatedTest extends TestCase
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'test-uuid-no-items',
+            'uuid' => 'test-uuid-no-items',
             'status' => 'confirmed',
         ]);
 
@@ -129,25 +129,25 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_logs_item_added(): void
     {
         $order = Order::factory()->create([
-            'uuid'         => 'test-uuid-add',
+            'uuid' => 'test-uuid-add',
             'total_amount' => 0,
         ]);
         $product = Product::factory()->create([
             'external_id' => 'prod-new-1',
-            'name'        => 'Новый товар',
+            'name' => 'Новый товар',
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'  => 'test-uuid-add',
+            'uuid' => 'test-uuid-add',
             'items' => [
                 [
-                    'product_uuid'     => 'prod-new-1',
-                    'quantity'         => 3,
-                    'base_price'       => 500,
-                    'final_price'      => 500,
+                    'product_uuid' => 'prod-new-1',
+                    'quantity' => 3,
+                    'base_price' => 500,
+                    'final_price' => 500,
                     'discount_percent' => 0,
                 ],
             ],
@@ -166,23 +166,23 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_logs_item_removed(): void
     {
         $order = Order::factory()->create([
-            'uuid'         => 'test-uuid-remove',
+            'uuid' => 'test-uuid-remove',
             'total_amount' => 1000,
         ]);
         $product = Product::factory()->create([
             'external_id' => 'prod-rm-1',
-            'name'        => 'Удаляемый товар',
+            'name' => 'Удаляемый товар',
         ]);
         OrderItem::factory()->create([
-            'order_id'         => $order->id,
-            'product_id'       => $product->id,
-            'name'             => 'Удаляемый товар',
-            'price'            => 500,
-            'base_price'       => 500,
-            'final_price'      => 500,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => 'Удаляемый товар',
+            'price' => 500,
+            'base_price' => 500,
+            'final_price' => 500,
             'discount_percent' => 0,
-            'quantity'         => 2,
-            'subtotal'         => 1000,
+            'quantity' => 2,
+            'subtotal' => 1000,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
@@ -190,7 +190,7 @@ class HandleOrderUpdatedTest extends TestCase
 
         // Отправляем пустые items — товар удалён
         $this->handler->handle([
-            'uuid'  => 'test-uuid-remove',
+            'uuid' => 'test-uuid-remove',
             'items' => [],
         ]);
 
@@ -204,36 +204,36 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_logs_item_modified(): void
     {
         $order = Order::factory()->create([
-            'uuid'         => 'test-uuid-modify',
+            'uuid' => 'test-uuid-modify',
             'total_amount' => 1000,
         ]);
         $product = Product::factory()->create([
             'external_id' => 'prod-mod-1',
-            'name'        => 'Изменяемый товар',
+            'name' => 'Изменяемый товар',
         ]);
         OrderItem::factory()->create([
-            'order_id'         => $order->id,
-            'product_id'       => $product->id,
-            'name'             => 'Изменяемый товар',
-            'price'            => 500,
-            'base_price'       => 500,
-            'final_price'      => 500,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => 'Изменяемый товар',
+            'price' => 500,
+            'base_price' => 500,
+            'final_price' => 500,
             'discount_percent' => 0,
-            'quantity'         => 5,
-            'subtotal'         => 2500,
+            'quantity' => 5,
+            'subtotal' => 2500,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'  => 'test-uuid-modify',
+            'uuid' => 'test-uuid-modify',
             'items' => [
                 [
-                    'product_uuid'     => 'prod-mod-1',
-                    'quantity'         => 3,
-                    'base_price'       => 500,
-                    'final_price'      => 400,
+                    'product_uuid' => 'prod-mod-1',
+                    'quantity' => 3,
+                    'base_price' => 500,
+                    'final_price' => 400,
                     'discount_percent' => 20,
                 ],
             ],
@@ -254,36 +254,36 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_records_old_and_new_total(): void
     {
         $order = Order::factory()->create([
-            'uuid'         => 'test-uuid-totals',
+            'uuid' => 'test-uuid-totals',
             'total_amount' => 2500,
         ]);
         $product = Product::factory()->create([
             'external_id' => 'prod-total-1',
-            'name'        => 'Товар с итогом',
+            'name' => 'Товар с итогом',
         ]);
         OrderItem::factory()->create([
-            'order_id'         => $order->id,
-            'product_id'       => $product->id,
-            'name'             => 'Товар с итогом',
-            'price'            => 500,
-            'base_price'       => 500,
-            'final_price'      => 500,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => 'Товар с итогом',
+            'price' => 500,
+            'base_price' => 500,
+            'final_price' => 500,
             'discount_percent' => 0,
-            'quantity'         => 5,
-            'subtotal'         => 2500,
+            'quantity' => 5,
+            'subtotal' => 2500,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'  => 'test-uuid-totals',
+            'uuid' => 'test-uuid-totals',
             'items' => [
                 [
-                    'product_uuid'     => 'prod-total-1',
-                    'quantity'         => 3,
-                    'base_price'       => 500,
-                    'final_price'      => 500,
+                    'product_uuid' => 'prod-total-1',
+                    'quantity' => 3,
+                    'base_price' => 500,
+                    'final_price' => 500,
                     'discount_percent' => 0,
                 ],
             ],
@@ -299,36 +299,36 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_generates_russian_summary(): void
     {
         $order = Order::factory()->create([
-            'uuid'         => 'test-uuid-summary',
+            'uuid' => 'test-uuid-summary',
             'total_amount' => 500,
         ]);
         $product = Product::factory()->create([
             'external_id' => 'prod-sum-1',
-            'name'        => 'Помада Rouge',
+            'name' => 'Помада Rouge',
         ]);
         OrderItem::factory()->create([
-            'order_id'         => $order->id,
-            'product_id'       => $product->id,
-            'name'             => 'Помада Rouge',
-            'price'            => 500,
-            'base_price'       => 500,
-            'final_price'      => 500,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => 'Помада Rouge',
+            'price' => 500,
+            'base_price' => 500,
+            'final_price' => 500,
             'discount_percent' => 0,
-            'quantity'         => 1,
-            'subtotal'         => 500,
+            'quantity' => 1,
+            'subtotal' => 500,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'  => 'test-uuid-summary',
+            'uuid' => 'test-uuid-summary',
             'items' => [
                 [
-                    'product_uuid'     => 'prod-sum-1',
-                    'quantity'         => 3,
-                    'base_price'       => 500,
-                    'final_price'      => 500,
+                    'product_uuid' => 'prod-sum-1',
+                    'quantity' => 3,
+                    'base_price' => 500,
+                    'final_price' => 500,
                     'discount_percent' => 0,
                 ],
             ],
@@ -345,36 +345,36 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_does_not_log_when_items_unchanged(): void
     {
         $order = Order::factory()->create([
-            'uuid'         => 'test-uuid-nochange',
+            'uuid' => 'test-uuid-nochange',
             'total_amount' => 1000,
         ]);
         $product = Product::factory()->create([
             'external_id' => 'prod-nc-1',
-            'name'        => 'Без изменений',
+            'name' => 'Без изменений',
         ]);
         OrderItem::factory()->create([
-            'order_id'         => $order->id,
-            'product_id'       => $product->id,
-            'name'             => 'Без изменений',
-            'price'            => 500,
-            'base_price'       => 500,
-            'final_price'      => 500,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => 'Без изменений',
+            'price' => 500,
+            'base_price' => 500,
+            'final_price' => 500,
             'discount_percent' => 0,
-            'quantity'         => 2,
-            'subtotal'         => 1000,
+            'quantity' => 2,
+            'subtotal' => 1000,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'  => 'test-uuid-nochange',
+            'uuid' => 'test-uuid-nochange',
             'items' => [
                 [
-                    'product_uuid'     => 'prod-nc-1',
-                    'quantity'         => 2,
-                    'base_price'       => 500,
-                    'final_price'      => 500,
+                    'product_uuid' => 'prod-nc-1',
+                    'quantity' => 2,
+                    'base_price' => 500,
+                    'final_price' => 500,
                     'discount_percent' => 0,
                 ],
             ],
@@ -394,7 +394,7 @@ class HandleOrderUpdatedTest extends TestCase
         Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'test-uuid-erp-num',
+            'uuid' => 'test-uuid-erp-num',
             'number' => 'ЗКП-000123',
         ]);
 
@@ -412,7 +412,7 @@ class HandleOrderUpdatedTest extends TestCase
         Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'test-uuid-erp-upd',
+            'uuid' => 'test-uuid-erp-upd',
             'number' => 'ЗКП-000200',
         ]);
 
@@ -423,7 +423,7 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_updates_order_status_to_deleted(): void
     {
         $order = Order::factory()->create([
-            'uuid'   => 'test-uuid-status-deleted',
+            'uuid' => 'test-uuid-status-deleted',
             'status' => 'confirmed',
         ]);
 
@@ -431,7 +431,7 @@ class HandleOrderUpdatedTest extends TestCase
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'   => 'test-uuid-status-deleted',
+            'uuid' => 'test-uuid-status-deleted',
             'status' => 'deleted',
         ]);
 
@@ -442,36 +442,36 @@ class HandleOrderUpdatedTest extends TestCase
     public function it_accepts_negative_discount_percent_as_markup_and_logs_neutral_summary(): void
     {
         $order = Order::factory()->create([
-            'uuid'         => 'test-uuid-negative-discount',
+            'uuid' => 'test-uuid-negative-discount',
             'total_amount' => 1000,
         ]);
         $product = Product::factory()->create([
             'external_id' => 'prod-negative-1',
-            'name'        => 'Товар с наценкой',
+            'name' => 'Товар с наценкой',
         ]);
         OrderItem::factory()->create([
-            'order_id'         => $order->id,
-            'product_id'       => $product->id,
-            'name'             => 'Товар с наценкой',
-            'price'            => 1000,
-            'base_price'       => 1000,
-            'final_price'      => 1000,
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => 'Товар с наценкой',
+            'price' => 1000,
+            'base_price' => 1000,
+            'final_price' => 1000,
             'discount_percent' => 0,
-            'quantity'         => 1,
-            'subtotal'         => 1000,
+            'quantity' => 1,
+            'subtotal' => 1000,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid'  => 'test-uuid-negative-discount',
+            'uuid' => 'test-uuid-negative-discount',
             'items' => [
                 [
-                    'product_uuid'     => 'prod-negative-1',
-                    'quantity'         => 1,
-                    'base_price'       => 1000,
-                    'final_price'      => 1150,
+                    'product_uuid' => 'prod-negative-1',
+                    'quantity' => 1,
+                    'base_price' => 1000,
+                    'final_price' => 1150,
                     'discount_percent' => -15,
                 ],
             ],

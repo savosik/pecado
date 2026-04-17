@@ -15,17 +15,44 @@ use App\Models\ProductExport;
  */
 class GoogleMerchantXmlPreset extends AbstractPreset
 {
-    public function key(): string { return 'google_merchant'; }
-    public function name(): string { return 'Google Merchant / Facebook (XML)'; }
-    public function description(): string { return 'XML-фид для Google Merchant Center, Google Ads и каталогов Facebook/Instagram.'; }
-    public function fileExtension(): string { return 'xml'; }
-    public function mimeType(): string { return 'application/xml; charset=utf-8'; }
-    public function color(): string { return 'red'; }
-    public function icon(): string { return 'LuSearch'; }
+    public function key(): string
+    {
+        return 'google_merchant';
+    }
+
+    public function name(): string
+    {
+        return 'Google Merchant / Facebook (XML)';
+    }
+
+    public function description(): string
+    {
+        return 'XML-фид для Google Merchant Center, Google Ads и каталогов Facebook/Instagram.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'xml';
+    }
+
+    public function mimeType(): string
+    {
+        return 'application/xml; charset=utf-8';
+    }
+
+    public function color(): string
+    {
+        return 'red';
+    }
+
+    public function icon(): string
+    {
+        return 'LuSearch';
+    }
 
     public function writeToStream($stream, ProductExport $export): void
     {
-        $xml = new \XMLWriter();
+        $xml = new \XMLWriter;
         $xml->openMemory();
         $xml->startDocument('1.0', 'UTF-8');
         $xml->setIndent(true);
@@ -36,7 +63,7 @@ class GoogleMerchantXmlPreset extends AbstractPreset
         $xml->writeAttribute('xmlns:g', 'http://base.google.com/ns/1.0');
 
         $xml->startElement('channel');
-        $xml->writeElement('title', config('app.name', 'Pecado') . ' — Product Feed');
+        $xml->writeElement('title', config('app.name', 'Pecado').' — Product Feed');
         $xml->writeElement('link', config('app.url'));
         $xml->writeElement('description', 'Product catalog feed');
 
@@ -71,11 +98,11 @@ class GoogleMerchantXmlPreset extends AbstractPreset
 
                 $xml->writeElement('g:availability', $item['stock'] > 0 ? 'in_stock' : 'out_of_stock');
 
-                $xml->writeElement('g:price', number_format($item['price'], 2, '.', '') . ' RUB');
+                $xml->writeElement('g:price', number_format($item['price'], 2, '.', '').' RUB');
 
                 if ($item['base_price'] > $item['price']) {
-                    $xml->writeElement('g:sale_price', number_format($item['price'], 2, '.', '') . ' RUB');
-                    $xml->writeElement('g:price', number_format($item['base_price'], 2, '.', '') . ' RUB');
+                    $xml->writeElement('g:sale_price', number_format($item['price'], 2, '.', '').' RUB');
+                    $xml->writeElement('g:price', number_format($item['base_price'], 2, '.', '').' RUB');
                 }
 
                 if ($item['brand_name']) {
@@ -86,7 +113,7 @@ class GoogleMerchantXmlPreset extends AbstractPreset
                     $xml->writeElement('g:mpn', $item['sku']);
                 }
 
-                if (!empty($item['barcodes'])) {
+                if (! empty($item['barcodes'])) {
                     $xml->writeElement('g:gtin', $item['barcodes'][0]);
                 } elseif ($item['barcode']) {
                     $xml->writeElement('g:gtin', $item['barcode']);
@@ -103,7 +130,9 @@ class GoogleMerchantXmlPreset extends AbstractPreset
                 // Атрибуты через custom labels
                 $attrIndex = 0;
                 foreach ($item['attributes'] as $attr) {
-                    if ($attrIndex >= 5) break; // Google allows max 5 custom labels
+                    if ($attrIndex >= 5) {
+                        break;
+                    } // Google allows max 5 custom labels
                     $xml->writeElement("g:custom_label_{$attrIndex}", "{$attr['name']}: {$attr['value']}");
                     $attrIndex++;
                 }

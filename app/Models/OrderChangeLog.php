@@ -20,9 +20,9 @@ class OrderChangeLog extends Model
     protected function casts(): array
     {
         return [
-            'changes'   => 'array',
-            'old_total'  => 'decimal:2',
-            'new_total'  => 'decimal:2',
+            'changes' => 'array',
+            'old_total' => 'decimal:2',
+            'new_total' => 'decimal:2',
         ];
     }
 

@@ -24,7 +24,7 @@ class UpdateCurrencyRatesTest extends TestCase
         $this->seed(\Database\Seeders\RolesAndPermissionsSeeder::class);
     }
 
-    private string $cbrXml = <<<XML
+    private string $cbrXml = <<<'XML'
 <?xml version="1.0" encoding="windows-1251"?>
 <ValCurs Date="11.03.2026" name="Foreign Currency Market">
     <Valute ID="R01090B">
@@ -57,21 +57,21 @@ XML;
         $this->artisan('currency:update')->assertSuccessful();
 
         $this->assertDatabaseHas('currencies', [
-            'code'          => 'BYN',
+            'code' => 'BYN',
             'exchange_rate' => 28.5,
             'official_rate' => 28.5,
         ]);
 
         // 20 / 100 = 0.2
         $this->assertDatabaseHas('currencies', [
-            'code'          => 'KZT',
+            'code' => 'KZT',
             'exchange_rate' => 0.2,
             'official_rate' => 0.2,
         ]);
 
         // Базовая валюта не изменяется
         $this->assertDatabaseHas('currencies', [
-            'code'          => 'RUB',
+            'code' => 'RUB',
             'exchange_rate' => 1,
         ]);
     }

@@ -2,13 +2,15 @@ import { useState, useEffect } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
-    Textarea, NativeSelect, Stack,
+    Textarea, NativeSelect, Stack, Dialog, Portal, Input, SimpleGrid,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus } from 'react-icons/lu';
+import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
+import { PhoneInput } from '@/components/common/PhoneInput';
 
 /**
  * Страница оформления заказа.
@@ -26,8 +28,9 @@ export default function CheckoutIndex({
     instockTotals = {},
     preorderTotals = {},
     grandTotal = {},
-    companies = [],
+    companies: initialCompanies = [],
     addresses = [],
+    countries = [],
 }) {
     const { currency, errors: serverErrors } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
@@ -38,14 +41,17 @@ export default function CheckoutIndex({
         { label: 'Оформление заказа' },
     ];
 
+    const [companies, setCompanies] = useState(initialCompanies);
+
     // Form state
     const { data, setData, post, processing, errors } = useForm({
-        company_id: companies.length > 0 ? companies[0].id : '',
+        company_id: initialCompanies.length > 0 ? initialCompanies[0].id : '',
         delivery_address: addresses.length > 0 ? addresses[0].address : '',
         comment: '',
     });
 
     const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
+    const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
 
     // Show server stock error
     useEffect(() => {
@@ -138,9 +144,21 @@ export default function CheckoutIndex({
                             rounded="lg"
                             p={{ base: '4', md: '5' }}
                         >
-                            <Flex align="center" gap="2" mb="3">
-                                <LuBuilding2 size={20} />
-                                <Text fontWeight="600" fontSize="lg">Компания</Text>
+                            <Flex align="center" justify="space-between" mb="3" gap="2" flexWrap="wrap">
+                                <Flex align="center" gap="2">
+                                    <LuBuilding2 size={20} />
+                                    <Text fontWeight="600" fontSize="lg">Компания</Text>
+                                </Flex>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    colorPalette="pecado"
+                                    onClick={() => setCompanyDialogOpen(true)}
+                                >
+                                    <LuPlus size={14} />
+                                    Добавить компанию
+                                </Button>
                             </Flex>
 
                             {companies.length > 0 ? (
@@ -165,7 +183,7 @@ export default function CheckoutIndex({
                                 </Field>
                             ) : (
                                 <Text color="fg.muted" fontSize="sm">
-                                    У вас нет зарегистрированных компаний. Обратитесь к менеджеру.
+                                    У вас нет зарегистрированных компаний. Добавьте первую, чтобы оформить заказ.
                                 </Text>
                             )}
                         </Box>
@@ -294,7 +312,282 @@ export default function CheckoutIndex({
                     </Stack>
                 </form>
             </Box>
+
+            <AddCompanyDialog
+                open={companyDialogOpen}
+                countries={countries}
+                onClose={() => setCompanyDialogOpen(false)}
+                onCreated={(company) => {
+                    setCompanies((prev) => [...prev, company]);
+                    setData('company_id', company.id);
+                    setCompanyDialogOpen(false);
+                    toaster.create({ title: 'Компания успешно создана', type: 'success' });
+                }}
+            />
         </UserLayout>
+    );
+}
+
+/**
+ * Диалог создания компании прямо со страницы Checkout.
+ * Обязательные поля: Название, Страна, Юридическое название, ИНН.
+ * Проверка уникальности ИНН выполняется на бэкенде по всей БД.
+ */
+function AddCompanyDialog({ open, countries, onClose, onCreated }) {
+    const emptyForm = {
+        country: '',
+        name: '',
+        legal_name: '',
+        tax_id: '',
+        registration_number: '',
+        tax_code: '',
+        okpo_code: '',
+        legal_address: '',
+        actual_address: '',
+        phone: '',
+        email: '',
+    };
+
+    const [form, setForm] = useState(emptyForm);
+    const [errors, setErrors] = useState({});
+    const [saving, setSaving] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            setForm(emptyForm);
+            setErrors({});
+        }
+    }, [open]);
+
+    const handleChange = (field, value) => {
+        setForm((prev) => ({ ...prev, [field]: value }));
+        setErrors((prev) => ({ ...prev, [field]: undefined }));
+    };
+
+    const validate = () => {
+        const errs = {};
+        if (!form.name.trim()) errs.name = 'Название обязательно.';
+        if (!form.country) errs.country = 'Выберите страну.';
+        if (!form.legal_name.trim()) errs.legal_name = 'Юридическое название обязательно.';
+        if (!form.tax_id.trim()) errs.tax_id = 'ИНН обязателен.';
+        if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Введите корректный email.';
+        return errs;
+    };
+
+    const errText = (key) => {
+        const v = errors?.[key];
+        return Array.isArray(v) ? v[0] : v;
+    };
+
+    const handleSubmit = async () => {
+        const clientErrors = validate();
+        if (Object.keys(clientErrors).length > 0) {
+            setErrors(clientErrors);
+            return;
+        }
+
+        setSaving(true);
+        setErrors({});
+        try {
+            const { data } = await axios.post('/cabinet/companies/api', form);
+            onCreated(data.company);
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setErrors(err.response.data.errors || {});
+            } else {
+                toaster.create({ title: 'Ошибка создания компании', type: 'error' });
+            }
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <Dialog.Root
+            open={open}
+            onOpenChange={({ open: isOpen }) => !isOpen && onClose()}
+            size="lg"
+        >
+            <Portal>
+                <Dialog.Backdrop />
+                <Dialog.Positioner>
+                    <Dialog.Content>
+                        <Dialog.Header>
+                            <Dialog.Title>Новая компания</Dialog.Title>
+                        </Dialog.Header>
+                        <Dialog.Body>
+                            <Stack gap="4">
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+                                    <Field
+                                        label="Название"
+                                        required
+                                        invalid={!!errText('name')}
+                                        errorText={errText('name')}
+                                    >
+                                        <Input
+                                            value={form.name}
+                                            onChange={(e) => handleChange('name', e.target.value)}
+                                            placeholder="ООО Компания"
+                                        />
+                                    </Field>
+
+                                    <Field
+                                        label="Страна"
+                                        required
+                                        invalid={!!errText('country')}
+                                        errorText={errText('country')}
+                                    >
+                                        <NativeSelect.Root size="md">
+                                            <NativeSelect.Field
+                                                value={form.country}
+                                                onChange={(e) => handleChange('country', e.target.value)}
+                                            >
+                                                <option value="">Выберите страну</option>
+                                                {countries.map((c) => (
+                                                    <option key={c.value} value={c.value}>{c.label}</option>
+                                                ))}
+                                            </NativeSelect.Field>
+                                            <NativeSelect.Indicator />
+                                        </NativeSelect.Root>
+                                    </Field>
+                                </SimpleGrid>
+
+                                <Field
+                                    label="Юридическое название"
+                                    required
+                                    invalid={!!errText('legal_name')}
+                                    errorText={errText('legal_name')}
+                                >
+                                    <Input
+                                        value={form.legal_name}
+                                        onChange={(e) => handleChange('legal_name', e.target.value)}
+                                        placeholder="ООО «Компания»"
+                                    />
+                                </Field>
+
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+                                    <Field
+                                        label="ИНН"
+                                        required
+                                        invalid={!!errText('tax_id')}
+                                        errorText={errText('tax_id')}
+                                    >
+                                        <Input
+                                            value={form.tax_id}
+                                            onChange={(e) => handleChange('tax_id', e.target.value)}
+                                            placeholder="7707083893"
+                                        />
+                                    </Field>
+
+                                    <Field
+                                        label="ОГРН"
+                                        invalid={!!errText('registration_number')}
+                                        errorText={errText('registration_number')}
+                                    >
+                                        <Input
+                                            value={form.registration_number}
+                                            onChange={(e) => handleChange('registration_number', e.target.value)}
+                                            placeholder="1027700132195"
+                                        />
+                                    </Field>
+                                </SimpleGrid>
+
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+                                    <Field
+                                        label="КПП"
+                                        invalid={!!errText('tax_code')}
+                                        errorText={errText('tax_code')}
+                                    >
+                                        <Input
+                                            value={form.tax_code}
+                                            onChange={(e) => handleChange('tax_code', e.target.value)}
+                                            placeholder="770701001"
+                                        />
+                                    </Field>
+
+                                    <Field
+                                        label="ОКПО"
+                                        invalid={!!errText('okpo_code')}
+                                        errorText={errText('okpo_code')}
+                                    >
+                                        <Input
+                                            value={form.okpo_code}
+                                            onChange={(e) => handleChange('okpo_code', e.target.value)}
+                                            placeholder="00032537"
+                                        />
+                                    </Field>
+                                </SimpleGrid>
+
+                                <Field
+                                    label="Юридический адрес"
+                                    invalid={!!errText('legal_address')}
+                                    errorText={errText('legal_address')}
+                                >
+                                    <Textarea
+                                        rows={2}
+                                        value={form.legal_address}
+                                        onChange={(e) => handleChange('legal_address', e.target.value)}
+                                        placeholder="г. Москва, ул. Примерная, д. 1"
+                                    />
+                                </Field>
+
+                                <Field
+                                    label="Фактический адрес"
+                                    invalid={!!errText('actual_address')}
+                                    errorText={errText('actual_address')}
+                                >
+                                    <Textarea
+                                        rows={2}
+                                        value={form.actual_address}
+                                        onChange={(e) => handleChange('actual_address', e.target.value)}
+                                        placeholder="г. Москва, ул. Примерная, д. 1, оф. 100"
+                                    />
+                                </Field>
+
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
+                                    <Field
+                                        label="Телефон"
+                                        invalid={!!errText('phone')}
+                                        errorText={errText('phone')}
+                                    >
+                                        <PhoneInput
+                                            value={form.phone}
+                                            onChange={(val) => handleChange('phone', val)}
+                                        />
+                                    </Field>
+
+                                    <Field
+                                        label="Email"
+                                        invalid={!!errText('email')}
+                                        errorText={errText('email')}
+                                    >
+                                        <Input
+                                            type="email"
+                                            value={form.email}
+                                            onChange={(e) => handleChange('email', e.target.value)}
+                                            placeholder="company@example.com"
+                                        />
+                                    </Field>
+                                </SimpleGrid>
+                            </Stack>
+                        </Dialog.Body>
+                        <Dialog.Footer>
+                            <Button variant="outline" onClick={onClose} disabled={saving}>
+                                Отмена
+                            </Button>
+                            <Button
+                                colorPalette="pecado"
+                                onClick={handleSubmit}
+                                loading={saving}
+                                loadingText="Создание..."
+                            >
+                                Создать компанию
+                            </Button>
+                        </Dialog.Footer>
+                    </Dialog.Content>
+                </Dialog.Positioner>
+            </Portal>
+        </Dialog.Root>
     );
 }
 

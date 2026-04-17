@@ -22,7 +22,7 @@ class HandlePartnerDeletedTest extends TestCase
             'erp_id' => '550e8400-e29b-41d4-a716-446655440000',
         ]);
 
-        $handler = new HandlePartnerDeleted();
+        $handler = new HandlePartnerDeleted;
         $handler->handle([
             'event' => 'partner.deleted',
             'uuid' => '550e8400-e29b-41d4-a716-446655440000',
@@ -42,7 +42,7 @@ class HandlePartnerDeletedTest extends TestCase
                 return str_contains($msg, 'пользователь не найден');
             });
 
-        $handler = new HandlePartnerDeleted();
+        $handler = new HandlePartnerDeleted;
         $handler->handle([
             'event' => 'partner.deleted',
             'uuid' => 'nonexistent-uuid',
@@ -58,7 +58,7 @@ class HandlePartnerDeletedTest extends TestCase
                 return str_contains($msg, 'отсутствует uuid');
             });
 
-        $handler = new HandlePartnerDeleted();
+        $handler = new HandlePartnerDeleted;
         $handler->handle([
             'event' => 'partner.deleted',
         ]);
@@ -72,7 +72,7 @@ class HandlePartnerDeletedTest extends TestCase
             'erp_id' => 'test-uuid-123',
         ]);
 
-        $handler = new HandlePartnerDeleted();
+        $handler = new HandlePartnerDeleted;
         $handler->handle([
             'event' => 'partner.deleted',
             'uuid' => 'test-uuid-123',
@@ -92,7 +92,7 @@ class HandlePartnerDeletedTest extends TestCase
             'email' => 'fallback@example.com',
         ]);
 
-        $handler = new HandlePartnerDeleted();
+        $handler = new HandlePartnerDeleted;
         $handler->handle([
             'event' => 'partner.deleted',
             'uuid' => 'nonexistent-uuid',

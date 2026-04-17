@@ -20,32 +20,34 @@ class HandleOrderUpdated
     {
         $uuid = $payload['uuid'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('HandleOrderUpdated: отсутствует uuid', ['payload' => $payload]);
+
             return;
         }
 
         $order = Order::where('uuid', $uuid)->first();
 
-        if (!$order) {
+        if (! $order) {
             Log::info('HandleOrderUpdated: заказ не найден', ['uuid' => $uuid]);
+
             return;
         }
 
         // Обновление статуса
         if (isset($payload['status'])) {
             $rawStatus = $payload['status'];
-            
+
             // Маппинг статусов из 1С (docs-erp/content/rules/orders.md)
             $statusMap = [
                 'не согласован' => 'pending',
-                'к выполнению'  => 'confirmed',
-                'к отгрузке'    => 'ready_to_ship',
-                'к_отгрузке'    => 'ready_to_ship', // Вариант с подчеркиванием
-                'закрыт'        => 'closed',
-                'удален'        => 'deleted',
-                'удалён'        => 'deleted',
-                'deleted'       => 'deleted',
+                'к выполнению' => 'confirmed',
+                'к отгрузке' => 'ready_to_ship',
+                'к_отгрузке' => 'ready_to_ship', // Вариант с подчеркиванием
+                'закрыт' => 'closed',
+                'удален' => 'deleted',
+                'удалён' => 'deleted',
+                'deleted' => 'deleted',
             ];
 
             $normalizedStatus = mb_strtolower(trim($rawStatus));
@@ -72,7 +74,7 @@ class HandleOrderUpdated
         }
 
         Log::info('HandleOrderUpdated: заказ обновлён', [
-            'uuid'   => $uuid,
+            'uuid' => $uuid,
             'status' => $payload['status'] ?? 'не изменён',
             'delivery_address' => isset($payload['delivery_address']) ? 'обновлён' : 'не изменён',
         ]);
@@ -98,14 +100,14 @@ class HandleOrderUpdated
 
         foreach ($parsedItems as $item) {
             $order->items()->create([
-                'product_id'       => $item['product_id'],
-                'name'             => $item['name'],
-                'quantity'         => $item['quantity'],
-                'price'            => $item['final_price'],
-                'base_price'       => $item['base_price'],
+                'product_id' => $item['product_id'],
+                'name' => $item['name'],
+                'quantity' => $item['quantity'],
+                'price' => $item['final_price'],
+                'base_price' => $item['base_price'],
                 'discount_percent' => $item['discount_percent'],
-                'final_price'      => $item['final_price'],
-                'subtotal'         => $item['quantity'] * $item['final_price'],
+                'final_price' => $item['final_price'],
+                'subtotal' => $item['quantity'] * $item['final_price'],
             ]);
         }
 
@@ -119,11 +121,11 @@ class HandleOrderUpdated
             $summary = $this->buildSummary($diff, $oldTotal, (float) $newTotal);
 
             OrderChangeLog::create([
-                'order_id'  => $order->id,
-                'type'      => 'items_updated',
-                'summary'   => $summary,
-                'changes'   => $diff,
-                'source'    => 'erp',
+                'order_id' => $order->id,
+                'type' => 'items_updated',
+                'summary' => $summary,
+                'changes' => $diff,
+                'source' => 'erp',
                 'old_total' => $oldTotal,
                 'new_total' => (float) $newTotal,
             ]);
@@ -139,14 +141,14 @@ class HandleOrderUpdated
         $snapshot = [];
 
         foreach ($order->items()->with('product')->get() as $item) {
-            $key = $item->product?->external_id ?? 'unknown_' . $item->id;
+            $key = $item->product?->external_id ?? 'unknown_'.$item->id;
             $snapshot[$key] = [
-                'product_id'       => $item->product_id,
-                'name'             => $item->product?->name ?? $item->name,
-                'quantity'         => (int) $item->quantity,
-                'base_price'       => (float) $item->base_price,
+                'product_id' => $item->product_id,
+                'name' => $item->product?->name ?? $item->name,
+                'quantity' => (int) $item->quantity,
+                'base_price' => (float) $item->base_price,
                 'discount_percent' => (float) $item->discount_percent,
-                'final_price'      => (float) $item->final_price,
+                'final_price' => (float) $item->final_price,
             ];
         }
 
@@ -165,25 +167,26 @@ class HandleOrderUpdated
             $productUuid = $item['product_uuid'] ?? '';
             $product = Product::where('external_id', $productUuid)->first();
 
-            if (!$product) {
+            if (! $product) {
                 Log::info('HandleOrderUpdated: товар не найден, позиция пропущена', [
                     'product_uuid' => $productUuid,
                 ]);
+
                 continue;
             }
 
-            $quantity        = $item['quantity']         ?? 0;
-            $basePrice       = $item['base_price']       ?? $item['price'] ?? 0;
+            $quantity = $item['quantity'] ?? 0;
+            $basePrice = $item['base_price'] ?? $item['price'] ?? 0;
             $discountPercent = $item['discount_percent'] ?? 0;
-            $finalPrice      = $item['final_price']      ?? $item['price'] ?? $basePrice;
+            $finalPrice = $item['final_price'] ?? $item['price'] ?? $basePrice;
 
             $parsed[$productUuid] = [
-                'product_id'       => $product->id,
-                'name'             => $product->name,
-                'quantity'         => (int) $quantity,
-                'base_price'       => (float) $basePrice,
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'quantity' => (int) $quantity,
+                'base_price' => (float) $basePrice,
                 'discount_percent' => (float) $discountPercent,
-                'final_price'      => (float) $finalPrice,
+                'final_price' => (float) $finalPrice,
             ];
         }
 
@@ -199,29 +202,29 @@ class HandleOrderUpdated
 
         // Добавленные: есть в новых, нет в старых
         foreach ($newItems as $uuid => $newItem) {
-            if (!isset($oldSnapshot[$uuid])) {
+            if (! isset($oldSnapshot[$uuid])) {
                 $diff['added'][] = [
                     'product_name' => $newItem['name'],
-                    'quantity'     => $newItem['quantity'],
-                    'price'        => $newItem['final_price'],
+                    'quantity' => $newItem['quantity'],
+                    'price' => $newItem['final_price'],
                 ];
             }
         }
 
         // Удалённые: есть в старых, нет в новых
         foreach ($oldSnapshot as $uuid => $oldItem) {
-            if (!isset($newItems[$uuid])) {
+            if (! isset($newItems[$uuid])) {
                 $diff['removed'][] = [
                     'product_name' => $oldItem['name'],
-                    'quantity'     => $oldItem['quantity'],
-                    'price'        => $oldItem['final_price'],
+                    'quantity' => $oldItem['quantity'],
+                    'price' => $oldItem['final_price'],
                 ];
             }
         }
 
         // Изменённые: есть в обоих
         foreach ($newItems as $uuid => $newItem) {
-            if (!isset($oldSnapshot[$uuid])) {
+            if (! isset($oldSnapshot[$uuid])) {
                 continue;
             }
 
@@ -241,10 +244,10 @@ class HandleOrderUpdated
                 $changes['base_price'] = ['old' => $oldItem['base_price'], 'new' => $newItem['base_price']];
             }
 
-            if (!empty($changes)) {
+            if (! empty($changes)) {
                 $diff['modified'][] = [
                     'product_name' => $newItem['name'],
-                    'changes'      => $changes,
+                    'changes' => $changes,
                 ];
             }
         }
@@ -257,9 +260,9 @@ class HandleOrderUpdated
      */
     private function hasMeaningfulChanges(array $diff, float $oldTotal, float $newTotal): bool
     {
-        return !empty($diff['added'])
-            || !empty($diff['removed'])
-            || !empty($diff['modified'])
+        return ! empty($diff['added'])
+            || ! empty($diff['removed'])
+            || ! empty($diff['modified'])
             || abs($oldTotal - $newTotal) > 0.01;
     }
 
@@ -297,7 +300,7 @@ class HandleOrderUpdated
         }
 
         if (abs($oldTotal - $newTotal) > 0.01) {
-            $lines[] = "Сумма заказа: " . number_format($oldTotal, 2, '.', ' ') . " → " . number_format($newTotal, 2, '.', ' ') . " ₽";
+            $lines[] = 'Сумма заказа: '.number_format($oldTotal, 2, '.', ' ').' → '.number_format($newTotal, 2, '.', ' ').' ₽';
         }
 
         return implode("\n", $lines);

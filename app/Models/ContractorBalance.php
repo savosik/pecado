@@ -22,8 +22,8 @@ class ContractorBalance extends Model
     ];
 
     protected $casts = [
-        'current_balance'        => 'decimal:2',
-        'overdue_debt'           => 'decimal:2',
+        'current_balance' => 'decimal:2',
+        'overdue_debt' => 'decimal:2',
         'balance_erp_updated_at' => 'datetime',
     ];
 

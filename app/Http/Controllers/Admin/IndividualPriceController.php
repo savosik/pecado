@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Http\Controllers\Controller;
 use App\Models\IndividualPrice;
-use App\Models\User;
 use App\Models\Product;
+use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Pricing\IndividualPriceStatsService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
-use Carbon\Carbon;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IndividualPriceController extends Controller
@@ -73,6 +73,7 @@ class IndividualPriceController extends Controller
             $item->product_name = $product?->name ?? "ID: {$item->product_id}";
             $item->product_sku = $product?->sku ?? '';
             $item->warehouse_name = $warehouses[$item->warehouse_id] ?? "ID: {$item->warehouse_id}";
+
             return $item;
         });
 
@@ -239,7 +240,7 @@ class IndividualPriceController extends Controller
             $query->select('id', 'name', 'email')
                 ->limit(20)
                 ->get()
-                ->map(fn($u) => [
+                ->map(fn ($u) => [
                     'id' => $u->id,
                     'label' => $u->name,
                     'email' => $u->email,
@@ -270,7 +271,7 @@ class IndividualPriceController extends Controller
             $query->select('id', 'name', 'sku')
                 ->limit(20)
                 ->get()
-                ->map(fn($p) => [
+                ->map(fn ($p) => [
                     'id' => $p->id,
                     'label' => "{$p->sku} — {$p->name}",
                     'name' => $p->name,
@@ -299,7 +300,7 @@ class IndividualPriceController extends Controller
             $query->select('id', 'name')
                 ->limit(20)
                 ->get()
-                ->map(fn($w) => [
+                ->map(fn ($w) => [
                     'id' => $w->id,
                     'label' => $w->name,
                 ])
@@ -311,7 +312,7 @@ class IndividualPriceController extends Controller
      */
     public function export(Request $request): StreamedResponse
     {
-        if (!$request->filled('partner_id') && !$request->filled('product_id')) {
+        if (! $request->filled('partner_id') && ! $request->filled('product_id')) {
             abort(422, 'Для экспорта необходимо выбрать партнёра или товар');
         }
 
@@ -331,7 +332,7 @@ class IndividualPriceController extends Controller
 
         $query->orderBy('updated_at', 'desc');
 
-        $filename = 'individual_prices_' . now()->format('Y-m-d_H-i') . '.csv';
+        $filename = 'individual_prices_'.now()->format('Y-m-d_H-i').'.csv';
 
         return response()->streamDownload(function () use ($query) {
             $handle = fopen('php://output', 'w');

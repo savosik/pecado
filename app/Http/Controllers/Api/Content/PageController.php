@@ -109,7 +109,7 @@ class PageController extends Controller
     {
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|string|max:255|unique:pages,slug,' . $page->id,
+            'slug' => 'sometimes|string|max:255|unique:pages,slug,'.$page->id,
             'content' => 'sometimes|required|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
@@ -136,6 +136,7 @@ class PageController extends Controller
     public function destroy(Page $page): JsonResponse
     {
         $page->delete();
+
         return response()->json(null, 204);
     }
 

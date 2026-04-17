@@ -11,8 +11,8 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 class Banner extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia, Searchable;
     use \App\Traits\HasRegions;
+    use HasFactory, InteractsWithMedia, Searchable;
 
     protected $fillable = [
         'title',
@@ -48,14 +48,14 @@ class Banner extends Model implements HasMedia
         $this->addMediaCollection('desktop')
             ->acceptsMimeTypes([
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
-                'video/mp4', 'video/webm', 'video/quicktime'
+                'video/mp4', 'video/webm', 'video/quicktime',
             ])
             ->singleFile();
 
         $this->addMediaCollection('mobile')
             ->acceptsMimeTypes([
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
-                'video/mp4', 'video/webm', 'video/quicktime'
+                'video/mp4', 'video/webm', 'video/quicktime',
             ])
             ->singleFile();
     }

@@ -133,6 +133,7 @@ class ProductSelectionController extends Controller
             return response()->json(['data' => $this->format($selection->fresh())], 201);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['message' => 'Ошибка при создании подборки', 'error' => $e->getMessage()], 500);
         }
     }
@@ -146,7 +147,7 @@ class ProductSelectionController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'slug' => 'sometimes|string|unique:product_selections,slug,' . $productSelection->id,
+            'slug' => 'sometimes|string|unique:product_selections,slug,'.$productSelection->id,
             'short_description' => 'nullable|string',
             'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
@@ -182,6 +183,7 @@ class ProductSelectionController extends Controller
             return response()->json(['data' => $this->format($productSelection->fresh())]);
         } catch (\Exception $e) {
             DB::rollBack();
+
             return response()->json(['message' => 'Ошибка при обновлении подборки', 'error' => $e->getMessage()], 500);
         }
     }
@@ -216,6 +218,7 @@ class ProductSelectionController extends Controller
     {
         $productSelection->delete();
         UserProductSelectionController::clearHomeCache();
+
         return response()->json(null, 204);
     }
 

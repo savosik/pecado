@@ -17,11 +17,10 @@ trait HandlesMediaUpload
     /**
      * Загрузить медиа в коллекцию из файла или URL.
      *
-     * @param Request $request
-     * @param Model   $model       Eloquent-модель с HasMedia
-     * @param string  $field       Имя поля в запросе (например, 'list_item')
-     * @param string  $collection  Имя медиа-коллекции (например, 'list-item')
-     * @param bool    $clearFirst  Очистить коллекцию перед загрузкой
+     * @param  Model  $model  Eloquent-модель с HasMedia
+     * @param  string  $field  Имя поля в запросе (например, 'list_item')
+     * @param  string  $collection  Имя медиа-коллекции (например, 'list-item')
+     * @param  bool  $clearFirst  Очистить коллекцию перед загрузкой
      */
     protected function handleMediaUpload(
         Request $request,
@@ -35,7 +34,7 @@ trait HandlesMediaUpload
         $hasFile = $request->hasFile($field);
         $hasUrl = $request->filled($urlField);
 
-        if (!$hasFile && !$hasUrl) {
+        if (! $hasFile && ! $hasUrl) {
             return;
         }
 
@@ -85,6 +84,7 @@ trait HandlesMediaUpload
             $key = str_replace('-', '_', $collection);
             $urls[$key] = $model->getFirstMediaUrl($collection) ?: null;
         }
+
         return $urls;
     }
 }

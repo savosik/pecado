@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Models\SizeChart;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Brand;
+use App\Models\SizeChart;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class SizeChartController extends AdminController
 {
@@ -29,7 +29,7 @@ class SizeChartController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -82,7 +82,7 @@ class SizeChartController extends AdminController
             'values' => $request->input('values'),
         ]);
 
-        if (!empty($request->brand_ids)) {
+        if (! empty($request->brand_ids)) {
             $sizeChart->brands()->sync($request->brand_ids);
         }
 

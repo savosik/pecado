@@ -29,8 +29,8 @@ class AiContentManagerSeeder extends Seeder
         $this->command->info('╔══════════════════════════════════════════════════════╗');
         $this->command->info('║  AI Content Manager — Token Created                  ║');
         $this->command->info('╠══════════════════════════════════════════════════════╣');
-        $this->command->info('║  User: ' . $user->email);
-        $this->command->info('║  Token: ' . $token->plainTextToken);
+        $this->command->info('║  User: '.$user->email);
+        $this->command->info('║  Token: '.$token->plainTextToken);
         $this->command->info('╠══════════════════════════════════════════════════════╣');
         $this->command->warn('║  ⚠ Сохраните токен! Он показывается только один раз. ║');
         $this->command->info('╚══════════════════════════════════════════════════════╝');

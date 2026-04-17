@@ -45,7 +45,7 @@ class ApiToken extends Model
      */
     public static function generateToken(?int $userId = null): string
     {
-        return hash('sha256', ($userId ?? 0) . microtime(true) . Str::random(32));
+        return hash('sha256', ($userId ?? 0).microtime(true).Str::random(32));
     }
 
     /**

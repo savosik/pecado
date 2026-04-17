@@ -15,15 +15,17 @@ class HandleOrderDeleted
     {
         $uuid = $payload['uuid'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('HandleOrderDeleted: отсутствует uuid', ['payload' => $payload]);
+
             return;
         }
 
         $order = Order::where('uuid', $uuid)->first();
 
-        if (!$order) {
+        if (! $order) {
             Log::info('HandleOrderDeleted: заказ не найден', ['uuid' => $uuid]);
+
             return;
         }
 

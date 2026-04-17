@@ -5,7 +5,6 @@ namespace App\Services\ProductExport;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Attribute;
-use App\Services\ProductExport\DynamicAttributeField;
 use Illuminate\Support\Collection;
 
 /**
@@ -49,81 +48,81 @@ class FieldRegistry
     {
         $fields = [
             // Основные
-            new Fields\IdField(),
-            new Fields\NameField(),
-            new Fields\SkuField(),
-            new Fields\CodeField(),
-            new Fields\BarcodeField(),
-            new Fields\BasePriceField(),
-            new Fields\RecommendedPriceField(),
-            new Fields\SlugField(),
-            new Fields\UrlField(),
-            new Fields\TnvedField(),
-            new Fields\ExternalIdField(),
-            new Fields\DescriptionField(),
-            new Fields\ShortDescriptionField(),
-            new Fields\MetaTitleField(),
-            new Fields\MetaDescriptionField(),
-            new Fields\DescriptionPlainField(),
-            new Fields\ShortDescriptionPlainField(),
+            new Fields\IdField,
+            new Fields\NameField,
+            new Fields\SkuField,
+            new Fields\CodeField,
+            new Fields\BarcodeField,
+            new Fields\BasePriceField,
+            new Fields\RecommendedPriceField,
+            new Fields\SlugField,
+            new Fields\UrlField,
+            new Fields\TnvedField,
+            new Fields\ExternalIdField,
+            new Fields\DescriptionField,
+            new Fields\ShortDescriptionField,
+            new Fields\MetaTitleField,
+            new Fields\MetaDescriptionField,
+            new Fields\DescriptionPlainField,
+            new Fields\ShortDescriptionPlainField,
 
             // Флаги
-            new Fields\IsNewField(),
-            new Fields\IsBestsellerField(),
-            new Fields\IsMarkedField(),
-            new Fields\IsLiquidationField(),
-            new Fields\ForMarketplacesField(),
+            new Fields\IsNewField,
+            new Fields\IsBestsellerField,
+            new Fields\IsMarkedField,
+            new Fields\IsLiquidationField,
+            new Fields\ForMarketplacesField,
 
             // Бренд (экспорт)
-            new Fields\BrandNameField(),
-            new Fields\BrandSlugField(),
-            new Fields\BrandCategoryField(),
+            new Fields\BrandNameField,
+            new Fields\BrandSlugField,
+            new Fields\BrandCategoryField,
 
             // Модель (экспорт)
-            new Fields\ModelNameField(),
-            new Fields\ModelCodeField(),
+            new Fields\ModelNameField,
+            new Fields\ModelCodeField,
 
             // Категории (экспорт)
-            new Fields\CategoriesNameField(),
-            new Fields\CategoryPathField(),
+            new Fields\CategoriesNameField,
+            new Fields\CategoryPathField,
 
             // Сертификаты (экспорт)
-            new Fields\CertificatesNameField(),
+            new Fields\CertificatesNameField,
 
             // Размерная сетка
-            new Fields\SizeChartNameField(),
+            new Fields\SizeChartNameField,
 
             // Складские остатки
-            new Fields\WarehousesNameField(),
-            new Fields\WarehousesQuantityField(),
-            new Fields\TotalStockField(),
+            new Fields\WarehousesNameField,
+            new Fields\WarehousesQuantityField,
+            new Fields\TotalStockField,
 
             // Штрихкоды
-            new Fields\BarcodesField(),
+            new Fields\BarcodesField,
 
             // Медиа
-            new Fields\MainImageField(),
-            new Fields\AdditionalImagesField(),
-            new Fields\AllImagesField(),
-            new Fields\VideoField(),
+            new Fields\MainImageField,
+            new Fields\AdditionalImagesField,
+            new Fields\AllImagesField,
+            new Fields\VideoField,
 
             // Пользовательские (по клиенту) — с инжекцией сервисов
             new Fields\DiscountedPriceField($this->priceService),
             new Fields\DiscountPercentageField($this->priceService),
             new Fields\UserStockAvailableField($this->stockService),
             new Fields\UserStockPreorderField($this->stockService),
-            new Fields\ClientRegionField(),
+            new Fields\ClientRegionField,
 
             // Даты
-            new Fields\CreatedAtField(),
-            new Fields\UpdatedAtField(),
+            new Fields\CreatedAtField,
+            new Fields\UpdatedAtField,
 
             // Фильтры-only (связи)
-            new Fields\Filters\BrandFilterField(),
-            new Fields\Filters\CategoryFilterField(),
-            new Fields\Filters\ModelFilterField(),
-            new Fields\Filters\WarehouseFilterField(),
-            new Fields\Filters\CertificateFilterField(),
+            new Fields\Filters\BrandFilterField,
+            new Fields\Filters\CategoryFilterField,
+            new Fields\Filters\ModelFilterField,
+            new Fields\Filters\WarehouseFilterField,
+            new Fields\Filters\CertificateFilterField,
         ];
 
         foreach ($fields as $field) {
@@ -153,6 +152,7 @@ class FieldRegistry
     public function all(): Collection
     {
         $this->boot();
+
         return $this->fields;
     }
 
@@ -176,6 +176,7 @@ class FieldRegistry
             // Если идентификатор числовой — legacy формат attribute.{id}
             if (is_numeric($identifier)) {
                 $filterKey = "attr.{$identifier}";
+
                 return $this->fields->get($filterKey);
             }
 
@@ -212,7 +213,7 @@ class FieldRegistry
                     $group = "Атр: {$group}";
                 }
 
-                if (!isset($groups[$group])) {
+                if (! isset($groups[$group])) {
                     $groups[$group] = [];
                 }
                 $groups[$group][] = $field->toFilterDefinition();
@@ -242,7 +243,7 @@ class FieldRegistry
                     $group = 'Атрибуты';
                 }
 
-                if (!isset($groups[$group])) {
+                if (! isset($groups[$group])) {
                     $groups[$group] = [];
                 }
                 $groups[$group][] = $field->toFieldDefinition();

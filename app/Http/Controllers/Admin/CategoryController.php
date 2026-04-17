@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Attribute;
 use App\Models\Category;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CategoryController extends AdminController
 {
@@ -57,7 +57,7 @@ class CategoryController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -72,6 +72,7 @@ class CategoryController extends AdminController
         // Явно добавляем parent в сериализацию
         $categories->through(function ($category) {
             $category->setAttribute('parent', $category->parent);
+
             return $category;
         });
 
@@ -141,14 +142,16 @@ class CategoryController extends AdminController
                         // Локализованное имя {ru: "...", en: "..."}
                         return $name['ru'] ?? $name['en'] ?? array_values($name)[0] ?? '';
                     }
+
                     return $name;
                 }
+
                 return $tag;
             })->filter()->values()->toArray();
             $category->syncTags($tagNames);
         }
 
-        if (!empty($validated['attribute_ids'])) {
+        if (! empty($validated['attribute_ids'])) {
             $category->attributes()->sync($validated['attribute_ids']);
         }
 
@@ -194,7 +197,7 @@ class CategoryController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'nullable|string|max:255|unique:categories,slug,' . $category->id,
+            'slug' => 'nullable|string|max:255|unique:categories,slug,'.$category->id,
             'parent_id' => 'nullable|exists:categories,id',
             'external_id' => 'nullable|string|max:255',
             'is_active' => 'boolean',
@@ -238,8 +241,10 @@ class CategoryController extends AdminController
                         // Локализованное имя {ru: "...", en: "..."}
                         return $name['ru'] ?? $name['en'] ?? array_values($name)[0] ?? '';
                     }
+
                     return $name;
                 }
+
                 return $tag;
             })->filter()->values()->toArray();
             $category->syncTags($tagNames);

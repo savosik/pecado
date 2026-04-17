@@ -31,12 +31,12 @@ trait ProductQueryScopes
      */
     public function scopeSearch(Builder $query, string $q): Builder
     {
-        $like = '%' . mb_strtolower($q) . '%';
+        $like = '%'.mb_strtolower($q).'%';
 
         return $query->where(function (Builder $query) use ($like, $q) {
             $query->where('name', 'LIKE', $like)
-                  ->orWhere('sku', 'LIKE', $like)
-                  ->orWhere('barcode', '=', $q);
+                ->orWhere('sku', 'LIKE', $like)
+                ->orWhere('barcode', '=', $q);
         });
     }
 
@@ -96,7 +96,7 @@ trait ProductQueryScopes
                 foreach ($categories as $cat) {
                     $orGroup->orWhere(function ($w) use ($cat) {
                         $w->where('_lft', '>=', $cat->_lft)
-                          ->where('_rgt', '<=', $cat->_rgt);
+                            ->where('_rgt', '<=', $cat->_rgt);
                     });
                 }
             });
@@ -148,8 +148,8 @@ trait ProductQueryScopes
     /**
      * Фильтр по наличию на складах региона.
      *
-     * @param string   $mode     instock | preorder | notavailable
-     * @param int|null $regionId ID региона пользователя
+     * @param  string  $mode  instock | preorder | notavailable
+     * @param  int|null  $regionId  ID региона пользователя
      */
     public function scopeInStock(Builder $query, string $mode, ?int $regionId = null): Builder
     {
@@ -163,9 +163,9 @@ trait ProductQueryScopes
             ->get(['warehouse_id', 'type'])
             ->groupBy('type');
 
-        $primaryIds  = ($warehouses['primary'] ?? collect())->pluck('warehouse_id')->toArray();
+        $primaryIds = ($warehouses['primary'] ?? collect())->pluck('warehouse_id')->toArray();
         $preorderIds = ($warehouses['preorder'] ?? collect())->pluck('warehouse_id')->toArray();
-        $allIds      = array_merge($primaryIds, $preorderIds);
+        $allIds = array_merge($primaryIds, $preorderIds);
 
         $existsWithStock = function ($sub, array $warehouseIds) {
             $sub->select(DB::raw(1))
@@ -180,11 +180,11 @@ trait ProductQueryScopes
         };
 
         return match ($mode) {
-            'instock'      => $query->whereExists(fn ($sub) => $existsWithStock($sub, $primaryIds)),
-            'preorder'     => $query->whereExists(fn ($sub) => $existsWithStock($sub, $preorderIds))
-                                      ->whereNotExists(fn ($sub) => $existsWithStock($sub, $primaryIds)),
+            'instock' => $query->whereExists(fn ($sub) => $existsWithStock($sub, $primaryIds)),
+            'preorder' => $query->whereExists(fn ($sub) => $existsWithStock($sub, $preorderIds))
+                ->whereNotExists(fn ($sub) => $existsWithStock($sub, $primaryIds)),
             'notavailable' => $query->whereNotExists(fn ($sub) => $existsWithStock($sub, $allIds)),
-            default        => $query,
+            default => $query,
         };
     }
 
@@ -195,7 +195,7 @@ trait ProductQueryScopes
      * складе региона (primary или preorder). Используется по умолчанию,
      * когда пользователь не выбрал явный фильтр наличия.
      *
-     * @param int|null $regionId ID региона пользователя
+     * @param  int|null  $regionId  ID региона пользователя
      */
     public function scopeAvailable(Builder $query, ?int $regionId = null): Builder
     {
@@ -228,7 +228,7 @@ trait ProductQueryScopes
     public function scopeInSale(Builder $query, bool $value = true): Builder
     {
         $user = \Illuminate\Support\Facades\Auth::user();
-        if (!$user || !$user->erp_id) {
+        if (! $user || ! $user->erp_id) {
             return $value ? $query->whereRaw('1 = 0') : $query;
         }
 
@@ -263,8 +263,8 @@ trait ProductQueryScopes
     /**
      * Фильтр по значениям атрибутов.
      *
-     * @param int[] $valueIds  ID значений атрибутов
-     * @param bool  $any       true — OR (любой из), false — AND (все)
+     * @param  int[]  $valueIds  ID значений атрибутов
+     * @param  bool  $any  true — OR (любой из), false — AND (все)
      */
     public function scopeByAttributes(Builder $query, array $valueIds, bool $any = false): Builder
     {

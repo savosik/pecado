@@ -21,7 +21,7 @@ class HandleShipmentCreatedTest extends TestCase
     {
         $product = Product::factory()->create(['external_id' => 'ship-prod-001']);
 
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0001',
@@ -61,7 +61,7 @@ class HandleShipmentCreatedTest extends TestCase
             'tax_id' => '9876543210',
         ]);
 
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0002',
@@ -80,7 +80,7 @@ class HandleShipmentCreatedTest extends TestCase
     #[Test]
     public function it_creates_shipment_without_company_when_inn_not_found(): void
     {
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0003',
@@ -99,7 +99,7 @@ class HandleShipmentCreatedTest extends TestCase
     #[Test]
     public function it_is_idempotent_uses_update_or_create(): void
     {
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
 
         // Первое создание
         $handler->handle([
@@ -135,7 +135,7 @@ class HandleShipmentCreatedTest extends TestCase
                 return str_contains($msg, 'отсутствует uuid');
             });
 
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
         $handler->handle([
             'event' => 'shipment.created',
             'tax_id' => '1234567890',
@@ -147,7 +147,7 @@ class HandleShipmentCreatedTest extends TestCase
     #[Test]
     public function it_creates_items_without_product_when_product_not_found(): void
     {
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0005',
@@ -175,7 +175,7 @@ class HandleShipmentCreatedTest extends TestCase
         $product1 = Product::factory()->create(['external_id' => 'ship-multi-001']);
         $product2 = Product::factory()->create(['external_id' => 'ship-multi-002']);
 
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0006',
@@ -201,7 +201,7 @@ class HandleShipmentCreatedTest extends TestCase
         // Схема shipment.created не должна требовать minimum: 0 (исправлено в v12.7.4).
         $product = Product::factory()->create(['external_id' => 'ship-neg-discount-001']);
 
-        $handler = new HandleShipmentCreated();
+        $handler = new HandleShipmentCreated;
         $handler->handle([
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-neg-disc-001',
@@ -211,12 +211,12 @@ class HandleShipmentCreatedTest extends TestCase
             'currency_code' => 'RUB',
             'items' => [
                 [
-                    'product_uuid'          => 'ship-neg-discount-001',
-                    'quantity'              => 5,
-                    'price'                 => 1000.00,
+                    'product_uuid' => 'ship-neg-discount-001',
+                    'quantity' => 5,
+                    'price' => 1000.00,
                     'auto_discount_percent' => -10,
                     'manual_discount_percent' => -5,
-                    'total'                 => 5750.00,
+                    'total' => 5750.00,
                 ],
             ],
         ]);

@@ -16,6 +16,7 @@ class OrderController extends Controller
     public function __construct(
         protected CurrencyService $currencyService
     ) {}
+
     /**
      * Список заказов текущего пользователя.
      * GET /cabinet/orders
@@ -32,7 +33,9 @@ class OrderController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('uuid', 'like', "%{$search}%")
-                  ->orWhere('id', $search);
+                    ->orWhere('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%")
+                    ->orWhere('id', $search);
             });
         }
 
@@ -83,39 +86,40 @@ class OrderController extends Controller
         // Трансформация данных
         $orders->getCollection()->transform(function ($order) use ($currency) {
             $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
+
             return [
-                'id'              => $order->id,
-                'number'          => $order->number ?? ('#' . $order->id),
-                'uuid'            => $order->uuid,
-                'status'          => $order->status?->value,
-                'status_label'    => $this->getStatusLabel($order->status),
-                'type'            => $order->type?->value,
-                'total_amount'    => $order->total_amount,
+                'id' => $order->id,
+                'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
+                'uuid' => $order->uuid,
+                'status' => $order->status?->value,
+                'status_label' => $this->getStatusLabel($order->status),
+                'type' => $order->type?->value,
+                'total_amount' => $order->total_amount,
                 'total_converted' => $totalConverted,
-                'currency_code'   => $order->currency_code,
-                'created_at'      => $order->created_at?->format('d.m.Y H:i'),
-                'updated_at'      => $order->updated_at?->format('d.m.Y H:i'),
-                'company'         => $order->company ? [
-                    'id'   => $order->company->id,
+                'currency_code' => $order->currency_code,
+                'created_at' => $order->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
+                'company' => $order->company ? [
+                    'id' => $order->company->id,
                     'name' => $order->company->name,
                 ] : null,
-                'items_count'     => $order->items->count(),
+                'items_count' => $order->items->count(),
             ];
         });
 
         return Inertia::render('User/Cabinet/Orders/Index', [
             'orders' => $orders,
             'filters' => [
-                'search'      => $search,
-                'status'      => $status,
-                'type'        => $request->input('type', ''),
-                'date_from'   => $dateFrom,
-                'date_to'     => $dateTo,
+                'search' => $search,
+                'status' => $status,
+                'type' => $request->input('type', ''),
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
-                'amount_to'   => $amountTo,
-                'sort_by'     => $sortBy,
-                'sort_order'  => $sortOrder,
-                'per_page'    => $perPage,
+                'amount_to' => $amountTo,
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
+                'per_page' => $perPage,
             ],
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
@@ -149,21 +153,20 @@ class OrderController extends Controller
             'changeLogs',
         ]);
 
-
-
         return Inertia::render('User/Cabinet/Orders/Show', [
             'order' => [
-                'id'                  => $order->id,
-                'uuid'                => $order->uuid,
-                'status'              => $order->status?->value,
-                'status_label'        => $this->getStatusLabel($order->status),
-                'type'                => $order->type?->value,
-                'comment'             => $order->comment,
-                'total_amount'        => $order->total_amount,
-                'total_converted'     => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
-                'currency_code'       => $order->currency_code,
-                'created_at'          => $order->created_at?->toISOString(),
-                'created_at_formatted'=> $order->created_at?->format('d.m.Y H:i'),
+                'id' => $order->id,
+                'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
+                'uuid' => $order->uuid,
+                'status' => $order->status?->value,
+                'status_label' => $this->getStatusLabel($order->status),
+                'type' => $order->type?->value,
+                'comment' => $order->comment,
+                'total_amount' => $order->total_amount,
+                'total_converted' => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
+                'currency_code' => $order->currency_code,
+                'created_at' => $order->created_at?->toISOString(),
+                'created_at_formatted' => $order->created_at?->format('d.m.Y H:i'),
                 'company' => $order->company ? [
                     'id' => $order->company->id,
                     'name' => $order->company->name,
@@ -193,20 +196,21 @@ class OrderController extends Controller
 
                 'shipments' => $order->shipments()->map(function ($shipment) {
                     return [
-                        'id'            => $shipment->id,
-                        'uuid'          => $shipment->uuid,
-                        'date'          => $shipment->date?->format('Y-m-d'),
-                        'status'        => $shipment->status,
-                        'status_label'  => match ($shipment->status) {
-                            'completed'   => 'Выполнена',
+                        'id' => $shipment->id,
+                        'number' => $shipment->number ?? $shipment->erp_number ?? ('#'.$shipment->id),
+                        'uuid' => $shipment->uuid,
+                        'date' => $shipment->date?->format('Y-m-d'),
+                        'status' => $shipment->status,
+                        'status_label' => match ($shipment->status) {
+                            'completed' => 'Выполнена',
                             'in_progress' => 'В обработке',
-                            'new'         => 'Новая',
-                            'cancelled'   => 'Отменена',
-                            default       => $shipment->status,
+                            'new' => 'Новая',
+                            'cancelled' => 'Отменена',
+                            default => $shipment->status,
                         },
-                        'total_amount'  => $shipment->total_amount,
+                        'total_amount' => $shipment->total_amount,
                         'currency_code' => $shipment->currency_code,
-                        'items_count'   => $shipment->items()->count(),
+                        'items_count' => $shipment->items()->count(),
                     ];
                 }),
                 'status_histories' => $order->statusHistories->map(function ($history) {
@@ -224,14 +228,14 @@ class OrderController extends Controller
                 }),
                 'change_logs' => $order->changeLogs->map(function ($log) {
                     return [
-                        'id'               => $log->id,
-                        'type'             => $log->type,
-                        'summary'          => $log->summary,
-                        'changes'          => $log->changes,
-                        'source'           => $log->source,
-                        'old_total'        => $log->old_total,
-                        'new_total'        => $log->new_total,
-                        'created_at'       => $log->created_at->format('d.m.Y H:i'),
+                        'id' => $log->id,
+                        'type' => $log->type,
+                        'summary' => $log->summary,
+                        'changes' => $log->changes,
+                        'source' => $log->source,
+                        'old_total' => $log->old_total,
+                        'new_total' => $log->new_total,
+                        'created_at' => $log->created_at->format('d.m.Y H:i'),
                         'created_at_human' => $log->created_at->diffForHumans(),
                     ];
                 }),
@@ -249,12 +253,12 @@ class OrderController extends Controller
     protected function getStatusLabel(?OrderStatus $status): string
     {
         return match ($status) {
-            OrderStatus::PENDING       => 'Ожидает',
-            OrderStatus::CONFIRMED     => 'Подтверждён',
+            OrderStatus::PENDING => 'Ожидает',
+            OrderStatus::CONFIRMED => 'Подтверждён',
             OrderStatus::READY_TO_SHIP => 'К отгрузке',
-            OrderStatus::CLOSED        => 'Закрыт',
-            OrderStatus::DELETED       => 'Удалён',
-            default                    => 'Неизвестно',
+            OrderStatus::CLOSED => 'Закрыт',
+            OrderStatus::DELETED => 'Удалён',
+            default => 'Неизвестно',
         };
     }
 
@@ -271,13 +275,14 @@ class OrderController extends Controller
      */
     private function convertAmount(float $amount, ?string $sourceCurrencyCode, ?Currency $targetCurrency): float
     {
-        if (!$targetCurrency || $targetCurrency->is_base) {
+        if (! $targetCurrency || $targetCurrency->is_base) {
             if ($sourceCurrencyCode && $sourceCurrencyCode !== 'RUB') {
                 $src = Currency::where('code', $sourceCurrencyCode)->first();
                 if ($src) {
                     return round($amount * (float) $src->exchange_rate, 2);
                 }
             }
+
             return $amount;
         }
 

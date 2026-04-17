@@ -19,7 +19,7 @@ class ApiTokenController extends Controller
         $tokens = ApiToken::where('user_id', Auth::id())
             ->latest()
             ->get()
-            ->map(fn(ApiToken $token) => [
+            ->map(fn (ApiToken $token) => [
                 'id' => $token->id,
                 'name' => $token->name,
                 'token' => $token->token,

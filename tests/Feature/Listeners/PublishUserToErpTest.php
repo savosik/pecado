@@ -10,8 +10,8 @@ use App\Listeners\PublishUserToErp;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use Tests\TestCase;
 use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 /**
  * Тесты для PublishUserToErp listener (US-01 v2).
@@ -34,8 +34,8 @@ class PublishUserToErpTest extends TestCase
     {
         $user = User::factory()->create([
             'erp_id' => '550e8400-e29b-41d4-a716-446655440000',
-            'email'  => 'test@example.com',
-            'name'   => 'Иван',
+            'email' => 'test@example.com',
+            'name' => 'Иван',
             'status' => UserStatus::PROCESSING,
         ]);
 
@@ -61,7 +61,7 @@ class PublishUserToErpTest extends TestCase
     {
         $user = User::factory()->create([
             'status' => UserStatus::ACTIVE,
-            'name'   => null,
+            'name' => null,
         ]);
 
         Queue::clearResolvedInstances();
@@ -79,7 +79,7 @@ class PublishUserToErpTest extends TestCase
     {
         $user = User::factory()->create([
             'status' => UserStatus::ACTIVE,
-            'name'   => 'Иван',
+            'name' => 'Иван',
         ]);
 
         Queue::clearResolvedInstances();
@@ -98,7 +98,7 @@ class PublishUserToErpTest extends TestCase
         $user = User::factory()->make();
         $event = new UserCreated($user);
 
-        $listener = new PublishUserToErp();
+        $listener = new PublishUserToErp;
         $listener->handle($event);
 
         Queue::assertNothingPushed();
@@ -107,9 +107,9 @@ class PublishUserToErpTest extends TestCase
     #[Test]
     public function it_does_nothing_when_event_has_no_user(): void
     {
-        $event = new \stdClass();
+        $event = new \stdClass;
 
-        $listener = new PublishUserToErp();
+        $listener = new PublishUserToErp;
         $listener->handle($event);
 
         Queue::assertNothingPushed();
@@ -119,11 +119,11 @@ class PublishUserToErpTest extends TestCase
     public function partner_created_payload_contains_correct_fields(): void
     {
         $user = User::factory()->create([
-            'erp_id'  => 'test-erp-uuid',
-            'email'   => 'client@example.com',
-            'name'    => 'Иванов Иван',
-            'phone'   => '+7(999)123-45-67',
-            'status'  => UserStatus::PROCESSING,
+            'erp_id' => 'test-erp-uuid',
+            'email' => 'client@example.com',
+            'name' => 'Иванов Иван',
+            'phone' => '+7(999)123-45-67',
+            'status' => UserStatus::PROCESSING,
         ]);
 
         $user->status = UserStatus::ACTIVE;
@@ -131,6 +131,7 @@ class PublishUserToErpTest extends TestCase
 
         Queue::assertPushed(PublishUserToErpJob::class, function ($job) {
             $p = $job->payload;
+
             return $p['event'] === 'partner.created'
                 && $p['uuid'] === 'test-erp-uuid'
                 && $p['login'] === 'client@example.com'

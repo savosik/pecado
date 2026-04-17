@@ -15,15 +15,17 @@ class HandleReturnDeleted
     {
         $uuid = $payload['uuid'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('HandleReturnDeleted: отсутствует uuid', ['payload' => $payload]);
+
             return;
         }
 
         $return = ProductReturn::where('uuid', $uuid)->first();
 
-        if (!$return) {
+        if (! $return) {
             Log::info('HandleReturnDeleted: возврат не найден', ['uuid' => $uuid]);
+
             return;
         }
 

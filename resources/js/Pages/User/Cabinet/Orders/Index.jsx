@@ -283,7 +283,9 @@ export default function OrdersIndex({ filters, statuses, types }) {
                                         >
                                             <Table.Cell>
                                                 <VStack gap="1" align="start">
-                                                    <Text fontWeight="600">#{order.id}</Text>
+                                                    <Text fontWeight="600" noOfLines={1} maxW="120px" title={order.number}>
+                                                        {order.number}
+                                                    </Text>
                                                     {order.type === 'preorder' ? (
                                                         <Badge colorPalette="purple" variant="subtle" fontSize="2xs" px="1.5">Предзаказ</Badge>
                                                     ) : (
@@ -358,7 +360,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
                                     <Card.Body p="4">
                                         <Flex justify="space-between" align="center" mb="2">
                                             <HStack gap="2">
-                                                <Text fontWeight="700" fontSize="md">Заказ #{order.id}</Text>
+                                                <Text fontWeight="700" fontSize="md" noOfLines={1}>Заказ {order.number}</Text>
                                                 {order.type === 'preorder' && (
                                                     <Badge colorPalette="purple" variant="subtle" fontSize="2xs">Предзаказ</Badge>
                                                 )}

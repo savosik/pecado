@@ -112,10 +112,10 @@ class NormalizeUserDataJob implements ShouldQueue
         if ($this->dryRun) {
             Log::info('NormalizeUserDataJob [DRY-RUN]', [
                 'user_id' => $this->userId,
-                'before'  => [
-                    'name'       => $user->name,
-                    'phone'      => $user->phone,
-                    'city'       => $user->city,
+                'before' => [
+                    'name' => $user->name,
+                    'phone' => $user->phone,
+                    'city' => $user->city,
                 ],
                 'after' => $updates,
             ]);

@@ -4,17 +4,16 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\OrderStatus;
 use App\Events\OrderCreated;
-use App\Models\Order;
-use App\Models\User;
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Company;
-use App\Models\DeliveryAddress;
+use App\Models\Order;
 use App\Models\Product;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class OrderController extends AdminController
 {
@@ -38,11 +37,13 @@ class OrderController extends AdminController
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('uuid', 'like', "%{$search}%")
-                  ->orWhere('id', $search)
-                  ->orWhereHas('user', function ($userQuery) use ($search) {
-                      $userQuery->where('name', 'like', "%{$search}%")
-                                ->orWhere('email', 'like', "%{$search}%");
-                  });
+                    ->orWhere('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%")
+                    ->orWhere('id', $search)
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -80,7 +81,7 @@ class OrderController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'uuid', 'total_amount', 'status', 'created_at', 'updated_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -120,17 +121,17 @@ class OrderController extends AdminController
         return Inertia::render('Admin/Pages/Orders/Index', [
             'orders' => $orders,
             'filters' => [
-                'search'      => $search,
-                'status'      => $status,
-                'type'        => $request->input('type', ''),
-                'company_id'  => $companyId,
-                'date_from'   => $dateFrom,
-                'date_to'     => $dateTo,
+                'search' => $search,
+                'status' => $status,
+                'type' => $request->input('type', ''),
+                'company_id' => $companyId,
+                'date_from' => $dateFrom,
+                'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
-                'amount_to'   => $amountTo,
-                'sort_by'     => $sortBy,
-                'sort_order'  => $sortOrder,
-                'per_page'    => $perPage,
+                'amount_to' => $amountTo,
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
+                'per_page' => $perPage,
             ],
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
@@ -167,13 +168,16 @@ class OrderController extends AdminController
             'user_id' => 'required|exists:users,id',
             'company_id' => 'required|exists:companies,id',
             'delivery_address' => 'nullable|string|max:1000',
-            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(OrderStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'currency_code' => 'nullable|string|max:3',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.name' => 'required|string',
+            'items.*.base_price' => 'nullable|numeric|min:0',
             'items.*.price' => 'required|numeric|min:0',
+            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.final_price' => 'nullable|numeric|min:0',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
@@ -181,7 +185,9 @@ class OrderController extends AdminController
         try {
             // Подсчёт total_amount
             $totalAmount = collect($validated['items'])->sum(function ($item) {
-                return $item['price'] * $item['quantity'];
+                $effectivePrice = $item['final_price'] ?? $item['price'];
+
+                return $effectivePrice * $item['quantity'];
             });
 
             // Создание заказа
@@ -197,12 +203,16 @@ class OrderController extends AdminController
 
             // Создание позиций заказа
             foreach ($validated['items'] as $item) {
+                $effectivePrice = $item['final_price'] ?? $item['price'];
                 $order->items()->create([
                     'product_id' => $item['product_id'],
                     'name' => $item['name'],
+                    'base_price' => $item['base_price'] ?? $item['price'],
                     'price' => $item['price'],
+                    'discount_percent' => $item['discount_percent'] ?? 0,
+                    'final_price' => $effectivePrice,
                     'quantity' => $item['quantity'],
-                    'subtotal' => $item['price'] * $item['quantity'],
+                    'subtotal' => $effectivePrice * $item['quantity'],
                 ]);
             }
 
@@ -214,10 +224,11 @@ class OrderController extends AdminController
             return $this->redirectAfterSave($request, 'admin.orders.index', 'admin.orders.edit', $order, 'Заказ успешно создан');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при создании заказа: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при создании заказа: '.$e->getMessage()]);
         }
     }
 
@@ -256,7 +267,10 @@ class OrderController extends AdminController
                     return [
                         'id' => $item->id,
                         'name' => $item->name,
+                        'base_price' => $item->base_price,
                         'price' => $item->price,
+                        'discount_percent' => $item->discount_percent,
+                        'final_price' => $item->final_price,
                         'quantity' => $item->quantity,
                         'subtotal' => $item->subtotal,
                         'product' => $item->product ? [
@@ -320,7 +334,10 @@ class OrderController extends AdminController
                         'id' => $item->id,
                         'product_id' => $item->product_id,
                         'name' => $item->name,
+                        'base_price' => $item->base_price,
                         'price' => $item->price,
+                        'discount_percent' => $item->discount_percent,
+                        'final_price' => $item->final_price,
                         'quantity' => $item->quantity,
                         'subtotal' => $item->subtotal,
                         'sku' => $item->product ? $item->product->sku : null,
@@ -359,14 +376,17 @@ class OrderController extends AdminController
             'user_id' => 'required|exists:users,id',
             'company_id' => 'required|exists:companies,id',
             'delivery_address' => 'nullable|string|max:1000',
-            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(OrderStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'currency_code' => 'nullable|string|max:3',
             'items' => 'required|array|min:1',
             'items.*.id' => 'nullable|exists:order_items,id',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.name' => 'required|string',
+            'items.*.base_price' => 'nullable|numeric|min:0',
             'items.*.price' => 'required|numeric|min:0',
+            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.final_price' => 'nullable|numeric|min:0',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
 
@@ -374,7 +394,9 @@ class OrderController extends AdminController
         try {
             // Подсчёт total_amount
             $totalAmount = collect($validated['items'])->sum(function ($item) {
-                return $item['price'] * $item['quantity'];
+                $effectivePrice = $item['final_price'] ?? $item['price'];
+
+                return $effectivePrice * $item['quantity'];
             });
 
             // Обновление заказа
@@ -391,27 +413,35 @@ class OrderController extends AdminController
             // Синхронизация позиций заказа
             $existingItemIds = [];
             foreach ($validated['items'] as $item) {
-                if (!empty($item['id'])) {
+                if (! empty($item['id'])) {
                     // Обновление существующей позиции
                     $orderItem = $order->items()->find($item['id']);
                     if ($orderItem) {
+                        $effectivePrice = $item['final_price'] ?? $item['price'];
                         $orderItem->update([
                             'product_id' => $item['product_id'],
                             'name' => $item['name'],
+                            'base_price' => $item['base_price'] ?? $item['price'],
                             'price' => $item['price'],
+                            'discount_percent' => $item['discount_percent'] ?? 0,
+                            'final_price' => $effectivePrice,
                             'quantity' => $item['quantity'],
-                            'subtotal' => $item['price'] * $item['quantity'],
+                            'subtotal' => $effectivePrice * $item['quantity'],
                         ]);
                         $existingItemIds[] = $item['id'];
                     }
                 } else {
                     // Создание новой позиции
+                    $effectivePrice = $item['final_price'] ?? $item['price'];
                     $newItem = $order->items()->create([
                         'product_id' => $item['product_id'],
                         'name' => $item['name'],
+                        'base_price' => $item['base_price'] ?? $item['price'],
                         'price' => $item['price'],
+                        'discount_percent' => $item['discount_percent'] ?? 0,
+                        'final_price' => $effectivePrice,
                         'quantity' => $item['quantity'],
-                        'subtotal' => $item['price'] * $item['quantity'],
+                        'subtotal' => $effectivePrice * $item['quantity'],
                     ]);
                     $existingItemIds[] = $newItem->id;
                 }
@@ -425,10 +455,11 @@ class OrderController extends AdminController
             return $this->redirectAfterSave($request, 'admin.orders.index', 'admin.orders.edit', $order, 'Заказ успешно обновлён');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при обновлении заказа: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при обновлении заказа: '.$e->getMessage()]);
         }
     }
 
@@ -438,7 +469,7 @@ class OrderController extends AdminController
     public function updateStatus(Request $request, Order $order): RedirectResponse
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(OrderStatus::cases(), 'value')),
         ]);
 
         $order->update([
@@ -458,7 +489,7 @@ class OrderController extends AdminController
         $validated = $request->validate([
             'order_ids' => 'required|array|min:1',
             'order_ids.*' => 'exists:orders,id',
-            'status' => 'required|string|in:' . implode(',', array_column(OrderStatus::cases(), 'value')),
+            'status' => 'required|string|in:'.implode(',', array_column(OrderStatus::cases(), 'value')),
         ]);
 
         $count = Order::whereIn('id', $validated['order_ids'])->update([
@@ -494,7 +525,7 @@ class OrderController extends AdminController
         $product = Product::findOrFail($validated['product_id']);
         $user = $validated['user_id'] ? User::find($validated['user_id']) : null;
         $currencyCode = $validated['currency_code'] ?? 'RUB';
-        
+
         // 1. Get price in base currency (with individual prices applied)
         if ($user) {
             $priceResult = $this->priceService->getPriceResult($product, $user);
@@ -505,13 +536,13 @@ class OrderController extends AdminController
 
         // 2. Convert to target currency
         $finalPrice = $basePrice;
-        if ($currencyCode !== 'RUB') { 
-             $currency = \App\Models\Currency::where('code', $currencyCode)->first();
-             if ($currency) {
-                 $finalPrice = $this->priceService->convertPrice($basePrice, $currency);
-             }
+        if ($currencyCode !== 'RUB') {
+            $currency = \App\Models\Currency::where('code', $currencyCode)->first();
+            if ($currency) {
+                $finalPrice = $this->priceService->convertPrice($basePrice, $currency);
+            }
         }
-        
+
         // Round to 2 decimals
         $finalPrice = round($finalPrice, 2);
 
@@ -527,11 +558,11 @@ class OrderController extends AdminController
     public function searchUsers(Request $request): \Illuminate\Http\JsonResponse
     {
         $query = $request->input('query', '');
-        
+
         $users = User::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%");
+                    ->orWhere('email', 'like', "%{$query}%");
             })
             ->select('id', 'name', 'email')
             ->orderBy('name')
@@ -545,7 +576,7 @@ class OrderController extends AdminController
                     'label' => "{$user->name} ({$user->email})",
                 ];
             });
-            
+
         return response()->json($users);
     }
 
@@ -557,7 +588,7 @@ class OrderController extends AdminController
     {
         $query = $request->input('query', '');
         $userId = $request->input('user_id');
-        
+
         $companies = Company::query()
             ->when($userId, function ($q) use ($userId) {
                 $q->where('user_id', $userId);
@@ -565,8 +596,8 @@ class OrderController extends AdminController
             ->when($query, function ($q) use ($query) {
                 $q->where(function ($subQ) use ($query) {
                     $subQ->where('name', 'like', "%{$query}%")
-                         ->orWhere('legal_name', 'like', "%{$query}%")
-                         ->orWhere('tax_id', 'like', "%{$query}%");
+                        ->orWhere('legal_name', 'like', "%{$query}%")
+                        ->orWhere('tax_id', 'like', "%{$query}%");
                 });
             })
             ->with('user:id,name,email')
@@ -584,7 +615,7 @@ class OrderController extends AdminController
                     'label' => $company->name,
                 ];
             });
-            
+
         return response()->json($companies);
     }
 
@@ -594,12 +625,12 @@ class OrderController extends AdminController
     protected function getStatusLabel(?OrderStatus $status): string
     {
         return match ($status) {
-            OrderStatus::PENDING       => 'Ожидает',
-            OrderStatus::CONFIRMED     => 'Подтверждён',
+            OrderStatus::PENDING => 'Ожидает',
+            OrderStatus::CONFIRMED => 'Подтверждён',
             OrderStatus::READY_TO_SHIP => 'К отгрузке',
-            OrderStatus::CLOSED        => 'Закрыт',
-            OrderStatus::DELETED       => 'Удалён',
-            default                    => 'Неизвестно',
+            OrderStatus::CLOSED => 'Закрыт',
+            OrderStatus::DELETED => 'Удалён',
+            default => 'Неизвестно',
         };
     }
 }

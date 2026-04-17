@@ -28,11 +28,11 @@ class HandlePartnerUpdated
 
     public function handle(array $payload): void
     {
-        $uuid  = $payload['uuid']  ?? null;
+        $uuid = $payload['uuid'] ?? null;
         $login = $payload['login'] ?? null;
         $email = $payload['email'] ?? $login;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('partner.updated: отсутствует uuid', ['payload' => $payload]);
 
             return;
@@ -46,7 +46,7 @@ class HandlePartnerUpdated
 
             Log::info('partner.updated: пользователь найден по erp_id, обновлён', [
                 'user_id' => $user->id,
-                'erp_id'  => $uuid,
+                'erp_id' => $uuid,
             ]);
 
             return;
@@ -62,8 +62,8 @@ class HandlePartnerUpdated
 
             Log::info('partner.updated: пользователь найден по email, erp_id привязан', [
                 'user_id' => $user->id,
-                'email'   => $email,
-                'erp_id'  => $uuid,
+                'email' => $email,
+                'erp_id' => $uuid,
             ]);
 
             return;
@@ -71,7 +71,7 @@ class HandlePartnerUpdated
 
         // Пользователь не найден — partner.updated не создаёт новых
         Log::warning('partner.updated: пользователь не найден', [
-            'uuid'  => $uuid,
+            'uuid' => $uuid,
             'login' => $login,
             'email' => $email,
         ]);
@@ -113,8 +113,6 @@ class HandlePartnerUpdated
             $updateData['country'] = $this->normalizeCountry($payload['country']);
         }
 
-
-
         // is_active → UserStatus
         if (array_key_exists('is_active', $payload)) {
             $updateData['status'] = $payload['is_active']
@@ -142,12 +140,12 @@ class HandlePartnerUpdated
     /**
      * Резолвит client_status из payload в client_status_id.
      *
-     * @return int|null|false  int — найден, null — сбросить, false — не менять
+     * @return int|null|false int — найден, null — сбросить, false — не менять
      */
     private function resolveClientStatusId(array $payload): int|null|false
     {
         // Поле отсутствует в payload — не менять текущий статус
-        if (!array_key_exists('client_status', $payload)) {
+        if (! array_key_exists('client_status', $payload)) {
             return false;
         }
 
@@ -163,7 +161,7 @@ class HandlePartnerUpdated
         if ($clientStatusId === null) {
             Log::warning('partner.updated: неизвестный client_status, статус не изменён', [
                 'client_status' => $clientStatusCode,
-                'uuid'          => $payload['uuid'] ?? null,
+                'uuid' => $payload['uuid'] ?? null,
             ]);
 
             return false;

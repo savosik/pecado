@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\Warehouse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class WarehouseController extends Controller
 {
@@ -20,8 +20,8 @@ class WarehouseController extends Controller
         $query = Warehouse::query();
 
         if ($request->has('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('external_id', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%')
+                ->orWhere('external_id', 'like', '%'.$request->search.'%');
         }
 
         if ($request->has('sort_by') && $request->has('sort_order')) {
@@ -79,7 +79,7 @@ class WarehouseController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'external_id' => 'nullable|string|max:255|unique:warehouses,external_id,' . $warehouse->id,
+            'external_id' => 'nullable|string|max:255|unique:warehouses,external_id,'.$warehouse->id,
         ]);
 
         $warehouse->update($validated);

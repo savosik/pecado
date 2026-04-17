@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Helpers\ContentHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
-use App\Helpers\ContentHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -29,16 +29,16 @@ class PageController extends Controller
 
         return Inertia::render('User/Pages/Show', [
             'page' => [
-                'id'      => $page->id,
-                'title'   => $page->title,
-                'slug'    => $page->slug,
+                'id' => $page->id,
+                'title' => $page->title,
+                'slug' => $page->slug,
                 'content' => $sanitizedContent,
             ],
             'seo' => [
-                'title'       => $page->meta_title ?: $page->title,
+                'title' => $page->meta_title ?: $page->title,
                 'description' => $page->meta_description ?: ContentHelper::extractText($page->content, 160),
-                'url'         => $request->url(),
-                'type'        => 'article',
+                'url' => $request->url(),
+                'type' => 'article',
             ],
             'breadcrumbs' => [
                 ['label' => 'Главная', 'url' => '/'],

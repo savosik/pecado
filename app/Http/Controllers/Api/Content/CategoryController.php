@@ -107,6 +107,7 @@ class CategoryController extends Controller
         return $nodes->map(function (Category $node) {
             $data = $this->format($node);
             $data['children'] = $this->formatTree($node->children);
+
             return $data;
         })->toArray();
     }

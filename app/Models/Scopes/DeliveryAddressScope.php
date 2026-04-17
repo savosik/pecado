@@ -11,7 +11,7 @@ class DeliveryAddressScope implements Scope
 {
     /**
      * Apply the scope to a given Eloquent query builder.
-     * 
+     *
      * Limits delivery addresses to those owned by the current user,
      * unless the user is an admin.
      */

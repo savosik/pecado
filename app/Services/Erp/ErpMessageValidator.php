@@ -27,37 +27,37 @@ class ErpMessageValidator
      */
     private const SCHEMA_MAP = [
         // US-02: Партнёры
-        'partner.created'        => 'partner.created.json',
-        'partner.updated'        => 'partner.updated.json',
-        'partner.deleted'        => 'partner.deleted.json',
+        'partner.created' => 'partner.created.json',
+        'partner.updated' => 'partner.updated.json',
+        'partner.deleted' => 'partner.deleted.json',
         // US-03: Базовые цены
-        'price.updated'          => 'price.updated.json',
+        'price.updated' => 'price.updated.json',
         // US-05: Курсы валют
-        'exchange_rate.updated'  => 'exchange_rate.updated.json',
+        'exchange_rate.updated' => 'exchange_rate.updated.json',
         // US-06: Остатки
-        'stock.updated'          => 'stock.updated.json',
+        'stock.updated' => 'stock.updated.json',
         // US-07: Контрагенты
-        'contractor.created'     => 'contractor.created.json',
+        'contractor.created' => 'contractor.created.json',
         // US-08: Заказы
-        'order.created'          => 'order.created.json',
-        'order.updated'          => 'order.updated.json',
-        'order.deleted'          => 'order.deleted.json',
+        'order.created' => 'order.created.json',
+        'order.updated' => 'order.updated.json',
+        'order.deleted' => 'order.deleted.json',
         // US-09: Возвраты
-        'return.updated'         => 'return.updated.json',
-        'return.deleted'         => 'return.deleted.json',
+        'return.updated' => 'return.updated.json',
+        'return.deleted' => 'return.deleted.json',
         // US-10: Реализации
-        'shipment.created'       => 'shipment.created.json',
-        'shipment.updated'       => 'shipment.created.json', // Та же структура
-        'shipment.deleted'       => 'shipment.deleted.json',
+        'shipment.created' => 'shipment.created.json',
+        'shipment.updated' => 'shipment.created.json', // Та же структура
+        'shipment.deleted' => 'shipment.deleted.json',
         // US-11: Баланс
-        'balance.updated'        => 'balance.updated.json',
+        'balance.updated' => 'balance.updated.json',
         // US-14: Индивидуальные цены
         'individual_prices.ready' => 'individual_prices.ready.json',
         // US-15: Каталог
-        'category.created'       => 'category.created.json',
-        'category.updated'       => 'category.created.json', // Та же структура
-        'product.created'        => 'product.created.json',
-        'product.updated'        => 'product.updated.json',
+        'category.created' => 'category.created.json',
+        'category.updated' => 'category.created.json', // Та же структура
+        'product.created' => 'product.created.json',
+        'product.updated' => 'product.updated.json',
     ];
 
     /**
@@ -65,8 +65,8 @@ class ErpMessageValidator
      */
     private const OUTBOUND_SCHEMA_MAP = [
         'partner.created' => 'partner.created.to_erp.json',
-        'order.created'   => 'order.created.to_erp.json',
-        'return.created'  => 'return.created.to_erp.json',
+        'order.created' => 'order.created.to_erp.json',
+        'return.created' => 'return.created.to_erp.json',
     ];
 
     /**
@@ -78,7 +78,7 @@ class ErpMessageValidator
 
     public function __construct()
     {
-        $this->validator = new Validator();
+        $this->validator = new Validator;
         $this->validator->setMaxErrors(5);
     }
 
@@ -101,13 +101,13 @@ class ErpMessageValidator
     /**
      * Валидировать исходящий payload (Сайт → 1С) по JSON Schema.
      *
-     * @param  string  $event   Тип события (e.g. "order.created")
-     * @param  array   $payload Payload перед отправкой
+     * @param  string  $event  Тип события (e.g. "order.created")
+     * @param  array  $payload  Payload перед отправкой
      * @return array{valid: bool, errors: string[]}
      */
     public function validateOutbound(string $event, array $payload): array
     {
-        if (!$this->hasOutboundSchema($event)) {
+        if (! $this->hasOutboundSchema($event)) {
             return ['valid' => true, 'errors' => []];
         }
 
@@ -118,6 +118,7 @@ class ErpMessageValidator
                 'event' => $event,
                 'error' => $e->getMessage(),
             ]);
+
             return ['valid' => true, 'errors' => []];
         }
 
@@ -128,7 +129,7 @@ class ErpMessageValidator
             return ['valid' => true, 'errors' => []];
         }
 
-        $formatter = new ErrorFormatter();
+        $formatter = new ErrorFormatter;
         $errors = $formatter->format($result->error(), true);
 
         return ['valid' => false, 'errors' => $this->flattenErrors($errors)];
@@ -137,13 +138,13 @@ class ErpMessageValidator
     /**
      * Валидировать payload сообщения по JSON Schema.
      *
-     * @param  string  $event   Тип события (e.g. "partner.created")
-     * @param  array   $payload Декодированный JSON payload
+     * @param  string  $event  Тип события (e.g. "partner.created")
+     * @param  array  $payload  Декодированный JSON payload
      * @return array{valid: bool, errors: string[]}
      */
     public function validate(string $event, array $payload): array
     {
-        if (!$this->hasSchema($event)) {
+        if (! $this->hasSchema($event)) {
             // Нет схемы — пропускаем валидацию
             return ['valid' => true, 'errors' => []];
         }
@@ -169,7 +170,7 @@ class ErpMessageValidator
             return ['valid' => true, 'errors' => []];
         }
 
-        $formatter = new ErrorFormatter();
+        $formatter = new ErrorFormatter;
         $errors = $formatter->format($result->error(), true);
 
         // Преобразуем вложенную структуру ошибок в плоский массив строк
@@ -192,9 +193,9 @@ class ErpMessageValidator
             return $this->schemas[$schemaFile];
         }
 
-        $path = __DIR__ . '/Schemas/' . $schemaFile;
+        $path = __DIR__.'/Schemas/'.$schemaFile;
 
-        if (!file_exists($path)) {
+        if (! file_exists($path)) {
             throw new \RuntimeException("Schema file not found: {$path}");
         }
 
@@ -206,7 +207,7 @@ class ErpMessageValidator
         }
 
         // opis/json-schema требует абсолютный URI в $id
-        $schema->{'$id'} = 'https://pecado.local/schemas/' . $schemaFile;
+        $schema->{'$id'} = 'https://pecado.local/schemas/'.$schemaFile;
 
         $this->schemas[$schemaFile] = $schema;
 
@@ -216,7 +217,6 @@ class ErpMessageValidator
     /**
      * Преобразовать вложенную структуру ошибок в плоский массив строк.
      *
-     * @param  array  $errors
      * @return string[]
      */
     private function flattenErrors(array $errors): array
@@ -239,23 +239,23 @@ class ErpMessageValidator
     /**
      * Записать ошибку валидации в БД для отображения в админке.
      *
-     * @param  string  $event     Тип события (e.g. "partner.created")
-     * @param  string  $direction "incoming" или "outgoing"
-     * @param  array   $errors    Массив строк с описанием ошибок
-     * @param  array   $payload   Исходный payload
+     * @param  string  $event  Тип события (e.g. "partner.created")
+     * @param  string  $direction  "incoming" или "outgoing"
+     * @param  array  $errors  Массив строк с описанием ошибок
+     * @param  array  $payload  Исходный payload
      */
     public function logValidationError(string $event, string $direction, array $errors, array $payload): void
     {
         try {
             ErpValidationError::create([
-                'event'      => $event,
-                'direction'  => $direction,
+                'event' => $event,
+                'direction' => $direction,
                 'message_id' => $payload['message_id'] ?? null,
-                'errors'     => $errors,
-                'payload'    => $payload,
+                'errors' => $errors,
+                'payload' => $payload,
             ]);
         } catch (\Throwable $e) {
-            Log::error('Не удалось записать ошибку валидации ERP в БД: ' . $e->getMessage());
+            Log::error('Не удалось записать ошибку валидации ERP в БД: '.$e->getMessage());
         }
     }
 }

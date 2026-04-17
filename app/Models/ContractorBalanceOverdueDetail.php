@@ -15,7 +15,7 @@ class ContractorBalanceOverdueDetail extends Model
     ];
 
     protected $casts = [
-        'amount'   => 'decimal:2',
+        'amount' => 'decimal:2',
         'due_date' => 'date',
     ];
 

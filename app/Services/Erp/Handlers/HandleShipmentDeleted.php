@@ -15,15 +15,17 @@ class HandleShipmentDeleted
     {
         $uuid = $payload['uuid'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('HandleShipmentDeleted: отсутствует uuid', ['payload' => $payload]);
+
             return;
         }
 
         $shipment = Shipment::where('uuid', $uuid)->first();
 
-        if (!$shipment) {
+        if (! $shipment) {
             Log::info('HandleShipmentDeleted: реализация не найдена', ['uuid' => $uuid]);
+
             return;
         }
 

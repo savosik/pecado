@@ -76,6 +76,7 @@ class CatalogApiController extends Controller
 
             $products = array_map(function ($product) use ($favoritedIds) {
                 $product['is_favorited'] = isset($favoritedIds[$product['id']]);
+
                 return $product;
             }, $products);
         } else {
@@ -89,6 +90,7 @@ class CatalogApiController extends Controller
                     $product['stock_quantity'],
                     $product['preorder_quantity'],
                 );
+
                 return $product;
             }, $products);
         }
@@ -97,11 +99,11 @@ class CatalogApiController extends Controller
             'data' => $products,
             'meta' => [
                 'current_page' => $paginated->currentPage(),
-                'last_page'    => $paginated->lastPage(),
-                'per_page'     => $paginated->perPage(),
-                'total'        => $paginated->total(),
-                'from'         => $paginated->firstItem(),
-                'to'           => $paginated->lastItem(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+                'from' => $paginated->firstItem(),
+                'to' => $paginated->lastItem(),
             ],
         ]);
     }
@@ -129,8 +131,8 @@ class CatalogApiController extends Controller
             'intval',
             $validated['category_ids'] ?? [],
         );
-        if (!empty($validated['category_id']) && !in_array((int)$validated['category_id'], $selectedCategoryIds)) {
-            $selectedCategoryIds[] = (int)$validated['category_id'];
+        if (! empty($validated['category_id']) && ! in_array((int) $validated['category_id'], $selectedCategoryIds)) {
+            $selectedCategoryIds[] = (int) $validated['category_id'];
         }
 
         $selectedAttributeValueIds = array_map(
@@ -142,7 +144,7 @@ class CatalogApiController extends Controller
         unset($withoutAttributes['attribute_inline_filters']);
 
         return response()->json([
-            'brands'     => $this->facetService->getBrandFacets($this->buildBaseQuery($withoutBrands), $selectedBrandIds),
+            'brands' => $this->facetService->getBrandFacets($this->buildBaseQuery($withoutBrands), $selectedBrandIds),
             'categories' => $this->facetService->getCategoryFacets($this->buildBaseQuery($withoutCategories), $selectedCategoryIds),
             'attributes' => $this->facetService->getAttributeFacets(
                 $this->buildBaseQuery($withoutAttributes),
@@ -170,7 +172,7 @@ class CatalogApiController extends Controller
 
         // Конвертируем цены в валюту пользователя
         $user = Auth::user();
-        if ($user && $user->region?->currency && !$user->region->currency->is_base) {
+        if ($user && $user->region?->currency && ! $user->region->currency->is_base) {
             $currencyService = app(\App\Services\CurrencyService::class);
             $currency = $user->region->currency;
 
@@ -202,18 +204,18 @@ class CatalogApiController extends Controller
         });
 
         // Поиск
-        if (!empty($validated['q'])) {
+        if (! empty($validated['q'])) {
             $query->search($validated['q']);
         }
 
         // Категория (одиночная, из маршрута)
-        if (!empty($validated['category_id'])) {
+        if (! empty($validated['category_id'])) {
             $descendants = ($validated['include_descendants'] ?? true);
             $query->inCategory((int) $validated['category_id'], (bool) $descendants);
         }
 
         // Категории (множественные)
-        if (!empty($validated['category_ids'])) {
+        if (! empty($validated['category_ids'])) {
             $descendants = ($validated['include_descendants'] ?? true);
             $query->inCategories(
                 array_map('intval', $validated['category_ids']),
@@ -222,12 +224,12 @@ class CatalogApiController extends Controller
         }
 
         // Бренды
-        if (!empty($validated['brand_ids'])) {
+        if (! empty($validated['brand_ids'])) {
             $query->inBrands(array_map('intval', $validated['brand_ids']));
         }
 
         // Подборки (коллекции)
-        if (!empty($validated['collection_ids'])) {
+        if (! empty($validated['collection_ids'])) {
             $query->inCollections(array_map('intval', $validated['collection_ids']));
         }
 
@@ -239,7 +241,7 @@ class CatalogApiController extends Controller
             $maxVal = $priceMax !== null ? (float) $priceMax : null;
 
             // Если у пользователя не базовая валюта — конвертируем обратно в базовую
-            if ($user && $user->region?->currency && !$user->region->currency->is_base) {
+            if ($user && $user->region?->currency && ! $user->region->currency->is_base) {
                 $currencyService = app(\App\Services\CurrencyService::class);
                 if ($minVal !== null) {
                     $minVal = $currencyService->convertToBase($minVal, $user->region->currency);
@@ -253,9 +255,9 @@ class CatalogApiController extends Controller
         }
 
         // Наличие
-        if (!empty($validated['in_stock_mode'])) {
+        if (! empty($validated['in_stock_mode'])) {
             $query->inStock($validated['in_stock_mode'], $user?->region_id);
-        } elseif (!empty($validated['in_stock'])) {
+        } elseif (! empty($validated['in_stock'])) {
             $query->inStock('instock', $user?->region_id);
         } else {
             // По умолчанию скрываем товары «нет в наличии» —
@@ -264,27 +266,27 @@ class CatalogApiController extends Controller
         }
 
         // Скидка (in_sale=1 → только со скидкой; in_sale=0 или отсутствует → без фильтра)
-        if (!empty($validated['in_sale'])) {
+        if (! empty($validated['in_sale'])) {
             $query->inSale(true);
         }
 
         // Избранное
-        if (!empty($validated['in_favourites']) && $user) {
+        if (! empty($validated['in_favourites']) && $user) {
             $query->inFavourites($user->id);
         }
 
         // Новинки
-        if (!empty($validated['is_new'])) {
+        if (! empty($validated['is_new'])) {
             $query->where('is_new', true);
         }
 
         // Бестселлеры
-        if (!empty($validated['is_bestseller'])) {
+        if (! empty($validated['is_bestseller'])) {
             $query->where('is_bestseller', true);
         }
 
         // Атрибуты (select — через attribute_values)
-        if (!empty($validated['attribute_value_ids'])) {
+        if (! empty($validated['attribute_value_ids'])) {
             $any = (bool) ($validated['attribute_any'] ?? false);
             $query->byAttributes(
                 array_map('intval', $validated['attribute_value_ids']),
@@ -293,7 +295,7 @@ class CatalogApiController extends Controller
         }
 
         // Атрибуты (inline — number/text/boolean)
-        if (!empty($validated['attribute_inline_filters'])) {
+        if (! empty($validated['attribute_inline_filters'])) {
             $query->byInlineAttributes($validated['attribute_inline_filters']);
         }
 

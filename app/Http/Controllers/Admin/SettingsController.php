@@ -24,7 +24,7 @@ class SettingsController extends Controller
                         'value' => $setting->value,
                         'type' => $setting->type,
                         'description' => $setting->description,
-                    ]
+                    ],
                 ];
             });
         });

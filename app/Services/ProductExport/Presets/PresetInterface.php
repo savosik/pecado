@@ -48,7 +48,7 @@ interface PresetInterface
     /**
      * Генерировать содержимое файла и записать в поток.
      *
-     * @param resource $stream writable stream
+     * @param  resource  $stream  writable stream
      */
     public function writeToStream($stream, ProductExport $export): void;
 

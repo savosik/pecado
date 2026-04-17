@@ -25,6 +25,7 @@ class SyncAttributesToCategories extends Command
 
         if ($categories->isEmpty()) {
             $this->info('Нет категорий с товарами, имеющими атрибуты.');
+
             return self::SUCCESS;
         }
 

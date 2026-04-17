@@ -6,7 +6,6 @@ use App\Enums\UserStatus;
 use App\Events\CompanyCreated;
 use App\Events\CompanyUpdated;
 use App\Models\Company;
-use App\Models\CompanyBankAccount;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandleContractorCreated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,55 +30,55 @@ class HandleContractorCreatedTest extends TestCase
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
         $handler->handle([
-            'event'               => 'contractor.created',
-            'uuid'                => 'contractor-uuid-456',
-            'partner_uuid'        => 'partner-uuid-123',
-            'name'                => 'ООО «Тест»',
-            'legal_name'          => 'Общество с ограниченной ответственностью «Тест»',
-            'tax_id'              => '7701234567',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-456',
+            'partner_uuid' => 'partner-uuid-123',
+            'name' => 'ООО «Тест»',
+            'legal_name' => 'Общество с ограниченной ответственностью «Тест»',
+            'tax_id' => '7701234567',
             'registration_number' => '770101001',
-            'tax_code'            => '770101001',
-            'okpo_code'           => '12345678',
-            'legal_address'       => 'г. Москва, ул. Пушкина, д. 10',
-            'actual_address'      => 'г. Москва, ул. Лермонтова, д. 5',
-            'phone'               => '+74951234567',
-            'email'               => 'info@test.ru',
-            'bank_accounts'       => [
+            'tax_code' => '770101001',
+            'okpo_code' => '12345678',
+            'legal_address' => 'г. Москва, ул. Пушкина, д. 10',
+            'actual_address' => 'г. Москва, ул. Лермонтова, д. 5',
+            'phone' => '+74951234567',
+            'email' => 'info@test.ru',
+            'bank_accounts' => [
                 [
-                    'bank_name'             => 'АО «Сбербанк»',
-                    'bank_bik'              => '044525225',
+                    'bank_name' => 'АО «Сбербанк»',
+                    'bank_bik' => '044525225',
                     'correspondent_account' => '30101810400000000225',
-                    'account_number'        => '40702810938000012345',
-                    'is_primary'            => true,
+                    'account_number' => '40702810938000012345',
+                    'is_primary' => true,
                 ],
             ],
         ]);
 
         $this->assertDatabaseHas('companies', [
-            'erp_id'              => 'contractor-uuid-456',
-            'user_id'             => $user->id,
-            'name'                => 'ООО «Тест»',
-            'legal_name'          => 'Общество с ограниченной ответственностью «Тест»',
-            'tax_id'              => '7701234567',
+            'erp_id' => 'contractor-uuid-456',
+            'user_id' => $user->id,
+            'name' => 'ООО «Тест»',
+            'legal_name' => 'Общество с ограниченной ответственностью «Тест»',
+            'tax_id' => '7701234567',
             'registration_number' => '770101001',
-            'tax_code'            => '770101001',
-            'okpo_code'           => '12345678',
-            'legal_address'       => 'г. Москва, ул. Пушкина, д. 10',
-            'actual_address'      => 'г. Москва, ул. Лермонтова, д. 5',
-            'phone'               => '+74951234567',
-            'email'               => 'info@test.ru',
+            'tax_code' => '770101001',
+            'okpo_code' => '12345678',
+            'legal_address' => 'г. Москва, ул. Пушкина, д. 10',
+            'actual_address' => 'г. Москва, ул. Лермонтова, д. 5',
+            'phone' => '+74951234567',
+            'email' => 'info@test.ru',
         ]);
 
         $company = Company::withoutGlobalScopes()->where('erp_id', 'contractor-uuid-456')->first();
         $this->assertCount(1, $company->bankAccounts);
         $this->assertDatabaseHas('company_bank_accounts', [
-            'company_id'     => $company->id,
-            'bank_name'      => 'АО «Сбербанк»',
-            'bank_bik'       => '044525225',
+            'company_id' => $company->id,
+            'bank_name' => 'АО «Сбербанк»',
+            'bank_bik' => '044525225',
             'account_number' => '40702810938000012345',
-            'is_primary'     => true,
+            'is_primary' => true,
         ]);
     }
 
@@ -97,20 +96,20 @@ class HandleContractorCreatedTest extends TestCase
 
         // Создаём компанию вручную
         Company::withoutGlobalScopes()->create([
-            'erp_id'  => 'contractor-uuid-existing',
+            'erp_id' => 'contractor-uuid-existing',
             'user_id' => $user->id,
-            'name'    => 'Старое название',
-            'tax_id'  => '1234567890',
+            'name' => 'Старое название',
+            'tax_id' => '1234567890',
             'country' => 'BY',
         ]);
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
         $handler->handle([
-            'event'        => 'contractor.created',
-            'uuid'         => 'contractor-uuid-existing',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-existing',
             'partner_uuid' => 'partner-uuid-789',
-            'name'         => 'Новое название',
-            'tax_id'       => '0987654321',
+            'name' => 'Новое название',
+            'tax_id' => '0987654321',
         ]);
 
         // Должна быть одна компания, а не две
@@ -118,7 +117,7 @@ class HandleContractorCreatedTest extends TestCase
 
         $this->assertDatabaseHas('companies', [
             'erp_id' => 'contractor-uuid-existing',
-            'name'   => 'Новое название',
+            'name' => 'Новое название',
             'tax_id' => '0987654321',
         ]);
     }
@@ -134,9 +133,9 @@ class HandleContractorCreatedTest extends TestCase
             ->once()
             ->withArgs(fn ($msg) => str_contains($msg, 'отсутствует uuid'));
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
         $handler->handle([
-            'event'        => 'contractor.created',
+            'event' => 'contractor.created',
             'partner_uuid' => 'some-partner',
         ]);
     }
@@ -148,10 +147,10 @@ class HandleContractorCreatedTest extends TestCase
             ->once()
             ->withArgs(fn ($msg) => str_contains($msg, 'отсутствует partner_uuid'));
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
         $handler->handle([
             'event' => 'contractor.created',
-            'uuid'  => 'contractor-uuid-no-partner',
+            'uuid' => 'contractor-uuid-no-partner',
         ]);
 
         $this->assertDatabaseMissing('companies', [
@@ -166,12 +165,12 @@ class HandleContractorCreatedTest extends TestCase
             ->once()
             ->withArgs(fn ($msg) => str_contains($msg, 'партнёр не найден'));
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
         $handler->handle([
-            'event'        => 'contractor.created',
-            'uuid'         => 'contractor-uuid-orphan',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-orphan',
             'partner_uuid' => 'nonexistent-partner-uuid',
-            'name'         => 'Компания без партнёра',
+            'name' => 'Компания без партнёра',
         ]);
 
         $this->assertDatabaseMissing('companies', [
@@ -193,12 +192,12 @@ class HandleContractorCreatedTest extends TestCase
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
         $handler->handle([
-            'event'        => 'contractor.created',
-            'uuid'         => 'contractor-uuid-event-test',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-event-test',
             'partner_uuid' => 'partner-uuid-event-test',
-            'name'         => 'Компания для теста событий',
+            'name' => 'Компания для теста событий',
         ]);
 
         Event::assertNotDispatched(CompanyCreated::class);
@@ -217,14 +216,14 @@ class HandleContractorCreatedTest extends TestCase
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
 
         // Первый вызов — создаём с одним счётом
         $handler->handle([
-            'event'        => 'contractor.created',
-            'uuid'         => 'contractor-uuid-bank-replace',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-bank-replace',
             'partner_uuid' => 'partner-uuid-bank-replace',
-            'name'         => 'Компания',
+            'name' => 'Компания',
             'bank_accounts' => [
                 ['bank_name' => 'Банк 1', 'account_number' => '111', 'is_primary' => true],
             ],
@@ -234,10 +233,10 @@ class HandleContractorCreatedTest extends TestCase
 
         // Второй вызов — заменяем на два новых счёта
         $handler->handle([
-            'event'        => 'contractor.created',
-            'uuid'         => 'contractor-uuid-bank-replace',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-bank-replace',
             'partner_uuid' => 'partner-uuid-bank-replace',
-            'name'         => 'Компания',
+            'name' => 'Компания',
             'bank_accounts' => [
                 ['bank_name' => 'Банк 2', 'account_number' => '222', 'is_primary' => true],
                 ['bank_name' => 'Банк 3', 'account_number' => '333', 'is_primary' => false],
@@ -258,14 +257,14 @@ class HandleContractorCreatedTest extends TestCase
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $handler = new HandleContractorCreated();
+        $handler = new HandleContractorCreated;
 
         // Создаём с банковскими счетами
         $handler->handle([
-            'event'        => 'contractor.created',
-            'uuid'         => 'contractor-uuid-bank-null',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-bank-null',
             'partner_uuid' => 'partner-uuid-bank-null',
-            'name'         => 'Компания',
+            'name' => 'Компания',
             'bank_accounts' => [
                 ['bank_name' => 'Банк', 'account_number' => '444', 'is_primary' => true],
             ],
@@ -275,10 +274,10 @@ class HandleContractorCreatedTest extends TestCase
 
         // Повторный вызов без bank_accounts — счета не трогаем
         $handler->handle([
-            'event'        => 'contractor.created',
-            'uuid'         => 'contractor-uuid-bank-null',
+            'event' => 'contractor.created',
+            'uuid' => 'contractor-uuid-bank-null',
             'partner_uuid' => 'partner-uuid-bank-null',
-            'name'         => 'Компания обновлённая',
+            'name' => 'Компания обновлённая',
             'bank_accounts' => null,
         ]);
 

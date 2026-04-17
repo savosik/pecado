@@ -11,13 +11,40 @@ use App\Models\ProductExport;
  */
 class OpenCartCsvPreset extends AbstractPreset
 {
-    public function key(): string { return 'opencart'; }
-    public function name(): string { return 'OpenCart (CSV)'; }
-    public function description(): string { return 'CSV-файл для импорта товаров в OpenCart через модуль Export/Import Tool.'; }
-    public function fileExtension(): string { return 'csv'; }
-    public function mimeType(): string { return 'text/csv; charset=utf-8'; }
-    public function color(): string { return 'cyan'; }
-    public function icon(): string { return 'LuShoppingCart'; }
+    public function key(): string
+    {
+        return 'opencart';
+    }
+
+    public function name(): string
+    {
+        return 'OpenCart (CSV)';
+    }
+
+    public function description(): string
+    {
+        return 'CSV-файл для импорта товаров в OpenCart через модуль Export/Import Tool.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'csv';
+    }
+
+    public function mimeType(): string
+    {
+        return 'text/csv; charset=utf-8';
+    }
+
+    public function color(): string
+    {
+        return 'cyan';
+    }
+
+    public function icon(): string
+    {
+        return 'LuShoppingCart';
+    }
 
     public function writeToStream($stream, ProductExport $export): void
     {
@@ -30,7 +57,7 @@ class OpenCartCsvPreset extends AbstractPreset
             // Определяем максимальное количество атрибутов в чанке
             $maxAttrs = $items->max(fn ($item) => count($item['attributes']));
 
-            if (!$headersWritten) {
+            if (! $headersWritten) {
                 $headers = [
                     'product_id', 'name(ru)', 'categories', 'sku', 'model',
                     'price', 'quantity', 'status', 'image', 'additional_images',
@@ -69,7 +96,7 @@ class OpenCartCsvPreset extends AbstractPreset
 
                 foreach ($item['attributes'] as $attr) {
                     $row[] = $attr['name'];
-                    $row[] = $attr['value'] . ($attr['unit'] ? " {$attr['unit']}" : '');
+                    $row[] = $attr['value'].($attr['unit'] ? " {$attr['unit']}" : '');
                 }
                 $remaining = ($maxAttrs - count($item['attributes'])) * 2;
                 for ($i = 0; $i < $remaining; $i++) {

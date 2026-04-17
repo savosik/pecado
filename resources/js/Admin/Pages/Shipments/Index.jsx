@@ -71,12 +71,12 @@ export default function Index({ shipments, filters, statuses }) {
             render: (_, row) => <Box fontFamily="mono" fontSize="sm">{row.id}</Box>,
         },
         {
-            key: 'uuid',
-            label: 'UUID',
+            key: 'number',
+            label: 'Номер',
             render: (_, row) => (
                 <Link href={route('admin.shipments.show', row.id)}>
                     <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontSize="sm" fontFamily="mono">
-                        {row.uuid?.substring(0, 8)}…
+                        {row.number || ("#" + row.id)}
                     </Text>
                 </Link>
             ),
@@ -179,7 +179,7 @@ export default function Index({ shipments, filters, statuses }) {
                     <SearchInput
                         value={searchQuery}
                         onChange={handleSearch}
-                        placeholder="Поиск по UUID, ИНН, компании или товару…"
+                        placeholder="Поиск по номеру, UUID, ИНН, компании или товару…"
                     />
                 </Box>
                 <Button

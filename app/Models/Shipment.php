@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -29,7 +28,7 @@ class Shipment extends Model
     protected function casts(): array
     {
         return [
-            'date'         => 'date',
+            'date' => 'date',
             'total_amount' => 'decimal:2',
         ];
     }
@@ -85,11 +84,11 @@ class Shipment extends Model
     public function getStatusLabelAttribute(): string
     {
         return match ($this->status) {
-            'completed'   => 'Выполнена',
+            'completed' => 'Выполнена',
             'in_progress' => 'В обработке',
-            'new'         => 'Новая',
-            'cancelled'   => 'Отменена',
-            default       => $this->status,
+            'new' => 'Новая',
+            'cancelled' => 'Отменена',
+            default => $this->status,
         };
     }
 }

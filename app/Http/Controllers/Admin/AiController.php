@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use OpenAI\Client;
 
 class AiController extends Controller
 {
@@ -23,7 +22,7 @@ class AiController extends Controller
 
         $apiKey = config('normalizer.api_key');
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             return response()->json([
                 'message' => 'OpenRouter API key is missing. Please configure OPENROUTER_API_KEY in .env',
             ], 500);
@@ -48,7 +47,7 @@ class AiController extends Controller
                 // Режим: редактирование выделенного фрагмента
                 $messages[] = [
                     'role' => 'user',
-                    'content' => "Выделенный фрагмент HTML, который нужно изменить:\n\n" . $request->selected_text,
+                    'content' => "Выделенный фрагмент HTML, который нужно изменить:\n\n".$request->selected_text,
                 ];
                 $messages[] = [
                     'role' => 'assistant',
@@ -62,7 +61,7 @@ class AiController extends Controller
                 // Режим: редактирование всего документа
                 $messages[] = [
                     'role' => 'user',
-                    'content' => "Текущий HTML-документ:\n\n" . $request->current_content,
+                    'content' => "Текущий HTML-документ:\n\n".$request->current_content,
                 ];
                 $messages[] = [
                     'role' => 'assistant',
@@ -76,8 +75,8 @@ class AiController extends Controller
                 // Генерация с учётом существующего контента
                 $messages[] = [
                     'role' => 'user',
-                    'content' => "В документе уже есть контент:\n\n" . $request->current_content .
-                        "\n\n---\n\nЗадание: " . $request->prompt .
+                    'content' => "В документе уже есть контент:\n\n".$request->current_content.
+                        "\n\n---\n\nЗадание: ".$request->prompt.
                         "\n\nВАЖНО: верни ВЕСЬ документ полностью (и старый контент, и новый). Не сокращай и не обрезай существующий текст.",
                 ];
             } else {
@@ -109,12 +108,12 @@ class AiController extends Controller
             elseif (method_exists($response, 'toArray')) {
                 $arr = $response->toArray();
                 $content = $arr['choices'][0]['message']['content'] ?? null;
-                if (!$content) {
+                if (! $content) {
                     \Log::warning('AI response toArray structure:', $arr);
                 }
             }
 
-            if (!$content) {
+            if (! $content) {
                 \Log::error('AI: cannot parse response', [
                     'type' => get_class($response),
                     'dump' => json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
@@ -128,7 +127,7 @@ class AiController extends Controller
 
         } catch (\Exception $e) {
             return response()->json([
-                'message' => 'Ошибка при генерации текста: ' . $e->getMessage(),
+                'message' => 'Ошибка при генерации текста: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -138,12 +137,12 @@ class AiController extends Controller
      */
     private function buildSystemPrompt(string $mode, ?string $context): string
     {
-        $stylingRules = "
+        $stylingRules = '
 Если пользователь ЯВНО просит изменить цвет, выделить, покрасить текст — используй:
-- Цвет текста: <span style=\"color: #e53e3e\">красный</span>, <span style=\"color: #3182ce\">синий</span>, <span style=\"color: #38a169\">зелёный</span>
-- Выделение маркером: <mark style=\"background: #fef08a\">текст</mark>
+- Цвет текста: <span style="color: #e53e3e">красный</span>, <span style="color: #3182ce">синий</span>, <span style="color: #38a169">зелёный</span>
+- Выделение маркером: <mark style="background: #fef08a">текст</mark>
 - Подчёркивание: <u>текст</u>
-НО: НЕ добавляй цвета, маркеры и подчёркивания по своей инициативе. Только если пользователь ЯВНО просит.";
+НО: НЕ добавляй цвета, маркеры и подчёркивания по своей инициативе. Только если пользователь ЯВНО просит.';
 
         $prompt = match ($mode) {
             'edit_selection' => "Ты — профессиональный редактор контента.
@@ -165,13 +164,13 @@ class AiController extends Controller
 - НЕ добавляй цвета, underline, mark, highlight и другие визуальные стили, если пользователь НЕ просил.
 - Не добавляй <!DOCTYPE>, <html>, <body> и другие обёртки.",
 
-            'rewrite' => "Ты — профессиональный редактор и копирайтер.
+            'rewrite' => 'Ты — профессиональный редактор и копирайтер.
 Перепиши предоставленный текст, улучшив читаемость и стиль, сохраняя смысл и длину.
 НЕ добавляй цветное выделение, маркеры и подчёркивания. Пиши чистый текст.
 Используй только: <p>, <h2>, <h3>, <ul>, <ol>, <li>, <strong>, <em>, <blockquote>.
-Верни результат как чистый HTML без Markdown-разметки.",
+Верни результат как чистый HTML без Markdown-разметки.',
 
-            default => "Ты — профессиональный копирайтер для интернет-магазина одежды и аксессуаров.
+            default => 'Ты — профессиональный копирайтер для интернет-магазина одежды и аксессуаров.
 Пиши продающие, грамотные и привлекательные описания на русском языке.
 ВАЖНО:
 - Возвращай ТОЛЬКО чистый HTML, без Markdown, без ```html обёрток.
@@ -179,11 +178,11 @@ class AiController extends Controller
 - НЕ используй цветной текст, маркеры, подчёркивания, inline-стили. Пиши ЧИСТО.
 - Создавай ДЛИННЫЙ, ПОДРОБНЫЙ контент (минимум 5-7 абзацев с подзаголовками).
 - НЕ обрезай текст — пиши полностью до логического конца.
-- Не добавляй <!DOCTYPE>, <html>, <body> и другие обёртки.",
+- Не добавляй <!DOCTYPE>, <html>, <body> и другие обёртки.',
         };
 
         if ($context) {
-            $prompt .= "\n\nКонтекст:\n" . $context;
+            $prompt .= "\n\nКонтекст:\n".$context;
         }
 
         return $prompt;

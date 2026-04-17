@@ -23,12 +23,20 @@ function InfoRow({ label, value }) {
 
 export default function Show({ shipment, related_orders }) {
     const fmt = (v) =>
-        parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2 });
+        parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Подсчёт суммы до всех скидок
+    const totalBeforeDiscounts = shipment.items?.reduce((sum, item) => {
+        return sum + parseFloat(item.price || 0) * parseInt(item.quantity || 0);
+    }, 0) || 0;
+
+    const totalAfterDiscounts = parseFloat(shipment.total_amount || 0);
+    const totalDiscount = totalBeforeDiscounts - totalAfterDiscounts;
 
     return (
         <>
             <PageHeader
-                title={`Реализация #${shipment.id}`}
+                title={`Реализация ${shipment.number || ("#" + shipment.id)}`}
                 backUrl={route('admin.shipments.index')}
                 backLabel="К списку"
             />
@@ -40,6 +48,10 @@ export default function Show({ shipment, related_orders }) {
                 </Card.Header>
                 <Card.Body>
                     <SimpleGrid columns={{ base: 2, md: 4 }} gap={6}>
+                        <Box>
+                            <Text fontSize="xs" color="gray.500" mb={1}>Номер</Text>
+                            <Text fontFamily="mono" fontSize="sm">{shipment.number || ("#" + shipment.id)}</Text>
+                        </Box>
                         <Box>
                             <Text fontSize="xs" color="gray.500" mb={1}>UUID</Text>
                             <Text fontFamily="mono" fontSize="xs" wordBreak="break-all">{shipment.uuid}</Text>
@@ -102,64 +114,93 @@ export default function Show({ shipment, related_orders }) {
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                     <Table.ColumnHeader>Заказ (UUID)</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Цена</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Авто-скидка %</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Ручн. скидка %</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Баз. цена</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Авто-скидка</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Ручн. скидка</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Общ. скидка</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Ставка НДС</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Итог</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
                                 {shipment.items && shipment.items.length > 0 ? (
-                                    shipment.items.map((item, index) => (
-                                        <Table.Row key={item.id || index}>
-                                            <Table.Cell>
-                                                {item.product ? (
-                                                    <Link href={route('admin.products.edit', item.product.id)}>
-                                                        <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontSize="sm">
-                                                            {item.product.name}
+                                    shipment.items.map((item, index) => {
+                                        const autoDiscount = parseFloat(item.auto_discount_percent) || 0;
+                                        const manualDiscount = parseFloat(item.manual_discount_percent) || 0;
+                                        const totalDiscountPercent = autoDiscount + manualDiscount - (autoDiscount * manualDiscount / 100);
+
+                                        return (
+                                            <Table.Row key={item.id || index}>
+                                                <Table.Cell>
+                                                    {item.product ? (
+                                                        <Link href={route('admin.products.edit', item.product.id)}>
+                                                            <VStack align="start" gap={0}>
+                                                                <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontSize="sm">
+                                                                    {item.product.name}
+                                                                </Text>
+                                                                <Text fontSize="xs" color="gray.500">
+                                                                    SKU: {item.product.sku || '—'}
+                                                                </Text>
+                                                            </VStack>
+                                                        </Link>
+                                                    ) : (
+                                                        <Text color="gray.500" fontSize="sm">Товар не найден</Text>
+                                                    )}
+                                                </Table.Cell>
+                                                <Table.Cell>
+                                                    {item.order_uuid ? (
+                                                        <Text fontFamily="mono" fontSize="xs" color="blue.600">
+                                                            {item.order_number || item.order_uuid.substring(0, 8)}…
                                                         </Text>
-                                                    </Link>
-                                                ) : (
-                                                    <Text color="gray.500" fontSize="sm">Товар не найден</Text>
-                                                )}
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                {item.order_uuid ? (
-                                                    <Text fontFamily="mono" fontSize="xs" color="blue.600">
-                                                        {item.order_uuid.substring(0, 8)}…
+                                                    ) : <Text color="gray.400" fontSize="xs">—</Text>}
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">
+                                                    <Text fontFamily="mono">{item.quantity}</Text>
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">
+                                                    <Text fontFamily="mono">{fmt(item.price)}</Text>
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">
+                                                    {autoDiscount > 0 ? (
+                                                        <Badge colorPalette="green" variant="subtle" size="sm">
+                                                            −{autoDiscount.toFixed(2)}%
+                                                        </Badge>
+                                                    ) : (
+                                                        <Text fontFamily="mono" color="gray.400">0%</Text>
+                                                    )}
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">
+                                                    {manualDiscount > 0 ? (
+                                                        <Badge colorPalette="orange" variant="subtle" size="sm">
+                                                            −{manualDiscount.toFixed(2)}%
+                                                        </Badge>
+                                                    ) : (
+                                                        <Text fontFamily="mono" color="gray.400">0%</Text>
+                                                    )}
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">
+                                                    {totalDiscountPercent > 0 ? (
+                                                        <Badge colorPalette="blue" variant="subtle" size="sm">
+                                                            −{totalDiscountPercent.toFixed(2)}%
+                                                        </Badge>
+                                                    ) : (
+                                                        <Text fontFamily="mono" color="gray.400">0%</Text>
+                                                    )}
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">
+                                                    <Text fontFamily="mono" fontSize="sm">
+                                                        {item.vat_rate != null ? `${item.vat_rate}%` : '—'}
                                                     </Text>
-                                                ) : <Text color="gray.400" fontSize="xs">—</Text>}
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono">{item.quantity}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono">{fmt(item.price)}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono" color={parseFloat(item.auto_discount_percent) > 0 ? 'green.600' : 'gray.400'}>
-                                                    {parseFloat(item.auto_discount_percent).toFixed(2)}%
-                                                </Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono" color={parseFloat(item.manual_discount_percent) > 0 ? 'orange.600' : 'gray.400'}>
-                                                    {parseFloat(item.manual_discount_percent).toFixed(2)}%
-                                                </Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono" fontSize="sm">
-                                                    {item.vat_rate != null ? `${item.vat_rate}%` : '—'}
-                                                </Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono" fontWeight="medium">{fmt(item.total)}</Text>
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    ))
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">
+                                                    <Text fontFamily="mono" fontWeight="medium">{fmt(item.total)}</Text>
+                                                </Table.Cell>
+                                            </Table.Row>
+                                        );
+                                    })
                                 ) : (
                                     <Table.Row>
-                                        <Table.Cell colSpan={8}>
+                                        <Table.Cell colSpan={9}>
                                             <Text textAlign="center" color="gray.500" py={4}>
                                                 Позиции отсутствуют
                                             </Text>
@@ -170,6 +211,28 @@ export default function Show({ shipment, related_orders }) {
                         </Table.Root>
                     </Box>
                 </Card.Body>
+                {shipment.items && shipment.items.length > 0 && (
+                    <Card.Footer>
+                        <VStack align="stretch" width="100%" gap={1}>
+                            <HStack justify="space-between">
+                                <Text color="fg.muted">Сумма до скидок:</Text>
+                                <Text fontFamily="mono">{fmt(totalBeforeDiscounts)} {shipment.currency_code}</Text>
+                            </HStack>
+                            {totalDiscount > 0 && (
+                                <HStack justify="space-between">
+                                    <Text color="green.600">Общая скидка:</Text>
+                                    <Text fontFamily="mono" color="green.600">−{fmt(totalDiscount)} {shipment.currency_code}</Text>
+                                </HStack>
+                            )}
+                            <HStack justify="space-between">
+                                <Text fontWeight="bold" fontSize="lg">Итого:</Text>
+                                <Text fontFamily="mono" fontWeight="bold" fontSize="lg">
+                                    {fmt(shipment.total_amount)} {shipment.currency_code}
+                                </Text>
+                            </HStack>
+                        </VStack>
+                    </Card.Footer>
+                )}
             </Card.Root>
 
             {/* Связанные заказы */}

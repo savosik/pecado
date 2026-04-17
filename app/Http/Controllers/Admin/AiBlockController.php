@@ -34,12 +34,12 @@ class AiBlockController extends Controller
     {
         $request->validate([
             'prompt' => 'required|string|max:3000',
-            'block_type' => 'required|string|in:' . implode(',', self::ALLOWED_BLOCK_TYPES),
+            'block_type' => 'required|string|in:'.implode(',', self::ALLOWED_BLOCK_TYPES),
         ]);
 
         $apiKey = config('normalizer.api_key');
 
-        if (!$apiKey) {
+        if (! $apiKey) {
             return response()->json([
                 'message' => 'OpenRouter API ключ не настроен. Добавьте OPENROUTER_API_KEY в .env',
             ], 500);
@@ -82,7 +82,7 @@ class AiBlockController extends Controller
                 $content = $arr['choices'][0]['message']['content'] ?? null;
             }
 
-            if (!$content) {
+            if (! $content) {
                 Log::error('AI Block: не удалось получить ответ', [
                     'type' => get_class($response),
                 ]);
@@ -92,7 +92,7 @@ class AiBlockController extends Controller
             // Извлекаем JSON из ответа (может быть обёрнут в ```json ... ```)
             $json = $this->extractJson($content);
 
-            if (!$json) {
+            if (! $json) {
                 Log::warning('AI Block: не удалось распарсить JSON', [
                     'raw' => $content,
                 ]);
@@ -100,7 +100,7 @@ class AiBlockController extends Controller
             }
 
             // Валидация структуры
-            if (!isset($json['type']) || !isset($json['data'])) {
+            if (! isset($json['type']) || ! isset($json['data'])) {
                 throw new \Exception('ИИ вернул блок без обязательных полей type/data.');
             }
 
@@ -112,10 +112,10 @@ class AiBlockController extends Controller
             ]);
 
         } catch (\Exception $e) {
-            Log::error('AI Block generation error: ' . $e->getMessage());
+            Log::error('AI Block generation error: '.$e->getMessage());
 
             return response()->json([
-                'message' => 'Ошибка генерации: ' . $e->getMessage(),
+                'message' => 'Ошибка генерации: '.$e->getMessage(),
             ], 500);
         }
     }

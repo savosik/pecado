@@ -4,16 +4,16 @@ namespace App\Http\Controllers\User;
 
 use App\Enums\ReturnReason;
 use App\Enums\ReturnStatus;
-use App\Models\ProductReturn;
-use App\Models\Product;
-use App\Models\Order;
 use App\Http\Controllers\Controller;
+use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductReturn;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\JsonResponse;
 
 class ReturnController extends Controller
 {
@@ -32,7 +32,8 @@ class ReturnController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('uuid', 'like', "%{$search}%")
-                  ->orWhere('id', $search);
+                    ->orWhere('erp_number', 'like', "%{$search}%")
+                    ->orWhere('id', $search);
             });
         }
 
@@ -83,6 +84,7 @@ class ReturnController extends Controller
         $returns->getCollection()->transform(function ($return) {
             return [
                 'id' => $return->id,
+                'number' => $return->erp_number ?? ('#'.$return->id),
                 'uuid' => $return->uuid,
                 'status' => $return->status?->value,
                 'status_label' => $this->getStatusLabel($return->status),
@@ -146,7 +148,7 @@ class ReturnController extends Controller
             'items.*.order_id' => 'nullable|exists:orders,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.reason' => 'required|string|in:' . implode(',', array_column(ReturnReason::cases(), 'value')),
+            'items.*.reason' => 'required|string|in:'.implode(',', array_column(ReturnReason::cases(), 'value')),
             'items.*.reason_comment' => 'nullable|string',
         ], [
             'items.required' => 'Добавьте хотя бы одну позицию возврата.',
@@ -162,9 +164,9 @@ class ReturnController extends Controller
 
         // Проверяем что order_id принадлежат текущему пользователю
         foreach ($validated['items'] as $item) {
-            if (!empty($item['order_id'])) {
+            if (! empty($item['order_id'])) {
                 $order = Order::find($item['order_id']);
-                if (!$order || $order->user_id !== $user->id) {
+                if (! $order || $order->user_id !== $user->id) {
                     return redirect()
                         ->back()
                         ->withInput()
@@ -208,10 +210,11 @@ class ReturnController extends Controller
                 ->with('success', 'Заявка на возврат успешно создана.');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->with('error', 'Ошибка при создании возврата: ' . $e->getMessage());
+                ->with('error', 'Ошибка при создании возврата: '.$e->getMessage());
         }
     }
 
@@ -228,6 +231,7 @@ class ReturnController extends Controller
         return Inertia::render('User/Cabinet/Returns/Show', [
             'return' => [
                 'id' => $return->id,
+                'number' => $return->erp_number ?? ('#'.$return->id),
                 'uuid' => $return->uuid,
                 'status' => $return->status?->value,
                 'status_label' => $this->getStatusLabel($return->status),
@@ -253,6 +257,7 @@ class ReturnController extends Controller
                         ] : null,
                         'order' => $item->order ? [
                             'id' => $item->order->id,
+                            'number' => $item->order->erp_number ?? $item->order->number ?? ('#'.$item->order->id),
                             'uuid' => $item->order->uuid,
                         ] : null,
                     ];
@@ -273,7 +278,7 @@ class ReturnController extends Controller
         $query = $request->input('query');
         $userId = $request->user()->id;
 
-        if (!$query) {
+        if (! $query) {
             return response()->json([]);
         }
 
@@ -313,7 +318,7 @@ class ReturnController extends Controller
         $productId = $request->input('product_id');
         $userId = $request->user()->id;
 
-        if (!$productId) {
+        if (! $productId) {
             return response()->json([]);
         }
 
@@ -328,10 +333,12 @@ class ReturnController extends Controller
             ->get()
             ->map(function ($order) {
                 $item = $order->items->first();
+
                 return [
                     'id' => $order->id,
+                    'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
                     'uuid' => $order->uuid,
-                    'label' => "Заказ #{$order->id} от " . $order->created_at->format('d.m.Y'),
+                    'label' => 'Заказ '.($order->erp_number ?? $order->number ?? ('#'.$order->id)).' от '.$order->created_at->format('d.m.Y'),
                     'price' => $item?->price ?? 0,
                     'quantity' => $item?->quantity ?? 0,
                     'created_at' => $order->created_at->format('d.m.Y H:i'),

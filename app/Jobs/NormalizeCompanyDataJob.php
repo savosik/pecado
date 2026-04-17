@@ -70,8 +70,8 @@ class NormalizeCompanyDataJob implements ShouldQueue
         if ($this->dryRun) {
             if (! empty($updates) || ! empty($bankUpdates)) {
                 Log::info('NormalizeCompanyDataJob [DRY-RUN]', [
-                    'company_id'   => $this->companyId,
-                    'updates'      => $updates,
+                    'company_id' => $this->companyId,
+                    'updates' => $updates,
                     'bank_updates' => $bankUpdates,
                 ]);
             }
@@ -95,8 +95,8 @@ class NormalizeCompanyDataJob implements ShouldQueue
 
         if (! empty($updates) || ! empty($bankUpdates)) {
             Log::info('NormalizeCompanyDataJob: данные нормализованы', [
-                'company_id'         => $this->companyId,
-                'company_updates'    => array_keys($updates),
+                'company_id' => $this->companyId,
+                'company_updates' => array_keys($updates),
                 'bank_accounts_fixed' => count($bankUpdates),
             ]);
         }

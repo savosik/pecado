@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryAddress;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class DeliveryAddressController extends Controller
 {
@@ -109,7 +109,7 @@ class DeliveryAddressController extends Controller
             ->map(function ($address) {
                 return [
                     'id' => $address->id,
-                    'name' => $address->name . ' (' . $address->user?->name . ')',
+                    'name' => $address->name.' ('.$address->user?->name.')',
                     'address' => $address->address,
                     'user_name' => $address->user?->name,
                 ];

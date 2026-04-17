@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\News;
 use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class NewsController extends Controller
 {
@@ -39,6 +39,7 @@ class NewsController extends Controller
             $item->tag_list = $item->tags->pluck('name')->toArray();
             $item->list_image = $item->getFirstMediaUrl('list-item');
             $item->region_names = $item->regions->pluck('name')->toArray();
+
             return $item;
         });
 
@@ -80,7 +81,7 @@ class NewsController extends Controller
         // Синхронизировать регионы
         $newsItem->regions()->sync($validated['region_ids'] ?? []);
 
-        if (!empty($validated['tags'])) {
+        if (! empty($validated['tags'])) {
             $newsItem->attachTags($validated['tags']);
         }
 
@@ -117,7 +118,7 @@ class NewsController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:news,slug,' . $news->id,
+            'slug' => 'required|string|max:255|unique:news,slug,'.$news->id,
             'detailed_description' => 'required|string',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',

@@ -7,8 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Faq extends Model
 {
-    use HasFactory;
     use \App\Traits\HasRegions;
+    use HasFactory;
 
     protected $fillable = [
         'title',

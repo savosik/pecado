@@ -54,8 +54,8 @@ class HandleInertiaRequests extends Middleware
                 ] : null,
             ],
             'currency' => $request->user() ? fn () => [
-                'code'   => $request->user()->region?->currency?->code ?? 'RUB',
-                'name'   => $request->user()->region?->currency?->name ?? 'Российский рубль',
+                'code' => $request->user()->region?->currency?->code ?? 'RUB',
+                'name' => $request->user()->region?->currency?->name ?? 'Российский рубль',
                 'symbol' => $request->user()->region?->currency?->symbol ?? '₽',
             ] : null,
             'flash' => [
@@ -65,14 +65,11 @@ class HandleInertiaRequests extends Middleware
                 'info' => fn () => $request->session()->get('info'),
                 'onboarding_completed' => fn () => $request->session()->get('onboarding_completed'),
             ],
-            'footerCategories' => Cache::remember('footer.categories', 3600, fn () =>
-                Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
+            'footerCategories' => Cache::remember('footer.categories', 3600, fn () => Category::active()->whereIsRoot()->select('id', 'name', 'slug')->limit(5)->get()
             ),
-            'headerMenuItems' => Cache::remember('menu.header', 3600, fn () =>
-                MenuItem::published()->forHeader()->ordered()->get()
+            'headerMenuItems' => Cache::remember('menu.header', 3600, fn () => MenuItem::published()->forHeader()->ordered()->get()
             ),
-            'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () =>
-                MenuItem::published()->forFooter()->ordered()->get()
+            'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () => MenuItem::published()->forFooter()->ordered()->get()
             ),
         ];
     }

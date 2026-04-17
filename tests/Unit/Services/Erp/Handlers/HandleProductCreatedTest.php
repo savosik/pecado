@@ -6,7 +6,6 @@ use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\ProductAttributeValue;
 use App\Services\Erp\Handlers\HandleProductCreated;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,28 +30,28 @@ class HandleProductCreatedTest extends TestCase
         $category = Category::factory()->create(['uuid' => 'cat-uuid-001']);
 
         $this->handler->handle([
-            'event'         => 'product.created',
-            'message_id'    => 'msg-prod-001',
-            'uuid'          => 'prod-uuid-v3-001',
-            'name'          => 'Тестовый товар',
-            'code'          => 'ТСТ-001',
-            'sku'           => 'ART001',
+            'event' => 'product.created',
+            'message_id' => 'msg-prod-001',
+            'uuid' => 'prod-uuid-v3-001',
+            'name' => 'Тестовый товар',
+            'code' => 'ТСТ-001',
+            'sku' => 'ART001',
             'category_uuid' => 'cat-uuid-001',
-            'brand'         => 'TestBrand',
-            'attributes'    => [
+            'brand' => 'TestBrand',
+            'attributes' => [
                 [
-                    'property_uuid'  => 'prop-color-uuid',
+                    'property_uuid' => 'prop-color-uuid',
                     'property_label' => 'Цвет',
-                    'value_type'     => 'string',
-                    'value_uuid'     => 'val-red-uuid',
-                    'value_label'    => 'Красный',
+                    'value_type' => 'string',
+                    'value_uuid' => 'val-red-uuid',
+                    'value_label' => 'Красный',
                 ],
                 [
-                    'property_uuid'  => 'prop-size-uuid',
+                    'property_uuid' => 'prop-size-uuid',
                     'property_label' => 'Размер',
-                    'value_type'     => 'string',
-                    'value_uuid'     => 'val-128gb-uuid',
-                    'value_label'    => '128GB',
+                    'value_type' => 'string',
+                    'value_uuid' => 'val-128gb-uuid',
+                    'value_label' => '128GB',
                 ],
             ],
         ]);
@@ -80,17 +79,17 @@ class HandleProductCreatedTest extends TestCase
     public function handles_attribute_with_null_value_uuid(): void
     {
         $this->handler->handle([
-            'event'      => 'product.created',
+            'event' => 'product.created',
             'message_id' => 'msg-prod-002',
-            'uuid'       => 'prod-uuid-v3-002',
-            'name'       => 'Товар со скалярным атрибутом',
+            'uuid' => 'prod-uuid-v3-002',
+            'name' => 'Товар со скалярным атрибутом',
             'attributes' => [
                 [
-                    'property_uuid'  => 'prop-material-uuid',
+                    'property_uuid' => 'prop-material-uuid',
                     'property_label' => 'Материал',
-                    'value_type'     => 'string',
-                    'value_uuid'     => null,
-                    'value_label'    => 'Алюминий',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Алюминий',
                 ],
             ],
         ]);
@@ -108,17 +107,17 @@ class HandleProductCreatedTest extends TestCase
     public function maps_value_type_reference_to_select(): void
     {
         $this->handler->handle([
-            'event'      => 'product.created',
+            'event' => 'product.created',
             'message_id' => 'msg-prod-003',
-            'uuid'       => 'prod-uuid-v3-003',
-            'name'       => 'Товар с reference атрибутом',
+            'uuid' => 'prod-uuid-v3-003',
+            'name' => 'Товар с reference атрибутом',
             'attributes' => [
                 [
-                    'property_uuid'  => 'prop-brand-ref-uuid',
+                    'property_uuid' => 'prop-brand-ref-uuid',
                     'property_label' => 'Бренд (ref)',
-                    'value_type'     => 'reference',
-                    'value_uuid'     => 'val-brand-samsung',
-                    'value_label'    => 'Samsung',
+                    'value_type' => 'reference',
+                    'value_uuid' => 'val-brand-samsung',
+                    'value_label' => 'Samsung',
                 ],
             ],
         ]);
@@ -133,14 +132,14 @@ class HandleProductCreatedTest extends TestCase
     {
         $product = Product::factory()->create([
             'external_id' => 'prod-price-test',
-            'base_price'  => 5000.00,
+            'base_price' => 5000.00,
         ]);
 
         $this->handler->handle([
-            'event'      => 'product.created',
+            'event' => 'product.created',
             'message_id' => 'msg-prod-004',
-            'uuid'       => 'prod-price-test',
-            'name'       => 'Обновлённое название',
+            'uuid' => 'prod-price-test',
+            'name' => 'Обновлённое название',
         ]);
 
         $product->refresh();
@@ -157,8 +156,8 @@ class HandleProductCreatedTest extends TestCase
     {
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-brand-obj-001',
-            'name'  => 'Товар с v4 брендом',
+            'uuid' => 'prod-brand-obj-001',
+            'name' => 'Товар с v4 брендом',
             'brand' => ['uuid' => 'brand-v4-uuid-001', 'name' => 'Nike'],
         ]);
 
@@ -176,8 +175,8 @@ class HandleProductCreatedTest extends TestCase
     {
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-brand-null-001',
-            'name'  => 'Товар без бренда',
+            'uuid' => 'prod-brand-null-001',
+            'name' => 'Товар без бренда',
             'brand' => null,
         ]);
 
@@ -191,15 +190,15 @@ class HandleProductCreatedTest extends TestCase
     {
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-brand-dup-001',
-            'name'  => 'Товар 1',
+            'uuid' => 'prod-brand-dup-001',
+            'name' => 'Товар 1',
             'brand' => ['uuid' => 'shared-brand-uuid', 'name' => 'Общий бренд'],
         ]);
 
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-brand-dup-002',
-            'name'  => 'Товар 2',
+            'uuid' => 'prod-brand-dup-002',
+            'name' => 'Товар 2',
             'brand' => ['uuid' => 'shared-brand-uuid', 'name' => 'Общий бренд'],
         ]);
 
@@ -212,25 +211,25 @@ class HandleProductCreatedTest extends TestCase
         $category = Category::factory()->create(['uuid' => 'cat-bind-001']);
 
         $this->handler->handle([
-            'event'         => 'product.created',
-            'message_id'    => 'msg-bind-001',
-            'uuid'          => 'prod-bind-001',
-            'name'          => 'Товар с привязкой атрибутов',
+            'event' => 'product.created',
+            'message_id' => 'msg-bind-001',
+            'uuid' => 'prod-bind-001',
+            'name' => 'Товар с привязкой атрибутов',
             'category_uuid' => 'cat-bind-001',
-            'attributes'    => [
+            'attributes' => [
                 [
-                    'property_uuid'  => 'prop-color-bind',
+                    'property_uuid' => 'prop-color-bind',
                     'property_label' => 'Цвет',
-                    'value_type'     => 'string',
-                    'value_uuid'     => 'val-red-bind',
-                    'value_label'    => 'Красный',
+                    'value_type' => 'string',
+                    'value_uuid' => 'val-red-bind',
+                    'value_label' => 'Красный',
                 ],
                 [
-                    'property_uuid'  => 'prop-size-bind',
+                    'property_uuid' => 'prop-size-bind',
                     'property_label' => 'Размер',
-                    'value_type'     => 'string',
-                    'value_uuid'     => 'val-m-bind',
-                    'value_label'    => 'M',
+                    'value_type' => 'string',
+                    'value_uuid' => 'val-m-bind',
+                    'value_label' => 'M',
                 ],
             ],
         ]);
@@ -250,17 +249,17 @@ class HandleProductCreatedTest extends TestCase
     public function does_not_bind_attributes_when_no_category(): void
     {
         $this->handler->handle([
-            'event'      => 'product.created',
+            'event' => 'product.created',
             'message_id' => 'msg-bind-002',
-            'uuid'       => 'prod-bind-no-cat',
-            'name'       => 'Товар без категории',
+            'uuid' => 'prod-bind-no-cat',
+            'name' => 'Товар без категории',
             'attributes' => [
                 [
-                    'property_uuid'  => 'prop-nocat-bind',
+                    'property_uuid' => 'prop-nocat-bind',
                     'property_label' => 'Материал',
-                    'value_type'     => 'string',
-                    'value_uuid'     => null,
-                    'value_label'    => 'Хлопок',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Хлопок',
                 ],
             ],
         ]);
@@ -278,15 +277,15 @@ class HandleProductCreatedTest extends TestCase
     {
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-model-dup-001',
-            'name'  => 'Товар 1',
+            'uuid' => 'prod-model-dup-001',
+            'name' => 'Товар 1',
             'model' => ['uuid' => 'shared-model-uuid', 'name' => 'Общая модель'],
         ]);
 
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-model-dup-002',
-            'name'  => 'Товар 2',
+            'uuid' => 'prod-model-dup-002',
+            'name' => 'Товар 2',
             'model' => ['uuid' => 'shared-model-uuid', 'name' => 'Общая модель'],
         ]);
 
@@ -304,16 +303,16 @@ class HandleProductCreatedTest extends TestCase
     {
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-model-name-001',
-            'name'  => 'Товар А',
+            'uuid' => 'prod-model-name-001',
+            'name' => 'Товар А',
             'model' => ['uuid' => 'model-uuid-old', 'name' => 'Модель X'],
         ]);
 
         // Второй товар с другим UUID модели, но тем же названием
         $this->handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-model-name-002',
-            'name'  => 'Товар Б',
+            'uuid' => 'prod-model-name-002',
+            'name' => 'Товар Б',
             'model' => ['uuid' => 'model-uuid-new', 'name' => 'Модель X'],
         ]);
 
@@ -365,8 +364,8 @@ class HandleProductCreatedTest extends TestCase
 
         $handler->handle([
             'event' => 'product.created',
-            'uuid'  => 'prod-deadlock-retry-001',
-            'name'  => 'Товар с retry',
+            'uuid' => 'prod-deadlock-retry-001',
+            'name' => 'Товар с retry',
         ]);
 
         $this->assertSame(3, $attempts);
@@ -406,8 +405,8 @@ class HandleProductCreatedTest extends TestCase
         try {
             $handler->handle([
                 'event' => 'product.created',
-                'uuid'  => 'prod-no-retry-001',
-                'name'  => 'Товар без retry',
+                'uuid' => 'prod-no-retry-001',
+                'name' => 'Товар без retry',
             ]);
         } finally {
             $this->assertSame(1, $attempts);

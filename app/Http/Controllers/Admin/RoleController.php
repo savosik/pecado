@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
@@ -107,7 +107,7 @@ class RoleController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:roles,name,' . $role->id,
+            'name' => 'required|string|max:255|unique:roles,name,'.$role->id,
             'permissions' => 'array',
             'permissions.*' => 'string|exists:permissions,name',
         ]);
@@ -147,7 +147,7 @@ class RoleController extends Controller
                         $actions[] = $action;
                     }
                 }
-                if (!empty($actions)) {
+                if (! empty($actions)) {
                     $groupItems[] = [
                         'resource' => $resource,
                         'label' => $this->resourceLabels[$resource] ?? $resource,
@@ -155,7 +155,7 @@ class RoleController extends Controller
                     ];
                 }
             }
-            if (!empty($groupItems)) {
+            if (! empty($groupItems)) {
                 $tree[] = [
                     'group' => $groupLabel,
                     'items' => $groupItems,

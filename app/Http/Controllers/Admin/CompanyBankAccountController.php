@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\CompanyBankAccount;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CompanyBankAccountController extends Controller
 {
@@ -141,7 +141,7 @@ class CompanyBankAccountController extends Controller
             ->map(function ($account) {
                 return [
                     'id' => $account->id,
-                    'name' => $account->bank_name . ' (' . $account->account_number . ')',
+                    'name' => $account->bank_name.' ('.$account->account_number.')',
                     'bank_name' => $account->bank_name,
                     'account_number' => $account->account_number,
                     'company_name' => $account->company?->name,

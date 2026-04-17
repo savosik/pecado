@@ -18,7 +18,7 @@ class HandlePriceUpdated
         $productUuid = $payload['product_uuid'] ?? null;
         $price = $payload['price'] ?? null;
 
-        if (!$productUuid || $price === null) {
+        if (! $productUuid || $price === null) {
             Log::warning('price.updated: отсутствует product_uuid или price', ['payload' => $payload]);
 
             return;
@@ -26,7 +26,7 @@ class HandlePriceUpdated
 
         $product = Product::where('external_id', $productUuid)->first();
 
-        if (!$product) {
+        if (! $product) {
             Log::info('price.updated: товар не найден по UUID, событие проигнорировано', [
                 'product_uuid' => $productUuid,
             ]);

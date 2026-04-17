@@ -25,7 +25,7 @@ class StoryController extends Controller
      */
     public static function getCachedStories(?int $regionId = null): array
     {
-        $cacheKey = 'user.stories.active.' . ($regionId ?? 'all');
+        $cacheKey = 'user.stories.active.'.($regionId ?? 'all');
 
         return Cache::remember($cacheKey, 600, function () use ($regionId) {
             return Story::active()
@@ -38,23 +38,23 @@ class StoryController extends Controller
                 ->get()
                 ->map(function (Story $story) {
                     return [
-                        'id'         => $story->id,
-                        'name'       => $story->name,
-                        'slug'       => $story->slug,
-                        'show_name'  => $story->show_name,
-                        'slides'     => $story->slides->map(function ($slide) {
+                        'id' => $story->id,
+                        'name' => $story->name,
+                        'slug' => $story->slug,
+                        'show_name' => $story->show_name,
+                        'slides' => $story->slides->map(function ($slide) {
                             $mediaUrl = $slide->getFirstMediaUrl('default');
                             $mediaMime = $slide->getFirstMedia('default')?->mime_type ?? '';
 
                             return [
-                                'id'          => $slide->id,
-                                'title'       => $slide->title,
-                                'content'     => $slide->content,
+                                'id' => $slide->id,
+                                'title' => $slide->title,
+                                'content' => $slide->content,
                                 'button_text' => $slide->button_text,
-                                'button_url'  => $slide->button_url,
-                                'media_url'   => $mediaUrl,
-                                'media_type'  => str_starts_with($mediaMime, 'video/') ? 'video' : 'image',
-                                'duration'    => $slide->duration ?? 5000,
+                                'button_url' => $slide->button_url,
+                                'media_url' => $mediaUrl,
+                                'media_type' => str_starts_with($mediaMime, 'video/') ? 'video' : 'image',
+                                'duration' => $slide->duration ?? 5000,
                             ];
                         })->toArray(),
                     ];

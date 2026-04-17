@@ -27,6 +27,7 @@ class RegenerateSinglePresetExportJob implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $timeout = 300; // 5 минут на один экспорт
+
     public int $tries = 1;
 
     public function __construct(
@@ -52,20 +53,22 @@ class RegenerateSinglePresetExportJob implements ShouldQueue
     {
         $export = ProductExport::find($this->exportId);
 
-        if (!$export || !$export->is_active || !$export->preset) {
+        if (! $export || ! $export->is_active || ! $export->preset) {
             Log::info("[PresetExports] Экспорт #{$this->exportId} не найден или неактивен, пропуск.");
+
             return;
         }
 
         $preset = $presetRegistry->resolve($export->preset);
-        if (!$preset) {
+        if (! $preset) {
             Log::warning("[PresetExports] Неизвестный пресет: {$export->preset} (export #{$export->id})");
+
             return;
         }
 
         try {
             $cacheDir = dirname($export->getCacheFilePath());
-            if (!is_dir($cacheDir)) {
+            if (! is_dir($cacheDir)) {
                 mkdir($cacheDir, 0755, true);
             }
 
@@ -73,7 +76,7 @@ class RegenerateSinglePresetExportJob implements ShouldQueue
 
             // Пишем во временный файл, затем атомарно заменяем — чтобы
             // параллельные запросы не читали наполовину записанный файл
-            $tmpPath = $filePath . '.tmp.' . getmypid();
+            $tmpPath = $filePath.'.tmp.'.getmypid();
             $stream = fopen($tmpPath, 'w');
             $preset->writeToStream($stream, $export);
             if (is_resource($stream)) {

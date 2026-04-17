@@ -127,6 +127,7 @@ class BannerController extends Controller
     public function destroy(Banner $banner): JsonResponse
     {
         $banner->delete();
+
         return response()->json(null, 204);
     }
 

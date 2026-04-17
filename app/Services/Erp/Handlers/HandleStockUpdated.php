@@ -21,7 +21,7 @@ class HandleStockUpdated
         $warehouseUuid = $payload['warehouse_uuid'] ?? null;
         $quantity = $payload['quantity'] ?? null;
 
-        if (!$productUuid || !$warehouseUuid || $quantity === null) {
+        if (! $productUuid || ! $warehouseUuid || $quantity === null) {
             Log::warning('stock.updated: отсутствует product_uuid, warehouse_uuid или quantity', ['payload' => $payload]);
 
             return;
@@ -29,7 +29,7 @@ class HandleStockUpdated
 
         $product = Product::where('external_id', $productUuid)->first();
 
-        if (!$product) {
+        if (! $product) {
             Log::info('stock.updated: товар не найден по UUID, событие проигнорировано', [
                 'product_uuid' => $productUuid,
             ]);
@@ -39,7 +39,7 @@ class HandleStockUpdated
 
         $warehouse = Warehouse::where('external_id', $warehouseUuid)->first();
 
-        if (!$warehouse) {
+        if (! $warehouse) {
             Log::info('stock.updated: склад не найден по UUID, событие проигнорировано', [
                 'warehouse_uuid' => $warehouseUuid,
             ]);

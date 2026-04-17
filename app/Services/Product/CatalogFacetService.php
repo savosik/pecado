@@ -78,7 +78,7 @@ class CatalogFacetService
             sort($otherValueIds);
             $bucketKey = implode(',', $otherValueIds);
 
-            if (!isset($buckets[$bucketKey])) {
+            if (! isset($buckets[$bucketKey])) {
                 $buckets[$bucketKey] = [
                     'attrIds' => [],
                     'otherValueIds' => $otherValueIds,
@@ -92,7 +92,7 @@ class CatalogFacetService
 
         foreach ($buckets as $bucket) {
             $attrQuery = clone $baseQuery;
-            if (!empty($bucket['otherValueIds'])) {
+            if (! empty($bucket['otherValueIds'])) {
                 $attrQuery->byAttributes($bucket['otherValueIds']);
             }
 
@@ -122,7 +122,7 @@ class CatalogFacetService
 
         foreach ($filterableAttributes as $attribute) {
             $rows = $rawResults[$attribute->id] ?? null;
-            if (!$rows || $rows->isEmpty()) {
+            if (! $rows || $rows->isEmpty()) {
                 continue;
             }
 
@@ -142,7 +142,7 @@ class CatalogFacetService
             ];
         }
 
-        if (!empty($selectedValueIds)) {
+        if (! empty($selectedValueIds)) {
             $foundValueIds = [];
             foreach ($result as $attr) {
                 foreach ($attr['values'] as $val) {
@@ -151,7 +151,7 @@ class CatalogFacetService
             }
             $missingValueIds = array_diff($selectedValueIds, $foundValueIds);
 
-            if (!empty($missingValueIds)) {
+            if (! empty($missingValueIds)) {
                 $missingValues = DB::table('attribute_values as av')
                     ->join('attributes as a', 'a.id', '=', 'av.attribute_id')
                     ->whereIn('av.id', $missingValueIds)
@@ -177,7 +177,7 @@ class CatalogFacetService
                     }
                     if ($attrRef !== null) {
                         $attrRef['values'] = array_merge($attrRef['values'], $missingVals);
-                        usort($attrRef['values'], fn($a, $b) => mb_strtolower((string)$a['value']) <=> mb_strtolower((string)$b['value']));
+                        usort($attrRef['values'], fn ($a, $b) => mb_strtolower((string) $a['value']) <=> mb_strtolower((string) $b['value']));
                     } else {
                         $attrName = $missingValues->firstWhere('attribute_id', $attrId)->attribute_name;
                         $result[] = [
@@ -252,8 +252,8 @@ class CatalogFacetService
             ->whereNull('pav.attribute_value_id')
             ->where(function ($q) {
                 $q->whereNotNull('pav.number_value')
-                  ->orWhereNotNull('pav.text_value')
-                  ->orWhereNotNull('pav.boolean_value');
+                    ->orWhereNotNull('pav.text_value')
+                    ->orWhereNotNull('pav.boolean_value');
             })
             ->select([
                 'a.id as attribute_id',
@@ -423,8 +423,8 @@ class CatalogFacetService
     /**
      * Общая агрегация фасетов по сущности (бренд, категория).
      *
-     * @param  string $table     Таблица сущности (brands, categories)
-     * @param  string $fkColumn  FK-колонка в products (brand_id, category_id)
+     * @param  string  $table  Таблица сущности (brands, categories)
+     * @param  string  $fkColumn  FK-колонка в products (brand_id, category_id)
      * @return array<int, array{id: int, name: string, slug: string, count: int}>
      */
     private function getEntityFacets(Builder $baseQuery, string $table, string $fkColumn, array $selectedIds = []): array
@@ -432,7 +432,7 @@ class CatalogFacetService
         $productIds = $this->cloneBaseIds($baseQuery);
         $alias = $table[0]; // 'b' для brands, 'c' для categories
 
-        $query = DB::table("products as p")
+        $query = DB::table('products as p')
             ->joinSub($productIds, 'filtered', 'filtered.id', '=', 'p.id')
             ->join("{$table} as {$alias}", "{$alias}.id", '=', "p.{$fkColumn}")
             ->select([
@@ -459,11 +459,11 @@ class CatalogFacetService
             ])
             ->toArray();
 
-        if (!empty($selectedIds)) {
+        if (! empty($selectedIds)) {
             $foundIds = array_column($results, 'id');
             $missingIds = array_diff($selectedIds, $foundIds);
 
-            if (!empty($missingIds)) {
+            if (! empty($missingIds)) {
                 $missingEntities = DB::table($table)
                     ->whereIn('id', $missingIds)
                     ->select('id', 'name', 'slug')
@@ -476,9 +476,9 @@ class CatalogFacetService
                     ])
                     ->toArray();
 
-                if (!empty($missingEntities)) {
+                if (! empty($missingEntities)) {
                     $results = array_merge($results, $missingEntities);
-                    usort($results, fn($a, $b) => mb_strtolower($a['name']) <=> mb_strtolower($b['name']));
+                    usort($results, fn ($a, $b) => mb_strtolower($a['name']) <=> mb_strtolower($b['name']));
                 }
             }
         }

@@ -2,8 +2,6 @@
 
 namespace App\Services\ProductExport;
 
-use App\Models\Product;
-use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
 /**

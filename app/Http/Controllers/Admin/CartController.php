@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Http\RedirectResponse;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class CartController extends AdminController
 {
@@ -62,10 +62,11 @@ class CartController extends AdminController
             return $this->redirectAfterSave($request, 'admin.carts.index', 'admin.carts.edit', $cart, 'Корзина успешно создана');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при создании корзины: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при создании корзины: '.$e->getMessage()]);
         }
     }
 
@@ -81,11 +82,11 @@ class CartController extends AdminController
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('id', $search)
-                  ->orWhereHas('user', function ($userQuery) use ($search) {
-                      $userQuery->where('name', 'like', "%{$search}%")
-                                ->orWhere('email', 'like', "%{$search}%");
-                  });
+                    ->orWhere('id', $search)
+                    ->orWhereHas('user', function ($userQuery) use ($search) {
+                        $userQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -112,13 +113,13 @@ class CartController extends AdminController
         // Фильтрация по сумме корзины (приблизительно, через подзапрос или join)
         // Так как цена может зависеть от пользователя и валюты, считаем базовую стоимость
         if ($amountMin = $request->input('amount_min')) {
-             $query->whereRaw('(SELECT SUM(cart_items.quantity * products.base_price) 
+            $query->whereRaw('(SELECT SUM(cart_items.quantity * products.base_price) 
                                FROM cart_items 
                                JOIN products ON products.id = cart_items.product_id 
                                WHERE cart_items.cart_id = carts.id) >= ?', [$amountMin]);
         }
         if ($amountMax = $request->input('amount_max')) {
-             $query->whereRaw('(SELECT SUM(cart_items.quantity * products.base_price) 
+            $query->whereRaw('(SELECT SUM(cart_items.quantity * products.base_price) 
                                FROM cart_items 
                                JOIN products ON products.id = cart_items.product_id 
                                WHERE cart_items.cart_id = carts.id) <= ?', [$amountMax]);
@@ -135,7 +136,7 @@ class CartController extends AdminController
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
-        
+
         $allowedSortFields = ['id', 'name', 'created_at', 'updated_at'];
         if (in_array($sortBy, $allowedSortFields)) {
             $query->orderBy($sortBy, $sortOrder);
@@ -190,7 +191,6 @@ class CartController extends AdminController
             ],
         ]);
     }
-
 
     /**
      * Show the form for editing the specified cart.
@@ -254,7 +254,7 @@ class CartController extends AdminController
             // Синхронизация элементов корзины
             $existingItemIds = [];
             foreach ($validated['items'] as $item) {
-                if (!empty($item['id'])) {
+                if (! empty($item['id'])) {
                     // Обновление существующего элемента
                     $cartItem = $cart->items()->find($item['id']);
                     if ($cartItem) {
@@ -282,10 +282,11 @@ class CartController extends AdminController
             return $this->redirectAfterSave($request, 'admin.carts.index', 'admin.carts.edit', $cart, 'Корзина успешно обновлена');
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
                 ->withInput()
-                ->withErrors(['error' => 'Ошибка при обновлении корзины: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при обновлении корзины: '.$e->getMessage()]);
         }
     }
 
@@ -314,7 +315,7 @@ class CartController extends AdminController
         try {
             // Удаление элементов корзин
             CartItem::whereIn('cart_id', $validated['cart_ids'])->delete();
-            
+
             // Удаление корзин
             $count = Cart::whereIn('id', $validated['cart_ids'])->delete();
 
@@ -325,9 +326,10 @@ class CartController extends AdminController
                 ->with('success', "Удалено корзин: {$count}");
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()
                 ->back()
-                ->withErrors(['error' => 'Ошибка при удалении корзин: ' . $e->getMessage()]);
+                ->withErrors(['error' => 'Ошибка при удалении корзин: '.$e->getMessage()]);
         }
     }
 
@@ -395,7 +397,7 @@ class CartController extends AdminController
         $product = Product::findOrFail($validated['product_id']);
         $user = $validated['user_id'] ? User::find($validated['user_id']) : null;
         $currencyCode = $validated['currency_code'] ?? 'RUB';
-        
+
         // 1. Get price in base currency (with individual prices applied)
         if ($user) {
             $priceResult = $this->priceService->getPriceResult($product, $user);
@@ -407,10 +409,10 @@ class CartController extends AdminController
         // 2. Convert to target currency
         $finalPrice = $basePrice;
         if ($currencyCode !== 'RUB') {
-             $currency = \App\Models\Currency::where('code', $currencyCode)->first();
-             if ($currency) {
-                 $finalPrice = $this->priceService->convertPrice($basePrice, $currency);
-             }
+            $currency = \App\Models\Currency::where('code', $currencyCode)->first();
+            if ($currency) {
+                $finalPrice = $this->priceService->convertPrice($basePrice, $currency);
+            }
         }
 
         return response()->json([
@@ -425,11 +427,11 @@ class CartController extends AdminController
     public function searchUsers(Request $request): \Illuminate\Http\JsonResponse
     {
         $query = $request->input('query', '');
-        
+
         $users = User::query()
             ->when($query, function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
-                  ->orWhere('email', 'like', "%{$query}%");
+                    ->orWhere('email', 'like', "%{$query}%");
             })
             ->select('id', 'name', 'email')
             ->orderBy('name')
@@ -443,7 +445,7 @@ class CartController extends AdminController
                     'label' => "{$user->name} ({$user->email})",
                 ];
             });
-            
+
         return response()->json($users);
     }
 }

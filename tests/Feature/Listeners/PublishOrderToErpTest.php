@@ -9,18 +9,17 @@ use App\Models\CompanyBankAccount;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\Region;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
-use PHPUnit\Framework\Attributes\Test;
-use Tests\TestCase;
-
 /**
  * US-06: При отправке заказа в 1С, данные контрагента включаются в payload.
  * 1С сопоставляет контрагента по ИНН.
  */
-use App\Models\Region;
-use App\Models\Warehouse;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
 
 class PublishOrderToErpTest extends TestCase
 {
@@ -66,28 +65,46 @@ class PublishOrderToErpTest extends TestCase
 
         // Вызов listener'а вручную
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
-        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) use ($company) {
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
             $payload = $job->payload;
 
             // Проверяем формат события
-            if ($payload['event'] !== 'order.created') return false;
+            if ($payload['event'] !== 'order.created') {
+                return false;
+            }
 
             // Проверяем данные контрагента
-            if (!isset($payload['contractor'])) return false;
-            if ($payload['contractor']['tax_id'] !== '7701234567') return false;
-            if ($payload['contractor']['name'] !== 'ООО Тестовая') return false;
-            if ($payload['contractor']['legal_name'] !== 'ООО Тестовая компания') return false;
+            if (! isset($payload['contractor'])) {
+                return false;
+            }
+            if ($payload['contractor']['tax_id'] !== '7701234567') {
+                return false;
+            }
+            if ($payload['contractor']['name'] !== 'ООО Тестовая') {
+                return false;
+            }
+            if ($payload['contractor']['legal_name'] !== 'ООО Тестовая компания') {
+                return false;
+            }
 
             // Банковские реквизиты
-            if (empty($payload['contractor']['bank_accounts'])) return false;
-            if ($payload['contractor']['bank_accounts'][0]['bank_name'] !== 'Сбербанк') return false;
+            if (empty($payload['contractor']['bank_accounts'])) {
+                return false;
+            }
+            if ($payload['contractor']['bank_accounts'][0]['bank_name'] !== 'Сбербанк') {
+                return false;
+            }
 
             // Позиции заказа
-            if (empty($payload['items'])) return false;
-            if ($payload['items'][0]['product_uuid'] !== 'test-ext-prod-001') return false;
+            if (empty($payload['items'])) {
+                return false;
+            }
+            if ($payload['items'][0]['product_uuid'] !== 'test-ext-prod-001') {
+                return false;
+            }
 
             return true;
         });
@@ -109,7 +126,7 @@ class PublishOrderToErpTest extends TestCase
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -136,7 +153,7 @@ class PublishOrderToErpTest extends TestCase
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -166,7 +183,7 @@ class PublishOrderToErpTest extends TestCase
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -194,7 +211,7 @@ class PublishOrderToErpTest extends TestCase
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -221,7 +238,7 @@ class PublishOrderToErpTest extends TestCase
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -250,7 +267,7 @@ class PublishOrderToErpTest extends TestCase
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -294,7 +311,7 @@ class PublishOrderToErpTest extends TestCase
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -329,15 +346,15 @@ class PublishOrderToErpTest extends TestCase
         $company = Company::factory()->create(['user_id' => $user->id]);
 
         $order = Order::factory()->create([
-            'user_id'    => $user->id,
+            'user_id' => $user->id,
             'company_id' => $company->id,
-            'type'       => \App\Enums\OrderType::ORDER,
+            'type' => \App\Enums\OrderType::ORDER,
         ]);
 
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -362,15 +379,15 @@ class PublishOrderToErpTest extends TestCase
         $company = Company::factory()->create(['user_id' => $user->id]);
 
         $order = Order::factory()->create([
-            'user_id'    => $user->id,
+            'user_id' => $user->id,
             'company_id' => $company->id,
-            'type'       => \App\Enums\OrderType::PREORDER,
+            'type' => \App\Enums\OrderType::PREORDER,
         ]);
 
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
@@ -378,7 +395,7 @@ class PublishOrderToErpTest extends TestCase
 
             return is_array($uuids)
                 && in_array('wh-preorder-001', $uuids)
-                && !in_array('wh-primary-001', $uuids);
+                && ! in_array('wh-primary-001', $uuids);
         });
     }
 
@@ -391,15 +408,15 @@ class PublishOrderToErpTest extends TestCase
         $company = Company::factory()->create(['user_id' => $user->id]);
 
         $order = Order::factory()->create([
-            'user_id'    => $user->id,
+            'user_id' => $user->id,
             'company_id' => $company->id,
-            'type'       => \App\Enums\OrderType::ORDER,
+            'type' => \App\Enums\OrderType::ORDER,
         ]);
 
         Queue::fake();
 
         $event = new OrderCreated($order);
-        $listener = new \App\Listeners\PublishOrderToErp();
+        $listener = new \App\Listeners\PublishOrderToErp;
         $listener->handle($event);
 
         Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {

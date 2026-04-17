@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\Content;
 use App\Http\Controllers\Controller;
 use App\Models\Region;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 /**
  * Регионы (READ-ONLY).

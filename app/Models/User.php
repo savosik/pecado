@@ -5,22 +5,20 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\Country;
 use App\Enums\UserStatus;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-
-use Illuminate\Database\Eloquent\Casts\Attribute;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
-
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements HasMedia
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasApiTokens, HasFactory, Notifiable, InteractsWithMedia, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, InteractsWithMedia, Notifiable;
 
     /**
      * The accessors to append to the model's array form.
@@ -29,14 +27,13 @@ class User extends Authenticatable implements HasMedia
      */
     protected $appends = ['status_label'];
 
-
     /**
      * Человекочитаемое название статуса.
      */
     protected function statusLabel(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->status?->label() ?? '—',
+            get: fn () => $this->status?->label() ?? '—',
         );
     }
 
@@ -46,7 +43,7 @@ class User extends Authenticatable implements HasMedia
     protected function temporaryPassword(): Attribute
     {
         return Attribute::make(
-            get: fn() => filled($this->email) ? sprintf('%u', crc32($this->email)) : null,
+            get: fn () => filled($this->email) ? sprintf('%u', crc32($this->email)) : null,
         );
     }
 
@@ -127,6 +124,7 @@ class User extends Authenticatable implements HasMedia
     {
         return $this->hasMany(DeliveryAddress::class);
     }
+
     /**
      * Get the region that the user belongs to.
      */
@@ -158,7 +156,6 @@ class User extends Authenticatable implements HasMedia
             get: fn () => $this->region?->currency,
         );
     }
-
 
     /**
      * Get the favorites for the user.
@@ -268,5 +265,4 @@ class User extends Authenticatable implements HasMedia
     {
         return $this->belongsTo(ClientStatus::class);
     }
-
 }

@@ -19,12 +19,10 @@ trait RedirectsAfterSave
     /**
      * Redirect after successful store/update.
      *
-     * @param Request $request
-     * @param string $indexRoute Route name for the index page (e.g., 'admin.brands.index')
-     * @param string $editRoute Route name for the edit page (e.g., 'admin.brands.edit')
-     * @param mixed $model The model instance or ID to pass to the edit route
-     * @param string $successMessage Flash message
-     * @return RedirectResponse
+     * @param  string  $indexRoute  Route name for the index page (e.g., 'admin.brands.index')
+     * @param  string  $editRoute  Route name for the edit page (e.g., 'admin.brands.edit')
+     * @param  mixed  $model  The model instance or ID to pass to the edit route
+     * @param  string  $successMessage  Flash message
      */
     protected function redirectAfterSave(
         Request $request,

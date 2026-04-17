@@ -6,17 +6,16 @@ use App\Helpers\SearchHelper;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Laravel\Scout\Searchable;
-use Spatie\Tags\HasTags;
-
 use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\Tags\HasTags;
 
 class Article extends Model implements HasMedia
 {
+    use \App\Traits\HasContentMedia;
+
+    use \App\Traits\HasRegions;
     /** @use HasFactory<\Database\Factories\ArticleFactory> */
     use HasFactory, HasTags, Searchable;
-    use \App\Traits\HasContentMedia;
-    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'title',
@@ -67,6 +66,6 @@ class Article extends Model implements HasMedia
     public function scopePublished($query)
     {
         return $query->where('is_published', true)
-                     ->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()));
+            ->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()));
     }
 }

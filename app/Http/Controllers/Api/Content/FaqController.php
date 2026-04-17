@@ -116,6 +116,7 @@ class FaqController extends Controller
     public function destroy(Faq $faq): JsonResponse
     {
         $faq->delete();
+
         return response()->json(null, 204);
     }
 

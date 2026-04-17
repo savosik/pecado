@@ -17,22 +17,22 @@ class SetupRabbitMQTopology extends Command
      * Входящие очереди (1С → Сайт) с routing keys.
      */
     private const INCOMING_QUEUES = [
-        'erp_in.partners'  => ['partner.*', 'contractor.*'],
-        'erp_in.prices'    => ['price.*', 'exchange_rate.*', 'individual_prices.*'],
-        'erp_in.stock'     => ['stock.*'],
-        'erp_in.orders'    => ['order.*'],
-        'erp_in.returns'   => ['return.*'],
+        'erp_in.partners' => ['partner.*', 'contractor.*'],
+        'erp_in.prices' => ['price.*', 'exchange_rate.*', 'individual_prices.*'],
+        'erp_in.stock' => ['stock.*'],
+        'erp_in.orders' => ['order.*'],
+        'erp_in.returns' => ['return.*'],
         'erp_in.documents' => ['shipment.*'],
-        'erp_in.balance'   => ['balance.*'],
-        'erp_in.catalog'   => ['category.*', 'product.*'],
+        'erp_in.balance' => ['balance.*'],
+        'erp_in.catalog' => ['category.*', 'product.*'],
     ];
 
     /**
      * Исходящие очереди (Сайт → 1С) с routing keys.
      */
     private const OUTGOING_QUEUES = [
-        'erp_out.orders'   => ['order.created'],
-        'erp_out.returns'  => ['return.created'],
+        'erp_out.orders' => ['order.created'],
+        'erp_out.returns' => ['return.created'],
         'erp_out.partners' => ['partner.created'], // US-01 v2: Сайт → 1С
     ];
 

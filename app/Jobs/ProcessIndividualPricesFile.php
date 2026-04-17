@@ -66,7 +66,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
             $filePath = $this->extractFilePath($this->fileUrl);
             $disk = Storage::disk('prices-exchange');
 
-            if (!$disk->exists($filePath)) {
+            if (! $disk->exists($filePath)) {
                 Log::error('ProcessIndividualPricesFile: файл не найден в MinIO', [
                     'file_path' => $filePath,
                 ]);
@@ -77,7 +77,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
             // Резолвим partner_uuid → partner_id
             $partnerId = User::where('erp_id', $this->partnerUuid)->value('id');
 
-            if (!$partnerId) {
+            if (! $partnerId) {
                 Log::warning('ProcessIndividualPricesFile: партнёр не найден, удаляем CSV', [
                     'partner_uuid' => $this->partnerUuid,
                     'file_path' => $filePath,
@@ -168,6 +168,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
         foreach ($this->readCsvStream($disk, $filePath, $maps) as $record) {
             if ($record === null) {
                 $skipped++;
+
                 continue;
             }
 
@@ -194,7 +195,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
                 ->delete();
         }
 
-        if (!empty($batch)) {
+        if (! empty($batch)) {
             $this->insertBatch($partnerId, $batch);
             $totalProcessed += count($batch);
         }
@@ -220,6 +221,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
         foreach ($this->readCsvStream($disk, $filePath, $maps) as $record) {
             if ($record === null) {
                 $skipped++;
+
                 continue;
             }
 
@@ -232,7 +234,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
             }
         }
 
-        if (!empty($batch)) {
+        if (! empty($batch)) {
             $this->upsertBatch($partnerId, $batch);
             $totalProcessed += count($batch);
         }
@@ -257,7 +259,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
     {
         $stream = $disk->readStream($filePath);
 
-        if (!$stream) {
+        if (! $stream) {
             throw new \RuntimeException("Не удалось открыть поток для файла: {$filePath}");
         }
 
@@ -284,8 +286,9 @@ class ProcessIndividualPricesFile implements ShouldQueue
                 $productId = $maps['products'][$productUuid] ?? null;
                 $warehouseId = $maps['warehouses'][$warehouseUuid] ?? null;
 
-                if (!$productId || !$warehouseId) {
+                if (! $productId || ! $warehouseId) {
                     yield null;
+
                     continue;
                 }
 
@@ -316,7 +319,7 @@ class ProcessIndividualPricesFile implements ShouldQueue
         }
 
         $sql = 'INSERT INTO `individual_prices` (`partner_id`, `product_id`, `warehouse_id`, `price`) VALUES '
-            . implode(', ', $values);
+            .implode(', ', $values);
 
         DB::connection('prices')->statement($sql);
     }
@@ -340,8 +343,8 @@ class ProcessIndividualPricesFile implements ShouldQueue
         }
 
         $sql = 'INSERT INTO `individual_prices` (`partner_id`, `product_id`, `warehouse_id`, `price`, `updated_at`) VALUES '
-            . implode(', ', $values)
-            . ' ON DUPLICATE KEY UPDATE `price` = VALUES(`price`), `updated_at` = NOW()';
+            .implode(', ', $values)
+            .' ON DUPLICATE KEY UPDATE `price` = VALUES(`price`), `updated_at` = NOW()';
 
         DB::connection('prices')->statement($sql);
     }

@@ -138,11 +138,11 @@ const Edit = ({ order, statuses, currencies }) => {
 
     return (
         <>
-            <Head title={`Редактировать заказ #${order.id}`} />
+            <Head title={`Редактировать заказ ${order.number || ("#" + order.id)}`} />
 
             <PageHeader
-                title={`Редактировать заказ #${order.id}`}
-                subtitle={`UUID: ${order.uuid}`}
+                title={`Редактировать заказ ${order.number || ("#" + order.id)}`}
+                subtitle={`Номер: ${order.number || ("#" + order.id)} | UUID: ${order.uuid}`}
                 actions={
                     <HStack>
                         <Button
@@ -267,7 +267,7 @@ const Edit = ({ order, statuses, currencies }) => {
                         <OrderItemsEditor
                             value={data.items}
                             onChange={(items) => setData("items", items)}
-                            error={errors.items}
+                            errors={errors}
                             userId={data.user_id}
                             currencyCode={data.currency_code}
                         />

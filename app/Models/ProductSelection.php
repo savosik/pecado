@@ -4,14 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
 class ProductSelection extends Model implements HasMedia
 {
-    use HasFactory, InteractsWithMedia;
     use \App\Traits\HasRegions;
+    use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
         'name',
@@ -63,14 +62,14 @@ class ProductSelection extends Model implements HasMedia
         $this->addMediaCollection('desktop')
             ->acceptsMimeTypes([
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
-                'video/mp4', 'video/webm', 'video/quicktime'
+                'video/mp4', 'video/webm', 'video/quicktime',
             ])
             ->singleFile();
 
         $this->addMediaCollection('mobile')
             ->acceptsMimeTypes([
                 'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml',
-                'video/mp4', 'video/webm', 'video/quicktime'
+                'video/mp4', 'video/webm', 'video/quicktime',
             ])
             ->singleFile();
     }

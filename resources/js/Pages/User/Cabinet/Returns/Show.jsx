@@ -31,7 +31,7 @@ export default function ReturnShow() {
 
     return (
         <CabinetLayout
-            title={`Возврат #${returnData.id}`}
+            title={`Возврат ${returnData.number}`}
             actions={
                 <Button asChild variant="outline" size="sm">
                     <Link href="/cabinet/returns">
@@ -40,7 +40,7 @@ export default function ReturnShow() {
                 </Button>
             }
         >
-            <Head title={`Возврат #${returnData.id} — Pecado`} />
+            <Head title={`Возврат ${returnData.number} — Pecado`} />
 
             <Stack gap="5">
                 {/* Статус */}
@@ -56,7 +56,7 @@ export default function ReturnShow() {
                         {returnData.status_label}
                     </Badge>
                     <Text fontSize="sm" color="fg.muted">
-                        UUID: {returnData.uuid?.substring(0, 8)}...
+                        Возврат {returnData.number} от {returnData.created_at.split(' ')[0]}
                     </Text>
                 </Flex>
 
@@ -161,7 +161,7 @@ export default function ReturnShow() {
                                                 <Table.Cell>
                                                     {item.order ? (
                                                         <Badge colorPalette="purple" variant="subtle" fontSize="xs">
-                                                            #{item.order.id}
+                                                            {item.order.number || `#${item.order.id}`}
                                                         </Badge>
                                                     ) : (
                                                         <Text color="fg.muted">—</Text>

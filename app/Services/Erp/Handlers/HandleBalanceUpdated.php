@@ -19,15 +19,17 @@ class HandleBalanceUpdated
     {
         $partnerUuid = $payload['partner_uuid'] ?? null;
 
-        if (!$partnerUuid) {
+        if (! $partnerUuid) {
             Log::warning('HandleBalanceUpdated: отсутствует partner_uuid', ['payload' => $payload]);
+
             return;
         }
 
         $user = User::where('erp_id', $partnerUuid)->first();
 
-        if (!$user) {
+        if (! $user) {
             Log::info('HandleBalanceUpdated: пользователь не найден', ['partner_uuid' => $partnerUuid]);
+
             return;
         }
 
@@ -35,6 +37,7 @@ class HandleBalanceUpdated
 
         if (empty($contractors)) {
             Log::warning('HandleBalanceUpdated: пустой массив contractors', ['partner_uuid' => $partnerUuid]);
+
             return;
         }
 
@@ -42,10 +45,11 @@ class HandleBalanceUpdated
 
         DB::transaction(function () use ($user, $contractors, $updatedAt) {
             foreach ($contractors as $contractorData) {
-                $contractorInn  = $contractorData['tax_id'] ?? null;
+                $contractorInn = $contractorData['tax_id'] ?? null;
 
-                if (!$contractorInn) {
+                if (! $contractorInn) {
                     Log::warning('HandleBalanceUpdated: отсутствует tax_id', ['data' => $contractorData]);
+
                     continue;
                 }
 
@@ -56,16 +60,16 @@ class HandleBalanceUpdated
                     ->first();
 
                 $updateData = [
-                    'company_id'             => $company?->id,
-                    'current_balance'        => $contractorData['current_balance'] ?? 0,
-                    'overdue_debt'           => $contractorData['overdue_debt'] ?? 0,
+                    'company_id' => $company?->id,
+                    'current_balance' => $contractorData['current_balance'] ?? 0,
+                    'overdue_debt' => $contractorData['overdue_debt'] ?? 0,
                     'balance_erp_updated_at' => $updatedAt,
                 ];
 
                 /** @var ContractorBalance $balance */
                 $balance = ContractorBalance::updateOrCreate(
                     [
-                        'user_id'        => $user->id,
+                        'user_id' => $user->id,
                         'tax_id' => $contractorInn,
                     ],
                     $updateData
@@ -81,19 +85,19 @@ class HandleBalanceUpdated
                     }
                     ContractorBalanceOverdueDetail::create([
                         'contractor_balance_id' => $balance->id,
-                        'shipment_uuid'         => $detail['shipment_uuid'],
-                        'amount'                => $detail['amount'] ?? 0,
-                        'due_date'              => $detail['due_date'],
+                        'shipment_uuid' => $detail['shipment_uuid'],
+                        'amount' => $detail['amount'] ?? 0,
+                        'due_date' => $detail['due_date'],
                     ]);
                 }
 
                 Log::info('HandleBalanceUpdated: баланс контрагента обновлён', [
-                    'partner_uuid'     => $user->erp_id,
-                    'user_id'          => $user->id,
-                    'tax_id'           => $contractorInn,
-                    'current_balance'  => $updateData['current_balance'],
-                    'overdue_debt'     => $updateData['overdue_debt'],
-                    'overdue_count'    => count($overdueDetails),
+                    'partner_uuid' => $user->erp_id,
+                    'user_id' => $user->id,
+                    'tax_id' => $contractorInn,
+                    'current_balance' => $updateData['current_balance'],
+                    'overdue_debt' => $updateData['overdue_debt'],
+                    'overdue_count' => count($overdueDetails),
                 ]);
             }
         });

@@ -2,9 +2,7 @@
 
 namespace App\Services\Product;
 
-
 use App\Models\Product;
-use App\Models\Region;
 use App\Services\CurrencyService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -24,28 +22,28 @@ class ProductQueryService
         $galleryMedia = $product->getMedia('additional');
 
         return [
-            'id'                => $product->id,
-            'name'              => $product->name,
-            'slug'              => $product->slug,
-            'sku'               => $product->sku,
-            'external_id'       => $product->external_id,
-            'base_price'        => (float) $product->base_price,
-            'brand_name'        => $product->brand?->name,
-            'brand_slug'        => $product->brand?->slug,
-            'main_image'        => $product->getFirstMediaUrl('main') ?: null,
-            'thumbnail'         => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main') ?: null,
-            'gallery_urls'      => $galleryMedia->map(fn ($m) => [
-                'url'   => $m->getUrl(),
+            'id' => $product->id,
+            'name' => $product->name,
+            'slug' => $product->slug,
+            'sku' => $product->sku,
+            'external_id' => $product->external_id,
+            'base_price' => (float) $product->base_price,
+            'brand_name' => $product->brand?->name,
+            'brand_slug' => $product->brand?->slug,
+            'main_image' => $product->getFirstMediaUrl('main') ?: null,
+            'thumbnail' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main') ?: null,
+            'gallery_urls' => $galleryMedia->map(fn ($m) => [
+                'url' => $m->getUrl(),
                 'thumb' => $m->getUrl('thumb') ?: $m->getUrl(),
             ])->values()->toArray(),
-            'is_new'            => $product->is_new,
-            'is_bestseller'     => $product->is_bestseller,
+            'is_new' => $product->is_new,
+            'is_bestseller' => $product->is_bestseller,
             // Для кешированных данных primary_stock/preorder_stock = null → 0.
             // Это ожидаемо: enrichProductsWithStock() перезапишет значения после извлечения из кеша.
-            'stock_quantity'    => (int) ($product->primary_stock ?? 0),
+            'stock_quantity' => (int) ($product->primary_stock ?? 0),
             'preorder_quantity' => (int) ($product->preorder_stock ?? 0),
-            'tags'              => $product->tags->map(fn ($tag) => [
-                'id'   => $tag->id,
+            'tags' => $product->tags->map(fn ($tag) => [
+                'id' => $tag->id,
                 'name' => $tag->name,
                 'slug' => $tag->slug,
                 'type' => $tag->type,
@@ -69,7 +67,7 @@ class ProductQueryService
     public static function getRegionWarehouseIds(): array
     {
         $user = Auth::user();
-        if (!$user || !$user->region_id) {
+        if (! $user || ! $user->region_id) {
             return ['primary' => [], 'preorder' => []];
         }
 
@@ -79,7 +77,7 @@ class ProductQueryService
             ->get();
 
         return [
-            'primary'  => $rows->where('type', 'primary')->pluck('warehouse_id')->toArray(),
+            'primary' => $rows->where('type', 'primary')->pluck('warehouse_id')->toArray(),
             'preorder' => $rows->where('type', 'preorder')->pluck('warehouse_id')->toArray(),
         ];
     }
@@ -92,7 +90,7 @@ class ProductQueryService
         $wh = self::getRegionWarehouseIds();
 
         // Primary stock
-        if (!empty($wh['primary'])) {
+        if (! empty($wh['primary'])) {
             $query->addSelect([
                 'primary_stock' => DB::table('product_warehouse')
                     ->selectRaw('COALESCE(SUM(quantity), 0)')
@@ -104,7 +102,7 @@ class ProductQueryService
         }
 
         // Preorder stock
-        if (!empty($wh['preorder'])) {
+        if (! empty($wh['preorder'])) {
             $query->addSelect([
                 'preorder_stock' => DB::table('product_warehouse')
                     ->selectRaw('COALESCE(SUM(quantity), 0)')
@@ -143,7 +141,7 @@ class ProductQueryService
         $stockMap = [];
         foreach ($stockRows as $row) {
             $pid = $row->product_id;
-            if (!isset($stockMap[$pid])) {
+            if (! isset($stockMap[$pid])) {
                 $stockMap[$pid] = ['primary' => 0, 'preorder' => 0];
             }
             if (isset($primaryIds[$row->warehouse_id])) {
@@ -158,6 +156,7 @@ class ProductQueryService
             $stock = $stockMap[$product['id']] ?? ['primary' => 0, 'preorder' => 0];
             $product['stock_quantity'] = $stock['primary'];
             $product['preorder_quantity'] = $stock['preorder'];
+
             return $product;
         }, $products);
     }
@@ -169,6 +168,7 @@ class ProductQueryService
     {
         return array_map(function ($selection) {
             $selection['products'] = self::enrichProductsWithStock($selection['products'] ?? []);
+
             return $selection;
         }, $selections);
     }
@@ -178,18 +178,18 @@ class ProductQueryService
      * v7: Используем таблицу individual_prices вместо старой модели Discount.
      *
      * @param  array  $products  массив товаров (каждый с 'id' и 'external_id')
-     * @return Collection  Коллекция [product_id => ['price' => float, 'discount_percent' => float]]
+     * @return Collection Коллекция [product_id => ['price' => float, 'discount_percent' => float]]
      */
     public static function loadIndividualPriceMap(array $products): Collection
     {
         $user = Auth::user();
-        if (!$user || !$user->erp_id) {
+        if (! $user || ! $user->erp_id) {
             return collect();
         }
 
         // v7.1: Собираем product IDs (числовые) напрямую
         $productIds = collect($products)
-            ->filter(fn ($p) => !empty($p['id']))
+            ->filter(fn ($p) => ! empty($p['id']))
             ->pluck('id')
             ->toArray();
 
@@ -223,6 +223,7 @@ class ProductQueryService
                 $product['sale_price'] = $individualPrice;
                 $product['has_discount'] = $discountPercent > 0;
             }
+
             return $product;
         }, $products);
     }
@@ -234,7 +235,7 @@ class ProductQueryService
     public static function enrichProductsWithDiscounts(array $products, ?Collection $priceMap = null): array
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return $products;
         }
 
@@ -254,7 +255,7 @@ class ProductQueryService
     public static function enrichSelectionsWithDiscounts(array $selections): array
     {
         $user = Auth::user();
-        if (!$user) {
+        if (! $user) {
             return $selections;
         }
 
@@ -267,6 +268,7 @@ class ProductQueryService
 
         return array_map(function ($selection) use ($priceMap) {
             $selection['products'] = self::applyIndividualPriceMap($selection['products'] ?? [], $priceMap);
+
             return $selection;
         }, $selections);
     }
@@ -277,7 +279,7 @@ class ProductQueryService
     public static function convertProductsPrices(array $products): array
     {
         $user = Auth::user();
-        if (!$user || !$user->region?->currency) {
+        if (! $user || ! $user->region?->currency) {
             return $products;
         }
 
@@ -296,6 +298,7 @@ class ProductQueryService
     {
         return array_map(function ($selection) {
             $selection['products'] = self::convertProductsPrices($selection['products'] ?? []);
+
             return $selection;
         }, $selections);
     }

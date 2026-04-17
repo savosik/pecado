@@ -5,17 +5,16 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Spatie\Tags\HasTags;
-
 use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\Tags\HasTags;
 
 class BrandStory extends Model implements HasMedia
 {
+    use \App\Traits\HasContentMedia;
+
+    use \App\Traits\HasRegions;
     /** @use HasFactory<\Database\Factories\BrandFactory> */
     use HasFactory, HasTags;
-    use \App\Traits\HasContentMedia;
-    use \App\Traits\HasRegions;
 
     protected $fillable = [
         'title',
@@ -40,13 +39,11 @@ class BrandStory extends Model implements HasMedia
     public function scopePublished($query)
     {
         return $query->where('is_published', true)
-                     ->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()));
+            ->where(fn ($q) => $q->whereNull('published_at')->orWhere('published_at', '<=', now()));
     }
 
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class);
     }
-
-
 }

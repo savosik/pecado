@@ -26,7 +26,7 @@ class AuthTest extends TestCase
         $token = $user->createToken('test-token', ['*']);
 
         $response = $this->withHeaders([
-            'Authorization' => 'Bearer ' . $token->plainTextToken,
+            'Authorization' => 'Bearer '.$token->plainTextToken,
         ])->getJson('/api/content/me');
 
         $response->assertOk()

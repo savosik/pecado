@@ -26,15 +26,15 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_activates_user_and_sets_erp_id(): void
     {
         $user = User::factory()->create([
-            'email'  => 'partner@example.com',
+            'email' => 'partner@example.com',
             'status' => UserStatus::PROCESSING,
             'erp_id' => null,
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
             'event' => 'partner.created',
-            'uuid'  => '550e8400-e29b-41d4-a716-446655440000',
+            'uuid' => '550e8400-e29b-41d4-a716-446655440000',
             'email' => 'partner@example.com',
         ]);
 
@@ -48,15 +48,15 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_overwrites_existing_erp_id(): void
     {
         $user = User::factory()->create([
-            'email'  => 'partner@example.com',
+            'email' => 'partner@example.com',
             'status' => UserStatus::BLOCKED,
             'erp_id' => 'old-uuid',
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
             'event' => 'partner.created',
-            'uuid'  => 'new-uuid-1234',
+            'uuid' => 'new-uuid-1234',
             'email' => 'partner@example.com',
         ]);
 
@@ -73,21 +73,21 @@ class HandlePartnerCreatedTest extends TestCase
     #[Test]
     public function it_creates_new_user_when_not_found_and_password_present(): void
     {
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'    => 'partner.created',
-            'uuid'     => 'erp-uuid-new-partner',
-            'email'    => 'newuser@example.com',
-            'name'     => 'Иванов Иван',
-            'phone'    => '+77001234567',
+            'event' => 'partner.created',
+            'uuid' => 'erp-uuid-new-partner',
+            'email' => 'newuser@example.com',
+            'name' => 'Иванов Иван',
+            'phone' => '+77001234567',
             'password' => 'temppass123',
         ]);
 
         $this->assertDatabaseHas('users', [
-            'email'  => 'newuser@example.com',
+            'email' => 'newuser@example.com',
             'erp_id' => 'erp-uuid-new-partner',
-            'name'   => 'Иванов Иван',
-            'phone'  => '+77001234567',
+            'name' => 'Иванов Иван',
+            'phone' => '+77001234567',
             'must_change_password' => true,
         ]);
 
@@ -103,11 +103,11 @@ class HandlePartnerCreatedTest extends TestCase
     #[Test]
     public function it_sets_must_change_password_true_for_erp_created_user(): void
     {
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'    => 'partner.created',
-            'uuid'     => 'erp-uuid-pass-check',
-            'email'    => 'passcheck@example.com',
+            'event' => 'partner.created',
+            'uuid' => 'erp-uuid-pass-check',
+            'email' => 'passcheck@example.com',
             'password' => 'abc123',
         ]);
 
@@ -125,10 +125,10 @@ class HandlePartnerCreatedTest extends TestCase
                 return str_contains($msg, 'нет пароля для создания');
             });
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
             'event' => 'partner.created',
-            'uuid'  => 'erp-uuid-no-pass',
+            'uuid' => 'erp-uuid-no-pass',
             'email' => 'nopass@example.com',
         ]);
 
@@ -150,7 +150,7 @@ class HandlePartnerCreatedTest extends TestCase
                 return str_contains($msg, 'отсутствует uuid или email');
             });
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
             'event' => 'partner.created',
             'email' => 'partner@example.com',
@@ -166,10 +166,10 @@ class HandlePartnerCreatedTest extends TestCase
                 return str_contains($msg, 'отсутствует uuid или email');
             });
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
             'event' => 'partner.created',
-            'uuid'  => '550e8400-e29b-41d4-a716-446655440000',
+            'uuid' => '550e8400-e29b-41d4-a716-446655440000',
         ]);
     }
 
@@ -183,17 +183,17 @@ class HandlePartnerCreatedTest extends TestCase
         Event::fake([UserUpdated::class, UserCreated::class]);
 
         $user = User::factory()->create([
-            'email'  => 'noevent@example.com',
+            'email' => 'noevent@example.com',
             'status' => UserStatus::PROCESSING,
         ]);
 
         // Event::fake сбрасывает счётчик — нужно отслеживать с этого момента
         Event::fake([UserUpdated::class, UserCreated::class]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
             'event' => 'partner.created',
-            'uuid'  => 'no-loop-uuid',
+            'uuid' => 'no-loop-uuid',
             'email' => 'noevent@example.com',
         ]);
 
@@ -206,11 +206,11 @@ class HandlePartnerCreatedTest extends TestCase
     {
         Event::fake([UserUpdated::class, UserCreated::class]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'    => 'partner.created',
-            'uuid'     => 'no-loop-create-uuid',
-            'email'    => 'nocreate@example.com',
+            'event' => 'partner.created',
+            'uuid' => 'no-loop-create-uuid',
+            'email' => 'nocreate@example.com',
             'password' => 'temp123',
         ]);
 
@@ -226,16 +226,16 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_sets_client_status_when_valid_client_status_provided(): void
     {
         $goldStatus = ClientStatus::factory()->create([
-            'name'        => 'Gold',
+            'name' => 'Gold',
             'external_id' => 'gold',
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'         => 'partner.created',
-            'uuid'          => 'uuid-with-status',
-            'email'         => 'golduser@example.com',
-            'password'      => 'temp123',
+            'event' => 'partner.created',
+            'uuid' => 'uuid-with-status',
+            'email' => 'golduser@example.com',
+            'password' => 'temp123',
             'client_status' => 'gold',
         ]);
 
@@ -248,21 +248,21 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_resets_client_status_when_null(): void
     {
         $silverStatus = ClientStatus::factory()->create([
-            'name'        => 'Silver',
+            'name' => 'Silver',
             'external_id' => 'silver',
         ]);
 
         $user = User::factory()->create([
-            'email'            => 'reset@example.com',
-            'erp_id'           => 'uuid-reset-status',
+            'email' => 'reset@example.com',
+            'erp_id' => 'uuid-reset-status',
             'client_status_id' => $silverStatus->id,
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'         => 'partner.created',
-            'uuid'          => 'uuid-reset-status',
-            'email'         => 'reset@example.com',
+            'event' => 'partner.created',
+            'uuid' => 'uuid-reset-status',
+            'email' => 'reset@example.com',
             'client_status' => null,
         ]);
 
@@ -274,7 +274,7 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_logs_warning_for_unknown_client_status(): void
     {
         $user = User::factory()->create([
-            'email'  => 'unknown@example.com',
+            'email' => 'unknown@example.com',
             'erp_id' => 'uuid-unknown-status',
             'client_status_id' => null,
         ]);
@@ -286,17 +286,18 @@ class HandlePartnerCreatedTest extends TestCase
                 if (str_contains($msg, 'неизвестный client_status')) {
                     return $context['client_status'] === 'platinum';
                 }
+
                 // Остальные warning (например, от NormalizeUserDataJob) — пропускаем
                 return true;
             });
 
         Log::shouldReceive('info')->andReturnNull();
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'         => 'partner.created',
-            'uuid'          => 'uuid-unknown-status',
-            'email'         => 'unknown@example.com',
+            'event' => 'partner.created',
+            'uuid' => 'uuid-unknown-status',
+            'email' => 'unknown@example.com',
             'client_status' => 'platinum',
         ]);
 
@@ -308,26 +309,26 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_updates_client_status_on_redelivery(): void
     {
         $silverStatus = ClientStatus::factory()->create([
-            'name'        => 'Silver',
+            'name' => 'Silver',
             'external_id' => 'silver',
         ]);
 
         $goldStatus = ClientStatus::factory()->create([
-            'name'        => 'Gold',
+            'name' => 'Gold',
             'external_id' => 'gold',
         ]);
 
         $user = User::factory()->create([
-            'email'            => 'upgrade@example.com',
-            'erp_id'           => 'uuid-upgrade',
+            'email' => 'upgrade@example.com',
+            'erp_id' => 'uuid-upgrade',
             'client_status_id' => $silverStatus->id,
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'         => 'partner.created',
-            'uuid'          => 'uuid-upgrade',
-            'email'         => 'upgrade@example.com',
+            'event' => 'partner.created',
+            'uuid' => 'uuid-upgrade',
+            'email' => 'upgrade@example.com',
             'client_status' => 'gold',
         ]);
 
@@ -339,20 +340,20 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_does_not_change_status_when_client_status_absent(): void
     {
         $silverStatus = ClientStatus::factory()->create([
-            'name'        => 'Silver',
+            'name' => 'Silver',
             'external_id' => 'silver',
         ]);
 
         $user = User::factory()->create([
-            'email'            => 'nochange@example.com',
-            'erp_id'           => 'uuid-nochange',
+            'email' => 'nochange@example.com',
+            'erp_id' => 'uuid-nochange',
             'client_status_id' => $silverStatus->id,
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
             'event' => 'partner.created',
-            'uuid'  => 'uuid-nochange',
+            'uuid' => 'uuid-nochange',
             'email' => 'nochange@example.com',
             // client_status отсутствует — не менять
         ]);
@@ -369,16 +370,16 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_blocks_user_when_is_active_false(): void
     {
         $user = User::factory()->create([
-            'email'  => 'blocked@example.com',
+            'email' => 'blocked@example.com',
             'erp_id' => 'uuid-block',
             'status' => UserStatus::ACTIVE,
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'     => 'partner.created',
-            'uuid'      => 'uuid-block',
-            'email'     => 'blocked@example.com',
+            'event' => 'partner.created',
+            'uuid' => 'uuid-block',
+            'email' => 'blocked@example.com',
             'is_active' => false,
         ]);
 
@@ -390,16 +391,16 @@ class HandlePartnerCreatedTest extends TestCase
     public function it_activates_user_when_is_active_true(): void
     {
         $user = User::factory()->create([
-            'email'  => 'reactivate@example.com',
+            'email' => 'reactivate@example.com',
             'erp_id' => 'uuid-reactivate',
             'status' => UserStatus::BLOCKED,
         ]);
 
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'     => 'partner.created',
-            'uuid'      => 'uuid-reactivate',
-            'email'     => 'reactivate@example.com',
+            'event' => 'partner.created',
+            'uuid' => 'uuid-reactivate',
+            'email' => 'reactivate@example.com',
             'is_active' => true,
         ]);
 
@@ -410,12 +411,12 @@ class HandlePartnerCreatedTest extends TestCase
     #[Test]
     public function it_creates_blocked_user_when_is_active_false(): void
     {
-        $handler = new HandlePartnerCreated();
+        $handler = new HandlePartnerCreated;
         $handler->handle([
-            'event'     => 'partner.created',
-            'uuid'      => 'uuid-create-blocked',
-            'email'     => 'newblocked@example.com',
-            'password'  => 'temp123',
+            'event' => 'partner.created',
+            'uuid' => 'uuid-create-blocked',
+            'email' => 'newblocked@example.com',
+            'password' => 'temp123',
             'is_active' => false,
         ]);
 
@@ -424,4 +425,3 @@ class HandlePartnerCreatedTest extends TestCase
         $this->assertEquals(UserStatus::BLOCKED, $user->status);
     }
 }
-

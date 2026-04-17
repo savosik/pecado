@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Article;
 use App\Models\Region;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
-use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 
 class ArticleController extends Controller
 {
@@ -40,6 +40,7 @@ class ArticleController extends Controller
             $article->tag_list = $article->tags->pluck('name')->toArray();
             $article->list_image = $article->getFirstMediaUrl('list-item');
             $article->region_names = $article->regions->pluck('name')->toArray();
+
             return $article;
         });
 
@@ -82,7 +83,7 @@ class ArticleController extends Controller
         // Синхронизировать регионы
         $article->regions()->sync($validated['region_ids'] ?? []);
 
-        if (!empty($validated['tags'])) {
+        if (! empty($validated['tags'])) {
             $article->attachTags($validated['tags']);
         }
 
@@ -119,7 +120,7 @@ class ArticleController extends Controller
     {
         $validated = $request->validate([
             'title' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:articles,slug,' . $article->id,
+            'slug' => 'required|string|max:255|unique:articles,slug,'.$article->id,
             'short_description' => 'required|string',
             'detailed_description' => 'required|string',
             'is_published' => 'boolean',

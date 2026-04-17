@@ -104,7 +104,7 @@ class ExportPresetTest extends TestCase
             'user_id' => $this->user->id,
             'client_user_id' => $this->user->id,
             'name' => "Test {$presetKey}",
-            'format' => match($preset->fileExtension()) {
+            'format' => match ($preset->fileExtension()) {
                 'xml' => 'xml',
                 'json' => 'json',
                 'xlsx' => 'xls',
@@ -147,7 +147,7 @@ class ExportPresetTest extends TestCase
         $this->assertStringNotContainsString('Fatal error', $content);
         $this->assertStringNotContainsString('Warning:', $content);
 
-        echo "\n  ✅ Пресет {$presetKey}: " . strlen($content) . " байт\n";
+        echo "\n  ✅ Пресет {$presetKey}: ".strlen($content)." байт\n";
     }
 
     public static function presetKeysProvider(): array
@@ -183,7 +183,7 @@ class ExportPresetTest extends TestCase
         $errors = libxml_get_errors();
         libxml_clear_errors();
 
-        $this->assertNotFalse($xml, 'YML: невалидный XML — ' . ($errors ? $errors[0]->message : 'unknown'));
+        $this->assertNotFalse($xml, 'YML: невалидный XML — '.($errors ? $errors[0]->message : 'unknown'));
         $this->assertEquals('yml_catalog', $xml->getName(), 'Корневой элемент должен быть yml_catalog');
         $this->assertNotNull($xml->shop, 'YML: отсутствует элемент <shop>');
         $this->assertNotNull($xml->shop->categories, 'YML: отсутствует элемент <categories>');
@@ -199,7 +199,7 @@ class ExportPresetTest extends TestCase
         $this->assertNotEmpty((string) $firstOffer->price, 'YML offer: отсутствует price');
         $this->assertNotEmpty((string) $firstOffer->currencyId, 'YML offer: отсутствует currencyId');
 
-        echo "\n✅ YML: " . count($offers) . " offer-ов, валидный XML\n";
+        echo "\n✅ YML: ".count($offers)." offer-ов, валидный XML\n";
     }
 
     public function test_google_merchant_generates_valid_rss_feed(): void
@@ -248,7 +248,7 @@ class ExportPresetTest extends TestCase
             $this->assertContains($col, $header, "Shopify CSV: отсутствует обязательная колонка '{$col}'");
         }
 
-        echo "\n✅ Shopify CSV: " . count($header) . " колонок, " . (count($lines) - 1) . " строк данных\n";
+        echo "\n✅ Shopify CSV: ".count($header).' колонок, '.(count($lines) - 1)." строк данных\n";
     }
 
     public function test_woocommerce_csv_has_required_columns(): void
@@ -268,7 +268,7 @@ class ExportPresetTest extends TestCase
             $this->assertContains($col, $header, "WooCommerce CSV: отсутствует колонка '{$col}'");
         }
 
-        echo "\n✅ WooCommerce CSV: " . count($header) . " колонок\n";
+        echo "\n✅ WooCommerce CSV: ".count($header)." колонок\n";
     }
 
     public function test_cscart_csv_uses_semicolon_separator(): void
@@ -287,7 +287,7 @@ class ExportPresetTest extends TestCase
         $this->assertContains('Product name', $header, 'CS-Cart: отсутствует Product name');
         $this->assertContains('Price', $header, 'CS-Cart: отсутствует Price');
 
-        echo "\n✅ CS-Cart CSV: " . count($header) . " колонок, разделитель ';'\n";
+        echo "\n✅ CS-Cart CSV: ".count($header)." колонок, разделитель ';'\n";
     }
 
     // ═══════════════════════════════════════════════
@@ -303,7 +303,7 @@ class ExportPresetTest extends TestCase
         $content = $this->generatePresetContent($preset, $export);
 
         $data = json_decode($content, true);
-        $this->assertNotNull($data, 'JSON Catalog: невалидный JSON — ' . json_last_error_msg());
+        $this->assertNotNull($data, 'JSON Catalog: невалидный JSON — '.json_last_error_msg());
 
         $this->assertArrayHasKey('generated_at', $data);
         $this->assertArrayHasKey('shop', $data);
@@ -327,13 +327,13 @@ class ExportPresetTest extends TestCase
         $this->assertArrayHasKey('available', $product);
 
         // Проверяем вложенность категорий
-        if (!empty($data['categories'])) {
+        if (! empty($data['categories'])) {
             $firstCat = $data['categories'][0];
             $this->assertArrayHasKey('id', $firstCat);
             $this->assertArrayHasKey('name', $firstCat);
         }
 
-        echo "\n✅ JSON Catalog: " . count($data['products']) . " товаров, " . count($data['categories']) . " корневых категорий\n";
+        echo "\n✅ JSON Catalog: ".count($data['products']).' товаров, '.count($data['categories'])." корневых категорий\n";
     }
 
     public function test_excel_catalog_generates_valid_xlsx(): void
@@ -347,7 +347,9 @@ class ExportPresetTest extends TestCase
         $tempFile = tempnam(sys_get_temp_dir(), 'excel_test_');
         $stream = fopen($tempFile, 'w');
         $preset->writeToStream($stream, $export);
-        if (is_resource($stream)) { fclose($stream); }
+        if (is_resource($stream)) {
+            fclose($stream);
+        }
 
         $this->assertGreaterThan(0, filesize($tempFile), 'Excel: файл пустой');
 
@@ -366,7 +368,7 @@ class ExportPresetTest extends TestCase
         $spreadsheet->disconnectWorksheets();
         @unlink($tempFile);
 
-        echo "\n✅ Excel: 2 листа, " . ($sheet->getHighestRow() - 1) . " товаров\n";
+        echo "\n✅ Excel: 2 листа, ".($sheet->getHighestRow() - 1)." товаров\n";
     }
 
     // ═══════════════════════════════════════════════
@@ -510,7 +512,9 @@ class ExportPresetTest extends TestCase
         // Эмулируем кеш-файл (как будто job завершился)
         $export = ProductExport::where('hash', $hash)->first();
         $cacheDir = dirname($export->getCacheFilePath());
-        if (!is_dir($cacheDir)) { mkdir($cacheDir, 0755, true); }
+        if (! is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
         file_put_contents($export->getCacheFilePath(), '<test>cached</test>');
         $export->update(['cached_at' => now()]);
 
@@ -558,7 +562,9 @@ class ExportPresetTest extends TestCase
         // Эмулируем готовый кеш (job завершился)
         $export = ProductExport::where('hash', $hash)->first();
         $cacheDir = dirname($export->getCacheFilePath());
-        if (!is_dir($cacheDir)) { mkdir($cacheDir, 0755, true); }
+        if (! is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
         file_put_contents($export->getCacheFilePath(), 'id,name\n1,test');
         $export->update(['cached_at' => now()]);
 
@@ -655,6 +661,7 @@ class ExportPresetTest extends TestCase
         $response = $preset->generate($export);
         ob_start();
         $response->sendContent();
+
         return ob_get_clean();
     }
 }

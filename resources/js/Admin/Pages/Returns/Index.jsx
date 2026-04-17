@@ -163,7 +163,7 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
             ),
         },
         { label: "ID", key: "id", sortable: true },
-        { label: "UUID", key: "uuid", sortable: true, render: (value) => value?.substring(0, 8) + "..." },
+        { label: "Номер", key: "number", sortable: true, render: (value, row) => value || ("#" + row.id) },
         {
             label: "Пользователь",
             key: "user",

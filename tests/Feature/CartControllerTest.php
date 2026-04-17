@@ -18,7 +18,9 @@ class CartControllerTest extends TestCase
     use RefreshDatabase;
 
     private User $user;
+
     private PriceServiceInterface $priceServiceMock;
+
     private StockServiceInterface $stockServiceMock;
 
     protected function setUp(): void

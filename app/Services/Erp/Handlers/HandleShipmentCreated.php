@@ -18,8 +18,9 @@ class HandleShipmentCreated
     {
         $uuid = $payload['uuid'] ?? null;
 
-        if (!$uuid) {
+        if (! $uuid) {
             Log::warning('HandleShipmentCreated: отсутствует uuid', ['payload' => $payload]);
+
             return;
         }
 
@@ -42,13 +43,14 @@ class HandleShipmentCreated
         $shipment = Shipment::updateOrCreate(
             ['uuid' => $uuid],
             [
-                'erp_number'     => $payload['number'] ?? null,
-                'user_id'        => $userId,
-                'company_id'     => $companyId,
-                'tax_id'         => $contractorInn,
-                'date'           => $payload['date'] ?? null,
-                'status'         => $payload['status'] ?? 'new',
-                'currency_code'  => $payload['currency_code'] ?? null,
+                'number' => $payload['number'] ?? null,
+                'erp_number' => $payload['number'] ?? null,
+                'user_id' => $userId,
+                'company_id' => $companyId,
+                'tax_id' => $contractorInn,
+                'date' => $payload['date'] ?? null,
+                'status' => $payload['status'] ?? 'new',
+                'currency_code' => $payload['currency_code'] ?? null,
             ]
         );
 
@@ -58,7 +60,7 @@ class HandleShipmentCreated
         }
 
         Log::info('HandleShipmentCreated: реализация создана/обновлена', [
-            'uuid'       => $uuid,
+            'uuid' => $uuid,
             'company_id' => $companyId,
         ]);
     }
@@ -76,27 +78,27 @@ class HandleShipmentCreated
         foreach ($items as $item) {
             $product = Product::where('external_id', $item['product_uuid'] ?? '')->first();
 
-            $quantity            = $item['quantity'] ?? 0;
-            $price               = $item['price'] ?? 0;
-            $autoDiscount        = $item['auto_discount_percent'] ?? 0;
-            $manualDiscount      = $item['manual_discount_percent'] ?? 0;
-            $vatRate             = $item['vat_rate'] ?? null;
-            $orderUuid           = $item['order_uuid'] ?? null;
+            $quantity = $item['quantity'] ?? 0;
+            $price = $item['price'] ?? 0;
+            $autoDiscount = $item['auto_discount_percent'] ?? 0;
+            $manualDiscount = $item['manual_discount_percent'] ?? 0;
+            $vatRate = $item['vat_rate'] ?? null;
+            $orderUuid = $item['order_uuid'] ?? null;
 
             // total — итоговая сумма, приходит из 1С (v2); если нет — вычисляем
-            $total   = isset($item['total']) ? (float) $item['total'] : round($quantity * $price, 2);
+            $total = isset($item['total']) ? (float) $item['total'] : round($quantity * $price, 2);
             $subtotal = round($quantity * $price, 2);
 
             $shipment->items()->create([
-                'product_id'              => $product?->id,
-                'order_uuid'              => $orderUuid,
-                'quantity'                => $quantity,
-                'price'                   => $price,
-                'auto_discount_percent'   => $autoDiscount,
+                'product_id' => $product?->id,
+                'order_uuid' => $orderUuid,
+                'quantity' => $quantity,
+                'price' => $price,
+                'auto_discount_percent' => $autoDiscount,
                 'manual_discount_percent' => $manualDiscount,
-                'total'                   => $total,
-                'subtotal'                => $subtotal,
-                'vat_rate'                => $vatRate,
+                'total' => $total,
+                'subtotal' => $subtotal,
+                'vat_rate' => $vatRate,
             ]);
 
             $totalAmount += $total;

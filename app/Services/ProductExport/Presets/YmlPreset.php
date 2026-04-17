@@ -16,19 +16,46 @@ use App\Models\ProductExport;
  */
 class YmlPreset extends AbstractPreset
 {
-    public function key(): string { return 'yml'; }
-    public function name(): string { return 'Yandex.Market / 1С-Битрикс (YML)'; }
-    public function description(): string { return 'XML-фид для Яндекс.Маркет, 1С-Битрикс, InSales, Prom.ua и других CMS, поддерживающих YML-формат.'; }
-    public function fileExtension(): string { return 'xml'; }
-    public function mimeType(): string { return 'application/xml; charset=utf-8'; }
-    public function color(): string { return 'orange'; }
-    public function icon(): string { return 'LuFileCode'; }
+    public function key(): string
+    {
+        return 'yml';
+    }
+
+    public function name(): string
+    {
+        return 'Yandex.Market / 1С-Битрикс (YML)';
+    }
+
+    public function description(): string
+    {
+        return 'XML-фид для Яндекс.Маркет, 1С-Битрикс, InSales, Prom.ua и других CMS, поддерживающих YML-формат.';
+    }
+
+    public function fileExtension(): string
+    {
+        return 'xml';
+    }
+
+    public function mimeType(): string
+    {
+        return 'application/xml; charset=utf-8';
+    }
+
+    public function color(): string
+    {
+        return 'orange';
+    }
+
+    public function icon(): string
+    {
+        return 'LuFileCode';
+    }
 
     public function writeToStream($stream, ProductExport $export): void
     {
         $categories = $this->fetchCategories();
 
-        $xml = new \XMLWriter();
+        $xml = new \XMLWriter;
         $xml->openMemory();
         $xml->startDocument('1.0', 'UTF-8');
         $xml->setIndent(true);
@@ -107,7 +134,7 @@ class YmlPreset extends AbstractPreset
                     $xml->writeElement('vendorCode', $item['sku']);
                 }
 
-                if (!empty($item['barcodes'])) {
+                if (! empty($item['barcodes'])) {
                     foreach ($item['barcodes'] as $bc) {
                         $xml->writeElement('barcode', $bc);
                     }

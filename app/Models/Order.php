@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
@@ -64,7 +63,7 @@ class Order extends Model
                 $order->uuid = (string) Str::uuid();
             }
             if (empty($order->number)) {
-                $order->number = 'ORD-' . now()->format('Y') . '-' . str_pad(
+                $order->number = 'ORD-'.now()->format('Y').'-'.str_pad(
                     (string) (static::withTrashed()->max('id') + 1),
                     4,
                     '0',
@@ -95,8 +94,6 @@ class Order extends Model
     {
         return $this->belongsTo(Company::class);
     }
-
-
 
     public function cart(): BelongsTo
     {

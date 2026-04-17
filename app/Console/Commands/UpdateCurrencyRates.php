@@ -29,6 +29,7 @@ class UpdateCurrencyRates extends Command
             if ($response->failed()) {
                 $this->error('Не удалось получить данные от ЦБ РФ.');
                 Log::error('Currency update failed: Could not fetch data from CBR.');
+
                 return Command::FAILURE;
             }
 
@@ -41,6 +42,7 @@ class UpdateCurrencyRates extends Command
             if ($xml === false) {
                 $this->error('Не удалось разобрать XML-ответ ЦБ РФ.');
                 Log::error('Currency update failed: Invalid XML.');
+
                 return Command::FAILURE;
             }
 
@@ -58,8 +60,8 @@ class UpdateCurrencyRates extends Command
 
                 if ($rateNode) {
                     $valueStr = str_replace(',', '.', (string) $rateNode->Value);
-                    $nominal  = (float) $rateNode->Nominal;
-                    $value    = (float) $valueStr;
+                    $nominal = (float) $rateNode->Nominal;
+                    $value = (float) $valueStr;
 
                     if ($nominal > 0) {
                         // official_rate = курс ЦБ РФ за 1 единицу иностранной валюты в RUB
@@ -72,8 +74,8 @@ class UpdateCurrencyRates extends Command
                         $exchangeRate = $officialRate * $rateCoefficient;
 
                         $currency->update([
-                            'official_rate'      => $officialRate,
-                            'exchange_rate'      => $exchangeRate,
+                            'official_rate' => $officialRate,
+                            'exchange_rate' => $exchangeRate,
                             'exchange_rate_date' => now(),
                         ]);
 
@@ -86,11 +88,13 @@ class UpdateCurrencyRates extends Command
             }
 
             $this->info("Обновлено валют: {$updatedCount}.");
+
             return Command::SUCCESS;
 
         } catch (\Exception $e) {
-            $this->error('Ошибка: ' . $e->getMessage());
-            Log::error('Currency update exception: ' . $e->getMessage());
+            $this->error('Ошибка: '.$e->getMessage());
+            Log::error('Currency update exception: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }

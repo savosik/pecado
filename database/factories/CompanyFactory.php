@@ -27,7 +27,7 @@ class CompanyFactory extends Factory
             'user_id' => User::factory(),
             'country' => $country,
             'name' => fake()->company(),
-            'legal_name' => 'ООО "' . fake()->company() . '"',
+            'legal_name' => 'ООО "'.fake()->company().'"',
             'tax_id' => $this->generateTaxId($country),
             'registration_number' => $country === Country::RU ? fake()->numerify('1##############') : null,
             'tax_code' => $country === Country::RU ? fake()->numerify('#########') : null,
@@ -48,7 +48,7 @@ class CompanyFactory extends Factory
             Country::RU => fake()->numerify('##########'), // ИНН 10 digits for legal entity
             Country::BY => fake()->numerify('#########'),  // УНП 9 digits
             Country::KZ => fake()->numerify('############'), // БИН 12 digits
-            default     => fake()->numerify('#########'),  // Generic 9 digits for other CIS
+            default => fake()->numerify('#########'),  // Generic 9 digits for other CIS
         };
     }
 

@@ -7,7 +7,6 @@ use App\Models\AttributeValue;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
-
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -74,7 +73,7 @@ class CatalogApiControllerTest extends TestCase
         Product::factory()->count(3)->create(['brand_id' => $brand1->id]);
         Product::factory()->count(2)->create(['brand_id' => $brand2->id]);
 
-        $response = $this->getJson('/api/catalog/products?brand_ids[]=' . $brand1->id);
+        $response = $this->getJson('/api/catalog/products?brand_ids[]='.$brand1->id);
 
         $response->assertOk()
             ->assertJsonPath('meta.total', 3);
@@ -90,7 +89,7 @@ class CatalogApiControllerTest extends TestCase
         Product::factory()->count(4)->create(['category_id' => $cat1->id]);
         Product::factory()->count(1)->create(['category_id' => $cat2->id]);
 
-        $response = $this->getJson('/api/catalog/products?category_id=' . $cat1->id . '&include_descendants=0');
+        $response = $this->getJson('/api/catalog/products?category_id='.$cat1->id.'&include_descendants=0');
 
         $response->assertOk()
             ->assertJsonPath('meta.total', 4);
@@ -147,7 +146,7 @@ class CatalogApiControllerTest extends TestCase
         Product::factory()->count(3)->create();
 
         // b → brand_ids (compact URL)
-        $response = $this->getJson('/api/catalog/products?b[]=' . $brand->id);
+        $response = $this->getJson('/api/catalog/products?b[]='.$brand->id);
 
         $response->assertOk()
             ->assertJsonPath('meta.total', 2);
@@ -253,7 +252,7 @@ class CatalogApiControllerTest extends TestCase
         Product::factory()->count(3)->create(['brand_id' => $brand2->id]);
 
         // Фильтруем по brand1 — в фасетах категорий должны быть только товары brand1
-        $response = $this->getJson('/api/catalog/products/facets?brand_ids[]=' . $brand1->id);
+        $response = $this->getJson('/api/catalog/products/facets?brand_ids[]='.$brand1->id);
 
         $response->assertOk();
 
