@@ -64,3 +64,5 @@ Route::get('/content-blueprint', fn () => Inertia::render('ContentBlueprint'))->
 Route::get('/export/{hash}', [\App\Http\Controllers\ProductExportDownloadController::class, 'download'])->name('export.download');
 
 Route::post('/api/products/{slug}/pros-cons/generate', [\App\Http\Controllers\User\ProductProsConsController::class, 'generate'])->middleware('auth')->name('products.pros_cons.generate');
+
+Route::get('/health', \Spatie\Health\Http\Controllers\HealthCheckJsonResultsController::class)->name('health');
