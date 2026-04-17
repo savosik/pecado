@@ -33,7 +33,7 @@ class RegenerateSinglePresetExportJob implements ShouldQueue
     public function __construct(
         public int $exportId,
     ) {
-        $this->onQueue('exports');
+        $this->onConnection('redis')->onQueue('heavy');
     }
 
     /**
