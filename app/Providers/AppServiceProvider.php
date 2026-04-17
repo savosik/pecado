@@ -9,6 +9,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Horizon\Horizon;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -63,6 +64,11 @@ class AppServiceProvider extends ServiceProvider
         // Super-admin bypass — role «super-admin» получает все права автоматически
         \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
             return $user->hasRole('super-admin') ? true : null;
+        });
+
+        Horizon::auth(function ($request) {
+            return app()->environment('local') ||
+                ($request->user() && $request->user()->hasRole('super-admin'));
         });
 
         \Illuminate\Support\Facades\Event::listen(

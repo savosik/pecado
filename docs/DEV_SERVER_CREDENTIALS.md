@@ -32,6 +32,14 @@
 | SSH password | 0zp6fx# |
 | SSH key | ~/.ssh/id_ed25519 |
 
+## Laravel Horizon (мониторинг очередей Redis)
+
+| | |
+|---|---|
+| URL | http://dev.pecado.ru/horizon |
+
+> Доступ только для роли `super-admin`. Используй `admin@pecado.ru` или `savosik@pecado.ru`.
+
 ## RabbitMQ — AMQP для 1С (из локальной сети)
 
 | | |
