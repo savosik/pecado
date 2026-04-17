@@ -57,6 +57,8 @@ class BulkDeleteJob implements ShouldQueue
 
             if ($this->method === 'truncate') {
                 $this->handleTruncate($cacheKey);
+            } elseif ($this->method === 'forceDelete') {
+                $this->handleForceDelete($cacheKey);
             } else {
                 $this->handleEach($cacheKey);
             }
@@ -130,6 +132,40 @@ class BulkDeleteJob implements ShouldQueue
                 $cacheKey,
                 'running',
                 "Удаление: {$deleted} / {$total}",
+                $deleted,
+                $total
+            );
+        }
+    }
+
+    /**
+     * Окончательное удаление только soft-deleted записей.
+     */
+    private function handleForceDelete(string $cacheKey): void
+    {
+        $modelClass = $this->modelClass;
+        $total = $modelClass::onlyTrashed()->count();
+        $deleted = 0;
+        $chunkSize = 500;
+
+        $this->updateProgress($cacheKey, 'running', "Окончательное удаление: 0 / {$total}", 0, $total);
+
+        while (true) {
+            $records = $modelClass::onlyTrashed()->limit($chunkSize)->get();
+
+            if ($records->isEmpty()) {
+                break;
+            }
+
+            foreach ($records as $record) {
+                $record->forceDelete();
+                $deleted++;
+            }
+
+            $this->updateProgress(
+                $cacheKey,
+                'running',
+                "Окончательное удаление: {$deleted} / {$total}",
                 $deleted,
                 $total
             );

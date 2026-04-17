@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { HStack, Badge, Button, Input, Box, VStack, Text } from "@chakra-ui/react";
+import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
-import { LuPlus, LuFilter, LuX } from "react-icons/lu";
+import { LuPlus, LuFilter, LuX, LuTrash2 } from "react-icons/lu";
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
@@ -12,7 +12,7 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePermission } from '@/Admin/hooks/usePermission';
-import { DeleteAllButton } from '@/Admin/Components';
+import { DeleteAllButton, TrashedFilter } from '@/Admin/Components';
 
 const getStatusColor = (status) => {
     const colors = {
@@ -28,12 +28,22 @@ const getStatusColor = (status) => {
 const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Со склада';
 const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';
 
-const OrdersIndex = ({ filters, statuses, types, companies }) => {
+const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
     const { orders } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
+    const [forceDeleteId, setForceDeleteId] = useState(null);
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const [forceDeleteAllDialogOpen, setForceDeleteAllDialogOpen] = useState(false);
+    const [forceDeleteAllProcessing, setForceDeleteAllProcessing] = useState(false);
+
+    const isTrashed = !!filters?.trashed;
+
+    const toggleTrashed = () => {
+        router.get(route('admin.orders.index'), { trashed: isTrashed ? undefined : 1 }, { preserveState: false });
+    };
+
     const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
     const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
     const confirmDeleteAll = () => {
@@ -47,6 +57,21 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
             onError: () => {
                 toaster.create({ title: 'Ошибка при массовом удалении', type: 'error' });
                 setDeleteAllProcessing(false);
+            },
+        });
+    };
+
+    const confirmForceDeleteAll = () => {
+        setForceDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-force-delete-all', 'orders'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Окончательное удаление запущено в фоне', type: 'info' });
+                setForceDeleteAllDialogOpen(false);
+                setForceDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при запуске удаления', type: 'error' });
+                setForceDeleteAllProcessing(false);
             },
         });
     };
@@ -202,12 +227,34 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
             key: "created_at",
             sortable: true,
             render: (_, order) => (
-                <Text fontSize="sm" color="gray.600">
-                    {order.created_at || '—'}
-                </Text>
+                <Box>
+                    <Text fontSize="sm" color="gray.600">{order.created_at || '—'}</Text>
+                    {order.deleted_at && (
+                        <Badge colorPalette="red" variant="subtle" size="xs" mt={0.5}>
+                            Удалён: {order.deleted_at}
+                        </Badge>
+                    )}
+                </Box>
             ),
         },
-        createActionsColumn('admin.orders', (order) => setDeleteId(order.id), { permissionPrefix: 'orders' }),
+        isTrashed
+            ? {
+                key: 'actions',
+                label: 'Действия',
+                render: (_, order) => can('orders.delete') ? (
+                    <IconButton
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="red"
+                        aria-label="Удалить окончательно"
+                        title="Удалить окончательно"
+                        onClick={() => setForceDeleteId(order.id)}
+                    >
+                        <LuTrash2 />
+                    </IconButton>
+                ) : null,
+            }
+            : createActionsColumn('admin.orders', (order) => setDeleteId(order.id), { permissionPrefix: 'orders' }),
     ];
 
     const handleDelete = () => {
@@ -224,6 +271,17 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
         }
     };
 
+    const handleForceDelete = () => {
+        if (forceDeleteId) {
+            router.delete(route("admin.orders.force-delete", forceDeleteId), {
+                onSuccess: () => {
+                    toaster.create({ description: "Заказ окончательно удалён", type: "success" });
+                    setForceDeleteId(null);
+                },
+            });
+        }
+    };
+
     return (
         <>
             <Head title="Заказы" />
@@ -231,32 +289,46 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
             <PageHeader
                 title="Заказы"
                 actions={
-                    <>
-                        <DeleteAllButton
-                            sectionLabel="заказы"
-                            dialogOpen={deleteAllDialogOpen}
-                            onOpen={openDeleteAllDialog}
-                            onClose={closeDeleteAllDialog}
-                            onConfirm={confirmDeleteAll}
-                            isLoading={deleteAllProcessing}
+                    <HStack>
+                        <TrashedFilter
+                            trashed={isTrashed}
+                            trashedCount={trashedCount}
+                            onToggle={toggleTrashed}
                         />
-                        {<HStack>
+                        {isTrashed ? (
+                            <DeleteAllButton
+                                sectionLabel="удалённые заказы окончательно"
+                                dialogOpen={forceDeleteAllDialogOpen}
+                                onOpen={() => setForceDeleteAllDialogOpen(true)}
+                                onClose={() => setForceDeleteAllDialogOpen(false)}
+                                onConfirm={confirmForceDeleteAll}
+                                isLoading={forceDeleteAllProcessing}
+                            />
+                        ) : (
+                            <DeleteAllButton
+                                sectionLabel="заказы"
+                                dialogOpen={deleteAllDialogOpen}
+                                onOpen={openDeleteAllDialog}
+                                onClose={closeDeleteAllDialog}
+                                onConfirm={confirmDeleteAll}
+                                isLoading={deleteAllProcessing}
+                            />
+                        )}
                         <Button
                             onClick={() => setShowFilters(!showFilters)}
                             variant="outline"
                         >
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
-                        {can('orders.create') && (
-                        <Button
-                            onClick={() => router.visit(route("admin.orders.create"))}
-                            colorPalette="blue"
-                        >
-                            <LuPlus /> Создать заказ
-                        </Button>
+                        {!isTrashed && can('orders.create') && (
+                            <Button
+                                onClick={() => router.visit(route("admin.orders.create"))}
+                                colorPalette="blue"
+                            >
+                                <LuPlus /> Создать заказ
+                            </Button>
                         )}
-                    </HStack>}
-                    </>
+                    </HStack>
                 }
             />
 
@@ -419,6 +491,16 @@ const OrdersIndex = ({ filters, statuses, types, companies }) => {
                 onConfirm={handleDelete}
                 title="Удаление заказа"
                 description="Вы уверены, что хотите удалить этот заказ? Это действие нельзя отменить."
+            />
+
+            <ConfirmDialog
+                open={!!forceDeleteId}
+                onClose={() => setForceDeleteId(null)}
+                onConfirm={handleForceDelete}
+                title="Окончательное удаление заказа"
+                description="Вы уверены, что хотите окончательно удалить этот заказ? Запись будет удалена безвозвратно."
+                confirmLabel="Удалить окончательно"
+                colorPalette="red"
             />
         </>
     );

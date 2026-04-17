@@ -1,13 +1,15 @@
+import { useState } from 'react';
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
-import { Box, Text, Button, Badge } from '@chakra-ui/react';
-import { LuPlus } from 'react-icons/lu';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton, TrashedFilter } from '@/Admin/Components';
+import { Box, Text, Button, Badge, HStack, IconButton } from '@chakra-ui/react';
+import { LuPlus, LuTrash2 } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { usePermission } from '@/Admin/hooks/usePermission';
+import { toaster } from '@/components/ui/toaster';
 
-export default function Index({ companies, filters }) {
+export default function Index({ companies, filters, trashedCount }) {
     const { can } = usePermission();
     const {
         searchQuery,
@@ -28,6 +30,42 @@ export default function Index({ companies, filters }) {
         entityLabel: 'Компания',
     });
 
+    const [forceDeleteId, setForceDeleteId] = useState(null);
+    const [forceDeleteAllDialogOpen, setForceDeleteAllDialogOpen] = useState(false);
+    const [forceDeleteAllProcessing, setForceDeleteAllProcessing] = useState(false);
+
+    const isTrashed = !!filters?.trashed;
+
+    const toggleTrashed = () => {
+        router.get(route('admin.companies.index'), { trashed: isTrashed ? undefined : 1 }, { preserveState: false });
+    };
+
+    const confirmForceDeleteAll = () => {
+        setForceDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-force-delete-all', 'companies'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Окончательное удаление запущено в фоне', type: 'info' });
+                setForceDeleteAllDialogOpen(false);
+                setForceDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при запуске удаления', type: 'error' });
+                setForceDeleteAllProcessing(false);
+            },
+        });
+    };
+
+    const handleForceDelete = () => {
+        if (forceDeleteId) {
+            router.delete(route('admin.companies.force-delete', forceDeleteId), {
+                onSuccess: () => {
+                    toaster.create({ description: 'Компания окончательно удалена', type: 'success' });
+                    setForceDeleteId(null);
+                },
+            });
+        }
+    };
+
     const columns = [
         {
             key: 'id',
@@ -44,6 +82,11 @@ export default function Index({ companies, filters }) {
                     <Text fontWeight="medium">{name}</Text>
                     {item.legal_name && (
                         <Text fontSize="xs" color="fg.muted">{item.legal_name}</Text>
+                    )}
+                    {item.deleted_at && (
+                        <Badge colorPalette="red" variant="subtle" size="xs" mt={0.5}>
+                            Удалена: {item.deleted_at ? new Date(item.deleted_at).toLocaleDateString('ru-RU') : ''}
+                        </Badge>
                     )}
                 </Box>
             ),
@@ -87,7 +130,24 @@ export default function Index({ companies, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.companies', openDeleteDialog, { permissionPrefix: 'companies' }),
+        isTrashed
+            ? {
+                key: 'actions',
+                label: 'Действия',
+                render: (_, row) => can('companies.delete') ? (
+                    <IconButton
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="red"
+                        aria-label="Удалить окончательно"
+                        title="Удалить окончательно"
+                        onClick={() => setForceDeleteId(row.id)}
+                    >
+                        <LuTrash2 />
+                    </IconButton>
+                ) : null,
+            }
+            : createActionsColumn('admin.companies', openDeleteDialog, { permissionPrefix: 'companies' }),
     ];
 
     return (
@@ -96,21 +156,37 @@ export default function Index({ companies, filters }) {
                 title="Компании"
                 description="Управление компаниями пользователей"
                 actions={
-                    <>
-                        <DeleteAllButton
-                        sectionLabel="компании"
-                        dialogOpen={deleteAllDialogOpen}
-                        onOpen={openDeleteAllDialog}
-                        onClose={closeDeleteAllDialog}
-                        onConfirm={confirmDeleteAll}
-                        isLoading={deleteAllProcessing}
-                    />
-                        {can('companies.create') && (
-                    <Button colorPalette="blue" onClick={() => router.visit(route('admin.companies.create'))}>
-                        <LuPlus /> Создать компанию
-                    </Button>
-                    )}
-                    </>
+                    <HStack>
+                        <TrashedFilter
+                            trashed={isTrashed}
+                            trashedCount={trashedCount}
+                            onToggle={toggleTrashed}
+                        />
+                        {isTrashed ? (
+                            <DeleteAllButton
+                                sectionLabel="удалённые компании окончательно"
+                                dialogOpen={forceDeleteAllDialogOpen}
+                                onOpen={() => setForceDeleteAllDialogOpen(true)}
+                                onClose={() => setForceDeleteAllDialogOpen(false)}
+                                onConfirm={confirmForceDeleteAll}
+                                isLoading={forceDeleteAllProcessing}
+                            />
+                        ) : (
+                            <DeleteAllButton
+                                sectionLabel="компании"
+                                dialogOpen={deleteAllDialogOpen}
+                                onOpen={openDeleteAllDialog}
+                                onClose={closeDeleteAllDialog}
+                                onConfirm={confirmDeleteAll}
+                                isLoading={deleteAllProcessing}
+                            />
+                        )}
+                        {!isTrashed && can('companies.create') && (
+                            <Button colorPalette="blue" onClick={() => router.visit(route('admin.companies.create'))}>
+                                <LuPlus /> Создать компанию
+                            </Button>
+                        )}
+                    </HStack>
                 }
             />
 
@@ -139,6 +215,16 @@ export default function Index({ companies, filters }) {
                 onConfirm={confirmDelete}
                 title="Удалить компанию?"
                 description={`Вы уверены, что хотите удалить компанию "${entityToDelete?.name}"? Все банковские счета компании также будут удалены.`}
+            />
+
+            <ConfirmDialog
+                open={!!forceDeleteId}
+                onClose={() => setForceDeleteId(null)}
+                onConfirm={handleForceDelete}
+                title="Окончательное удаление компании"
+                description="Вы уверены, что хотите окончательно удалить эту компанию? Запись будет удалена безвозвратно."
+                confirmLabel="Удалить окончательно"
+                colorPalette="red"
             />
         </>
     );

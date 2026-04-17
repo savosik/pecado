@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { HStack, Badge, Button, Input, Box, VStack } from "@chakra-ui/react";
+import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton } from "@chakra-ui/react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Head, usePage, router } from "@inertiajs/react";
-import { LuPlus, LuFilter, LuX } from "react-icons/lu";
+import { LuPlus, LuFilter, LuX, LuTrash2 } from "react-icons/lu";
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
@@ -12,7 +12,7 @@ import { toaster } from "@/components/ui/toaster";
 import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { usePermission } from '@/Admin/hooks/usePermission';
-import { DeleteAllButton } from '@/Admin/Components';
+import { DeleteAllButton, TrashedFilter } from '@/Admin/Components';
 
 const getStatusColor = (status) => {
     const colors = {
@@ -24,12 +24,33 @@ const getStatusColor = (status) => {
     return colors[status] || "gray";
 };
 
-const ReturnsIndex = ({ filters, statuses, reasons }) => {
+const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
     const { returns } = usePage().props;
     const { can } = usePermission();
     const [deleteId, setDeleteId] = useState(null);
+    const [forceDeleteId, setForceDeleteId] = useState(null);
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
+    const [forceDeleteAllDialogOpen, setForceDeleteAllDialogOpen] = useState(false);
+    const [forceDeleteAllProcessing, setForceDeleteAllProcessing] = useState(false);
+    const [selectedReturns, setSelectedReturns] = useState([]);
+    const [showFilters, setShowFilters] = useState(false);
+    const [bulkStatus, setBulkStatus] = useState("");
+    const [localFilters, setLocalFilters] = useState({
+        status: filters?.status || "",
+        reason: filters?.reason || "",
+        date_from: filters?.date_from || "",
+        date_to: filters?.date_to || "",
+        amount_from: filters?.amount_from || "",
+        amount_to: filters?.amount_to || "",
+    });
+
+    const isTrashed = !!filters?.trashed;
+
+    const toggleTrashed = () => {
+        router.get(route('admin.returns.index'), { trashed: isTrashed ? undefined : 1 }, { preserveState: false });
+    };
+
     const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
     const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
     const confirmDeleteAll = () => {
@@ -46,84 +67,62 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
             },
         });
     };
-    const [selectedReturns, setSelectedReturns] = useState([]);
-    const [showFilters, setShowFilters] = useState(false);
-    const [bulkStatus, setBulkStatus] = useState("");
-    const [localFilters, setLocalFilters] = useState({
-        status: filters?.status || "",
-        reason: filters?.reason || "",
-        date_from: filters?.date_from || "",
-        date_to: filters?.date_to || "",
-        amount_from: filters?.amount_from || "",
-        amount_to: filters?.amount_to || "",
-    });
+
+    const confirmForceDeleteAll = () => {
+        setForceDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-force-delete-all', 'returns'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Окончательное удаление запущено в фоне', type: 'info' });
+                setForceDeleteAllDialogOpen(false);
+                setForceDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при запуске удаления', type: 'error' });
+                setForceDeleteAllProcessing(false);
+            },
+        });
+    };
 
     const handleSort = (field, direction) => {
         router.get(route("admin.returns.index"), {
             ...filters,
             sort_by: field,
             sort_order: direction,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
+        }, { preserveState: true, replace: true });
     };
 
     const handleApplyFilters = () => {
         router.get(route("admin.returns.index"), {
             ...filters,
             ...localFilters,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
+        }, { preserveState: true, replace: true });
     };
 
     const handleResetFilters = () => {
-        setLocalFilters({
-            status: "",
-            reason: "",
-            date_from: "",
-            date_to: "",
-            amount_from: "",
-            amount_to: "",
-        });
+        setLocalFilters({ status: "", reason: "", date_from: "", date_to: "", amount_from: "", amount_to: "" });
         router.get(route("admin.returns.index"), {
             search: filters?.search,
             sort_by: filters?.sort_by,
             sort_order: filters?.sort_order,
-        }, {
-            preserveState: true,
-            replace: true,
-        });
+            trashed: isTrashed ? 1 : undefined,
+        }, { preserveState: true, replace: true });
     };
 
     const handleBulkStatusUpdate = () => {
         if (selectedReturns.length === 0) {
-            toaster.create({
-                description: "Выберите возвраты для обновления статуса",
-                type: "warning",
-            });
+            toaster.create({ description: "Выберите возвраты для обновления статуса", type: "warning" });
             return;
         }
-
         if (!bulkStatus) {
-            toaster.create({
-                description: "Выберите статус",
-                type: "warning",
-            });
+            toaster.create({ description: "Выберите статус", type: "warning" });
             return;
         }
-
         router.post(route("admin.returns.bulk-status"), {
             return_ids: selectedReturns,
             status: bulkStatus,
         }, {
             onSuccess: () => {
-                toaster.create({
-                    description: "Статус успешно обновлён",
-                    type: "success",
-                });
+                toaster.create({ description: "Статус успешно обновлён", type: "success" });
                 setSelectedReturns([]);
                 setBulkStatus("");
             },
@@ -131,19 +130,14 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
     };
 
     const handleSelectAll = (checked) => {
-        if (checked) {
-            setSelectedReturns(returns.data.map(ret => ret.id));
-        } else {
-            setSelectedReturns([]);
-        }
+        setSelectedReturns(checked ? returns.data.map(ret => ret.id) : []);
     };
 
     const handleSelectReturn = (returnId, checked) => {
-        if (checked) {
-            setSelectedReturns([...selectedReturns, returnId]);
-        } else {
-            setSelectedReturns(selectedReturns.filter(id => id !== returnId));
-        }
+        setSelectedReturns(checked
+            ? [...selectedReturns, returnId]
+            : selectedReturns.filter(id => id !== returnId)
+        );
     };
 
     const columns = [
@@ -195,23 +189,55 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
             key: "created_at",
             sortable: true,
             render: (_, returnItem) => (
-                <Text fontSize="sm" color="gray.600">
-                    {returnItem.created_at ? new Date(returnItem.created_at).toLocaleString('ru-RU') : '—'}
-                </Text>
+                <Box>
+                    <Text fontSize="sm" color="gray.600">
+                        {returnItem.created_at || '—'}
+                    </Text>
+                    {returnItem.deleted_at && (
+                        <Badge colorPalette="red" variant="subtle" size="xs" mt={0.5}>
+                            Удалён: {returnItem.deleted_at}
+                        </Badge>
+                    )}
+                </Box>
             ),
         },
-        createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id), { permissionPrefix: 'returns' }),
+        isTrashed
+            ? {
+                key: 'actions',
+                label: 'Действия',
+                render: (_, returnItem) => can('returns.delete') ? (
+                    <IconButton
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="red"
+                        aria-label="Удалить окончательно"
+                        title="Удалить окончательно"
+                        onClick={() => setForceDeleteId(returnItem.id)}
+                    >
+                        <LuTrash2 />
+                    </IconButton>
+                ) : null,
+            }
+            : createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id), { permissionPrefix: 'returns' }),
     ];
 
     const handleDelete = () => {
         if (deleteId) {
             router.delete(route("admin.returns.destroy", deleteId), {
                 onSuccess: () => {
-                    toaster.create({
-                        description: "Возврат успешно удалён",
-                        type: "success",
-                    });
+                    toaster.create({ description: "Возврат успешно удалён", type: "success" });
                     setDeleteId(null);
+                },
+            });
+        }
+    };
+
+    const handleForceDelete = () => {
+        if (forceDeleteId) {
+            router.delete(route("admin.returns.force-delete", forceDeleteId), {
+                onSuccess: () => {
+                    toaster.create({ description: "Возврат окончательно удалён", type: "success" });
+                    setForceDeleteId(null);
                 },
             });
         }
@@ -224,36 +250,46 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
             <PageHeader
                 title="Возвраты"
                 actions={
-                    <>
-                        <DeleteAllButton
-                        sectionLabel="возвраты"
-                        dialogOpen={deleteAllDialogOpen}
-                        onOpen={openDeleteAllDialog}
-                        onClose={closeDeleteAllDialog}
-                        onConfirm={confirmDeleteAll}
-                        isLoading={deleteAllProcessing}
-                    />
-                        {<HStack>
-                        <Button
-                            onClick={() => setShowFilters(!showFilters)}
-                            variant="outline"
-                        >
+                    <HStack>
+                        <TrashedFilter
+                            trashed={isTrashed}
+                            trashedCount={trashedCount}
+                            onToggle={toggleTrashed}
+                        />
+                        {isTrashed ? (
+                            <DeleteAllButton
+                                sectionLabel="удалённые возвраты окончательно"
+                                dialogOpen={forceDeleteAllDialogOpen}
+                                onOpen={() => setForceDeleteAllDialogOpen(true)}
+                                onClose={() => setForceDeleteAllDialogOpen(false)}
+                                onConfirm={confirmForceDeleteAll}
+                                isLoading={forceDeleteAllProcessing}
+                            />
+                        ) : (
+                            <DeleteAllButton
+                                sectionLabel="возвраты"
+                                dialogOpen={deleteAllDialogOpen}
+                                onOpen={openDeleteAllDialog}
+                                onClose={closeDeleteAllDialog}
+                                onConfirm={confirmDeleteAll}
+                                isLoading={deleteAllProcessing}
+                            />
+                        )}
+                        <Button onClick={() => setShowFilters(!showFilters)} variant="outline">
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
-                        {can('returns.create') && (
-                        <Button
-                            onClick={() => router.visit(route("admin.returns.create"))}
-                            colorPalette="blue"
-                        >
-                            <LuPlus /> Создать возврат
-                        </Button>
+                        {!isTrashed && can('returns.create') && (
+                            <Button
+                                onClick={() => router.visit(route("admin.returns.create"))}
+                                colorPalette="blue"
+                            >
+                                <LuPlus /> Создать возврат
+                            </Button>
                         )}
-                    </HStack>}
-                    </>
+                    </HStack>
                 }
             />
 
-            {/* Расширенные фильтры */}
             {showFilters && (
                 <Box p={4} borderWidth="1px" borderRadius="md" mb={4}>
                     <VStack align="stretch" gap={4}>
@@ -334,9 +370,7 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                                 />
                             </Field>
 
-                            <Button onClick={handleApplyFilters} colorPalette="blue">
-                                Применить
-                            </Button>
+                            <Button onClick={handleApplyFilters} colorPalette="blue">Применить</Button>
                             <Button onClick={handleResetFilters} variant="outline">
                                 <LuX /> Сбросить
                             </Button>
@@ -345,8 +379,7 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                 </Box>
             )}
 
-            {/* Bulk operations */}
-            {selectedReturns.length > 0 && (
+            {selectedReturns.length > 0 && !isTrashed && (
                 <Box p={4} borderWidth="1px" borderRadius="md" mb={4} bg="blue.50">
                     <HStack>
                         <span>Выбрано: {selectedReturns.length}</span>
@@ -366,9 +399,9 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                             </Select.Content>
                         </Select.Root>
                         {can('returns.edit') && (
-                        <Button onClick={handleBulkStatusUpdate} colorPalette="blue">
-                            Применить статус
-                        </Button>
+                            <Button onClick={handleBulkStatusUpdate} colorPalette="blue">
+                                Применить статус
+                            </Button>
                         )}
                         <Button onClick={() => setSelectedReturns([])} variant="ghost">
                             Отменить выбор
@@ -393,6 +426,16 @@ const ReturnsIndex = ({ filters, statuses, reasons }) => {
                 onConfirm={handleDelete}
                 title="Удаление возврата"
                 description="Вы уверены, что хотите удалить этот возврат? Это действие нельзя отменить."
+            />
+
+            <ConfirmDialog
+                open={!!forceDeleteId}
+                onClose={() => setForceDeleteId(null)}
+                onConfirm={handleForceDelete}
+                title="Окончательное удаление возврата"
+                description="Вы уверены, что хотите окончательно удалить этот возврат? Запись будет удалена безвозвратно."
+                confirmLabel="Удалить окончательно"
+                colorPalette="red"
             />
         </>
     );

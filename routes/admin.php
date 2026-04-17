@@ -23,6 +23,10 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::delete('/bulk-delete-all/{resource}', [\App\Http\Controllers\Admin\BulkDeleteController::class, 'destroyAll'])->name('bulk-delete-all');
     Route::get('/bulk-delete-status/{resource}', [\App\Http\Controllers\Admin\BulkDeleteController::class, 'status'])->name('bulk-delete-status');
 
+    // Массовое окончательное удаление soft-deleted записей (фоновое)
+    Route::delete('/bulk-force-delete-all/{resource}', [\App\Http\Controllers\Admin\BulkDeleteController::class, 'forceDestroyAll'])->name('bulk-force-delete-all');
+    Route::get('/bulk-force-delete-status/{resource}', [\App\Http\Controllers\Admin\BulkDeleteController::class, 'forceStatus'])->name('bulk-force-delete-status');
+
     // Editor.js — загрузка изображений
     Route::post('/api/upload-image', [\App\Http\Controllers\Admin\EditorUploadController::class, 'uploadByFile'])->name('api.upload-image');
     Route::post('/api/fetch-url', [\App\Http\Controllers\Admin\EditorUploadController::class, 'fetchByUrl'])->name('api.fetch-url');
@@ -395,6 +399,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::post('/orders/bulk-status', [\App\Http\Controllers\Admin\OrderController::class, 'bulkUpdateStatus'])->name('orders.bulk-status');
     });
     Route::delete('/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'destroy'])->name('orders.destroy')->middleware('permission:orders.delete');
+    Route::delete('/orders/{id}/force-delete', [\App\Http\Controllers\Admin\OrderController::class, 'forceDestroy'])->name('orders.force-delete')->middleware('permission:orders.delete');
 
     // Корзины
     Route::middleware('permission:carts.view')->get('/carts', [\App\Http\Controllers\Admin\CartController::class, 'index'])->name('carts.index');
@@ -435,6 +440,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::post('/returns/bulk-status', [\App\Http\Controllers\Admin\ReturnController::class, 'bulkUpdateStatus'])->name('returns.bulk-status');
     });
     Route::delete('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'destroy'])->name('returns.destroy')->middleware('permission:returns.delete');
+    Route::delete('/returns/{id}/force-delete', [\App\Http\Controllers\Admin\ReturnController::class, 'forceDestroy'])->name('returns.force-delete')->middleware('permission:returns.delete');
 
     // Реализации
     Route::middleware('permission:shipments.view')->group(function () {
@@ -442,6 +448,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::get('/shipments/{shipment}', [\App\Http\Controllers\Admin\ShipmentController::class, 'show'])->name('shipments.show');
     });
     Route::delete('/shipments/{shipment}', [\App\Http\Controllers\Admin\ShipmentController::class, 'destroy'])->name('shipments.destroy')->middleware('permission:shipments.delete');
+    Route::delete('/shipments/{id}/force-delete', [\App\Http\Controllers\Admin\ShipmentController::class, 'forceDestroy'])->name('shipments.force-delete')->middleware('permission:shipments.delete');
 
     // Избранное
     Route::middleware('permission:favorites.view')->group(function () {
@@ -548,6 +555,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::put('/companies/{company}', [\App\Http\Controllers\Admin\CompanyController::class, 'update'])->name('companies.update');
     });
     Route::delete('/companies/{company}', [\App\Http\Controllers\Admin\CompanyController::class, 'destroy'])->name('companies.destroy')->middleware('permission:companies.delete');
+    Route::delete('/companies/{id}/force-delete', [\App\Http\Controllers\Admin\CompanyController::class, 'forceDestroy'])->name('companies.force-delete')->middleware('permission:companies.delete');
 
     // Банковские счета
     Route::middleware('permission:company-bank-accounts.view')->group(function () {

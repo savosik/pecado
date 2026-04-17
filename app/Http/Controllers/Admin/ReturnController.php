@@ -25,8 +25,11 @@ class ReturnController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = ProductReturn::query()
-            ->with(['user', 'items', 'order']);
+        $onlyTrashed = $request->boolean('trashed');
+
+        $query = $onlyTrashed
+            ? ProductReturn::onlyTrashed()->with(['user', 'items', 'order'])
+            : ProductReturn::query()->with(['user', 'items', 'order']);
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -94,6 +97,7 @@ class ReturnController extends AdminController
                 'status_label' => $this->getStatusLabel($return->status),
                 'total_amount' => $return->total_amount,
                 'created_at' => $return->created_at?->format('d.m.Y H:i'),
+                'deleted_at' => $return->deleted_at?->format('d.m.Y H:i'),
                 'user' => $return->user ? [
                     'id' => $return->user->id,
                     'name' => $return->user->name,
@@ -123,7 +127,9 @@ class ReturnController extends AdminController
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
+                'trashed' => $onlyTrashed,
             ],
+            'trashedCount' => ProductReturn::onlyTrashed()->count(),
             'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
@@ -471,6 +477,17 @@ class ReturnController extends AdminController
         $return->delete();
 
         return redirect()->route('admin.returns.index')->with('success', 'Возврат успешно удалён');
+    }
+
+    /**
+     * Permanently delete a soft-deleted return.
+     */
+    public function forceDestroy(int $id): RedirectResponse
+    {
+        $return = ProductReturn::onlyTrashed()->findOrFail($id);
+        $return->forceDelete();
+
+        return redirect()->route('admin.returns.index', ['trashed' => 1])->with('success', 'Возврат окончательно удалён');
     }
 
     /**

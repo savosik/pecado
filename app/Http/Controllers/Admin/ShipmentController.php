@@ -18,8 +18,11 @@ class ShipmentController extends Controller
 
     public function index(Request $request)
     {
-        $query = Shipment::query()
-            ->with(['user', 'company', 'items.product']);
+        $onlyTrashed = $request->boolean('trashed');
+
+        $query = $onlyTrashed
+            ? Shipment::onlyTrashed()->with(['user', 'company', 'items.product'])
+            : Shipment::query()->with(['user', 'company', 'items.product']);
 
         // Поиск по UUID, ИНН, наименованию компании или товару
         if ($search = $request->input('search')) {
@@ -89,6 +92,7 @@ class ShipmentController extends Controller
                 'total_amount' => $shipment->total_amount,
                 'items_count' => $shipment->items->count(),
                 'created_at' => $shipment->created_at->format('d.m.Y H:i'),
+                'deleted_at' => $shipment->deleted_at?->format('d.m.Y H:i'),
                 'user' => $shipment->user ? [
                     'id' => $shipment->user->id,
                     'name' => $shipment->user->name,
@@ -103,10 +107,11 @@ class ShipmentController extends Controller
 
         return Inertia::render('Admin/Pages/Shipments/Index', [
             'shipments' => $shipments,
-            'filters' => $request->only([
-                'search', 'status', 'user_id', 'date_from', 'date_to',
-                'currency_code', 'sort_by', 'sort_order', 'per_page',
-            ]),
+            'filters' => array_merge(
+                $request->only(['search', 'status', 'user_id', 'date_from', 'date_to', 'currency_code', 'sort_by', 'sort_order', 'per_page']),
+                ['trashed' => $onlyTrashed]
+            ),
+            'trashedCount' => Shipment::onlyTrashed()->count(),
             'statuses' => array_map(fn ($k, $v) => ['value' => $k, 'label' => $v], array_keys(self::STATUS_LABELS), self::STATUS_LABELS),
         ]);
     }
@@ -175,5 +180,13 @@ class ShipmentController extends Controller
         $shipment->delete();
 
         return redirect()->route('admin.shipments.index')->with('success', 'Реализация успешно удалена');
+    }
+
+    public function forceDestroy(int $id)
+    {
+        $shipment = Shipment::onlyTrashed()->findOrFail($id);
+        $shipment->forceDelete();
+
+        return redirect()->route('admin.shipments.index', ['trashed' => 1])->with('success', 'Реализация окончательно удалена');
     }
 }

@@ -275,6 +275,88 @@ class BulkDeleteController extends Controller
     }
 
     /**
+     * Реестр soft-deleted ресурсов для окончательного удаления.
+     */
+    private function forceDeleteRegistry(): array
+    {
+        return [
+            'orders' => [
+                'model' => \App\Models\Order::class,
+                'permission' => 'orders.delete',
+                'label' => 'Заказы (удалённые)',
+            ],
+            'shipments' => [
+                'model' => \App\Models\Shipment::class,
+                'permission' => 'shipments.delete',
+                'label' => 'Реализации (удалённые)',
+            ],
+            'returns' => [
+                'model' => \App\Models\ProductReturn::class,
+                'permission' => 'returns.delete',
+                'label' => 'Возвраты (удалённые)',
+            ],
+            'companies' => [
+                'model' => \App\Models\Company::class,
+                'permission' => 'companies.delete',
+                'label' => 'Компании (удалённые)',
+            ],
+        ];
+    }
+
+    /**
+     * Окончательно удалить все soft-deleted записи ресурса через фоновую Job.
+     *
+     * DELETE /admin/bulk-force-delete-all/{resource}
+     */
+    public function forceDestroyAll(Request $request, string $resource)
+    {
+        $registry = $this->forceDeleteRegistry();
+
+        if (! isset($registry[$resource])) {
+            abort(404, "Ресурс «{$resource}» не поддерживает окончательное удаление.");
+        }
+
+        $config = $registry[$resource];
+
+        if (! $request->user()->can($config['permission'])) {
+            abort(403, 'Недостаточно прав для удаления.');
+        }
+
+        $cacheKey = BulkDeleteJob::cacheKey("force:{$resource}");
+        $progress = Cache::get($cacheKey);
+
+        if ($progress && $progress['status'] === 'running') {
+            return back()->with('warning', "Удаление «{$config['label']}» уже выполняется. Подождите завершения.");
+        }
+
+        BulkDeleteJob::dispatch(
+            "force:{$resource}",
+            $config['model'],
+            'forceDelete',
+            $config['label']
+        );
+
+        return back()->with('success', "Окончательное удаление «{$config['label']}» запущено в фоне.");
+    }
+
+    /**
+     * Проверить статус фонового окончательного удаления.
+     *
+     * GET /admin/bulk-force-delete-status/{resource}
+     */
+    public function forceStatus(string $resource)
+    {
+        $cacheKey = BulkDeleteJob::cacheKey("force:{$resource}");
+        $progress = Cache::get($cacheKey);
+
+        if (! $progress) {
+            return response()->json(['status' => 'idle']);
+        }
+
+        return response()->json($progress);
+    }
+
+    /**
      * Удалить все записи ресурса — всегда через фоновую Job.
      * Возвращает мгновенный ответ с flash-сообщением.
      */

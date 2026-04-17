@@ -15,9 +15,11 @@ class CompanyController extends Controller
 
     public function index(Request $request)
     {
-        $query = Company::query()
-            ->with('user')
-            ->withCount('bankAccounts');
+        $onlyTrashed = $request->boolean('trashed');
+
+        $query = $onlyTrashed
+            ? Company::onlyTrashed()->with('user')->withCount('bankAccounts')
+            : Company::query()->with('user')->withCount('bankAccounts');
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -47,7 +49,11 @@ class CompanyController extends Controller
 
         return Inertia::render('Admin/Pages/Companies/Index', [
             'companies' => $companies,
-            'filters' => $request->only(['search', 'user_id', 'country', 'sort_by', 'sort_order', 'per_page']),
+            'filters' => array_merge(
+                $request->only(['search', 'user_id', 'country', 'sort_by', 'sort_order', 'per_page']),
+                ['trashed' => $onlyTrashed]
+            ),
+            'trashedCount' => Company::onlyTrashed()->count(),
         ]);
     }
 
@@ -125,6 +131,14 @@ class CompanyController extends Controller
         $company->delete();
 
         return redirect()->route('admin.companies.index')->with('success', 'Компания успешно удалена');
+    }
+
+    public function forceDestroy(int $id)
+    {
+        $company = Company::onlyTrashed()->findOrFail($id);
+        $company->forceDelete();
+
+        return redirect()->route('admin.companies.index', ['trashed' => 1])->with('success', 'Компания окончательно удалена');
     }
 
     /**

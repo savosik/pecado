@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton, TrashedFilter } from '@/Admin/Components';
 import {
     Box, Text, Badge, IconButton, HStack, VStack, Card,
     Input, Stack, Button, Flex,
 } from '@chakra-ui/react';
-import { LuEye, LuFilter, LuX } from 'react-icons/lu';
+import { LuEye, LuFilter, LuX, LuTrash2 } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
+import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 
@@ -19,7 +20,7 @@ const STATUS_COLORS = {
     in_progress: 'orange',
 };
 
-export default function Index({ shipments, filters, statuses }) {
+export default function Index({ shipments, filters, statuses, trashedCount }) {
     const {
         searchQuery,
         handleSearch,
@@ -37,6 +38,42 @@ export default function Index({ shipments, filters, statuses }) {
     } = useResourceIndex('admin.shipments', filters, {
         entityLabel: 'Реализация',
     });
+
+    const [forceDeleteId, setForceDeleteId] = useState(null);
+    const [forceDeleteAllDialogOpen, setForceDeleteAllDialogOpen] = useState(false);
+    const [forceDeleteAllProcessing, setForceDeleteAllProcessing] = useState(false);
+
+    const isTrashed = !!filters?.trashed;
+
+    const toggleTrashed = () => {
+        router.get(route('admin.shipments.index'), { trashed: isTrashed ? undefined : 1 }, { preserveState: false });
+    };
+
+    const confirmForceDeleteAll = () => {
+        setForceDeleteAllProcessing(true);
+        router.delete(route('admin.bulk-force-delete-all', 'shipments'), {
+            onSuccess: () => {
+                toaster.create({ title: 'Окончательное удаление запущено в фоне', type: 'info' });
+                setForceDeleteAllDialogOpen(false);
+                setForceDeleteAllProcessing(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при запуске удаления', type: 'error' });
+                setForceDeleteAllProcessing(false);
+            },
+        });
+    };
+
+    const handleForceDelete = () => {
+        if (forceDeleteId) {
+            router.delete(route('admin.shipments.force-delete', forceDeleteId), {
+                onSuccess: () => {
+                    toaster.create({ description: 'Реализация окончательно удалена', type: 'success' });
+                    setForceDeleteId(null);
+                },
+            });
+        }
+    };
 
     const [showFilters, setShowFilters] = useState(false);
     const [localFilters, setLocalFilters] = useState({
@@ -139,37 +176,79 @@ export default function Index({ shipments, filters, statuses }) {
             label: 'Создано',
             sortable: true,
             render: (_, row) => (
-                <Text fontSize="sm" color="gray.600">{row.created_at}</Text>
+                <Box>
+                    <Text fontSize="sm" color="gray.600">{row.created_at}</Text>
+                    {row.deleted_at && (
+                        <Badge colorPalette="red" variant="subtle" size="xs" mt={0.5}>
+                            Удалён: {row.deleted_at}
+                        </Badge>
+                    )}
+                </Box>
             ),
         },
-        createActionsColumn('admin.shipments', openDeleteDialog, {
-            showEdit: false,
-            permissionPrefix: 'shipments',
-            extraActions: (row) => (
-                <IconButton
-                    size="sm"
-                    variant="ghost"
-                    aria-label="Просмотр"
-                    onClick={() => router.visit(route('admin.shipments.show', row.id))}
-                >
-                    <LuEye />
-                </IconButton>
-            ),
-        }),
+        isTrashed
+            ? {
+                key: 'actions',
+                label: 'Действия',
+                render: (_, row) => (
+                    <IconButton
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="red"
+                        aria-label="Удалить окончательно"
+                        title="Удалить окончательно"
+                        onClick={() => setForceDeleteId(row.id)}
+                    >
+                        <LuTrash2 />
+                    </IconButton>
+                ),
+            }
+            : createActionsColumn('admin.shipments', openDeleteDialog, {
+                showEdit: false,
+                permissionPrefix: 'shipments',
+                extraActions: (row) => (
+                    <IconButton
+                        size="sm"
+                        variant="ghost"
+                        aria-label="Просмотр"
+                        onClick={() => router.visit(route('admin.shipments.show', row.id))}
+                    >
+                        <LuEye />
+                    </IconButton>
+                ),
+            }),
     ];
 
     return (
         <>
-            <PageHeader title="Реализации" 
+            <PageHeader title="Реализации"
                 actions={
-                    <DeleteAllButton
-                        sectionLabel="реализации"
-                        dialogOpen={deleteAllDialogOpen}
-                        onOpen={openDeleteAllDialog}
-                        onClose={closeDeleteAllDialog}
-                        onConfirm={confirmDeleteAll}
-                        isLoading={deleteAllProcessing}
-                    />
+                    <HStack>
+                        <TrashedFilter
+                            trashed={isTrashed}
+                            trashedCount={trashedCount}
+                            onToggle={toggleTrashed}
+                        />
+                        {isTrashed ? (
+                            <DeleteAllButton
+                                sectionLabel="удалённые реализации окончательно"
+                                dialogOpen={forceDeleteAllDialogOpen}
+                                onOpen={() => setForceDeleteAllDialogOpen(true)}
+                                onClose={() => setForceDeleteAllDialogOpen(false)}
+                                onConfirm={confirmForceDeleteAll}
+                                isLoading={forceDeleteAllProcessing}
+                            />
+                        ) : (
+                            <DeleteAllButton
+                                sectionLabel="реализации"
+                                dialogOpen={deleteAllDialogOpen}
+                                onOpen={openDeleteAllDialog}
+                                onClose={closeDeleteAllDialog}
+                                onConfirm={confirmDeleteAll}
+                                isLoading={deleteAllProcessing}
+                            />
+                        )}
+                    </HStack>
                 }
             />
 
@@ -281,6 +360,16 @@ export default function Index({ shipments, filters, statuses }) {
                 onConfirm={confirmDelete}
                 title="Удалить реализацию?"
                 description="Вы уверены, что хотите удалить эту реализацию? Это действие нельзя отменить."
+            />
+
+            <ConfirmDialog
+                open={!!forceDeleteId}
+                onClose={() => setForceDeleteId(null)}
+                onConfirm={handleForceDelete}
+                title="Окончательное удаление реализации"
+                description="Вы уверены, что хотите окончательно удалить эту реализацию? Запись будет удалена безвозвратно."
+                confirmLabel="Удалить окончательно"
+                colorPalette="red"
             />
         </>
     );

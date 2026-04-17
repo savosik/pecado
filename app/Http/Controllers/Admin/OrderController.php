@@ -32,8 +32,11 @@ class OrderController extends AdminController
      */
     public function index(Request $request): Response
     {
-        $query = Order::query()
-            ->with(['user', 'company', 'items']);
+        $onlyTrashed = $request->boolean('trashed');
+
+        $query = $onlyTrashed
+            ? Order::onlyTrashed()->with(['user', 'company', 'items'])
+            : Order::query()->with(['user', 'company', 'items']);
 
         // Поиск
         if ($search = $request->input('search')) {
@@ -107,6 +110,7 @@ class OrderController extends AdminController
                 'total_amount' => $order->total_amount,
                 'currency_code' => $order->currency_code ?? '₽',
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
+                'deleted_at' => $order->deleted_at?->format('d.m.Y H:i'),
                 'user' => $order->user ? [
                     'id' => $order->user->id,
                     'name' => $order->user->name,
@@ -134,7 +138,9 @@ class OrderController extends AdminController
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
+                'trashed' => $onlyTrashed,
             ],
+            'trashedCount' => Order::onlyTrashed()->count(),
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
@@ -541,6 +547,17 @@ class OrderController extends AdminController
         $order->delete();
 
         return redirect()->route('admin.orders.index')->with('success', 'Заказ успешно удалён');
+    }
+
+    /**
+     * Permanently delete a soft-deleted order.
+     */
+    public function forceDestroy(int $id): RedirectResponse
+    {
+        $order = Order::onlyTrashed()->findOrFail($id);
+        $order->forceDelete();
+
+        return redirect()->route('admin.orders.index', ['trashed' => 1])->with('success', 'Заказ окончательно удалён');
     }
 
     /**
