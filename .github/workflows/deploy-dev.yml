@@ -93,7 +93,7 @@ jobs:
             ${{ runner.os }}-composer-
 
       - name: "📦 Install PHP dependencies"
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader --no-scripts
 
       - name: "⚙️ Prepare .env for tests"
         run: |
@@ -125,6 +125,8 @@ jobs:
           # Создаём необходимые директории storage
           mkdir -p storage/framework/views storage/framework/cache storage/framework/sessions
           mkdir -p bootstrap/cache
+          # Регистрируем пакеты (после создания storage и .env)
+          php artisan package:discover --ansi
 
           # Создаём фейковый Vite manifest чтобы тесты могли рендерить Blade/Inertia views
           mkdir -p public/build
