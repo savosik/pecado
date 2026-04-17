@@ -376,6 +376,41 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function retries_product_created_on_duplicate_key_race(): void
+    {
+        // Race: параллельные воркеры могут одновременно пытаться вставить одну и ту же
+        // запись (brands.slug, product_models.external_id, attribute_values.(attribute_id,value)).
+        // MySQL errno 1062 должен триггерить тот же retry-механизм, что и deadlock.
+        $pdoException = new \PDOException(
+            "SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry 'test-brand' for key 'brands.brands_slug_unique'"
+        );
+        $pdoException->errorInfo = [
+            '23000',
+            1062,
+            "Duplicate entry 'test-brand' for key 'brands.brands_slug_unique'",
+        ];
+        $duplicateKeyException = new QueryException(
+            'mysql',
+            'insert into `brands` (`slug`, `name`) values (?, ?)',
+            ['test-brand', 'Test Brand'],
+            $pdoException,
+        );
+
+        $handler = new class extends HandleProductCreated
+        {
+            public function shouldRetryPublic(\Throwable $e): bool
+            {
+                return $this->shouldRetryOnDeadlock($e);
+            }
+        };
+
+        $this->assertTrue(
+            $handler->shouldRetryPublic($duplicateKeyException),
+            'Duplicate Key (1062) должен триггерить retry — на повторе SELECT найдёт чужой INSERT.'
+        );
+    }
+
+    #[Test]
     public function does_not_retry_product_created_on_non_deadlock_error(): void
     {
         $handler = \Mockery::mock(HandleProductCreated::class)

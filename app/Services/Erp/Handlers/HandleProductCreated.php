@@ -283,11 +283,17 @@ class HandleProductCreated
             }
 
             // --- Привязка атрибутов к категории товара ---
+            // Атомарный insertOrIgnore вместо syncWithoutDetaching: при 6 воркерах
+            // non-atomic SELECT+INSERT ловит Duplicate entry на уникальном индексе.
             if ($categoryId && ! empty($processedAttributeIds)) {
-                $category = $category ?? Category::find($categoryId);
-                if ($category) {
-                    $category->attributes()->syncWithoutDetaching($processedAttributeIds);
-                }
+                $now = now();
+                $rows = array_map(fn ($aid) => [
+                    'attribute_id' => $aid,
+                    'category_id' => $categoryId,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $processedAttributeIds);
+                DB::table('attribute_category')->insertOrIgnore($rows);
             }
 
             Log::info('product.created: товар создан/обновлён', [
@@ -307,7 +313,20 @@ class HandleProductCreated
         /** @var ConcurrencyErrorDetector $detector */
         $detector = app(ConcurrencyErrorDetector::class);
 
-        return $detector->causedByConcurrencyError($e);
+        if ($detector->causedByConcurrencyError($e)) {
+            return true;
+        }
+
+        // MySQL error 1062 (Duplicate entry) — гонка между параллельными воркерами
+        // на уникальных индексах (brands.slug, product_models.external_id,
+        // attribute_values.(attribute_id,value), attributes.slug и т.п.).
+        // При повторе транзакции SELECT найдёт строку, вставленную выигравшим воркером.
+        if ($e instanceof \Illuminate\Database\QueryException
+            && (int) ($e->errorInfo[1] ?? 0) === 1062) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
