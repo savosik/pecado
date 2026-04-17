@@ -31,17 +31,14 @@ class ProcessIndividualPricesFile implements ShouldQueue
 
     public int $tries = 3;
 
-    /**
-     * Выделенная очередь для обработки ценовых файлов.
-     */
-    public string $queue = 'prices';
-
     public function __construct(
         public readonly string $fileUrl,
         public readonly string $uploadType,
         public readonly string $partnerUuid,
         public readonly int $recordsCount = 0,
-    ) {}
+    ) {
+        $this->onQueue('prices');
+    }
 
     /**
      * Скачать CSV из MinIO, резолвить UUID→INT, батч-вставить.
