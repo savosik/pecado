@@ -13,12 +13,6 @@ use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
-/**
- * Тесты для PublishUserToErp listener (US-01 v2).
- *
- * partner.created публикуется только когда статус пользователя
- * меняется на «Активен» (UserStatus::ACTIVE).
- */
 class PublishUserToErpTest extends TestCase
 {
     use RefreshDatabase;
@@ -30,7 +24,7 @@ class PublishUserToErpTest extends TestCase
     }
 
     #[Test]
-    public function it_dispatches_partner_created_when_status_changes_to_active(): void
+    public function it_dispatches_partner_created_on_user_created_event(): void
     {
         $user = User::factory()->create([
             'erp_id' => '550e8400-e29b-41d4-a716-446655440000',
@@ -39,12 +33,11 @@ class PublishUserToErpTest extends TestCase
             'status' => UserStatus::PROCESSING,
         ]);
 
-        // Симулируем изменение статуса на ACTIVE
-        $user->status = UserStatus::ACTIVE;
-        $user->save();
+        Queue::fake();
 
-        // UserUpdated event будет отправлен автоматически при save()
-        // Но для теста listener напрямую — имитируем getChanges()
+        $listener = new PublishUserToErp;
+        $listener->handle(new UserCreated($user));
+
         Queue::assertPushed(PublishUserToErpJob::class, function ($job) {
             return $job->payload['event'] === 'partner.created'
                 && isset($job->payload['uuid'])
@@ -52,54 +45,23 @@ class PublishUserToErpTest extends TestCase
                 && isset($job->payload['name'])
                 && isset($job->payload['email'])
                 && isset($job->payload['message_id'])
-                && isset($job->payload['timestamp']);
+                && isset($job->payload['timestamp'])
+                && array_key_exists('is_active', $job->payload)
+                && array_key_exists('comment', $job->payload);
         });
     }
 
     #[Test]
-    public function it_dispatches_when_name_filled_on_active_user(): void
+    public function it_does_not_dispatch_on_user_updated_event(): void
     {
         $user = User::factory()->create([
-            'status' => UserStatus::ACTIVE,
-            'name' => null,
+            'status' => UserStatus::PROCESSING,
         ]);
 
-        Queue::clearResolvedInstances();
         Queue::fake();
 
-        // Заполнение имени на активном пользователе — должно отправить в ERP
-        $user->name = 'Новое имя';
+        $user->status = UserStatus::ACTIVE;
         $user->save();
-
-        Queue::assertPushed(PublishUserToErpJob::class);
-    }
-
-    #[Test]
-    public function it_does_not_dispatch_when_irrelevant_field_changes_on_active_user(): void
-    {
-        $user = User::factory()->create([
-            'status' => UserStatus::ACTIVE,
-            'name' => 'Иван',
-        ]);
-
-        Queue::clearResolvedInstances();
-        Queue::fake();
-
-        // Изменение несвязанного поля — не должно отправлять в ERP
-        $user->phone = '+79991234567';
-        $user->save();
-
-        Queue::assertNothingPushed();
-    }
-
-    #[Test]
-    public function it_does_not_dispatch_on_user_created_event(): void
-    {
-        $user = User::factory()->make();
-        $event = new UserCreated($user);
-
-        $listener = new PublishUserToErp;
-        $listener->handle($event);
 
         Queue::assertNothingPushed();
     }
@@ -107,10 +69,8 @@ class PublishUserToErpTest extends TestCase
     #[Test]
     public function it_does_nothing_when_event_has_no_user(): void
     {
-        $event = new \stdClass;
-
         $listener = new PublishUserToErp;
-        $listener->handle($event);
+        $listener->handle(new \stdClass);
 
         Queue::assertNothingPushed();
     }
@@ -123,36 +83,42 @@ class PublishUserToErpTest extends TestCase
             'email' => 'client@example.com',
             'name' => 'Иванов Иван',
             'phone' => '+7(999)123-45-67',
-            'status' => UserStatus::PROCESSING,
+            'status' => UserStatus::ACTIVE,
+            'comment' => 'VIP клиент',
         ]);
 
-        $user->status = UserStatus::ACTIVE;
-        $user->save();
+        Queue::fake();
 
-        Queue::assertPushed(PublishUserToErpJob::class, function ($job) {
+        $listener = new PublishUserToErp;
+        $listener->handle(new UserCreated($user));
+
+        Queue::assertPushed(PublishUserToErpJob::class, function ($job) use ($user) {
             $p = $job->payload;
 
             return $p['event'] === 'partner.created'
                 && $p['uuid'] === 'test-erp-uuid'
                 && $p['login'] === 'client@example.com'
                 && $p['email'] === 'client@example.com'
-                && str_contains($p['name'], 'Иван');
+                && str_contains($p['name'], 'Иван')
+                && $p['is_active'] === true
+                && str_contains($p['comment'], $user->view_token);
         });
     }
 
     #[Test]
-    public function it_does_not_dispatch_when_status_changes_from_active_to_blocked(): void
+    public function is_active_is_false_when_user_status_is_processing(): void
     {
         $user = User::factory()->create([
-            'status' => UserStatus::ACTIVE,
+            'status' => UserStatus::PROCESSING,
         ]);
 
-        Queue::clearResolvedInstances();
         Queue::fake();
 
-        $user->status = UserStatus::BLOCKED;
-        $user->save();
+        $listener = new PublishUserToErp;
+        $listener->handle(new UserCreated($user));
 
-        Queue::assertNothingPushed();
+        Queue::assertPushed(PublishUserToErpJob::class, function ($job) {
+            return $job->payload['is_active'] === false;
+        });
     }
 }

@@ -71,11 +71,6 @@ class AppServiceProvider extends ServiceProvider
         );
 
         \Illuminate\Support\Facades\Event::listen(
-            \App\Events\UserUpdated::class,
-            \App\Listeners\PublishUserToErp::class,
-        );
-
-        \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderCreated::class,
             \App\Listeners\PublishOrderToErp::class,
         );

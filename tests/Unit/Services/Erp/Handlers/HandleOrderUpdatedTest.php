@@ -21,7 +21,7 @@ class HandleOrderUpdatedTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->handler = new HandleOrderUpdated;
+        $this->handler = app(HandleOrderUpdated::class);
     }
 
     #[Test]

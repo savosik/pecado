@@ -30,7 +30,7 @@ export default function ProductInfo({
     discountPct = null,
 }) {
     const { auth } = usePage().props;
-    const user = auth?.user || null;
+    const user = auth?.user?.status === 'active' ? auth.user : null;
     const [isFav, setIsFav] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
 

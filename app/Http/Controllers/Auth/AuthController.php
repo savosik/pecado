@@ -89,6 +89,8 @@ class AuthController extends Controller
             'terms_accepted.accepted' => 'Необходимо принять условия использования',
         ]);
 
+        $defaultRegionId = \App\Models\Region::orderBy('id')->value('id');
+
         $user = User::create([
             'name' => $validated['name'] ?? null,
             'email' => strtolower($validated['email']),
@@ -97,7 +99,7 @@ class AuthController extends Controller
             'city' => $validated['city'] ?? null,
             'password' => $validated['password'],
             'terms_accepted' => true,
-            // 'is_admin' removed — roles are assigned separately
+            'region_id' => $defaultRegionId,
         ]);
 
         Auth::login($user);

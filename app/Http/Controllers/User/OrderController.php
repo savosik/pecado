@@ -150,7 +150,7 @@ class OrderController extends Controller
             'items.product.brand:id,name',
             'items.product.media',
             'statusHistories.user',
-            'changeLogs',
+            'changeLogs.user',
         ]);
 
         return Inertia::render('User/Cabinet/Orders/Show', [
@@ -233,6 +233,7 @@ class OrderController extends Controller
                         'summary' => $log->summary,
                         'changes' => $log->changes,
                         'source' => $log->source,
+                        'user_name' => $log->user?->name,
                         'old_total' => $log->old_total,
                         'new_total' => $log->new_total,
                         'created_at' => $log->created_at->format('d.m.Y H:i'),

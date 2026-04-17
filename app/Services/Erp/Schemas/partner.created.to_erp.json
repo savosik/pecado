@@ -2,7 +2,7 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "partner.created.to_erp",
     "title": "partner.created (Сайт → 1С)",
-    "description": "Активация пользователя — отправка данных партнёра в 1С",
+    "description": "Создание пользователя — отправка данных партнёра в 1С",
     "type": "object",
     "properties": {
         "event": {
@@ -37,6 +37,15 @@
         "email": {
             "type": "string",
             "format": "email"
+        },
+        "is_active": {
+            "type": "boolean"
+        },
+        "comment": {
+            "type": [
+                "string",
+                "null"
+            ]
         }
     },
     "required": [

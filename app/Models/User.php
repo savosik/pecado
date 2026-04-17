@@ -65,9 +65,21 @@ class User extends Authenticatable implements HasMedia
         'password',
         'must_change_password',
         'erp_id',
+        'view_token',
         'region_id',
         'client_status_id',
     ];
+
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::creating(function (self $user) {
+            if (empty($user->view_token)) {
+                $user->view_token = \Illuminate\Support\Str::random(48);
+            }
+        });
+    }
 
     /**
      * The attributes that should be hidden for serialization.

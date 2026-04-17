@@ -425,7 +425,11 @@ function OrderTimeline({ entries = [] }) {
                                     height="18px"
                                     borderRadius="full"
                                     bg={index === 0
-                                        ? (entry.type === 'items_updated' ? 'orange.500' : 'pecado.500')
+                                        ? (entry.type === 'items_updated'
+                                            ? 'orange.500'
+                                            : entry.type === 'attributes_updated'
+                                                ? 'purple.500'
+                                                : 'pecado.500')
                                         : 'gray.300'
                                     }
                                     border="3px solid"
@@ -434,11 +438,9 @@ function OrderTimeline({ entries = [] }) {
                                     zIndex={1}
                                 />
 
-                                {entry.type === 'status_changed' ? (
-                                    <StatusEntry entry={entry} />
-                                ) : (
-                                    <ItemsChangedEntry entry={entry} />
-                                )}
+                                {entry.type === 'status_changed' && <StatusEntry entry={entry} />}
+                                {entry.type === 'items_updated' && <ItemsChangedEntry entry={entry} />}
+                                {entry.type === 'attributes_updated' && <AttributesChangedEntry entry={entry} />}
                             </Box>
                         ))}
                     </Stack>
@@ -517,11 +519,9 @@ function ItemsChangedEntry({ entry }) {
             <HStack gap="1.5">
                 <LuPencilLine size={14} style={{ color: 'var(--chakra-colors-orange-500)', flexShrink: 0 }} />
                 <Text fontWeight="600" fontSize="sm" color="orange.700" _dark={{ color: 'orange.300' }}>
-                    Заказ изменён
+                    Состав заказа изменён
                 </Text>
-                {c.source === 'erp' && (
-                    <Badge variant="subtle" colorPalette="blue" fontSize="2xs">1С</Badge>
-                )}
+                <SourceBadge source={c.source} userName={c.user_name} />
             </HStack>
 
             {/* Сумма до/после */}
@@ -621,6 +621,111 @@ function ItemsChangedEntry({ entry }) {
                                         </Box>
                                     </HStack>
                                 ))}
+                            </Stack>
+                        </Box>
+                    )}
+                </Box>
+            )}
+        </Stack>
+    );
+}
+
+const SOURCE_LABELS_MAP = { erp: '1С', admin: 'Админ', system: 'Система' };
+const SOURCE_COLORS_MAP = { erp: 'blue', admin: 'purple', system: 'gray' };
+
+function SourceBadge({ source, userName }) {
+    if (!source) return null;
+    const label = SOURCE_LABELS_MAP[source] ?? source;
+    const color = SOURCE_COLORS_MAP[source] ?? 'gray';
+    return (
+        <HStack gap="1" fontSize="xs" color="fg.muted">
+            <Badge variant="subtle" colorPalette={color} fontSize="2xs">{label}</Badge>
+            {userName && (
+                <HStack gap="0.5">
+                    <LuUser size={12} />
+                    <Text>{userName}</Text>
+                </HStack>
+            )}
+        </HStack>
+    );
+}
+
+/**
+ * Запись об изменении атрибутов заказа (компания, адрес, комментарий и т.д.).
+ */
+function AttributesChangedEntry({ entry }) {
+    const [expanded, setExpanded] = useState(false);
+    const c = entry.data;
+    const attributes = c.changes?.attributes || {};
+    const fields = Object.keys(attributes);
+
+    const formatValue = (v) => {
+        if (v === null || v === undefined || v === '') return '—';
+        return String(v);
+    };
+
+    return (
+        <Stack gap={1}>
+            <HStack gap="1.5">
+                <LuPencilLine size={14} style={{ color: 'var(--chakra-colors-purple-500)', flexShrink: 0 }} />
+                <Text fontWeight="600" fontSize="sm" color="purple.700" _dark={{ color: 'purple.300' }}>
+                    Изменены данные заказа
+                </Text>
+                <SourceBadge source={c.source} userName={c.user_name} />
+            </HStack>
+
+            <Text fontSize="xs" color="fg.muted">
+                {fields.map((f) => attributes[f].label).join(', ')}
+            </Text>
+
+            <HStack fontSize="xs" color="fg.muted" gap="1">
+                <LuClock size={12} />
+                <Text>{c.created_at}</Text>
+                <Text>•</Text>
+                <Text>{c.created_at_human}</Text>
+            </HStack>
+
+            {fields.length > 0 && (
+                <Box mt={1}>
+                    <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setExpanded(!expanded)}
+                        color="pecado.600"
+                        _hover={{ bg: 'pecado.50', _dark: { bg: 'gray.700' } }}
+                    >
+                        {expanded ? <LuChevronUp size={14} /> : <LuChevronDown size={14} />}
+                        {expanded ? 'Скрыть подробности' : 'Подробности'}
+                    </Button>
+
+                    {expanded && (
+                        <Box
+                            mt={2}
+                            bg="gray.50"
+                            _dark={{ bg: 'gray.700' }}
+                            borderRadius="lg"
+                            p={3}
+                            fontSize="sm"
+                        >
+                            <Stack gap={2}>
+                                {fields.map((field) => {
+                                    const a = attributes[field];
+                                    const oldLabel = a.old_label ?? formatValue(a.old);
+                                    const newLabel = a.new_label ?? formatValue(a.new);
+                                    return (
+                                        <HStack key={field} gap="2" align="start">
+                                            <Box color="purple.500" mt="1"><LuPencilLine size={14} /></Box>
+                                            <Box>
+                                                <Text fontWeight="600">{a.label}</Text>
+                                                <Text fontSize="xs" color="fg.muted">
+                                                    <Box as="span" textDecoration="line-through">{oldLabel}</Box>
+                                                    {' → '}
+                                                    <Box as="span" fontWeight="600">{newLabel}</Box>
+                                                </Text>
+                                            </Box>
+                                        </HStack>
+                                    );
+                                })}
                             </Stack>
                         </Box>
                     )}

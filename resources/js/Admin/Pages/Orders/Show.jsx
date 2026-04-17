@@ -17,7 +17,7 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
-import { StatusHistoryTimeline } from "./Components/StatusHistoryTimeline";
+import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
 
 const getStatusColor = (status) => {
     const colors = {
@@ -272,9 +272,12 @@ const OrderShow = () => {
                 </Card.Footer>
             </Card.Root>
 
-            {/* История статусов */}
+            {/* Полная история заказа: статусы + изменения атрибутов/состава */}
             <Box mt={6}>
-                <StatusHistoryTimeline histories={order.status_histories || []} />
+                <OrderHistoryTimeline
+                    statusHistories={order.status_histories || []}
+                    changeLogs={order.change_logs || []}
+                />
             </Box>
         </>
     );

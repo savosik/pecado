@@ -9,6 +9,7 @@ use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Order\OrderChangeLogger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,8 @@ class OrderController extends AdminController
     use RedirectsAfterSave;
 
     public function __construct(
-        protected \App\Services\Pricing\PriceService $priceService
+        protected \App\Services\Pricing\PriceService $priceService,
+        protected OrderChangeLogger $changeLogger,
     ) {
         parent::__construct();
     }
@@ -237,7 +239,7 @@ class OrderController extends AdminController
      */
     public function show(Order $order): Response
     {
-        $order->load(['user', 'company', 'items.product', 'cart', 'statusHistories.user']);
+        $order->load(['user', 'company', 'items.product', 'cart', 'statusHistories.user', 'changeLogs.user']);
 
         return Inertia::render('Admin/Pages/Orders/Show', [
             'order' => [
@@ -290,6 +292,20 @@ class OrderController extends AdminController
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
                         'created_at_human' => $history->created_at->diffForHumans(),
+                    ];
+                }),
+                'change_logs' => $order->changeLogs->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'type' => $log->type,
+                        'summary' => $log->summary,
+                        'changes' => $log->changes,
+                        'source' => $log->source,
+                        'user_name' => $log->user?->name,
+                        'old_total' => $log->old_total,
+                        'new_total' => $log->new_total,
+                        'created_at' => $log->created_at->format('d.m.Y H:i'),
+                        'created_at_human' => $log->created_at->diffForHumans(),
                     ];
                 }),
             ],
@@ -392,6 +408,12 @@ class OrderController extends AdminController
 
         DB::beginTransaction();
         try {
+            // Снимок до изменений — для журнала
+            $order->load(['company', 'user', 'items.product']);
+            $oldAttrs = $this->changeLogger->snapshotAttributes($order);
+            $oldItems = $this->changeLogger->snapshotItems($order);
+            $oldTotal = (float) $order->total_amount;
+
             // Подсчёт total_amount
             $totalAmount = collect($validated['items'])->sum(function ($item) {
                 $effectivePrice = $item['final_price'] ?? $item['price'];
@@ -449,6 +471,16 @@ class OrderController extends AdminController
 
             // Удаление позиций, которых больше нет
             $order->items()->whereNotIn('id', $existingItemIds)->delete();
+
+            // Фиксируем изменения в журнале (атрибуты + состав)
+            $order->refresh()->load(['company', 'user', 'items.product']);
+            $newAttrs = $this->changeLogger->snapshotAttributes($order);
+            $newItems = $this->changeLogger->snapshotItems($order);
+            $newTotal = (float) $order->total_amount;
+
+            $userId = auth()->id();
+            $this->changeLogger->logAttributeChanges($order, $oldAttrs, $newAttrs, 'admin', $userId);
+            $this->changeLogger->logItemChanges($order, $oldItems, $newItems, $oldTotal, $newTotal, 'admin', $userId);
 
             DB::commit();
 

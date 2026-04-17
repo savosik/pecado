@@ -13,6 +13,7 @@ class OrderChangeLog extends Model
         'summary',
         'changes',
         'source',
+        'user_id',
         'old_total',
         'new_total',
     ];
@@ -29,5 +30,10 @@ class OrderChangeLog extends Model
     public function order(): BelongsTo
     {
         return $this->belongsTo(Order::class);
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 }

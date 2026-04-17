@@ -51,6 +51,9 @@ require __DIR__.'/user.php';
 // Каталог товаров с поиском (API)
 Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
 
+// Просмотр профиля пользователя по секретному токену (для менеджеров без доступа в админку)
+Route::get('/preview/user/{token}', [\App\Http\Controllers\UserPreviewController::class, 'show'])->name('user.preview');
+
 // AI Generation
 Route::post('/ai/generate', [App\Http\Controllers\Admin\AiController::class, 'generate'])->name('admin.ai.generate');
 

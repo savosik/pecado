@@ -21,7 +21,7 @@ import { toastInfo } from '@/utils/toast';
  */
 export default function CartQuantityControl({ productId, disabled = false, size = 'md', fullWidth = false }) {
     const { auth } = usePage().props;
-    const user = auth?.user || null;
+    const user = auth?.user?.status === 'active' ? auth.user : null;
 
     const [qty, setQty] = useState(0);
     const [syncing, setSyncing] = useState(false);

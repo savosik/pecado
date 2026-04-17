@@ -25,7 +25,8 @@ import { useFavoritesStore } from '@/stores/useFavoritesStore';
  */
 export function useProductHelpers(product) {
     const { auth, currency } = usePage().props;
-    const user = auth?.user || null;
+    const authUser = auth?.user || null;
+    const user = authUser?.status === 'active' ? authUser : null;
     const currencySymbol = currency?.symbol || '₽';
 
     const [isFav, setIsFav] = useState(false);
