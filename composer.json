@@ -25,6 +25,7 @@
         "openai-php/client": "^0.18.0",
         "opis/json-schema": "^2.6",
         "phpoffice/phpspreadsheet": "^5.4",
+        "spatie/laravel-health": "^1.39",
         "spatie/laravel-medialibrary": "^11.0.0",
         "spatie/laravel-permission": "^7.2",
         "spatie/laravel-tags": "^4.10",

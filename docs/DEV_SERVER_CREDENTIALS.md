@@ -40,6 +40,17 @@
 
 > Доступ только для роли `super-admin`. Используй `admin@pecado.ru` или `savosik@pecado.ru`.
 
+## Spatie Health (проверки здоровья системы)
+
+| | |
+|---|---|
+| JSON эндпоинт | http://dev.pecado.ru/health |
+| CLI | `php artisan health:list` |
+
+Проверяет: MySQL (main + prices), Redis, диск (warn 70%, fail 90%), Horizon. Запускается каждую минуту через планировщик.
+
+> Эндпоинт `/health` публичный — используется для внешнего мониторинга (uptime-роботы).
+
 ## RabbitMQ — AMQP для 1С (из локальной сети)
 
 | | |
