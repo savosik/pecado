@@ -40,6 +40,16 @@
 
 > Доступ только для роли `super-admin`. Используй `admin@pecado.ru` или `savosik@pecado.ru`.
 
+## Laravel Pulse (мониторинг производительности)
+
+| | |
+|---|---|
+| URL | http://dev.pecado.ru/pulse |
+
+Показывает: нагрузку CPU/памяти, медленные запросы (mysql + prices), медленные jobs/requests, очереди, исключения. Данные обновляются в реальном времени через `pulse:check` (supervisor).
+
+> Доступ только для роли `super-admin`. Используй `admin@pecado.ru` или `savosik@pecado.ru`.
+
 ## Spatie Health (проверки здоровья системы)
 
 | | |
