@@ -68,23 +68,38 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                     <Separator my={4} />
 
                     {/* Итоговая сумма */}
-                    <Flex
-                        align="end" gap="3" p="4" borderRadius="lg"
-                        bg="pecado.50" _dark={{ bg: 'pecado.900/10', borderColor: 'pecado.800' }}
-                        border="1px solid" borderColor="pecado.100"
-                    >
-                        <Box>
-                            <Text fontSize="xs" color="gray.500" mb="1">Итоговая сумма</Text>
-                            <Text fontWeight="800" fontSize="2xl" fontFamily="mono">
-                                {fmt(shipment.total_converted)} {currencySymbol}
-                            </Text>
-                        </Box>
-                        {shipment.currency_code && shipment.currency_code !== currency?.code && (
-                            <Text fontSize="sm" color="gray.400" pb="1">
-                                ({fmt(shipment.total_amount)} {shipment.currency_code})
-                            </Text>
-                        )}
-                    </Flex>
+                    {(() => {
+                        const totalSavings = (shipment.items || []).reduce((acc, item) => {
+                            const base = parseFloat(item.price_converted || 0) * item.quantity;
+                            const total = parseFloat(item.total_converted || 0);
+                            if (base > total + 0.01) acc += base - total;
+                            return acc;
+                        }, 0);
+                        return (
+                            <Flex
+                                align="end" gap="3" p="4" borderRadius="lg"
+                                bg="pecado.50" _dark={{ bg: 'pecado.900/10', borderColor: 'pecado.800' }}
+                                border="1px solid" borderColor="pecado.100"
+                            >
+                                <Box>
+                                    <Text fontSize="xs" color="gray.500" mb="1">Итоговая сумма</Text>
+                                    <Text fontWeight="800" fontSize="2xl" fontFamily="mono">
+                                        {fmt(shipment.total_converted)} {currencySymbol}
+                                    </Text>
+                                    {totalSavings > 0 && (
+                                        <Text fontSize="sm" color="green.600" _dark={{ color: 'green.400' }} mt="1">
+                                            Ваша выгода: {fmt(totalSavings)} {currencySymbol}
+                                        </Text>
+                                    )}
+                                </Box>
+                                {shipment.currency_code && shipment.currency_code !== currency?.code && (
+                                    <Text fontSize="sm" color="gray.400" pb="1">
+                                        ({fmt(shipment.total_amount)} {shipment.currency_code})
+                                    </Text>
+                                )}
+                            </Flex>
+                        );
+                    })()}
                 </Card.Body>
             </Card.Root>
 
@@ -182,15 +197,23 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                     <Table.ColumnHeader>Заказ</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Авт. скидка</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Руч. скидка</Table.ColumnHeader>
+                                                <Table.ColumnHeader textAlign="right">Базовая цена ({currencySymbol})</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Скидка</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Ваша цена ({currencySymbol})</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">НДС</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Итог ({currencySymbol})</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {shipment.items?.map((item, idx) => (
+                                {shipment.items?.map((item, idx) => {
+                                    const basePriceConverted = parseFloat(item.price_converted || 0);
+                                    const grossConverted = basePriceConverted * item.quantity;
+                                    const totalConverted = parseFloat(item.total_converted || 0);
+                                    const hasDiscount = grossConverted > totalConverted + 0.01;
+                                    const effectivePriceConverted = item.quantity > 0 ? totalConverted / item.quantity : 0;
+                                    const savingsConverted = hasDiscount ? grossConverted - totalConverted : 0;
+                                    const combinedDiscount = parseFloat(item.auto_discount_percent || 0) + parseFloat(item.manual_discount_percent || 0);
+                                    return (
                                     <Table.Row key={item.id || idx} _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}>
                                         <Table.Cell>
                                             {item.product ? (
@@ -216,27 +239,37 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <VStack gap="0" align="end">
-                                                <Text fontFamily="mono" fontSize="sm">{fmt(item.price_converted)}</Text>
+                                                <Text fontFamily="mono" fontSize="sm">{fmt(basePriceConverted)}</Text>
                                                 {shipment.currency_code !== currency?.code && (
                                                     <Text fontSize="xs" color="gray.400">{fmt(item.price)} {shipment.currency_code}</Text>
                                                 )}
                                             </VStack>
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
-                                            <Text
-                                                fontFamily="mono" fontSize="sm"
-                                                color={parseFloat(item.auto_discount_percent) > 0 ? 'green.500' : 'gray.300'}
-                                            >
-                                                {parseFloat(item.auto_discount_percent).toFixed(2)}%
-                                            </Text>
+                                            {hasDiscount ? (
+                                                <VStack gap="0" align="end">
+                                                    <Badge colorPalette="green" variant="subtle" size="xs">
+                                                        -{combinedDiscount > 0 ? combinedDiscount.toFixed(2) : fmt(savingsConverted / grossConverted * 100)}%
+                                                    </Badge>
+                                                    {combinedDiscount > 0 && parseFloat(item.auto_discount_percent) > 0 && parseFloat(item.manual_discount_percent) > 0 && (
+                                                        <Text fontSize="2xs" color="gray.400">
+                                                            авт. {parseFloat(item.auto_discount_percent).toFixed(2)}% + руч. {parseFloat(item.manual_discount_percent).toFixed(2)}%
+                                                        </Text>
+                                                    )}
+                                                </VStack>
+                                            ) : (
+                                                <Text fontFamily="mono" fontSize="sm" color="gray.300">—</Text>
+                                            )}
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
-                                            <Text
-                                                fontFamily="mono" fontSize="sm"
-                                                color={parseFloat(item.manual_discount_percent) > 0 ? 'orange.500' : 'gray.300'}
-                                            >
-                                                {parseFloat(item.manual_discount_percent).toFixed(2)}%
-                                            </Text>
+                                            <VStack gap="0" align="end">
+                                                <Text fontFamily="mono" fontSize="sm" fontWeight="500">{fmt(effectivePriceConverted)}</Text>
+                                                {shipment.currency_code !== currency?.code && (
+                                                    <Text fontSize="xs" color="gray.400">
+                                                        {fmt(item.quantity > 0 ? parseFloat(item.total || 0) / item.quantity : 0)} {shipment.currency_code}
+                                                    </Text>
+                                                )}
+                                            </VStack>
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <Text fontFamily="mono" fontSize="sm" color="gray.500">
@@ -245,21 +278,35 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <VStack gap="0" align="end">
-                                                <Text fontFamily="mono" fontWeight="600">{fmt(item.total_converted)}</Text>
+                                                <Text fontFamily="mono" fontWeight="600">{fmt(totalConverted)}</Text>
                                                 {shipment.currency_code !== currency?.code && (
                                                     <Text fontSize="xs" color="gray.400">{fmt(item.total)} {shipment.currency_code}</Text>
+                                                )}
+                                                {savingsConverted > 0 && (
+                                                    <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
+                                                        Экономия: {fmt(savingsConverted)}
+                                                    </Text>
                                                 )}
                                             </VStack>
                                         </Table.Cell>
                                     </Table.Row>
-                                ))}
+                                    );
+                                })}
                             </Table.Body>
                         </Table.Root>
                     </Box>
 
                     {/* Mobile cards */}
                     <VStack gap="3" p="4" display={{ base: 'flex', md: 'none' }}>
-                        {shipment.items?.map((item, idx) => (
+                        {shipment.items?.map((item, idx) => {
+                            const basePriceConverted = parseFloat(item.price_converted || 0);
+                            const totalConverted = parseFloat(item.total_converted || 0);
+                            const grossConverted = basePriceConverted * item.quantity;
+                            const hasDiscount = grossConverted > totalConverted + 0.01;
+                            const effectivePriceConverted = item.quantity > 0 ? totalConverted / item.quantity : 0;
+                            const savingsConverted = hasDiscount ? grossConverted - totalConverted : 0;
+                            const combinedDiscount = parseFloat(item.auto_discount_percent || 0) + parseFloat(item.manual_discount_percent || 0);
+                            return (
                             <Box
                                 key={item.id || idx}
                                 w="100%" p="4" borderRadius="lg" border="1px solid"
@@ -270,15 +317,14 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                 </Text>
                                 <SimpleGrid columns={2} gap={3}>
                                     <InfoBlock label="Количество" value={item.quantity} />
-                                    <InfoBlock label="Цена" value={`${fmt(item.price_converted)} ${currencySymbol}`} mono />
-                                    <InfoBlock
-                                        label="Авт. скидка"
-                                        value={`${parseFloat(item.auto_discount_percent).toFixed(2)}%`}
-                                    />
-                                    <InfoBlock
-                                        label="Руч. скидка"
-                                        value={`${parseFloat(item.manual_discount_percent).toFixed(2)}%`}
-                                    />
+                                    <InfoBlock label="Базовая цена" value={`${fmt(basePriceConverted)} ${currencySymbol}`} mono />
+                                    {hasDiscount && (
+                                        <InfoBlock
+                                            label="Скидка"
+                                            value={`${combinedDiscount > 0 ? combinedDiscount.toFixed(2) : fmt(savingsConverted / grossConverted * 100)}%`}
+                                        />
+                                    )}
+                                    <InfoBlock label="Ваша цена" value={`${fmt(effectivePriceConverted)} ${currencySymbol}`} mono />
                                     <InfoBlock
                                         label="НДС"
                                         value={item.vat_rate != null ? `${item.vat_rate}%` : '—'}
@@ -286,12 +332,18 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                     <Box>
                                         <Text fontSize="xs" color="gray.500" mb="1">Итог</Text>
                                         <Text fontWeight="700" fontFamily="mono">
-                                            {fmt(item.total_converted)} {currencySymbol}
+                                            {fmt(totalConverted)} {currencySymbol}
                                         </Text>
+                                        {savingsConverted > 0 && (
+                                            <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
+                                                Ваша выгода: {fmt(savingsConverted)} {currencySymbol}
+                                            </Text>
+                                        )}
                                     </Box>
                                 </SimpleGrid>
                             </Box>
-                        ))}
+                            );
+                        })}
                         {(!shipment.items || shipment.items.length === 0) && (
                             <Text color="gray.400" textAlign="center" py="4">Позиции отсутствуют</Text>
                         )}

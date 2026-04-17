@@ -180,12 +180,18 @@ export default function OrderShow({ order }) {
                                         <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                             <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="160px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="160px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
                                         </Table.Row>
                                     </Table.Header>
                                     <Table.Body>
-                                        {order.items.map((item) => (
+                                        {order.items.map((item) => {
+                                            const basePrice = parseFloat(item.base_price || 0);
+                                            const finalPrice = parseFloat(item.final_price || item.price || 0);
+                                            const discountPct = parseFloat(item.discount_percent || 0);
+                                            const hasDiscount = basePrice > 0 && finalPrice > 0 && basePrice > finalPrice;
+                                            const savingsLine = hasDiscount ? (basePrice - finalPrice) * item.quantity : 0;
+                                            return (
                                             <Table.Row key={item.id}>
                                                 <Table.Cell>
                                                     <HStack gap="3">
@@ -224,13 +230,34 @@ export default function OrderShow({ order }) {
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="center">{item.quantity}</Table.Cell>
                                                 <Table.Cell textAlign="right">
-                                                    <Text fontWeight="500">{fmt(item.price)}</Text>
+                                                    {hasDiscount && (
+                                                        <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
+                                                            {fmt(basePrice)}
+                                                        </Text>
+                                                    )}
+                                                    {hasDiscount && discountPct > 0 && (
+                                                        <Badge colorPalette="green" variant="subtle" size="xs" mb="0.5">
+                                                            -{fmt(discountPct)}%
+                                                        </Badge>
+                                                    )}
+                                                    <Text fontWeight="500">{fmt(finalPrice)}</Text>
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="right">
+                                                    {hasDiscount && (
+                                                        <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
+                                                            {fmt(basePrice * item.quantity)}
+                                                        </Text>
+                                                    )}
                                                     <Text fontWeight="600">{fmt(item.subtotal)}</Text>
+                                                    {savingsLine > 0 && (
+                                                        <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
+                                                            Экономия: {fmt(savingsLine)}
+                                                        </Text>
+                                                    )}
                                                 </Table.Cell>
                                             </Table.Row>
-                                        ))}
+                                            );
+                                        })}
                                     </Table.Body>
                                 </Table.Root>
                             </Box>
@@ -239,26 +266,43 @@ export default function OrderShow({ order }) {
                 )}
 
                 {/* ═══ Итого ═══ */}
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-                    <Card.Body p="4">
-                        <Flex justify="space-between" align="center">
-                            <Flex align="center" gap="2">
-                                <LuShoppingBag size={20} />
-                                <Text fontWeight="700" fontSize="lg">Итого</Text>
-                            </Flex>
-                            <VStack gap="0" align="end">
-                                <Text fontSize="xl" fontWeight="800">
-                                    {fmt(order.total_converted)} {currencySymbol}
-                                </Text>
-                                {order.currency_code && order.currency_code !== currency?.code && (
-                                    <Text fontSize="xs" color="gray.400">
-                                        {fmt(order.total_amount)} {order.currency_code}
-                                    </Text>
-                                )}
-                            </VStack>
-                        </Flex>
-                    </Card.Body>
-                </Card.Root>
+                {(() => {
+                    const totalSavings = (order.items || []).reduce((acc, item) => {
+                        const bp = parseFloat(item.base_price || 0);
+                        const fp = parseFloat(item.final_price || item.price || 0);
+                        if (bp > fp) acc += (bp - fp) * item.quantity;
+                        return acc;
+                    }, 0);
+                    return (
+                        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                            <Card.Body p="4">
+                                <Flex justify="space-between" align="center">
+                                    <Flex align="center" gap="2">
+                                        <LuShoppingBag size={20} />
+                                        <Text fontWeight="700" fontSize="lg">Итого</Text>
+                                    </Flex>
+                                    <VStack gap="0" align="end">
+                                        <Text fontSize="xl" fontWeight="800">
+                                            {fmt(order.total_converted)} {currencySymbol}
+                                        </Text>
+                                        {order.currency_code && order.currency_code !== currency?.code && (
+                                            <Text fontSize="xs" color="gray.400">
+                                                {fmt(order.total_amount)} {order.currency_code}
+                                            </Text>
+                                        )}
+                                        {totalSavings > 0 && (
+                                            <HStack gap="1" mt="1">
+                                                <Badge colorPalette="green" variant="subtle" size="sm">
+                                                    Ваша выгода: {fmt(totalSavings)} {currencySymbol}
+                                                </Badge>
+                                            </HStack>
+                                        )}
+                                    </VStack>
+                                </Flex>
+                            </Card.Body>
+                        </Card.Root>
+                    );
+                })()}
 
                 {/* ═══ Единый timeline: статусы + изменения ═══ */}
                 {timelineEntries.length > 0 && (

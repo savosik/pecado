@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react';
 import {
-    Box, Flex, Text, Table, Image, Badge, IconButton,
+    Box, Flex, Text, Table, Image, Badge, IconButton, HStack,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import { LuTrash2, LuChevronUp, LuChevronDown } from 'react-icons/lu';
@@ -50,7 +50,12 @@ function computeRowData(row, pickPricePair) {
         (row.instock ? !!row.instock.is_unavailable : true) &&
         (row.preorder ? !!row.preorder.is_unavailable : true);
 
-    return { pid, instockQty, preorderQty, totalQty, priceRegular, priceDiscounted, sumRegular, sumDiscounted, isUnavailable };
+    const discountPercent = priceRegular > 0 && priceRegular !== priceDiscounted
+        ? Math.round((1 - priceDiscounted / priceRegular) * 100)
+        : 0;
+    const savingsTotal = sumRegular - sumDiscounted;
+
+    return { pid, instockQty, preorderQty, totalQty, priceRegular, priceDiscounted, sumRegular, sumDiscounted, isUnavailable, discountPercent, savingsTotal };
 }
 
 /**
@@ -299,6 +304,11 @@ export default function CartTable({
                                                 {data.priceRegular.toLocaleString('ru-RU')}
                                             </Text>
                                         )}
+                                        {data.discountPercent > 0 && (
+                                            <Badge colorPalette="green" variant="subtle" size="xs" mb="0.5">
+                                                -{data.discountPercent}%
+                                            </Badge>
+                                        )}
                                         <Text>{data.priceDiscounted.toLocaleString('ru-RU')}</Text>
                                     </Table.Cell>
                                     <Table.Cell verticalAlign="middle">
@@ -308,6 +318,11 @@ export default function CartTable({
                                             </Text>
                                         )}
                                         <Text fontWeight="medium">{data.sumDiscounted.toLocaleString('ru-RU')}</Text>
+                                        {data.savingsTotal > 0 && (
+                                            <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
+                                                Экономия: {data.savingsTotal.toLocaleString('ru-RU')}
+                                            </Text>
+                                        )}
                                     </Table.Cell>
                                     <Table.Cell verticalAlign="middle">
                                         <IconButton
@@ -345,6 +360,11 @@ export default function CartTable({
                                 <Text fontWeight="semibold">
                                     {totals.totalAmountDiscounted.toLocaleString('ru-RU')}
                                 </Text>
+                                {totals.totalAmountRegular > totals.totalAmountDiscounted && (
+                                    <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
+                                        Ваша выгода: {(totals.totalAmountRegular - totals.totalAmountDiscounted).toLocaleString('ru-RU')} {currencySymbol}
+                                    </Text>
+                                )}
                             </Table.Cell>
                             <Table.Cell />
                         </Table.Row>
@@ -420,9 +440,14 @@ export default function CartTable({
                                                 Цена ({currencySymbol})
                                             </Text>
                                             {data.priceRegular !== data.priceDiscounted && (
-                                                <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
-                                                    {data.priceRegular.toLocaleString('ru-RU')}
-                                                </Text>
+                                                <HStack gap="1" align="center">
+                                                    <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
+                                                        {data.priceRegular.toLocaleString('ru-RU')}
+                                                    </Text>
+                                                    <Badge colorPalette="green" variant="subtle" size="xs">
+                                                        -{data.discountPercent}%
+                                                    </Badge>
+                                                </HStack>
                                             )}
                                             <Text fontWeight="medium">
                                                 {data.priceDiscounted.toLocaleString('ru-RU')}
@@ -457,6 +482,11 @@ export default function CartTable({
                                             <Text as="span" fontWeight="medium">
                                                 {data.sumDiscounted.toLocaleString('ru-RU')}
                                             </Text>
+                                            {data.savingsTotal > 0 && (
+                                                <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }} mt="0.5">
+                                                    Ваша выгода: {data.savingsTotal.toLocaleString('ru-RU')} {currencySymbol}
+                                                </Text>
+                                            )}
                                         </Box>
                                         <IconButton
                                             aria-label="Удалить"

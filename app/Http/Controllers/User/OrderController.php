@@ -179,6 +179,9 @@ class OrderController extends Controller
                         'id' => $item->id,
                         'name' => $item->name,
                         'price' => $item->price,
+                        'base_price' => $item->base_price,
+                        'final_price' => $item->final_price,
+                        'discount_percent' => $item->discount_percent,
                         'quantity' => $item->quantity,
                         'subtotal' => $item->subtotal,
                         'product' => $item->product ? [
