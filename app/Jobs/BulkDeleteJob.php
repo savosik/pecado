@@ -33,15 +33,13 @@ class BulkDeleteJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public string $queue = 'heavy';
-
     public function __construct(
         public string $resourceSlug,
         public string $modelClass,
         public string $method,
         public string $label,
     ) {
-        $this->onConnection('redis');
+        $this->onConnection('redis')->onQueue('heavy');
     }
 
     /**
