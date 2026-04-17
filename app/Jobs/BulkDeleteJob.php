@@ -33,8 +33,6 @@ class BulkDeleteJob implements ShouldQueue
 
     public int $tries = 1;
 
-    public string $connection = 'redis';
-
     public string $queue = 'heavy';
 
     public function __construct(
@@ -42,7 +40,9 @@ class BulkDeleteJob implements ShouldQueue
         public string $modelClass,
         public string $method,
         public string $label,
-    ) {}
+    ) {
+        $this->onConnection('redis');
+    }
 
     /**
      * Ключ кеша для прогресса удаления.
