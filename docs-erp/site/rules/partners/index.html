@@ -608,6 +608,17 @@
   <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
+        Версионные изменения
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         Критерии приёмки
       
     </span>
@@ -644,7 +655,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1614,6 +1625,17 @@
   <a href="#_8" class="md-nav__link">
     <span class="md-ellipsis">
       
+        Версионные изменения
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_9" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         Критерии приёмки
       
     </span>
@@ -1650,7 +1672,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_9" class="md-nav__link">
+  <a href="#_10" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1734,6 +1756,7 @@
 <li><strong>(v8)</strong> Поля <code>first_name</code>, <code>last_name</code>, <code>middle_name</code> удалены. Единое поле <code>name</code> (НаименованиеПолное)</li>
 <li><strong>(v10)</strong> Поле <code>is_active</code> (boolean) — активность партнёра. <code>false</code> → пользователь не может оформлять заказы</li>
 <li><strong>(v11)</strong> Поле <code>client_status</code> — произвольная строка, код статуса клиента (уровень лояльности). Резолвится через <code>ClientStatus.external_id</code>. Примеры: <code>silver</code>, <code>gold</code>, <code>diamond</code>, <code>individual</code></li>
+<li><strong>(v12.7.5)</strong> Поле <code>password</code> — тип изменён с <code>integer</code> на <code>string</code>, <code>maxLength</code> увеличен до 32. 1С передаёт CRC32 как строку длиной до 10 символов</li>
 </ul>
 <h3 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1819,14 +1842,28 @@
 <h2 id="partnercreated-1_1">partner.created (Сайт → 1С)<a class="headerlink" href="#partnercreated-1_1" title="Permanent link">&para;</a></h2>
 <h3 id="-_2">Бизнес-правила<a class="headerlink" href="#-_2" title="Permanent link">&para;</a></h3>
 <ul>
+<li>Событие публикуется при <strong>регистрации</strong> нового пользователя (событие <code>UserCreated</code>), не при активации</li>
+<li>Новый пользователь получает статус <strong>PROCESSING</strong> — <code>is_active</code> всегда <code>false</code> при первой отправке</li>
+<li>Поле <code>comment</code> содержит <strong>секретную ссылку</strong> на превью-страницу (<code>/preview/user/{token}</code>) — только по URL с токеном, без авторизации</li>
+<li>Ссылка предназначена для менеджеров, не имеющих доступа к админке, чтобы ознакомиться с данными нового партнёра</li>
+<li>При регистрации пользователю автоматически назначается регион по умолчанию (первый по id)</li>
 <li>1С ищет партнёра по email (<code>EmailПартнера</code>); если не найден — создаёт нового</li>
 <li>1С <strong>не использует</strong> UUID из payload как свой идентификатор — генерирует свой UUID платформой</li>
 </ul>
-<h3 id="_8">Критерии приёмки<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
+<h3 id="_8">Версионные изменения<a class="headerlink" href="#_8" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] Сайт публикует <code>partner.created</code> с данными партнёра через <code>erp_out.partners</code></li>
-<li>[ ] Payload содержит: <code>event</code>, <code>message_id</code>, <code>uuid</code>, <code>login</code>, <code>name</code>, <code>email</code></li>
+<li><strong>(v12.8)</strong> Триггер изменён с <code>UserUpdated</code> (активация) на <code>UserCreated</code> (регистрация)</li>
+<li><strong>(v12.8)</strong> Добавлено поле <code>is_active</code> (boolean) — всегда <code>false</code> при первой регистрации (статус PROCESSING)</li>
+<li><strong>(v12.8)</strong> Добавлено поле <code>comment</code> (string|null) — секретная ссылка на превью-страницу пользователя</li>
+</ul>
+<h3 id="_9">Критерии приёмки<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Сайт публикует <code>partner.created</code> с данными партнёра через <code>erp_out.partners</code> при регистрации</li>
+<li>[ ] Payload содержит: <code>event</code>, <code>message_id</code>, <code>uuid</code>, <code>login</code>, <code>name</code>, <code>email</code>, <code>is_active</code>, <code>comment</code></li>
 <li>[ ] <code>login = email</code></li>
+<li>[ ] <code>is_active = false</code> (новый пользователь в статусе PROCESSING)</li>
+<li>[ ] <code>comment</code> содержит валидный URL вида <code>/preview/user/{token}</code></li>
+<li>[ ] Превью-страница открывается без авторизации, показывает данные пользователя и анкету (если заполнена)</li>
 </ul>
 <hr />
 <h2 id="partnerdeleted-1">partner.deleted (1С → Сайт)<a class="headerlink" href="#partnerdeleted-1" title="Permanent link">&para;</a></h2>
@@ -1835,7 +1872,7 @@
 <li>Пользователь переводится в статус «Не активен» (<code>is_active = false</code>)</li>
 <li>Пользователь не может авторизоваться и оформлять заказы</li>
 </ul>
-<h3 id="_9">Критерии приёмки<a class="headerlink" href="#_9" title="Permanent link">&para;</a></h3>
+<h3 id="_10">Критерии приёмки<a class="headerlink" href="#_10" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Сайт принимает <code>partner.deleted</code> и деактивирует пользователя</li>
 </ul>

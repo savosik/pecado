@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 12.7.4
+  version: 12.8.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -368,9 +368,11 @@ operations:
 
   sendPartnerCreated:
     title: Отправка партнёра в 1С
-    summary: Сайт → 1С при активации пользователя
+    summary: Сайт → 1С при регистрации пользователя
     description: |
-      Публикуется через `PublishUserToErpJob`.
+      Публикуется через `PublishUserToErpJob` при событии `UserCreated`.
+      Новый пользователь получает статус PROCESSING (`is_active: false`).
+      Поле `comment` содержит секретную ссылку на превью-страницу пользователя для менеджеров.
       1С ищет партнёра по email; если не найден — создаёт нового.
       1С НЕ присваивает UUID из JSON как ссылку — UUID генерирует платформа 1С.
     action: send
@@ -849,7 +851,7 @@ components:
     PartnerCreatedFromSite:
       name: partner.created
       title: Партнёр создан (Сайт → 1С)
-      summary: Активация нового пользователя на сайте
+      summary: Регистрация нового пользователя на сайте
       traits:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
@@ -1382,6 +1384,22 @@ components:
           type: string
           format: email
           description: Email
+        is_active:
+          type: boolean
+          description: |
+            Активность пользователя. При регистрации всегда `false` —
+            пользователь находится в статусе PROCESSING до проверки менеджером.
+          examples:
+            - false
+        comment:
+          type:
+            - string
+            - 'null'
+          description: |
+            Секретная ссылка на превью-страницу пользователя для менеджеров.
+            Содержит уникальный токен (`view_token`), доступ — только по ссылке.
+          examples:
+            - 'https://example.com/preview/user/abc123def456'
 
     # ── US-03: Цены ──────────────────────────
     PriceUpdatedPayload:
