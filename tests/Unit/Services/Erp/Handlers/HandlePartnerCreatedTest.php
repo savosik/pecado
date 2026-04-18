@@ -6,6 +6,7 @@ use App\Enums\UserStatus;
 use App\Events\UserCreated;
 use App\Events\UserUpdated;
 use App\Models\ClientStatus;
+use App\Models\Region;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandlePartnerCreated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -423,5 +424,32 @@ class HandlePartnerCreatedTest extends TestCase
         $user = User::where('email', 'newblocked@example.com')->first();
         $this->assertNotNull($user);
         $this->assertEquals(UserStatus::BLOCKED, $user->status);
+    }
+
+    // ──────────────────────────────────────────────
+    // Дефолтный регион при создании из 1С
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_assigns_min_region_to_new_user_created_from_erp(): void
+    {
+        $firstRegion = Region::factory()->create();
+        Region::factory()->create();
+        Region::factory()->create();
+
+        $minId = Region::min('id');
+        $this->assertEquals($firstRegion->id, $minId);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-region-default',
+            'email' => 'regiontest@example.com',
+            'password' => 'temp123',
+        ]);
+
+        $user = User::where('email', 'regiontest@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals($minId, $user->region_id);
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services\Erp\Handlers;
 use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
 use App\Models\ClientStatus;
+use App\Models\Region;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -124,6 +125,8 @@ class HandlePartnerCreated
             return;
         }
 
+        $defaultRegionId = Region::min('id');
+
         $createData = [
             'name' => $name ?? $login,
             'city' => $city,
@@ -134,6 +137,7 @@ class HandlePartnerCreated
             'must_change_password' => true,
             'erp_id' => $uuid,
             'status' => $userStatus,
+            'region_id' => $defaultRegionId,
         ];
 
         if ($clientStatusId !== false) {
