@@ -52,15 +52,58 @@ class PublishUserToErpTest extends TestCase
     }
 
     #[Test]
-    public function it_does_not_dispatch_on_user_updated_event(): void
+    public function it_does_not_dispatch_on_user_created_without_name(): void
+    {
+        $user = User::factory()->create(['name' => null, 'status' => UserStatus::PROCESSING]);
+
+        Queue::fake();
+
+        $listener = new PublishUserToErp;
+        $listener->handle(new UserCreated($user));
+
+        Queue::assertNothingPushed();
+    }
+
+    #[Test]
+    public function it_dispatches_partner_created_when_name_set_for_first_time_on_update(): void
+    {
+        $user = User::factory()->create(['name' => null, 'status' => UserStatus::PROCESSING]);
+
+        Queue::fake();
+
+        $user->name = 'Иван Иванов';
+        $user->save();
+
+        Queue::assertPushed(PublishUserToErpJob::class, function ($job) {
+            return $job->payload['event'] === 'partner.created'
+                && $job->payload['name'] === 'Иван Иванов';
+        });
+    }
+
+    #[Test]
+    public function it_does_not_dispatch_on_user_updated_when_name_already_set(): void
     {
         $user = User::factory()->create([
+            'name' => 'Уже есть имя',
             'status' => UserStatus::PROCESSING,
         ]);
 
         Queue::fake();
 
         $user->status = UserStatus::ACTIVE;
+        $user->save();
+
+        Queue::assertNothingPushed();
+    }
+
+    #[Test]
+    public function it_does_not_dispatch_on_user_updated_when_name_changes_but_was_not_null(): void
+    {
+        $user = User::factory()->create(['name' => 'Старое имя', 'status' => UserStatus::PROCESSING]);
+
+        Queue::fake();
+
+        $user->name = 'Новое имя';
         $user->save();
 
         Queue::assertNothingPushed();

@@ -183,6 +183,7 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
             onSuccess: () => {
                 toaster.create({ title: 'Лог сообщений очищен', type: 'success' });
                 setClearingBusMessages(false);
+                router.reload({ preserveScroll: true });
             },
             onError: () => {
                 toaster.create({ title: 'Ошибка при очистке лога', type: 'error' });
@@ -194,11 +195,12 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
     const handleClearProcessed = useCallback(() => {
         if (!window.confirm('Очистить журнал обработанных сообщений и статистику? Это действие необратимо.')) return;
         setClearingProcessed(true);
-        router.delete(route('admin.bulk-delete-all', 'erp-processed-messages'), {
+        router.delete(route('admin.erp-bus.clear-processed'), {
             preserveScroll: true,
             onSuccess: () => {
                 toaster.create({ title: 'Журнал обработанных сообщений очищен', type: 'success' });
                 setClearingProcessed(false);
+                router.reload({ preserveScroll: true });
             },
             onError: () => {
                 toaster.create({ title: 'Ошибка при очистке журнала', type: 'error' });

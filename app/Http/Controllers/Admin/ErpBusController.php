@@ -194,6 +194,16 @@ class ErpBusController extends AdminController
     }
 
     /**
+     * Очистить журнал обработанных сообщений и статистику (синхронно).
+     */
+    public function clearProcessed(): \Illuminate\Http\RedirectResponse
+    {
+        ErpProcessedMessage::truncate();
+
+        return back()->with('success', 'Журнал обработанных сообщений очищен');
+    }
+
+    /**
      * Очистить лог ошибок валидации.
      */
     public function clearValidationErrors(): \Illuminate\Http\RedirectResponse

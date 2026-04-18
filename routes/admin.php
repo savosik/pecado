@@ -680,6 +680,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::get('/erp-bus/messages/{message}', [\App\Http\Controllers\Admin\ErpBusController::class, 'showMessage'])->name('erp-bus.messages.show')->middleware('permission:erp-bus.view');
     Route::delete('/erp-bus/messages', [\App\Http\Controllers\Admin\ErpBusController::class, 'clearMessages'])->name('erp-bus.clear-messages')->middleware('permission:erp-bus.view');
     Route::delete('/erp-bus/validation-errors', [\App\Http\Controllers\Admin\ErpBusController::class, 'clearValidationErrors'])->name('erp-bus.clear-validation-errors')->middleware('permission:erp-bus.view');
+    Route::delete('/erp-bus/processed', [\App\Http\Controllers\Admin\ErpBusController::class, 'clearProcessed'])->name('erp-bus.clear-processed')->middleware('permission:erp-bus.view');
 
     // Роли
     Route::middleware('permission:roles.view')->group(function () {
