@@ -13,11 +13,10 @@ class HandlePartnerCreatedCurrencyTest extends TestCase
     use RefreshDatabase;
 
     /**
-     * partner.created не передаёт region/currency — эти поля
-     * не участвуют в обработке. Валюта определяется через регион
-     * пользователя, который привязывается на стороне сайта.
+     * partner.created не передаёт region — устанавливается дефолтный (min id).
+     * Валюта определяется через регион пользователя.
      */
-    public function test_partner_handler_does_not_set_region_or_currency(): void
+    public function test_partner_handler_sets_default_region_on_create(): void
     {
         $rub = Currency::factory()->create(['code' => 'RUB', 'is_base' => true]);
         $region = Region::factory()->create([
@@ -46,9 +45,9 @@ class HandlePartnerCreatedCurrencyTest extends TestCase
         $user = User::where('erp_id', $payload['uuid'])->first();
         $this->assertNotNull($user, 'Пользователь должен быть создан');
 
-        // region_id не устанавливается из ERP — нет поля region в payload
-        $this->assertNull($user->region_id);
-        // currency_id тоже не устанавливается напрямую
+        // region_id устанавливается дефолтным (min id) при создании из ERP
+        $this->assertEquals(Region::min('id'), $user->region_id);
+        // currency_id не устанавливается напрямую — только через регион
         $this->assertNull($user->currency_id ?? null);
     }
 
