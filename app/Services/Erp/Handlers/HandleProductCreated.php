@@ -102,11 +102,12 @@ class HandleProductCreated
             }
 
             // --- Upsert товара ---
-            // Сохраняем существующую base_price — она управляется через price.updated (US-02)
-            $existing = Product::where('external_id', $uuid)->first();
+            // withoutGlobalScopes: HiddenScope фильтрует hidden=true, без него мы не найдём
+            // скрытый товар и создадим дубликат с тем же external_id → ошибка 1062.
+            $existing = Product::withoutGlobalScopes()->where('external_id', $uuid)->first();
             $basePrice = $existing?->base_price ?? 0;
 
-            $product = Product::updateOrCreate(
+            $product = Product::withoutGlobalScopes()->updateOrCreate(
                 ['external_id' => $uuid],
                 [
                     'name' => $name,
