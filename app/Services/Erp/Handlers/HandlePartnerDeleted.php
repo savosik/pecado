@@ -8,28 +8,23 @@ use Illuminate\Support\Facades\Log;
 
 class HandlePartnerDeleted
 {
-    /**
-     * Обработка события partner.deleted из 1С.
-     *
-     * Находит пользователя по erp_id (UUID), с fallback-поиском
-     * по email (для случая когда erp_id ещё не привязан).
-     * Переводит в статус «Заблокирован».
-     */
     public function handle(array $payload): void
     {
         $uuid = $payload['uuid'] ?? null;
         $email = $payload['email'] ?? null;
 
-        if (! $uuid) {
-            Log::warning('partner.deleted: отсутствует uuid', ['payload' => $payload]);
+        if (! $uuid && ! $email) {
+            Log::warning('partner.deleted: отсутствуют uuid и email', ['payload' => $payload]);
 
             return;
         }
 
-        // Основной поиск — по erp_id
-        $user = User::where('erp_id', $uuid)->first();
+        $user = null;
 
-        // Fallback — по email (erp_id мог ещё не быть привязан)
+        if ($uuid) {
+            $user = User::where('erp_id', $uuid)->first();
+        }
+
         if (! $user && $email) {
             $user = User::where('email', $email)->first();
         }

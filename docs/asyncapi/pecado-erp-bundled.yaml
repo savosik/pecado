@@ -285,9 +285,11 @@ channels:
           type: object
           required:
             - event
-            - message_id
-            - uuid
-            - email
+          anyOf:
+            - required:
+                - uuid
+            - required:
+                - email
           properties:
             event:
               type: string
@@ -305,11 +307,13 @@ channels:
             email:
               type: string
               format: email
-              description: Email партнёра для fallback-поиска, если erp_id ещё не привязан
+              description: Email партнёра — обязателен если uuid не передан
           examples:
             - event: partner.deleted
               message_id: msg-partner-del-a1b2c3d4
               uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            - event: partner.deleted
+              message_id: msg-partner-del-b2c3d4e5
               email: partner@example.com
       contractorCreated:
         name: contractor.created
@@ -3186,9 +3190,11 @@ components:
         type: object
         required:
           - event
-          - message_id
-          - uuid
-          - email
+        anyOf:
+          - required:
+              - uuid
+          - required:
+              - email
         properties:
           event:
             type: string
@@ -3206,11 +3212,13 @@ components:
           email:
             type: string
             format: email
-            description: Email партнёра для fallback-поиска, если erp_id ещё не привязан
+            description: Email партнёра — обязателен если uuid не передан
         examples:
           - event: partner.deleted
             message_id: msg-partner-del-a1b2c3d4
             uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+          - event: partner.deleted
+            message_id: msg-partner-del-b2c3d4e5
             email: partner@example.com
     PartnerCreatedFromSite:
       name: partner.created
@@ -5216,9 +5224,11 @@ components:
       type: object
       required:
         - event
-        - message_id
-        - uuid
-        - email
+      anyOf:
+        - required:
+            - uuid
+        - required:
+            - email
       properties:
         event:
           type: string
@@ -5236,11 +5246,13 @@ components:
         email:
           type: string
           format: email
-          description: Email партнёра для fallback-поиска, если erp_id ещё не привязан
+          description: Email партнёра — обязателен если uuid не передан
       examples:
         - event: partner.deleted
           message_id: msg-partner-del-a1b2c3d4
           uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+        - event: partner.deleted
+          message_id: msg-partner-del-b2c3d4e5
           email: partner@example.com
     OrderDeletedPayload:
       type: object

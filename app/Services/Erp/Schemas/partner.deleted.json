@@ -22,8 +22,10 @@
     },
     "additionalProperties": true,
     "required": [
-        "event",
-        "uuid",
-        "email"
+        "event"
+    ],
+    "anyOf": [
+        {"required": ["uuid"]},
+        {"required": ["email"]}
     ]
 }

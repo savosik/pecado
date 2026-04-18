@@ -34,6 +34,41 @@ class HandlePartnerDeletedTest extends TestCase
     }
 
     #[Test]
+    public function it_blocks_user_by_email_only(): void
+    {
+        $user = User::factory()->create([
+            'status' => UserStatus::ACTIVE,
+            'erp_id' => null,
+            'email' => 'only-email@example.com',
+        ]);
+
+        $handler = new HandlePartnerDeleted;
+        $handler->handle([
+            'event' => 'partner.deleted',
+            'email' => 'only-email@example.com',
+        ]);
+
+        $user->refresh();
+
+        $this->assertEquals(UserStatus::BLOCKED, $user->status);
+    }
+
+    #[Test]
+    public function it_does_nothing_when_both_uuid_and_email_missing(): void
+    {
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(function ($msg) {
+                return str_contains($msg, 'отсутствуют uuid и email');
+            });
+
+        $handler = new HandlePartnerDeleted;
+        $handler->handle([
+            'event' => 'partner.deleted',
+        ]);
+    }
+
+    #[Test]
     public function it_does_nothing_when_user_not_found(): void
     {
         Log::shouldReceive('warning')
@@ -46,21 +81,6 @@ class HandlePartnerDeletedTest extends TestCase
         $handler->handle([
             'event' => 'partner.deleted',
             'uuid' => 'nonexistent-uuid',
-        ]);
-    }
-
-    #[Test]
-    public function it_does_nothing_when_uuid_missing(): void
-    {
-        Log::shouldReceive('warning')
-            ->once()
-            ->withArgs(function ($msg) {
-                return str_contains($msg, 'отсутствует uuid');
-            });
-
-        $handler = new HandlePartnerDeleted;
-        $handler->handle([
-            'event' => 'partner.deleted',
         ]);
     }
 
