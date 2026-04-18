@@ -172,6 +172,40 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
     };
     const [eventFilter, setEventFilter] = useState(filters.event || '');
     const [clearingValidation, setClearingValidation] = useState(false);
+    const [clearingBusMessages, setClearingBusMessages] = useState(false);
+    const [clearingProcessed, setClearingProcessed] = useState(false);
+
+    const handleClearBusMessages = useCallback(() => {
+        if (!window.confirm('Очистить весь лог сообщений шины? Это действие необратимо.')) return;
+        setClearingBusMessages(true);
+        router.delete(route('admin.erp-bus.clear-messages'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toaster.create({ title: 'Лог сообщений очищен', type: 'success' });
+                setClearingBusMessages(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при очистке лога', type: 'error' });
+                setClearingBusMessages(false);
+            },
+        });
+    }, []);
+
+    const handleClearProcessed = useCallback(() => {
+        if (!window.confirm('Очистить журнал обработанных сообщений и статистику? Это действие необратимо.')) return;
+        setClearingProcessed(true);
+        router.delete(route('admin.bulk-delete-all', 'erp-processed-messages'), {
+            preserveScroll: true,
+            onSuccess: () => {
+                toaster.create({ title: 'Журнал обработанных сообщений очищен', type: 'success' });
+                setClearingProcessed(false);
+            },
+            onError: () => {
+                toaster.create({ title: 'Ошибка при очистке журнала', type: 'error' });
+                setClearingProcessed(false);
+            },
+        });
+    }, []);
 
     const handleRefresh = useCallback(() => {
         router.reload({ preserveScroll: true });
@@ -313,12 +347,26 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                                 </Text>
                             </Box>
                         </HStack>
-                        <Link href={route('admin.erp-bus.messages')}>
-                            <Button size="sm" colorPalette="purple" variant="outline">
-                                <LuFileText />
-                                Открыть лог
-                            </Button>
-                        </Link>
+                        <HStack gap={2}>
+                            {busMessagesCount > 0 && (
+                                <Button
+                                    size="sm"
+                                    colorPalette="red"
+                                    variant="outline"
+                                    loading={clearingBusMessages}
+                                    onClick={handleClearBusMessages}
+                                >
+                                    <LuTrash2 />
+                                    Очистить журнал
+                                </Button>
+                            )}
+                            <Link href={route('admin.erp-bus.messages')}>
+                                <Button size="sm" colorPalette="purple" variant="outline">
+                                    <LuFileText />
+                                    Открыть лог
+                                </Button>
+                            </Link>
+                        </HStack>
                     </Flex>
                 </Card.Body>
             </Card.Root>
@@ -423,9 +471,21 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
             {/* Статистика по типам событий */}
             {eventStats && eventStats.length > 0 && (
                 <Box mb={8}>
-                    <Text fontWeight="bold" fontSize="md" mb={3}>
-                        📊 Статистика по типам событий
-                    </Text>
+                    <HStack justify="space-between" mb={3}>
+                        <Text fontWeight="bold" fontSize="md">
+                            📊 Статистика по типам событий
+                        </Text>
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            colorPalette="red"
+                            loading={clearingProcessed}
+                            onClick={handleClearProcessed}
+                        >
+                            <LuTrash2 />
+                            Очистить статистику и журнал
+                        </Button>
+                    </HStack>
                     <SimpleGrid columns={{ base: 2, sm: 3, md: 4, lg: 6 }} gap={3}>
                         {eventStats.map((stat) => (
                             <Card.Root key={stat.event} size="sm">
@@ -452,9 +512,23 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
 
             {/* Журнал обработанных сообщений */}
             <Box mb={8}>
-                <Text fontWeight="bold" fontSize="md" mb={3}>
-                    ✅ Журнал обработанных сообщений
-                </Text>
+                <HStack justify="space-between" mb={3}>
+                    <Text fontWeight="bold" fontSize="md">
+                        ✅ Журнал обработанных сообщений
+                    </Text>
+                    {processed.data.length > 0 && (
+                        <Button
+                            size="xs"
+                            variant="outline"
+                            colorPalette="red"
+                            loading={clearingProcessed}
+                            onClick={handleClearProcessed}
+                        >
+                            <LuTrash2 />
+                            Очистить журнал
+                        </Button>
+                    )}
+                </HStack>
 
                 <HStack gap={3} mb={4}>
                     <Input
