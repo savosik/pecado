@@ -60,16 +60,17 @@ class IndividualPriceController extends Controller
         $productIds = $prices->pluck('product_id')->unique();
         $warehouseIds = $prices->pluck('warehouse_id')->unique();
 
-        $partners = User::whereIn('id', $partnerIds)->pluck('name', 'id')->toArray();
-        $partnerEmails = User::whereIn('id', $partnerIds)->pluck('email', 'id')->toArray();
+        // Один запрос вместо двух (name + email)
+        $partnerData = User::whereIn('id', $partnerIds)->get(['id', 'name', 'email'])->keyBy('id');
         $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
         $warehouses = Warehouse::whereIn('id', $warehouseIds)->pluck('name', 'id')->toArray();
 
         // Трансформируем данные для фронтенда
-        $prices->through(function ($item) use ($partners, $partnerEmails, $products, $warehouses) {
+        $prices->through(function ($item) use ($partnerData, $products, $warehouses) {
+            $partner = $partnerData[$item->partner_id] ?? null;
             $product = $products[$item->product_id] ?? null;
-            $item->partner_name = $partners[$item->partner_id] ?? "ID: {$item->partner_id}";
-            $item->partner_email = $partnerEmails[$item->partner_id] ?? '';
+            $item->partner_name = $partner?->name ?? "ID: {$item->partner_id}";
+            $item->partner_email = $partner?->email ?? '';
             $item->product_name = $product?->name ?? "ID: {$item->product_id}";
             $item->product_sku = $product?->sku ?? '';
             $item->warehouse_name = $warehouses[$item->warehouse_id] ?? "ID: {$item->warehouse_id}";
@@ -225,8 +226,7 @@ class IndividualPriceController extends Controller
 
         // При создании — ищем среди всех; при фильтрации — только тех, у кого есть цены
         if ($request->boolean('only_with_prices')) {
-            $partnerIds = DB::connection('prices')->table('individual_prices')->distinct()->pluck('partner_id');
-            $query->whereIn('id', $partnerIds);
+            $query->whereIn('id', $this->statsService->getDistinctPartnerIds());
         }
 
         if ($search = $request->input('query')) {
@@ -256,8 +256,7 @@ class IndividualPriceController extends Controller
         $query = Product::query();
 
         if ($request->boolean('only_with_prices')) {
-            $productIds = DB::connection('prices')->table('individual_prices')->distinct()->pluck('product_id');
-            $query->whereIn('id', $productIds);
+            $query->whereIn('id', $this->statsService->getDistinctProductIds());
         }
 
         if ($search = $request->input('query')) {
@@ -288,8 +287,7 @@ class IndividualPriceController extends Controller
         $query = Warehouse::query();
 
         if ($request->boolean('only_with_prices')) {
-            $warehouseIds = DB::connection('prices')->table('individual_prices')->distinct()->pluck('warehouse_id');
-            $query->whereIn('id', $warehouseIds);
+            $query->whereIn('id', $this->statsService->getDistinctWarehouseIds());
         }
 
         if ($search = $request->input('query')) {
