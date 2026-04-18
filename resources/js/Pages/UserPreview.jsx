@@ -1,5 +1,5 @@
 import { Head } from '@inertiajs/react';
-import { Box, Card, Heading, Stack, SimpleGrid, Text, Badge, Separator } from '@chakra-ui/react';
+import { Box, Card, Heading, Stack, SimpleGrid, Text, Badge, Separator, HStack } from '@chakra-ui/react';
 
 function Field({ label, value }) {
     if (value === null || value === undefined || value === '') return null;
