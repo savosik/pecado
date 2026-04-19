@@ -55,8 +55,8 @@ class DashboardController extends AdminController
                     'order_number' => $order->order_number,
                     'user_name' => $order->user->name ?? 'N/A',
                     'total_amount' => $order->total_amount,
-                    'status' => $order->status,
-                    'status_label' => $order->status_label,
+                    'status' => $order->status?->value,
+                    'status_label' => $order->status?->label() ?? 'Неизвестно',
                     'created_at' => $order->created_at->format('d.m.Y H:i'),
                 ];
             });
