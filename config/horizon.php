@@ -248,6 +248,15 @@ return [
                 'maxProcesses' => 2,
             ],
         ],
+
+        'dev' => [
+            'supervisor-1' => [
+                'maxProcesses' => 3,
+            ],
+            'supervisor-heavy' => [
+                'maxProcesses' => 2,
+            ],
+        ],
     ],
 
     /*
