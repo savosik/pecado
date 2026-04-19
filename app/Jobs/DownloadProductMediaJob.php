@@ -48,10 +48,10 @@ class DownloadProductMediaJob implements ShouldQueue
         if (! empty($mainImage)) {
             try {
                 $product->addMediaFromUrl($mainImage)
-                    ->withCustomProperties(['product_code' => $data['code']])
+                    ->withCustomProperties(['product_code' => $product->code])
                     ->toMediaCollection('main');
             } catch (\Exception $e) {
-                Log::warning("Ошибка загрузки main изображения для {$data['code']}: {$e->getMessage()}");
+                Log::warning("Ошибка загрузки main изображения для {$product->code}: {$e->getMessage()}");
             }
         }
 
@@ -60,10 +60,10 @@ class DownloadProductMediaJob implements ShouldQueue
             if (! empty($imgUrl)) {
                 try {
                     $product->addMediaFromUrl($imgUrl)
-                        ->withCustomProperties(['product_code' => $data['code']])
+                        ->withCustomProperties(['product_code' => $product->code])
                         ->toMediaCollection('additional');
                 } catch (\Exception $e) {
-                    Log::warning("Ошибка загрузки доп. изображения для {$data['code']}: {$e->getMessage()}");
+                    Log::warning("Ошибка загрузки доп. изображения для {$product->code}: {$e->getMessage()}");
                 }
             }
         }
@@ -73,15 +73,15 @@ class DownloadProductMediaJob implements ShouldQueue
             if (! empty($videoUrl)) {
                 try {
                     $product->addMediaFromUrl($videoUrl)
-                        ->withCustomProperties(['product_code' => $data['code']])
+                        ->withCustomProperties(['product_code' => $product->code])
                         ->toMediaCollection('video');
                 } catch (\Exception $e) {
-                    Log::warning("Ошибка загрузки видео для {$data['code']}: {$e->getMessage()}");
+                    Log::warning("Ошибка загрузки видео для {$product->code}: {$e->getMessage()}");
                 }
             }
         }
 
         $mediaCount = $product->media()->count();
-        Log::info("Загружены медиа для {$data['code']}: {$mediaCount} файлов");
+        Log::info("Загружены медиа для {$product->code}: {$mediaCount} файлов");
     }
 }
