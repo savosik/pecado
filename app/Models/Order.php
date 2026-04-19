@@ -14,6 +14,9 @@ class Order extends Model
 {
     use HasFactory, SoftDeletes;
 
+    /** Флаг: заказ обновляется из ERP — не публиковать обратно в шину */
+    public bool $fromErp = false;
+
     protected $dispatchesEvents = [
         'updated' => \App\Events\OrderUpdated::class,
         'deleted' => \App\Events\OrderDeleted::class,

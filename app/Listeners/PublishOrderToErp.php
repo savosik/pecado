@@ -17,6 +17,10 @@ class PublishOrderToErp
 
         $order = $event->order;
 
+        if ($order->fromErp) {
+            return;
+        }
+
         // Load relationships to include in the payload
         $order->load(['items.product', 'user', 'company.bankAccounts', 'user.region']);
 

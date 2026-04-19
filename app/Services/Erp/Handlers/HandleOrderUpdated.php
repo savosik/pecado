@@ -74,6 +74,7 @@ class HandleOrderUpdated
             $order->delivery_address = $payload['delivery_address'];
         }
 
+        $order->fromErp = true;
         $order->save();
 
         // Обновление позиций (если переданы) с журналированием
