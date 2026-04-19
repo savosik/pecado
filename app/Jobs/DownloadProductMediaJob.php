@@ -36,37 +36,45 @@ class DownloadProductMediaJob implements ShouldQueue
 
         $data = $this->itemData;
 
-        // Clear existing media
+        // Очищаем только записи media в БД (файлы уже удалены через deletePreservingMedia при удалении товара
+        // или живут от предыдущей загрузки). clearMediaCollection удаляет файлы — это нормально,
+        // т.к. сейчас мы загружаем свежие файлы с правильными custom_properties.
         $product->clearMediaCollection('main');
         $product->clearMediaCollection('additional');
         $product->clearMediaCollection('video');
 
-        // Main image
+        // Главное изображение
         $mainImage = $data['image_main'] ?? '';
         if (! empty($mainImage)) {
             try {
-                $product->addMediaFromUrl($mainImage)->toMediaCollection('main');
+                $product->addMediaFromUrl($mainImage)
+                    ->withCustomProperties(['product_code' => $data['code']])
+                    ->toMediaCollection('main');
             } catch (\Exception $e) {
                 Log::warning("Ошибка загрузки main изображения для {$data['code']}: {$e->getMessage()}");
             }
         }
 
-        // Additional images
+        // Дополнительные изображения
         foreach ($data['additional_images'] ?? [] as $imgUrl) {
             if (! empty($imgUrl)) {
                 try {
-                    $product->addMediaFromUrl($imgUrl)->toMediaCollection('additional');
+                    $product->addMediaFromUrl($imgUrl)
+                        ->withCustomProperties(['product_code' => $data['code']])
+                        ->toMediaCollection('additional');
                 } catch (\Exception $e) {
                     Log::warning("Ошибка загрузки доп. изображения для {$data['code']}: {$e->getMessage()}");
                 }
             }
         }
 
-        // Videos
+        // Видео
         foreach ($data['product_videos'] ?? [] as $videoUrl) {
             if (! empty($videoUrl)) {
                 try {
-                    $product->addMediaFromUrl($videoUrl)->toMediaCollection('video');
+                    $product->addMediaFromUrl($videoUrl)
+                        ->withCustomProperties(['product_code' => $data['code']])
+                        ->toMediaCollection('video');
                 } catch (\Exception $e) {
                     Log::warning("Ошибка загрузки видео для {$data['code']}: {$e->getMessage()}");
                 }

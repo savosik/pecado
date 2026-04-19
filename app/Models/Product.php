@@ -275,6 +275,21 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * Переопределение метода Spatie\MediaLibrary\InteractsWithMedia.
+     * 
+     * При удалении товара мы удаляем только записи в таблице media,
+     * а файлы в MinIO остаются (наш персистентный кэш по артикулу).
+     *
+     * @return $this
+     */
+    public function deleteAllMedia(): self
+    {
+        $this->media()->delete();
+
+        return $this;
+    }
+
+    /**
      * Get the indexable data array for the model.
      *
      * @return array<string, mixed>
