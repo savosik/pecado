@@ -19,6 +19,8 @@ class RegeneratePresetExportsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public string $queue = 'exports';
+
     public int $timeout = 600; // 10 минут
 
     public function handle(PresetRegistry $presetRegistry): void
