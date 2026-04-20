@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Helpers\ContentHelper;
+use App\Helpers\TagHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class ArticleController extends Controller
                 'excerpt' => $item->short_description ?: ContentHelper::extractText($item->detailed_description, 160),
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'published_at' => $item->published_at?->toISOString(),
-                'tags' => $item->tags->pluck('name')->toArray(),
+                'tags' => TagHelper::names($item->tags),
             ];
         });
 
@@ -110,7 +111,7 @@ class ArticleController extends Controller
                 'content' => $sanitizedContent,
                 'image' => $detailImage ?: null,
                 'published_at' => $article->published_at?->toISOString(),
-                'tags' => $article->tags->pluck('name')->toArray(),
+                'tags' => TagHelper::names($article->tags),
             ],
             'seo' => [
                 'title' => $article->meta_title ?: $article->title,

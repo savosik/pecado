@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Helpers\ContentHelper;
+use App\Helpers\TagHelper;
 use App\Http\Controllers\Controller;
 use App\Models\BrandStory;
 use Illuminate\Http\Request;
@@ -45,7 +46,7 @@ class BrandStoryController extends Controller
                 'excerpt' => $item->short_description ?: ContentHelper::extractText($item->detailed_description, 160),
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'published_at' => $item->published_at?->toISOString(),
-                'tags' => $item->tags->pluck('name')->toArray(),
+                'tags' => TagHelper::names($item->tags),
                 'brand' => $item->brand ? [
                     'id' => $item->brand->id,
                     'name' => $item->brand->name,
@@ -117,7 +118,7 @@ class BrandStoryController extends Controller
                 'content' => $sanitizedContent,
                 'image' => $detailImage ?: null,
                 'published_at' => $brandStory->published_at?->toISOString(),
-                'tags' => $brandStory->tags->pluck('name')->toArray(),
+                'tags' => TagHelper::names($brandStory->tags),
                 'brand' => $brandStory->brand ? [
                     'id' => $brandStory->brand->id,
                     'name' => $brandStory->brand->name,

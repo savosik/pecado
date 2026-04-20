@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Helpers\ContentHelper;
+use App\Helpers\TagHelper;
 use App\Http\Controllers\Controller;
 use App\Models\News;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class NewsController extends Controller
                 'excerpt' => ContentHelper::extractText($item->detailed_description, 160),
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'published_at' => $item->published_at?->toISOString(),
-                'tags' => $item->tags->pluck('name')->toArray(),
+                'tags' => TagHelper::names($item->tags),
             ];
         });
 
@@ -113,7 +114,7 @@ class NewsController extends Controller
                 'content' => $sanitizedContent,
                 'image' => $detailImage ?: null,
                 'published_at' => $newsItem->published_at?->toISOString(),
-                'tags' => $newsItem->tags->pluck('name')->toArray(),
+                'tags' => TagHelper::names($newsItem->tags),
             ],
             'seo' => [
                 'title' => $newsItem->meta_title ?: $newsItem->title,
