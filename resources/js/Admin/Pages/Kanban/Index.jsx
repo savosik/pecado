@@ -7,6 +7,7 @@ import TaskCard from './Components/TaskCard';
 import TaskModal from './Components/TaskModal';
 
 const statusLabels = {
+    backlog: 'БЭКЛОГ',
     todo: 'К ВЫПОЛНЕНИЮ',
     in_progress: 'В РАБОТЕ',
     testing: 'ТЕСТИРОВАНИЕ',
@@ -20,9 +21,13 @@ export default function Index({ tasks, columns }) {
     const [selectedTask, setSelectedTask] = useState(null);
     const [currentStatus, setCurrentStatus] = useState('todo');
 
-    // Поддерживаем локальный стейт при обновлении пропсов
     useEffect(() => {
         setLocalTasks(tasks);
+        // Обновляем открытую задачу, если props изменились (например, после загрузки вложений)
+        if (selectedTask) {
+            const updated = tasks.find(t => t.id === selectedTask.id);
+            if (updated) setSelectedTask(updated);
+        }
     }, [tasks]);
 
     const handleDragStart = (e, task) => {
@@ -73,7 +78,7 @@ export default function Index({ tasks, columns }) {
             <VStack align="stretch" gap={6} h="calc(100vh - 120px)">
                 <HStack justify="space-between">
                     <Heading size="lg">Канбан доска</Heading>
-                    <Button colorScheme="blue" onClick={() => handleOpenModal(null, 'todo')}>
+                    <Button colorPalette="blue" onClick={() => handleOpenModal(null, 'todo')}>
                         <LuPlus /> Добавить задачу
                     </Button>
                 </HStack>

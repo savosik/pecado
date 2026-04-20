@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { router } from '@inertiajs/react';
 import { Box, VStack, HStack, Text, Button, IconButton, Textarea } from '@chakra-ui/react';
 import { LuReply, LuSend } from 'react-icons/lu';
+import VoiceMicButton from './VoiceMicButton';
 
 export default function CommentSection({ task }) {
     const [content, setContent] = useState('');
@@ -38,6 +39,9 @@ export default function CommentSection({ task }) {
         });
     };
 
+    const appendText = (setter) => (text) =>
+        setter(prev => prev ? prev + ' ' + text : text);
+
     const renderComment = (comment, level = 0) => (
         <Box key={comment.id} w="100%" pl={level > 0 ? 8 : 0} mt={level > 0 ? 2 : 4}>
             <Box bg="white" _dark={{ bg: 'gray.700' }} p={3} rounded="md" shadow="sm" borderWidth="1px" borderColor="border.subtle">
@@ -58,20 +62,26 @@ export default function CommentSection({ task }) {
                 </HStack>
 
                 {replyTo === comment.id && (
-                    <HStack mt={2}>
+                    <Box mt={2}>
                         <Textarea
                             size="sm"
                             placeholder="Написать ответ..."
                             value={replyContent}
                             onChange={(e) => setReplyContent(e.target.value)}
+                            mb={2}
                         />
-                        <IconButton
-                            colorScheme="blue"
-                            onClick={() => handleReply(comment.id)}
-                        >
-                            <LuSend />
-                        </IconButton>
-                    </HStack>
+                        <HStack justify="flex-end">
+                            <VoiceMicButton onText={appendText(setReplyContent)} size="sm" />
+                            <IconButton
+                                size="sm"
+                                colorPalette="blue"
+                                onClick={() => handleReply(comment.id)}
+                                aria-label="Отправить ответ"
+                            >
+                                <LuSend />
+                            </IconButton>
+                        </HStack>
+                    </Box>
                 )}
             </Box>
 
@@ -94,9 +104,12 @@ export default function CommentSection({ task }) {
                     onChange={(e) => setContent(e.target.value)}
                     mb={2}
                 />
-                <Button colorScheme="blue" onClick={handleAddComment}>
-                    Отправить
-                </Button>
+                <HStack justify="space-between">
+                    <VoiceMicButton onText={appendText(setContent)} />
+                    <Button colorPalette="blue" onClick={handleAddComment}>
+                        Отправить
+                    </Button>
+                </HStack>
             </Box>
         </Box>
     );

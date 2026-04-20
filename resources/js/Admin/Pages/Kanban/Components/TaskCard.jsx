@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Box, Text, VStack, HStack, Badge, Link, Icon } from '@chakra-ui/react';
-import { LuExternalLink, LuMessageSquare, LuGlobe, LuUser } from 'react-icons/lu';
+import { LuExternalLink, LuMessageSquare, LuGlobe, LuUser, LuPaperclip } from 'react-icons/lu';
 
 export default function TaskCard({ task, onDragStart, onTaskClick }) {
     const commentCount = task.comments ? task.comments.length : 0;
+    const attachmentCount = task.attachments ? task.attachments.length : 0;
 
     const statusColors = {
+        backlog: 'purple',
         todo: 'gray',
         in_progress: 'blue',
         testing: 'orange',
@@ -33,15 +35,23 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
                 <Badge colorPalette={statusColors[task.status] || 'gray'} size="sm">
                     {task.status.replace('_', ' ').toUpperCase()}
                 </Badge>
-                {commentCount > 0 && (
-                    <HStack gap={1} color="fg.muted" fontSize="sm">
-                        <Icon as={LuMessageSquare} />
-                        <Text>{commentCount}</Text>
-                    </HStack>
-                )}
+                <HStack gap={2}>
+                    {commentCount > 0 && (
+                        <HStack gap={1} color="fg.muted" fontSize="sm">
+                            <Icon as={LuMessageSquare} />
+                            <Text>{commentCount}</Text>
+                        </HStack>
+                    )}
+                    {attachmentCount > 0 && (
+                        <HStack gap={1} color="fg.muted" fontSize="sm">
+                            <Icon as={LuPaperclip} />
+                            <Text>{attachmentCount}</Text>
+                        </HStack>
+                    )}
+                </HStack>
             </HStack>
 
-            <Text fontWeight="semibold" mb={2} noOfLines={2}>
+            <Text fontWeight="semibold" mb={2} lineClamp={2}>
                 {task.title}
             </Text>
 

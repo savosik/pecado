@@ -683,6 +683,8 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::put('/kanban/{kanbanTask}', [\App\Http\Controllers\Admin\KanbanController::class, 'update'])->name('kanban.update');
         Route::put('/kanban/{kanbanTask}/order', [\App\Http\Controllers\Admin\KanbanController::class, 'updateOrder'])->name('kanban.update-order');
         Route::post('/kanban/{kanbanTask}/comments', [\App\Http\Controllers\Admin\KanbanCommentController::class, 'store'])->name('kanban.comments.store');
+        Route::post('/kanban/{kanbanTask}/attachments', [\App\Http\Controllers\Admin\KanbanAttachmentController::class, 'store'])->name('kanban.attachments.store');
+        Route::delete('/kanban/attachments/{attachment}', [\App\Http\Controllers\Admin\KanbanAttachmentController::class, 'destroy'])->name('kanban.attachments.destroy');
     });
 
     // Шина ERP

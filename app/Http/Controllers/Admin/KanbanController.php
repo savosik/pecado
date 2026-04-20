@@ -11,9 +11,10 @@ class KanbanController extends Controller
 {
     public function index()
     {
-        $tasks = KanbanTask::with(['comments.replies.replies'])->orderBy('order')->get();
+        $tasks = KanbanTask::with(['comments', 'attachments'])->orderBy('order')->get();
         
         $columns = [
+            'backlog',
             'todo',
             'in_progress',
             'testing',
@@ -32,7 +33,7 @@ class KanbanController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'required|string|in:todo,in_progress,testing,done,reopen',
+            'status' => 'required|string|in:backlog,todo,in_progress,testing,done,reopen',
             'page_url' => 'nullable|url|max:255',
             'browser' => 'nullable|string|max:255',
             'user_name' => 'nullable|string|max:255',
@@ -51,7 +52,7 @@ class KanbanController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|string|max:255',
             'description' => 'nullable|string',
-            'status' => 'sometimes|string|in:todo,in_progress,testing,done,reopen',
+            'status' => 'sometimes|string|in:backlog,todo,in_progress,testing,done,reopen',
             'page_url' => 'nullable|string|max:255',
             'browser' => 'nullable|string|max:255',
             'user_name' => 'nullable|string|max:255',
@@ -65,7 +66,7 @@ class KanbanController extends Controller
     public function updateOrder(Request $request, KanbanTask $kanbanTask)
     {
         $validated = $request->validate([
-            'status' => 'required|string|in:todo,in_progress,testing,done,reopen',
+            'status' => 'required|string|in:backlog,todo,in_progress,testing,done,reopen',
             'order' => 'required|integer',
         ]);
 

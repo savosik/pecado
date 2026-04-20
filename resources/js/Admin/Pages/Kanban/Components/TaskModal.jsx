@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { router } from '@inertiajs/react';
-import { Box, VStack, HStack, Heading, Text, Button, IconButton, Input, Textarea, Select } from '@chakra-ui/react';
+import { Box, VStack, HStack, Heading, Text, Button, IconButton, Input, Textarea, NativeSelect } from '@chakra-ui/react';
 import { LuX } from 'react-icons/lu';
 import CommentSection from './CommentSection';
+import AttachmentSection from './AttachmentSection';
+import VoiceMicButton from './VoiceMicButton';
 
-// Упрощенная модалка на чистом React (чтобы избежать возможных конфликтов версий Chakra UI Modal)
 export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
-    if (!isOpen) return null;
-
     const isEdit = !!task;
 
     const [form, setForm] = useState({
@@ -50,11 +49,13 @@ export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
         }
     };
 
+    if (!isOpen) return null;
+
     return (
         <Box
             position="fixed" top={0} left={0} w="100vw" h="100vh"
-            bg="blackAlpha.600" zIndex={1400}
-            display="flex" alignItems="center" justify="center"
+            bg="black/60" zIndex={1400}
+            display="flex" alignItems="center" justifyContent="center"
             onClick={onClose}
         >
             <Box
@@ -78,20 +79,26 @@ export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
                             </Box>
 
                             <Box>
-                                <Text fontWeight="medium" mb={1}>Описание</Text>
+                                <HStack justify="space-between" mb={1}>
+                                    <Text fontWeight="medium">Описание</Text>
+                                    <VoiceMicButton onText={(t) => setForm(p => ({ ...p, description: p.description ? p.description + ' ' + t : t }))} />
+                                </HStack>
                                 <Textarea name="description" value={form.description} onChange={handleChange} rows={4} />
                             </Box>
 
                             <HStack gap={4}>
                                 <Box flex={1}>
                                     <Text fontWeight="medium" mb={1}>Статус</Text>
-                                    <Select name="status" value={form.status} onChange={handleChange}>
-                                        <option value="todo">К ВЫПОЛНЕНИЮ</option>
-                                        <option value="in_progress">В РАБОТЕ</option>
-                                        <option value="testing">ТЕСТИРОВАНИЕ</option>
-                                        <option value="done">ГОТОВО</option>
-                                        <option value="reopen">ОТКРЫТО ПОВТОРНО (Reopen)</option>
-                                    </Select>
+                                    <NativeSelect.Root>
+                                        <NativeSelect.Field name="status" value={form.status} onChange={handleChange}>
+                                            <option value="backlog">БЭКЛОГ</option>
+                                            <option value="todo">К ВЫПОЛНЕНИЮ</option>
+                                            <option value="in_progress">В РАБОТЕ</option>
+                                            <option value="testing">ТЕСТИРОВАНИЕ</option>
+                                            <option value="done">ГОТОВО</option>
+                                            <option value="reopen">ОТКРЫТО ПОВТОРНО</option>
+                                        </NativeSelect.Field>
+                                    </NativeSelect.Root>
                                 </Box>
                                 <Box flex={1}>
                                     <Text fontWeight="medium" mb={1}>Имя пользователя</Text>
@@ -112,12 +119,13 @@ export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
                         </VStack>
                     </form>
 
+                    {isEdit && <AttachmentSection task={task} />}
                     {isEdit && <CommentSection task={task} />}
                 </Box>
 
                 <HStack p={4} borderTopWidth="1px" borderColor="border.default" justify="flex-end">
                     <Button variant="outline" onClick={onClose}>Отмена</Button>
-                    <Button type="submit" form="task-form" colorScheme="blue">Сохранить</Button>
+                    <Button type="submit" form="task-form" colorPalette="blue">Сохранить</Button>
                 </HStack>
             </Box>
         </Box>

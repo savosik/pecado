@@ -29,4 +29,9 @@ class KanbanTask extends Model
     {
         return $this->hasMany(KanbanComment::class);
     }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(KanbanTaskAttachment::class);
+    }
 }
