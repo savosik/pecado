@@ -56,6 +56,21 @@ class TagHelperTest extends TestCase
         $this->assertSame(['c', 'a'], TagHelper::names(Collection::make([$c, $a])));
     }
 
+    public function test_last_resort_any_non_empty_translation(): void
+    {
+        // fallback совпадает с locale — прямого fallback нет; TagHelper всё равно
+        // должен вытащить осмысленное имя из любого непустого перевода.
+        config()->set('app.fallback_locale', 'ru');
+        app()->setLocale('ru');
+
+        $tag = new Tag;
+        $tag->setTranslation('name', 'en', 'только английский');
+        $tag->setTranslation('slug', 'en', 'only-en');
+        $tag->save();
+
+        $this->assertSame(['только английский'], TagHelper::names(collect([$tag])));
+    }
+
     public function test_explicit_locale_overrides_app_locale(): void
     {
         app()->setLocale('ru');

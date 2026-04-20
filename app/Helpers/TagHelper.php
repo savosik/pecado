@@ -23,13 +23,23 @@ class TagHelper
 
         return $collection
             ->map(function (Tag $tag) use ($locale, $fallback): string {
-                $name = (string) ($tag->getTranslation('name', $locale) ?: '');
+                $name = trim((string) ($tag->getTranslation('name', $locale) ?: ''));
 
                 if ($name === '' && $fallback && $fallback !== $locale) {
-                    $name = (string) ($tag->getTranslation('name', $fallback) ?: '');
+                    $name = trim((string) ($tag->getTranslation('name', $fallback) ?: ''));
                 }
 
-                return trim($name);
+                if ($name === '') {
+                    foreach ($tag->getTranslations('name') as $value) {
+                        $candidate = trim((string) $value);
+                        if ($candidate !== '') {
+                            $name = $candidate;
+                            break;
+                        }
+                    }
+                }
+
+                return $name;
             })
             ->filter(fn (string $name): bool => $name !== '')
             ->values()
