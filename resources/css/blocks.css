@@ -7,16 +7,33 @@
 .content-blocks {
     --cb-radius: 8px;
     --cb-gap: 32px;
-    --cb-text: #1a1a1a;
-    --cb-muted: #4a4a4a;
+    --cb-text: var(--chakra-colors-fg, #1a1a1a);
+    --cb-muted: var(--chakra-colors-fg-muted, #4a4a4a);
+    --cb-bg: var(--chakra-colors-bg, #fff);
     --cb-border: var(--chakra-colors-border);
     --cb-bg-subtle: var(--chakra-colors-bg-subtle);
     --cb-accent: #9e1b32;
     --cb-accent-light: #f5e0e4;
+    --cb-mark-bg: #fef08a;
+    --cb-mark-text: inherit;
+    --cb-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.08);
+    --cb-shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
+    --cb-shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.07);
+    --cb-shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.06);
 
     font-size: 1.024rem;
     line-height: 1.8;
     color: var(--cb-text);
+}
+
+/* ── Переопределения для тёмной темы (next-themes attribute="class") ── */
+.dark .content-blocks {
+    --cb-mark-bg: rgba(254, 240, 138, 0.22);
+    --cb-mark-text: #fde68a;
+    --cb-shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.4);
+    --cb-shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --cb-shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.4);
+    --cb-shadow-xl: 0 12px 24px rgba(0, 0, 0, 0.45);
 }
 
 /* ── Header ── */
@@ -42,7 +59,8 @@
     text-underline-offset: 2px;
 }
 .cb-paragraph mark, .cb-paragraph .cdx-marker {
-    background: #fef08a;
+    background: var(--cb-mark-bg);
+    color: var(--cb-mark-text);
     border-radius: 2px;
     padding: 1px 4px;
 }
@@ -656,7 +674,7 @@
     transition: box-shadow 0.2s, transform 0.2s;
 }
 .cb-icon-features__item:hover {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    box-shadow: var(--cb-shadow-md);
     transform: translateY(-2px);
 }
 .cb-icon-features__icon {
@@ -715,7 +733,7 @@
     min-width: 80px;
 }
 .cb-countdown--default .cb-countdown__box {
-    background: #fff;
+    background: var(--cb-bg);
     border: 1px solid var(--cb-border);
 }
 .cb-countdown__value {
@@ -892,7 +910,7 @@
 .cb-timeline { position: relative; margin: var(--cb-gap) 0; padding-left: 20px; }
 .cb-timeline::before { content: ""; position: absolute; left: 0; top: 8px; bottom: 0; width: 2px; background: var(--cb-border); }
 .cb-timeline__item { position: relative; margin-bottom: 32px; padding-left: 24px; }
-.cb-timeline__item::before { content: ""; position: absolute; left: -25px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--cb-accent); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--cb-border); }
+.cb-timeline__item::before { content: ""; position: absolute; left: -25px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--cb-accent); border: 2px solid var(--cb-bg); box-shadow: 0 0 0 1px var(--cb-border); }
 .cb-timeline__item:last-child { margin-bottom: 0; }
 .cb-timeline__date { font-weight: 800; font-size: 0.96rem; color: var(--cb-accent); margin-bottom: 4px; }
 .cb-timeline__title { font-weight: 700; font-size: 1.104rem; margin-bottom: 6px; }
@@ -911,7 +929,7 @@
 
 /* ── Comparison ── */
 .cb-comp-wrap { margin: var(--cb-gap) 0; overflow-x: auto; border: 1px solid var(--cb-border); border-radius: var(--cb-radius); }
-.cb-comp { width: 100%; min-width: 600px; border-collapse: collapse; text-align: left; background: #fff; }
+.cb-comp { width: 100%; min-width: 600px; border-collapse: collapse; text-align: left; background: var(--cb-bg); }
 .cb-comp th, .cb-comp td { padding: 16px 20px; border-bottom: 1px solid var(--cb-border); }
 .cb-comp th { font-weight: 700; font-size: 1.056rem; background: var(--cb-bg-subtle); color: var(--cb-text); }
 .cb-comp__feature-th { width: 40%; }
@@ -925,8 +943,8 @@
 
 /* ── Pricing Table ── */
 .cb-pricing { display: flex; flex-wrap: wrap; gap: 24px; margin: var(--cb-gap) 0; }
-.cb-pricing__card { flex: 1; min-width: 250px; border: 1px solid var(--cb-border); border-radius: var(--cb-radius); padding: 32px 24px; display: flex; flex-direction: column; position: relative; background: #fff; transition: transform 0.2s, box-shadow 0.2s; }
-.cb-pricing__card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.06); }
+.cb-pricing__card { flex: 1; min-width: 250px; border: 1px solid var(--cb-border); border-radius: var(--cb-radius); padding: 32px 24px; display: flex; flex-direction: column; position: relative; background: var(--cb-bg); transition: transform 0.2s, box-shadow 0.2s; }
+.cb-pricing__card:hover { transform: translateY(-4px); box-shadow: var(--cb-shadow-xl); }
 .cb-pricing__card--popular { border: 2px solid var(--cb-accent); transform: translateY(-8px); box-shadow: 0 12px 24px rgba(158, 27, 50, 0.1); }
 .cb-pricing__card--popular:hover { transform: translateY(-12px); box-shadow: 0 16px 32px rgba(158, 27, 50, 0.15); }
 .cb-pricing__badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--cb-accent); color: #fff; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; padding: 4px 12px; border-radius: 20px; letter-spacing: 0.05em; }
@@ -957,9 +975,9 @@
     .cb-team--2, .cb-team--3, .cb-team--4 { grid-template-columns: 1fr; }
 }
 .cb-team__card { text-align: center; padding: 28px 20px; border: 1px solid var(--cb-border); border-radius: var(--cb-radius); transition: box-shadow 0.2s, transform 0.2s; }
-.cb-team__card:hover { box-shadow: 0 6px 24px rgba(0,0,0,0.07); transform: translateY(-3px); }
+.cb-team__card:hover { box-shadow: var(--cb-shadow-lg); transform: translateY(-3px); }
 .cb-team__photo { width: 96px; height: 96px; border-radius: 50%; object-fit: cover; margin: 0 auto 16px; display: block; border: 3px solid var(--cb-border); }
-.cb-team__photo-placeholder { width: 96px; height: 96px; border-radius: 50%; background: var(--cb-bg-subtle); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; color: #ccc; border: 3px solid var(--cb-border); }
+.cb-team__photo-placeholder { width: 96px; height: 96px; border-radius: 50%; background: var(--cb-bg-subtle); margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 2.4rem; color: var(--cb-muted); border: 3px solid var(--cb-border); }
 .cb-team__name { font-weight: 700; font-size: 1.104rem; margin-bottom: 4px; color: var(--cb-text); }
 .cb-team__role { font-size: 0.864rem; font-weight: 600; color: var(--cb-accent); margin-bottom: 8px; }
 .cb-team__bio { font-size: 0.912rem; line-height: 1.5; color: var(--cb-muted); }
