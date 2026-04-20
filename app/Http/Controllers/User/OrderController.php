@@ -155,6 +155,7 @@ class OrderController extends Controller
             'items.product.media',
             'statusHistories.user',
             'changeLogs.user',
+            'shipments',
         ]);
 
         return Inertia::render('User/Cabinet/Orders/Show', [
@@ -201,7 +202,7 @@ class OrderController extends Controller
                     ];
                 }),
 
-                'shipments' => $order->shipments()->map(function ($shipment) {
+                'shipments' => $order->shipments->map(function ($shipment) {
                     return [
                         'id' => $shipment->id,
                         'number' => $shipment->number ?? $shipment->erp_number ?? ('#'.$shipment->id),

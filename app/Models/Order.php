@@ -145,13 +145,15 @@ class Order extends Model
     /**
      * Реализации (отгрузки) по этому заказу — через shipment_items.order_uuid.
      */
-    public function shipments(): \Illuminate\Database\Eloquent\Collection
+    public function shipments(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
     {
-        $shipmentIds = ShipmentItem::where('order_uuid', $this->uuid)
-            ->pluck('shipment_id')
-            ->unique()
-            ->values();
-
-        return Shipment::whereIn('id', $shipmentIds)->get();
+        return $this->belongsToMany(
+            Shipment::class,
+            'shipment_items',
+            'order_uuid',
+            'shipment_id',
+            'uuid',
+            'id'
+        )->distinct();
     }
 }
