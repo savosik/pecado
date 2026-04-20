@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -19,6 +20,7 @@ class Attribute extends Model
         'type',
         'unit',
         'is_filterable',
+        'is_active',
         'sort_order',
         'attribute_group_id',
     ];
@@ -32,8 +34,23 @@ class Attribute extends Model
     {
         return [
             'is_filterable' => 'boolean',
+            'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
+    }
+
+    /**
+     * Имя считается «русским» если содержит хотя бы одну кириллическую букву.
+     * Имена на латинице с подчёркиваниями приходят из 1С как служебные и по умолчанию деактивируются.
+     */
+    public static function hasCyrillicName(?string $name): bool
+    {
+        return $name !== null && preg_match('/\p{Cyrillic}/u', $name) === 1;
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->where('is_active', true);
     }
 
     /**

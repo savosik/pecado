@@ -33,6 +33,14 @@ class AttributeController extends AdminController
             });
         }
 
+        // Фильтр по активности
+        $activeFilter = $request->input('active');
+        if ($activeFilter === 'active') {
+            $query->where('is_active', true);
+        } elseif ($activeFilter === 'inactive') {
+            $query->where('is_active', false);
+        }
+
         // Сортировка
         $sortBy = $request->input('sort_by', 'sort_order');
         $sortOrder = $request->input('sort_order', 'asc');
@@ -55,6 +63,7 @@ class AttributeController extends AdminController
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,
+                'active' => $activeFilter,
             ],
         ]);
     }
@@ -87,6 +96,7 @@ class AttributeController extends AdminController
             'type' => 'required|string|in:string,number,boolean,select',
             'unit' => 'nullable|string|max:50',
             'is_filterable' => 'boolean',
+            'is_active' => 'boolean',
             'sort_order' => 'nullable|integer',
             'values' => 'required_if:type,select|array',
             'values.*.value' => 'required|string|max:255',
@@ -151,6 +161,7 @@ class AttributeController extends AdminController
             'type' => 'required|string|in:string,number,boolean,select',
             'unit' => 'nullable|string|max:50',
             'is_filterable' => 'boolean',
+            'is_active' => 'boolean',
             'sort_order' => 'nullable|integer',
             'values' => 'nullable|array',
             'values.*.id' => 'nullable|exists:attribute_values,id',

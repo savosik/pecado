@@ -71,6 +71,11 @@ export default function Index({ attributes, filters }) {
             render: (val) => val ? <Badge colorPalette="green">Да</Badge> : <Badge colorPalette="gray">Нет</Badge>,
         },
         {
+            key: 'is_active',
+            label: 'Активен',
+            render: (val) => val ? <Badge colorPalette="green">Активен</Badge> : <Badge colorPalette="orange">Неактивен</Badge>,
+        },
+        {
             key: 'sort_order',
             label: 'Сортировка',
             sortable: true,

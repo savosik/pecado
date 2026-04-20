@@ -135,7 +135,7 @@ class FieldRegistry
      */
     protected function registerDynamicAttributes(): void
     {
-        $attributes = Attribute::with('values', 'attributeGroup')->orderBy('name')->get();
+        $attributes = Attribute::active()->with('values', 'attributeGroup')->orderBy('name')->get();
 
         foreach ($attributes as $attribute) {
             $field = new DynamicAttributeField($attribute);

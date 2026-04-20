@@ -411,6 +411,83 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function cyrillic_named_attribute_is_active_by_default(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-attr-ru-001',
+            'name' => 'Товар с русским атрибутом',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-ru-uuid',
+                    'property_label' => 'Длина',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => '10 см',
+                ],
+            ],
+        ]);
+
+        $attr = Attribute::where('external_id', 'prop-ru-uuid')->first();
+        $this->assertNotNull($attr);
+        $this->assertTrue($attr->is_active, 'Русский атрибут должен создаваться активным');
+    }
+
+    #[Test]
+    public function english_named_attribute_is_created_inactive(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-attr-en-001',
+            'name' => 'Товар со служебным английским атрибутом',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-en-uuid',
+                    'property_label' => 'service_internal_code',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'X-42',
+                ],
+            ],
+        ]);
+
+        $attr = Attribute::where('external_id', 'prop-en-uuid')->first();
+        $this->assertNotNull($attr);
+        $this->assertFalse($attr->is_active, 'Атрибут с латинским именем должен создаваться неактивным');
+    }
+
+    #[Test]
+    public function existing_attribute_is_active_status_not_changed_on_product_created(): void
+    {
+        // Админ вручную активировал английский атрибут
+        $attr = Attribute::create([
+            'external_id' => 'prop-keep-en-uuid',
+            'name' => 'legacy_code',
+            'slug' => 'legacy-code',
+            'type' => 'string',
+            'is_active' => true,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-keep-active-001',
+            'name' => 'Повторный импорт',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-keep-en-uuid',
+                    'property_label' => 'legacy_code',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Z-1',
+                ],
+            ],
+        ]);
+
+        $attr->refresh();
+        $this->assertTrue($attr->is_active, 'Ручная активация админа не должна сбрасываться повторным импортом');
+    }
+
+    #[Test]
     public function does_not_retry_product_created_on_non_deadlock_error(): void
     {
         $handler = \Mockery::mock(HandleProductCreated::class)

@@ -16,6 +16,7 @@ export default function Create({ types, categoryTree, attributeGroups }) {
         type: 'string',
         unit: '',
         is_filterable: false,
+        is_active: true,
         sort_order: 0,
         values: [],
         category_ids: [],
@@ -140,6 +141,21 @@ export default function Create({ types, categoryTree, attributeGroups }) {
                                                     colorPalette="blue"
                                                 />
                                                 <Text size="sm">{data.is_filterable ? 'Да' : 'Нет'}</Text>
+                                            </HStack>
+                                        </FormField>
+
+                                        <FormField
+                                            label="Активен"
+                                            error={errors.is_active}
+                                            helperText="Неактивные атрибуты не показываются на сайте и в экспортах."
+                                        >
+                                            <HStack gap={4} mt={2}>
+                                                <Switch
+                                                    checked={data.is_active}
+                                                    onCheckedChange={(e) => setData('is_active', e.checked)}
+                                                    colorPalette="green"
+                                                />
+                                                <Text size="sm">{data.is_active ? 'Активен' : 'Неактивен'}</Text>
                                             </HStack>
                                         </FormField>
                                     </SimpleGrid>

@@ -57,6 +57,7 @@ class CatalogFacetService
         // Получаем список всех фильтруемых атрибутов
         $filterableAttributes = DB::table('attributes')
             ->where('is_filterable', true)
+            ->where('is_active', true)
             ->orderBy('sort_order')
             ->get(['id', 'name']);
 
@@ -209,6 +210,7 @@ class CatalogFacetService
             ->join('attributes as a', 'a.id', '=', 'pav.attribute_id')
             ->join('attribute_values as av', 'av.id', '=', 'pav.attribute_value_id')
             ->where('a.is_filterable', true)
+            ->where('a.is_active', true)
             ->select([
                 'a.id as attribute_id',
                 'a.name as attribute_name',
@@ -249,6 +251,7 @@ class CatalogFacetService
             ->joinSub($this->cloneBaseIds($baseQuery), 'filtered', 'filtered.id', '=', 'pav.product_id')
             ->join('attributes as a', 'a.id', '=', 'pav.attribute_id')
             ->where('a.is_filterable', true)
+            ->where('a.is_active', true)
             ->whereNull('pav.attribute_value_id')
             ->where(function ($q) {
                 $q->whereNotNull('pav.number_value')

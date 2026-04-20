@@ -180,6 +180,7 @@ class HandleProductUpdated
                                 'name' => $propertyLabel,
                                 'slug' => $baseSlug,
                                 'type' => $siteType,
+                                'is_active' => \App\Models\Attribute::hasCyrillicName($propertyLabel),
                             ]);
                         }
                     } else {

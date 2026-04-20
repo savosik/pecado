@@ -219,7 +219,7 @@ abstract class AbstractPreset implements PresetInterface
      */
     protected function fetchAllAttributes(): Collection
     {
-        return Attribute::orderBy('name')->get();
+        return Attribute::active()->orderBy('name')->get();
     }
 
     /**
