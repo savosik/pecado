@@ -27,8 +27,9 @@ class BrandController extends AdminController
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('description', 'like', "%{$search}%")
-                    ->orWhere('short_description', 'like', "%{$search}%");
+                    ->orWhere('short_description', 'like', "%{$search}%")
+                    ->orWhere('slug', 'like', "%{$search}%")
+                    ->orWhere('external_id', 'like', "%{$search}%");
             });
         }
 
@@ -80,7 +81,6 @@ class BrandController extends AdminController
             'parent_id' => 'nullable|exists:brands,id',
             'external_id' => 'nullable|string|max:255',
             'short_description' => 'nullable|string',
-            'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'logo' => 'nullable|image|max:20480',
@@ -164,7 +164,6 @@ class BrandController extends AdminController
             'parent_id' => 'nullable|exists:brands,id',
             'external_id' => 'nullable|string|max:255',
             'short_description' => 'nullable|string',
-            'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'logo' => 'nullable|image|max:20480',
