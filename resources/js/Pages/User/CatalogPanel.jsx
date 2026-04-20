@@ -326,13 +326,14 @@ export default function CatalogPanel({ open, onClose }) {
 
     /* ── featured brands ── */
     const featuredBrands = useMemo(() =>
-        ownBrands.filter((b) => b.is_featured).sort(sortBrandsAlpha),
-    [ownBrands]);
+        (Array.isArray(brands) ? brands : []).filter((b) => b.is_featured).sort(sortBrandsAlpha),
+    [brands]);
 
     /* ── other brands grouped by letter ── */
     const otherBrandsByLetter = useMemo(() => {
         const map = {};
         for (const b of otherBrands) {
+            if (b.is_featured) continue;
             const name = (b.name || '').trim();
             if (!name) continue;
             const letter = getFirstLetter(name);
