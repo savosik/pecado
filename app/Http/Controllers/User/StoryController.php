@@ -54,7 +54,7 @@ class StoryController extends Controller
                                 'button_url' => $slide->button_url,
                                 'media_url' => $mediaUrl,
                                 'media_type' => str_starts_with($mediaMime, 'video/') ? 'video' : 'image',
-                                'duration' => $slide->duration ?? 5000,
+                                'duration' => ($slide->duration ?? 5) * 1000,
                             ];
                         })->toArray(),
                     ];

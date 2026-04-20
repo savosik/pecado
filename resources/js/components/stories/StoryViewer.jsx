@@ -193,7 +193,7 @@ export default function StoryViewer({ stories = [], initialIndex = 0, onClose, o
             {/* Close button */}
             <IconButton
                 aria-label="Закрыть"
-                onClick={onClose}
+                onClick={(e) => { e.stopPropagation(); onClose?.(); }}
                 position="absolute"
                 top="5"
                 right="3"
