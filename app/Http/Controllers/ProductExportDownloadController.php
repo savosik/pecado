@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\RegenerateSinglePresetExportJob;
 use App\Models\ProductExport;
+use App\Services\ProductExport\Presets\PresetInterface;
 use App\Services\ProductExport\Presets\PresetRegistry;
 use App\Services\ProductExportService;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Cache;
 
 class ProductExportDownloadController extends Controller
 {
@@ -37,52 +38,88 @@ class ProductExportDownloadController extends Controller
     }
 
     /**
-     * Стратегия ленивой регенерации:
+     * Стратегия ленивой синхронной генерации с TTL кэша 10 минут.
      *
-     * 1) Свежий кэш (< 4 часов) → отдаём мгновенно
-     * 2) Стаалый кэш (файл есть, но > 4 часов) → отдаём стаалый + ставим фоновую регенерацию
-     * 3) Нет кэша вообще (первый запрос) → генерируем синхронно, сохраняем, отдаём
-     *
-     * Защита от шторма запросов:
-     * - WithoutOverlapping в Job → один export_id = один Job в очереди
-     * - Очередь 'exports' с 1 воркером → генерация сериализована
-     * - Атомарная замена файла (rename) → читатели не получат полу-файл
+     * 1) Свежий кэш (< 10 минут) → отдаём мгновенно.
+     * 2) Иначе → синхронно генерируем файл и отдаём. Cache::lock сериализует параллельные
+     *    запросы к одной выгрузке: только один процесс реально пишет файл, остальные ждут
+     *    и получают готовый результат.
      */
     protected function handlePresetDownload(ProductExport $export)
     {
         $preset = $this->presetRegistry->resolve($export->preset);
         abort_if(! $preset, 404, 'Формат выгрузки не найден.');
 
+        if ($this->hasFreshCacheFile($export)) {
+            return $this->streamCachedFile($export, $preset);
+        }
+
+        // До 5 минут на синхронную генерацию. Учти fastcgi_read_timeout nginx —
+        // при превышении клиент получит 504, поэтому пресеты должны укладываться в бюджет.
+        set_time_limit(300);
+
+        Cache::lock("product-export-generate:{$export->id}", 300)
+            ->block(60, function () use ($export, $preset) {
+                // Перечитываем cached_at — пока ждали лок, другой процесс мог сгенерировать.
+                $export->refresh();
+                if (! $this->hasFreshCacheFile($export)) {
+                    $this->generateCacheFile($export, $preset);
+                }
+            });
+
+        return $this->streamCachedFile($export, $preset);
+    }
+
+    protected function hasFreshCacheFile(ProductExport $export): bool
+    {
+        if (! $export->hasFreshCache()) {
+            return false;
+        }
+
+        $filePath = $export->getCacheFilePath();
+
+        return file_exists($filePath) && filesize($filePath) > 0;
+    }
+
+    protected function generateCacheFile(ProductExport $export, PresetInterface $preset): void
+    {
+        $filePath = $export->getCacheFilePath();
+        $cacheDir = dirname($filePath);
+
+        if (! is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+
+        // Пишем во временный файл, затем атомарно заменяем — чтобы
+        // параллельные читатели не получили наполовину записанный файл.
+        $tmpPath = $filePath.'.tmp.'.getmypid();
+
+        try {
+            $stream = fopen($tmpPath, 'w');
+            $preset->writeToStream($stream, $export);
+            if (is_resource($stream)) {
+                fclose($stream);
+            }
+
+            rename($tmpPath, $filePath);
+            $export->update(['cached_at' => now()]);
+        } catch (\Throwable $e) {
+            if (file_exists($tmpPath)) {
+                @unlink($tmpPath);
+            }
+            throw $e;
+        }
+    }
+
+    protected function streamCachedFile(ProductExport $export, PresetInterface $preset)
+    {
         $filePath = $export->getCacheFilePath();
         $filename = "export_{$preset->key()}_".now()->format('Y-m-d').".{$preset->fileExtension()}";
-        $hasCacheFile = file_exists($filePath) && filesize($filePath) > 0;
 
-        // Случай 1: Свежий кэш — отдаём мгновенно
-        if ($export->hasFreshCache(1) && $hasCacheFile) {
-            $export->update(['last_downloaded_at' => now()]);
+        $export->update(['last_downloaded_at' => now()]);
 
-            return response()->download($filePath, $filename, [
-                'Content-Type' => $preset->mimeType(),
-            ]);
-        }
-
-        // Случай 2: Стаалый кэш (файл есть, но устарел или cached_at пустой)
-        if ($hasCacheFile) {
-            // Ставим фоновую регенерацию (WithoutOverlapping не даст создать дубль)
-            RegenerateSinglePresetExportJob::dispatch($export->id);
-
-            $export->update(['last_downloaded_at' => now()]);
-
-            return response()->download($filePath, $filename, [
-                'Content-Type' => $preset->mimeType(),
-            ]);
-        }
-
-        // Случай 3: Нет кэша вообще (первый запрос) — ставим в очередь
-        RegenerateSinglePresetExportJob::dispatch($export->id);
-
-        return response()->json([
-            'message' => 'Файл выгрузки формируется. Повторите запрос через 1-2 минуты.',
-        ], 202);
+        return response()->download($filePath, $filename, [
+            'Content-Type' => $preset->mimeType(),
+        ]);
     }
 }

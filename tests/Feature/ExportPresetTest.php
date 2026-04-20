@@ -505,27 +505,23 @@ class ExportPresetTest extends TestCase
 
         $hash = $response->json('hash');
 
-        // Первый запрос без кеша — 202 (файл формируется в фоне)
+        // Первый запрос без кэша — синхронная генерация и сразу 200 + файл
         $downloadResponse = $this->get("/export/{$hash}");
-        $downloadResponse->assertStatus(202);
+        $downloadResponse->assertStatus(200);
+        $downloadResponse->assertHeader('Content-Type', 'application/xml; charset=utf-8');
 
-        // Эмулируем кеш-файл (как будто job завершился)
         $export = ProductExport::where('hash', $hash)->first();
-        $cacheDir = dirname($export->getCacheFilePath());
-        if (! is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
-        }
-        file_put_contents($export->getCacheFilePath(), '<test>cached</test>');
-        $export->update(['cached_at' => now()]);
+        $this->assertNotNull($export->fresh()->cached_at, 'cached_at должен заполниться после генерации');
+        $this->assertFileExists($export->getCacheFilePath(), 'Файл кэша должен появиться на диске');
 
-        // Повторный запрос с кешем — 200
+        // Повторный запрос — кэш свежий, отдаём моментально
         $downloadResponse2 = $this->get("/export/{$hash}");
         $downloadResponse2->assertStatus(200);
         $downloadResponse2->assertHeader('Content-Type', 'application/xml; charset=utf-8');
 
         @unlink($export->getCacheFilePath());
 
-        echo "\n✅ Скачивание YML по hash работает (202 → 200 после кеша)\n";
+        echo "\n✅ Скачивание YML по hash: синхронная генерация → 200 сразу\n";
     }
 
     public function test_inactive_preset_returns_404(): void
@@ -556,27 +552,53 @@ class ExportPresetTest extends TestCase
 
         $hash = $response->json('hash');
 
-        // Первый запрос без кеша — 202
-        $this->get("/export/{$hash}")->assertStatus(202);
+        // Первый запрос без кэша — синхронная генерация, сразу 200
+        $this->get("/export/{$hash}")->assertOk();
 
-        // Эмулируем готовый кеш (job завершился)
         $export = ProductExport::where('hash', $hash)->first();
+        $this->assertNotNull($export->fresh()->cached_at, 'cached_at должен быть заполнен');
+        $this->assertFileExists($export->getCacheFilePath(), 'Файл кэша должен существовать');
+
+        $firstCachedAt = $export->fresh()->cached_at;
+
+        // Повторный запрос в рамках TTL 10 минут — отдаём существующий кэш без регенерации
+        $this->get("/export/{$hash}")->assertOk();
+        $this->assertEquals(
+            $firstCachedAt->timestamp,
+            $export->fresh()->cached_at->timestamp,
+            'cached_at не должен обновляться пока кэш свежий'
+        );
+
+        @unlink($export->getCacheFilePath());
+
+        echo "\n✅ Кэш-файл: синхронная генерация → повторный запрос из кэша\n";
+    }
+
+    public function test_stale_cache_is_regenerated_synchronously(): void
+    {
+        $response = $this->actingAs($this->user)
+            ->postJson('/cabinet/export-presets/json_catalog/generate');
+
+        $hash = $response->json('hash');
+        $export = ProductExport::where('hash', $hash)->first();
+
+        // Подменяем кэш «устаревшим» файлом
         $cacheDir = dirname($export->getCacheFilePath());
         if (! is_dir($cacheDir)) {
             mkdir($cacheDir, 0755, true);
         }
-        file_put_contents($export->getCacheFilePath(), 'id,name\n1,test');
-        $export->update(['cached_at' => now()]);
+        file_put_contents($export->getCacheFilePath(), 'STALE_CONTENT');
+        $export->update(['cached_at' => now()->subMinutes(30)]);
 
-        // С кешем — 200
         $this->get("/export/{$hash}")->assertOk();
 
-        $this->assertNotNull($export->fresh()->cached_at, 'cached_at должен быть заполнен');
-        $this->assertFileExists($export->getCacheFilePath(), 'Файл кэша должен существовать');
+        $content = file_get_contents($export->getCacheFilePath());
+        $this->assertStringNotContainsString('STALE_CONTENT', $content, 'Устаревший кэш должен быть перезаписан');
+        $this->assertLessThan(10, $export->fresh()->cached_at->diffInMinutes(now()));
 
         @unlink($export->getCacheFilePath());
 
-        echo "\n✅ Кэш-файл: 202 без кеша → 200 с кешем\n";
+        echo "\n✅ Устаревший кэш синхронно перегенерирован\n";
     }
 
     public function test_product_export_model_has_preset_methods(): void

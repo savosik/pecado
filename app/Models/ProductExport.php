@@ -57,7 +57,7 @@ class ProductExport extends Model
     /**
      * Check if a valid cache file exists.
      */
-    public function hasFreshCache(int $maxAgeHours = 4): bool
+    public function hasFreshCache(int $maxAgeMinutes = 10): bool
     {
         if (! $this->cached_at) {
             return false;
@@ -68,7 +68,7 @@ class ProductExport extends Model
             return false;
         }
 
-        return $this->cached_at->diffInHours(now()) < $maxAgeHours;
+        return $this->cached_at->diffInMinutes(now()) < $maxAgeMinutes;
     }
 
     /**
