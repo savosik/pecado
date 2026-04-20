@@ -15,16 +15,17 @@ class BugReportController extends Controller
             'description' => 'nullable|string',
             'browser'     => 'nullable|string|max:255',
             'user_name'   => 'nullable|string|max:255',
+            'type'        => 'nullable|string|in:bug,feature,improvement,ux,cosmetic,unexpected',
             'files.*'     => 'nullable|file|max:20480',
         ]);
 
-        $maxOrder = KanbanTask::where('status', 'todo')->max('order');
+        $maxOrder = KanbanTask::where('status', 'backlog')->max('order');
 
         $task = KanbanTask::create([
             'title'       => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'status'      => 'todo',
-            'type'        => 'bug',
+            'status'      => 'backlog',
+            'type'        => $validated['type'] ?? 'bug',
             'browser'     => $validated['browser'] ?? null,
             'user_name'   => $validated['user_name'] ?? null,
             'page_url'    => $request->headers->get('referer'),

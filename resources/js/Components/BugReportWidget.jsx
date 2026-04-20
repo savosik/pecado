@@ -1,9 +1,18 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Box, IconButton, Input, Textarea, Text, VStack, HStack, Button } from '@chakra-ui/react';
+import { Box, IconButton, Input, Textarea, Text, VStack, HStack, Button, Spinner } from '@chakra-ui/react';
 import { LuBug, LuX, LuPaperclip } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import VoiceMicButton from '@/Admin/Pages/Kanban/Components/VoiceMicButton';
+
+const TYPE_OPTIONS = [
+    { value: 'bug',         label: '🐛 Баг' },
+    { value: 'unexpected',  label: '🤔 Странное поведение' },
+    { value: 'ux',          label: '😤 Неудобство' },
+    { value: 'cosmetic',    label: '💅 Косметика' },
+    { value: 'feature',     label: '✨ Хотелка' },
+    { value: 'improvement', label: '⚡ Улучшение' },
+];
 
 function detectBrowser() {
     const ua = navigator.userAgent;
@@ -13,10 +22,6 @@ function detectBrowser() {
     if (/Firefox\//.test(ua)) return 'Firefox';
     if (/Safari\//.test(ua)) return 'Safari';
     return ua.slice(0, 60);
-}
-
-function getResolution() {
-    return `${window.screen.width}×${window.screen.height}`;
 }
 
 function getCsrfToken() {
@@ -36,7 +41,9 @@ export default function BugReportWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
+    const [type, setType] = useState('bug');
     const [files, setFiles] = useState([]);
+    const [screenshotLoading, setScreenshotLoading] = useState(false);
     const [loading, setLoading] = useState(false);
     const fileInputRef = useRef(null);
 
@@ -63,6 +70,7 @@ export default function BugReportWidget() {
 
     const handleOpen = async () => {
         setIsOpen(true);
+        setScreenshotLoading(true);
 
         try {
             const html2canvas = (await import('html2canvas')).default;
@@ -72,20 +80,30 @@ export default function BugReportWidget() {
                 logging: false,
                 allowTaint: true,
             });
-            canvas.toBlob((blob) => {
-                if (!blob) return;
-                const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
-                const file = new File([blob], `screenshot-${ts}.png`, { type: 'image/png' });
-                setFiles(prev => [file, ...prev]);
-            }, 'image/png', 0.8);
-        } catch (_) {}
+            await new Promise(resolve => {
+                canvas.toBlob(blob => {
+                    if (blob) {
+                        const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
+                        const file = new File([blob], `screenshot-${ts}.png`, { type: 'image/png' });
+                        setFiles(prev => [file, ...prev]);
+                    }
+                    resolve();
+                }, 'image/png', 0.8);
+            });
+        } catch (err) {
+            console.warn('Скриншот не удался:', err);
+        } finally {
+            setScreenshotLoading(false);
+        }
     };
 
     const handleClose = () => {
         setIsOpen(false);
         setTitle('');
         setDescription('');
+        setType('bug');
         setFiles([]);
+        setScreenshotLoading(false);
     };
 
     const handleFileChange = (e) => {
@@ -105,7 +123,8 @@ export default function BugReportWidget() {
         const formData = new FormData();
         formData.append('title', title.trim());
         formData.append('description', description.trim());
-        formData.append('browser', `${detectBrowser()} · ${getResolution()}`);
+        formData.append('type', type);
+        formData.append('browser', `${detectBrowser()} · ${window.screen.width}×${window.screen.height}`);
         formData.append('user_name', auth?.user?.name || '');
         files.forEach(f => formData.append('files[]', f));
 
@@ -124,9 +143,12 @@ export default function BugReportWidget() {
                 toaster.create({ title: 'Ваше замечание принято', type: 'success', duration: 4000 });
                 handleClose();
             } else {
+                const body = await res.text();
+                console.error('Bug report error:', res.status, body);
                 toaster.create({ title: 'Ошибка при отправке', type: 'error' });
             }
-        } catch (_) {
+        } catch (err) {
+            console.error('Bug report fetch error:', err);
             toaster.create({ title: 'Ошибка при отправке', type: 'error' });
         } finally {
             setLoading(false);
@@ -174,9 +196,7 @@ export default function BugReportWidget() {
                                     <Box>
                                         <HStack justify="space-between" mb={1}>
                                             <Text fontWeight="medium" fontSize="sm">Тема *</Text>
-                                            <VoiceMicButton
-                                                onText={(t) => setTitle(p => p ? p + ' ' + t : t)}
-                                            />
+                                            <VoiceMicButton onText={(t) => setTitle(p => p ? p + ' ' + t : t)} />
                                         </HStack>
                                         <Input
                                             value={title}
@@ -189,9 +209,7 @@ export default function BugReportWidget() {
                                     <Box>
                                         <HStack justify="space-between" mb={1}>
                                             <Text fontWeight="medium" fontSize="sm">Описание</Text>
-                                            <VoiceMicButton
-                                                onText={(t) => setDescription(p => p ? p + ' ' + t : t)}
-                                            />
+                                            <VoiceMicButton onText={(t) => setDescription(p => p ? p + ' ' + t : t)} />
                                         </HStack>
                                         <Textarea
                                             value={description}
@@ -199,6 +217,24 @@ export default function BugReportWidget() {
                                             placeholder="Подробнее опишите проблему..."
                                             rows={4}
                                         />
+                                    </Box>
+
+                                    <Box>
+                                        <Text fontWeight="medium" fontSize="sm" mb={1}>Тип</Text>
+                                        <HStack gap={2} flexWrap="wrap">
+                                            {TYPE_OPTIONS.map(o => (
+                                                <Button
+                                                    key={o.value}
+                                                    size="xs"
+                                                    type="button"
+                                                    variant={type === o.value ? 'solid' : 'outline'}
+                                                    colorPalette={type === o.value ? 'red' : 'gray'}
+                                                    onClick={() => setType(o.value)}
+                                                >
+                                                    {o.label}
+                                                </Button>
+                                            ))}
+                                        </HStack>
                                     </Box>
 
                                     <Box>
@@ -223,34 +259,38 @@ export default function BugReportWidget() {
                                             style={{ display: 'none' }}
                                             onChange={handleFileChange}
                                         />
-                                        {files.length > 0 && (
-                                            <VStack align="stretch" gap={1}>
-                                                {files.map((f, i) => (
-                                                    <HStack
-                                                        key={i}
-                                                        fontSize="xs"
-                                                        bg="bg.subtle"
-                                                        px={2}
-                                                        py={1}
-                                                        rounded="md"
-                                                        justify="space-between"
+                                        <VStack align="stretch" gap={1}>
+                                            {screenshotLoading && (
+                                                <HStack fontSize="xs" bg="bg.subtle" px={2} py={1} rounded="md" color="fg.muted">
+                                                    <Spinner size="xs" />
+                                                    <Text>Захватываю скриншот...</Text>
+                                                </HStack>
+                                            )}
+                                            {files.map((f, i) => (
+                                                <HStack
+                                                    key={i}
+                                                    fontSize="xs"
+                                                    bg="bg.subtle"
+                                                    px={2}
+                                                    py={1}
+                                                    rounded="md"
+                                                    justify="space-between"
+                                                >
+                                                    <Text flex={1} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+                                                        {f.name}
+                                                    </Text>
+                                                    <Text color="fg.muted" flexShrink={0}>{formatSize(f.size)}</Text>
+                                                    <IconButton
+                                                        size="2xs"
+                                                        variant="ghost"
+                                                        type="button"
+                                                        onClick={() => removeFile(i)}
                                                     >
-                                                        <Text flex={1} overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
-                                                            {f.name}
-                                                        </Text>
-                                                        <Text color="fg.muted" flexShrink={0}>{formatSize(f.size)}</Text>
-                                                        <IconButton
-                                                            size="2xs"
-                                                            variant="ghost"
-                                                            type="button"
-                                                            onClick={() => removeFile(i)}
-                                                        >
-                                                            <LuX />
-                                                        </IconButton>
-                                                    </HStack>
-                                                ))}
-                                            </VStack>
-                                        )}
+                                                        <LuX />
+                                                    </IconButton>
+                                                </HStack>
+                                            ))}
+                                        </VStack>
                                     </Box>
                                 </VStack>
                             </form>
@@ -263,8 +303,9 @@ export default function BugReportWidget() {
                                 form="bug-report-form"
                                 colorPalette="red"
                                 loading={loading}
+                                disabled={screenshotLoading}
                             >
-                                Отправить
+                                {screenshotLoading ? 'Захватываю скриншот...' : 'Отправить'}
                             </Button>
                         </HStack>
                     </Box>
