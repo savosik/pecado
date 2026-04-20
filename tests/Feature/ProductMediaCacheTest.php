@@ -4,7 +4,6 @@ namespace Tests\Feature;
 
 use App\Models\Media;
 use App\Models\Product;
-use App\Models\Scopes\HiddenScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -40,10 +39,10 @@ class ProductMediaCacheTest extends TestCase
 
         // Файл в Storage должен остаться
         $files = Storage::disk('public')->allFiles();
-        
+
         $this->assertNotEmpty(
-            array_filter($files, fn($f) => str_contains($f, 'TEST-DEL-001')),
-            'Файлы должны остаться в Storage после удаления товара: ' . implode(', ', $files)
+            array_filter($files, fn ($f) => str_contains($f, 'TEST-DEL-001')),
+            'Файлы должны остаться в Storage после удаления товара: '.implode(', ', $files)
         );
     }
 

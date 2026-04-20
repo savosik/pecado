@@ -4,7 +4,6 @@ namespace Tests\Unit\Services\Order;
 
 use App\Models\Company;
 use App\Models\Order;
-use App\Models\OrderChangeLog;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Models\User;

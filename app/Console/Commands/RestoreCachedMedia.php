@@ -49,9 +49,9 @@ class RestoreCachedMedia extends Command
             $basePath = "products-media/{$code}";
 
             $collections = [
-                'main'       => ['singleFile' => true],
+                'main' => ['singleFile' => true],
                 'additional' => ['singleFile' => false],
-                'video'      => ['singleFile' => true],
+                'video' => ['singleFile' => true],
             ];
 
             $hasMain = false;

@@ -13,7 +13,7 @@ class KanbanAttachmentController extends Controller
     public function store(Request $request, KanbanTask $kanbanTask)
     {
         $request->validate([
-            'files'   => 'required|array|max:20',
+            'files' => 'required|array|max:20',
             'files.*' => 'file|max:20480',
         ]);
 
@@ -22,9 +22,9 @@ class KanbanAttachmentController extends Controller
 
             $kanbanTask->attachments()->create([
                 'original_name' => $file->getClientOriginalName(),
-                'path'          => $path,
-                'mime_type'     => $file->getMimeType(),
-                'size'          => $file->getSize(),
+                'path' => $path,
+                'mime_type' => $file->getMimeType(),
+                'size' => $file->getSize(),
             ]);
         }
 

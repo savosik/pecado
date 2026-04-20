@@ -97,14 +97,14 @@ class KanbanApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title'       => 'required|string|max:255',
+            'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'status'      => 'nullable|string|in:backlog,todo,in_progress,testing,done,reopen',
-            'type'        => 'nullable|string|in:bug,unexpected,ux,cosmetic,feature,improvement',
-            'scope'       => 'nullable|string|in:1c,site,1c_and_site',
-            'page_url'    => 'nullable|string|max:500',
-            'browser'     => 'nullable|string|max:255',
-            'user_name'   => 'nullable|string|max:255',
+            'status' => 'nullable|string|in:backlog,todo,in_progress,testing,done,reopen',
+            'type' => 'nullable|string|in:bug,unexpected,ux,cosmetic,feature,improvement',
+            'scope' => 'nullable|string|in:1c,site,1c_and_site',
+            'page_url' => 'nullable|string|max:500',
+            'browser' => 'nullable|string|max:255',
+            'user_name' => 'nullable|string|max:255',
         ]);
 
         $status = $validated['status'] ?? 'backlog';
@@ -113,7 +113,7 @@ class KanbanApiController extends Controller
         $task = KanbanTask::create([
             ...$validated,
             'status' => $status,
-            'order'  => $maxOrder !== null ? $maxOrder + 1 : 0,
+            'order' => $maxOrder !== null ? $maxOrder + 1 : 0,
         ]);
 
         return response()->json(['data' => $this->format($task->load(['comments.replies', 'attachments']))], 201);
@@ -126,6 +126,7 @@ class KanbanApiController extends Controller
      * смена статуса (`status`) после обработки задачи.
      *
      * @urlParam id integer required ID задачи. Example: 1
+     *
      * @bodyParam title string Заголовок. Example: Обновлённый заголовок
      * @bodyParam description string Описание. Example: Обновлённое описание с деталями
      * @bodyParam status string Статус: backlog, todo, in_progress, testing, done, reopen. Example: in_progress
@@ -140,14 +141,14 @@ class KanbanApiController extends Controller
         $task = KanbanTask::findOrFail($id);
 
         $validated = $request->validate([
-            'title'       => 'sometimes|required|string|max:255',
+            'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
-            'status'      => 'sometimes|string|in:backlog,todo,in_progress,testing,done,reopen',
-            'type'        => 'nullable|string|in:bug,unexpected,ux,cosmetic,feature,improvement',
-            'scope'       => 'nullable|string|in:1c,site,1c_and_site',
-            'page_url'    => 'nullable|string|max:500',
-            'browser'     => 'nullable|string|max:255',
-            'user_name'   => 'nullable|string|max:255',
+            'status' => 'sometimes|string|in:backlog,todo,in_progress,testing,done,reopen',
+            'type' => 'nullable|string|in:bug,unexpected,ux,cosmetic,feature,improvement',
+            'scope' => 'nullable|string|in:1c,site,1c_and_site',
+            'page_url' => 'nullable|string|max:500',
+            'browser' => 'nullable|string|max:255',
+            'user_name' => 'nullable|string|max:255',
         ]);
 
         $task->update($validated);
@@ -190,6 +191,7 @@ class KanbanApiController extends Controller
      * Агент может оставлять комментарии с описанием хода работы или результата.
      *
      * @urlParam id integer required ID задачи. Example: 1
+     *
      * @bodyParam content string required Текст комментария. Example: Исследовал проблему — баг в компоненте Checkout.jsx на строке 42
      * @bodyParam parent_id integer ID родительского комментария для ответа. Example: 5
      */
@@ -198,14 +200,14 @@ class KanbanApiController extends Controller
         $task = KanbanTask::findOrFail($id);
 
         $validated = $request->validate([
-            'content'   => 'required|string',
+            'content' => 'required|string',
             'parent_id' => 'nullable|integer|exists:kanban_comments,id',
         ]);
 
         $comment = KanbanComment::create([
             'kanban_task_id' => $task->id,
-            'content'        => $validated['content'],
-            'parent_id'      => $validated['parent_id'] ?? null,
+            'content' => $validated['content'],
+            'parent_id' => $validated['parent_id'] ?? null,
         ]);
 
         return response()->json(['data' => $this->formatComment($comment->load('replies'))], 201);
@@ -228,6 +230,7 @@ class KanbanApiController extends Controller
      * Прикрепить файл к задаче.
      *
      * @urlParam id integer required ID задачи. Example: 1
+     *
      * @bodyParam file file required Файл для прикрепления (макс. 20 МБ).
      */
     public function addAttachment(Request $request, int $id): JsonResponse
@@ -243,10 +246,10 @@ class KanbanApiController extends Controller
 
         $attachment = KanbanTaskAttachment::create([
             'kanban_task_id' => $task->id,
-            'original_name'  => $file->getClientOriginalName(),
-            'path'           => $path,
-            'mime_type'      => $file->getMimeType(),
-            'size'           => $file->getSize(),
+            'original_name' => $file->getClientOriginalName(),
+            'path' => $path,
+            'mime_type' => $file->getMimeType(),
+            'size' => $file->getSize(),
         ]);
 
         return response()->json(['data' => $this->formatAttachment($attachment)], 201);
@@ -269,30 +272,30 @@ class KanbanApiController extends Controller
     private function format(KanbanTask $task): array
     {
         return [
-            'id'          => $task->id,
-            'title'       => $task->title,
+            'id' => $task->id,
+            'title' => $task->title,
             'description' => $task->description,
-            'status'      => $task->status,
-            'type'        => $task->type,
-            'scope'       => $task->scope,
-            'order'       => $task->order,
-            'page_url'    => $task->page_url,
-            'browser'     => $task->browser,
-            'user_name'   => $task->user_name,
-            'comments'    => $task->comments->map(fn ($c) => $this->formatComment($c))->values()->toArray(),
+            'status' => $task->status,
+            'type' => $task->type,
+            'scope' => $task->scope,
+            'order' => $task->order,
+            'page_url' => $task->page_url,
+            'browser' => $task->browser,
+            'user_name' => $task->user_name,
+            'comments' => $task->comments->map(fn ($c) => $this->formatComment($c))->values()->toArray(),
             'attachments' => $task->attachments->map(fn ($a) => $this->formatAttachment($a))->values()->toArray(),
-            'created_at'  => $task->created_at?->toIso8601String(),
-            'updated_at'  => $task->updated_at?->toIso8601String(),
+            'created_at' => $task->created_at?->toIso8601String(),
+            'updated_at' => $task->updated_at?->toIso8601String(),
         ];
     }
 
     private function formatComment(KanbanComment $comment): array
     {
         return [
-            'id'         => $comment->id,
-            'content'    => $comment->content,
-            'parent_id'  => $comment->parent_id,
-            'replies'    => $comment->replies->map(fn ($r) => $this->formatComment($r))->values()->toArray(),
+            'id' => $comment->id,
+            'content' => $comment->content,
+            'parent_id' => $comment->parent_id,
+            'replies' => $comment->replies->map(fn ($r) => $this->formatComment($r))->values()->toArray(),
             'created_at' => $comment->created_at?->toIso8601String(),
             'updated_at' => $comment->updated_at?->toIso8601String(),
         ];
@@ -301,12 +304,12 @@ class KanbanApiController extends Controller
     private function formatAttachment(KanbanTaskAttachment $attachment): array
     {
         return [
-            'id'            => $attachment->id,
+            'id' => $attachment->id,
             'original_name' => $attachment->original_name,
-            'url'           => $attachment->url,
-            'mime_type'     => $attachment->mime_type,
-            'size'          => $attachment->size,
-            'created_at'    => $attachment->created_at?->toIso8601String(),
+            'url' => $attachment->url,
+            'mime_type' => $attachment->mime_type,
+            'size' => $attachment->size,
+            'created_at' => $attachment->created_at?->toIso8601String(),
         ];
     }
 }

@@ -12,19 +12,19 @@ class KanbanController extends Controller
     public function index()
     {
         $tasks = KanbanTask::with(['comments', 'attachments'])->orderBy('order')->get();
-        
+
         $columns = [
             'backlog',
             'todo',
             'in_progress',
             'testing',
             'done',
-            'reopen'
+            'reopen',
         ];
 
         return Inertia::render('Admin/Pages/Kanban/Index', [
             'tasks' => $tasks,
-            'columns' => $columns
+            'columns' => $columns,
         ]);
     }
 
@@ -69,7 +69,7 @@ class KanbanController extends Controller
 
     public function destroy(KanbanTask $kanbanTask)
     {
-        if (!in_array($kanbanTask->status, ['backlog', 'done'])) {
+        if (! in_array($kanbanTask->status, ['backlog', 'done'])) {
             abort(403, 'Удалять можно только задачи в беклоге или в статусе "Готово"');
         }
 

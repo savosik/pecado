@@ -4,7 +4,6 @@ namespace Tests\Feature\Listeners;
 
 use App\Enums\UserStatus;
 use App\Events\UserCreated;
-use App\Events\UserUpdated;
 use App\Jobs\PublishUserToErpJob;
 use App\Listeners\PublishUserToErp;
 use App\Models\User;

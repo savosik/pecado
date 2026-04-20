@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\KanbanTask;
-use App\Models\KanbanComment;
 use Illuminate\Http\Request;
 
 class KanbanCommentController extends Controller

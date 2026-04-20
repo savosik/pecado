@@ -52,8 +52,7 @@ class IndividualPriceStatsService
      */
     public function getDistinctPartnerIds(): Collection
     {
-        return Cache::remember(self::CACHE_KEY_PARTNER_IDS, self::CACHE_TTL_IDS_SECONDS, fn () =>
-            DB::connection('prices')->table('individual_prices')->distinct()->pluck('partner_id')
+        return Cache::remember(self::CACHE_KEY_PARTNER_IDS, self::CACHE_TTL_IDS_SECONDS, fn () => DB::connection('prices')->table('individual_prices')->distinct()->pluck('partner_id')
         );
     }
 
@@ -62,8 +61,7 @@ class IndividualPriceStatsService
      */
     public function getDistinctProductIds(): Collection
     {
-        return Cache::remember(self::CACHE_KEY_PRODUCT_IDS, self::CACHE_TTL_IDS_SECONDS, fn () =>
-            DB::connection('prices')->table('individual_prices')->distinct()->pluck('product_id')
+        return Cache::remember(self::CACHE_KEY_PRODUCT_IDS, self::CACHE_TTL_IDS_SECONDS, fn () => DB::connection('prices')->table('individual_prices')->distinct()->pluck('product_id')
         );
     }
 
@@ -72,8 +70,7 @@ class IndividualPriceStatsService
      */
     public function getDistinctWarehouseIds(): Collection
     {
-        return Cache::remember(self::CACHE_KEY_WAREHOUSE_IDS, self::CACHE_TTL_IDS_SECONDS, fn () =>
-            DB::connection('prices')->table('individual_prices')->distinct()->pluck('warehouse_id')
+        return Cache::remember(self::CACHE_KEY_WAREHOUSE_IDS, self::CACHE_TTL_IDS_SECONDS, fn () => DB::connection('prices')->table('individual_prices')->distinct()->pluck('warehouse_id')
         );
     }
 

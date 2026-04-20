@@ -276,7 +276,7 @@ class Product extends Model implements HasMedia
 
     /**
      * Переопределение метода Spatie\MediaLibrary\InteractsWithMedia.
-     * 
+     *
      * При удалении товара мы удаляем только записи в таблице media,
      * а файлы в MinIO остаются (наш персистентный кэш по артикулу).
      *

@@ -29,15 +29,17 @@ class ImportCatalogMedia extends Command
 
         $response = Http::timeout(120)->get($url);
 
-        if (!$response->successful()) {
+        if (! $response->successful()) {
             $this->error("Ошибка загрузки: HTTP {$response->status()}");
+
             return self::FAILURE;
         }
 
         $items = $response->json();
 
-        if (!is_array($items) || count($items) === 0) {
+        if (! is_array($items) || count($items) === 0) {
             $this->warn('JSON не содержит товаров.');
+
             return self::SUCCESS;
         }
 
@@ -51,7 +53,7 @@ class ImportCatalogMedia extends Command
                 $q->where('collection_name', 'main');
             })->pluck('external_id')->flip()->toArray();
 
-            $this->info("Товаров без главного изображения: " . count($productIdsWithoutMainImage));
+            $this->info('Товаров без главного изображения: '.count($productIdsWithoutMainImage));
         }
 
         $bar = $this->output->createProgressBar($totalItems);
@@ -71,21 +73,24 @@ class ImportCatalogMedia extends Command
             if (empty($uid)) {
                 $skipped++;
                 $bar->advance();
+
                 continue;
             }
 
             // Если --missing-only и товар уже имеет главное изображение — пропускаем
-            if ($missingOnly && !isset($productIdsWithoutMainImage[$uid])) {
+            if ($missingOnly && ! isset($productIdsWithoutMainImage[$uid])) {
                 $skippedHasMedia++;
                 $bar->advance();
+
                 continue;
             }
 
             $product = Product::where('external_id', $uid)->first();
 
-            if (!$product) {
+            if (! $product) {
                 $skipped++;
                 $bar->advance();
+
                 continue;
             }
 
@@ -112,7 +117,7 @@ class ImportCatalogMedia extends Command
         if ($missingOnly) {
             $this->line("  Пропущено (есть медиа): {$skippedHasMedia}");
         }
-        $this->line("  Очередь:               catalog-media");
+        $this->line('  Очередь:               catalog-media');
         $this->info('═══════════════════════════════════════');
         $this->newLine();
         $this->info('Обработка выполняется воркерами в фоне.');

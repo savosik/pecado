@@ -24,9 +24,9 @@ class SyncSearchIndex extends Command
     protected $description = 'Синхронизировать поисковые индексы Meilisearch с БД (upsert + stale cleanup)';
 
     private array $models = [
-        'products'   => [Product::class,  'products'],
+        'products' => [Product::class,  'products'],
         'categories' => [Category::class, 'categories'],
-        'brands'     => [Brand::class,    'brands'],
+        'brands' => [Brand::class,    'brands'],
     ];
 
     public function handle(): int
@@ -36,7 +36,7 @@ class SyncSearchIndex extends Command
         $skipImport = $this->option('skip-import');
 
         if ($onlyModel && ! isset($this->models[$onlyModel])) {
-            $this->error("Неизвестная модель: {$onlyModel}. Допустимые: " . implode(', ', array_keys($this->models)));
+            $this->error("Неизвестная модель: {$onlyModel}. Допустимые: ".implode(', ', array_keys($this->models)));
 
             return self::FAILURE;
         }

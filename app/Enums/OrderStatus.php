@@ -13,11 +13,11 @@ enum OrderStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::PENDING       => 'Ожидает',
-            self::CONFIRMED     => 'Подтверждён',
+            self::PENDING => 'Ожидает',
+            self::CONFIRMED => 'Подтверждён',
             self::READY_TO_SHIP => 'К отгрузке',
-            self::CLOSED        => 'Закрыт',
-            self::DELETED       => 'Удалён',
+            self::CLOSED => 'Закрыт',
+            self::DELETED => 'Удалён',
         };
     }
 }
