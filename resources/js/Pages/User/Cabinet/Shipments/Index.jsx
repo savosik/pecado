@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import {
-    Box, Flex, HStack, VStack, Text, Badge, Button, Input, Table,
+    Box, Flex, HStack, VStack, Text, Badge, Button, Input,
     Card, Stack, IconButton,
 } from '@chakra-ui/react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     LuFilter, LuX, LuArrowUpDown, LuArrowUp, LuArrowDown,
-    LuEye, LuChevronLeft, LuChevronRight, LuSearch, LuTruck,
+    LuChevronLeft, LuChevronRight, LuSearch, LuTruck, LuCalendar,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
@@ -14,9 +14,9 @@ import { Select } from '@/components/ui/select';
 
 const STATUS_COLORS = {
     new: 'blue',
+    in_progress: 'orange',
     completed: 'green',
     cancelled: 'red',
-    in_progress: 'orange',
 };
 
 export default function ShipmentsIndex({ filters, statuses }) {
@@ -61,27 +61,28 @@ export default function ShipmentsIndex({ filters, statuses }) {
 
     const handlePageChange = (page) => navigateWithParams({ page });
 
-    const SortIcon = ({ field }) => {
-        if (filters?.sort_by !== field) return <LuArrowUpDown size={14} />;
-        return filters?.sort_order === 'asc' ? <LuArrowUp size={14} /> : <LuArrowDown size={14} />;
-    };
-
-    const SortableHeader = ({ field, children, ...props }) => (
-        <Table.ColumnHeader
-            cursor="pointer"
-            onClick={() => handleSort(field)}
-            _hover={{ color: 'pecado.500' }}
-            transition="color 0.15s"
-            {...props}
-        >
-            <HStack gap="1">
-                <Text>{children}</Text>
-                <SortIcon field={field} />
-            </HStack>
-        </Table.ColumnHeader>
-    );
-
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('ru-RU') : null;
+
+    const SortButton = ({ field, children }) => {
+        const active = filters?.sort_by === field;
+        const Icon = active
+            ? (filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown)
+            : LuArrowUpDown;
+        return (
+            <Button
+                variant={active ? 'subtle' : 'ghost'}
+                colorPalette={active ? 'pecado' : 'gray'}
+                size="xs"
+                onClick={() => handleSort(field)}
+                gap="1"
+            >
+                {children}
+                <Icon size={12} />
+            </Button>
+        );
+    };
 
     return (
         <CabinetLayout title="Мои отгрузки">
@@ -186,7 +187,7 @@ export default function ShipmentsIndex({ filters, statuses }) {
                 </Card.Root>
             )}
 
-            {/* Таблица / пустое состояние */}
+            {/* Список отгрузок */}
             {shipments.data.length === 0 ? (
                 <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     <Card.Body p="10" textAlign="center">
@@ -206,126 +207,88 @@ export default function ShipmentsIndex({ filters, statuses }) {
                 </Card.Root>
             ) : (
                 <>
-                    {/* Desktop */}
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }}
-                        display={{ base: 'none', md: 'block' }}
-                        borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                        _dark={{ borderColor: 'gray.700' }} overflow="hidden"
-                    >
-                        <Box overflowX="auto">
-                            <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
-                                <Table.Header>
-                                    <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
-                                        <SortableHeader field="id" w="80px">№</SortableHeader>
-                                        <SortableHeader field="date">Дата</SortableHeader>
-                                        <SortableHeader field="status">Статус</SortableHeader>
-                                        <Table.ColumnHeader>Компания</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="center">Позиций</Table.ColumnHeader>
-                                        <SortableHeader field="total_amount" textAlign="right">
-                                            Сумма ({currencySymbol})
-                                        </SortableHeader>
-                                        <Table.ColumnHeader w="60px" />
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {shipments.data.map((shipment) => (
-                                        <Table.Row
-                                            key={shipment.id}
-                                            _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}
-                                            transition="background 0.15s"
-                                        >
-                                            <Table.Cell>
-                                                <Text fontWeight="600" noOfLines={1} maxW="150px" title={shipment.number}>
+                    {/* Сортировка */}
+                    <HStack gap="1" mb="3" px="1" flexWrap="wrap">
+                        <Text fontSize="xs" color="gray.400" mr="1">Сортировка:</Text>
+                        <SortButton field="id">Номер</SortButton>
+                        <SortButton field="date">Дата</SortButton>
+                        <SortButton field="status">Статус</SortButton>
+                        <SortButton field="total_amount">Сумма</SortButton>
+                    </HStack>
+
+                    {/* Карточки-строки */}
+                    <VStack gap="2" align="stretch">
+                        {shipments.data.map((shipment) => (
+                            <Link key={shipment.id} href={`/cabinet/shipments/${shipment.id}`}>
+                                <Box
+                                    bg={{ base: 'white', _dark: 'gray.800' }}
+                                    borderRadius="xl"
+                                    border="1px solid"
+                                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                    p="4"
+                                    _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
+                                    transition="all 0.15s"
+                                    cursor="pointer"
+                                >
+                                    <Flex gap="4" align="start" justify="space-between">
+                                        {/* Левая часть: номер, статус, мета */}
+                                        <Box flex="1" minW="0">
+                                            {/* Строка 1: номер + статус + updated_at */}
+                                            <Flex gap="2" align="center" flexWrap="wrap" mb="1.5">
+                                                <Text fontWeight="700" fontSize="md" fontFamily="mono" whiteSpace="nowrap" flexShrink="0">
                                                     {shipment.number}
                                                 </Text>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text fontSize="sm" color="fg.muted">
-                                                    {shipment.date ? new Date(shipment.date).toLocaleDateString('ru-RU') : '—'}
-                                                </Text>
-                                            </Table.Cell>
-                                            <Table.Cell>
                                                 <Badge
-                                                    colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
-                                                    variant="subtle" borderRadius="full" px="2.5" fontSize="xs"
+                                                    colorPalette="gray"
+                                                    variant="subtle" fontSize="2xs" px="1.5"
                                                 >
-                                                    {shipment.status_label}
+                                                    Отгрузка
                                                 </Badge>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text fontSize="sm" color="fg.muted">{shipment.company?.name || '—'}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="center">
-                                                <Text fontSize="sm">{shipment.items_count}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <VStack gap="0" align="end">
-                                                    <Text fontWeight="600">
-                                                        {fmt(shipment.total_converted)} {currencySymbol}
-                                                    </Text>
-                                                    {shipment.currency_code && shipment.currency_code !== currency?.code && (
-                                                        <Text fontSize="xs" color="gray.400">
-                                                            {fmt(shipment.total_amount)} {shipment.currency_code}
-                                                        </Text>
+                                                <Flex align="center" gap="1.5">
+                                                    <Badge
+                                                        colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
+                                                        variant="subtle" fontSize="xs" borderRadius="full" px="2.5"
+                                                    >
+                                                        {shipment.status_label}
+                                                    </Badge>
+                                                    {shipment.updated_at && (
+                                                        <Text fontSize="2xs" color="gray.400">{shipment.updated_at}</Text>
                                                     )}
-                                                </VStack>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Link href={`/cabinet/shipments/${shipment.id}`}>
-                                                    <IconButton variant="ghost" size="xs" aria-label="Просмотр" colorPalette="pecado">
-                                                        <LuEye size={16} />
-                                                    </IconButton>
-                                                </Link>
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table.Root>
-                        </Box>
-                    </Card.Root>
+                                                </Flex>
+                                            </Flex>
 
-                    {/* Mobile */}
-                    <VStack gap="3" display={{ base: 'flex', md: 'none' }}>
-                        {shipments.data.map((shipment) => (
-                            <Link key={shipment.id} href={`/cabinet/shipments/${shipment.id}`} style={{ width: '100%' }}>
-                                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }}
-                                    borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                                    _dark={{ borderColor: 'gray.700' }}
-                                    _hover={{ shadow: 'md', transform: 'translateY(-1px)' }}
-                                    transition="all 0.2s" cursor="pointer"
-                                >
-                                    <Card.Body p="4">
-                                        <Flex justify="space-between" align="center" mb="2">
-                                            <Text fontWeight="700" fontSize="md" noOfLines={1} pr="2">Отгрузка {shipment.number}</Text>
-                                            <Badge
-                                                colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
-                                                variant="subtle" borderRadius="full" px="2.5" fontSize="xs"
-                                            >
-                                                {shipment.status_label}
-                                            </Badge>
-                                        </Flex>
-                                        <Flex justify="space-between" align="center">
-                                            <VStack gap="0" align="start">
+                                            {/* Строка 2: компания, позиции */}
+                                            <HStack gap="3" fontSize="xs" color="gray.500" flexWrap="wrap" mb={shipment.date ? '1.5' : '0'}>
                                                 {shipment.company && (
-                                                    <Text fontSize="xs" color="fg.muted">{shipment.company.name}</Text>
+                                                    <Text fontWeight="500">{shipment.company.name}</Text>
                                                 )}
-                                                <Text fontSize="xs" color="fg.muted">
-                                                    {shipment.date ? new Date(shipment.date).toLocaleDateString('ru-RU') : '—'}
+                                                <Text>
+                                                    {shipment.items_count} {shipment.items_count === 1 ? 'позиция' : shipment.items_count < 5 ? 'позиции' : 'позиций'}
                                                 </Text>
-                                            </VStack>
-                                            <VStack gap="0" align="end">
-                                                <Text fontWeight="700" fontSize="md">
-                                                    {fmt(shipment.total_converted)} {currencySymbol}
+                                            </HStack>
+
+                                            {/* Строка 3: дата отгрузки */}
+                                            {shipment.date && (
+                                                <HStack gap="1" fontSize="xs" color="gray.500" minW="0">
+                                                    <Box flexShrink="0" color="gray.400"><LuCalendar size={11} /></Box>
+                                                    <Text noOfLines={1}>Дата отгрузки: {formatDate(shipment.date)}</Text>
+                                                </HStack>
+                                            )}
+                                        </Box>
+
+                                        {/* Правая часть: сумма */}
+                                        <VStack gap="0" align="end" flexShrink="0">
+                                            <Text fontWeight="700" fontSize="lg" fontFamily="mono" whiteSpace="nowrap">
+                                                {fmt(shipment.total_converted)} {currencySymbol}
+                                            </Text>
+                                            {shipment.currency_code && shipment.currency_code !== currency?.code && (
+                                                <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
+                                                    {fmt(shipment.total_amount)} {shipment.currency_code}
                                                 </Text>
-                                                {shipment.currency_code && shipment.currency_code !== currency?.code && (
-                                                    <Text fontSize="xs" color="gray.400">
-                                                        {fmt(shipment.total_amount)} {shipment.currency_code}
-                                                    </Text>
-                                                )}
-                                            </VStack>
-                                        </Flex>
-                                    </Card.Body>
-                                </Card.Root>
+                                            )}
+                                        </VStack>
+                                    </Flex>
+                                </Box>
                             </Link>
                         ))}
                     </VStack>
@@ -349,7 +312,7 @@ export default function ShipmentsIndex({ filters, statuses }) {
                                         (page >= cur - 2 && page <= cur + 2);
                                 })
                                 .reduce((acc, page, idx, arr) => {
-                                    if (idx > 0 && page - arr[idx - 1] > 1) acc.push('…' + page);
+                                    if (idx > 0 && page - arr[idx - 1] > 1) acc.push('...' + page);
                                     acc.push(page);
                                     return acc;
                                 }, [])
