@@ -152,6 +152,7 @@ export const menuConfig: MenuGroup[] = [
         title: "Система",
         icon: LuSettings,
         items: [
+            { label: "Канбан", icon: LuLayoutDashboard, path: "/admin/kanban", permission: "settings.view" },
             { label: "Шина ERP", icon: LuRadio, path: "/admin/erp-bus", permission: "erp-bus.view" },
             { label: "Медиа", icon: LuImagePlay, path: "/admin/media", permission: "media.view" },
             { label: "Роли", icon: LuShieldCheck, path: "/admin/roles", permission: "roles.view" },

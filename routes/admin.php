@@ -676,6 +676,15 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Система
     // =====================================================================
 
+    // Канбан
+    Route::middleware('permission:settings.view')->group(function () {
+        Route::get('/kanban', [\App\Http\Controllers\Admin\KanbanController::class, 'index'])->name('kanban.index');
+        Route::post('/kanban', [\App\Http\Controllers\Admin\KanbanController::class, 'store'])->name('kanban.store');
+        Route::put('/kanban/{kanbanTask}', [\App\Http\Controllers\Admin\KanbanController::class, 'update'])->name('kanban.update');
+        Route::put('/kanban/{kanbanTask}/order', [\App\Http\Controllers\Admin\KanbanController::class, 'updateOrder'])->name('kanban.update-order');
+        Route::post('/kanban/{kanbanTask}/comments', [\App\Http\Controllers\Admin\KanbanCommentController::class, 'store'])->name('kanban.comments.store');
+    });
+
     // Шина ERP
     Route::get('/erp-bus', [\App\Http\Controllers\Admin\ErpBusController::class, 'index'])->name('erp-bus.index')->middleware('permission:erp-bus.view');
     Route::get('/erp-bus/messages', [\App\Http\Controllers\Admin\ErpBusController::class, 'messages'])->name('erp-bus.messages')->middleware('permission:erp-bus.view');
