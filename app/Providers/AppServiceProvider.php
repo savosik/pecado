@@ -130,6 +130,7 @@ class AppServiceProvider extends ServiceProvider
         // Scramble: Kanban API — для LLM-агентов
         Scramble::registerApi('kanban', [
             'api_path' => 'api/kanban',
+            'middleware' => ['web'],
             'info' => [
                 'title' => 'Pecado Kanban API',
                 'version' => '1.0',
@@ -167,7 +168,7 @@ class AppServiceProvider extends ServiceProvider
             ],
         ]);
 
-        Scramble::registerUiRoute(path: 'docs/kanban-api', api: 'kanban')->middleware(['web']);
-        Scramble::registerJsonSpecificationRoute(path: 'docs/kanban-api.json', api: 'kanban')->middleware(['web']);
+        Scramble::registerUiRoute(path: 'docs/kanban-api', api: 'kanban');
+        Scramble::registerJsonSpecificationRoute(path: 'docs/kanban-api.json', api: 'kanban');
     }
 }
