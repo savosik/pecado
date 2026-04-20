@@ -72,7 +72,7 @@ class HandleInertiaRequests extends Middleware
             ),
             'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () => MenuItem::published()->forFooter()->ordered()->get()
             ),
-            'bugReportMode' => (bool) env('BUG_REPORT_MODE', false),
+            'bugReportMode' => (bool) config('app.bug_report_mode'),
         ];
     }
 }

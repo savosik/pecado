@@ -123,4 +123,6 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'bug_report_mode' => env('BUG_REPORT_MODE', false),
+
 ];
