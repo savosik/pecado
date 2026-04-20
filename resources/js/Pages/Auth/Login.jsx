@@ -4,7 +4,7 @@ import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
 import PasswordInput from '@/components/ui/password-input';
 import AuthLayout from './AuthLayout';
-import SocialAuthButtons from './SocialAuthButtons';
+// import SocialAuthButtons from './SocialAuthButtons';
 
 export default function Login({ errors }) {
     const { data, setData, post, processing } = useForm({
@@ -114,7 +114,7 @@ export default function Login({ errors }) {
                     </Stack>
                 </form>
 
-                <SocialAuthButtons label="Или войдите через" />
+                {/* <SocialAuthButtons label="Или войдите через" /> */}
 
                 <Box mt={6} textAlign="center">
                     <Text color="gray.500" fontSize="sm">

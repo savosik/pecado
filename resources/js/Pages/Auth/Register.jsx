@@ -3,7 +3,7 @@ import { Box, Input, Button, Text, Stack, SimpleGrid } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import PasswordInput from '@/components/ui/password-input';
 import AuthLayout from './AuthLayout';
-import SocialAuthButtons from './SocialAuthButtons';
+// import SocialAuthButtons from './SocialAuthButtons';
 
 export default function Register({ errors }) {
     const { data, setData, post, processing } = useForm({
@@ -92,7 +92,7 @@ export default function Register({ errors }) {
                     </Stack>
                 </form>
 
-                <SocialAuthButtons label="Или зарегистрируйтесь через" />
+                {/* <SocialAuthButtons label="Или зарегистрируйтесь через" /> */}
 
                 <Box mt={6} textAlign="center">
                     <Text color="gray.500" fontSize="sm">
