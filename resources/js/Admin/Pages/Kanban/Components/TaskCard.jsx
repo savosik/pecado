@@ -1,5 +1,6 @@
-import { Box, Text, VStack, HStack, Badge, Link, Icon } from '@chakra-ui/react';
-import { LuExternalLink, LuMessageSquare, LuGlobe, LuUser, LuPaperclip } from 'react-icons/lu';
+import { Box, Text, VStack, HStack, Badge, Link, Icon, IconButton } from '@chakra-ui/react';
+import { LuExternalLink, LuMessageSquare, LuGlobe, LuUser, LuPaperclip, LuTrash2 } from 'react-icons/lu';
+import { router } from '@inertiajs/react';
 
 const TYPE_LABELS = {
     bug: '🐛 Баг',
@@ -26,9 +27,18 @@ const SCOPE_LABELS = {
 };
 
 
+const DELETABLE_STATUSES = ['backlog', 'done'];
+
 export default function TaskCard({ task, onDragStart, onTaskClick }) {
     const commentCount = task.comments?.length ?? 0;
     const attachmentCount = task.attachments?.length ?? 0;
+    const canDelete = DELETABLE_STATUSES.includes(task.status);
+
+    const handleDelete = (e) => {
+        e.stopPropagation();
+        if (!confirm(`Удалить задачу "${task.title}"?`)) return;
+        router.delete(route('admin.kanban.destroy', task.id), { preserveScroll: true });
+    };
 
     return (
         <Box
@@ -71,6 +81,17 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
                             <Icon as={LuPaperclip} />
                             <Text>{attachmentCount}</Text>
                         </HStack>
+                    )}
+                    {canDelete && (
+                        <IconButton
+                            size="2xs"
+                            variant="ghost"
+                            colorPalette="red"
+                            aria-label="Удалить задачу"
+                            onClick={handleDelete}
+                        >
+                            <LuTrash2 />
+                        </IconButton>
                     )}
                 </HStack>
             </HStack>

@@ -67,6 +67,17 @@ class KanbanController extends Controller
         return redirect()->back();
     }
 
+    public function destroy(KanbanTask $kanbanTask)
+    {
+        if (!in_array($kanbanTask->status, ['backlog', 'done'])) {
+            abort(403, 'Удалять можно только задачи в беклоге или в статусе "Готово"');
+        }
+
+        $kanbanTask->delete();
+
+        return redirect()->back();
+    }
+
     public function updateOrder(Request $request, KanbanTask $kanbanTask)
     {
         $validated = $request->validate([
