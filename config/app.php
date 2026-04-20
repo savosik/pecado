@@ -125,4 +125,6 @@ return [
 
     'bug_report_mode' => env('BUG_REPORT_MODE', false),
 
+    'kanban_api_enabled' => env('KANBAN_API_ENABLED', false),
+
 ];

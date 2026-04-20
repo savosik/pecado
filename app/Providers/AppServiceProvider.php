@@ -126,5 +126,48 @@ class AppServiceProvider extends ServiceProvider
 
         Scramble::registerUiRoute(path: 'docs/api', api: 'content');
         Scramble::registerJsonSpecificationRoute(path: 'docs/api.json', api: 'content');
+
+        // Scramble: Kanban API — для LLM-агентов
+        Scramble::registerApi('kanban', [
+            'api_path' => 'api/kanban',
+            'info' => [
+                'title' => 'Pecado Kanban API',
+                'version' => '1.0',
+                'description' => implode("\n\n", [
+                    'Публичный API управления задачами канбан-доски.',
+                    '**Авторизация не требуется.** API активируется переменной окружения `KANBAN_API_ENABLED=true`.',
+                    '',
+                    '## Основные сценарии для LLM-агентов',
+                    '',
+                    '1. **Получить задачи** — `GET /api/kanban/tasks?status=backlog`',
+                    '2. **Взять задачу в работу** — `PATCH /api/kanban/tasks/{id}` с `{"status": "in_progress"}`',
+                    '3. **Оставить комментарий** — `POST /api/kanban/tasks/{id}/comments`',
+                    '4. **Закрыть задачу** — `PATCH /api/kanban/tasks/{id}` с `{"status": "done"}`',
+                    '',
+                    '## Доступные статусы',
+                    '| Статус | Описание |',
+                    '|--------|----------|',
+                    '| `backlog` | Новые задачи, не распределённые в спринт |',
+                    '| `todo` | К выполнению в текущем спринте |',
+                    '| `in_progress` | В работе |',
+                    '| `testing` | На тестировании |',
+                    '| `done` | Выполнено |',
+                    '| `reopen` | Открыто повторно |',
+                    '',
+                    '## Доступные типы',
+                    '| Тип | Описание |',
+                    '|-----|----------|',
+                    '| `bug` | Ошибка в работе системы |',
+                    '| `unexpected` | Странное поведение |',
+                    '| `ux` | Неудобство в использовании |',
+                    '| `cosmetic` | Визуальная проблема |',
+                    '| `feature` | Новая функциональность |',
+                    '| `improvement` | Улучшение существующего |',
+                ]),
+            ],
+        ]);
+
+        Scramble::registerUiRoute(path: 'docs/kanban-api', api: 'kanban');
+        Scramble::registerJsonSpecificationRoute(path: 'docs/kanban-api.json', api: 'kanban');
     }
 }

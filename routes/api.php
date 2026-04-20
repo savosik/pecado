@@ -83,6 +83,27 @@ Route::prefix('content')
     });
 
 // ──────────────────────────────────────────────────────────────
+// Kanban API — для LLM-агентов (публичный, без авторизации)
+// Активируется переменной KANBAN_API_ENABLED=true
+// ──────────────────────────────────────────────────────────────
+Route::prefix('kanban')
+    ->middleware([\App\Http\Middleware\KanbanApiEnabled::class, 'throttle:120,1'])
+    ->name('api.kanban.')
+    ->group(function () {
+        Route::get('tasks', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'index'])->name('tasks.index');
+        Route::post('tasks', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'store'])->name('tasks.store');
+        Route::get('tasks/{id}', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'show'])->name('tasks.show');
+        Route::patch('tasks/{id}', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'update'])->name('tasks.update');
+        Route::delete('tasks/{id}', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'destroy'])->name('tasks.destroy');
+
+        Route::post('tasks/{id}/comments', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'addComment'])->name('tasks.comments.store');
+        Route::delete('comments/{commentId}', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'deleteComment'])->name('comments.destroy');
+
+        Route::post('tasks/{id}/attachments', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'addAttachment'])->name('tasks.attachments.store');
+        Route::delete('attachments/{attachmentId}', [\App\Http\Controllers\Api\Kanban\KanbanApiController::class, 'deleteAttachment'])->name('attachments.destroy');
+    });
+
+// ──────────────────────────────────────────────────────────────
 // Client API — публичные эндпоинты по хешу (без авторизации)
 // ──────────────────────────────────────────────────────────────
 Route::prefix('client-api/{token}')
