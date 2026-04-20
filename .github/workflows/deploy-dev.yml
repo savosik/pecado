@@ -252,6 +252,7 @@ jobs:
             --exclude='storage/framework/sessions' \
             --exclude='storage/framework/views' \
             --exclude='storage/app/exports' \
+            --exclude='storage/app/public' \
             ./ /srv/pecado/
 
       - name: "🐳 Deploy"
@@ -274,6 +275,9 @@ jobs:
 
           echo "==> [1/7] Установка PHP зависимостей..."
           sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
+
+          echo "==> [1.5/7] Создание symlink public/storage (если ещё нет)..."
+          sg docker -c 'docker compose exec -T app php artisan storage:link' || true
 
           echo "==> [2/7] Очистка и прогрев кешей Laravel..."
           sg docker -c 'docker compose exec -T app php artisan optimize:clear'
