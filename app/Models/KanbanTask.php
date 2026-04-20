@@ -18,6 +18,8 @@ class KanbanTask extends Model
         'page_url',
         'browser',
         'user_name',
+        'scope',
+        'type',
     ];
 
     public function comments(): HasMany

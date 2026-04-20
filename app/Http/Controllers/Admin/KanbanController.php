@@ -37,6 +37,8 @@ class KanbanController extends Controller
             'page_url' => 'nullable|url|max:255',
             'browser' => 'nullable|string|max:255',
             'user_name' => 'nullable|string|max:255',
+            'scope' => 'nullable|string|in:1c,site,1c_and_site',
+            'type' => 'nullable|string|in:bug,feature,improvement,ux,cosmetic,unexpected',
         ]);
 
         $maxOrder = KanbanTask::where('status', $validated['status'])->max('order');
@@ -56,6 +58,8 @@ class KanbanController extends Controller
             'page_url' => 'nullable|string|max:255',
             'browser' => 'nullable|string|max:255',
             'user_name' => 'nullable|string|max:255',
+            'scope' => 'nullable|string|in:1c,site,1c_and_site',
+            'type' => 'nullable|string|in:bug,feature,improvement,ux,cosmetic,unexpected',
         ]);
 
         $kanbanTask->update($validated);

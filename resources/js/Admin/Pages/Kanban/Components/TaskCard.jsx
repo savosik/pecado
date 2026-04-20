@@ -1,19 +1,34 @@
-import React, { useState } from 'react';
 import { Box, Text, VStack, HStack, Badge, Link, Icon } from '@chakra-ui/react';
 import { LuExternalLink, LuMessageSquare, LuGlobe, LuUser, LuPaperclip } from 'react-icons/lu';
 
-export default function TaskCard({ task, onDragStart, onTaskClick }) {
-    const commentCount = task.comments ? task.comments.length : 0;
-    const attachmentCount = task.attachments ? task.attachments.length : 0;
+const TYPE_LABELS = {
+    bug: '🐛 Баг',
+    unexpected: '🤔 Странное',
+    ux: '😤 Неудобство',
+    cosmetic: '💅 Косметика',
+    feature: '✨ Хотелка',
+    improvement: '⚡ Улучшение',
+};
 
-    const statusColors = {
-        backlog: 'purple',
-        todo: 'gray',
-        in_progress: 'blue',
-        testing: 'orange',
-        done: 'green',
-        reopen: 'red',
-    };
+const TYPE_COLORS = {
+    bug: 'red',
+    unexpected: 'orange',
+    ux: 'yellow',
+    cosmetic: 'pink',
+    feature: 'teal',
+    improvement: 'cyan',
+};
+
+const SCOPE_LABELS = {
+    '1c': '1С',
+    site: 'Сайт',
+    '1c_and_site': '1С+Сайт',
+};
+
+
+export default function TaskCard({ task, onDragStart, onTaskClick }) {
+    const commentCount = task.comments?.length ?? 0;
+    const attachmentCount = task.attachments?.length ?? 0;
 
     return (
         <Box
@@ -31,10 +46,19 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
             _active={{ cursor: 'grabbing' }}
             transition="all 0.2s"
         >
-            <HStack justify="space-between" mb={2}>
-                <Badge colorPalette={statusColors[task.status] || 'gray'} size="sm">
-                    {task.status.replace('_', ' ').toUpperCase()}
-                </Badge>
+            <HStack justify="space-between" mb={2} flexWrap="wrap" gap={1}>
+                <HStack gap={1} flexWrap="wrap">
+                    {task.type && (
+                        <Badge colorPalette={TYPE_COLORS[task.type] || 'gray'} size="sm">
+                            {TYPE_LABELS[task.type] || task.type}
+                        </Badge>
+                    )}
+                    {task.scope && (
+                        <Badge variant="outline" colorPalette="gray" size="sm">
+                            {SCOPE_LABELS[task.scope] || task.scope}
+                        </Badge>
+                    )}
+                </HStack>
                 <HStack gap={2}>
                     {commentCount > 0 && (
                         <HStack gap={1} color="fg.muted" fontSize="sm">
@@ -59,13 +83,13 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
                 {task.user_name && (
                     <HStack gap={1}>
                         <Icon as={LuUser} />
-                        <Text noOfLines={1}>{task.user_name}</Text>
+                        <Text lineClamp={1}>{task.user_name}</Text>
                     </HStack>
                 )}
                 {task.browser && (
                     <HStack gap={1}>
                         <Icon as={LuGlobe} />
-                        <Text noOfLines={1}>{task.browser}</Text>
+                        <Text lineClamp={1}>{task.browser}</Text>
                     </HStack>
                 )}
                 {task.page_url && (

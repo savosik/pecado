@@ -1,34 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { Box, VStack, HStack, Heading, Text, Button, IconButton, Input, Textarea, NativeSelect } from '@chakra-ui/react';
 import { LuX } from 'react-icons/lu';
 import CommentSection from './CommentSection';
 import AttachmentSection from './AttachmentSection';
 import VoiceMicButton from './VoiceMicButton';
 
-export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
-    const isEdit = !!task;
+const SCOPE_OPTIONS = [
+    { value: '', label: '— не указан —' },
+    { value: '1c', label: '1С' },
+    { value: 'site', label: 'Сайт' },
+    { value: '1c_and_site', label: '1С и Сайт' },
+];
 
-    const [form, setForm] = useState({
+const TYPE_OPTIONS = [
+    { value: '', label: '— не указан —' },
+    { value: 'bug', label: '🐛 Баг' },
+    { value: 'unexpected', label: '🤔 Странное поведение' },
+    { value: 'ux', label: '😤 Неудобство' },
+    { value: 'cosmetic', label: '💅 Косметика' },
+    { value: 'feature', label: '✨ Хотелка' },
+    { value: 'improvement', label: '⚡ Улучшение' },
+];
+
+function detectBrowser() {
+    const ua = navigator.userAgent;
+    if (/Edg\//.test(ua)) return 'Microsoft Edge';
+    if (/OPR\/|Opera/.test(ua)) return 'Opera';
+    if (/Chrome\//.test(ua)) return 'Chrome';
+    if (/Firefox\//.test(ua)) return 'Firefox';
+    if (/Safari\//.test(ua)) return 'Safari';
+    return ua.slice(0, 60);
+}
+
+function buildInitialForm(task, defaultStatus, userName) {
+    return {
         title: task?.title || '',
         description: task?.description || '',
         status: task?.status || defaultStatus || 'todo',
         page_url: task?.page_url || '',
-        browser: task?.browser || '',
-        user_name: task?.user_name || ''
-    });
+        browser: task?.browser || detectBrowser(),
+        user_name: task?.user_name || userName || '',
+        scope: task?.scope || '',
+        type: task?.type || '',
+    };
+}
+
+export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
+    const { auth } = usePage().props;
+    const userName = auth?.user?.name || '';
+    const isEdit = !!task;
+
+    const [form, setForm] = useState(() => buildInitialForm(task, defaultStatus, userName));
 
     useEffect(() => {
-        if (task) {
-            setForm({
-                title: task.title || '',
-                description: task.description || '',
-                status: task.status || 'todo',
-                page_url: task.page_url || '',
-                browser: task.browser || '',
-                user_name: task.user_name || ''
-            });
-        }
+        setForm(buildInitialForm(task, defaultStatus, userName));
     }, [task]);
 
     const handleChange = (e) => {
@@ -88,6 +114,26 @@ export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
 
                             <HStack gap={4}>
                                 <Box flex={1}>
+                                    <Text fontWeight="medium" mb={1}>Тип</Text>
+                                    <NativeSelect.Root>
+                                        <NativeSelect.Field name="type" value={form.type} onChange={handleChange}>
+                                            {TYPE_OPTIONS.map(o => (
+                                                <option key={o.value} value={o.value}>{o.label}</option>
+                                            ))}
+                                        </NativeSelect.Field>
+                                    </NativeSelect.Root>
+                                </Box>
+                                <Box flex={1}>
+                                    <Text fontWeight="medium" mb={1}>Скоуп</Text>
+                                    <NativeSelect.Root>
+                                        <NativeSelect.Field name="scope" value={form.scope} onChange={handleChange}>
+                                            {SCOPE_OPTIONS.map(o => (
+                                                <option key={o.value} value={o.value}>{o.label}</option>
+                                            ))}
+                                        </NativeSelect.Field>
+                                    </NativeSelect.Root>
+                                </Box>
+                                <Box flex={1}>
                                     <Text fontWeight="medium" mb={1}>Статус</Text>
                                     <NativeSelect.Root>
                                         <NativeSelect.Field name="status" value={form.status} onChange={handleChange}>
@@ -100,20 +146,20 @@ export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
                                         </NativeSelect.Field>
                                     </NativeSelect.Root>
                                 </Box>
-                                <Box flex={1}>
-                                    <Text fontWeight="medium" mb={1}>Имя пользователя</Text>
-                                    <Input name="user_name" value={form.user_name} onChange={handleChange} />
-                                </Box>
                             </HStack>
 
                             <HStack gap={4}>
                                 <Box flex={1}>
-                                    <Text fontWeight="medium" mb={1}>URL страницы</Text>
-                                    <Input name="page_url" type="url" value={form.page_url} onChange={handleChange} />
+                                    <Text fontWeight="medium" mb={1}>Имя пользователя</Text>
+                                    <Input name="user_name" value={form.user_name} onChange={handleChange} />
                                 </Box>
                                 <Box flex={1}>
                                     <Text fontWeight="medium" mb={1}>Браузер</Text>
                                     <Input name="browser" value={form.browser} onChange={handleChange} />
+                                </Box>
+                                <Box flex={1}>
+                                    <Text fontWeight="medium" mb={1}>URL страницы</Text>
+                                    <Input name="page_url" type="url" value={form.page_url} onChange={handleChange} />
                                 </Box>
                             </HStack>
                         </VStack>
