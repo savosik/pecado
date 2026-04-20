@@ -4,6 +4,7 @@ import { Sidebar } from "../Components/Sidebar";
 import { MobileSidebar } from "../Components/MobileSidebar";
 import { Header } from "../Components/Header";
 import { Toaster } from "@/components/ui/toaster";
+import BugReportWidget from "@/Components/BugReportWidget";
 
 export const AdminLayout = ({ children, breadcrumbs = [] }) => {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -34,6 +35,7 @@ export const AdminLayout = ({ children, breadcrumbs = [] }) => {
             </Box>
 
             <Toaster />
+            <BugReportWidget />
         </Box>
     );
 };

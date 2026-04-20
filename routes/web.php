@@ -36,6 +36,8 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+    Route::post('/bug-report', [\App\Http\Controllers\BugReportController::class, 'store'])->name('bug-report.store');
+
     // Onboarding
     Route::get('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'show'])->name('onboarding');
     Route::post('/onboarding', [\App\Http\Controllers\User\OnboardingController::class, 'store'])->name('onboarding.store');

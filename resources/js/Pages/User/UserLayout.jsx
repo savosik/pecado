@@ -7,6 +7,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { ProductQuickViewProvider } from '@/contexts/ProductQuickViewContext';
 import ProductQuickViewMount from '@/components/product/ProductQuickViewMount';
 import { AuthDialogProvider } from '@/contexts/AuthDialogContext';
+import BugReportWidget from '@/Components/BugReportWidget';
 
 export default function UserLayout({ children }) {
     return (
@@ -31,6 +32,7 @@ export default function UserLayout({ children }) {
                 <ScrollToTop />
                 <ProductQuickViewMount />
                 <Toaster />
+                <BugReportWidget />
             </Box>
         </ProductQuickViewProvider>
         </AuthDialogProvider>
