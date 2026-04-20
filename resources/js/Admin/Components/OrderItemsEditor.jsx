@@ -141,8 +141,8 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
         const item = { ...newItems[index] };
         const bp = parseFloat(basePrice) || 0;
         item.base_price = bp;
-        // Пересчёт скидки на основе base_price и final_price
-        if (bp > 0 && Number(item.final_price) < bp) {
+        // Пересчёт скидки на основе base_price и final_price (отрицательное значение = наценка)
+        if (bp > 0) {
             item.discount_percent = parseFloat(((bp - Number(item.final_price)) / bp * 100).toFixed(2));
         } else {
             item.discount_percent = 0;
@@ -158,9 +158,9 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
         const p = parseFloat(price) || 0;
         item.price = p;
         item.final_price = p;
-        // Пересчёт скидки
+        // Пересчёт скидки (отрицательное значение = наценка)
         const bp = Number(item.base_price) || 0;
-        if (bp > 0 && p < bp) {
+        if (bp > 0) {
             item.discount_percent = parseFloat(((bp - p) / bp * 100).toFixed(2));
         } else {
             item.discount_percent = 0;
@@ -174,7 +174,7 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
     const handleUpdateDiscount = (index, discountPercent) => {
         const newItems = [...value];
         const item = { ...newItems[index] };
-        const dp = parseFloat(discountPercent) || 0;
+        const dp = discountPercent === '' || discountPercent === '-' ? 0 : (parseFloat(discountPercent) || 0);
         item.discount_percent = dp;
         // Пересчёт final_price на основе base_price и скидки
         const bp = Number(item.base_price) || Number(item.price) || 0;
@@ -244,7 +244,7 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
                                         const discountError = errors[`items.${index}.discount_percent`];
                                         const quantityError = errors[`items.${index}.quantity`];
 
-                                        const hasDiscount = Number(item.discount_percent) > 0;
+                                        const hasDiscount = Number(item.discount_percent) !== 0;
 
                                         return (
                                             <Table.Row key={index}>
@@ -307,7 +307,6 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
                                                         <Input
                                                             type="number"
                                                             step="0.01"
-                                                            min="0"
                                                             max="100"
                                                             value={Number(item.discount_percent) || 0}
                                                             onChange={(e) => handleUpdateDiscount(index, e.target.value)}
@@ -315,8 +314,11 @@ const OrderItemsEditor = ({ value = [], onChange, errors = {}, userId, currencyC
                                                             invalid={!!discountError}
                                                         />
                                                         {hasDiscount && (
-                                                            <Badge colorPalette="green" size="sm">
-                                                                −{parseFloat(item.discount_percent).toFixed(1)}%
+                                                            <Badge colorPalette={Number(item.discount_percent) < 0 ? "orange" : "green"} size="sm">
+                                                                {Number(item.discount_percent) < 0
+                                                                    ? `+${Math.abs(parseFloat(item.discount_percent)).toFixed(1)}%`
+                                                                    : `−${parseFloat(item.discount_percent).toFixed(1)}%`
+                                                                }
                                                             </Badge>
                                                         )}
                                                         {discountError && (

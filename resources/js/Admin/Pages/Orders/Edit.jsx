@@ -142,7 +142,7 @@ const Edit = ({ order, statuses, currencies }) => {
 
             <PageHeader
                 title={`Редактировать заказ ${order.number || ("#" + order.id)}`}
-                subtitle={`Номер: ${order.number || ("#" + order.id)} | UUID: ${order.uuid}`}
+                subtitle={`Номер: ${order.number || ("#" + order.id)}`}
                 actions={
                     <HStack>
                         <Button

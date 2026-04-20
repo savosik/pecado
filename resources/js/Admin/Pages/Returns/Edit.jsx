@@ -123,7 +123,7 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
                     <VStack align="start" gap={1}>
                         <Text>Редактирование возврата {returnData.number || ("#" + returnData.id)}</Text>
                         <Text fontSize="sm" color="fg.muted" fontWeight="normal">
-                            Номер: {returnData.number || ("#" + returnData.id)} | UUID: {returnData.uuid}
+                            Номер: {returnData.number || ("#" + returnData.id)}
                         </Text>
                     </VStack>
                 }

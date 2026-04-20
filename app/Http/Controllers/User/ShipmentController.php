@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\Currency;
+use App\Models\Order;
 use App\Models\Shipment;
 use App\Services\CurrencyService;
 use Illuminate\Http\Request;
@@ -93,7 +95,7 @@ class ShipmentController extends Controller
 
             return [
                 'id' => $shipment->id,
-                'number' => $shipment->number ?? $shipment->erp_number ?? ('#'.$shipment->id),
+                'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
                 'tax_id' => $shipment->tax_id,
                 'date' => $shipment->date?->format('Y-m-d'),
                 'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
@@ -145,7 +147,19 @@ class ShipmentController extends Controller
 
         $currency = $this->getUserCurrency($request);
 
-        $relatedOrders = $shipment->getRelatedOrders();
+        $orderUuids = $shipment->items()
+            ->whereNotNull('order_uuid')
+            ->pluck('order_uuid')
+            ->unique()
+            ->values();
+
+        $relatedOrders = $orderUuids->isNotEmpty()
+            ? Order::withoutGlobalScopes()
+                ->whereIn('uuid', $orderUuids)
+                ->with(['company'])
+                ->withCount(['items', 'shipments'])
+                ->get()
+            : collect();
 
         $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
 
@@ -158,11 +172,12 @@ class ShipmentController extends Controller
             )->where('shipment_uuid', $shipment->uuid)->first();
         }
 
+        $ordersByUuid = $relatedOrders->keyBy('uuid');
+
         return Inertia::render('User/Cabinet/Shipments/Show', [
             'shipment' => [
                 'id' => $shipment->id,
-                'number' => $shipment->number ?? $shipment->erp_number ?? ('#'.$shipment->id),
-                'uuid' => $shipment->uuid,
+                'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
                 'tax_id' => $shipment->tax_id,
                 'date' => $shipment->date?->format('Y-m-d'),
                 'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
@@ -177,13 +192,15 @@ class ShipmentController extends Controller
                     'legal_name' => $shipment->company->legal_name,
                     'tax_id' => $shipment->company->tax_id,
                 ] : null,
-                'items' => $shipment->items->map(function ($item) use ($currency) {
+                'items' => $shipment->items->map(function ($item) use ($currency, $ordersByUuid) {
                     $priceConverted = $this->convertAmount((float) $item->price, null, $currency);
                     $totalConverted = $this->convertAmount((float) $item->total, null, $currency);
+                    $order = $item->order_uuid ? $ordersByUuid->get($item->order_uuid) : null;
 
                     return [
                         'id' => $item->id,
-                        'order_uuid' => $item->order_uuid,
+                        'order_id' => $order?->id,
+                        'order_number' => $order ? ($order->number ?? ('#'.$order->id)) : null,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
                         'price_converted' => $priceConverted,
@@ -203,11 +220,31 @@ class ShipmentController extends Controller
                     ];
                 }),
             ],
-            'related_orders' => $relatedOrders->map(function ($order) {
+            'related_orders' => $relatedOrders->map(function ($order) use ($currency) {
                 return [
                     'id' => $order->id,
-                    'number' => $order->number ?? ('#'.$order->id),
+                    'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
+                    'uuid' => $order->uuid,
+                    'type' => $order->type?->value,
                     'status' => $order->status?->value,
+                    'status_label' => match ($order->status) {
+                        OrderStatus::PENDING => 'Ожидает',
+                        OrderStatus::CONFIRMED => 'Подтверждён',
+                        OrderStatus::READY_TO_SHIP => 'К отгрузке',
+                        OrderStatus::CLOSED => 'Закрыт',
+                        OrderStatus::DELETED => 'Удалён',
+                        default => 'Неизвестно',
+                    },
+                    'company' => $order->company ? ['id' => $order->company->id, 'name' => $order->company->name] : null,
+                    'items_count' => $order->items_count,
+                    'shipments_count' => $order->shipments_count,
+                    'total_amount' => $order->total_amount,
+                    'total_converted' => $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency),
+                    'currency_code' => $order->currency_code,
+                    'created_at' => $order->created_at?->format('d.m.Y H:i'),
+                    'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
+                    'delivery_address' => $order->delivery_address,
+                    'comment' => $order->comment,
                 ];
             }),
             'overdue_detail' => $overdueDetail ? [

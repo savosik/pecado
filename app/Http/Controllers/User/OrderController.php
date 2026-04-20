@@ -27,7 +27,8 @@ class OrderController extends Controller
 
         $query = Order::query()
             ->where('user_id', $user->id)
-            ->with(['company', 'items']);
+            ->with(['company'])
+            ->withCount(['items', 'shipments']);
 
         // Поиск по UUID или ID
         if ($search = $request->input('search')) {
@@ -103,7 +104,10 @@ class OrderController extends Controller
                     'id' => $order->company->id,
                     'name' => $order->company->name,
                 ] : null,
-                'items_count' => $order->items->count(),
+                'items_count' => $order->items_count,
+                'shipments_count' => $order->shipments_count,
+                'delivery_address' => $order->delivery_address,
+                'comment' => $order->comment,
             ];
         });
 
@@ -226,7 +230,7 @@ class OrderController extends Controller
                         'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
-                        'created_at_human' => $history->created_at->diffForHumans(),
+                        'created_at_human' => $history->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
                 'change_logs' => $order->changeLogs->map(function ($log) {
@@ -240,7 +244,7 @@ class OrderController extends Controller
                         'old_total' => $log->old_total,
                         'new_total' => $log->new_total,
                         'created_at' => $log->created_at->format('d.m.Y H:i'),
-                        'created_at_human' => $log->created_at->diffForHumans(),
+                        'created_at_human' => $log->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
             ],

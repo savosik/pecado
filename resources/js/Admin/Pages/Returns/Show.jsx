@@ -111,10 +111,6 @@ const ReturnShow = () => {
                                 <Text fontFamily="mono" fontSize="sm">{returnData.number || ("#" + returnData.id)}</Text>
                             </HStack>
                             <HStack justify="space-between">
-                                <Text color="fg.muted">UUID:</Text>
-                                <Text fontFamily="mono" fontSize="sm">{returnData.uuid}</Text>
-                            </HStack>
-                            <HStack justify="space-between">
                                 <Text color="fg.muted">Статус:</Text>
                                 <Badge colorPalette={getStatusColor(returnData.status)}>
                                     {returnData.status_label}
@@ -276,9 +272,6 @@ const ReturnShow = () => {
                                             <VStack align="start" gap={0}>
                                                 <Text fontSize="sm" fontFamily="mono">
                                                     {item.order.number || ("#" + item.order.id)}
-                                                </Text>
-                                                <Text fontSize="xs" color="gray.500" fontFamily="mono">
-                                                    {item.order.uuid?.substring(0, 8)}…
                                                 </Text>
                                             </VStack>
                                         ) : "—"}

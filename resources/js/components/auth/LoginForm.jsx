@@ -1,11 +1,10 @@
-import { useState } from 'react';
 import { useForm } from '@inertiajs/react';
 import { Box, Input, Button, Text, Stack } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
 import PasswordInput from '@/components/ui/password-input';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
-import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
+// import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
 
 export default function LoginForm() {
     const { openRegister, openForgotPassword } = useAuthDialog();
@@ -108,7 +107,7 @@ export default function LoginForm() {
                 </Stack>
             </form>
 
-            <SocialAuthButtons label="Или войдите через" />
+            {/* <SocialAuthButtons label="Или войдите через" /> */}
 
             <Box mt={5} textAlign="center">
                 <Text color="gray.500" fontSize="sm">

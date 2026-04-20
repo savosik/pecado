@@ -1,7 +1,15 @@
 import { Box, Flex, HStack, VStack, Text, Badge, Card, Table, Separator, SimpleGrid } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+
+const ORDER_STATUS_COLORS = {
+    pending: 'yellow',
+    confirmed: 'blue',
+    ready_to_ship: 'purple',
+    closed: 'green',
+    deleted: 'red',
+};
 
 const STATUS_COLORS = {
     new: 'blue',
@@ -105,46 +113,88 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
 
             {/* Связанные заказы */}
             {related_orders && related_orders.length > 0 && (
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb={6} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-                    <Card.Header>
-                        <HStack gap="2">
-                            <LuShoppingBag size={18} />
-                            <Text fontWeight="600" fontSize="lg">Заказы по этой отгрузке ({related_orders.length})</Text>
-                        </HStack>
-                    </Card.Header>
-                    <Card.Body p={0}>
-                        <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
-                            <Table.Header>
-                                <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
-                                    <Table.ColumnHeader>Номер заказа</Table.ColumnHeader>
-                                    <Table.ColumnHeader>UUID</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Статус</Table.ColumnHeader>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {related_orders.map((order) => (
-                                    <Table.Row key={order.id} _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}>
-                                        <Table.Cell>
-                                            <Link href={`/cabinet/orders/${order.id}`}>
-                                                <Text color="pecado.600" _hover={{ textDecoration: 'underline' }} fontWeight="600">
-                                                    {order.number || `#${order.id}`}
+                <Box mb={6}>
+                    <HStack gap="2" mb="3">
+                        <LuShoppingBag size={18} />
+                        <Text fontWeight="600" fontSize="lg">Заказы по этой отгрузке ({related_orders.length})</Text>
+                    </HStack>
+                    <VStack gap="2" align="stretch">
+                        {related_orders.map((order) => (
+                            <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
+                                <Box
+                                    bg={{ base: 'white', _dark: 'gray.800' }}
+                                    borderRadius="xl"
+                                    border="1px solid"
+                                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                    p="4"
+                                    _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
+                                    transition="all 0.15s"
+                                    cursor="pointer"
+                                >
+                                    <Flex gap="4" align="start" justify="space-between">
+                                        <Box flex="1" minW="0">
+                                            <Flex gap="2" align="center" flexWrap="wrap" mb="1.5">
+                                                <Text fontWeight="700" fontSize="md" fontFamily="mono" whiteSpace="nowrap" flexShrink="0">
+                                                    {order.number}
                                                 </Text>
-                                            </Link>
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Text fontFamily="mono" fontSize="xs" color="gray.400">
-                                                {order.uuid?.substring(0, 12)}…
+                                                <Badge
+                                                    colorPalette={order.type === 'preorder' ? 'purple' : 'gray'}
+                                                    variant="subtle" fontSize="2xs" px="1.5"
+                                                >
+                                                    {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                </Badge>
+                                                <Flex align="center" gap="1.5">
+                                                    <Badge
+                                                        colorPalette={ORDER_STATUS_COLORS[order.status] || 'gray'}
+                                                        variant="subtle" fontSize="xs" borderRadius="full" px="2.5"
+                                                    >
+                                                        {order.status_label}
+                                                    </Badge>
+                                                    <Text fontSize="2xs" color="gray.400">{order.updated_at}</Text>
+                                                </Flex>
+                                            </Flex>
+
+                                            <HStack gap="3" fontSize="xs" color="gray.500" flexWrap="wrap" mb={order.delivery_address || order.comment ? '1.5' : '0'}>
+                                                {order.company && (
+                                                    <Text fontWeight="500">{order.company.name}</Text>
+                                                )}
+                                                <Text>{order.items_count} {order.items_count === 1 ? 'позиция' : order.items_count < 5 ? 'позиции' : 'позиций'}</Text>
+                                                {order.shipments_count > 0 && (
+                                                    <Text>{order.shipments_count} {order.shipments_count === 1 ? 'отгрузка' : order.shipments_count < 5 ? 'отгрузки' : 'отгрузок'}</Text>
+                                                )}
+                                            </HStack>
+
+                                            {order.delivery_address && (
+                                                <HStack gap="1" fontSize="xs" color="gray.500" mb="1" minW="0">
+                                                    <Box flexShrink="0" color="gray.400"><LuMapPin size={11} /></Box>
+                                                    <Text noOfLines={1}>{order.delivery_address}</Text>
+                                                </HStack>
+                                            )}
+
+                                            {order.comment && (
+                                                <HStack gap="1" fontSize="xs" color="gray.400" minW="0">
+                                                    <Box flexShrink="0"><LuMessageSquare size={11} /></Box>
+                                                    <Text noOfLines={1} fontStyle="italic">{order.comment}</Text>
+                                                </HStack>
+                                            )}
+                                        </Box>
+
+                                        <VStack gap="0" align="end" flexShrink="0">
+                                            <Text fontWeight="700" fontSize="lg" fontFamily="mono" whiteSpace="nowrap">
+                                                {fmt(order.total_converted)} {currencySymbol}
                                             </Text>
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Badge variant="subtle" fontSize="xs">{order.status}</Badge>
-                                        </Table.Cell>
-                                    </Table.Row>
-                                ))}
-                            </Table.Body>
-                        </Table.Root>
-                    </Card.Body>
-                </Card.Root>
+                                            {order.currency_code && order.currency_code !== currency?.code && (
+                                                <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
+                                                    {fmt(order.total_amount)} {order.currency_code}
+                                                </Text>
+                                            )}
+                                        </VStack>
+                                    </Flex>
+                                </Box>
+                            </Link>
+                        ))}
+                    </VStack>
+                </Box>
             )}
 
             {/* Просрочка по этой реализации */}
@@ -228,10 +278,12 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                             )}
                                         </Table.Cell>
                                         <Table.Cell>
-                                            {item.order_uuid ? (
-                                                <Text fontFamily="mono" fontSize="xs" color="blue.500">
-                                                    {item.order_uuid.substring(0, 8)}…
-                                                </Text>
+                                            {item.order_id ? (
+                                                <Link href={`/cabinet/orders/${item.order_id}`}>
+                                                    <Text color="pecado.600" _hover={{ textDecoration: 'underline' }} fontSize="xs" fontWeight="500">
+                                                        {item.order_number}
+                                                    </Text>
+                                                </Link>
                                             ) : <Text color="gray.300" fontSize="xs">—</Text>}
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">

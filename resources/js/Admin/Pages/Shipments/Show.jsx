@@ -53,10 +53,6 @@ export default function Show({ shipment, related_orders }) {
                             <Text fontFamily="mono" fontSize="sm">{shipment.number || ("#" + shipment.id)}</Text>
                         </Box>
                         <Box>
-                            <Text fontSize="xs" color="gray.500" mb={1}>UUID</Text>
-                            <Text fontFamily="mono" fontSize="xs" wordBreak="break-all">{shipment.uuid}</Text>
-                        </Box>
-                        <Box>
                             <Text fontSize="xs" color="gray.500" mb={1}>Статус</Text>
                             <Badge colorPalette={STATUS_COLORS[shipment.status] || 'gray'}>
                                 {shipment.status_label}
@@ -112,7 +108,7 @@ export default function Show({ shipment, related_orders }) {
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Заказ (UUID)</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Заказ</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Баз. цена</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Авто-скидка</Table.ColumnHeader>
@@ -148,11 +144,9 @@ export default function Show({ shipment, related_orders }) {
                                                     )}
                                                 </Table.Cell>
                                                 <Table.Cell>
-                                                    {item.order_uuid ? (
-                                                        <Text fontFamily="mono" fontSize="xs" color="blue.600">
-                                                            {item.order_number || item.order_uuid.substring(0, 8)}…
-                                                        </Text>
-                                                    ) : <Text color="gray.400" fontSize="xs">—</Text>}
+                                                    <Text fontFamily="mono" fontSize="xs" color="blue.600">
+                                                        {item.order_number || '—'}
+                                                    </Text>
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="right">
                                                     <Text fontFamily="mono">{item.quantity}</Text>
@@ -247,7 +241,6 @@ export default function Show({ shipment, related_orders }) {
                                 <Table.Row>
                                     <Table.ColumnHeader>ID</Table.ColumnHeader>
                                     <Table.ColumnHeader>Номер</Table.ColumnHeader>
-                                    <Table.ColumnHeader>UUID</Table.ColumnHeader>
                                     <Table.ColumnHeader>Статус</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
@@ -263,11 +256,6 @@ export default function Show({ shipment, related_orders }) {
                                         </Table.Cell>
                                         <Table.Cell>
                                             <Text fontFamily="mono" fontSize="sm">{order.number}</Text>
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Text fontFamily="mono" fontSize="xs" color="gray.500">
-                                                {order.uuid?.substring(0, 8)}…
-                                            </Text>
                                         </Table.Cell>
                                         <Table.Cell>
                                             <Badge>{order.status}</Badge>

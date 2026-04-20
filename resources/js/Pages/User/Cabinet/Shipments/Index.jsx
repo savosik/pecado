@@ -92,7 +92,7 @@ export default function ShipmentsIndex({ filters, statuses }) {
                 <Box as="form" onSubmit={handleSearch} flex="1">
                     <Flex gap="2">
                         <Input
-                            placeholder="Поиск по UUID, ИНН, названию товара..."
+                            placeholder="Поиск по номеру, ИНН, названию товара..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"

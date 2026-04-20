@@ -184,7 +184,7 @@ class OrderController extends AdminController
             'items.*.name' => 'required|string',
             'items.*.base_price' => 'nullable|numeric|min:0',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.discount_percent' => 'nullable|numeric|max:100',
             'items.*.final_price' => 'nullable|numeric|min:0',
             'items.*.quantity' => 'required|integer|min:1',
         ]);
@@ -297,7 +297,7 @@ class OrderController extends AdminController
                         'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
-                        'created_at_human' => $history->created_at->diffForHumans(),
+                        'created_at_human' => $history->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
                 'change_logs' => $order->changeLogs->map(function ($log) {
@@ -311,7 +311,7 @@ class OrderController extends AdminController
                         'old_total' => $log->old_total,
                         'new_total' => $log->new_total,
                         'created_at' => $log->created_at->format('d.m.Y H:i'),
-                        'created_at_human' => $log->created_at->diffForHumans(),
+                        'created_at_human' => $log->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
             ],
@@ -377,7 +377,7 @@ class OrderController extends AdminController
                         'user_name' => $history->user ? $history->user->name : 'Система',
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
-                        'created_at_human' => $history->created_at->diffForHumans(),
+                        'created_at_human' => $history->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
             ],
@@ -407,7 +407,7 @@ class OrderController extends AdminController
             'items.*.name' => 'required|string',
             'items.*.base_price' => 'nullable|numeric|min:0',
             'items.*.price' => 'required|numeric|min:0',
-            'items.*.discount_percent' => 'nullable|numeric|min:0|max:100',
+            'items.*.discount_percent' => 'nullable|numeric|max:100',
             'items.*.final_price' => 'nullable|numeric|min:0',
             'items.*.quantity' => 'required|integer|min:1',
         ]);

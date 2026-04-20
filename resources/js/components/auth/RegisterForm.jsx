@@ -3,7 +3,7 @@ import { Box, Input, Button, Text, Stack, SimpleGrid } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
 import PasswordInput from '@/components/ui/password-input';
-import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
+// import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
 
 export default function RegisterForm() {
     const { openLogin } = useAuthDialog();
@@ -90,7 +90,7 @@ export default function RegisterForm() {
                 </Stack>
             </form>
 
-            <SocialAuthButtons label="Или зарегистрируйтесь через" />
+            {/* <SocialAuthButtons label="Или зарегистрируйтесь через" /> */}
 
             <Box mt={4} textAlign="center">
                 <Text color="gray.500" fontSize="sm">

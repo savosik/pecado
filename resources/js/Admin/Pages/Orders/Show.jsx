@@ -97,10 +97,6 @@ const OrderShow = () => {
                                 <Text fontFamily="mono" fontSize="sm">{order.number || ("#" + order.id)}</Text>
                             </HStack>
                             <HStack justify="space-between">
-                                <Text color="fg.muted">UUID:</Text>
-                                <Text fontFamily="mono" fontSize="sm">{order.uuid}</Text>
-                            </HStack>
-                            <HStack justify="space-between">
                                 <Text color="fg.muted">Тип:</Text>
                                 <Badge colorPalette={getTypeColor(order.type)} variant="subtle">
                                     {getTypeLabel(order.type)}
