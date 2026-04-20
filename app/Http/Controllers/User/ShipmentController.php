@@ -200,7 +200,7 @@ class ShipmentController extends Controller
                     return [
                         'id' => $item->id,
                         'order_id' => $order?->id,
-                        'order_number' => $order ? ($order->number ?? ('#'.$order->id)) : null,
+                        'order_number' => $order ? ($order->erp_number ?? $order->number ?? ('#'.$order->id)) : null,
                         'quantity' => $item->quantity,
                         'price' => $item->price,
                         'price_converted' => $priceConverted,
