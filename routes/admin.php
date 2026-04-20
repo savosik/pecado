@@ -424,7 +424,6 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Возвраты
     Route::middleware('permission:returns.view')->group(function () {
         Route::get('/returns', [\App\Http\Controllers\Admin\ReturnController::class, 'index'])->name('returns.index');
-        Route::get('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'show'])->name('returns.show');
     });
     Route::middleware('permission:returns.create')->group(function () {
         Route::get('/returns/create', [\App\Http\Controllers\Admin\ReturnController::class, 'create'])->name('returns.create');
@@ -432,12 +431,15 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::get('/returns/search-products', [\App\Http\Controllers\Admin\ReturnController::class, 'searchProducts'])->name('returns.search-products');
         Route::get('/returns/product-orders', [\App\Http\Controllers\Admin\ReturnController::class, 'getProductOrders'])->name('returns.product-orders');
     });
+    Route::middleware('permission:returns.view')->group(function () {
+        Route::get('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'show'])->name('returns.show');
+    });
     Route::middleware('permission:returns.edit')->group(function () {
+        Route::post('/returns/bulk-status', [\App\Http\Controllers\Admin\ReturnController::class, 'bulkUpdateStatus'])->name('returns.bulk-status');
         Route::get('/returns/{return}/edit', [\App\Http\Controllers\Admin\ReturnController::class, 'edit'])->name('returns.edit');
         Route::put('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'update'])->name('returns.update');
         Route::patch('/returns/{return}/status', [\App\Http\Controllers\Admin\ReturnController::class, 'updateStatus'])->name('returns.status');
         Route::patch('/returns/{return}/admin-comment', [\App\Http\Controllers\Admin\ReturnController::class, 'updateAdminComment'])->name('returns.admin-comment');
-        Route::post('/returns/bulk-status', [\App\Http\Controllers\Admin\ReturnController::class, 'bulkUpdateStatus'])->name('returns.bulk-status');
     });
     Route::delete('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'destroy'])->name('returns.destroy')->middleware('permission:returns.delete');
     Route::delete('/returns/{id}/force-delete', [\App\Http\Controllers\Admin\ReturnController::class, 'forceDestroy'])->name('returns.force-delete')->middleware('permission:returns.delete');
