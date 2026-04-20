@@ -28,14 +28,16 @@ class ArticleController extends Controller
 
         $articles = $query->paginate(12)->withQueryString();
 
-        $availableTags = \Spatie\Tags\Tag::query()
-            ->join('taggables', 'tags.id', '=', 'taggables.tag_id')
-            ->where('taggables.taggable_type', \App\Models\Article::class)
-            ->whereIn('taggables.taggable_id', Article::published()->select('id'))
-            ->distinct()
-            ->orderBy('tags.name')
-            ->pluck('tags.name')
-            ->toArray();
+        $availableTags = TagHelper::names(
+            \Spatie\Tags\Tag::query()
+                ->join('taggables', 'tags.id', '=', 'taggables.tag_id')
+                ->where('taggables.taggable_type', \App\Models\Article::class)
+                ->whereIn('taggables.taggable_id', Article::published()->select('id'))
+                ->distinct()
+                ->select('tags.*')
+                ->get()
+        );
+        sort($availableTags);
 
         // Подгружаем медиа для каждого элемента
         $articles->getCollection()->transform(function ($item) {

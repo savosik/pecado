@@ -29,14 +29,16 @@ class NewsController extends Controller
         $news = $query->paginate(12)->withQueryString();
 
         // Все теги раздела (из опубликованных записей)
-        $availableTags = \Spatie\Tags\Tag::query()
-            ->join('taggables', 'tags.id', '=', 'taggables.tag_id')
-            ->where('taggables.taggable_type', \App\Models\News::class)
-            ->whereIn('taggables.taggable_id', News::published()->select('id'))
-            ->distinct()
-            ->orderBy('tags.name')
-            ->pluck('tags.name')
-            ->toArray();
+        $availableTags = TagHelper::names(
+            \Spatie\Tags\Tag::query()
+                ->join('taggables', 'tags.id', '=', 'taggables.tag_id')
+                ->where('taggables.taggable_type', \App\Models\News::class)
+                ->whereIn('taggables.taggable_id', News::published()->select('id'))
+                ->distinct()
+                ->select('tags.*')
+                ->get()
+        );
+        sort($availableTags);
 
         // Подгружаем медиа для каждого элемента
         $news->getCollection()->transform(function ($item) {
