@@ -21,7 +21,7 @@ class KanbanController extends Controller
             'reopen'
         ];
 
-        return Inertia::render('Kanban/Index', [
+        return Inertia::render('Admin/Pages/Kanban/Index', [
             'tasks' => $tasks,
             'columns' => $columns
         ]);
