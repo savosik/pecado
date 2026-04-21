@@ -85,11 +85,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                             return acc;
                         }, 0);
                         return (
-                            <Flex
-                                align="end" gap="3" p="4" borderRadius="lg"
-                                bg="pecado.50" _dark={{ bg: 'pecado.900/10', borderColor: 'pecado.800' }}
-                                border="1px solid" borderColor="pecado.100"
-                            >
+                            <Flex align="end" gap="3">
                                 <Box>
                                     <Text fontSize="xs" color="gray.500" mb="1">Итоговая сумма</Text>
                                     <Text fontWeight="800" fontSize="2xl" fontFamily="mono">
