@@ -125,7 +125,7 @@ class HandlePartnerCreated
             return;
         }
 
-        $defaultRegionId = Region::min('id');
+        $defaultRegionId = Region::defaultId();
 
         $createData = [
             'name' => $name ?? $login,

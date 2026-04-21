@@ -178,6 +178,22 @@ class CatalogFacetServiceTest extends TestCase
         $this->assertEquals($brand1->id, $result[0]['id']);
     }
 
+    public function test_brand_facets_respects_hidden_scope(): void
+    {
+        // Регрессия для бага #26: раньше cloneBaseIds использовал getQuery()
+        // без applyScopes → HiddenScope игнорировался и в счётчик попадали hidden-товары.
+        $brand = Brand::factory()->create();
+
+        Product::factory()->count(2)->create(['brand_id' => $brand->id, 'hidden' => true]);
+        Product::factory()->create(['brand_id' => $brand->id, 'hidden' => false]);
+
+        $result = $this->service->getBrandFacets(Product::query());
+
+        $this->assertCount(1, $result);
+        $this->assertEquals($brand->id, $result[0]['id']);
+        $this->assertEquals(1, $result[0]['count'], 'В счётчик не должны попадать скрытые товары');
+    }
+
     // ─── getCategoryFacets ──────────────────────────────────
 
     public function test_category_facets_returns_correct_counts(): void

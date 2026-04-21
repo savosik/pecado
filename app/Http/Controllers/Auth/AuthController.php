@@ -89,7 +89,7 @@ class AuthController extends Controller
             'terms_accepted.accepted' => 'Необходимо принять условия использования',
         ]);
 
-        $defaultRegionId = \App\Models\Region::orderBy('id')->value('id');
+        $defaultRegionId = \App\Models\Region::defaultId();
 
         $user = User::create([
             'name' => $validated['name'] ?? null,

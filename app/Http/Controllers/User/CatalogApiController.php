@@ -6,6 +6,7 @@ use App\Enums\CatalogSort;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\ProductFilterRequest;
 use App\Models\Product;
+use App\Models\Region;
 use App\Services\Product\CatalogFacetService;
 use App\Services\Product\ProductQueryService;
 use Illuminate\Database\Eloquent\Builder;
@@ -196,6 +197,10 @@ class CatalogApiController extends Controller
     {
         $query = Product::query();
         $user = Auth::user();
+        // Гость трактуется так, будто у него уже назначен регион по умолчанию —
+        // это обеспечивает консистентность счётчиков фильтров и списка товаров.
+        $regionId = $user !== null ? $user->region_id : null;
+        $regionId = $regionId ?? Region::defaultId();
 
         // Исключаем товары из неактивных категорий
         $query->where(function ($q) {
@@ -256,13 +261,13 @@ class CatalogApiController extends Controller
 
         // Наличие
         if (! empty($validated['in_stock_mode'])) {
-            $query->inStock($validated['in_stock_mode'], $user?->region_id);
+            $query->inStock($validated['in_stock_mode'], $regionId);
         } elseif (! empty($validated['in_stock'])) {
-            $query->inStock('instock', $user?->region_id);
+            $query->inStock('instock', $regionId);
         } else {
             // По умолчанию скрываем товары «нет в наличии» —
             // показываем только «в наличии» и «предзаказ»
-            $query->available($user?->region_id);
+            $query->available($regionId);
         }
 
         // Скидка (in_sale=1 → только со скидкой; in_sale=0 или отсутствует → без фильтра)

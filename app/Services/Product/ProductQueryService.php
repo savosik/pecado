@@ -3,6 +3,7 @@
 namespace App\Services\Product;
 
 use App\Models\Product;
+use App\Models\Region;
 use App\Services\CurrencyService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -62,17 +63,23 @@ class ProductQueryService
     /**
      * Получить ID складов региона текущего пользователя.
      *
+     * Для гостя используется регион по умолчанию — чтобы запросы остатков
+     * на SQL-уровне работали консистентно с фасетами. Наружу (в ответ API)
+     * эти поля для гостя всё равно не попадают — см. CatalogApiController.
+     *
      * @return array{primary: int[], preorder: int[]}
      */
     public static function getRegionWarehouseIds(): array
     {
         $user = Auth::user();
-        if (! $user || ! $user->region_id) {
+        $regionId = $user !== null ? $user->region_id : null;
+        $regionId = $regionId ?? Region::defaultId();
+        if (! $regionId) {
             return ['primary' => [], 'preorder' => []];
         }
 
         $rows = DB::table('region_warehouse')
-            ->where('region_id', $user->region_id)
+            ->where('region_id', $regionId)
             ->select('warehouse_id', 'type')
             ->get();
 

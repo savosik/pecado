@@ -50,4 +50,14 @@ class Region extends Model
             ->wherePivot('type', 'preorder')
             ->withTimestamps();
     }
+
+    /**
+     * ID региона по умолчанию.
+     * Используется для гостей в каталоге и при автоматическом назначении региона
+     * (регистрация, обработка 1С partner.created).
+     */
+    public static function defaultId(): ?int
+    {
+        return static::orderBy('id')->value('id');
+    }
 }

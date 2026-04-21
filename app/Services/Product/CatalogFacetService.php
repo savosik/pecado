@@ -382,7 +382,7 @@ class CatalogFacetService
         // 3. Посчитать количество товаров в каждом бакете одним запросом (с bindings)
         $query = DB::table('products as p')
             ->joinSub(
-                (clone $baseQuery)->select('products.id')->getQuery(),
+                $this->cloneBaseIds($baseQuery),
                 'filtered',
                 'filtered.id',
                 '=',
@@ -493,12 +493,14 @@ class CatalogFacetService
      * Клонировать базовый запрос и извлечь только ID товаров (подзапрос).
      *
      * Сбрасывает все select/addSelect и оставляет только products.id.
+     * toBase() применяет глобальные scope-ы Eloquent (HiddenScope и т.п.)
+     * перед возвратом query builder — иначе в фасеты попадают скрытые товары.
      */
     private function cloneBaseIds(Builder $baseQuery): \Illuminate\Database\Query\Builder
     {
         return (clone $baseQuery)
             ->select('products.id')
-            ->getQuery();
+            ->toBase();
     }
 
     /**

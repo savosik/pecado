@@ -7,8 +7,11 @@ use App\Models\AttributeValue;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Region;
 use App\Models\User;
+use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CatalogApiControllerTest extends TestCase
@@ -302,5 +305,75 @@ class CatalogApiControllerTest extends TestCase
             ->assertJsonPath('min', 0)
             ->assertJsonPath('max', 0)
             ->assertJsonPath('buckets', []);
+    }
+
+    // ─── guest behavior (баг #26) ────────────────────────────
+
+    public function test_guest_facet_count_matches_product_list_count(): void
+    {
+        // Регрессия на баг #26: фасет уважает HiddenScope так же, как сам список.
+        $brand = Brand::factory()->create();
+        Product::factory()->count(2)->create(['brand_id' => $brand->id, 'hidden' => true]);
+        Product::factory()->create(['brand_id' => $brand->id, 'hidden' => false]);
+
+        $facets = $this->getJson('/api/catalog/products/facets')
+            ->assertOk()
+            ->json('brands');
+
+        $brandFacet = collect($facets)->firstWhere('id', $brand->id);
+        $this->assertNotNull($brandFacet, 'Бренд должен присутствовать в фасетах');
+        $this->assertEquals(1, $brandFacet['count']);
+
+        $this->getJson('/api/catalog/products?brand_ids[]='.$brand->id)
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1);
+    }
+
+    public function test_guest_uses_default_region_for_availability(): void
+    {
+        // Гость должен видеть товары так, как будто ему назначен регион по умолчанию.
+        $region = Region::factory()->create();
+        $warehouse = Warehouse::factory()->create();
+        DB::table('region_warehouse')->insert([
+            'region_id' => $region->id,
+            'warehouse_id' => $warehouse->id,
+            'type' => 'primary',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $inStock = Product::factory()->create(['hidden' => false]);
+        DB::table('product_warehouse')->insert([
+            'product_id' => $inStock->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 5,
+        ]);
+
+        $outOfStock = Product::factory()->create(['hidden' => false]);
+
+        $response = $this->getJson('/api/catalog/products')->assertOk();
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($inStock->id, $ids, 'Товар с остатком должен быть в выдаче гостя');
+        $this->assertNotContains($outOfStock->id, $ids, 'Товар без остатков должен быть отфильтрован дефолтным регионом');
+    }
+
+    public function test_guest_response_hides_prices_and_stock(): void
+    {
+        // Инвариант: даже если внутри запроса подставляется дефолтный регион,
+        // наружу у гостя не должны уходить цены и складские поля.
+        Product::factory()->count(2)->create(['hidden' => false]);
+
+        $data = $this->getJson('/api/catalog/products')->assertOk()->json('data');
+        $this->assertNotEmpty($data);
+
+        foreach ($data as $item) {
+            $this->assertArrayNotHasKey('base_price', $item);
+            $this->assertArrayNotHasKey('sale_price', $item);
+            $this->assertArrayNotHasKey('discount_percentage', $item);
+            $this->assertArrayNotHasKey('stock_quantity', $item);
+            $this->assertArrayNotHasKey('preorder_quantity', $item);
+            $this->assertFalse($item['is_favorited']);
+        }
     }
 }
