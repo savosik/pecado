@@ -59,6 +59,8 @@ nav:
     - "ЭТАП 2. Онбординг": stages/02-onboarding.md
     - "ЭТАП 3. Дашборд ЛК": stages/03-dashboard.md
     - "ЭТАП 4. Профиль, компания, адреса": stages/04-profile-company.md
+    - "ЭТАП 5. Каталог (авторизованный)": stages/05-catalog.md
+    - "ЭТАП 6. Поиск (авторизованный)": stages/06-search.md
     - "ЭТАП 7. Корзины": stages/07-carts.md
     - "ЭТАП 8. Оформление заказа": stages/08-checkout.md
     - "ЭТАП 9. Отслеживание заказов": stages/09-orders.md
@@ -66,8 +68,25 @@ nav:
     - "ЭТАП 11. Возвраты": stages/11-returns.md
     - "ЭТАП 12. Выгрузки": stages/12-exports.md
     - "ЭТАП 13. API-токены": stages/13-api-tokens.md
+    - "ЭТАП 14. Статические страницы": stages/14-cms-pages.md
+    - "ЭТАП 15. Темы, адаптивность, a11y": stages/15-themes-responsive-a11y.md
+    - "ЭТАП 16. Смена пароля": stages/16-change-password.md
     - "ЭТАП 17. Восстановление пароля": stages/17-password-recovery.md
     - "ЭТАП 18. Выход": stages/18-logout.md
+    - "ЭТАП 19. Лояльный клиент": stages/19-loyal-client.md
+  - Edge-кейсы:
+    - Обзор: edge-cases/index.md
+    - "E.1. Блокированный клиент": edge-cases/blocked-client.md
+    - "E.2. Кросс-авторизация": edge-cases/cross-auth.md
+    - "E.3. Локали и символы": edge-cases/locales.md
+    - "E.4. Длинные значения": edge-cases/long-values.md
+    - "E.5. Медленный интернет": edge-cases/slow-network.md
+    - "E.6. Офлайн": edge-cases/offline.md
+    - "E.7. Многооконность": edge-cases/multi-window.md
+    - "E.8. Валюта": edge-cases/currency.md
+    - "E.9. Проверка багрекера": edge-cases/bugtracker-check.md
+    - "E.10. Регрессия после деплоя": edge-cases/regression.md
+  - Итоги: summary.md
   - Связанные ресурсы:
     - "ERP-интеграция (гайд)": https://dev.pecado.ru/docs/erp-guide/
     - "AsyncAPI (интерактивная)": https://dev.pecado.ru/docs/erp/

@@ -5,6 +5,54 @@
          <lastmod>2026-04-21</lastmod>
     </url>
     <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/summary/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/blocked-client/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/bugtracker-check/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/cross-auth/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/currency/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/locales/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/long-values/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/multi-window/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/offline/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/regression/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/edge-cases/slow-network/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
          <loc>https://dev.pecado.ru/docs/test-plan/intro/bugtracker/</loc>
          <lastmod>2026-04-21</lastmod>
     </url>
@@ -45,6 +93,14 @@
          <lastmod>2026-04-21</lastmod>
     </url>
     <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/05-catalog/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/06-search/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
          <loc>https://dev.pecado.ru/docs/test-plan/stages/07-carts/</loc>
          <lastmod>2026-04-21</lastmod>
     </url>
@@ -73,11 +129,27 @@
          <lastmod>2026-04-21</lastmod>
     </url>
     <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/14-cms-pages/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/15-themes-responsive-a11y/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/16-change-password/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
          <loc>https://dev.pecado.ru/docs/test-plan/stages/17-password-recovery/</loc>
          <lastmod>2026-04-21</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/test-plan/stages/18-logout/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/19-loyal-client/</loc>
          <lastmod>2026-04-21</lastmod>
     </url>
 </urlset>
