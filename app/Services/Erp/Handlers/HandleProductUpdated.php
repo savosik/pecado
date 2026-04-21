@@ -97,6 +97,11 @@ class HandleProductUpdated
                 $updateData['hidden'] = (bool) $payload['hidden'];
             }
 
+            // --- Маркированный товар «Честный знак» (v12.9) ---
+            if (array_key_exists('is_marked', $payload)) {
+                $updateData['is_marked'] = (bool) $payload['is_marked'];
+            }
+
             // Применяем обновление полей (без base_price!)
             if (! empty($updateData)) {
                 $product->update($updateData);

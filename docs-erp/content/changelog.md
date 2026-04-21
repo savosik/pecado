@@ -6,6 +6,83 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.12.0] — 2026-04-21
+
+> Поле `number` становится обязательным в `shipment.created` и `shipment.updated`
+
+### Изменено (BREAKING)
+
+- **`number` добавлено в `required`** у схем `ShipmentCreatedPayload` и `ShipmentUpdatedPayload` (AsyncAPI) и в `shipment.created.json` / `shipment.updated.json` (JSON Schema)
+- **Тип `number`** уточнён с `["string", "null"]` на `string` с `minLength: 1` — null-значения и пустые строки больше не принимаются
+- **Поведение валидатора** — `ErpMessageValidator` отклоняет сообщения без `number`; сообщение попадает в `failed` статус `erp_bus_messages`, реализация не создаётся/не обновляется
+- **Бизнес-правило** — см. `docs-erp/content/rules/shipments.md` (v12.11)
+
+### Миграция (1С)
+
+- 1С обязана начать заполнять поле `number` в публикуемых payload'ах `shipment.created` и `shipment.updated` непустой строкой (например, `"29УТ-003413"`)
+- До выката правки на стороне 1С все входящие `shipment.*` сообщения будут падать с ошибкой валидации. Восстановление — переотправка событий 1С после релиза
+- Существующие реализации с `erp_number = null` в БД сайта актуализируются при следующем `shipment.updated` от 1С
+
+### Причина
+
+- Без ERP-номера покупатель в ЛК видит технический `id` сайта, менеджер в 1С — ERP-номер. Это ломает коммуникацию клиент-менеджер при обсуждении конкретной реализации. См. канбан-задачу «в отгрузках нужно показывать ERP number (если есть) вместо id»
+
+---
+
+## [12.11.0] — 2026-04-21
+
+> **US-16:** Управление промо-флагами товаров (новинка / бестселлер / ликвидация) через события `promotion.*`
+
+### Добавлено
+
+- **Новые события `promotion.created` / `promotion.updated` / `promotion.deleted`** (1С → Сайт) — отдельная очередь `erp_in.promotions`, routing keys `promotion.*`
+- **Payload** содержит `uuid` промо-группы, `type` (`new` / `bestseller` / `liquidation`) и массив `items[]` из `{uuid товара}`
+- **JSON Schema** — `app/Services/Erp/Schemas/promotion.created.json`, `promotion.updated.json`, `promotion.deleted.json`
+- **AsyncAPI** — канал `erpInPromotions`, сообщения `PromotionCreated/Updated/Deleted`, схемы `PromotionCreatedPayload/PromotionUpdatedPayload/PromotionDeletedPayload/PromotionItem/PromotionType`
+- **Модель данных сайта** — новая таблица `erp_promotions` (`uuid`, `type enum`) и pivot `erp_promotion_product`, модель `App\Models\ErpPromotion`
+- **Обработчики** — `HandlePromotionCreated`, `HandlePromotionUpdated`, `HandlePromotionDeleted`, общий сервис пересчёта флагов `RecalculateProductPromoFlags`
+- **Агрегация на товаре** — колонки `products.is_new`, `is_bestseller`, `is_liquidation` пересчитываются как `EXISTS()` по привязкам. Товар может быть в нескольких промо-группах одного `type` одновременно
+- **Supervisor-воркер** — `erp-promotions-consumer` на очереди `erp_in.promotions`
+- **Документация** — `docs-erp/content/rules/promotions.md` с бизнес-правилами и критериями приёмки
+
+### Примечания
+
+- События `promotion.*` существуют **параллельно** уже имеющейся сущности `Promotion` (маркетинговые акции/страницы сайта). Это разные модели с разным назначением: `Promotion` — витрина, `ErpPromotion` — агрегатор флагов из 1С
+- Идемпотентность: `promotion.created` с тем же `uuid` ведёт себя как `promotion.updated` (upsert состава)
+
+---
+
+## [12.10.0] — 2026-04-21
+
+> Разделение JSON Schema для `shipment.created` и `shipment.updated`
+
+### Изменено
+
+- **Отдельная JSON Schema для `shipment.updated`** — создан файл `app/Services/Erp/Schemas/shipment.updated.json`. Ранее `shipment.updated` валидировался схемой `shipment.created.json` (одинаковая структура)
+- **AsyncAPI** — общий `ShipmentPayload` разделён на `ShipmentCreatedPayload` и `ShipmentUpdatedPayload`. Поле `event` теперь `const` у каждой схемы (вместо `enum`)
+- **`ErpMessageValidator`** — в `SCHEMA_MAP` для ключа `shipment.updated` используется `shipment.updated.json`
+
+### Примечания
+
+- Структура payload-ов `shipment.created` и `shipment.updated` **остаётся идентичной**; разделение выполнено на вырост — для независимой эволюции схем при появлении у `shipment.updated` собственных полей
+- Логика обработчиков `HandleShipmentCreated` / `HandleShipmentUpdated` не менялась
+
+---
+
+## [12.9.0] — 2026-04-21
+
+> Признак маркированного товара `is_marked` в `product.created` и `product.updated`
+
+### Добавлено
+
+- **`is_marked`** — новое поле boolean в `product.created` и `product.updated` (1С → Сайт). Признак маркированного товара (обязательная маркировка «Честный знак»). Сохраняется в колонке `products.is_marked`
+- Для `product.created` отсутствие поля трактуется как `false` (значение по умолчанию)
+- Для `product.updated` работает семантика частичного обновления: поле применяется только если присутствует в payload
+- Обновлены JSON Schema (`app/Services/Erp/Schemas/product.created.json`, `product.updated.json`) и AsyncAPI (`ProductCreatedPayload`, `ProductUpdatedPayload`)
+- Обработчики `HandleProductCreated` и `HandleProductUpdated` прокидывают `is_marked` в модель `Product`
+
+---
+
 ## [12.8.0] — 2026-04-17
 
 > Регистрация пользователя как триггер `partner.created`, поля `is_active` и `comment` в исходящем направлении

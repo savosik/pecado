@@ -1,6 +1,6 @@
 # Реализации
 
-> **JSON Schema:** [`shipment.created.json`](/docs/erp/schemas/shipment.created.json) | [`shipment.deleted.json`](/docs/erp/schemas/shipment.deleted.json)  
+> **JSON Schema:** [`shipment.created.json`](/docs/erp/schemas/shipment.created.json) | [`shipment.updated.json`](/docs/erp/schemas/shipment.updated.json) | [`shipment.deleted.json`](/docs/erp/schemas/shipment.deleted.json)  
 > **AsyncAPI:** [Полная спецификация](/docs/erp/spec.yaml)
 
 **Направление:** 1С → Сайт | **Очередь:** `erp_in.documents`
@@ -10,7 +10,7 @@
 | Событие | Описание |
 |---|---|
 | `shipment.created` | При первом проведении реализации |
-| `shipment.updated` | При перепроведении (формат идентичен `created`) |
+| `shipment.updated` | При перепроведении (структура идентична `created`, отличается `event`) |
 | `shipment.deleted` | При отмене проведения |
 
 ## Бизнес-правила
@@ -20,6 +20,8 @@
 - Расчёт задолженности ведётся по реализациям, не по заказам
 - `contractor_inn` — привязка к контрагенту по ИНН
 - **(v12.3)** Если передан `number` — сайт сохраняет его как `erp_number`. Это номер реализации из 1С, который отображается пользователю
+- **(v12.10)** У `shipment.updated` **собственная JSON Schema** (`shipment.updated.json`), отделённая от `shipment.created.json`. Пока структуры payload-ов идентичны; разделение выполнено на вырост — для независимой эволюции `updated` при появлении у него собственных полей
+- **(v12.11) `number` обязательно для `shipment.created` и `shipment.updated`.** 1С обязана передавать номер реализации непустой строкой. Сообщения без `number` отклоняются валидатором и отправляются в DLQ. Причина: без ERP-номера покупатель в ЛК видит только технический `id` сайта, а менеджер в 1С — ERP-номер; это ломает коммуникацию клиент-менеджер при обсуждении отгрузки
 
 ## Критерии приёмки
 
@@ -27,3 +29,5 @@
 - [ ] Реализация привязывается к контрагенту по ИНН
 - [ ] Позиции связаны с заказами через `order_uuid`
 - [ ] Реализация отображается в ЛК
+- [ ] **(v12.10)** Валидация `shipment.updated` использует схему `shipment.updated.json` (поле `event` = `shipment.updated`)
+- [ ] **(v12.11)** `shipment.created` / `shipment.updated` без поля `number` или с пустой строкой отклоняются на стадии валидации и не создают/не обновляют реализацию

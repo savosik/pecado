@@ -1,0 +1,44 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "promotion.created",
+    "title": "promotion.created (1С → Сайт) — промо-флаг создан",
+    "description": "Создание новой группы товаров с промо-флагом (новинка/бестселлер/ликвидация). При получении: сохраняется ErpPromotion с uuid и type, привязываются товары из items, у каждого товара пересчитывается соответствующий флаг.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "const": "promotion.created"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID промо-группы в 1С"
+        },
+        "type": {
+            "type": "string",
+            "enum": ["new", "bestseller", "liquidation"],
+            "description": "Тип промо-флага: new — новинка, bestseller — бестселлер, liquidation — ликвидация"
+        },
+        "items": {
+            "type": "array",
+            "description": "Полный состав товаров в промо-группе",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid",
+                        "description": "UUID товара в 1С (external_id)"
+                    }
+                },
+                "required": ["uuid"]
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": ["event", "uuid", "type", "items"]
+}

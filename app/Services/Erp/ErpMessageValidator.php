@@ -22,8 +22,6 @@ class ErpMessageValidator
 
     /**
      * Маппинг событий на файлы схем.
-     * Для событий с одинаковой структурой (shipment.updated = shipment.created)
-     * используется один файл схемы.
      */
     private const SCHEMA_MAP = [
         // US-02: Партнёры
@@ -47,7 +45,7 @@ class ErpMessageValidator
         'return.deleted' => 'return.deleted.json',
         // US-10: Реализации
         'shipment.created' => 'shipment.created.json',
-        'shipment.updated' => 'shipment.created.json', // Та же структура
+        'shipment.updated' => 'shipment.updated.json',
         'shipment.deleted' => 'shipment.deleted.json',
         // US-11: Баланс
         'balance.updated' => 'balance.updated.json',
@@ -58,6 +56,10 @@ class ErpMessageValidator
         'category.updated' => 'category.created.json', // Та же структура
         'product.created' => 'product.created.json',
         'product.updated' => 'product.updated.json',
+        // US-16: Промо-флаги товаров (новинка/бестселлер/ликвидация)
+        'promotion.created' => 'promotion.created.json',
+        'promotion.updated' => 'promotion.updated.json',
+        'promotion.deleted' => 'promotion.deleted.json',
     ];
 
     /**

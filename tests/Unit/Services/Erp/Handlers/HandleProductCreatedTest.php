@@ -527,4 +527,51 @@ class HandleProductCreatedTest extends TestCase
             ]);
         }
     }
+
+    #[Test]
+    public function sets_is_marked_true_when_payload_contains_true(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-marked-001',
+            'uuid' => 'prod-marked-001',
+            'name' => 'Маркированный товар',
+            'is_marked' => true,
+        ]);
+
+        $product = Product::where('external_id', 'prod-marked-001')->first();
+        $this->assertNotNull($product);
+        $this->assertTrue($product->is_marked);
+    }
+
+    #[Test]
+    public function sets_is_marked_false_when_payload_contains_false(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-marked-002',
+            'uuid' => 'prod-marked-002',
+            'name' => 'Немаркированный товар',
+            'is_marked' => false,
+        ]);
+
+        $product = Product::where('external_id', 'prod-marked-002')->first();
+        $this->assertNotNull($product);
+        $this->assertFalse($product->is_marked);
+    }
+
+    #[Test]
+    public function is_marked_defaults_to_false_when_missing(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-marked-003',
+            'uuid' => 'prod-marked-003',
+            'name' => 'Товар без флага маркировки',
+        ]);
+
+        $product = Product::where('external_id', 'prod-marked-003')->first();
+        $this->assertNotNull($product);
+        $this->assertFalse($product->is_marked);
+    }
 }

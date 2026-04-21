@@ -66,6 +66,7 @@ class HandleProductCreated
         $modelData = $payload['model'] ?? null;
         $attributes = $payload['attributes'] ?? [];
         $hidden = (bool) ($payload['hidden'] ?? false);
+        $isMarked = (bool) ($payload['is_marked'] ?? false);
 
         $category = null;
 
@@ -73,7 +74,7 @@ class HandleProductCreated
         // и позволяет безопасно пережить кратковременный deadlock при массовой выгрузке.
         $this->runInTransaction(function () use (
             $uuid, $name, $code, $sku, $categoryUuid, $brandData,
-            $description, $barcodes, $modelData, $attributes, $hidden, &$category
+            $description, $barcodes, $modelData, $attributes, $hidden, $isMarked, &$category
         ) {
             // --- Категория ---
             $categoryId = null;
@@ -118,6 +119,7 @@ class HandleProductCreated
                     'brand_id' => $brandId,
                     'model_id' => $modelId,
                     'hidden' => $hidden,
+                    'is_marked' => $isMarked,
                     // Цена не перезаписывается здесь — она управляется через price.updated (US-02)
                     'base_price' => $basePrice,
                 ]

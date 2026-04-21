@@ -328,4 +328,60 @@ class HandleProductUpdatedTest extends TestCase
         $colorAttr = Attribute::where('external_id', 'prop-color-upd-bind')->first();
         $this->assertTrue($category->attributes->contains($colorAttr));
     }
+
+    #[Test]
+    public function updates_is_marked_when_field_present(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-upd-marked-001',
+            'is_marked' => false,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-upd-marked-001',
+            'is_marked' => true,
+        ]);
+
+        $product->refresh();
+        $this->assertTrue($product->is_marked);
+    }
+
+    #[Test]
+    public function clears_is_marked_when_field_false(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-upd-marked-002',
+            'is_marked' => true,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-upd-marked-002',
+            'is_marked' => false,
+        ]);
+
+        $product->refresh();
+        $this->assertFalse($product->is_marked);
+    }
+
+    #[Test]
+    public function preserves_is_marked_when_field_absent_from_payload(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-upd-marked-003',
+            'is_marked' => true,
+            'name' => 'Прежнее название',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-upd-marked-003',
+            'name' => 'Новое название',
+        ]);
+
+        $product->refresh();
+        $this->assertEquals('Новое название', $product->name);
+        $this->assertTrue($product->is_marked);
+    }
 }

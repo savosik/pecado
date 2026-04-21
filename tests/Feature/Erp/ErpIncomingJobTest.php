@@ -6,6 +6,7 @@ use App\Enums\UserStatus;
 use App\Models\Company;
 use App\Models\ContractorBalance;
 use App\Models\ErpProcessedMessage;
+use App\Models\ErpPromotion;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
@@ -1609,6 +1610,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-000000000031',
             'tax_id' => '1234567890',
+            'number' => '29УТ-000031',
             'date' => '2026-02-16',
             'status' => 'completed',
             'currency_code' => 'KZT',
@@ -1654,7 +1656,18 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'shipment.updated',
             'uuid' => '00000000-0000-4000-a000-000000000032',
+            'tax_id' => '1234567890',
+            'number' => '29УТ-000032',
+            'date' => '2026-02-16',
             'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [
+                [
+                    'product_uuid' => '00000000-0000-4000-a000-00000000000d',
+                    'quantity' => 1,
+                    'price' => 100.00,
+                ],
+            ],
             'message_id' => 'msg-ship-updated-001',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1709,6 +1722,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-000000000034',
             'tax_id' => '1234567890',
+            'number' => '29УТ-000034',
             'date' => '2026-02-16',
             'status' => 'completed',
             'items' => [],
@@ -1733,6 +1747,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
             'tax_id' => '5555555555',
+            'number' => '29УТ-00002F',
             'date' => '2026-02-16',
             'status' => 'new',
             'currency_code' => 'RUB',
@@ -1754,7 +1769,11 @@ class ErpIncomingJobTest extends TestCase
         $updateJob = $this->makeJob([
             'event' => 'shipment.updated',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
+            'tax_id' => '5555555555',
+            'number' => '29УТ-00002F',
+            'date' => '2026-02-16',
             'status' => 'completed',
+            'currency_code' => 'RUB',
             'items' => [
                 ['product_uuid' => '00000000-0000-4000-a000-000000000010', 'quantity' => 10, 'price' => 1500.00],
             ],
@@ -1784,6 +1803,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
             'tax_id' => '5555555555',
+            'number' => '29УТ-00002F',
             'items' => [],
             'message_id' => 'msg-ship-life-create',
         ]);
@@ -1806,6 +1826,7 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-000000000a02',
             'message_id' => 'msg-ship-neg-disc-001',
             'tax_id' => '1234567890',
+            'number' => '29УТ-000A02',
             'date' => '2026-04-16',
             'status' => 'completed',
             'currency_code' => 'RUB',
@@ -1835,6 +1856,92 @@ class ErpIncomingJobTest extends TestCase
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-ship-neg-disc-001',
             'event' => 'shipment.created',
+        ]);
+    }
+
+    #[Test]
+    public function shipment_created_without_number_fails_schema_validation(): void
+    {
+        // v12.12: поле `number` обязательно. Если 1С не прислал номер реализации —
+        // сообщение должно быть отклонено валидатором, реализация не создаётся.
+        $job = $this->makeJob([
+            'event' => 'shipment.created',
+            'uuid' => '00000000-0000-4000-a000-000000000b01',
+            'tax_id' => '1234567890',
+            'date' => '2026-04-21',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [
+                ['product_uuid' => '00000000-0000-4000-a000-000000000b02', 'quantity' => 1, 'price' => 500.00],
+            ],
+            'message_id' => 'msg-ship-no-number-001',
+        ]);
+
+        $job->fire();
+
+        $this->assertDatabaseMissing('shipments', [
+            'uuid' => '00000000-0000-4000-a000-000000000b01',
+        ]);
+        $this->assertDatabaseMissing('erp_processed_messages', [
+            'message_id' => 'msg-ship-no-number-001',
+        ]);
+    }
+
+    #[Test]
+    public function shipment_updated_without_number_fails_schema_validation(): void
+    {
+        // v12.12: поле `number` обязательно для shipment.updated.
+        $existing = \App\Models\Shipment::factory()->create([
+            'uuid' => '00000000-0000-4000-a000-000000000b03',
+            'status' => 'new',
+            'erp_number' => 'OLD-ERP-NUM',
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'shipment.updated',
+            'uuid' => '00000000-0000-4000-a000-000000000b03',
+            'tax_id' => '1234567890',
+            'date' => '2026-04-21',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [
+                ['product_uuid' => '00000000-0000-4000-a000-000000000b04', 'quantity' => 1, 'price' => 500.00],
+            ],
+            'message_id' => 'msg-ship-upd-no-number-001',
+        ]);
+
+        $job->fire();
+
+        $existing->refresh();
+        $this->assertSame('new', $existing->status);
+        $this->assertSame('OLD-ERP-NUM', $existing->erp_number);
+        $this->assertDatabaseMissing('erp_processed_messages', [
+            'message_id' => 'msg-ship-upd-no-number-001',
+        ]);
+    }
+
+    #[Test]
+    public function shipment_created_with_empty_number_fails_schema_validation(): void
+    {
+        // v12.12: пустая строка в `number` тоже не принимается (minLength: 1).
+        $job = $this->makeJob([
+            'event' => 'shipment.created',
+            'uuid' => '00000000-0000-4000-a000-000000000b05',
+            'tax_id' => '1234567890',
+            'number' => '',
+            'date' => '2026-04-21',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [
+                ['product_uuid' => '00000000-0000-4000-a000-000000000b06', 'quantity' => 1, 'price' => 500.00],
+            ],
+            'message_id' => 'msg-ship-empty-number-001',
+        ]);
+
+        $job->fire();
+
+        $this->assertDatabaseMissing('shipments', [
+            'uuid' => '00000000-0000-4000-a000-000000000b05',
         ]);
     }
 
@@ -2327,5 +2434,132 @@ class ErpIncomingJobTest extends TestCase
         // Цена должна сохраниться — price.updated управляет ценами (US-02)
         $this->assertEquals(12345.00, (float) $existing->base_price);
         $this->assertEquals('Обновлённое имя', $existing->name);
+    }
+
+    // ========================================================
+    // US-16: promotion.* — промо-флаги товаров через шину ERP
+    // ========================================================
+
+    #[Test]
+    public function promotion_created_flow_sets_is_new_through_job(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-b000-000000000010',
+            'is_new' => false,
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'promotion.created',
+            'uuid' => '00000000-0000-4000-b000-0000000000a1',
+            'type' => 'new',
+            'items' => [['uuid' => '00000000-0000-4000-b000-000000000010']],
+            'message_id' => 'msg-promo-created-1',
+        ]);
+        $job->fire();
+
+        $this->assertTrue((bool) $product->fresh()->is_new);
+        $this->assertDatabaseHas('erp_promotions', [
+            'uuid' => '00000000-0000-4000-b000-0000000000a1',
+            'type' => 'new',
+        ]);
+        $this->assertDatabaseHas('erp_processed_messages', [
+            'message_id' => 'msg-promo-created-1',
+            'event' => 'promotion.created',
+        ]);
+    }
+
+    #[Test]
+    public function promotion_updated_flow_replaces_items_and_recalculates_flags(): void
+    {
+        $keep = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-b000-000000000011',
+            'is_liquidation' => false,
+        ]);
+        $dropped = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-b000-000000000012',
+            'is_liquidation' => false,
+        ]);
+        $added = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-b000-000000000013',
+            'is_liquidation' => false,
+        ]);
+
+        $this->makeJob([
+            'event' => 'promotion.created',
+            'uuid' => '00000000-0000-4000-b000-0000000000b1',
+            'type' => 'liquidation',
+            'items' => [
+                ['uuid' => $keep->external_id],
+                ['uuid' => $dropped->external_id],
+            ],
+            'message_id' => 'msg-promo-liq-create',
+        ])->fire();
+
+        $this->assertTrue((bool) $keep->fresh()->is_liquidation);
+        $this->assertTrue((bool) $dropped->fresh()->is_liquidation);
+
+        $this->makeJob([
+            'event' => 'promotion.updated',
+            'uuid' => '00000000-0000-4000-b000-0000000000b1',
+            'type' => 'liquidation',
+            'items' => [
+                ['uuid' => $keep->external_id],
+                ['uuid' => $added->external_id],
+            ],
+            'message_id' => 'msg-promo-liq-update',
+        ])->fire();
+
+        $this->assertTrue((bool) $keep->fresh()->is_liquidation);
+        $this->assertFalse((bool) $dropped->fresh()->is_liquidation);
+        $this->assertTrue((bool) $added->fresh()->is_liquidation);
+    }
+
+    #[Test]
+    public function promotion_deleted_flow_clears_flag(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-b000-000000000020',
+            'is_bestseller' => false,
+        ]);
+
+        $this->makeJob([
+            'event' => 'promotion.created',
+            'uuid' => '00000000-0000-4000-b000-0000000000c1',
+            'type' => 'bestseller',
+            'items' => [['uuid' => $product->external_id]],
+            'message_id' => 'msg-promo-bs-create',
+        ])->fire();
+
+        $this->assertTrue((bool) $product->fresh()->is_bestseller);
+
+        $this->makeJob([
+            'event' => 'promotion.deleted',
+            'uuid' => '00000000-0000-4000-b000-0000000000c1',
+            'message_id' => 'msg-promo-bs-delete',
+        ])->fire();
+
+        $this->assertFalse((bool) $product->fresh()->is_bestseller);
+        $this->assertEquals(0, ErpPromotion::count());
+    }
+
+    #[Test]
+    public function promotion_created_with_invalid_type_is_rejected_by_validator(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => '00000000-0000-4000-b000-000000000030',
+            'is_new' => false,
+        ]);
+
+        $job = $this->makeJob([
+            'event' => 'promotion.created',
+            'uuid' => '00000000-0000-4000-b000-0000000000d1',
+            'type' => 'invalid_type',
+            'items' => [['uuid' => $product->external_id]],
+            'message_id' => 'msg-promo-invalid-type',
+        ]);
+        $job->fire();
+
+        $this->assertEquals(0, ErpPromotion::count());
+        $this->assertFalse((bool) $product->fresh()->is_new);
     }
 }

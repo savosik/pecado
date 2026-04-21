@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/client-segments/">
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/promotions/">
       
       
-        <link rel="prev" href="../product-attributes/">
+        <link rel="prev" href="../client-segments/">
       
       
-        <link rel="next" href="../promotions/">
+        <link rel="next" href="../data-normalization/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Клиентские сегменты - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+        <title>Промо-флаги товаров - Pecado ERP — Интеграция 1С ↔ Сайт</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#_1" class="md-skip">
+        <a href="#-" class="md-skip">
           Перейти к содержанию
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Клиентские сегменты
+              Промо-флаги товаров
             
           </span>
         </div>
@@ -733,6 +733,34 @@
                 
   
   
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-segments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Клиентские сегменты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
     
   
   
@@ -752,7 +780,7 @@
   <span class="md-ellipsis">
     
   
-    Клиентские сегменты
+    Промо-флаги товаров
   
 
     
@@ -770,7 +798,7 @@
   <span class="md-ellipsis">
     
   
-    Клиентские сегменты
+    Промо-флаги товаров
   
 
     
@@ -796,10 +824,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Сегменты
+        Направления обмена
       
     </span>
   </a>
@@ -807,22 +835,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#v11" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Механизм синхронизации (v11)
+        Модель данных на сайте
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Механизм синхронизации (v11)">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Тип промо-флага
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promotioncreated-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        promotion.created — создание промо-группы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="promotion.created — создание промо-группы">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#-_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Сторона 1С
+        Бизнес-правила
       
     </span>
   </a>
@@ -833,18 +883,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Сторона сайта
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Подготовка данных
+        Критерии приёмки
       
     </span>
   </a>
@@ -857,13 +896,80 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#promotionupdated-type" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Отображение в ЛК
+        promotion.updated — обновление состава и/или type
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="promotion.updated — обновление состава и/или type">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Бизнес-правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promotiondeleted-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        promotion.deleted — удаление промо-группы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="promotion.deleted — удаление промо-группы">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Бизнес-правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -871,7 +977,7 @@
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Критерии приёмки
+        Ошибки и диагностика
       
     </span>
   </a>
@@ -882,34 +988,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../promotions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Промо-флаги товаров
-  
-
-    
-  </span>
-  
-  
-
-      </a>
     </li>
   
 
@@ -1377,10 +1455,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#_2" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Сегменты
+        Направления обмена
       
     </span>
   </a>
@@ -1388,22 +1466,44 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#v11" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Механизм синхронизации (v11)
+        Модель данных на сайте
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Механизм синхронизации (v11)">
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#-_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Тип промо-флага
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promotioncreated-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        promotion.created — создание промо-группы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="promotion.created — создание промо-группы">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#1" class="md-nav__link">
+  <a href="#-_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Сторона 1С
+        Бизнес-правила
       
     </span>
   </a>
@@ -1414,18 +1514,7 @@
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Сторона сайта
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#_4" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Подготовка данных
+        Критерии приёмки
       
     </span>
   </a>
@@ -1438,13 +1527,80 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+  <a href="#promotionupdated-type" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Отображение в ЛК
+        promotion.updated — обновление состава и/или type
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="promotion.updated — обновление состава и/или type">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-_3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Бизнес-правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#promotiondeleted-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        promotion.deleted — удаление промо-группы
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="promotion.deleted — удаление промо-группы">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Бизнес-правила
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1452,7 +1608,7 @@
   <a href="#_6" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Критерии приёмки
+        Ошибки и диагностика
       
     </span>
   </a>
@@ -1476,104 +1632,172 @@
 
 
 
-<h1 id="_1">Клиентские сегменты<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
-<p><strong>Область:</strong> Управление клиентской базой + синхронизация + ЛК</p>
-<h2 id="_2">Сегменты<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<h1 id="-">Промо-флаги товаров (новинка, бестселлер, ликвидация)<a class="headerlink" href="#-" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/promotion.created.json"><code>promotion.created.json</code></a> | <a href="/docs/erp/schemas/promotion.updated.json"><code>promotion.updated.json</code></a> | <a href="/docs/erp/schemas/promotion.deleted.json"><code>promotion.deleted.json</code></a><br />
+<strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a></p>
+</blockquote>
+<h2 id="_1">Направления обмена<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Уровень</th>
-<th>Название</th>
-<th><code>client_status</code></th>
-<th>Скидка</th>
+<th>Событие</th>
+<th>Направление</th>
+<th>Очередь</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
-<td>Silver</td>
-<td><code>silver</code></td>
-<td>10%</td>
+<td><code>promotion.created</code></td>
+<td>1С → Сайт</td>
+<td><code>erp_in.promotions</code></td>
 </tr>
 <tr>
-<td>2</td>
-<td>Gold</td>
-<td><code>gold</code></td>
-<td>15%</td>
+<td><code>promotion.updated</code></td>
+<td>1С → Сайт</td>
+<td><code>erp_in.promotions</code></td>
 </tr>
 <tr>
-<td>3</td>
-<td>Diamond</td>
-<td><code>diamond</code></td>
-<td>20%</td>
-</tr>
-<tr>
-<td>4</td>
-<td>Индивидуальный</td>
-<td><code>individual</code></td>
-<td>Разная</td>
+<td><code>promotion.deleted</code></td>
+<td>1С → Сайт</td>
+<td><code>erp_in.promotions</code></td>
 </tr>
 </tbody>
 </table>
-<div class="admonition note">
-<p class="admonition-title">Открытый вопрос</p>
-<p>Окончательные названия уровней — открытый вопрос (отв.: Лена)</p>
-</div>
-<h2 id="v11">Механизм синхронизации (v11)<a class="headerlink" href="#v11" title="Permanent link">&para;</a></h2>
-<p>Сегмент передаётся через <code>partner.created</code> (без нового события <code>partner.updated</code>).</p>
-<h3 id="1">Сторона 1С<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
-<ol>
-<li>При записи/изменении типового соглашения → <code>partner.created</code> с <code>client_status</code></li>
-<li>Значение = наименование соглашения (lowercase, латиница)</li>
-<li>Нет соглашения → <code>client_status = null</code></li>
-<li>Массовая выгрузка включает актуальный <code>client_status</code></li>
-</ol>
-<h3 id="_3">Сторона сайта<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
-<ol>
-<li>Обработчик получает <code>client_status</code> из payload</li>
-<li>Не <code>null</code> → ищет <code>ClientStatus</code> по <code>external_id</code></li>
-<li>Найден → привязывает к <code>user.client_status_id</code></li>
-<li><code>null</code> → сбрасывает <code>client_status_id</code></li>
-<li>Не найден → логирует предупреждение, не меняет текущий статус</li>
-</ol>
-<h3 id="_4">Подготовка данных<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
-<p>Перед первоначальной выгрузкой создать в админке:</p>
+<hr />
+<h2 id="_2">Модель данных на сайте<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Название</th>
-<th><code>external_id</code></th>
+<th>Сущность</th>
+<th>Таблица</th>
+<th>Назначение</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Silver</td>
-<td><code>silver</code></td>
+<td><code>ErpPromotion</code></td>
+<td><code>erp_promotions</code></td>
+<td>UUID промо-группы + тип (<code>new</code>/<code>bestseller</code>/<code>liquidation</code>)</td>
 </tr>
 <tr>
-<td>Gold</td>
-<td><code>gold</code></td>
+<td>Привязка товаров</td>
+<td><code>erp_promotion_product</code></td>
+<td>Связь промо ↔ товар (many-to-many)</td>
 </tr>
 <tr>
-<td>Diamond</td>
-<td><code>diamond</code></td>
-</tr>
-<tr>
-<td>Индивидуальный</td>
-<td><code>individual</code></td>
+<td>Флаг на товаре</td>
+<td><code>products.is_new</code> / <code>is_bestseller</code> / <code>is_liquidation</code></td>
+<td>Агрегированный признак для витрины и фильтров</td>
 </tr>
 </tbody>
 </table>
-<h2 id="_5">Отображение в ЛК<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
-<p>Плашка со статусом (название + изображение из <code>ClientStatus</code>)</p>
-<h2 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<p><strong>Агрегация:</strong> флаг товара устанавливается в <code>true</code>, если товар состоит хотя бы в одной <code>ErpPromotion</code> соответствующего <code>type</code>. В <code>false</code> — если ни в одной.</p>
+<p>Таким образом, один товар может находиться в нескольких промо одного типа одновременно (например, «Летние новинки» и «Новинки бренда X»). Удаление одного из промо не снимает флаг, пока остаётся хотя бы одно активное.</p>
+<hr />
+<h2 id="-_1">Тип промо-флага<a class="headerlink" href="#-_1" title="Permanent link">&para;</a></h2>
+<p>В поле <code>type</code> допустимы только три значения (латиница):</p>
+<table>
+<thead>
+<tr>
+<th>Значение</th>
+<th>Русское соответствие</th>
+<th>Колонка товара</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>new</code></td>
+<td>Новинка</td>
+<td><code>products.is_new</code></td>
+</tr>
+<tr>
+<td><code>bestseller</code></td>
+<td>Бестселлер</td>
+<td><code>products.is_bestseller</code></td>
+</tr>
+<tr>
+<td><code>liquidation</code></td>
+<td>Ликвидация</td>
+<td><code>products.is_liquidation</code></td>
+</tr>
+</tbody>
+</table>
+<p>Другие значения приводят к отклонению сообщения на этапе JSON Schema-валидации (<code>ErpMessageValidator</code>).</p>
+<hr />
+<h2 id="promotioncreated-">promotion.created — создание промо-группы<a class="headerlink" href="#promotioncreated-" title="Permanent link">&para;</a></h2>
+<h3 id="-_2">Бизнес-правила<a class="headerlink" href="#-_2" title="Permanent link">&para;</a></h3>
 <ul>
-<li>[ ] 1С отправляет <code>client_status</code> в <code>partner.created</code> при изменении соглашения</li>
-<li>[ ] Сайт резолвит через <code>ClientStatus.external_id</code></li>
-<li>[ ] <code>null</code> → сброс статуса</li>
-<li>[ ] Неизвестный <code>client_status</code> → предупреждение</li>
-<li>[ ] Плашка статуса в ЛК</li>
+<li><code>uuid</code> промо-группы — идемпотентный ключ. Повторная отправка с тем же <code>uuid</code> ведёт себя как <code>promotion.updated</code> (upsert).</li>
+<li><code>items[]</code> — <strong>полный</strong> состав товаров на момент создания. Товары, не найденные по <code>external_id</code>, игнорируются (с записью в лог), валидация сообщения не падает.</li>
+<li>Флаги на товарах пересчитываются в рамках одной транзакции после изменения привязок.</li>
 </ul>
+<h3 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] При получении <code>promotion.created</code> с <code>type=new</code> у всех товаров из <code>items[]</code> (найденных по UUID) <code>products.is_new = 1</code>.</li>
+<li>[ ] Повторная отправка того же <code>uuid</code> с новым составом заменяет привязки и пересчитывает флаги у добавленных и удалённых товаров.</li>
+<li>[ ] Повторная отправка с тем же <code>uuid</code> и <code>message_id</code> в пределах одного цикла обработки — <strong>no-op</strong> (идемпотентность по <code>message_id</code>).</li>
+<li>[ ] Товары, не найденные по <code>external_id</code>, в лог попадают, но сообщение обрабатывается успешно.</li>
+</ul>
+<hr />
+<h2 id="promotionupdated-type">promotion.updated — обновление состава и/или type<a class="headerlink" href="#promotionupdated-type" title="Permanent link">&para;</a></h2>
+<h3 id="-_3">Бизнес-правила<a class="headerlink" href="#-_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>items[]</code> — <strong>полный снимок</strong> актуального состава. Сайт выполняет полную замену привязок (<code>BelongsToMany::sync</code>).</li>
+<li>Если промо-группа с таким <code>uuid</code> не найдена — создаётся (<strong>upsert</strong>).</li>
+<li>При смене <code>type</code> (например, <code>new</code> → <code>bestseller</code>) флаги пересчитываются для <strong>обоих типов</strong> — предыдущего и нового.</li>
+</ul>
+<h3 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] Товары, которых больше нет в <code>items[]</code>, <strong>освобождаются</strong> от привязки; если они не состоят в других промо того же <code>type</code> — соответствующий флаг снимается.</li>
+<li>[ ] Товары, добавленные в <code>items[]</code>, получают соответствующий флаг (если ещё не имели).</li>
+<li>[ ] При смене <code>type</code> у всех товаров (и добавленных, и удалённых, и оставшихся) флаги обоих типов корректно пересчитываются.</li>
+<li>[ ] Отсутствие промо-группы по <code>uuid</code> не приводит к ошибке — сайт создаёт группу.</li>
+</ul>
+<hr />
+<h2 id="promotiondeleted-">promotion.deleted — удаление промо-группы<a class="headerlink" href="#promotiondeleted-" title="Permanent link">&para;</a></h2>
+<h3 id="-_4">Бизнес-правила<a class="headerlink" href="#-_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Удаляются запись <code>ErpPromotion</code> и все её привязки в <code>erp_promotion_product</code>.</li>
+<li>У каждого освободившегося товара флаг <strong>снимается только если</strong> он больше не состоит ни в одной другой <code>ErpPromotion</code> того же <code>type</code>.</li>
+<li>Если промо-группы с таким <code>uuid</code> не существует — событие логируется как информационное и обработка завершается успешно.</li>
+</ul>
+<h3 id="_5">Критерии приёмки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] После <code>promotion.deleted</code> запись из <code>erp_promotions</code> удалена, связанные строки <code>erp_promotion_product</code> — тоже.</li>
+<li>[ ] У товаров, состоящих <strong>только</strong> в удалённой группе — соответствующий флаг снят.</li>
+<li>[ ] У товаров, состоящих также в других промо того же <code>type</code> — флаг <strong>остаётся</strong>.</li>
+<li>[ ] Удаление несуществующей промо-группы не считается ошибкой.</li>
+</ul>
+<hr />
+<h2 id="_6">Ошибки и диагностика<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Сценарий</th>
+<th>Поведение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Отсутствует <code>uuid</code> или <code>type</code></td>
+<td>Сообщение отклоняется JSON Schema, запись в <code>erp_validation_errors</code></td>
+</tr>
+<tr>
+<td><code>type</code> не из enum</td>
+<td>Аналогично: отклонение схемой</td>
+</tr>
+<tr>
+<td>Товары из <code>items[]</code> не найдены</td>
+<td>Логируется количество <code>missing</code>, обработка успешна</td>
+</tr>
+<tr>
+<td>Ошибка БД внутри транзакции</td>
+<td>Транзакция откатывается, сообщение уходит в retry (backoff=15 с)</td>
+</tr>
+</tbody>
+</table>
+<p>Идемпотентность гарантируется таблицей <code>erp_processed_messages</code> по <code>message_id</code>.</p>
 
 
 

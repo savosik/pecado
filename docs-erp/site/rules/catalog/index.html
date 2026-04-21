@@ -939,6 +939,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../promotions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Промо-флаги товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../data-normalization/" class="md-nav__link">
         
   
@@ -1599,6 +1627,7 @@
 <li><code>brand</code> содержит поле <code>label</code> (дублирует <code>name</code>)</li>
 <li><code>model</code> — nullable. Источник — доп. реквизит из настройки <code>СвойствоМодель</code></li>
 <li><strong>(v10)</strong> <code>hidden = true</code> → товар не отображается (ни в каталоге, ни в поиске)</li>
+<li><strong>(v12.9)</strong> <code>is_marked</code> (boolean) — признак маркированного товара («Честный знак»). Сохраняется в <code>products.is_marked</code>. Строго <code>true</code>/<code>false</code>, строки <code>"Да"</code>/<code>"Нет"</code> отклоняются JSON-парсером</li>
 </ul>
 <h3 id="_5">Критерии приёмки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1606,6 +1635,8 @@
 <li>[ ] Бренд создаётся/обновляется по <code>uuid</code></li>
 <li>[ ] Атрибуты создаются из <code>attributes[]</code></li>
 <li>[ ] Товары с <code>hidden = true</code> не видны на сайте</li>
+<li>[ ] <strong>(v12.9)</strong> При <code>is_marked = true</code> товар помечен как маркированный в БД сайта (<code>products.is_marked = 1</code>)</li>
+<li>[ ] <strong>(v12.9)</strong> При <code>is_marked = false</code> флаг снимается (<code>products.is_marked = 0</code>)</li>
 </ul>
 <hr />
 <h2 id="productupdated">Товары (product.updated) — частичное обновление<a class="headerlink" href="#productupdated" title="Permanent link">&para;</a></h2>
@@ -1614,12 +1645,14 @@
 <li>Отправляет <strong>только изменённые поля</strong>. Обязательны: <code>event</code>, <code>message_id</code>, <code>uuid</code></li>
 <li><code>attributes</code> содержит <strong>только изменённые</strong> атрибуты — сайт мержит по <code>property_uuid</code></li>
 <li>Цена <strong>не обновляется</strong> через <code>product.updated</code> — используйте <code>price.updated</code></li>
+<li><strong>(v12.9)</strong> <code>is_marked</code> обновляется только если поле <strong>присутствует</strong> в payload. Отсутствие поля сохраняет текущее значение</li>
 </ul>
 <h3 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Частичное обновление — неизменённые поля сохраняются</li>
 <li>[ ] Атрибуты мержатся по <code>property_uuid</code></li>
 <li>[ ] При изменении <code>hidden</code> отправляется <code>product.updated</code> с полем <code>hidden</code></li>
+<li>[ ] <strong>(v12.9)</strong> При изменении признака маркировки отправляется <code>product.updated</code> с полем <code>is_marked</code>, сайт применяет новое значение к <code>products.is_marked</code></li>
 </ul>
 
 

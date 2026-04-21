@@ -20,6 +20,9 @@ use App\Services\Erp\Handlers\HandlePartnerUpdated;
 use App\Services\Erp\Handlers\HandlePriceUpdated;
 use App\Services\Erp\Handlers\HandleProductCreated;
 use App\Services\Erp\Handlers\HandleProductUpdated;
+use App\Services\Erp\Handlers\HandlePromotionCreated;
+use App\Services\Erp\Handlers\HandlePromotionDeleted;
+use App\Services\Erp\Handlers\HandlePromotionUpdated;
 use App\Services\Erp\Handlers\HandleReturnDeleted;
 use App\Services\Erp\Handlers\HandleReturnUpdated;
 use App\Services\Erp\Handlers\HandleShipmentCreated;
@@ -76,6 +79,10 @@ class ErpIncomingJob extends BaseJob
         'category.updated' => HandleCategoryUpdated::class,
         'product.created' => HandleProductCreated::class,
         'product.updated' => HandleProductUpdated::class,
+        // US-16: Промо-флаги товаров
+        'promotion.created' => HandlePromotionCreated::class,
+        'promotion.updated' => HandlePromotionUpdated::class,
+        'promotion.deleted' => HandlePromotionDeleted::class,
     ];
 
     /**

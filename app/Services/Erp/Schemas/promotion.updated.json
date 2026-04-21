@@ -1,0 +1,42 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "promotion.updated",
+    "title": "promotion.updated (1С → Сайт) — состав промо-группы обновлён",
+    "description": "Полная замена состава товаров промо-группы. items содержит актуальный снимок. При получении: привязки товаров к ErpPromotion.uuid заменяются, у всех затронутых товаров пересчитываются флаги. Смена type допускается.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "const": "promotion.updated"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "type": {
+            "type": "string",
+            "enum": ["new", "bestseller", "liquidation"],
+            "description": "Тип промо-флага (может меняться относительно promotion.created)"
+        },
+        "items": {
+            "type": "array",
+            "description": "Полный актуальный состав товаров — сайт заменяет привязки целиком",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    }
+                },
+                "required": ["uuid"]
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": ["event", "uuid", "type", "items"]
+}

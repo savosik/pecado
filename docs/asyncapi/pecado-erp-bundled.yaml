@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 12.8.0
+  version: 12.11.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -1212,6 +1212,7 @@ channels:
             - message_id
             - uuid
             - tax_id
+            - number
             - date
             - status
             - currency_code
@@ -1219,9 +1220,7 @@ channels:
           properties:
             event:
               type: string
-              enum:
-                - shipment.created
-                - shipment.updated
+              const: shipment.created
             message_id:
               type: string
               examples:
@@ -1238,10 +1237,14 @@ channels:
               examples:
                 - '7710140679'
             number:
-              type:
-                - string
-                - 'null'
-              description: Номер реализации в 1С. Сохраняется как erp_number на сайте.
+              type: string
+              minLength: 1
+              description: >-
+                Номер реализации в 1С. Сохраняется как erp_number на сайте.
+                Обязательное поле, используется клиентом и менеджером для
+                коммуникации.
+              examples:
+                - 29УТ-003413
             date:
               type: string
               format: date
@@ -1331,11 +1334,21 @@ channels:
             contentType: application/json
         payload:
           type: object
+          description: >
+            Перепроведение реализации в 1С. Структура полностью совпадает с
+            `ShipmentCreatedPayload`;
+
+            отличается только значением поля `event`. Разделение на две схемы
+            сделано на вырост — при
+
+            появлении у события `shipment.updated` собственных полей схема
+            эволюционирует независимо.
           required:
             - event
             - message_id
             - uuid
             - tax_id
+            - number
             - date
             - status
             - currency_code
@@ -1343,9 +1356,7 @@ channels:
           properties:
             event:
               type: string
-              enum:
-                - shipment.created
-                - shipment.updated
+              const: shipment.updated
             message_id:
               type: string
               examples:
@@ -1362,10 +1373,14 @@ channels:
               examples:
                 - '7710140679'
             number:
-              type:
-                - string
-                - 'null'
-              description: Номер реализации в 1С. Сохраняется как erp_number на сайте.
+              type: string
+              minLength: 1
+              description: >-
+                Номер реализации в 1С. Сохраняется как erp_number на сайте.
+                Обязательное поле, используется клиентом и менеджером для
+                коммуникации.
+              examples:
+                - 29УТ-003413
             date:
               type: string
               format: date
@@ -1765,6 +1780,12 @@ channels:
                 Флаг «Скрыть в интернете» (v10). Если true — товар не
                 отображается на сайте. Строго boolean true/false, строки вида
                 "Да"/"Нет" будут отклонены интерпретатором JSON.
+            is_marked:
+              type: boolean
+              description: >-
+                Признак маркированного товара (обязательная маркировка «Честный
+                знак»). Строго boolean true/false, строки вида "Да"/"Нет" будут
+                отклонены интерпретатором JSON.
             brand:
               oneOf:
                 - type: object
@@ -1920,6 +1941,11 @@ channels:
             hidden:
               type: boolean
               description: Флаг «Скрыть в интернете» (v10)
+            is_marked:
+              type: boolean
+              description: >-
+                Признак маркированного товара (обязательная маркировка «Честный
+                знак»). Строго boolean true/false.
             brand:
               oneOf:
                 - type: object
@@ -2023,6 +2049,194 @@ channels:
         is: queue
         queue:
           name: erp_in.catalog
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+  erpInPromotions:
+    address: erp_in.promotions
+    title: Промо-флаги товаров (1С → Сайт)
+    description: |
+      Очередь для управления флагами «новинка», «бестселлер», «ликвидация».
+      1С ведёт несколько групп товаров с UUID и типом; сайт агрегирует по типу
+      и выставляет `products.is_new` / `is_bestseller` / `is_liquidation`.
+      Routing keys: `promotion.*`
+    messages:
+      promotionCreated:
+        name: promotion.created
+        title: Промо-группа создана
+        summary: Создание группы товаров с промо-флагом (новинка/бестселлер/ликвидация)
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - uuid
+            - type
+            - items
+          properties:
+            event:
+              type: string
+              const: promotion.created
+            message_id:
+              type: string
+              description: Уникальный ID сообщения для идемпотентности
+            uuid:
+              allOf:
+                - type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+              description: UUID промо-группы в 1С
+            type:
+              type: string
+              enum:
+                - new
+                - bestseller
+                - liquidation
+              description: |
+                Тип промо-флага:
+                - `new` — новинка (`products.is_new`)
+                - `bestseller` — бестселлер (`products.is_bestseller`)
+                - `liquidation` — ликвидация (`products.is_liquidation`)
+            items:
+              type: array
+              description: Полный состав товаров в группе
+              items:
+                type: object
+                required:
+                  - uuid
+                properties:
+                  uuid:
+                    allOf:
+                      - type: string
+                        format: uuid
+                        description: UUID строка
+                        examples:
+                          - 550e8400-e29b-41d4-a716-446655440000
+                    description: UUID товара в 1С (external_id на сайте)
+          examples:
+            - event: promotion.created
+              message_id: msg-promo-new-001
+              uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
+              type: new
+              items:
+                - uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+                - uuid: b2c3d4e5-f6a7-8901-bcde-f23456789012
+      promotionUpdated:
+        name: promotion.updated
+        title: Промо-группа обновлена
+        summary: Полная замена состава товаров и/или смена type
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - uuid
+            - type
+            - items
+          properties:
+            event:
+              type: string
+              const: promotion.updated
+            message_id:
+              type: string
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            type:
+              type: string
+              enum:
+                - new
+                - bestseller
+                - liquidation
+              description: |
+                Тип промо-флага:
+                - `new` — новинка (`products.is_new`)
+                - `bestseller` — бестселлер (`products.is_bestseller`)
+                - `liquidation` — ликвидация (`products.is_liquidation`)
+            items:
+              type: array
+              description: >-
+                Актуальный снимок состава товаров — сайт заменяет привязки
+                целиком
+              items:
+                type: object
+                required:
+                  - uuid
+                properties:
+                  uuid:
+                    allOf:
+                      - type: string
+                        format: uuid
+                        description: UUID строка
+                        examples:
+                          - 550e8400-e29b-41d4-a716-446655440000
+                    description: UUID товара в 1С (external_id на сайте)
+          examples:
+            - event: promotion.updated
+              message_id: msg-promo-upd-001
+              uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
+              type: bestseller
+              items:
+                - uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+      promotionDeleted:
+        name: promotion.deleted
+        title: Промо-группа удалена
+        summary: Удаление промо-группы, снятие флагов у освободившихся товаров
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          required:
+            - event
+            - uuid
+          properties:
+            event:
+              type: string
+              const: promotion.deleted
+            message_id:
+              type: string
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+          examples:
+            - event: promotion.deleted
+              message_id: msg-promo-del-001
+              uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.promotions
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
@@ -2957,6 +3171,81 @@ operations:
     tags:
       - name: US-15
       - name: catalog
+  receivePromotionCreated:
+    title: Создание промо-группы
+    summary: 1С создаёт группу товаров с промо-флагом (новинка/бестселлер/ликвидация)
+    description: >
+      Обработчик: `HandlePromotionCreated`
+
+
+      Создаётся сущность `ErpPromotion` по `uuid`, к ней привязываются товары из
+      `items[]`
+
+      (поиск по `external_id`). У затронутых товаров пересчитывается
+      соответствующий
+
+      флаг: `products.is_new` / `is_bestseller` / `is_liquidation`.
+
+
+      Идемпотентен: повторный вызов с тем же `uuid` заменяет состав и type.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPromotions'
+    messages:
+      - $ref: '#/channels/erpInPromotions/messages/promotionCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-16
+      - name: promotions
+  receivePromotionUpdated:
+    title: Обновление состава промо-группы
+    summary: 1С передаёт актуальный состав и, опционально, изменённый type
+    description: >
+      Обработчик: `HandlePromotionUpdated`
+
+
+      Полная замена `items[]`. При отсутствии промо-группы по `uuid` — создаётся
+      (upsert).
+
+      Пересчитываются флаги у товаров, которые добавлены, удалены или остались в
+      группе.
+
+      При смене `type` флаг предыдущего типа снимается, если товар не состоит
+
+      в других группах этого type.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPromotions'
+    messages:
+      - $ref: '#/channels/erpInPromotions/messages/promotionUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-16
+      - name: promotions
+  receivePromotionDeleted:
+    title: Удаление промо-группы
+    summary: 1С удаляет группу — сайт снимает привязки и пересчитывает флаги
+    description: |
+      Обработчик: `HandlePromotionDeleted`
+
+      Сущность `ErpPromotion` удаляется вместе с привязками к товарам.
+      У каждого освободившегося товара соответствующий флаг снимается, если он
+      больше не состоит ни в одной ErpPromotion этого type.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPromotions'
+    messages:
+      - $ref: '#/channels/erpInPromotions/messages/promotionDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-16
+      - name: promotions
 components:
   messageTraits:
     erpEnvelope:
@@ -4346,6 +4635,7 @@ components:
           - message_id
           - uuid
           - tax_id
+          - number
           - date
           - status
           - currency_code
@@ -4353,9 +4643,7 @@ components:
         properties:
           event:
             type: string
-            enum:
-              - shipment.created
-              - shipment.updated
+            const: shipment.created
           message_id:
             type: string
             examples:
@@ -4372,10 +4660,14 @@ components:
             examples:
               - '7710140679'
           number:
-            type:
-              - string
-              - 'null'
-            description: Номер реализации в 1С. Сохраняется как erp_number на сайте.
+            type: string
+            minLength: 1
+            description: >-
+              Номер реализации в 1С. Сохраняется как erp_number на сайте.
+              Обязательное поле, используется клиентом и менеджером для
+              коммуникации.
+            examples:
+              - 29УТ-003413
           date:
             type: string
             format: date
@@ -4465,11 +4757,21 @@ components:
           contentType: application/json
       payload:
         type: object
+        description: >
+          Перепроведение реализации в 1С. Структура полностью совпадает с
+          `ShipmentCreatedPayload`;
+
+          отличается только значением поля `event`. Разделение на две схемы
+          сделано на вырост — при
+
+          появлении у события `shipment.updated` собственных полей схема
+          эволюционирует независимо.
         required:
           - event
           - message_id
           - uuid
           - tax_id
+          - number
           - date
           - status
           - currency_code
@@ -4477,9 +4779,7 @@ components:
         properties:
           event:
             type: string
-            enum:
-              - shipment.created
-              - shipment.updated
+            const: shipment.updated
           message_id:
             type: string
             examples:
@@ -4496,10 +4796,14 @@ components:
             examples:
               - '7710140679'
           number:
-            type:
-              - string
-              - 'null'
-            description: Номер реализации в 1С. Сохраняется как erp_number на сайте.
+            type: string
+            minLength: 1
+            description: >-
+              Номер реализации в 1С. Сохраняется как erp_number на сайте.
+              Обязательное поле, используется клиентом и менеджером для
+              коммуникации.
+            examples:
+              - 29УТ-003413
           date:
             type: string
             format: date
@@ -4932,6 +5236,12 @@ components:
               Флаг «Скрыть в интернете» (v10). Если true — товар не отображается
               на сайте. Строго boolean true/false, строки вида "Да"/"Нет" будут
               отклонены интерпретатором JSON.
+          is_marked:
+            type: boolean
+            description: >-
+              Признак маркированного товара (обязательная маркировка «Честный
+              знак»). Строго boolean true/false, строки вида "Да"/"Нет" будут
+              отклонены интерпретатором JSON.
           brand:
             oneOf:
               - type: object
@@ -5087,6 +5397,11 @@ components:
           hidden:
             type: boolean
             description: Флаг «Скрыть в интернете» (v10)
+          is_marked:
+            type: boolean
+            description: >-
+              Признак маркированного товара (обязательная маркировка «Честный
+              знак»). Строго boolean true/false.
           brand:
             oneOf:
               - type: object
@@ -5183,6 +5498,173 @@ components:
                     true/false (не 1/0 или 'Да'/'Нет'). Для number — число.
                   examples:
                     - Розовый
+    PromotionCreated:
+      name: promotion.created
+      title: Промо-группа создана
+      summary: Создание группы товаров с промо-флагом (новинка/бестселлер/ликвидация)
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - uuid
+          - type
+          - items
+        properties:
+          event:
+            type: string
+            const: promotion.created
+          message_id:
+            type: string
+            description: Уникальный ID сообщения для идемпотентности
+          uuid:
+            allOf:
+              - type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+            description: UUID промо-группы в 1С
+          type:
+            type: string
+            enum:
+              - new
+              - bestseller
+              - liquidation
+            description: |
+              Тип промо-флага:
+              - `new` — новинка (`products.is_new`)
+              - `bestseller` — бестселлер (`products.is_bestseller`)
+              - `liquidation` — ликвидация (`products.is_liquidation`)
+          items:
+            type: array
+            description: Полный состав товаров в группе
+            items:
+              type: object
+              required:
+                - uuid
+              properties:
+                uuid:
+                  allOf:
+                    - type: string
+                      format: uuid
+                      description: UUID строка
+                      examples:
+                        - 550e8400-e29b-41d4-a716-446655440000
+                  description: UUID товара в 1С (external_id на сайте)
+        examples:
+          - event: promotion.created
+            message_id: msg-promo-new-001
+            uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
+            type: new
+            items:
+              - uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+              - uuid: b2c3d4e5-f6a7-8901-bcde-f23456789012
+    PromotionUpdated:
+      name: promotion.updated
+      title: Промо-группа обновлена
+      summary: Полная замена состава товаров и/или смена type
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - uuid
+          - type
+          - items
+        properties:
+          event:
+            type: string
+            const: promotion.updated
+          message_id:
+            type: string
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          type:
+            type: string
+            enum:
+              - new
+              - bestseller
+              - liquidation
+            description: |
+              Тип промо-флага:
+              - `new` — новинка (`products.is_new`)
+              - `bestseller` — бестселлер (`products.is_bestseller`)
+              - `liquidation` — ликвидация (`products.is_liquidation`)
+          items:
+            type: array
+            description: Актуальный снимок состава товаров — сайт заменяет привязки целиком
+            items:
+              type: object
+              required:
+                - uuid
+              properties:
+                uuid:
+                  allOf:
+                    - type: string
+                      format: uuid
+                      description: UUID строка
+                      examples:
+                        - 550e8400-e29b-41d4-a716-446655440000
+                  description: UUID товара в 1С (external_id на сайте)
+        examples:
+          - event: promotion.updated
+            message_id: msg-promo-upd-001
+            uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
+            type: bestseller
+            items:
+              - uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    PromotionDeleted:
+      name: promotion.deleted
+      title: Промо-группа удалена
+      summary: Удаление промо-группы, снятие флагов у освободившихся товаров
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        required:
+          - event
+          - uuid
+        properties:
+          event:
+            type: string
+            const: promotion.deleted
+          message_id:
+            type: string
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+        examples:
+          - event: promotion.deleted
+            message_id: msg-promo-del-001
+            uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
   schemas:
     UUID:
       type: string
@@ -6381,13 +6863,14 @@ components:
           description: Ставка НДС (%)
           examples:
             - 20
-    ShipmentPayload:
+    ShipmentCreatedPayload:
       type: object
       required:
         - event
         - message_id
         - uuid
         - tax_id
+        - number
         - date
         - status
         - currency_code
@@ -6395,9 +6878,7 @@ components:
       properties:
         event:
           type: string
-          enum:
-            - shipment.created
-            - shipment.updated
+          const: shipment.created
         message_id:
           type: string
           examples:
@@ -6414,10 +6895,138 @@ components:
           examples:
             - '7710140679'
         number:
-          type:
-            - string
-            - 'null'
-          description: Номер реализации в 1С. Сохраняется как erp_number на сайте.
+          type: string
+          minLength: 1
+          description: >-
+            Номер реализации в 1С. Сохраняется как erp_number на сайте.
+            Обязательное поле, используется клиентом и менеджером для
+            коммуникации.
+          examples:
+            - 29УТ-003413
+        date:
+          type: string
+          format: date
+          description: Дата в формате yyyy-MM-dd
+          examples:
+            - '2026-03-17'
+        status:
+          type: string
+          const: completed
+          description: Всегда "completed"
+        currency_code:
+          type: string
+          minLength: 3
+          maxLength: 3
+          description: ISO 4217 буквенный код валюты
+          examples:
+            - RUB
+            - KZT
+            - BYN
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - product_uuid
+              - quantity
+              - price
+              - auto_discount_percent
+              - manual_discount_percent
+              - total
+              - vat_rate
+            properties:
+              product_uuid:
+                type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+              order_uuid:
+                description: UUID исходного заказа
+                oneOf:
+                  - type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                  - type: 'null'
+              quantity:
+                type: number
+                minimum: 0
+              price:
+                type: number
+                minimum: 0
+                description: Базовая цена
+              auto_discount_percent:
+                type: number
+                maximum: 100
+                description: >-
+                  Процент автоматической скидки (отрицательное значение —
+                  наценка без ограничений)
+              manual_discount_percent:
+                type: number
+                maximum: 100
+                description: >-
+                  Процент ручной скидки (отрицательное значение — наценка без
+                  ограничений)
+              total:
+                type: number
+                description: Итоговая сумма строки
+              vat_rate:
+                type: number
+                description: Ставка НДС (%)
+                examples:
+                  - 20
+    ShipmentUpdatedPayload:
+      type: object
+      description: >
+        Перепроведение реализации в 1С. Структура полностью совпадает с
+        `ShipmentCreatedPayload`;
+
+        отличается только значением поля `event`. Разделение на две схемы
+        сделано на вырост — при
+
+        появлении у события `shipment.updated` собственных полей схема
+        эволюционирует независимо.
+      required:
+        - event
+        - message_id
+        - uuid
+        - tax_id
+        - number
+        - date
+        - status
+        - currency_code
+        - items
+      properties:
+        event:
+          type: string
+          const: shipment.updated
+        message_id:
+          type: string
+          examples:
+            - msg-shipment-s1a2b3c4
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        tax_id:
+          type: string
+          description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+          examples:
+            - '7710140679'
+        number:
+          type: string
+          minLength: 1
+          description: >-
+            Номер реализации в 1С. Сохраняется как erp_number на сайте.
+            Обязательное поле, используется клиентом и менеджером для
+            коммуникации.
+          examples:
+            - 29УТ-003413
         date:
           type: string
           format: date
@@ -6842,6 +7451,12 @@ components:
             Флаг «Скрыть в интернете» (v10). Если true — товар не отображается
             на сайте. Строго boolean true/false, строки вида "Да"/"Нет" будут
             отклонены интерпретатором JSON.
+        is_marked:
+          type: boolean
+          description: >-
+            Признак маркированного товара (обязательная маркировка «Честный
+            знак»). Строго boolean true/false, строки вида "Да"/"Нет" будут
+            отклонены интерпретатором JSON.
         brand:
           oneOf:
             - type: object
@@ -6978,6 +7593,11 @@ components:
         hidden:
           type: boolean
           description: Флаг «Скрыть в интернете» (v10)
+        is_marked:
+          type: boolean
+          description: >-
+            Признак маркированного товара (обязательная маркировка «Честный
+            знак»). Строго boolean true/false.
         brand:
           oneOf:
             - type: object
@@ -7074,3 +7694,158 @@ components:
                   true/false (не 1/0 или 'Да'/'Нет'). Для number — число.
                 examples:
                   - Розовый
+    PromotionItem:
+      type: object
+      required:
+        - uuid
+      properties:
+        uuid:
+          allOf:
+            - type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+          description: UUID товара в 1С (external_id на сайте)
+    PromotionType:
+      type: string
+      enum:
+        - new
+        - bestseller
+        - liquidation
+      description: |
+        Тип промо-флага:
+        - `new` — новинка (`products.is_new`)
+        - `bestseller` — бестселлер (`products.is_bestseller`)
+        - `liquidation` — ликвидация (`products.is_liquidation`)
+    PromotionCreatedPayload:
+      type: object
+      required:
+        - event
+        - uuid
+        - type
+        - items
+      properties:
+        event:
+          type: string
+          const: promotion.created
+        message_id:
+          type: string
+          description: Уникальный ID сообщения для идемпотентности
+        uuid:
+          allOf:
+            - type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+          description: UUID промо-группы в 1С
+        type:
+          type: string
+          enum:
+            - new
+            - bestseller
+            - liquidation
+          description: |
+            Тип промо-флага:
+            - `new` — новинка (`products.is_new`)
+            - `bestseller` — бестселлер (`products.is_bestseller`)
+            - `liquidation` — ликвидация (`products.is_liquidation`)
+        items:
+          type: array
+          description: Полный состав товаров в группе
+          items:
+            type: object
+            required:
+              - uuid
+            properties:
+              uuid:
+                allOf:
+                  - type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                description: UUID товара в 1С (external_id на сайте)
+      examples:
+        - event: promotion.created
+          message_id: msg-promo-new-001
+          uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
+          type: new
+          items:
+            - uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+            - uuid: b2c3d4e5-f6a7-8901-bcde-f23456789012
+    PromotionUpdatedPayload:
+      type: object
+      required:
+        - event
+        - uuid
+        - type
+        - items
+      properties:
+        event:
+          type: string
+          const: promotion.updated
+        message_id:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        type:
+          type: string
+          enum:
+            - new
+            - bestseller
+            - liquidation
+          description: |
+            Тип промо-флага:
+            - `new` — новинка (`products.is_new`)
+            - `bestseller` — бестселлер (`products.is_bestseller`)
+            - `liquidation` — ликвидация (`products.is_liquidation`)
+        items:
+          type: array
+          description: Актуальный снимок состава товаров — сайт заменяет привязки целиком
+          items:
+            type: object
+            required:
+              - uuid
+            properties:
+              uuid:
+                allOf:
+                  - type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                description: UUID товара в 1С (external_id на сайте)
+      examples:
+        - event: promotion.updated
+          message_id: msg-promo-upd-001
+          uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444
+          type: bestseller
+          items:
+            - uuid: a1b2c3d4-e5f6-7890-abcd-ef1234567890
+    PromotionDeletedPayload:
+      type: object
+      required:
+        - event
+        - uuid
+      properties:
+        event:
+          type: string
+          const: promotion.deleted
+        message_id:
+          type: string
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+      examples:
+        - event: promotion.deleted
+          message_id: msg-promo-del-001
+          uuid: 7f9e8a1b-1111-4aaa-bbbb-222233334444

@@ -64,6 +64,7 @@ nav:
     - Ценообразование: rules/pricing-model.md
     - Атрибуты товаров: rules/product-attributes.md
     - Клиентские сегменты: rules/client-segments.md
+    - Промо-флаги товаров: rules/promotions.md
     - Нормализация данных: rules/data-normalization.md
   - Тест-план:
     - "Фаза 0: Подготовка": tests/phase-0-setup.md

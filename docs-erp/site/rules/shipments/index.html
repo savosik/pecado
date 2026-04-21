@@ -844,6 +844,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../promotions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Промо-флаги товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../data-normalization/" class="md-nav__link">
         
   
@@ -1350,7 +1378,7 @@
 
 <h1 id="_1">Реализации<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h1>
 <blockquote>
-<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/shipment.created.json"><code>shipment.created.json</code></a> | <a href="/docs/erp/schemas/shipment.deleted.json"><code>shipment.deleted.json</code></a><br />
+<p><strong>JSON Schema:</strong> <a href="/docs/erp/schemas/shipment.created.json"><code>shipment.created.json</code></a> | <a href="/docs/erp/schemas/shipment.updated.json"><code>shipment.updated.json</code></a> | <a href="/docs/erp/schemas/shipment.deleted.json"><code>shipment.deleted.json</code></a><br />
 <strong>AsyncAPI:</strong> <a href="/docs/erp/spec.yaml">Полная спецификация</a></p>
 </blockquote>
 <p><strong>Направление:</strong> 1С → Сайт | <strong>Очередь:</strong> <code>erp_in.documents</code></p>
@@ -1369,7 +1397,7 @@
 </tr>
 <tr>
 <td><code>shipment.updated</code></td>
-<td>При перепроведении (формат идентичен <code>created</code>)</td>
+<td>При перепроведении (структура идентична <code>created</code>, отличается <code>event</code>)</td>
 </tr>
 <tr>
 <td><code>shipment.deleted</code></td>
@@ -1384,6 +1412,7 @@
 <li>Расчёт задолженности ведётся по реализациям, не по заказам</li>
 <li><code>contractor_inn</code> — привязка к контрагенту по ИНН</li>
 <li><strong>(v12.3)</strong> Если передан <code>number</code> — сайт сохраняет его как <code>erp_number</code>. Это номер реализации из 1С, который отображается пользователю</li>
+<li><strong>(v12.10)</strong> У <code>shipment.updated</code> <strong>собственная JSON Schema</strong> (<code>shipment.updated.json</code>), отделённая от <code>shipment.created.json</code>. Пока структуры payload-ов идентичны; разделение выполнено на вырост — для независимой эволюции <code>updated</code> при появлении у него собственных полей</li>
 </ul>
 <h2 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1391,6 +1420,7 @@
 <li>[ ] Реализация привязывается к контрагенту по ИНН</li>
 <li>[ ] Позиции связаны с заказами через <code>order_uuid</code></li>
 <li>[ ] Реализация отображается в ЛК</li>
+<li>[ ] <strong>(v12.10)</strong> Валидация <code>shipment.updated</code> использует схему <code>shipment.updated.json</code> (поле <code>event</code> = <code>shipment.updated</code>)</li>
 </ul>
 
 
