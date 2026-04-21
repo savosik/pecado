@@ -36,7 +36,7 @@ class CabinetController extends Controller
             ->get()
             ->map(fn ($order) => [
                 'id' => $order->id,
-                'order_number' => $order->number,
+                'order_number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
                 'status' => $order->status instanceof \BackedEnum ? $order->status->value : (string) $order->status,
                 'type' => $order->type instanceof \BackedEnum ? $order->type->value : (string) $order->type,
                 'total' => $order->total_amount,
