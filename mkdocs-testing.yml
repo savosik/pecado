@@ -57,6 +57,15 @@ nav:
     - "ЭТАП 0. Гость": stages/00-guest.md
     - "ЭТАП 1. Регистрация": stages/01-registration.md
     - "ЭТАП 2. Онбординг": stages/02-onboarding.md
+    - "ЭТАП 3. Дашборд ЛК": stages/03-dashboard.md
+    - "ЭТАП 4. Профиль, компания, адреса": stages/04-profile-company.md
+    - "ЭТАП 7. Корзины": stages/07-carts.md
+    - "ЭТАП 8. Оформление заказа": stages/08-checkout.md
+    - "ЭТАП 9. Отслеживание заказов": stages/09-orders.md
+    - "ЭТАП 10. Отгрузки": stages/10-shipments.md
+    - "ЭТАП 11. Возвраты": stages/11-returns.md
+    - "ЭТАП 12. Выгрузки": stages/12-exports.md
+    - "ЭТАП 13. API-токены": stages/13-api-tokens.md
     - "ЭТАП 17. Восстановление пароля": stages/17-password-recovery.md
     - "ЭТАП 18. Выход": stages/18-logout.md
   - Связанные ресурсы:

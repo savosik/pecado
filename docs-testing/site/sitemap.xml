@@ -37,6 +37,42 @@
          <lastmod>2026-04-21</lastmod>
     </url>
     <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/03-dashboard/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/04-profile-company/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/07-carts/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/08-checkout/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/09-orders/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/10-shipments/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/11-returns/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/12-exports/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
+         <loc>https://dev.pecado.ru/docs/test-plan/stages/13-api-tokens/</loc>
+         <lastmod>2026-04-21</lastmod>
+    </url>
+    <url>
          <loc>https://dev.pecado.ru/docs/test-plan/stages/17-password-recovery/</loc>
          <lastmod>2026-04-21</lastmod>
     </url>
