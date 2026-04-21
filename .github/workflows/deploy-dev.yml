@@ -347,7 +347,35 @@ jobs:
             sleep 2
           done
 
-          echo "==> [5.2/7] Настройка топологии RabbitMQ (exchanges, queues, shovels)..."
+          echo "==> [5.2/7] Провижининг пользователей RabbitMQ (идемпотентно)..."
+          # Пароли берём из /srv/pecado/.env — чтобы при любом recreate контейнера
+          # (например при подключении нового persistent volume) пользователи создавались заново.
+          set -a
+          source /srv/pecado/.env
+          set +a
+          ensure_user() {
+            local user="$1" pass="$2" tag="$3" conf="$4" write="$5" read="$6"
+            if sg docker -c "docker compose exec -T rabbitmq rabbitmqctl list_users" 2>/dev/null | awk '{print $1}' | grep -Fxq "$user"; then
+              echo "  пользователь $user уже есть — обновляю пароль/права"
+              sg docker -c "docker compose exec -T rabbitmq rabbitmqctl change_password '$user' '$pass'"
+            else
+              echo "  создаю пользователя $user"
+              sg docker -c "docker compose exec -T rabbitmq rabbitmqctl add_user '$user' '$pass'"
+            fi
+            if [ -n "$tag" ]; then
+              sg docker -c "docker compose exec -T rabbitmq rabbitmqctl set_user_tags '$user' $tag"
+            fi
+            sg docker -c "docker compose exec -T rabbitmq rabbitmqctl set_permissions -p / '$user' '$conf' '$write' '$read'"
+          }
+          ensure_user "${RABBITMQ_MANAGEMENT_USER}" "${RABBITMQ_MANAGEMENT_PASSWORD}" "administrator" ".*" ".*" ".*"
+          ensure_user "${RABBITMQ_USER}"            "${RABBITMQ_PASSWORD}"            ""               ".*" ".*" ".*"
+          if [ -n "${RABBITMQ_ERP_USER:-}" ] && [ -n "${RABBITMQ_ERP_PASSWORD:-}" ]; then
+            ensure_user "${RABBITMQ_ERP_USER}"      "${RABBITMQ_ERP_PASSWORD}"        "" 'erp\..*|erp_out\..*' 'erp\..*' 'erp_out\..*'
+          fi
+          # Удаляем дефолтного guest, если он остался (безопаснее)
+          sg docker -c 'docker compose exec -T rabbitmq rabbitmqctl delete_user guest' 2>/dev/null || true
+
+          echo "==> [5.3/7] Настройка топологии RabbitMQ (exchanges, queues, shovels)..."
           sg docker -c 'docker compose exec -T app php artisan rabbitmq:setup' || true
 
           echo "==> [6/7] Перезапуск очередей..."

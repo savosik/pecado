@@ -73,6 +73,8 @@
 
 Права: публикация в `erp.*` exchanges, чтение из `erp_out.*` очередей.
 
+> Креды в `/srv/pecado/.env` хранятся под именами `RABBITMQ_ERP_USER` / `RABBITMQ_ERP_PASSWORD`. Деплой-workflow идемпотентно пересоздаёт пользователя при каждом запуске (см. блок `[5.2/7] Провижининг пользователей RabbitMQ`).
+
 ## RabbitMQ — AMQP для Laravel приложения
 
 | | |
