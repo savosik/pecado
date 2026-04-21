@@ -448,6 +448,78 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
+        Пользователи и права
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shovel-esb-externalremains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shovel: остатки с московского ESB (external.remains)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shovel: остатки с московского ESB (external.remains)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shovel-dynamic-management-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Параметры shovel-а (dynamic, через Management API)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ttl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL и отказоустойчивость
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Потребители очередей
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ttl-policy-external-remains-ttl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL сообщений (policy external-remains-ttl)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         Сводная таблица событий
       
     </span>
@@ -616,6 +688,34 @@
     
   
     Остатки
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../rules/external-remains/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Внешние остатки (ESB)
   
 
     
@@ -1440,6 +1540,78 @@
   <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
+        Пользователи и права
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shovel-esb-externalremains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shovel: остатки с московского ESB (external.remains)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Shovel: остатки с московского ESB (external.remains)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shovel-dynamic-management-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Параметры shovel-а (dynamic, через Management API)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ttl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL и отказоустойчивость
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Потребители очередей
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ttl-policy-external-remains-ttl" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        TTL сообщений (policy external-remains-ttl)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
         Сводная таблица событий
       
     </span>
@@ -1466,9 +1638,11 @@
 
 <h1 id="rabbitmq">Инфраструктура RabbitMQ<a class="headerlink" href="#rabbitmq" title="Permanent link">&para;</a></h1>
 <h2 id="_1">Архитектура<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code>1С → erp.events (exchange, topic, durable) → Очереди сайта (erp_in.*)
-Сайт → site.events (exchange, topic, durable) → Очереди 1С (erp_out.*)
+<div class="highlight"><pre><span></span><code>1С          → erp.events      (topic, durable) → Очереди сайта      (erp_in.*)
+Сайт        → site.events     (topic, durable) → Очереди 1С         (erp_out.*)
+Внешний ESB → shovel → external.remains (fanout, durable) → external.remains_for_{website,erp}
 </code></pre></div>
+<p>Брокер — <code>pecado-rabbitmq</code> (образ <code>rabbitmq:3-management</code>). Плагины <code>rabbitmq_shovel</code> и <code>rabbitmq_shovel_management</code> включены через смонтированный файл <code>docker/rabbitmq/enabled_plugins</code>. Данные Mnesia персистятся в named volume <code>rabbitmq-data</code> — topology и пользователи переживают рестарт контейнера.</p>
 <h2 id="1">Входящие очереди (1С → Сайт)<a class="headerlink" href="#1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1554,7 +1728,184 @@
 <p>Все обработчики <strong>идемпотентны</strong>: повторная обработка по <code>message_id</code> не приводит к дублированию. Обработанные <code>message_id</code> записываются в таблицу <code>erp_processed_messages</code>.</p>
 <h2 id="dlq-dead-letter-queue">DLQ (Dead Letter Queue)<a class="headerlink" href="#dlq-dead-letter-queue" title="Permanent link">&para;</a></h2>
 <p>Для каждой входящей очереди есть DLQ с префиксом <code>erp_dlq.*</code>. Сообщения, вызвавшие ошибку обработки, перенаправляются в DLQ.</p>
-<h2 id="_4">Сводная таблица событий<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<h2 id="_4">Пользователи и права<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>Пользователи создаются <strong>автоматически</strong> на каждом деплое (шаг <code>[5.2/7] Провижининг пользователей RabbitMQ</code> в <code>.github/workflows/deploy-dev.yml</code>). Если пользователь уже есть — обновляется только пароль и права; ручного вмешательства не требуется даже при полном recreate контейнера.</p>
+<table>
+<thead>
+<tr>
+<th>Пользователь</th>
+<th>Tag</th>
+<th>Права (<code>configure</code> / <code>write</code> / <code>read</code>)</th>
+<th>Назначение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pecado_admin</code></td>
+<td><code>administrator</code></td>
+<td><code>.*</code> / <code>.*</code> / <code>.*</code></td>
+<td>Management UI, дебаг, техподдержка</td>
+</tr>
+<tr>
+<td><code>pecado_app</code></td>
+<td>—</td>
+<td><code>.*</code> / <code>.*</code> / <code>.*</code></td>
+<td>Laravel-приложение (AMQP + Management API)</td>
+</tr>
+<tr>
+<td><code>erp_1c</code></td>
+<td>—</td>
+<td><code>erp\..*\|erp_out\..*</code> / <code>erp\..*</code> / <code>erp_out\..*</code></td>
+<td>1С:КА2 — читает <code>erp_out.*</code>, публикует в <code>erp.events</code></td>
+</tr>
+</tbody>
+</table>
+<p>Пароли берутся из <code>/srv/pecado/.env</code> (<code>RABBITMQ_MANAGEMENT_*</code>, <code>RABBITMQ_USER</code>/<code>RABBITMQ_PASSWORD</code>, <code>RABBITMQ_ERP_USER</code>/<code>RABBITMQ_ERP_PASSWORD</code>). Дефолтный <code>guest</code> удаляется.</p>
+<blockquote>
+<p>Если <code>RABBITMQ_ERP_*</code> не заданы — пользователь <code>erp_1c</code> пропускается (используется на dev-сервере, но не нужен в CI/локальных средах).</p>
+</blockquote>
+<h2 id="shovel-esb-externalremains">Shovel: остатки с московского ESB (external.remains)<a class="headerlink" href="#shovel-esb-externalremains" title="Permanent link">&para;</a></h2>
+<p>Часть событий об остатках приходит не напрямую из 1С:КА2 Pecado, а через <strong>RabbitMQ Shovel</strong>, тянущий сообщения из очереди <code>remains_for_moscow</code> на внешнем ESB (<code>93.125.18.73:5672</code>) и публикующий их в локальный <strong>fanout-обменник</strong> <code>external.remains</code>. Оттуда каждое сообщение копируется в две durable-очереди:</p>
+<table>
+<thead>
+<tr>
+<th>Очередь</th>
+<th>Потребитель</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>external.remains_for_website</code></td>
+<td>Сайт Pecado</td>
+</tr>
+<tr>
+<td><code>external.remains_for_erp</code></td>
+<td>1С:КА2 (ERP)</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight"><pre><span></span><code>ESB (93.125.18.73)                     pecado-rabbitmq
+  ┌──────────────────────┐            ┌────────────────────────────────┐
+  │ remains_for_moscow   │  shovel    │  external.remains (fanout)     │
+  │ (TTL 3 дня)          │ ─────────► │             │                  │
+  └──────────────────────┘            │             ├─► external.remains_for_website
+                                      │             └─► external.remains_for_erp
+                                      └────────────────────────────────┘
+</code></pre></div>
+<h3 id="shovel-dynamic-management-api">Параметры shovel-а (dynamic, через Management API)<a class="headerlink" href="#shovel-dynamic-management-api" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Параметр</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>moscow-remains</code></td>
+</tr>
+<tr>
+<td><code>src-protocol</code></td>
+<td><code>amqp091</code></td>
+</tr>
+<tr>
+<td><code>src-queue</code></td>
+<td><code>remains_for_moscow</code> (на ESB)</td>
+</tr>
+<tr>
+<td><code>dest-protocol</code></td>
+<td><code>amqp091</code></td>
+</tr>
+<tr>
+<td><code>dest-uri</code></td>
+<td><code>amqp://</code> (локальный брокер)</td>
+</tr>
+<tr>
+<td><code>dest-exchange</code></td>
+<td><code>external.remains</code></td>
+</tr>
+<tr>
+<td><code>ack-mode</code></td>
+<td><code>on-confirm</code></td>
+</tr>
+<tr>
+<td><code>add-forward-headers</code></td>
+<td><code>false</code></td>
+</tr>
+<tr>
+<td><code>delete-after</code></td>
+<td><code>never</code></td>
+</tr>
+<tr>
+<td>TTL сообщений в источнике</td>
+<td>3 дня</td>
+</tr>
+</tbody>
+</table>
+<p>Shovel создаётся/обновляется автоматически командой <code>php artisan rabbitmq:setup</code> при деплое (одновременно с другими exchange/queue). Конфиг — <code>config/erp.php → moscow_shovel</code>. Регистрация идёт через RabbitMQ Management API <code>PUT /api/parameters/shovel/%2F/moscow-remains</code>.</p>
+<h3 id="ttl">TTL и отказоустойчивость<a class="headerlink" href="#ttl" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Очередь-источник <code>remains_for_moscow</code> на ESB имеет TTL 3 дня. Если shovel задержится с подключением, непрочитанные сообщения удаляются автоматически.</li>
+<li><code>ack-mode: on-confirm</code> гарантирует, что shovel подтверждает сообщение источнику <strong>только после</strong> publisher-confirm от целевого брокера. Сообщения не теряются при нетворк-блипах.</li>
+<li><code>reconnect-delay: 5</code> — после разрыва shovel переподключается к ESB каждые 5 секунд.</li>
+</ul>
+<h3 id="_5">Потребители очередей<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Очередь</th>
+<th>Потребитель</th>
+<th>Статус на 2026-04-21</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>external.remains_for_website</code></td>
+<td><code>ExternalRemainsJob</code> (сайт), supervisor-процесс <code>external-remains-consumer</code></td>
+<td>Реализован — берёт остатки только по складу «Тюмень Основной» (см. <a href="../rules/external-remains/">бизнес-правила</a>)</td>
+</tr>
+<tr>
+<td><code>external.remains_for_erp</code></td>
+<td>1С:КА2 (AMQP-чтение)</td>
+<td>Не реализован</td>
+</tr>
+</tbody>
+</table>
+<h3 id="ttl-policy-external-remains-ttl">TTL сообщений (policy <code>external-remains-ttl</code>)<a class="headerlink" href="#ttl-policy-external-remains-ttl" title="Permanent link">&para;</a></h3>
+<p>На обе очереди применяется RabbitMQ policy:</p>
+<table>
+<thead>
+<tr>
+<th>Поле</th>
+<th>Значение</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pattern</code></td>
+<td><code>^external\.remains_for_.*$</code></td>
+</tr>
+<tr>
+<td><code>apply-to</code></td>
+<td><code>queues</code></td>
+</tr>
+<tr>
+<td><code>definition</code></td>
+<td><code>{"message-ttl": 259200000}</code> (3 дня в мс)</td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<p>Пока потребителей нет, сообщения автоматически удаляются через 3 дня после публикации в fanout — чтобы очереди не разрастались бесконечно и не забивали диск <code>rabbitmq-data</code>. Величина совпадает с TTL очереди-источника на ESB: если сообщение не прочитано за 3 дня с момента прилёта на ESB и ещё 3 дня уже в наших очередях — оно всё равно устарело по бизнесу. TTL конфигурируется через <code>EXTERNAL_REMAINS_TTL_MS</code>.</p>
+<p>Policy регистрируется автоматически командой <code>php artisan rabbitmq:setup</code> через Management API (<code>PUT /api/policies/%2F/external-remains-ttl</code>).</p>
+<blockquote>
+<p>Креды (<code>MOSCOW_ESB_AMQP_URI</code>, <code>MOSCOW_ESB_SRC_QUEUE</code>) хранятся в <code>/srv/pecado/.env</code> на dev-сервере. Полные значения — в <code>docs/DEV_SERVER_CREDENTIALS.md</code>.</p>
+</blockquote>
+<h2 id="_6">Сводная таблица событий<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>

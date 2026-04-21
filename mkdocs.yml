@@ -55,6 +55,7 @@ nav:
     - Каталог: rules/catalog.md
     - Цены: rules/prices.md
     - Остатки: rules/stocks.md
+    - Внешние остатки (ESB): rules/external-remains.md
     - Контрагенты: rules/contractors.md
     - Заказы: rules/orders.md
     - Возвраты: rules/returns.md

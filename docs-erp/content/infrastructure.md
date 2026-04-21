@@ -103,7 +103,7 @@ Shovel создаётся/обновляется автоматически ко
 
 | Очередь | Потребитель | Статус на 2026-04-21 |
 |---|---|---|
-| `external.remains_for_website` | Модуль остатков сайта Pecado | Не реализован (очередь просто накапливает) |
+| `external.remains_for_website` | `ExternalRemainsJob` (сайт), supervisor-процесс `external-remains-consumer` | Реализован — берёт остатки только по складу «Тюмень Основной» (см. [бизнес-правила](rules/external-remains.md)) |
 | `external.remains_for_erp` | 1С:КА2 (AMQP-чтение) | Не реализован |
 
 ### TTL сообщений (policy `external-remains-ttl`)

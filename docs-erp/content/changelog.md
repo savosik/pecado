@@ -6,6 +6,32 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.15.0] — 2026-04-21
+
+> Consumer внешних остатков: сайт забирает из `external.remains_for_website` только остатки по складу «Тюмень Основной»
+
+### Добавлено
+
+- **`ExternalRemainsJob`** (`app/Queue/Jobs/ExternalRemainsJob.php`) — потребитель очереди `external.remains_for_website`. Парсит envelope ESB (`{service, uid, event: {name, payload}}`), маршрутизирует `product.quantity.updated` на handler, обеспечивает идемпотентность через `erp_processed_messages` с префиксом `external-remains:`
+- **`HandleExternalProductQuantityUpdated`** — в `payload.remains[]` отфильтровывает только склад «Тюмень Основной» (UUID из `config/erp.php`), пишет в `product_warehouse.quantity` значение `max(0, quantity - reserve)`. Прочие склады и `organization_remains[]` игнорируются
+- **JSON Schema** `app/Services/Erp/Schemas/external.product_quantity_updated.json` — минимальная (envelope + payload.uid/code + remains[]), описывает только поля, которые сайт реально читает
+- **Supervisor-процесс** `[program:external-remains-consumer]` в `docker/supervisor/conf.d/worker.conf` (1 процесс, `tries=3`, `backoff=30`, отдельный лог)
+- **Config** `erp.external_remains.tyumen_warehouse_uuid` + ENV `EXTERNAL_REMAINS_TYUMEN_WAREHOUSE_UUID` (дефолт `f8083799-0838-11e0-a1ea-505054503030`)
+- **Раздел документации** [Внешние остатки (ESB)](rules/external-remains.md) с описанием протокола, алгоритма и ограничений
+
+### Причина
+
+- На момент релиза 12.14.0 очередь `external.remains_for_website` была создана, shovel тянул сообщения с ESB, но потребителя не было — сообщения копились и удалялись по TTL (3 дня), остатки центрального склада не попадали в БД сайта
+- Из 12 складов, по которым 1С присылает остатки, сайт Pecado торгует только одним — «Тюмень Основной». Фильтрация по UUID склада на стороне consumer-а проще, чем настраивать routing на стороне ESB (нет headers-exchange, топология fanout)
+- Доступный остаток = `quantity - reserve`, чтобы не показывать в каталоге зарезервированные под чужие заказы позиции
+
+### Ограничения
+
+- Поле `organization_remains[]` игнорируется: на сайте нет справочника юрлиц-продавцов, и названия организаций в сообщениях не передаются (только UUID). Если в будущем потребуется разрез по ООО Андрей — добавим отдельной миграцией и фильтром
+- Если товар не найден ни по `payload.uid`, ни по `payload.code` — сообщение молча пропускается (каталог ведёт 1С Pecado, не ESB)
+
+---
+
 ## [12.14.0] — 2026-04-21
 
 > Инфраструктура: shovel с московского ESB для внешних остатков, persistent-volume и автопровижининг пользователей RabbitMQ

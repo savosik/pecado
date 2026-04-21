@@ -10,13 +10,13 @@
       
       
       
-        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/tests/phase-3-e2e/">
+        <link rel="canonical" href="https://dev.pecado.ru/docs/erp-guide/rules/external-remains/">
       
       
-        <link rel="prev" href="../phase-2-outbound/">
+        <link rel="prev" href="../stocks/">
       
       
-        <link rel="next" href="../phase-4-edge/">
+        <link rel="next" href="../contractors/">
       
       
         
@@ -27,7 +27,7 @@
     
     
       
-        <title>Фаза 3: Сквозные сценарии - Pecado ERP — Интеграция 1С ↔ Сайт</title>
+        <title>Внешние остатки (ESB) - Pecado ERP — Интеграция 1С ↔ Сайт</title>
       
     
     
@@ -78,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#3" class="md-skip">
+        <a href="#esb" class="md-skip">
           Перейти к содержанию
         </a>
       
@@ -114,7 +114,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Фаза 3: Сквозные сценарии
+              Внешние остатки (ESB)
             
           </span>
         </div>
@@ -343,8 +343,10 @@
       
   
   
+    
   
   
+  
     
     
     
@@ -355,13 +357,11 @@
       
     
     
-    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
         
           
           <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
@@ -382,7 +382,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
@@ -400,7 +400,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../rules/partners/" class="md-nav__link">
+      <a href="../partners/" class="md-nav__link">
         
   
   
@@ -428,7 +428,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../rules/catalog/" class="md-nav__link">
+      <a href="../catalog/" class="md-nav__link">
         
   
   
@@ -456,7 +456,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../rules/prices/" class="md-nav__link">
+      <a href="../prices/" class="md-nav__link">
         
   
   
@@ -484,7 +484,7 @@
   
   
     <li class="md-nav__item">
-      <a href="../../rules/stocks/" class="md-nav__link">
+      <a href="../stocks/" class="md-nav__link">
         
   
   
@@ -492,487 +492,6 @@
     
   
     Остатки
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/external-remains/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Внешние остатки (ESB)
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/contractors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Контрагенты
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/orders/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Заказы
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/returns/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Возвраты
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/shipments/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Реализации
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/balances/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Баланс
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/individual-prices/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Индивидуальные цены
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/pricing-model/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Ценообразование
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/product-attributes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Атрибуты товаров
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/client-segments/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Клиентские сегменты
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/promotions/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Промо-флаги товаров
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../rules/data-normalization/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Нормализация данных
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-    
-  
-  
-  
-    
-    
-    
-    
-      
-        
-        
-      
-    
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
-      
-        
-        
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
-            
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Тест-план
-  
-
-    
-  </span>
-  
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            
-  
-    Тест-план
-  
-
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../phase-0-setup/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Фаза 0: Подготовка
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../phase-1-inbound/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Фаза 1: 1С → Сайт
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../phase-2-outbound/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Фаза 2: Сайт → 1С
   
 
     
@@ -1009,7 +528,7 @@
   <span class="md-ellipsis">
     
   
-    Фаза 3: Сквозные сценарии
+    Внешние остатки (ESB)
   
 
     
@@ -1027,7 +546,7 @@
   <span class="md-ellipsis">
     
   
-    Фаза 3: Сквозные сценарии
+    Внешние остатки (ESB)
   
 
     
@@ -1053,10 +572,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#31" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.1 — Полный жизненный цикл заказа
+        Источник данных
       
     </span>
   </a>
@@ -1064,10 +583,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#32" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.2 — Жизненный цикл партнёра
+        Что берёт сайт
       
     </span>
   </a>
@@ -1075,10 +594,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#33" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.3 — Цепочка: Реализация → Баланс
+        Алгоритм обработки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#payload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Структура подчёркнуто интересующей части payload
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Идемпотентность
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что НЕ делает сайт в ответ на это событие
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ограничения и известные нюансы
       
     </span>
   </a>
@@ -1101,7 +664,488 @@
   
   
     <li class="md-nav__item">
-      <a href="../phase-4-edge/" class="md-nav__link">
+      <a href="../contractors/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Контрагенты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../orders/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Заказы
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../returns/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Возвраты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../shipments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Реализации
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../balances/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Баланс
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../individual-prices/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Индивидуальные цены
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../pricing-model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ценообразование
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../product-attributes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Атрибуты товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../client-segments/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Клиентские сегменты
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../promotions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Промо-флаги товаров
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../data-normalization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Нормализация данных
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Тест-план
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Тест-план
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-0-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 0: Подготовка
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-1-inbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 1: 1С → Сайт
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-2-outbound/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 2: Сайт → 1С
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-3-e2e/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Фаза 3: Сквозные сценарии
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tests/phase-4-edge/" class="md-nav__link">
         
   
   
@@ -1355,10 +1399,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#31" class="md-nav__link">
+  <a href="#_1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.1 — Полный жизненный цикл заказа
+        Источник данных
       
     </span>
   </a>
@@ -1366,10 +1410,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#32" class="md-nav__link">
+  <a href="#_2" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.2 — Жизненный цикл партнёра
+        Что берёт сайт
       
     </span>
   </a>
@@ -1377,10 +1421,54 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#33" class="md-nav__link">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
-        3.3 — Цепочка: Реализация → Баланс
+        Алгоритм обработки
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#payload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Структура подчёркнуто интересующей части payload
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Идемпотентность
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Что НЕ делает сайт в ответ на это событие
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_6" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Ограничения и известные нюансы
       
     </span>
   </a>
@@ -1404,164 +1492,116 @@
 
 
 
-<h1 id="3">Фаза 3: Сквозные сценарии<a class="headerlink" href="#3" title="Permanent link">&para;</a></h1>
-<hr />
-<h2 id="31">3.1 — Полный жизненный цикл заказа<a class="headerlink" href="#31" title="Permanent link">&para;</a></h2>
+<h1 id="esb">Внешние остатки (московский ESB)<a class="headerlink" href="#esb" title="Permanent link">&para;</a></h1>
+<p>Этот раздел описывает обработку событий <code>product.quantity.updated</code>, приходящих с внешнего ESB через shovel <code>moscow-remains</code> в очередь <code>external.remains_for_website</code>. Это <strong>отдельный протокол от 1С↔Сайт</strong> (envelope <code>{service, uid, event: {name, payload}, ...}</code>), поэтому он не описан в AsyncAPI 1С↔Сайт — только локальной JSON Schema <code>external.product_quantity_updated.json</code>.</p>
+<h2 id="_1">Источник данных<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
-<th>Шаг</th>
-<th>Кто</th>
-<th>Действие</th>
-<th>Проверка</th>
+<th>Звено</th>
+<th>Значение</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>1</td>
-<td>🟢 Сайт</td>
-<td>Пользователь оформляет заказ</td>
-<td><code>order.created</code> в <code>erp_out.orders</code>, статус <code>pending</code></td>
+<td>Публикатор</td>
+<td><code>service-products</code> (внешний ESB, <code>93.125.18.73:5672</code>)</td>
 </tr>
 <tr>
-<td>2</td>
-<td>🔵 1С</td>
-<td>Подтверждает → <code>order.updated</code> <code>confirmed</code></td>
-<td>Статус → <code>confirmed</code>, запись в <code>order_status_histories</code></td>
+<td>Канал доставки</td>
+<td>RabbitMQ Shovel <code>moscow-remains</code> → fanout <code>external.remains</code> → <code>external.remains_for_website</code></td>
 </tr>
 <tr>
-<td>3</td>
-<td>🔵 1С</td>
-<td>Готовит к отгрузке → <code>order.updated</code> <code>ready_to_ship</code></td>
-<td>Статус → <code>ready_to_ship</code></td>
+<td>Частота</td>
+<td>При каждом изменении остатков/цен любого товара в 1С московского офиса</td>
 </tr>
 <tr>
-<td>4</td>
-<td>🔵 1С</td>
-<td>Изменил позиции → <code>order.updated</code> с <code>items[]</code></td>
-<td>Позиции пересозданы, diff в <code>order_change_logs</code></td>
-</tr>
-<tr>
-<td>5</td>
-<td>🔵 1С</td>
-<td>Реализация → <code>shipment.created</code></td>
-<td>Реализация в ЛК</td>
-</tr>
-<tr>
-<td>6</td>
-<td>🔵 1С</td>
-<td>Закрывает → <code>order.updated</code> <code>closed</code></td>
-<td>Статус → <code>closed</code></td>
-</tr>
-<tr>
-<td>7</td>
-<td>🔵 1С</td>
-<td>Удаляет → <code>order.deleted</code></td>
-<td>Статус → <code>deleted</code></td>
-</tr>
-<tr>
-<td>8</td>
-<td>🔵 1С</td>
-<td>Баланс → <code>balance.updated</code></td>
-<td>Баланс обновлён</td>
+<td>Размер сообщения</td>
+<td>~215 КБ (полная карточка товара + остатки + цены + медиа)</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Итоговая проверка:</strong></p>
+<h2 id="_2">Что берёт сайт<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
+<p>Сайт использует <strong>только остатки по складу «Тюмень Основной»</strong>. Все прочие склады (Москва, региональные, технические) из сообщения игнорируются — они не относятся к ассортименту сайта Pecado.</p>
+<p>UUID склада задаётся в <code>config/erp.php</code>:</p>
+<div class="highlight"><pre><span></span><code><span class="x">&#39;external_remains&#39; =&gt; [</span>
+<span class="x">    &#39;tyumen_warehouse_uuid&#39; =&gt; env(&#39;EXTERNAL_REMAINS_TYUMEN_WAREHOUSE_UUID&#39;, &#39;f8083799-0838-11e0-a1ea-505054503030&#39;),</span>
+<span class="x">],</span>
+</code></pre></div>
+<p>Соответствует записи в таблице <code>warehouses</code>:</p>
+<table>
+<thead>
+<tr>
+<th>id</th>
+<th>name</th>
+<th>external_id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td>Тюмень Основной</td>
+<td><code>f8083799-0838-11e0-a1ea-505054503030</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="_3">Алгоритм обработки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
+<p><code>ExternalRemainsJob</code> принимает сырое сообщение, проверяет идемпотентность по <code>envelope.uid</code> и передаёт в <code>HandleExternalProductQuantityUpdated</code>. Handler делает следующее:</p>
+<ol>
+<li><strong>Поиск товара:</strong></li>
+<li>сначала <code>Product::where('external_id', payload.uid)</code> (основной путь — UUID в 1С);</li>
+<li>если не найдено — fallback <code>Product::where('code', payload.code)</code> (на случай, если <code>external_id</code> ещё не проставлен, но код известен);</li>
+<li>если всё ещё не найдено — событие молча пропускается (<code>Log::info</code>).</li>
+<li><strong>Поиск склада:</strong> <code>Warehouse::where('external_id', config('erp.external_remains.tyumen_warehouse_uuid'))</code>. Если склад не зарегистрирован — пропуск с <code>Log::warning</code>.</li>
+<li><strong>Поиск записи по складу в <code>payload.remains[]</code>:</strong> ищем элемент с <code>warehouse_uid = UUID Тюмени</code>. Если в сообщении по Тюмени нет записи — пропуск (<code>Log::info</code>).</li>
+<li>
+<p><strong>Расчёт доступного остатка:</strong></p>
+<div class="highlight"><pre><span></span><code>available = max(0, remains.quantity - remains.reserve)
+</code></pre></div>
+</li>
+</ol>
+<p>Поле <code>total</code> игнорируется (оно эквивалентно <code>quantity + expected</code> по данным ESB и не отражает доступный остаток для продажи).
+5. <strong>Запись в БД:</strong> <code>product-&gt;warehouses()-&gt;syncWithoutDetaching([warehouse-&gt;id =&gt; ['quantity' =&gt; $available]])</code>. Это гарантирует, что остатки других складов в <code>product_warehouse</code> <strong>не затираются</strong>.</p>
+<h2 id="payload">Структура подчёркнуто интересующей части payload<a class="headerlink" href="#payload" title="Permanent link">&para;</a></h2>
+<div class="highlight"><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;service&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;service-products&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;uid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0b3a6e11-0a77-4de7-b7c8-1fe0490288ce&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;event&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;product.quantity.updated&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;payload&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;uid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cda07397-d5e6-11e8-8127-00155d00e605&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0T-00012400&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;remains&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;warehouse_uid&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;f8083799-0838-11e0-a1ea-505054503030&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;quantity&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;reserve&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;expected&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;nds&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">          </span><span class="nt">&quot;updated_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-04-20 16:23:45&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">      </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>Полный envelope содержит ещё массив <code>organization_remains[]</code> (разрез по юрлицам), блок <code>parameters[]</code>, <code>prices[]</code>, <code>media[]</code> и т.д. — <strong>всё это сайт не использует</strong>, обработка каталога и цен идёт отдельным каналом из 1С Pecado (события <code>product.updated</code>, <code>price.updated</code>).</p>
+<h2 id="_4">Идемпотентность<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
+<p>В таблицу <code>erp_processed_messages</code> пишется ключ <code>external-remains:{envelope.uid}</code> — префикс отделяет ESB-сообщения от 1С-сообщений (чтобы UUID не пересекались).</p>
+<h2 id="_5">Что НЕ делает сайт в ответ на это событие<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
 <ul>
-<li>[ ] <code>order_status_histories</code>: <code>pending</code> → <code>confirmed</code> → <code>ready_to_ship</code> → <code>closed</code> → <code>deleted</code></li>
-<li>[ ] <code>order_change_logs</code>: изменения позиций зафиксированы</li>
-<li>[ ] Реализация привязана к заказу</li>
-<li>[ ] Баланс отражает задолженность</li>
+<li>Не обновляет название, описание, параметры, медиа товара (это делают <code>product.updated</code> и <code>product.created</code> из 1С Pecado, не из ESB).</li>
+<li>Не обновляет цены (для них отдельный канал — <code>price.updated</code>).</li>
+<li>Не разносит остатки по юрлицам (<code>organization_remains[]</code> игнорируется — отдельные организации не представлены в БД).</li>
+<li>Не создаёт товар, если он не найден — каталог управляется 1С Pecado.</li>
 </ul>
-<hr />
-<h2 id="32">3.2 — Жизненный цикл партнёра<a class="headerlink" href="#32" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Шаг</th>
-<th>Кто</th>
-<th>Действие</th>
-<th>Проверка</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>🟢 Сайт</td>
-<td>Регистрация</td>
-<td><code>partner.created</code> → <code>erp_out.partners</code></td>
-</tr>
-<tr>
-<td>2</td>
-<td>🔵 1С</td>
-<td><code>partner.created</code> с <code>client_status: "silver"</code></td>
-<td>Статус Silver</td>
-</tr>
-<tr>
-<td>3</td>
-<td>🔵 1С</td>
-<td>Повышение → <code>client_status: "gold"</code></td>
-<td>Статус → Gold</td>
-</tr>
-<tr>
-<td>4</td>
-<td>🔵 1С</td>
-<td>Инд. → <code>client_status: "individual"</code></td>
-<td>Статус → Индивидуальный</td>
-</tr>
-<tr>
-<td>5</td>
-<td>🔵 1С</td>
-<td>Убирает → <code>client_status: null</code></td>
-<td>Статус сброшен</td>
-</tr>
-<tr>
-<td>6</td>
-<td>🔵 1С</td>
-<td>Деактивация → <code>partner.deleted</code></td>
-<td><code>is_active = false</code></td>
-</tr>
-</tbody>
-</table>
-<hr />
-<h2 id="33">3.3 — Цепочка: Реализация → Баланс<a class="headerlink" href="#33" title="Permanent link">&para;</a></h2>
-<table>
-<thead>
-<tr>
-<th>Шаг</th>
-<th>Кто</th>
-<th>Действие</th>
-<th>Проверка</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>1</td>
-<td>🔵 1С</td>
-<td><code>shipment.created</code></td>
-<td>Реализация появилась</td>
-</tr>
-<tr>
-<td>2</td>
-<td>🔵 1С</td>
-<td><code>balance.updated</code> с <code>overdue_details</code></td>
-<td>Просрочка детализирована</td>
-</tr>
-<tr>
-<td>3</td>
-<td>🔵 1С</td>
-<td><code>shipment.updated</code> (перепроведение)</td>
-<td>Реализация обновлена</td>
-</tr>
-<tr>
-<td>4</td>
-<td>🔵 1С</td>
-<td><code>balance.updated</code> с новой суммой</td>
-<td>Баланс пересчитан</td>
-</tr>
-</tbody>
-</table>
+<h2 id="_6">Ограничения и известные нюансы<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Отсутствует склад в БД</strong> → консьюмер логирует предупреждение и удаляет сообщение. Это корректно для локальных dev-сред без полного сид-дампа warehouses.</li>
+<li><strong>TTL 3 дня</strong> (policy <code>external-remains-ttl</code>) — если consumer не работает дольше 3 суток, сообщения удаляются. Для восстановления остатков на сайте можно запросить у 1С перевыгрузку через ESB.</li>
+<li><strong>Consumer не конкурентный</strong> — один процесс supervisor (<code>numprocs=1</code>). Поток сообщений из ESB невысокий (каждая карточка ≤1-2 раз в сутки в среднем), и при наличии двух воркеров одна запись по одному товару может обновляться двумя разными сообщениями конкурентно — лучше избегать.</li>
+</ul>
 
 
 

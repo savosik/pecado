@@ -512,6 +512,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../external-remains/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Внешние остатки (ESB)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../contractors/" class="md-nav__link">
         
   
@@ -1413,6 +1441,7 @@
 <li><code>contractor_inn</code> — привязка к контрагенту по ИНН</li>
 <li><strong>(v12.3)</strong> Если передан <code>number</code> — сайт сохраняет его как <code>erp_number</code>. Это номер реализации из 1С, который отображается пользователю</li>
 <li><strong>(v12.10)</strong> У <code>shipment.updated</code> <strong>собственная JSON Schema</strong> (<code>shipment.updated.json</code>), отделённая от <code>shipment.created.json</code>. Пока структуры payload-ов идентичны; разделение выполнено на вырост — для независимой эволюции <code>updated</code> при появлении у него собственных полей</li>
+<li><strong>(v12.11) <code>number</code> обязательно для <code>shipment.created</code> и <code>shipment.updated</code>.</strong> 1С обязана передавать номер реализации непустой строкой. Сообщения без <code>number</code> отклоняются валидатором и отправляются в DLQ. Причина: без ERP-номера покупатель в ЛК видит только технический <code>id</code> сайта, а менеджер в 1С — ERP-номер; это ломает коммуникацию клиент-менеджер при обсуждении отгрузки</li>
 </ul>
 <h2 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1421,6 +1450,7 @@
 <li>[ ] Позиции связаны с заказами через <code>order_uuid</code></li>
 <li>[ ] Реализация отображается в ЛК</li>
 <li>[ ] <strong>(v12.10)</strong> Валидация <code>shipment.updated</code> использует схему <code>shipment.updated.json</code> (поле <code>event</code> = <code>shipment.updated</code>)</li>
+<li>[ ] <strong>(v12.11)</strong> <code>shipment.created</code> / <code>shipment.updated</code> без поля <code>number</code> или с пустой строкой отклоняются на стадии валидации и не создают/не обновляют реализацию</li>
 </ul>
 
 

@@ -1,0 +1,62 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "external.product_quantity_updated",
+    "title": "product.quantity.updated (ESB → Сайт через external.remains_for_website)",
+    "description": "Envelope внешнего ESB: service-products публикует полную карточку товара с массивом остатков по складам. Сайт читает только поля, нужные для обновления остатка склада «Тюмень Основной» — остальное игнорируется. Источник: shovel moscow-remains (см. docs-erp/content/infrastructure.md).",
+    "type": "object",
+    "properties": {
+        "service": {
+            "type": "string"
+        },
+        "uid": {
+            "type": "string",
+            "description": "UUID конкретного сообщения. Используется как message_id для идемпотентности."
+        },
+        "event": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string",
+                    "const": "product.quantity.updated"
+                },
+                "payload": {
+                    "type": "object",
+                    "properties": {
+                        "uid": {
+                            "type": "string",
+                            "description": "UUID товара в 1С. Первичный ключ для поиска Product.external_id."
+                        },
+                        "code": {
+                            "type": "string",
+                            "description": "Код товара в 1С (например, \"0T-00012400\"). Fallback при отсутствии товара по uid — поиск по Product.code."
+                        },
+                        "remains": {
+                            "type": "array",
+                            "description": "Агрегированные остатки по складам. Нас интересует только запись с warehouse_uid склада Тюмень.",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "warehouse_uid": {"type": "string"},
+                                    "quantity": {"type": "number"},
+                                    "reserve": {"type": "number"},
+                                    "total": {"type": "number"},
+                                    "expected": {"type": "number"},
+                                    "nds": {"type": "boolean"},
+                                    "updated_at": {"type": "string"}
+                                },
+                                "required": ["warehouse_uid", "quantity", "reserve"],
+                                "additionalProperties": true
+                            }
+                        }
+                    },
+                    "required": ["uid", "remains"],
+                    "additionalProperties": true
+                }
+            },
+            "required": ["name", "payload"],
+            "additionalProperties": true
+        }
+    },
+    "required": ["event"],
+    "additionalProperties": true
+}
