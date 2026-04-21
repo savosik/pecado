@@ -34,8 +34,17 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
 
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+    const statusBadge = (
+        <Badge
+            colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
+            variant="subtle" px="3" py="1" borderRadius="full" fontSize="sm"
+        >
+            {shipment.status_label}
+        </Badge>
+    );
+
     return (
-        <CabinetLayout title={`Отгрузка ${shipment.number}`}>
+        <CabinetLayout title={`Отгрузка ${shipment.number}`} actions={statusBadge}>
             <Head title={`Отгрузка ${shipment.number} — Pecado`} />
 
             {/* Назад */}
@@ -50,19 +59,6 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
 
             {/* Основная информация */}
             <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb={6} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-                <Card.Header>
-                    <Flex justify="space-between" align="center" flexWrap="wrap" gap="3">
-                        <VStack align="start" gap="1">
-                            <Text fontWeight="700" fontSize="xl">Отгрузка {shipment.number}</Text>
-                        </VStack>
-                        <Badge
-                            colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
-                            variant="subtle" px="3" py="1" borderRadius="full" fontSize="sm"
-                        >
-                            {shipment.status_label}
-                        </Badge>
-                    </Flex>
-                </Card.Header>
                 <Card.Body>
                     <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} gap={5}>
                         <InfoBlock
