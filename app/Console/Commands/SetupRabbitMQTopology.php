@@ -132,7 +132,10 @@ class SetupRabbitMQTopology extends Command
             $channel->close();
             $connection->close();
 
-            // 8. Dynamic shovel с московского ESB
+            // 8. Policies (TTL и прочие runtime-свойства очередей)
+            $this->setupPolicies();
+
+            // 9. Dynamic shovel с московского ESB
             $this->setupMoscowShovel();
 
             $this->info('');
@@ -143,6 +146,70 @@ class SetupRabbitMQTopology extends Command
             $this->error("Ошибка: {$e->getMessage()}");
 
             return Command::FAILURE;
+        }
+    }
+
+    /**
+     * Регистрация RabbitMQ policies через Management API.
+     *
+     * Policies применяются к очередям/exchanges по regex-паттерну и задают
+     * runtime-свойства (TTL, max-length, HA, и т.д.), которые нельзя изменить
+     * через queue_declare на уже существующей очереди.
+     */
+    private function setupPolicies(): void
+    {
+        $this->info('');
+        $this->info('Настройка policies...');
+
+        $ttlMs = (int) config('erp.external_remains_ttl_ms', 3 * 24 * 60 * 60 * 1000);
+
+        $policies = [
+            'external-remains-ttl' => [
+                'pattern' => '^external\.remains_for_.*$',
+                'apply-to' => 'queues',
+                'definition' => [
+                    'message-ttl' => $ttlMs,
+                ],
+                'priority' => 0,
+            ],
+        ];
+
+        foreach ($policies as $name => $body) {
+            $this->putPolicy($name, $body);
+        }
+    }
+
+    private function putPolicy(string $name, array $body): void
+    {
+        $host = config('queue.connections.rabbitmq.hosts.0.host', 'rabbitmq');
+        $port = config('queue.connections.rabbitmq.management.port', 15672);
+        $user = config('queue.connections.rabbitmq.management.user', 'guest');
+        $pass = config('queue.connections.rabbitmq.management.password', 'guest');
+        $vhost = config('queue.connections.rabbitmq.hosts.0.vhost', '/');
+
+        $url = sprintf(
+            'http://%s:%s/api/policies/%s/%s',
+            $host,
+            $port,
+            rawurlencode($vhost),
+            rawurlencode($name),
+        );
+
+        try {
+            $response = Http::withBasicAuth($user, $pass)
+                ->timeout(10)
+                ->asJson()
+                ->put($url, $body);
+
+            if ($response->successful()) {
+                $this->info("  ✅ Policy '{$name}': pattern={$body['pattern']}, definition=".json_encode($body['definition']));
+
+                return;
+            }
+
+            $this->error("  ❌ Policy '{$name}' не применена (HTTP {$response->status()}): {$response->body()}");
+        } catch (\Exception $e) {
+            $this->error("  ❌ Ошибка Management API: {$e->getMessage()}");
         }
     }
 

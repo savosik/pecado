@@ -37,4 +37,16 @@ return [
         'prefetch_count' => (int) env('MOSCOW_ESB_SHOVEL_PREFETCH', 1000),
         'reconnect_delay' => (int) env('MOSCOW_ESB_SHOVEL_RECONNECT_DELAY', 5),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | TTL сообщений в очередях external.remains_for_*
+    |--------------------------------------------------------------------------
+    |
+    | Применяется через RabbitMQ policy (pattern `^external\.remains_for_.*$`).
+    | По умолчанию 3 дня — совпадает с TTL очереди-источника на ESB,
+    | чтобы в локальных очередях не накапливалось больше, чем на источнике.
+    |
+    */
+    'external_remains_ttl_ms' => (int) env('EXTERNAL_REMAINS_TTL_MS', 3 * 24 * 60 * 60 * 1000),
 ];
