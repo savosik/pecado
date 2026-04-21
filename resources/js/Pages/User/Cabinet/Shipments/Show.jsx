@@ -419,24 +419,26 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                         }, 0);
                         return (
                             <Flex
-                                justify="flex-end" gap="6" p="4" flexWrap="wrap"
+                                justify="flex-end" p="4"
                                 borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
                                 _dark={{ borderColor: 'gray.700' }}
                             >
-                                <HStack gap="2">
-                                    <Text fontSize="sm" color="gray.500">Итого:</Text>
-                                    <Text fontWeight="700" fontFamily="mono">
-                                        {fmt(shipment.total_converted)} {currencySymbol}
-                                    </Text>
-                                </HStack>
-                                {totalSavings > 0 && (
+                                <VStack gap="1" align="end">
                                     <HStack gap="2">
-                                        <Text fontSize="sm" color="gray.500">Экономия:</Text>
-                                        <Text fontWeight="700" fontFamily="mono" color="green.600" _dark={{ color: 'green.400' }}>
-                                            {fmt(totalSavings)} {currencySymbol}
+                                        <Text fontSize="sm" color="gray.500">Итого:</Text>
+                                        <Text fontWeight="700" fontFamily="mono">
+                                            {fmt(shipment.total_converted)} {currencySymbol}
                                         </Text>
                                     </HStack>
-                                )}
+                                    {totalSavings > 0 && (
+                                        <HStack gap="2">
+                                            <Text fontSize="sm" color="gray.500">Экономия:</Text>
+                                            <Text fontWeight="700" fontFamily="mono" color="green.600" _dark={{ color: 'green.400' }}>
+                                                {fmt(totalSavings)} {currencySymbol}
+                                            </Text>
+                                        </HStack>
+                                    )}
+                                </VStack>
                             </Flex>
                         );
                     })()}
