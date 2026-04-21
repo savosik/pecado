@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Head } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import MediaCard from './MediaCard';
@@ -39,7 +39,36 @@ const SORT_OPTIONS = [
     { value: 'name_desc', label: 'По имени Я-А' },
 ];
 
+const DEFAULT_SORT = 'newest';
+
+// Прочитать начальное состояние фильтров из query-string — это даёт поделиться
+// ссылкой на конкретную выборку медиатеки.
+function readInitialFilters() {
+    if (typeof window === 'undefined') {
+        return {
+            search: '',
+            type: '',
+            collection: '',
+            modelType: '',
+            sort: DEFAULT_SORT,
+            page: 1,
+        };
+    }
+    const params = new URLSearchParams(window.location.search);
+    const pageRaw = parseInt(params.get('page') ?? '', 10);
+    return {
+        search: params.get('search') ?? '',
+        type: params.get('type') ?? '',
+        collection: params.get('collection') ?? '',
+        modelType: params.get('model_type') ?? '',
+        sort: params.get('sort') ?? DEFAULT_SORT,
+        page: Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1,
+    };
+}
+
 export default function Index({ collections, modelTypes }) {
+    const initialFilters = useMemo(readInitialFilters, []);
+
     const [media, setMedia] = useState([]);
     const [pagination, setPagination] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -47,13 +76,13 @@ export default function Index({ collections, modelTypes }) {
     const [downloading, setDownloading] = useState(false);
 
     // Filters
-    const [search, setSearch] = useState('');
-    const [debouncedSearch, setDebouncedSearch] = useState('');
-    const [type, setType] = useState('');
-    const [collection, setCollection] = useState('');
-    const [modelType, setModelType] = useState('');
-    const [sort, setSort] = useState('newest');
-    const [page, setPage] = useState(1);
+    const [search, setSearch] = useState(initialFilters.search);
+    const [debouncedSearch, setDebouncedSearch] = useState(initialFilters.search);
+    const [type, setType] = useState(initialFilters.type);
+    const [collection, setCollection] = useState(initialFilters.collection);
+    const [modelType, setModelType] = useState(initialFilters.modelType);
+    const [sort, setSort] = useState(initialFilters.sort);
+    const [page, setPage] = useState(initialFilters.page);
     const perPage = 24;
 
     // Lightbox
@@ -61,13 +90,40 @@ export default function Index({ collections, modelTypes }) {
     const [lightboxIndex, setLightboxIndex] = useState(0);
 
     // Debounce search input
+    const isFirstSearchRender = useRef(true);
     useEffect(() => {
+        // Пропускаем первый рендер — debouncedSearch уже совпадает с URL,
+        // иначе страница бы улетела на page=1 и стерла ?page из ссылки.
+        if (isFirstSearchRender.current) {
+            isFirstSearchRender.current = false;
+            return;
+        }
         const timeout = setTimeout(() => {
             setDebouncedSearch(search.trim());
             setPage(1);
         }, 300);
         return () => clearTimeout(timeout);
     }, [search]);
+
+    // Синхронизация фильтров с URL: replaceState, чтобы не засорять history
+    // каждым изменением фильтра/страницы.
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const params = new URLSearchParams();
+        if (debouncedSearch) params.set('search', debouncedSearch);
+        if (type) params.set('type', type);
+        if (collection) params.set('collection', collection);
+        if (modelType) params.set('model_type', modelType);
+        if (sort && sort !== DEFAULT_SORT) params.set('sort', sort);
+        if (page > 1) params.set('page', String(page));
+
+        const query = params.toString();
+        const nextUrl = window.location.pathname + (query ? `?${query}` : '') + window.location.hash;
+        const currentUrl = window.location.pathname + window.location.search + window.location.hash;
+        if (nextUrl !== currentUrl) {
+            window.history.replaceState(window.history.state, '', nextUrl);
+        }
+    }, [debouncedSearch, type, collection, modelType, sort, page]);
 
     // Fetch media when filters change
     const fetchMedia = useCallback(async () => {
