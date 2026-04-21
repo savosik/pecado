@@ -53,7 +53,12 @@ class MediaController extends Controller
         $perPage = $request->integer('per_page', 24);
 
         if ($search) {
-            // Поиск через Meilisearch с фильтрами
+            // Поиск через Meilisearch с фильтрами.
+            // Берём ключи из индекса, а затем строим обычный Eloquent-запрос
+            // по существующим записям — иначе "призраки" в индексе (id, удалённых
+            // из БД) ломают пагинацию: total от Meilisearch больше реального числа
+            // моделей, на первой странице оказывается одна карточка, на следующих —
+            // ещё несколько, а многие страницы пустые.
             $meilisearchFilters = $this->buildMeilisearchFilters($type, $collection, $modelType);
 
             $mediaQuery = Media::search($search);
@@ -62,10 +67,12 @@ class MediaController extends Controller
                 $mediaQuery->options(['filter' => $meilisearchFilters]);
             }
 
-            $media = $mediaQuery->query(function ($query) use ($sort) {
-                $query->with('model');
-                $this->applySorting($query, $sort);
-            })->paginate($perPage)->withQueryString();
+            $ids = $mediaQuery->keys()->all();
+
+            $query = Media::query()->with('model')->whereIn('id', $ids);
+            $this->applySorting($query, $sort);
+
+            $media = $query->paginate($perPage)->withQueryString();
         } else {
             // Без поиска — обычный Eloquent запрос с фильтрами
             $query = Media::query()->with('model');
