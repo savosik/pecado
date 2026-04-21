@@ -13,7 +13,8 @@ class ReturnItem extends Model
 
     protected $fillable = [
         'return_id',
-        'order_id',
+        'shipment_item_id',
+        'shipment_id',
         'product_id',
         'quantity',
         'reason',
@@ -29,25 +30,21 @@ class ReturnItem extends Model
         'subtotal' => 'decimal:2',
     ];
 
-    /**
-     * Get the return that owns the item.
-     */
     public function return(): BelongsTo
     {
         return $this->belongsTo(ProductReturn::class, 'return_id');
     }
 
-    /**
-     * Get the order for this return item.
-     */
-    public function order(): BelongsTo
+    public function shipmentItem(): BelongsTo
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(ShipmentItem::class);
     }
 
-    /**
-     * Get the product for this return item.
-     */
+    public function shipment(): BelongsTo
+    {
+        return $this->belongsTo(Shipment::class);
+    }
+
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);

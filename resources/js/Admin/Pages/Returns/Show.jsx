@@ -249,7 +249,7 @@ const ReturnShow = () => {
                         <Table.Header>
                             <Table.Row>
                                 <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                <Table.ColumnHeader>Заказ</Table.ColumnHeader>
+                                <Table.ColumnHeader>Реализация</Table.ColumnHeader>
                                 <Table.ColumnHeader>Причина</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Цена</Table.ColumnHeader>
                                 <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
@@ -268,11 +268,16 @@ const ReturnShow = () => {
                                         )}
                                     </Table.Cell>
                                     <Table.Cell>
-                                        {item.order ? (
+                                        {item.shipment ? (
                                             <VStack align="start" gap={0}>
-                                                <Text fontSize="sm" fontFamily="mono">
-                                                    {item.order.number || ("#" + item.order.id)}
-                                                </Text>
+                                                <Badge colorPalette="blue" fontSize="xs">
+                                                    {item.shipment.number}
+                                                </Badge>
+                                                {item.shipment.date && (
+                                                    <Text fontSize="xs" color="fg.muted">
+                                                        от {item.shipment.date}
+                                                    </Text>
+                                                )}
                                             </VStack>
                                         ) : "—"}
                                     </Table.Cell>
@@ -284,9 +289,9 @@ const ReturnShow = () => {
                                             </Text>
                                         )}
                                     </Table.Cell>
-                                    <Table.Cell textAlign="right">{item.price} ₽</Table.Cell>
+                                    <Table.Cell textAlign="right">{item.price} {item.shipment?.currency_code || "₽"}</Table.Cell>
                                     <Table.Cell textAlign="right">{item.quantity}</Table.Cell>
-                                    <Table.Cell textAlign="right" fontWeight="medium">{item.subtotal} ₽</Table.Cell>
+                                    <Table.Cell textAlign="right" fontWeight="medium">{item.subtotal} {item.shipment?.currency_code || "₽"}</Table.Cell>
                                 </Table.Row>
                             ))}
                         </Table.Body>

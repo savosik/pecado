@@ -30,18 +30,42 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
         label: `${initialUser.name} (${initialUser.email})`,
     } : null);
 
+    const initialItems = (returnData.items || []).map((it) => ({
+        id: it.id,
+        shipment_item_id: it.shipment_item_id,
+        product: it.product,
+        shipment: it.shipment,
+        currency_code: it.shipment?.currency_code,
+        available_quantity: it.quantity,
+        quantity: it.quantity,
+        price: Number(it.price),
+        subtotal: Number(it.subtotal),
+        reason: it.reason,
+        reason_comment: it.reason_comment,
+    }));
+
     const { data, setData, put, processing, errors , transform } = useForm({
         user_id: returnData.user_id || "",
         status: returnData.status || "pending",
         comment: returnData.comment || "",
         admin_comment: returnData.admin_comment || "",
-        items: returnData.items || [],
+        items: initialItems,
     });
 
     const closeAfterSaveRef = useRef(false);
 
-    transform((data) => ({
-        ...data,
+    transform((payload) => ({
+        user_id: payload.user_id,
+        status: payload.status,
+        comment: payload.comment,
+        admin_comment: payload.admin_comment,
+        items: payload.items.map((it) => ({
+            id: it.id ?? null,
+            shipment_item_id: it.shipment_item_id,
+            quantity: it.quantity,
+            reason: it.reason,
+            reason_comment: it.reason_comment ?? null,
+        })),
         _close: closeAfterSaveRef.current ? 1 : 0,
     }));
 
@@ -225,6 +249,8 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
                             onChange={(items) => setData("items", items)}
                             reasons={reasons}
                             userId={data.user_id}
+                            searchShipmentsRoute="admin.returns.search-shipments"
+                            shipmentItemsRoute="admin.returns.shipment-items"
                         />
                         {errors.items && (
                             <Box mt={4} p={4} bg="red.50" borderRadius="md">

@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 12.11.0
+  version: 12.13.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -286,8 +286,12 @@ channels:
     address: erp_out.returns
     title: Возвраты (Сайт → 1С)
     description: |
-      Очередь для возвратов, инициированных на сайте.
-      Routing key: `return.created`
+      Очередь для возвратов, инициированных на сайте. Routing key: `return.created`.
+
+      С версии **12.13.0** возврат формируется на основании реализаций (shipments),
+      а не заказов. Каждая позиция возврата обязательно несёт `shipment_uuid`,
+      `shipment_number`, `price` (snapshot из ShipmentItem) и `currency_code`.
+      Поле `order_uuid` в корне сообщения полностью удалено.
     messages:
       returnCreatedFromSite:
         $ref: '#/components/messages/ReturnCreatedFromSite'
@@ -623,7 +627,9 @@ operations:
     summary: Сайт → 1С при создании возврата пользователем
     description: |
       Публикуется через `PublishReturnToErpJob`.
-      Возврат привязан к заказу через `order_id`.
+      Возврат привязан к позициям реализаций (shipment_items). 1С получает
+      `shipment_uuid`, `shipment_number`, `price` и `currency_code` на каждую
+      позицию, чего достаточно для проведения возврата по конкретной реализации.
     action: send
     channel:
       $ref: '#/channels/erpOutReturns'
@@ -1956,11 +1962,15 @@ components:
 
     ReturnCreatedPayload:
       type: object
+      description: |
+        Возврат покупателя. Позиции привязаны к реализациям (shipment_items),
+        а не к заказам — возвращать можно только то, что реально отгружено.
+        Каждая позиция несёт snapshot цены из ShipmentItem на момент создания
+        возврата, чтобы 1С провела возврат в той же валюте и по той же цене,
+        по которой была оформлена реализация.
       required:
         - event
-        - message_id
         - uuid
-        - order_uuid
         - partner_uuid
         - items
       properties:
@@ -1970,8 +1980,6 @@ components:
         message_id:
           type: string
         uuid:
-          $ref: '#/components/schemas/UUID'
-        order_uuid:
           $ref: '#/components/schemas/UUID'
         partner_uuid:
           $ref: '#/components/schemas/UUID'
@@ -1989,13 +1997,36 @@ components:
             type: object
             required:
               - product_uuid
+              - shipment_uuid
+              - shipment_number
               - quantity
+              - price
+              - currency_code
             properties:
               product_uuid:
                 $ref: '#/components/schemas/UUID'
+              shipment_uuid:
+                $ref: '#/components/schemas/UUID'
+                description: UUID реализации, в которой был отгружен возвращаемый товар
+              shipment_number:
+                type: string
+                minLength: 1
+                description: Человекочитаемый номер реализации (shipments.number)
               quantity:
                 type: number
                 minimum: 1
+              price:
+                type: number
+                minimum: 0
+                description: Цена одной единицы из ShipmentItem.price на момент создания возврата (snapshot)
+              currency_code:
+                type: string
+                minLength: 3
+                description: Валюта реализации, из которой возвращается позиция (shipments.currency_code)
+              subtotal:
+                type: number
+                minimum: 0
+                description: Сумма позиции возврата — price × quantity, округлённая до 2 знаков
               reason:
                 type:
                   - string

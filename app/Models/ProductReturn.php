@@ -23,7 +23,6 @@ class ProductReturn extends Model
         'uuid',
         'erp_number',
         'user_id',
-        'order_id',
         'status',
         'comment',
         'admin_comment',
@@ -53,14 +52,6 @@ class ProductReturn extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Get the order associated with this return.
-     */
-    public function order(): BelongsTo
-    {
-        return $this->belongsTo(Order::class);
     }
 
     /**

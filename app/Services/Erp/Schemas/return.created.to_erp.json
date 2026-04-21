@@ -2,18 +2,16 @@
     "$schema": "http://json-schema.org/draft-07/schema#",
     "$id": "return.created.to_erp",
     "title": "return.created (Сайт → 1С)",
-    "description": "Новый возврат — отправка в 1С для обработки",
+    "description": "Новый возврат покупателя — отправка в 1С. Позиции возврата привязаны к реализациям (shipment_items), не к заказам.",
     "type": "object",
     "properties": {
         "event": {
-            "type": "string"
+            "type": "string",
+            "const": "return.created"
         },
         "uuid": {
             "type": "string",
             "format": "uuid"
-        },
-        "order_uuid": {
-            "type": ["string", "null"]
         },
         "partner_uuid": {
             "type": ["string", "null"]
@@ -24,20 +22,49 @@
         },
         "items": {
             "type": "array",
+            "minItems": 1,
             "items": {
                 "type": "object",
                 "properties": {
                     "product_uuid": {
                         "type": ["string", "null"]
                     },
+                    "shipment_uuid": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "shipment_number": {
+                        "type": "string",
+                        "minLength": 1
+                    },
                     "quantity": {
                         "type": "number",
                         "minimum": 1
                     },
+                    "price": {
+                        "type": "number",
+                        "minimum": 0
+                    },
+                    "currency_code": {
+                        "type": "string",
+                        "minLength": 3
+                    },
+                    "subtotal": {
+                        "type": "number",
+                        "minimum": 0
+                    },
                     "reason": {
                         "type": ["string", "null"]
                     }
-                }
+                },
+                "required": [
+                    "product_uuid",
+                    "shipment_uuid",
+                    "shipment_number",
+                    "quantity",
+                    "price",
+                    "currency_code"
+                ]
             }
         }
     },

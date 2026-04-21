@@ -6,9 +6,6 @@ use App\Jobs\PublishReturnToErpJob;
 
 class PublishReturnToErp
 {
-    /**
-     * Handle the event.
-     */
     public function handle(object $event): void
     {
         if (! isset($event->productReturn)) {
@@ -17,19 +14,24 @@ class PublishReturnToErp
 
         $return = $event->productReturn;
 
-        // Load relationships to include in the payload
-        $return->load(['items.product', 'order', 'user']);
+        $return->load(['items.shipmentItem.shipment', 'items.product', 'user']);
 
         $payload = [
             'event' => 'return.created',
             'uuid' => $return->uuid,
-            'order_uuid' => $return->order?->uuid,
             'partner_uuid' => $return->user?->erp_id,
             'timestamp' => now()->toIso8601String(),
             'items' => $return->items->map(function ($item) {
+                $shipment = $item->shipmentItem?->shipment;
+
                 return [
                     'product_uuid' => $item->product?->external_id,
-                    'quantity' => $item->quantity,
+                    'shipment_uuid' => $shipment?->uuid,
+                    'shipment_number' => $shipment?->number,
+                    'quantity' => (int) $item->quantity,
+                    'price' => (float) $item->price,
+                    'currency_code' => $shipment?->currency_code ?? 'RUB',
+                    'subtotal' => (float) $item->subtotal,
                     'reason' => $item->reason?->value ?? $item->reason,
                 ];
             })->toArray(),

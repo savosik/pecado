@@ -11,14 +11,20 @@ import { toaster } from '@/components/ui/toaster';
 import ReturnItemsEditor from '@/Admin/Components/ReturnItemsEditor';
 
 export default function ReturnsCreate({ reasons }) {
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         comment: '',
         items: [],
     });
 
-    // Используем id авторизованного пользователя (он будет установлен на сервере)
-    // Для ReturnItemsEditor передадим "current" как userId, чтобы маршруты работали
-    const userId = 'current';
+    transform((payload) => ({
+        comment: payload.comment,
+        items: payload.items.map((it) => ({
+            shipment_item_id: it.shipment_item_id,
+            quantity: it.quantity,
+            reason: it.reason,
+            reason_comment: it.reason_comment ?? null,
+        })),
+    }));
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -107,10 +113,10 @@ export default function ReturnsCreate({ reasons }) {
                                 items={data.items}
                                 onChange={(items) => setData('items', items)}
                                 reasons={reasons}
-                                userId={userId}
-                                searchRoute="cabinet.returns.search-products"
-                                productOrdersRoute="cabinet.returns.product-orders"
+                                searchShipmentsRoute="cabinet.returns.search-shipments"
+                                shipmentItemsRoute="cabinet.returns.shipment-items"
                                 accentColor="gray"
+                                requireUser={false}
                             />
                             {errors.items && (
                                 <Box mt={4} p={4} bg="red.50" borderRadius="md">

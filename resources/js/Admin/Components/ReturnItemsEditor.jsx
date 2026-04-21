@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     Box,
     Button,
@@ -17,93 +17,112 @@ import {
     createListCollection,
 } from "@chakra-ui/react";
 import axios from "axios";
-import { LuPlus, LuTrash2, LuMinus, LuPackage, LuMessageSquare, LuX, LuCheck, LuChevronRight } from "react-icons/lu";
+import {
+    LuPlus,
+    LuTrash2,
+    LuPackage,
+    LuMessageSquare,
+    LuSearch,
+    LuCheck,
+    LuX,
+} from "react-icons/lu";
 import { Select } from "@/components/ui/select";
 import { Field } from "@/components/ui/field";
-import { ProductSelector } from "@/Admin/Components/ProductSelector";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
- * ReturnItemsEditor - редактор позиций возврата
- * 
- * Workflow (inline-форма): Товар → Заказ → Цена (автозаполнение) → Причина
+ * ReturnItemsEditor v2 — выбор реализации, затем мультивыбор позиций к возврату.
+ *
+ * Публикуемые позиции хранят shipment_item_id + snapshot цены/валюты,
+ * полученные из getShipmentItems.
  */
-const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, productOrdersRoute = 'admin.returns.product-orders', searchRoute = 'admin.returns.search-products', accentColor = 'blue' }) => {
+const ReturnItemsEditor = ({
+    items = [],
+    onChange,
+    reasons = [],
+    userId = null,
+    searchShipmentsRoute = "admin.returns.search-shipments",
+    shipmentItemsRoute = "admin.returns.shipment-items",
+    accentColor = "blue",
+    requireUser = true,
+}) => {
     const [localItems, setLocalItems] = useState(items);
     const [isAdding, setIsAdding] = useState(false);
 
-    // Синхронизация с внешними items
     useEffect(() => {
         setLocalItems(items);
     }, [items]);
 
-    // Обновление родителя при изменении локальных items
     useEffect(() => {
-        const itemsChanged = JSON.stringify(localItems) !== JSON.stringify(items);
-        if (itemsChanged && onChange) {
+        const changed = JSON.stringify(localItems) !== JSON.stringify(items);
+        if (changed && onChange) {
             onChange(localItems);
         }
     }, [localItems]);
 
-    const handleAddItem = (itemData) => {
-        setLocalItems([...localItems, itemData]);
+    const handleAddItems = (newItems) => {
+        setLocalItems([...localItems, ...newItems]);
         setIsAdding(false);
     };
 
     const handleRemoveItem = (index) => {
-        const newItems = localItems.filter((_, i) => i !== index);
-        setLocalItems(newItems);
+        setLocalItems(localItems.filter((_, i) => i !== index));
     };
 
-    const handleUpdateQuantity = (index, delta) => {
-        const newItems = [...localItems];
-        const newQty = Math.max(1, newItems[index].quantity + delta);
-        newItems[index].quantity = newQty;
-        newItems[index].subtotal = newQty * newItems[index].price;
-        setLocalItems(newItems);
+    const handleUpdateField = (index, field, value) => {
+        const next = [...localItems];
+        next[index] = { ...next[index], [field]: value };
+        if (field === "quantity") {
+            const qty = Math.max(1, Math.min(parseInt(value) || 1, next[index].available_quantity || Number.MAX_SAFE_INTEGER));
+            next[index].quantity = qty;
+            next[index].subtotal = +(qty * next[index].price).toFixed(2);
+        }
+        setLocalItems(next);
     };
 
     const totalAmount = localItems.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0);
 
     const getReasonLabel = (reasonValue) => {
-        const reason = reasons.find(r => r.value === reasonValue);
-        return reason?.label || reasonValue;
+        const reason = reasons.find((r) => r.value === reasonValue);
+        return reason?.label || reasonValue || "—";
     };
+
+    const addDisabled = requireUser && !userId;
 
     return (
         <VStack align="stretch" gap={4}>
-            {/* Кнопка добавления или inline-форма */}
             {!isAdding ? (
                 <HStack justify="space-between">
                     <Text fontSize="sm" color="fg.muted">
-                        {userId ? "Поиск товаров из заказов пользователя" : "Сначала выберите пользователя"}
+                        {addDisabled
+                            ? "Сначала выберите пользователя"
+                            : "Выберите реализацию и отметьте позиции, которые нужно вернуть"}
                     </Text>
                     <Button
                         colorPalette={accentColor}
                         onClick={() => setIsAdding(true)}
-                        disabled={!userId}
+                        disabled={addDisabled}
                     >
-                        <LuPlus /> Добавить товар
+                        <LuPlus /> Выбрать реализацию
                     </Button>
                 </HStack>
             ) : (
-                <AddItemForm
-                    onSave={handleAddItem}
+                <AddFromShipmentForm
+                    onSave={handleAddItems}
                     onCancel={() => setIsAdding(false)}
                     reasons={reasons}
                     userId={userId}
-                    productOrdersRoute={productOrdersRoute}
-                    searchRoute={searchRoute}
+                    searchShipmentsRoute={searchShipmentsRoute}
+                    shipmentItemsRoute={shipmentItemsRoute}
                     accentColor={accentColor}
+                    existingShipmentItemIds={localItems.map((i) => i.shipment_item_id)}
                 />
             )}
 
-            {/* Таблица позиций */}
             {localItems.length > 0 && (
                 <Card.Root>
                     <Card.Header>
-                        <HStack justify="space-between">
-                            <Heading size="sm">Позиции возврата ({localItems.length})</Heading>
-                        </HStack>
+                        <Heading size="sm">Позиции возврата ({localItems.length})</Heading>
                     </Card.Header>
                     <Card.Body p={0}>
                         <Table.Root size="sm">
@@ -111,9 +130,9 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, product
                                 <Table.Row>
                                     <Table.ColumnHeader width="60px">Фото</Table.ColumnHeader>
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Заказ</Table.ColumnHeader>
+                                    <Table.ColumnHeader>Реализация</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Цена</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="center" width="120px">Кол-во</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="center" width="100px">Кол-во</Table.ColumnHeader>
                                     <Table.ColumnHeader>Причина</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
                                     <Table.ColumnHeader width="60px"></Table.ColumnHeader>
@@ -121,78 +140,53 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, product
                             </Table.Header>
                             <Table.Body>
                                 {localItems.map((item, index) => (
-                                    <Table.Row key={index}>
+                                    <Table.Row key={`${item.shipment_item_id}-${index}`}>
                                         <Table.Cell>
                                             {item.product?.image_url ? (
-                                                <Image
-                                                    src={item.product.image_url}
-                                                    alt={item.product?.name}
-                                                    boxSize="40px"
-                                                    objectFit="cover"
-                                                    borderRadius="md"
-                                                />
+                                                <Image src={item.product.image_url} alt={item.product?.name} boxSize="40px" objectFit="cover" borderRadius="md" />
                                             ) : (
-                                                <Box
-                                                    boxSize="40px"
-                                                    bg="bg.muted"
-                                                    borderRadius="md"
-                                                    display="flex"
-                                                    alignItems="center"
-                                                    justifyContent="center"
-                                                >
+                                                <Box boxSize="40px" bg="bg.muted" borderRadius="md" display="flex" alignItems="center" justifyContent="center">
                                                     <LuPackage />
                                                 </Box>
                                             )}
                                         </Table.Cell>
                                         <Table.Cell>
                                             <VStack align="start" gap={0}>
-                                                <Text fontWeight="medium" lineClamp={1}>
-                                                    {item.product?.name || "Товар"}
-                                                </Text>
+                                                <Text fontWeight="medium" lineClamp={1}>{item.product?.name || "Товар"}</Text>
                                                 {item.product?.sku && (
-                                                    <Text fontSize="xs" color="fg.muted">
-                                                        SKU: {item.product.sku}
-                                                    </Text>
+                                                    <Text fontSize="xs" color="fg.muted">SKU: {item.product.sku}</Text>
                                                 )}
                                             </VStack>
                                         </Table.Cell>
                                         <Table.Cell>
-                                            {item.order_id ? (
-                                                <Badge colorPalette="blue">#{item.order_id}</Badge>
+                                            {item.shipment?.number ? (
+                                                <Badge colorPalette="blue">{item.shipment.number}</Badge>
                                             ) : (
                                                 <Text color="fg.muted">—</Text>
                                             )}
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
-                                            {parseFloat(item.price).toFixed(2)} ₽
+                                            {parseFloat(item.price).toFixed(2)} {item.currency_code || "₽"}
                                         </Table.Cell>
                                         <Table.Cell>
-                                            <HStack justify="center" gap={1}>
-                                                <IconButton
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    onClick={() => handleUpdateQuantity(index, -1)}
-                                                    disabled={item.quantity <= 1}
-                                                >
-                                                    <LuMinus />
-                                                </IconButton>
-                                                <Text fontWeight="medium" minW="30px" textAlign="center">
-                                                    {item.quantity}
+                                            <Input
+                                                size="xs"
+                                                type="number"
+                                                value={item.quantity}
+                                                min={1}
+                                                max={item.available_quantity || undefined}
+                                                onChange={(e) => handleUpdateField(index, "quantity", e.target.value)}
+                                                textAlign="center"
+                                            />
+                                            {item.available_quantity !== undefined && (
+                                                <Text fontSize="xs" color="fg.muted" textAlign="center">
+                                                    из {item.available_quantity}
                                                 </Text>
-                                                <IconButton
-                                                    size="xs"
-                                                    variant="ghost"
-                                                    onClick={() => handleUpdateQuantity(index, 1)}
-                                                >
-                                                    <LuPlus />
-                                                </IconButton>
-                                            </HStack>
+                                            )}
                                         </Table.Cell>
                                         <Table.Cell>
                                             <VStack align="start" gap={0}>
-                                                <Badge colorPalette="orange" size="sm">
-                                                    {getReasonLabel(item.reason)}
-                                                </Badge>
+                                                <Badge colorPalette="orange" size="sm">{getReasonLabel(item.reason)}</Badge>
                                                 {item.reason_comment && (
                                                     <Text fontSize="xs" color="fg.muted" lineClamp={1}>
                                                         <LuMessageSquare style={{ display: "inline" }} /> {item.reason_comment}
@@ -201,15 +195,10 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, product
                                             </VStack>
                                         </Table.Cell>
                                         <Table.Cell textAlign="right" fontWeight="medium">
-                                            {parseFloat(item.subtotal).toFixed(2)} ₽
+                                            {parseFloat(item.subtotal).toFixed(2)} {item.currency_code || "₽"}
                                         </Table.Cell>
                                         <Table.Cell>
-                                            <IconButton
-                                                size="sm"
-                                                variant="ghost"
-                                                colorPalette="red"
-                                                onClick={() => handleRemoveItem(index)}
-                                            >
+                                            <IconButton size="sm" variant="ghost" colorPalette="red" onClick={() => handleRemoveItem(index)}>
                                                 <LuTrash2 />
                                             </IconButton>
                                         </Table.Cell>
@@ -229,7 +218,6 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, product
                 </Card.Root>
             )}
 
-            {/* Пустое состояние */}
             {localItems.length === 0 && !isAdding && (
                 <Card.Root>
                     <Card.Body>
@@ -237,7 +225,7 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, product
                             <LuPackage size={48} style={{ opacity: 0.3 }} />
                             <Text color="fg.muted">Нет позиций в возврате</Text>
                             <Text fontSize="sm" color="fg.muted">
-                                Нажмите "Добавить товар" для добавления позиции
+                                Нажмите «Выбрать реализацию», чтобы добавить позиции
                             </Text>
                         </VStack>
                     </Card.Body>
@@ -248,314 +236,357 @@ const ReturnItemsEditor = ({ items = [], onChange, reasons = [], userId, product
 };
 
 /**
- * Inline-форма добавления позиции (пошаговая)
+ * Шаги: 1) выбрать реализацию, 2) отметить позиции + quantity/reason.
  */
-const AddItemForm = ({ onSave, onCancel, reasons, userId, productOrdersRoute, searchRoute, accentColor = 'blue' }) => {
+const AddFromShipmentForm = ({
+    onSave,
+    onCancel,
+    reasons,
+    userId,
+    searchShipmentsRoute,
+    shipmentItemsRoute,
+    accentColor = "blue",
+    existingShipmentItemIds = [],
+}) => {
     const [step, setStep] = useState(1);
-    const [selectedProduct, setSelectedProduct] = useState(null);
-    const [selectedOrder, setSelectedOrder] = useState(null);
-    const [quantity, setQuantity] = useState(1);
-    const [reason, setReason] = useState(reasons?.[0]?.value || "");
-    const [reasonComment, setReasonComment] = useState("");
-    const [price, setPrice] = useState(0);
+    const [query, setQuery] = useState("");
+    const [shipments, setShipments] = useState([]);
+    const [shipmentsLoading, setShipmentsLoading] = useState(false);
+    const [selectedShipment, setSelectedShipment] = useState(null);
+    const [shipmentItems, setShipmentItems] = useState([]);
+    const [itemsLoading, setItemsLoading] = useState(false);
+    const searchDebounceRef = useRef(null);
 
-    // Заказы
-    const [orders, setOrders] = useState([]);
-    const [ordersLoading, setOrdersLoading] = useState(false);
+    const reasonsCollection = useMemo(
+        () =>
+            createListCollection({
+                items: reasons?.map((r) => ({ label: r.label, value: r.value })) || [],
+            }),
+        [reasons],
+    );
 
-    const reasonsCollection = createListCollection({
-        items: reasons?.map(r => ({ label: r.label, value: r.value })) || [],
-    });
+    const loadShipments = useCallback(
+        async (q) => {
+            setShipmentsLoading(true);
+            try {
+                const response = await axios.get(route(searchShipmentsRoute), {
+                    params: {
+                        query: q,
+                        ...(userId && userId !== "current" ? { user_id: userId } : {}),
+                    },
+                });
+                setShipments(response.data || []);
+            } catch (error) {
+                console.error("Shipments fetch error:", error);
+                setShipments([]);
+            } finally {
+                setShipmentsLoading(false);
+            }
+        },
+        [searchShipmentsRoute, userId],
+    );
 
-    const handleSelectProduct = async (product) => {
-        setSelectedProduct(product);
+    useEffect(() => {
+        if (step !== 1) return;
+        clearTimeout(searchDebounceRef.current);
+        searchDebounceRef.current = setTimeout(() => loadShipments(query), 250);
+        return () => clearTimeout(searchDebounceRef.current);
+    }, [query, loadShipments, step]);
+
+    const handleSelectShipment = async (shipment) => {
+        setSelectedShipment(shipment);
         setStep(2);
-
-        // Загружаем заказы для этого товара
-        setOrdersLoading(true);
+        setItemsLoading(true);
         try {
-            const response = await axios.get(route(productOrdersRoute), {
-                params: { product_id: product.id, user_id: userId },
+            const response = await axios.get(route(shipmentItemsRoute), {
+                params: { shipment_id: shipment.id },
             });
-            setOrders(response.data);
+            const items = response.data?.items || [];
+            const defaultReason = reasons?.[0]?.value || "";
+            const prepared = items.map((it) => ({
+                ...it,
+                selected: existingShipmentItemIds.includes(it.shipment_item_id) ? false : false,
+                quantity: it.available_quantity > 0 ? 1 : 0,
+                reason: defaultReason,
+                reason_comment: "",
+                already_added: existingShipmentItemIds.includes(it.shipment_item_id),
+            }));
+            setShipmentItems(prepared);
         } catch (error) {
-            console.error("Orders fetch error:", error);
+            console.error("Shipment items fetch error:", error);
+            setShipmentItems([]);
         } finally {
-            setOrdersLoading(false);
+            setItemsLoading(false);
         }
     };
 
-    const handleSelectOrder = (order) => {
-        setSelectedOrder(order);
-        setPrice(parseFloat(order.price));
-        setStep(3);
+    const toggleSelect = (index) => {
+        const next = [...shipmentItems];
+        if (next[index].already_added) return;
+        if (next[index].available_quantity <= 0) return;
+        next[index].selected = !next[index].selected;
+        setShipmentItems(next);
     };
+
+    const updateItem = (index, field, value) => {
+        const next = [...shipmentItems];
+        if (field === "quantity") {
+            const parsed = Math.max(1, Math.min(parseInt(value) || 1, next[index].available_quantity));
+            next[index].quantity = parsed;
+        } else {
+            next[index][field] = value;
+        }
+        setShipmentItems(next);
+    };
+
+    const selectedCount = shipmentItems.filter((i) => i.selected).length;
 
     const handleSave = () => {
-        if (!selectedProduct || !selectedOrder || !reason) {
-            return;
-        }
+        const picked = shipmentItems.filter((i) => i.selected);
+        if (picked.length === 0) return;
 
-        onSave({
-            product_id: selectedProduct.id,
-            product: selectedProduct,
-            order_id: selectedOrder.id,
-            quantity,
-            price,
-            subtotal: quantity * price,
-            reason,
-            reason_comment: reasonComment,
-        });
+        const shipmentInfo = {
+            id: selectedShipment.id,
+            uuid: selectedShipment.uuid,
+            number: selectedShipment.number,
+            date: selectedShipment.date,
+        };
+
+        const prepared = picked.map((it) => ({
+            shipment_item_id: it.shipment_item_id,
+            product: it.product,
+            shipment: shipmentInfo,
+            currency_code: it.currency_code,
+            available_quantity: it.available_quantity,
+            quantity: it.quantity,
+            price: it.price,
+            subtotal: +(it.price * it.quantity).toFixed(2),
+            reason: it.reason,
+            reason_comment: it.reason_comment,
+        }));
+
+        onSave(prepared);
     };
 
     return (
         <Card.Root variant="elevated" shadow="md" borderRadius="lg" overflow="hidden">
-            <Box bg="gray.50" px={6} py={4} borderBottomWidth="1px" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+            <Box bg="gray.50" px={6} py={4} borderBottomWidth="1px" borderColor={{ base: "gray.100", _dark: "gray.700" }}>
                 <HStack justify="space-between" mb={4}>
-                    <Heading size="sm" color="gray.700">Добавление позиции</Heading>
+                    <Heading size="sm" color="gray.700">
+                        {step === 1 ? "Выбор реализации" : `Позиции реализации ${selectedShipment?.number || ""}`}
+                    </Heading>
                     <IconButton size="xs" variant="ghost" colorPalette="gray" onClick={onCancel}>
                         <LuX />
                     </IconButton>
                 </HStack>
-                {/* Улучшенный Stepper */}
-                <HStack w="full" px={2}>
-                    <StepIndicator step={1} currentStep={step} label="Товар" isMobile={false} accentColor={accentColor} />
-                    <Box flex={1} h="2px" bg={step >= 2 ? `${accentColor}.500` : "gray.200"} mx={2} />
-                    <StepIndicator step={2} currentStep={step} label="Заказ" isMobile={false} accentColor={accentColor} />
-                    <Box flex={1} h="2px" bg={step >= 3 ? `${accentColor}.500` : "gray.200"} mx={2} />
-                    <StepIndicator step={3} currentStep={step} label="Детали" isMobile={false} accentColor={accentColor} />
-                </HStack>
             </Box>
 
             <Card.Body p={6}>
-                {/* Шаг 1: Поиск товара */}
                 {step === 1 && (
-                    <VStack align="stretch" gap={4} py={4}>
-                        <Field label="Поиск товара" helperText="Введите название, артикул (SKU) или отсканируйте штрихкод">
-                            <ProductSelector
-                                mode="search"
-                                onSelect={handleSelectProduct}
-                                searchRoute={searchRoute}
-                                searchParams={{ user_id: userId }}
-                            />
+                    <VStack align="stretch" gap={4}>
+                        <Field label="Поиск по номеру реализации">
+                            <HStack>
+                                <Box flex={1} position="relative">
+                                    <Box position="absolute" left="3" top="50%" transform="translateY(-50%)" color="gray.400">
+                                        <LuSearch />
+                                    </Box>
+                                    <Input
+                                        value={query}
+                                        onChange={(e) => setQuery(e.target.value)}
+                                        placeholder="Например, 29УТ-003413"
+                                        pl="10"
+                                    />
+                                </Box>
+                            </HStack>
                         </Field>
+
+                        {shipmentsLoading ? (
+                            <Box p={8} textAlign="center">
+                                <Spinner size="md" color={`${accentColor}.500`} />
+                                <Text fontSize="sm" color="gray.500" mt={3}>Загрузка...</Text>
+                            </Box>
+                        ) : shipments.length > 0 ? (
+                            <VStack align="stretch" gap={3}>
+                                {shipments.map((s) => (
+                                    <Box
+                                        key={s.id}
+                                        p={4}
+                                        borderWidth="1px"
+                                        borderRadius="lg"
+                                        cursor="pointer"
+                                        bg={{ base: "white", _dark: "gray.800" }}
+                                        transition="all 0.2s"
+                                        _hover={{ borderColor: `${accentColor}.400`, shadow: "sm" }}
+                                        onClick={() => handleSelectShipment(s)}
+                                    >
+                                        <HStack justify="space-between">
+                                            <VStack align="start" gap={1}>
+                                                <HStack>
+                                                    <Badge colorPalette="blue" variant="solid">{s.number}</Badge>
+                                                    {s.date && <Text fontSize="sm" color="gray.500">от {s.date}</Text>}
+                                                </HStack>
+                                                <Text fontSize="sm" color="gray.600">
+                                                    Позиций: <b>{s.items_count}</b>, сумма: <b>{parseFloat(s.total_amount).toFixed(2)} {s.currency_code || "₽"}</b>
+                                                </Text>
+                                                {s.user && (
+                                                    <Text fontSize="xs" color="gray.500">{s.user.name} ({s.user.email})</Text>
+                                                )}
+                                            </VStack>
+                                            <Button size="sm" variant="ghost" colorPalette={accentColor}>Выбрать</Button>
+                                        </HStack>
+                                    </Box>
+                                ))}
+                            </VStack>
+                        ) : (
+                            <Box p={6} textAlign="center" bg="orange.50/50" borderRadius="lg" borderWidth="1px" borderColor="orange.200">
+                                <LuPackage size={32} style={{ margin: "0 auto", opacity: 0.5, marginBottom: 8 }} />
+                                <Text fontWeight="medium" color="orange.800">Реализации не найдены</Text>
+                                <Text fontSize="sm" color="orange.600">Нет отгрузок, удовлетворяющих условиям поиска</Text>
+                            </Box>
+                        )}
                     </VStack>
                 )}
 
-                {/* Шаг 2: Выбор заказа */}
                 {step === 2 && (
-                    <VStack align="stretch" gap={6}>
-                        {/* Selected Product Summary */}
-                        <HStack p={4} bg={`${accentColor}.50/50`} borderRadius="lg" borderWidth="1px" borderColor={`${accentColor}.100`}>
-                            <Image
-                                src={selectedProduct?.image_url}
-                                boxSize="56px"
-                                objectFit="cover"
-                                borderRadius="md"
-                                fallbackSrc="https://via.placeholder.com/56"
-                            />
-                            <VStack align="start" gap={0} flex={1}>
-                                <Text fontWeight="bold" color="gray.800">{selectedProduct?.name}</Text>
-                                <Text fontSize="sm" color="gray.500">{selectedProduct?.sku}</Text>
+                    <VStack align="stretch" gap={4}>
+                        <HStack p={4} bg={`${accentColor}.50/50`} borderRadius="lg" borderWidth="1px" borderColor={`${accentColor}.100`} justify="space-between">
+                            <VStack align="start" gap={0}>
+                                <Text fontWeight="bold">Реализация {selectedShipment?.number}</Text>
+                                <Text fontSize="sm" color="gray.500">
+                                    {selectedShipment?.date ? `от ${selectedShipment.date}` : ""} · {selectedShipment?.currency_code}
+                                </Text>
                             </VStack>
-                            <Button size="sm" variant="ghost" colorPalette={accentColor} onClick={() => { setSelectedProduct(null); setStep(1); }}>
-                                Изменить товар
+                            <Button size="sm" variant="ghost" colorPalette={accentColor} onClick={() => { setSelectedShipment(null); setShipmentItems([]); setStep(1); }}>
+                                Сменить реализацию
                             </Button>
                         </HStack>
 
-                        <Field label="В каком заказе был куплен товар?">
-                            {ordersLoading ? (
-                                <Box p={8} textAlign="center">
-                                    <Spinner size="md" color={`${accentColor}.500`} />
-                                    <Text fontSize="sm" color="gray.500" mt={3}>Поиск заказов...</Text>
-                                </Box>
-                            ) : orders.length > 0 ? (
-                                <VStack align="stretch" gap={3}>
-                                    {orders.map((order) => (
-                                        <Box
-                                            key={order.id}
-                                            p={4}
-                                            borderWidth="1px"
-                                            borderRadius="lg"
-                                            cursor="pointer"
-                                            bg={{ base: 'white', _dark: 'gray.800' }}
-                                            transition="all 0.2s"
-                                            _hover={{ borderColor: `${accentColor}.400`, shadow: "sm", transform: "translateY(-1px)" }}
-                                            onClick={() => handleSelectOrder(order)}
-                                        >
-                                            <HStack justify="space-between">
-                                                <VStack align="start" gap={1}>
+                        {itemsLoading ? (
+                            <Box p={8} textAlign="center">
+                                <Spinner size="md" color={`${accentColor}.500`} />
+                                <Text fontSize="sm" color="gray.500" mt={3}>Загрузка позиций...</Text>
+                            </Box>
+                        ) : shipmentItems.length === 0 ? (
+                            <Box p={6} textAlign="center" color="fg.muted">
+                                В этой реализации нет позиций
+                            </Box>
+                        ) : (
+                            <Table.Root size="sm">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.ColumnHeader width="40px"></Table.ColumnHeader>
+                                        <Table.ColumnHeader>Товар</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="right">Цена</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="center">Доступно</Table.ColumnHeader>
+                                        <Table.ColumnHeader textAlign="center" width="120px">Кол-во</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Причина</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Комментарий</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {shipmentItems.map((it, index) => {
+                                        const disabled = it.already_added || it.available_quantity <= 0;
+                                        return (
+                                            <Table.Row key={it.shipment_item_id} opacity={disabled ? 0.55 : 1}>
+                                                <Table.Cell>
+                                                    <Checkbox
+                                                        checked={!!it.selected}
+                                                        disabled={disabled}
+                                                        onCheckedChange={() => toggleSelect(index)}
+                                                    />
+                                                </Table.Cell>
+                                                <Table.Cell>
                                                     <HStack>
-                                                        <Badge colorPalette="purple" variant="solid">#{order.id}</Badge>
-                                                        <Text fontSize="sm" color="gray.500">от {order.created_at}</Text>
+                                                        {it.product?.image_url ? (
+                                                            <Image src={it.product.image_url} boxSize="36px" objectFit="cover" borderRadius="md" />
+                                                        ) : (
+                                                            <Box boxSize="36px" bg="bg.muted" borderRadius="md" display="flex" alignItems="center" justifyContent="center"><LuPackage /></Box>
+                                                        )}
+                                                        <VStack align="start" gap={0}>
+                                                            <Text fontWeight="medium" lineClamp={1}>{it.product?.name || "—"}</Text>
+                                                            {it.product?.sku && <Text fontSize="xs" color="fg.muted">SKU: {it.product.sku}</Text>}
+                                                            {it.already_added && <Badge size="xs" colorPalette="gray">уже добавлено</Badge>}
+                                                        </VStack>
                                                     </HStack>
-                                                    <Text fontSize="sm" fontWeight="medium">
-                                                        Куплено: <Text as="span" fontWeight="bold">{order.quantity} шт.</Text> по цене <Text as="span" fontWeight="bold">{parseFloat(order.price).toFixed(2)} ₽</Text>
+                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">{parseFloat(it.price).toFixed(2)} {it.currency_code}</Table.Cell>
+                                                <Table.Cell textAlign="center">
+                                                    <Text fontSize="sm">
+                                                        {it.available_quantity} / {it.shipped_quantity}
                                                     </Text>
-                                                </VStack>
-                                                <LuChevronRight size={20} color="gray" />
-                                            </HStack>
-                                        </Box>
-                                    ))}
-                                </VStack>
-                            ) : (
-                                <Box p={6} textAlign="center" bg="orange.50/50" borderRadius="lg" borderWidth="1px" borderColor="orange.200">
-                                    <LuPackage size={32} style={{ margin: "0 auto", opacity: 0.5, marginBottom: 8 }} />
-                                    <Text fontWeight="medium" color="orange.800">Заказы не найдены</Text>
-                                    <Text fontSize="sm" color="orange.600">Пользователь не покупал этот товар ранее</Text>
-                                </Box>
-                            )}
-                        </Field>
-                    </VStack>
-                )}
-
-                {/* Шаг 3: Детали */}
-                {step === 3 && (
-                    <VStack align="stretch" gap={6}>
-                        <HStack p={4} bg="gray.50" borderRadius="lg" borderWidth="1px" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
-                            <Image src={selectedProduct?.image_url} boxSize="48px" objectFit="cover" borderRadius="md" fallbackSrc="https://via.placeholder.com/48" />
-                            <Box flex={1}>
-                                <Text fontWeight="medium" lineClamp={1}>{selectedProduct?.name}</Text>
-                                <HStack gap={2} mt={1}>
-                                    <Badge size="xs" variant="outline">Заказ #{selectedOrder?.id}</Badge>
-                                    <Text fontSize="xs" color="gray.500">Цена: {price.toFixed(2)} ₽</Text>
-                                </HStack>
-                            </Box>
-                            <Button size="xs" variant="ghost" onClick={() => setStep(2)}>Сменить заказ</Button>
-                        </HStack>
-
-                        <HStack align="start" gap={6} wrap="wrap">
-                            <Field label="Количество" width="auto">
-                                <HStack>
-                                    <IconButton
-                                        variant="outline"
-                                        size="md"
-                                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                                        disabled={quantity <= 1}
-                                    >
-                                        <LuMinus />
-                                    </IconButton>
-                                    <Input
-                                        size="md"
-                                        type="number"
-                                        value={quantity}
-                                        onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                                        textAlign="center"
-                                        width="80px"
-                                        min={1}
-                                        fontWeight="bold"
-                                    />
-                                    <IconButton
-                                        variant="outline"
-                                        size="md"
-                                        onClick={() => setQuantity(quantity + 1)}
-                                    >
-                                        <LuPlus />
-                                    </IconButton>
-                                </HStack>
-                            </Field>
-
-                            <Box flex={1}>
-                                <Field label="Причина возврата" required>
-                                    <Select.Root
-                                        size="md"
-                                        collection={reasonsCollection}
-                                        value={reason ? [reason] : []}
-                                        onValueChange={(e) => setReason(e.value[0])}
-                                    >
-                                        <Select.Trigger>
-                                            <Select.ValueText placeholder="Укажите причину..." />
-                                        </Select.Trigger>
-                                        <Select.Content>
-                                            {reasonsCollection.items.map((item) => (
-                                                <Select.Item key={item.value} item={item}>
-                                                    {item.label}
-                                                </Select.Item>
-                                            ))}
-                                        </Select.Content>
-                                    </Select.Root>
-                                </Field>
-                            </Box>
-                        </HStack>
-
-                        <Field label="Комментарий">
-                            <Textarea
-                                placeholder="Опишите дефект или причину возврата..."
-                                value={reasonComment}
-                                onChange={(e) => setReasonComment(e.target.value)}
-                                rows={3}
-                                resize="none"
-                            />
-                        </Field>
-
-                        <HStack justify="flex-end" pt={2}>
-                            <VStack align="end" gap={0}>
-                                <Text fontSize="sm" color="gray.500">Итоговая сумма</Text>
-                                <Text fontSize="2xl" fontWeight="bold" color={`${accentColor}.600`}>
-                                    {(quantity * price).toFixed(2)} ₽
-                                </Text>
-                            </VStack>
-                        </HStack>
+                                                </Table.Cell>
+                                                <Table.Cell>
+                                                    <Input
+                                                        size="xs"
+                                                        type="number"
+                                                        min={1}
+                                                        max={it.available_quantity}
+                                                        value={it.quantity}
+                                                        disabled={!it.selected}
+                                                        onChange={(e) => updateItem(index, "quantity", e.target.value)}
+                                                        textAlign="center"
+                                                        width="80px"
+                                                    />
+                                                </Table.Cell>
+                                                <Table.Cell>
+                                                    <Select.Root
+                                                        size="xs"
+                                                        collection={reasonsCollection}
+                                                        value={it.reason ? [it.reason] : []}
+                                                        disabled={!it.selected}
+                                                        onValueChange={(e) => updateItem(index, "reason", e.value[0])}
+                                                    >
+                                                        <Select.Trigger>
+                                                            <Select.ValueText placeholder="Причина" />
+                                                        </Select.Trigger>
+                                                        <Select.Content>
+                                                            {reasonsCollection.items.map((item) => (
+                                                                <Select.Item key={item.value} item={item}>{item.label}</Select.Item>
+                                                            ))}
+                                                        </Select.Content>
+                                                    </Select.Root>
+                                                </Table.Cell>
+                                                <Table.Cell>
+                                                    <Textarea
+                                                        size="xs"
+                                                        rows={1}
+                                                        placeholder="Опционально"
+                                                        value={it.reason_comment}
+                                                        disabled={!it.selected}
+                                                        onChange={(e) => updateItem(index, "reason_comment", e.target.value)}
+                                                    />
+                                                </Table.Cell>
+                                            </Table.Row>
+                                        );
+                                    })}
+                                </Table.Body>
+                            </Table.Root>
+                        )}
                     </VStack>
                 )}
             </Card.Body>
 
-            <Card.Footer bg="gray.50" borderTopWidth="1px" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} py={4}>
-                <HStack justify="flex-end" w="full" gap={3}>
-                    <Button variant="subtle" colorPalette="gray" onClick={onCancel} size="md">
-                        Отмена
-                    </Button>
-                    {step === 3 && (
-                        <Button
-                            colorPalette={accentColor}
-                            size="md"
-                            onClick={handleSave}
-                            disabled={!selectedProduct || !selectedOrder || !reason}
-                        >
-                            <LuCheck /> Добавить позицию
-                        </Button>
-                    )}
+            <Card.Footer bg="gray.50" borderTopWidth="1px" borderColor={{ base: "gray.100", _dark: "gray.700" }} py={4}>
+                <HStack justify="space-between" w="full" gap={3}>
+                    <Text fontSize="sm" color="fg.muted">
+                        {step === 2 && selectedCount > 0 ? `Выбрано позиций: ${selectedCount}` : ""}
+                    </Text>
+                    <HStack gap={3}>
+                        <Button variant="subtle" colorPalette="gray" onClick={onCancel} size="md">Отмена</Button>
+                        {step === 2 && (
+                            <Button
+                                colorPalette={accentColor}
+                                size="md"
+                                onClick={handleSave}
+                                disabled={selectedCount === 0}
+                            >
+                                <LuCheck /> Добавить выбранные
+                            </Button>
+                        )}
+                    </HStack>
                 </HStack>
             </Card.Footer>
         </Card.Root>
-    );
-};
-
-/**
- * Индикатор шага
- */
-const StepIndicator = ({ step, currentStep, label, accentColor = 'blue' }) => {
-    const isActive = currentStep === step;
-    const isCompleted = currentStep > step;
-    const isPending = currentStep < step;
-
-    return (
-        <HStack gap={2}>
-            <Box
-                w="28px"
-                h="28px"
-                borderRadius="full"
-                bg={isCompleted ? "green.500" : isActive ? `${accentColor}.600` : "white"}
-                borderColor={isCompleted ? "green.500" : isActive ? `${accentColor}.600` : "gray.300"}
-                borderWidth={isPending ? "2px" : "0px"}
-                color={isCompleted || isActive ? "white" : "gray.400"}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                fontSize="sm"
-                fontWeight="bold"
-                shadow={isActive ? "sm" : "none"}
-            >
-                {isCompleted ? <LuCheck size={16} /> : step}
-            </Box>
-            <Text
-                fontSize="sm"
-                fontWeight={isActive ? "bold" : "medium"}
-                color={isActive ? "gray.800" : "gray.500"}
-            >
-                {label}
-            </Text>
-        </HStack>
     );
 };
 

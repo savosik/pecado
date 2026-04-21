@@ -109,7 +109,7 @@ export default function ReturnShow() {
                                     <Table.Header>
                                         <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                            <Table.ColumnHeader>Заказ</Table.ColumnHeader>
+                                            <Table.ColumnHeader>Реализация</Table.ColumnHeader>
                                             <Table.ColumnHeader>Причина</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right" w="110px">Цена</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="center" w="80px">Кол-во</Table.ColumnHeader>
@@ -159,10 +159,12 @@ export default function ReturnShow() {
                                                     </HStack>
                                                 </Table.Cell>
                                                 <Table.Cell>
-                                                    {item.order ? (
-                                                        <Badge colorPalette="purple" variant="subtle" fontSize="xs">
-                                                            {item.order.number || `#${item.order.id}`}
-                                                        </Badge>
+                                                    {item.shipment ? (
+                                                        <Link href={`/cabinet/shipments/${item.shipment.id}`}>
+                                                            <Badge colorPalette="blue" variant="subtle" fontSize="xs" _hover={{ bg: 'blue.100' }}>
+                                                                {item.shipment.number}
+                                                            </Badge>
+                                                        </Link>
                                                     ) : (
                                                         <Text color="fg.muted">—</Text>
                                                     )}

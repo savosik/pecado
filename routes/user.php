@@ -171,8 +171,8 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::delete('/api-tokens/{apiToken}', [\App\Http\Controllers\User\ApiTokenController::class, 'destroy'])->name('api-tokens.destroy');
 
     // Возвраты
-    Route::get('/returns/search-products', [ReturnController::class, 'searchProducts'])->name('returns.search-products');
-    Route::get('/returns/product-orders', [ReturnController::class, 'getProductOrders'])->name('returns.product-orders');
+    Route::get('/returns/search-shipments', [ReturnController::class, 'searchShipments'])->name('returns.search-shipments');
+    Route::get('/returns/shipment-items', [ReturnController::class, 'getShipmentItems'])->name('returns.shipment-items');
     Route::get('/returns', [ReturnController::class, 'index'])->name('returns.index');
     Route::get('/returns/create', [ReturnController::class, 'create'])->name('returns.create');
     Route::post('/returns', [ReturnController::class, 'store'])->name('returns.store');

@@ -428,8 +428,8 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:returns.create')->group(function () {
         Route::get('/returns/create', [\App\Http\Controllers\Admin\ReturnController::class, 'create'])->name('returns.create');
         Route::post('/returns', [\App\Http\Controllers\Admin\ReturnController::class, 'store'])->name('returns.store');
-        Route::get('/returns/search-products', [\App\Http\Controllers\Admin\ReturnController::class, 'searchProducts'])->name('returns.search-products');
-        Route::get('/returns/product-orders', [\App\Http\Controllers\Admin\ReturnController::class, 'getProductOrders'])->name('returns.product-orders');
+        Route::get('/returns/search-shipments', [\App\Http\Controllers\Admin\ReturnController::class, 'searchShipments'])->name('returns.search-shipments');
+        Route::get('/returns/shipment-items', [\App\Http\Controllers\Admin\ReturnController::class, 'getShipmentItems'])->name('returns.shipment-items');
     });
     Route::middleware('permission:returns.view')->group(function () {
         Route::get('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'show'])->name('returns.show');

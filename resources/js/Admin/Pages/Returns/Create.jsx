@@ -30,8 +30,17 @@ const ReturnsCreate = ({ statuses, reasons }) => {
 
     const closeAfterSaveRef = useRef(false);
 
-    transform((data) => ({
-        ...data,
+    transform((payload) => ({
+        user_id: payload.user_id,
+        status: payload.status,
+        comment: payload.comment,
+        admin_comment: payload.admin_comment,
+        items: payload.items.map((it) => ({
+            shipment_item_id: it.shipment_item_id,
+            quantity: it.quantity,
+            reason: it.reason,
+            reason_comment: it.reason_comment ?? null,
+        })),
         _close: closeAfterSaveRef.current ? 1 : 0,
     }));
 
@@ -210,6 +219,8 @@ const ReturnsCreate = ({ statuses, reasons }) => {
                             onChange={(items) => setData("items", items)}
                             reasons={reasons}
                             userId={data.user_id}
+                            searchShipmentsRoute="admin.returns.search-shipments"
+                            shipmentItemsRoute="admin.returns.shipment-items"
                         />
                         {errors.items && (
                             <Box mt={4} p={4} bg="red.50" borderRadius="md">

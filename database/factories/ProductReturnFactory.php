@@ -24,7 +24,6 @@ class ProductReturnFactory extends Factory
         return [
             'uuid' => $this->faker->uuid(),
             'user_id' => User::factory(),
-            'order_id' => null,
             'status' => ReturnStatus::PENDING,
             'comment' => $this->faker->optional()->sentence(),
             'admin_comment' => null,
