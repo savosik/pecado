@@ -180,10 +180,10 @@ export default function OrderShow({ order }) {
                                         <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                             <Table.ColumnHeader w="80px" textAlign="center">Кол-во</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Цена без скидки ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Цена без скидки</Table.ColumnHeader>
                                             <Table.ColumnHeader w="80px" textAlign="right">Скидка</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Цена со скидкой ({currencySymbol})</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Цена со скидкой</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Сумма</Table.ColumnHeader>
                                         </Table.Row>
                                     </Table.Header>
                                     <Table.Body>
