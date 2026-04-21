@@ -1,0 +1,18 @@
+{
+    "permissions": {
+        "allow": [
+            "mcp__laravel-boost__last-error",
+            "mcp__laravel-boost__read-log-entries",
+            "mcp__laravel-boost__list-routes",
+            "mcp__laravel-boost__database-schema",
+            "mcp__laravel-boost__browser-logs",
+            "mcp__laravel-boost__get-config",
+            "Bash(git -C * status)",
+            "Bash(git -C * diff *)",
+            "Bash(docker exec pecado-app php artisan test *)",
+            "Bash(docker exec pecado-app composer analyse *)",
+            "Bash(docker exec pecado-app php artisan route:list *)",
+            "Bash(docker exec pecado-app vendor/bin/phpstan analyse *)"
+        ]
+    }
+}
