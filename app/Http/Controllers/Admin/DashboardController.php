@@ -52,7 +52,7 @@ class DashboardController extends AdminController
             ->map(function ($order) {
                 return [
                     'id' => $order->id,
-                    'order_number' => $order->order_number,
+                    'order_number' => $order->erp_number ?? $order->number,
                     'user_name' => $order->user->name ?? 'N/A',
                     'total_amount' => $order->total_amount,
                     'status' => $order->status?->value,
