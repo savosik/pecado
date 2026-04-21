@@ -1,0 +1,65 @@
+site_name: Pecado — Ручной тест-план B2B-клиента
+site_description: Пошаговое тестирование сайта Pecado глазами B2B-клиента
+site_url: https://dev.pecado.ru/docs/test-plan/
+docs_dir: docs-testing/content
+site_dir: docs-testing/site
+
+theme:
+  name: material
+  language: ru
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Светлая тема
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Тёмная тема
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - attr_list
+  - md_in_html
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - toc:
+      permalink: true
+
+nav:
+  - Обзор: index.md
+  - Как работать с планом:
+    - Порядок работы: intro/how-to-work.md
+    - Багрекер (главный инструмент): intro/bugtracker.md
+    - Обмен с 1С (фоновая синхронизация): intro/erp-sync.md
+    - Устройства и браузеры: intro/devices.md
+    - Подготовка и доступы: intro/prep.md
+  - Этапы тестирования:
+    - "ЭТАП 0. Гость": stages/00-guest.md
+    - "ЭТАП 1. Регистрация": stages/01-registration.md
+    - "ЭТАП 2. Онбординг": stages/02-onboarding.md
+    - "ЭТАП 17. Восстановление пароля": stages/17-password-recovery.md
+    - "ЭТАП 18. Выход": stages/18-logout.md
+  - Связанные ресурсы:
+    - "ERP-интеграция (гайд)": https://dev.pecado.ru/docs/erp-guide/
+    - "AsyncAPI (интерактивная)": https://dev.pecado.ru/docs/erp/
+    - "Публичный API (Scramble)": https://dev.pecado.ru/docs/api
