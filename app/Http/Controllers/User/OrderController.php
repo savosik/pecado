@@ -205,7 +205,7 @@ class OrderController extends Controller
                 'shipments' => $order->shipments->map(function ($shipment) {
                     return [
                         'id' => $shipment->id,
-                        'number' => $shipment->number ?? $shipment->erp_number ?? ('#'.$shipment->id),
+                        'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
                         'uuid' => $shipment->uuid,
                         'date' => $shipment->date?->format('Y-m-d'),
                         'status' => $shipment->status,

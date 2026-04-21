@@ -305,6 +305,7 @@ export default function OrderShow({ order }) {
                             <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
                                 <Table.Header>
                                     <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
+                                        <Table.ColumnHeader>№</Table.ColumnHeader>
                                         <Table.ColumnHeader>Дата</Table.ColumnHeader>
                                         <Table.ColumnHeader>Статус</Table.ColumnHeader>
                                         <Table.ColumnHeader textAlign="center">Позиций</Table.ColumnHeader>
@@ -318,6 +319,13 @@ export default function OrderShow({ order }) {
                                             key={shipment.id}
                                             _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}
                                         >
+                                            <Table.Cell>
+                                                <Link href={`/cabinet/shipments/${shipment.id}`}>
+                                                    <Text fontFamily="mono" fontWeight="600" fontSize="sm" color="pecado.600" _hover={{ textDecoration: 'underline' }}>
+                                                        {shipment.number}
+                                                    </Text>
+                                                </Link>
+                                            </Table.Cell>
                                             <Table.Cell>
                                                 <Text fontSize="sm">
                                                     {shipment.date
