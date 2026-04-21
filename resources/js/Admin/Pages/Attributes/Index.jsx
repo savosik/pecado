@@ -66,8 +66,18 @@ export default function Index({ attributes, filters }) {
             render: (_, attr) => attr.type === 'select' ? attr.values_count : '—',
         },
         {
+            key: 'show_on_site',
+            label: 'На сайте',
+            render: (val) => val ? <Badge colorPalette="green">Да</Badge> : <Badge colorPalette="gray">Нет</Badge>,
+        },
+        {
             key: 'is_filterable',
-            label: 'Фильтр',
+            label: 'В фильтре',
+            render: (val) => val ? <Badge colorPalette="green">Да</Badge> : <Badge colorPalette="gray">Нет</Badge>,
+        },
+        {
+            key: 'show_in_export',
+            label: 'В выгрузках',
             render: (val) => val ? <Badge colorPalette="green">Да</Badge> : <Badge colorPalette="gray">Нет</Badge>,
         },
         {

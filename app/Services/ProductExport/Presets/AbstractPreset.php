@@ -140,8 +140,13 @@ abstract class AbstractPreset implements PresetInterface
         // Все атрибуты
         $attributes = [];
         foreach ($product->attributeValues as $av) {
-            $attrName = $av->attribute?->name ?? "attr_{$av->attribute_id}";
-            $attrUnit = $av->attribute?->unit;
+            $attr = $av->attribute;
+            if ($attr && (! $attr->is_active || ! $attr->show_in_export)) {
+                continue;
+            }
+
+            $attrName = $attr?->name ?? "attr_{$av->attribute_id}";
+            $attrUnit = $attr?->unit;
 
             $value = null;
             if ($av->text_value !== null) {
@@ -219,7 +224,10 @@ abstract class AbstractPreset implements PresetInterface
      */
     protected function fetchAllAttributes(): Collection
     {
-        return Attribute::active()->orderBy('name')->get();
+        return Attribute::active()
+            ->where('show_in_export', true)
+            ->orderBy('name')
+            ->get();
     }
 
     /**

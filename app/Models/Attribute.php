@@ -21,6 +21,8 @@ class Attribute extends Model
         'unit',
         'is_filterable',
         'is_active',
+        'show_on_site',
+        'show_in_export',
         'sort_order',
         'attribute_group_id',
     ];
@@ -35,6 +37,8 @@ class Attribute extends Model
         return [
             'is_filterable' => 'boolean',
             'is_active' => 'boolean',
+            'show_on_site' => 'boolean',
+            'show_in_export' => 'boolean',
             'sort_order' => 'integer',
         ];
     }

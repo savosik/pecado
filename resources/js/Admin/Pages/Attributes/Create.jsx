@@ -17,6 +17,8 @@ export default function Create({ types, categoryTree, attributeGroups }) {
         unit: '',
         is_filterable: false,
         is_active: true,
+        show_on_site: true,
+        show_in_export: true,
         sort_order: 0,
         values: [],
         category_ids: [],
@@ -133,7 +135,26 @@ export default function Create({ types, categoryTree, attributeGroups }) {
                                             />
                                         </FormField>
 
-                                        <FormField label="Использовать в фильтрах" error={errors.is_filterable}>
+                                        <FormField
+                                            label="Показывать на сайте"
+                                            error={errors.show_on_site}
+                                            helperText="Вывод в характеристиках карточки товара и в сравнении вариантов"
+                                        >
+                                            <HStack gap={4} mt={2}>
+                                                <Switch
+                                                    checked={data.show_on_site}
+                                                    onCheckedChange={(e) => setData('show_on_site', e.checked)}
+                                                    colorPalette="blue"
+                                                />
+                                                <Text size="sm">{data.show_on_site ? 'Да' : 'Нет'}</Text>
+                                            </HStack>
+                                        </FormField>
+
+                                        <FormField
+                                            label="Показывать в фильтре"
+                                            error={errors.is_filterable}
+                                            helperText="Участие атрибута в фасетном фильтре каталога"
+                                        >
                                             <HStack gap={4} mt={2}>
                                                 <Switch
                                                     checked={data.is_filterable}
@@ -145,9 +166,24 @@ export default function Create({ types, categoryTree, attributeGroups }) {
                                         </FormField>
 
                                         <FormField
+                                            label="Показывать в выгрузках"
+                                            error={errors.show_in_export}
+                                            helperText="Экспорт товаров (YML, CSV, XLSX и др.)"
+                                        >
+                                            <HStack gap={4} mt={2}>
+                                                <Switch
+                                                    checked={data.show_in_export}
+                                                    onCheckedChange={(e) => setData('show_in_export', e.checked)}
+                                                    colorPalette="blue"
+                                                />
+                                                <Text size="sm">{data.show_in_export ? 'Да' : 'Нет'}</Text>
+                                            </HStack>
+                                        </FormField>
+
+                                        <FormField
                                             label="Активен"
                                             error={errors.is_active}
-                                            helperText="Неактивные атрибуты не показываются на сайте и в экспортах."
+                                            helperText="Общий флаг. Неактивные атрибуты не участвуют нигде независимо от настроек выше."
                                         >
                                             <HStack gap={4} mt={2}>
                                                 <Switch

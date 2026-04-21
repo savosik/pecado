@@ -95,6 +95,8 @@ export default function Edit({ attribute, types, categoryTree, attributeGroups }
         unit: attribute.unit || '',
         is_filterable: !!attribute.is_filterable,
         is_active: attribute.is_active !== undefined ? !!attribute.is_active : true,
+        show_on_site: attribute.show_on_site !== undefined ? !!attribute.show_on_site : true,
+        show_in_export: attribute.show_in_export !== undefined ? !!attribute.show_in_export : true,
         sort_order: attribute.sort_order || 0,
         values: attribute.values || [],
         category_ids: (attribute.categories || []).map(c => c.id),
@@ -292,7 +294,26 @@ export default function Edit({ attribute, types, categoryTree, attributeGroups }
                                             />
                                         </FormField>
 
-                                        <FormField label="Использовать в фильтрах" error={errors.is_filterable}>
+                                        <FormField
+                                            label="Показывать на сайте"
+                                            error={errors.show_on_site}
+                                            helperText="Вывод в характеристиках карточки товара и в сравнении вариантов"
+                                        >
+                                            <HStack gap={4} mt={2}>
+                                                <Switch
+                                                    checked={data.show_on_site}
+                                                    onCheckedChange={(e) => setData('show_on_site', e.checked)}
+                                                    colorPalette="blue"
+                                                />
+                                                <Text size="sm">{data.show_on_site ? 'Да' : 'Нет'}</Text>
+                                            </HStack>
+                                        </FormField>
+
+                                        <FormField
+                                            label="Показывать в фильтре"
+                                            error={errors.is_filterable}
+                                            helperText="Участие атрибута в фасетном фильтре каталога"
+                                        >
                                             <HStack gap={4} mt={2}>
                                                 <Switch
                                                     checked={data.is_filterable}
@@ -304,9 +325,24 @@ export default function Edit({ attribute, types, categoryTree, attributeGroups }
                                         </FormField>
 
                                         <FormField
+                                            label="Показывать в выгрузках"
+                                            error={errors.show_in_export}
+                                            helperText="Экспорт товаров (YML, CSV, XLSX и др.)"
+                                        >
+                                            <HStack gap={4} mt={2}>
+                                                <Switch
+                                                    checked={data.show_in_export}
+                                                    onCheckedChange={(e) => setData('show_in_export', e.checked)}
+                                                    colorPalette="blue"
+                                                />
+                                                <Text size="sm">{data.show_in_export ? 'Да' : 'Нет'}</Text>
+                                            </HStack>
+                                        </FormField>
+
+                                        <FormField
                                             label="Активен"
                                             error={errors.is_active}
-                                            helperText="Неактивные атрибуты не показываются на сайте и в экспортах. При импорте из 1С атрибуты с названием на латинице автоматически создаются неактивными."
+                                            helperText="Общий флаг. Неактивные атрибуты не участвуют нигде независимо от настроек выше. При импорте из 1С атрибуты с названием на латинице автоматически создаются неактивными."
                                         >
                                             <HStack gap={4} mt={2}>
                                                 <Switch

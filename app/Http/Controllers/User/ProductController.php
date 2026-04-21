@@ -334,6 +334,9 @@ class ProductController extends Controller
                     if (! $attr) {
                         continue;
                     }
+                    if (! $attr->is_active || ! $attr->show_on_site) {
+                        continue;
+                    }
                     if (in_array($attr->type, $excludedTypes)) {
                         continue;
                     }
@@ -423,8 +426,13 @@ class ProductController extends Controller
         // Характеристики (атрибуты)
         $specifications = [];
         foreach ($product->attributeValues as $av) {
-            $attrName = $av->attribute?->name;
+            $attr = $av->attribute;
+            $attrName = $attr?->name;
             if (! $attrName) {
+                continue;
+            }
+
+            if (! $attr->is_active || ! $attr->show_on_site) {
                 continue;
             }
 
