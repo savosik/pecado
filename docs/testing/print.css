@@ -1,0 +1,360 @@
+/* === Print styles for Manual Test Plan === */
+
+@page {
+    size: A4;
+    margin: 16mm 14mm 18mm 14mm;
+
+    @bottom-right {
+        content: "Стр. " counter(page) " / " counter(pages);
+        font-family: "DejaVu Sans", sans-serif;
+        font-size: 9pt;
+        color: #888;
+    }
+
+    @bottom-left {
+        content: "Pecado · План ручного тестирования B2B";
+        font-family: "DejaVu Sans", sans-serif;
+        font-size: 9pt;
+        color: #888;
+    }
+}
+
+@page :first {
+    @bottom-right { content: ""; }
+    @bottom-left { content: ""; }
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+    font-family: "DejaVu Sans", "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: #1a1a1a;
+    background: #fff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+/* Pandoc titleblock (генерируется из --metadata title) — скрываем, используем свою обложку */
+header#title-block-header { display: none; }
+
+/* --- Обложка --- */
+
+.cover {
+    page-break-after: always;
+    text-align: center;
+    padding-top: 30mm;
+}
+
+.cover .logo {
+    font-size: 44pt;
+    font-weight: 900;
+    color: #9e1b32;
+    letter-spacing: -2pt;
+    line-height: 1;
+    margin: 0 auto 2mm;
+}
+
+.cover .logo::after {
+    content: "pecado";
+    display: block;
+}
+
+.cover .tagline {
+    font-size: 10pt;
+    color: #c29769;
+    letter-spacing: 2pt;
+    text-transform: uppercase;
+    margin-bottom: 22mm;
+}
+
+.cover .title {
+    font-size: 28pt;
+    color: #9e1b32;
+    font-weight: 700;
+    line-height: 1.15;
+    margin: 0 auto 5mm;
+    max-width: 160mm;
+}
+
+.cover .subtitle {
+    font-size: 13pt;
+    color: #555;
+    margin: 0 auto 28mm;
+    max-width: 150mm;
+    line-height: 1.35;
+}
+
+.cover .meta {
+    font-size: 10pt;
+    color: #3c3c3c;
+    border-top: 1pt solid #c29769;
+    border-bottom: 1pt solid #c29769;
+    padding: 5mm 8mm;
+    margin: 0 auto;
+    width: 130mm;
+    background: #fdf8f2;
+}
+
+.cover .meta table {
+    margin: 0 auto;
+    border: none;
+}
+
+.cover .meta td {
+    border: none;
+    padding: 2pt 10pt;
+    font-size: 10.5pt;
+    background: transparent !important;
+}
+
+.cover .meta td:first-child {
+    text-align: right;
+    color: #6a6a6a;
+    font-weight: 600;
+}
+
+.cover .meta td:last-child {
+    text-align: left;
+}
+
+.cover .footer-note {
+    margin: 6mm auto 0;
+    font-size: 9pt;
+    color: #888;
+    font-style: italic;
+    max-width: 150mm;
+}
+
+/* --- Headings --- */
+
+h1 {
+    font-size: 20pt;
+    color: #9e1b32;
+    border-bottom: 3pt solid #9e1b32;
+    padding-bottom: 6pt;
+    margin: 0 0 10pt 0;
+    page-break-after: avoid;
+    font-weight: 700;
+    letter-spacing: -0.3pt;
+}
+
+/* Каждый h1 (кроме первого) — новая страница */
+h1 { page-break-before: always; }
+.cover + h1 { page-break-before: always; }
+
+h2 {
+    font-size: 14pt;
+    color: #9e1b32;
+    border-bottom: 1.5pt solid #e6b896;
+    padding-bottom: 3pt;
+    margin: 14pt 0 7pt 0;
+    page-break-after: avoid;
+    font-weight: 700;
+}
+
+h3 {
+    font-size: 11.5pt;
+    color: #2c2c2c;
+    margin: 11pt 0 5pt 0;
+    page-break-after: avoid;
+    font-weight: 700;
+    border-left: 3pt solid #9e1b32;
+    padding-left: 7pt;
+}
+
+h4 {
+    font-size: 10.5pt;
+    color: #3c3c3c;
+    margin: 8pt 0 3pt 0;
+    page-break-after: avoid;
+    font-weight: 700;
+}
+
+/* --- Paragraphs & lists --- */
+
+p {
+    margin: 0 0 5pt 0;
+    orphans: 3;
+    widows: 3;
+}
+
+ul, ol {
+    margin: 3pt 0 7pt 0;
+    padding-left: 20px;
+}
+
+li {
+    margin: 1.5pt 0;
+    page-break-inside: avoid;
+}
+
+/* --- Checkboxes (pandoc task-list) ---
+   Pandoc рендерит: <li><label><input type="checkbox">текст</label></li>
+   Прячем <input>, рисуем квадратик через ::before у <label>. */
+
+ul.task-list {
+    list-style: none;
+    padding-left: 2px;
+}
+
+ul.task-list > li {
+    padding-left: 0;
+    margin: 3.5pt 0;
+    page-break-inside: avoid;
+    min-height: 12pt;
+}
+
+ul.task-list li input[type="checkbox"] {
+    display: none !important;
+    width: 0 !important;
+    margin: 0 !important;
+}
+
+ul.task-list li > label {
+    display: inline-block;
+    cursor: default;
+    position: relative;
+    padding-left: 18pt;
+    min-height: 12pt;
+}
+
+ul.task-list li > label::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 1.5pt;
+    width: 11pt;
+    height: 11pt;
+    border: 1.2pt solid #333;
+    border-radius: 2pt;
+    background: #fff;
+}
+
+/* Отмеченные чекбоксы [x] в Markdown */
+ul.task-list li:has(input:checked) > label::before {
+    background: #9e1b32;
+    border-color: #9e1b32;
+}
+
+ul.task-list li:has(input:checked) > label::after {
+    content: "✓";
+    position: absolute;
+    left: 1.8pt;
+    top: -1.5pt;
+    color: #fff;
+    font-size: 11pt;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* --- Tables --- */
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 6pt 0 8pt 0;
+    font-size: 9pt;
+    page-break-inside: auto;
+}
+
+thead { display: table-header-group; }
+
+tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+}
+
+th {
+    background: #f5e6d8;
+    color: #5a0f1d;
+    font-weight: 700;
+    text-align: left;
+    padding: 4pt 6pt;
+    border: 0.8pt solid #c29769;
+    font-size: 9pt;
+}
+
+td {
+    padding: 3pt 6pt;
+    border: 0.4pt solid #c8c8c8;
+    vertical-align: top;
+    font-size: 9pt;
+}
+
+tbody tr:nth-child(even) {
+    background: #faf6f1;
+}
+
+/* --- Blockquotes --- */
+
+blockquote {
+    margin: 6pt 0;
+    padding: 5pt 10pt;
+    border-left: 3pt solid #c29769;
+    background: #fdf8f2;
+    color: #4a3a2a;
+    font-style: italic;
+    page-break-inside: avoid;
+    font-size: 9pt;
+}
+
+blockquote p:last-child { margin-bottom: 0; }
+
+/* --- Code --- */
+
+code {
+    font-family: "DejaVu Sans Mono", "Consolas", monospace;
+    background: #f0ede8;
+    padding: 0.5pt 3pt;
+    border-radius: 2pt;
+    font-size: 8.5pt;
+    color: #5a0f1d;
+}
+
+pre {
+    background: #f7f4ef;
+    border: 0.5pt solid #d9d1c5;
+    border-radius: 2pt;
+    padding: 6pt 8pt;
+    overflow-x: auto;
+    page-break-inside: avoid;
+    font-size: 8.5pt;
+    margin: 5pt 0;
+}
+
+pre code {
+    background: transparent;
+    padding: 0;
+    color: #1a1a1a;
+    font-size: 8.5pt;
+}
+
+/* --- Horizontal rules --- */
+
+hr {
+    border: none;
+    border-top: 1px dashed #c29769;
+    margin: 10pt 0;
+    page-break-after: auto;
+}
+
+/* --- Links --- */
+
+a {
+    color: #9e1b32;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+/* --- Strong & emphasis --- */
+
+strong {
+    color: #5a0f1d;
+    font-weight: 700;
+}
+
+em { font-style: italic; }
