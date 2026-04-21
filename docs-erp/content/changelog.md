@@ -6,6 +6,32 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [12.14.0] — 2026-04-21
+
+> Инфраструктура: shovel с московского ESB для внешних остатков, persistent-volume и автопровижининг пользователей RabbitMQ
+
+### Добавлено
+
+- **Fanout-обменник `external.remains`** и две durable-очереди `external.remains_for_website`, `external.remains_for_erp` — автоматически создаются командой `php artisan rabbitmq:setup`
+- **Dynamic RabbitMQ Shovel `moscow-remains`** — тянет сообщения из очереди `remains_for_moscow` на ESB (`93.125.18.73:5672`) и публикует их в `external.remains`. Каждое сообщение размножается в обе очереди через fanout. Параметры: `ack-mode: on-confirm`, `reconnect-delay: 5`, `delete-after: never`
+- **Плагины `rabbitmq_shovel` и `rabbitmq_shovel_management`** — включены через смонтированный файл `docker/rabbitmq/enabled_plugins`
+- **Persistent-volume `rabbitmq-data`** — Mnesia теперь переживает рестарт контейнера (раньше всё было эфемерно)
+- **Идемпотентный провижининг пользователей** в `deploy-dev.yml` (шаг `[5.2/7]`): `pecado_admin`, `pecado_app`, опционально `erp_1c` — создаются через `rabbitmqctl` из паролей в `/srv/pecado/.env`. Дефолтный `guest` удаляется
+- **Новые env-переменные**: `MOSCOW_ESB_AMQP_URI`, `MOSCOW_ESB_SRC_QUEUE`, `MOSCOW_ESB_SHOVEL_PREFETCH`, `MOSCOW_ESB_SHOVEL_RECONNECT_DELAY`, `RABBITMQ_ERP_USER`, `RABBITMQ_ERP_PASSWORD` (см. `.env.example`)
+
+### Причина
+
+- Остатки центрального склада Москвы приходят не из 1С:КА2 Pecado, а через внешнюю ESB-шину. Нужен был независимый канал, который параллельно кормит и сайт, и локальную 1С — отсюда fanout-раздвоение
+- Без persistent-volume любой рестарт контейнера терял все очереди и пользователей. Пара «volume + автопровижининг» делает деплой стабильно повторяемым
+- Shovel-плагин выбран вместо самописного consumer-а: он встроен в RabbitMQ, обеспечивает `ack-mode: on-confirm`, автоматический reconnect и перемещает ответственность за reliable-доставку на уровень брокера
+
+### Потребители
+
+- `external.remains_for_website` и `external.remains_for_erp` на момент релиза **не имеют потребителей** — сообщения накапливаются. Написание consumer-а на стороне сайта (`Stock`-домен) и подключение AMQP-чтения со стороны 1С — отдельные задачи
+- TTL на pecado-rabbitmq не установлен; ограничением является только дисковое место. На ESB TTL 3 дня — если и источник и целевая очередь долго лежат без прочтения, старые сообщения источника уходят по TTL
+
+---
+
 ## [12.13.0] — 2026-04-21
 
 > Возвраты покупателя переводятся с привязки к заказам на привязку к реализациям; в payload `return.created` добавляется цена позиции

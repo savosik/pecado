@@ -3,9 +3,12 @@
 ## Архитектура
 
 ```
-1С → erp.events (exchange, topic, durable) → Очереди сайта (erp_in.*)
-Сайт → site.events (exchange, topic, durable) → Очереди 1С (erp_out.*)
+1С          → erp.events      (topic, durable) → Очереди сайта      (erp_in.*)
+Сайт        → site.events     (topic, durable) → Очереди 1С         (erp_out.*)
+Внешний ESB → shovel → external.remains (fanout, durable) → external.remains_for_{website,erp}
 ```
+
+Брокер — `pecado-rabbitmq` (образ `rabbitmq:3-management`). Плагины `rabbitmq_shovel` и `rabbitmq_shovel_management` включены через смонтированный файл `docker/rabbitmq/enabled_plugins`. Данные Mnesia персистятся в named volume `rabbitmq-data` — topology и пользователи переживают рестарт контейнера.
 
 ## Входящие очереди (1С → Сайт)
 
@@ -39,6 +42,20 @@
 ## DLQ (Dead Letter Queue)
 
 Для каждой входящей очереди есть DLQ с префиксом `erp_dlq.*`. Сообщения, вызвавшие ошибку обработки, перенаправляются в DLQ.
+
+## Пользователи и права
+
+Пользователи создаются **автоматически** на каждом деплое (шаг `[5.2/7] Провижининг пользователей RabbitMQ` в `.github/workflows/deploy-dev.yml`). Если пользователь уже есть — обновляется только пароль и права; ручного вмешательства не требуется даже при полном recreate контейнера.
+
+| Пользователь | Tag | Права (`configure` / `write` / `read`) | Назначение |
+|---|---|---|---|
+| `pecado_admin` | `administrator` | `.*` / `.*` / `.*` | Management UI, дебаг, техподдержка |
+| `pecado_app` | — | `.*` / `.*` / `.*` | Laravel-приложение (AMQP + Management API) |
+| `erp_1c` | — | `erp\..*\|erp_out\..*` / `erp\..*` / `erp_out\..*` | 1С:КА2 — читает `erp_out.*`, публикует в `erp.events` |
+
+Пароли берутся из `/srv/pecado/.env` (`RABBITMQ_MANAGEMENT_*`, `RABBITMQ_USER`/`RABBITMQ_PASSWORD`, `RABBITMQ_ERP_USER`/`RABBITMQ_ERP_PASSWORD`). Дефолтный `guest` удаляется.
+
+> Если `RABBITMQ_ERP_*` не заданы — пользователь `erp_1c` пропускается (используется на dev-сервере, но не нужен в CI/локальных средах).
 
 ## Shovel: остатки с московского ESB (external.remains)
 
@@ -74,11 +91,24 @@ ESB (93.125.18.73)                     pecado-rabbitmq
 | `delete-after` | `never` |
 | TTL сообщений в источнике | 3 дня |
 
-Shovel создаётся/обновляется автоматически командой `php artisan rabbitmq:setup` при деплое (одновременно с другими exchange/queue). Конфиг — `config/erp.php → moscow_shovel`.
+Shovel создаётся/обновляется автоматически командой `php artisan rabbitmq:setup` при деплое (одновременно с другими exchange/queue). Конфиг — `config/erp.php → moscow_shovel`. Регистрация идёт через RabbitMQ Management API `PUT /api/parameters/shovel/%2F/moscow-remains`.
 
-Плагины `rabbitmq_shovel` и `rabbitmq_shovel_management` включены в `docker/rabbitmq/enabled_plugins`.
+### TTL и отказоустойчивость
 
-> Креды (`MOSCOW_ESB_AMQP_URI`) хранятся в `/srv/pecado/.env` на dev-сервере. Полные значения — в `docs/DEV_SERVER_CREDENTIALS.md`.
+- Очередь-источник `remains_for_moscow` на ESB имеет TTL 3 дня. Если shovel задержится с подключением, непрочитанные сообщения удаляются автоматически.
+- `ack-mode: on-confirm` гарантирует, что shovel подтверждает сообщение источнику **только после** publisher-confirm от целевого брокера. Сообщения не теряются при нетворк-блипах.
+- `reconnect-delay: 5` — после разрыва shovel переподключается к ESB каждые 5 секунд.
+
+### Потребители очередей
+
+| Очередь | Потребитель | Статус на 2026-04-21 |
+|---|---|---|
+| `external.remains_for_website` | Модуль остатков сайта Pecado | Не реализован (очередь просто накапливает) |
+| `external.remains_for_erp` | 1С:КА2 (AMQP-чтение) | Не реализован |
+
+До появления потребителей сообщения лежат в очередях бессрочно (TTL не установлен на стороне pecado-rabbitmq — ограничением является только дисковое место). После появления потребителей — читаются.
+
+> Креды (`MOSCOW_ESB_AMQP_URI`, `MOSCOW_ESB_SRC_QUEUE`) хранятся в `/srv/pecado/.env` на dev-сервере. Полные значения — в `docs/DEV_SERVER_CREDENTIALS.md`.
 
 ## Сводная таблица событий
 
