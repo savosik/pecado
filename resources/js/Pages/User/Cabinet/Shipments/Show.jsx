@@ -1,7 +1,8 @@
 import { Box, Flex, HStack, VStack, Text, Badge, Card, Table, Separator, SimpleGrid } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
-import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare, LuInfo } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const ORDER_STATUS_COLORS = {
     pending: 'yellow',
@@ -246,12 +247,11 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                 <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                     <Table.ColumnHeader>Заказ</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Кол-во</Table.ColumnHeader>
-                                                <Table.ColumnHeader textAlign="right">Базовая цена ({currencySymbol})</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="center">Количество</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Цена без скидки</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Скидка</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Ваша цена ({currencySymbol})</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">НДС</Table.ColumnHeader>
-                                    <Table.ColumnHeader textAlign="right">Итог ({currencySymbol})</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Цена со скидкой</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
@@ -286,7 +286,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                                 </Link>
                                             ) : <Text color="gray.300" fontSize="xs">—</Text>}
                                         </Table.Cell>
-                                        <Table.Cell textAlign="right">
+                                        <Table.Cell textAlign="center">
                                             <Text fontFamily="mono">{item.quantity}</Text>
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
@@ -299,16 +299,26 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             {hasDiscount ? (
-                                                <VStack gap="0" align="end">
+                                                <HStack gap="1" justify="flex-end" align="center">
+                                                    {combinedDiscount > 0 && (
+                                                        <Tooltip
+                                                            showArrow
+                                                            content={
+                                                                <Box>
+                                                                    <Text fontSize="xs">Авт.: {parseFloat(item.auto_discount_percent || 0).toFixed(2)}%</Text>
+                                                                    <Text fontSize="xs">Руч.: {parseFloat(item.manual_discount_percent || 0).toFixed(2)}%</Text>
+                                                                </Box>
+                                                            }
+                                                        >
+                                                            <Box as="span" color="gray.400" cursor="help" display="inline-flex" aria-label="Состав скидки">
+                                                                <LuInfo size={12} />
+                                                            </Box>
+                                                        </Tooltip>
+                                                    )}
                                                     <Badge colorPalette="green" variant="subtle" size="xs">
                                                         -{combinedDiscount > 0 ? combinedDiscount.toFixed(2) : fmt(savingsConverted / grossConverted * 100)}%
                                                     </Badge>
-                                                    {combinedDiscount > 0 && parseFloat(item.auto_discount_percent) > 0 && parseFloat(item.manual_discount_percent) > 0 && (
-                                                        <Text fontSize="2xs" color="gray.400">
-                                                            авт. {parseFloat(item.auto_discount_percent).toFixed(2)}% + руч. {parseFloat(item.manual_discount_percent).toFixed(2)}%
-                                                        </Text>
-                                                    )}
-                                                </VStack>
+                                                </HStack>
                                             ) : (
                                                 <Text fontFamily="mono" fontSize="sm" color="gray.300">—</Text>
                                             )}
@@ -322,11 +332,6 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                                     </Text>
                                                 )}
                                             </VStack>
-                                        </Table.Cell>
-                                        <Table.Cell textAlign="right">
-                                            <Text fontFamily="mono" fontSize="sm" color="gray.500">
-                                                {item.vat_rate != null ? `${item.vat_rate}%` : '—'}
-                                            </Text>
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <VStack gap="0" align="end">
@@ -369,20 +374,35 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                 </Text>
                                 <SimpleGrid columns={2} gap={3}>
                                     <InfoBlock label="Количество" value={item.quantity} />
-                                    <InfoBlock label="Базовая цена" value={`${fmt(basePriceConverted)} ${currencySymbol}`} mono />
+                                    <InfoBlock label="Цена без скидки" value={`${fmt(basePriceConverted)} ${currencySymbol}`} mono />
                                     {hasDiscount && (
-                                        <InfoBlock
-                                            label="Скидка"
-                                            value={`${combinedDiscount > 0 ? combinedDiscount.toFixed(2) : fmt(savingsConverted / grossConverted * 100)}%`}
-                                        />
+                                        <Box>
+                                            <Text fontSize="xs" color="gray.500" mb="1">Скидка</Text>
+                                            <HStack gap="1" align="center">
+                                                {combinedDiscount > 0 && (
+                                                    <Tooltip
+                                                        showArrow
+                                                        content={
+                                                            <Box>
+                                                                <Text fontSize="xs">Авт.: {parseFloat(item.auto_discount_percent || 0).toFixed(2)}%</Text>
+                                                                <Text fontSize="xs">Руч.: {parseFloat(item.manual_discount_percent || 0).toFixed(2)}%</Text>
+                                                            </Box>
+                                                        }
+                                                    >
+                                                        <Box as="span" color="gray.400" cursor="help" display="inline-flex" aria-label="Состав скидки">
+                                                            <LuInfo size={12} />
+                                                        </Box>
+                                                    </Tooltip>
+                                                )}
+                                                <Text fontSize="sm" fontWeight="500">
+                                                    {combinedDiscount > 0 ? combinedDiscount.toFixed(2) : fmt(savingsConverted / grossConverted * 100)}%
+                                                </Text>
+                                            </HStack>
+                                        </Box>
                                     )}
-                                    <InfoBlock label="Ваша цена" value={`${fmt(effectivePriceConverted)} ${currencySymbol}`} mono />
-                                    <InfoBlock
-                                        label="НДС"
-                                        value={item.vat_rate != null ? `${item.vat_rate}%` : '—'}
-                                    />
+                                    <InfoBlock label="Цена со скидкой" value={`${fmt(effectivePriceConverted)} ${currencySymbol}`} mono />
                                     <Box>
-                                        <Text fontSize="xs" color="gray.500" mb="1">Итог</Text>
+                                        <Text fontSize="xs" color="gray.500" mb="1">Сумма</Text>
                                         <Text fontWeight="700" fontFamily="mono">
                                             {fmt(totalConverted)} {currencySymbol}
                                         </Text>
