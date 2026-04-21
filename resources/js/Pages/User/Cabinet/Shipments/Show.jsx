@@ -232,13 +232,12 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                 </Card.Root>
             )}
 
-            <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-                <Card.Header>
-                    <HStack gap="2">
-                        <LuPackage size={18} />
-                        <Text fontWeight="600" fontSize="lg">Состав отгрузки ({shipment.items?.length || 0})</Text>
-                    </HStack>
-                </Card.Header>
+            <Box>
+                <HStack gap="2" mb="3">
+                    <LuPackage size={18} />
+                    <Text fontWeight="600" fontSize="lg">Состав отгрузки ({shipment.items?.length || 0})</Text>
+                </HStack>
+                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                 <Card.Body p={0}>
                     {/* Desktop */}
                     <Box overflowX="auto" display={{ base: 'none', md: 'block' }}>
@@ -339,11 +338,6 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                                 {shipment.currency_code !== currency?.code && (
                                                     <Text fontSize="xs" color="gray.400">{fmt(item.total)} {shipment.currency_code}</Text>
                                                 )}
-                                                {savingsConverted > 0 && (
-                                                    <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
-                                                        Экономия: {fmt(savingsConverted)}
-                                                    </Text>
-                                                )}
                                             </VStack>
                                         </Table.Cell>
                                     </Table.Row>
@@ -406,11 +400,6 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                         <Text fontWeight="700" fontFamily="mono">
                                             {fmt(totalConverted)} {currencySymbol}
                                         </Text>
-                                        {savingsConverted > 0 && (
-                                            <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
-                                                Ваша выгода: {fmt(savingsConverted)} {currencySymbol}
-                                            </Text>
-                                        )}
                                     </Box>
                                 </SimpleGrid>
                             </Box>
@@ -420,8 +409,40 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                             <Text color="gray.400" textAlign="center" py="4">Позиции отсутствуют</Text>
                         )}
                     </VStack>
+
+                    {/* Итого/Экономия под таблицей */}
+                    {shipment.items && shipment.items.length > 0 && (() => {
+                        const totalSavings = shipment.items.reduce((acc, item) => {
+                            const base = parseFloat(item.price_converted || 0) * item.quantity;
+                            const total = parseFloat(item.total_converted || 0);
+                            return base > total + 0.01 ? acc + (base - total) : acc;
+                        }, 0);
+                        return (
+                            <Flex
+                                justify="flex-end" gap="6" p="4" flexWrap="wrap"
+                                borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                _dark={{ borderColor: 'gray.700' }}
+                            >
+                                <HStack gap="2">
+                                    <Text fontSize="sm" color="gray.500">Итого:</Text>
+                                    <Text fontWeight="700" fontFamily="mono">
+                                        {fmt(shipment.total_converted)} {currencySymbol}
+                                    </Text>
+                                </HStack>
+                                {totalSavings > 0 && (
+                                    <HStack gap="2">
+                                        <Text fontSize="sm" color="gray.500">Экономия:</Text>
+                                        <Text fontWeight="700" fontFamily="mono" color="green.600" _dark={{ color: 'green.400' }}>
+                                            {fmt(totalSavings)} {currencySymbol}
+                                        </Text>
+                                    </HStack>
+                                )}
+                            </Flex>
+                        );
+                    })()}
                 </Card.Body>
-            </Card.Root>
+                </Card.Root>
+            </Box>
         </CabinetLayout>
     );
 }
