@@ -93,6 +93,43 @@
 | Login | pecado_admin |
 | Password | SecurePass2024! |
 
+## RabbitMQ Shovel — остатки с московского ESB
+
+Shovel настраивается автоматически при деплое командой `php artisan rabbitmq:setup` (вызывается из `.github/workflows/deploy-dev.yml`). Он вытягивает сообщения из очереди `remains_for_moscow` на ESB и публикует их в локальный fanout-обменник `external.remains`, откуда они расходятся в две очереди:
+
+- `external.remains_for_website` — потребитель: сайт Pecado
+- `external.remains_for_erp` — потребитель: 1С
+
+### Параметры shovel-а
+
+| | |
+|---|---|
+| Name | `moscow-remains` |
+| `src-uri` | `amqp://moscow:Msk7x!9wQp2vLmKe4tRn@93.125.18.73:5672` |
+| `src-queue` | `remains_for_moscow` |
+| `dest-exchange` | `external.remains` (fanout) |
+| `ack-mode` | `on-confirm` |
+| `add-forward-headers` | `false` |
+| `delete-after` | `never` |
+| TTL сообщений в источнике | 3 дня (старые удаляются автоматически) |
+
+### Переменные окружения
+
+Добавь в `/srv/pecado/.env` на dev-сервере (одноразовая настройка):
+
+```dotenv
+MOSCOW_ESB_AMQP_URI="amqp://moscow:Msk7x!9wQp2vLmKe4tRn@93.125.18.73:5672"
+MOSCOW_ESB_SRC_QUEUE=remains_for_moscow
+MOSCOW_ESB_SHOVEL_PREFETCH=1000
+MOSCOW_ESB_SHOVEL_RECONNECT_DELAY=5
+```
+
+Если `MOSCOW_ESB_AMQP_URI` пустой, `rabbitmq:setup` только создаст fanout и очереди, но shovel пропустит (локальный dev без доступа к ESB).
+
+> Плагины `rabbitmq_shovel` и `rabbitmq_shovel_management` включены через файл `docker/rabbitmq/enabled_plugins`, который монтируется в контейнер. Персистентность RabbitMQ обеспечена volume `rabbitmq-data`.
+
+> Сообщения в `remains_for_moscow` копятся сразу, как только ESB пришлёт очередной апдейт остатков. TTL 3 дня — если shovel задержится с подключением, непрочитанные сообщения уйдут сами.
+
 ## MySQL (внутри Docker)
 
 | | |

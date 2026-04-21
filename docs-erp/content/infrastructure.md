@@ -40,6 +40,46 @@
 
 Для каждой входящей очереди есть DLQ с префиксом `erp_dlq.*`. Сообщения, вызвавшие ошибку обработки, перенаправляются в DLQ.
 
+## Shovel: остатки с московского ESB (external.remains)
+
+Часть событий об остатках приходит не напрямую из 1С:КА2 Pecado, а через **RabbitMQ Shovel**, тянущий сообщения из очереди `remains_for_moscow` на внешнем ESB (`93.125.18.73:5672`) и публикующий их в локальный **fanout-обменник** `external.remains`. Оттуда каждое сообщение копируется в две durable-очереди:
+
+| Очередь | Потребитель |
+|---|---|
+| `external.remains_for_website` | Сайт Pecado |
+| `external.remains_for_erp` | 1С:КА2 (ERP) |
+
+```
+ESB (93.125.18.73)                     pecado-rabbitmq
+  ┌──────────────────────┐            ┌────────────────────────────────┐
+  │ remains_for_moscow   │  shovel    │  external.remains (fanout)     │
+  │ (TTL 3 дня)          │ ─────────► │             │                  │
+  └──────────────────────┘            │             ├─► external.remains_for_website
+                                      │             └─► external.remains_for_erp
+                                      └────────────────────────────────┘
+```
+
+### Параметры shovel-а (dynamic, через Management API)
+
+| Параметр | Значение |
+|---|---|
+| `name` | `moscow-remains` |
+| `src-protocol` | `amqp091` |
+| `src-queue` | `remains_for_moscow` (на ESB) |
+| `dest-protocol` | `amqp091` |
+| `dest-uri` | `amqp://` (локальный брокер) |
+| `dest-exchange` | `external.remains` |
+| `ack-mode` | `on-confirm` |
+| `add-forward-headers` | `false` |
+| `delete-after` | `never` |
+| TTL сообщений в источнике | 3 дня |
+
+Shovel создаётся/обновляется автоматически командой `php artisan rabbitmq:setup` при деплое (одновременно с другими exchange/queue). Конфиг — `config/erp.php → moscow_shovel`.
+
+Плагины `rabbitmq_shovel` и `rabbitmq_shovel_management` включены в `docker/rabbitmq/enabled_plugins`.
+
+> Креды (`MOSCOW_ESB_AMQP_URI`) хранятся в `/srv/pecado/.env` на dev-сервере. Полные значения — в `docs/DEV_SERVER_CREDENTIALS.md`.
+
 ## Сводная таблица событий
 
 | Событие | Направление | Exchange | Очередь |

@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Http;
 use PhpAmqpLib\Connection\AMQPStreamConnection;
 use PhpAmqpLib\Exchange\AMQPExchangeType;
 use PhpAmqpLib\Wire\AMQPTable;
@@ -11,7 +12,20 @@ class SetupRabbitMQTopology extends Command
 {
     protected $signature = 'rabbitmq:setup';
 
-    protected $description = 'Создание топологии RabbitMQ (exchanges, queues, bindings, DLQ)';
+    protected $description = 'Создание топологии RabbitMQ (exchanges, queues, bindings, DLQ, shovels)';
+
+    /**
+     * Внешние (не-ERP) fanout-обменники и очереди-потребители.
+     *
+     * Shovel тянет сообщения из внешних систем (например, московского ESB) →
+     * публикует в fanout-обменник → сообщение копируется во все привязанные очереди.
+     */
+    private const EXTERNAL_FANOUTS = [
+        'external.remains' => [
+            'external.remains_for_website',
+            'external.remains_for_erp',
+        ],
+    ];
 
     /**
      * Входящие очереди (1С → Сайт) с routing keys.
@@ -102,8 +116,24 @@ class SetupRabbitMQTopology extends Command
                 }
             }
 
+            // 7. Внешние fanout-обменники и их очереди
+            foreach (self::EXTERNAL_FANOUTS as $exchange => $queues) {
+                $this->info("Создание fanout exchange: {$exchange}");
+                $channel->exchange_declare($exchange, AMQPExchangeType::FANOUT, false, true, false);
+
+                foreach ($queues as $queue) {
+                    $this->info("  Создание очереди: {$queue}");
+                    $channel->queue_declare($queue, false, true, false, false);
+                    $channel->queue_bind($queue, $exchange);
+                    $this->info("  Binding: {$queue} → {$exchange}");
+                }
+            }
+
             $channel->close();
             $connection->close();
+
+            // 8. Dynamic shovel с московского ESB
+            $this->setupMoscowShovel();
 
             $this->info('');
             $this->info('✅ Топология RabbitMQ успешно создана!');
@@ -113,6 +143,83 @@ class SetupRabbitMQTopology extends Command
             $this->error("Ошибка: {$e->getMessage()}");
 
             return Command::FAILURE;
+        }
+    }
+
+    /**
+     * Настройка dynamic shovel-а, тянущего внешние остатки с московского ESB
+     * и публикующего их в fanout `external.remains`.
+     *
+     * Параметры передаются через Management HTTP API (PUT /api/parameters/shovel/{vhost}/{name}).
+     * Если `MOSCOW_ESB_AMQP_URI` не задан — shovel не создаётся (локальный dev / CI).
+     */
+    private function setupMoscowShovel(): void
+    {
+        $cfg = config('erp.moscow_shovel');
+        $srcUri = $cfg['src_uri'] ?? null;
+
+        $this->info('');
+        $this->info('Настройка shovel-а с московского ESB...');
+
+        if (empty($srcUri)) {
+            $this->warn('  MOSCOW_ESB_AMQP_URI не задан — shovel пропущен.');
+
+            return;
+        }
+
+        $managementHost = config('queue.connections.rabbitmq.hosts.0.host', 'rabbitmq');
+        $managementPort = config('queue.connections.rabbitmq.management.port', 15672);
+        $managementUser = config('queue.connections.rabbitmq.management.user', 'guest');
+        $managementPass = config('queue.connections.rabbitmq.management.password', 'guest');
+        $vhost = config('queue.connections.rabbitmq.hosts.0.vhost', '/');
+
+        $payload = [
+            'value' => [
+                'src-protocol' => 'amqp091',
+                'src-uri' => $srcUri,
+                'src-queue' => $cfg['src_queue'],
+                'src-prefetch-count' => $cfg['prefetch_count'],
+                'dest-protocol' => 'amqp091',
+                'dest-uri' => 'amqp://',
+                'dest-exchange' => $cfg['dest_exchange'],
+                'dest-exchange-key' => '',
+                'ack-mode' => 'on-confirm',
+                'add-forward-headers' => false,
+                'delete-after' => 'never',
+                'reconnect-delay' => $cfg['reconnect_delay'],
+            ],
+        ];
+
+        $url = sprintf(
+            'http://%s:%s/api/parameters/shovel/%s/%s',
+            $managementHost,
+            $managementPort,
+            rawurlencode($vhost),
+            rawurlencode($cfg['name']),
+        );
+
+        try {
+            $response = Http::withBasicAuth($managementUser, $managementPass)
+                ->timeout(10)
+                ->asJson()
+                ->put($url, $payload);
+
+            if ($response->successful()) {
+                $this->info("  ✅ Shovel '{$cfg['name']}' создан/обновлён: {$cfg['src_queue']} → {$cfg['dest_exchange']}");
+
+                return;
+            }
+
+            if ($response->status() === 404) {
+                $this->error('  ❌ RabbitMQ Management API вернул 404 — плагин rabbitmq_shovel_management не включён.');
+                $this->warn('     Включите плагины: docker compose exec rabbitmq rabbitmq-plugins enable rabbitmq_shovel rabbitmq_shovel_management');
+
+                return;
+            }
+
+            $this->error("  ❌ Не удалось создать shovel (HTTP {$response->status()}): {$response->body()}");
+        } catch (\Exception $e) {
+            $this->error("  ❌ Ошибка подключения к Management API: {$e->getMessage()}");
         }
     }
 }

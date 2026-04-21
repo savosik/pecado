@@ -330,7 +330,24 @@ jobs:
           echo "==> [4/7] Синхронизация ролей и прав..."
           sg docker -c 'docker compose exec -T app php artisan db:seed --class=RolesAndPermissionsSeeder --force'
 
-          echo "==> [5/7] Настройка топологии RabbitMQ..."
+          echo "==> [5/7] Применение актуальной конфигурации RabbitMQ (плагины shovel, persistent volume)..."
+          sg docker -c 'docker compose up -d rabbitmq'
+
+          echo "==> [5.1/7] Ожидание готовности RabbitMQ..."
+          for i in $(seq 1 30); do
+            if sg docker -c 'docker compose exec -T rabbitmq rabbitmq-diagnostics ping' >/dev/null 2>&1; then
+              echo "RabbitMQ готов"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "❌ RabbitMQ не поднялся"
+              sg docker -c 'docker logs --tail 100 pecado-rabbitmq' || true
+              exit 1
+            fi
+            sleep 2
+          done
+
+          echo "==> [5.2/7] Настройка топологии RabbitMQ (exchanges, queues, shovels)..."
           sg docker -c 'docker compose exec -T app php artisan rabbitmq:setup' || true
 
           echo "==> [6/7] Перезапуск очередей..."

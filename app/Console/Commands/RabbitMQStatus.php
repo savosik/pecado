@@ -44,6 +44,10 @@ class RabbitMQStatus extends Command
             'erp_out.returns',
             'erp_out.partners',
         ],
+        'Внешние источники (Shovel)' => [
+            'external.remains_for_website',
+            'external.remains_for_erp',
+        ],
     ];
 
     public function handle(): int

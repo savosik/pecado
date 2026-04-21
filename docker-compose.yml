@@ -118,6 +118,9 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    volumes:
+      - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
+      - rabbitmq-data:/var/lib/rabbitmq
     networks:
       - pecado-network
 
@@ -204,3 +207,4 @@ volumes:
   mysql-prices-data:
   meilisearch-data:
   redis-data:
+  rabbitmq-data:
