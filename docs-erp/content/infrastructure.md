@@ -106,7 +106,20 @@ Shovel создаётся/обновляется автоматически ко
 | `external.remains_for_website` | Модуль остатков сайта Pecado | Не реализован (очередь просто накапливает) |
 | `external.remains_for_erp` | 1С:КА2 (AMQP-чтение) | Не реализован |
 
-До появления потребителей сообщения лежат в очередях бессрочно (TTL не установлен на стороне pecado-rabbitmq — ограничением является только дисковое место). После появления потребителей — читаются.
+### TTL сообщений (policy `external-remains-ttl`)
+
+На обе очереди применяется RabbitMQ policy:
+
+| Поле | Значение |
+|---|---|
+| `pattern` | `^external\.remains_for_.*$` |
+| `apply-to` | `queues` |
+| `definition` | `{"message-ttl": 259200000}` (3 дня в мс) |
+| `priority` | 0 |
+
+Пока потребителей нет, сообщения автоматически удаляются через 3 дня после публикации в fanout — чтобы очереди не разрастались бесконечно и не забивали диск `rabbitmq-data`. Величина совпадает с TTL очереди-источника на ESB: если сообщение не прочитано за 3 дня с момента прилёта на ESB и ещё 3 дня уже в наших очередях — оно всё равно устарело по бизнесу. TTL конфигурируется через `EXTERNAL_REMAINS_TTL_MS`.
+
+Policy регистрируется автоматически командой `php artisan rabbitmq:setup` через Management API (`PUT /api/policies/%2F/external-remains-ttl`).
 
 > Креды (`MOSCOW_ESB_AMQP_URI`, `MOSCOW_ESB_SRC_QUEUE`) хранятся в `/srv/pecado/.env` на dev-сервере. Полные значения — в `docs/DEV_SERVER_CREDENTIALS.md`.
 

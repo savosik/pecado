@@ -17,7 +17,8 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 - **Плагины `rabbitmq_shovel` и `rabbitmq_shovel_management`** — включены через смонтированный файл `docker/rabbitmq/enabled_plugins`
 - **Persistent-volume `rabbitmq-data`** — Mnesia теперь переживает рестарт контейнера (раньше всё было эфемерно)
 - **Идемпотентный провижининг пользователей** в `deploy-dev.yml` (шаг `[5.2/7]`): `pecado_admin`, `pecado_app`, опционально `erp_1c` — создаются через `rabbitmqctl` из паролей в `/srv/pecado/.env`. Дефолтный `guest` удаляется
-- **Новые env-переменные**: `MOSCOW_ESB_AMQP_URI`, `MOSCOW_ESB_SRC_QUEUE`, `MOSCOW_ESB_SHOVEL_PREFETCH`, `MOSCOW_ESB_SHOVEL_RECONNECT_DELAY`, `RABBITMQ_ERP_USER`, `RABBITMQ_ERP_PASSWORD` (см. `.env.example`)
+- **Новые env-переменные**: `MOSCOW_ESB_AMQP_URI`, `MOSCOW_ESB_SRC_QUEUE`, `MOSCOW_ESB_SHOVEL_PREFETCH`, `MOSCOW_ESB_SHOVEL_RECONNECT_DELAY`, `RABBITMQ_ERP_USER`, `RABBITMQ_ERP_PASSWORD`, `EXTERNAL_REMAINS_TTL_MS` (см. `.env.example`)
+- **Policy `external-remains-ttl`** (`pattern=^external\.remains_for_.*$`, `message-ttl=259200000`) — сообщения в fanout-очередях `external.remains_for_{website,erp}` удаляются через 3 дня, чтобы при простое потребителей не забивали диск. Регистрируется через Management API в `rabbitmq:setup`
 
 ### Причина
 
