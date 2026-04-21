@@ -179,18 +179,21 @@ export default function OrderShow({ order }) {
                                     <Table.Header>
                                         <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
                                             <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="160px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="160px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="80px" textAlign="center">Кол-во</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Цена без скидки ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="80px" textAlign="right">Скидка</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Цена со скидкой ({currencySymbol})</Table.ColumnHeader>
+                                            <Table.ColumnHeader w="130px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
                                         </Table.Row>
                                     </Table.Header>
                                     <Table.Body>
                                         {order.items.map((item) => {
-                                            const basePrice = parseFloat(item.base_price || 0);
                                             const finalPrice = parseFloat(item.final_price || item.price || 0);
-                                            const discountPct = parseFloat(item.discount_percent || 0);
-                                            const hasDiscount = basePrice > 0 && finalPrice > 0 && basePrice > finalPrice;
-                                            const savingsLine = hasDiscount ? (basePrice - finalPrice) * item.quantity : 0;
+                                            const rawBasePrice = parseFloat(item.base_price || 0);
+                                            const rawDiscountPct = parseFloat(item.discount_percent || 0);
+                                            const hasDiscount = rawBasePrice > 0 && finalPrice > 0 && rawBasePrice > finalPrice;
+                                            const basePrice = hasDiscount ? rawBasePrice : finalPrice;
+                                            const discountPct = hasDiscount ? rawDiscountPct : 0;
                                             return (
                                             <Table.Row key={item.id}>
                                                 <Table.Cell>
@@ -229,32 +232,10 @@ export default function OrderShow({ order }) {
                                                     </HStack>
                                                 </Table.Cell>
                                                 <Table.Cell textAlign="center">{item.quantity}</Table.Cell>
-                                                <Table.Cell textAlign="right">
-                                                    {hasDiscount && (
-                                                        <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
-                                                            {fmt(basePrice)}
-                                                        </Text>
-                                                    )}
-                                                    {hasDiscount && discountPct > 0 && (
-                                                        <Badge colorPalette="green" variant="subtle" size="xs" mb="0.5">
-                                                            -{fmt(discountPct)}%
-                                                        </Badge>
-                                                    )}
-                                                    <Text fontWeight="500">{fmt(finalPrice)}</Text>
-                                                </Table.Cell>
-                                                <Table.Cell textAlign="right">
-                                                    {hasDiscount && (
-                                                        <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
-                                                            {fmt(basePrice * item.quantity)}
-                                                        </Text>
-                                                    )}
-                                                    <Text fontWeight="600">{fmt(item.subtotal)}</Text>
-                                                    {savingsLine > 0 && (
-                                                        <Text fontSize="xs" color="green.600" _dark={{ color: 'green.400' }}>
-                                                            Экономия: {fmt(savingsLine)}
-                                                        </Text>
-                                                    )}
-                                                </Table.Cell>
+                                                <Table.Cell textAlign="right">{fmt(basePrice)}</Table.Cell>
+                                                <Table.Cell textAlign="right">{fmt(discountPct)}%</Table.Cell>
+                                                <Table.Cell textAlign="right">{fmt(finalPrice)}</Table.Cell>
+                                                <Table.Cell textAlign="right" fontWeight="600">{fmt(item.subtotal)}</Table.Cell>
                                             </Table.Row>
                                             );
                                         })}
@@ -293,7 +274,7 @@ export default function OrderShow({ order }) {
                                         {totalSavings > 0 && (
                                             <HStack gap="1" mt="1">
                                                 <Badge colorPalette="green" variant="subtle" size="sm">
-                                                    Ваша выгода: {fmt(totalSavings)} {currencySymbol}
+                                                    Сумма скидки: {fmt(totalSavings)} {currencySymbol}
                                                 </Badge>
                                             </HStack>
                                         )}
