@@ -149,14 +149,16 @@ abstract class AbstractPreset implements PresetInterface
             $attrUnit = $attr?->unit;
 
             $value = null;
-            if ($av->text_value !== null) {
+            if ($attr?->isBoolean()) {
+                $value = $av->boolean_value !== null ? ($av->boolean_value ? 'Да' : 'Нет') : null;
+            } elseif ($attr?->isNumber()) {
+                $value = $av->number_value;
+            } elseif ($av->attribute_value_id) {
+                $value = $av->attributeValue?->value ?? '';
+            } elseif ($av->text_value !== null && $av->text_value !== '') {
                 $value = $av->text_value;
             } elseif ($av->number_value !== null) {
                 $value = $av->number_value;
-            } elseif ($av->boolean_value !== null) {
-                $value = (bool) $av->boolean_value ? 'Да' : 'Нет';
-            } elseif ($av->attribute_value_id) {
-                $value = $av->attributeValue?->value ?? '';
             }
 
             if ($value !== null) {

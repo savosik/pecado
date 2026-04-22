@@ -257,13 +257,16 @@ class HandleProductCreated
                         $attributeValueId = $attrValue->id;
                     }
 
-                    // Записываем значение атрибута для товара
+                    // Записываем значение атрибута для товара.
+                    // text_value пишем только для строковых и select-атрибутов — иначе boolean даёт "1".
                     $pivotData = [
                         'attribute_value_id' => $attributeValueId,
-                        'text_value' => (string) ($valueLabel ?? ''),
+                        'text_value' => null,
+                        'number_value' => null,
+                        'boolean_value' => null,
+                        'datetime_value' => null,
                     ];
 
-                    // Для числовых, булевых и date-time типов заполняем соответствующие поля
                     if ($siteType === 'number' && is_numeric($valueLabel)) {
                         $pivotData['number_value'] = (float) $valueLabel;
                     } elseif ($siteType === 'boolean') {
@@ -274,6 +277,8 @@ class HandleProductCreated
                         } catch (\Exception $e) {
                             Log::warning('Неверный формат даты атрибута', ['value' => $valueLabel]);
                         }
+                    } else {
+                        $pivotData['text_value'] = (string) ($valueLabel ?? '');
                     }
 
                     \App\Models\ProductAttributeValue::updateOrCreate(

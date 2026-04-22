@@ -561,6 +561,82 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function boolean_attribute_is_stored_in_boolean_value_only(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-bool-001',
+            'uuid' => 'prod-bool-001',
+            'name' => 'Товар с булевым атрибутом',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-relief-uuid',
+                    'property_label' => 'С рельефной поверхностью',
+                    'value_type' => 'boolean',
+                    'value_uuid' => null,
+                    'value_label' => true,
+                ],
+                [
+                    'property_uuid' => 'prop-stim-uuid',
+                    'property_label' => 'С доп. стимуляцией',
+                    'value_type' => 'boolean',
+                    'value_uuid' => null,
+                    'value_label' => false,
+                ],
+            ],
+        ]);
+
+        $product = Product::where('external_id', 'prod-bool-001')->first();
+        $this->assertNotNull($product);
+
+        $reliefAttr = Attribute::where('external_id', 'prop-relief-uuid')->first();
+        $stimAttr = Attribute::where('external_id', 'prop-stim-uuid')->first();
+        $this->assertEquals('boolean', $reliefAttr->type);
+        $this->assertEquals('boolean', $stimAttr->type);
+
+        $reliefPav = $product->attributeValues()->where('attribute_id', $reliefAttr->id)->first();
+        $stimPav = $product->attributeValues()->where('attribute_id', $stimAttr->id)->first();
+
+        // text_value не должен заполняться для boolean — иначе UI отрисует "1" вместо "Да"
+        $this->assertNull($reliefPav->text_value);
+        $this->assertNull($stimPav->text_value);
+
+        $this->assertTrue($reliefPav->boolean_value);
+        $this->assertFalse($stimPav->boolean_value);
+
+        $this->assertSame('Да', $reliefPav->getFormattedValue());
+        $this->assertSame('Нет', $stimPav->getFormattedValue());
+    }
+
+    #[Test]
+    public function number_attribute_does_not_pollute_text_value(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-num-001',
+            'name' => 'Товар с числовым атрибутом',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-length-uuid',
+                    'property_label' => 'Длина',
+                    'value_type' => 'number',
+                    'value_uuid' => null,
+                    'value_label' => 13.8,
+                ],
+            ],
+        ]);
+
+        $attr = Attribute::where('external_id', 'prop-length-uuid')->first();
+        $this->assertEquals('number', $attr->type);
+
+        $pav = Product::where('external_id', 'prod-num-001')->first()
+            ->attributeValues()->where('attribute_id', $attr->id)->first();
+
+        $this->assertNull($pav->text_value);
+        $this->assertEquals(13.8, (float) $pav->number_value);
+    }
+
+    #[Test]
     public function is_marked_defaults_to_false_when_missing(): void
     {
         $this->handler->handle([

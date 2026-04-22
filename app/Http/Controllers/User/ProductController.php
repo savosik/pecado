@@ -436,13 +436,13 @@ class ProductController extends Controller
                 continue;
             }
 
-            // Значение: берём из справочника или текстовое/числовое/булево
-            $value = $av->attributeValue?->value
-                ?? $av->text_value
-                ?? $av->number_value
-                ?? ($av->boolean_value !== null ? ($av->boolean_value ? 'Да' : 'Нет') : null);
+            // Значение: приоритет по типу атрибута, чтобы boolean не вылезал как "1"
+            $value = $av->getFormattedValue();
+            if ($value === '' && $attr->isSelect()) {
+                $value = $av->attributeValue?->value ?? '';
+            }
 
-            if ($value !== null && $value !== '') {
+            if ($value !== '' && $value !== null) {
                 $specifications[$attrName] = (string) $value;
             }
         }

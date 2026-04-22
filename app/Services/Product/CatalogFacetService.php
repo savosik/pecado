@@ -287,9 +287,13 @@ class CatalogFacetService
                 $grouped[$attrId]['type'] = 'inline';
             }
 
-            $rawValue = $row->text_value
-                ?? ($row->number_value !== null ? rtrim(rtrim((string) $row->number_value, '0'), '.') : null)
-                ?? ($row->boolean_value !== null ? ($row->boolean_value ? 'Да' : 'Нет') : null);
+            $rawValue = match ($row->attribute_type) {
+                'boolean' => $row->boolean_value !== null ? ($row->boolean_value ? 'Да' : 'Нет') : null,
+                'number' => $row->number_value !== null ? rtrim(rtrim((string) $row->number_value, '0'), '.') : null,
+                default => $row->text_value
+                    ?? ($row->number_value !== null ? rtrim(rtrim((string) $row->number_value, '0'), '.') : null)
+                    ?? ($row->boolean_value !== null ? ($row->boolean_value ? 'Да' : 'Нет') : null),
+            };
 
             if ($rawValue === null || $rawValue === '') {
                 continue;

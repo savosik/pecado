@@ -169,17 +169,22 @@ class DynamicAttributeField extends ExportField
             return null;
         }
 
-        if ($attrValue->text_value !== null) {
+        if ($this->attribute->isBoolean()) {
+            return $attrValue->boolean_value !== null
+                ? ((bool) $attrValue->boolean_value ? 'Да' : 'Нет')
+                : null;
+        }
+        if ($this->attribute->isNumber()) {
+            return $attrValue->number_value;
+        }
+        if ($attrValue->attribute_value_id) {
+            return $attrValue->attributeValue?->value ?? $attrValue->attribute_value_id;
+        }
+        if ($attrValue->text_value !== null && $attrValue->text_value !== '') {
             return $attrValue->text_value;
         }
         if ($attrValue->number_value !== null) {
             return $attrValue->number_value;
-        }
-        if ($attrValue->boolean_value !== null) {
-            return (bool) $attrValue->boolean_value ? 'Да' : 'Нет';
-        }
-        if ($attrValue->attribute_value_id) {
-            return $attrValue->attributeValue?->value ?? $attrValue->attribute_value_id;
         }
 
         return null;
