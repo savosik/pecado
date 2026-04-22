@@ -2,7 +2,16 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Models\Article;
+use App\Models\Brand;
+use App\Models\BrandStory;
 use App\Models\Media;
+use App\Models\News;
+use App\Models\Product;
+use App\Models\Promotion;
+use App\Models\Story;
+use App\Models\StorySlide;
+use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -52,52 +61,36 @@ class MediaController extends Controller
         $sort = $request->input('sort', 'newest');
         $perPage = $request->integer('per_page', 24);
 
-        if ($search) {
-            // Поиск через Meilisearch с фильтрами.
-            // Берём ключи из индекса, а затем строим обычный Eloquent-запрос
-            // по существующим записям — иначе "призраки" в индексе (id, удалённых
-            // из БД) ломают пагинацию: total от Meilisearch больше реального числа
-            // моделей, на первой странице оказывается одна карточка, на следующих —
-            // ещё несколько, а многие страницы пустые.
-            $meilisearchFilters = $this->buildMeilisearchFilters($type, $collection, $modelType);
+        $query = Media::query()->with('model');
 
-            $mediaQuery = Media::search($search);
-
-            if ($meilisearchFilters) {
-                $mediaQuery->options(['filter' => $meilisearchFilters]);
-            }
-
-            $ids = $mediaQuery->keys()->all();
-
-            $query = Media::query()->with('model')->whereIn('id', $ids);
-            $this->applySorting($query, $sort);
-
-            $media = $query->paginate($perPage)->withQueryString();
-        } else {
-            // Без поиска — обычный Eloquent запрос с фильтрами
-            $query = Media::query()->with('model');
-
-            if ($type) {
-                match ($type) {
-                    'images' => $query->where('mime_type', 'like', 'image/%'),
-                    'videos' => $query->where('mime_type', 'like', 'video/%'),
-                    'documents' => $query->where('mime_type', 'like', 'application/%'),
-                    default => null,
-                };
-            }
-
-            if ($collection) {
-                $query->where('collection_name', $collection);
-            }
-
-            if ($modelType) {
-                $query->where('model_type', $modelType);
-            }
-
-            $this->applySorting($query, $sort);
-
-            $media = $query->paginate($perPage)->withQueryString();
+        if ($type) {
+            match ($type) {
+                'images' => $query->where('mime_type', 'like', 'image/%'),
+                'videos' => $query->where('mime_type', 'like', 'video/%'),
+                'documents' => $query->where('mime_type', 'like', 'application/%'),
+                default => null,
+            };
         }
+
+        if ($collection) {
+            $query->where('collection_name', $collection);
+        }
+
+        if ($modelType) {
+            $query->where('model_type', $modelType);
+        }
+
+        if ($search) {
+            // Подстрочный поиск: предсказуемое поведение — "550001" не тянет
+            // "5500100". Meilisearch с его typo/prefix-толерантностью для
+            // артикулов вредил, поэтому возвращаемся к LIKE по полям медиа
+            // и связанным моделям (товар, бренд, статьи, новости и т.д.).
+            $this->applySearchFilter($query, $search, $modelType);
+        }
+
+        $this->applySorting($query, $sort);
+
+        $media = $query->paginate($perPage)->withQueryString();
 
         // Преобразовать каждый медиафайл для фронтенда
         $media->getCollection()->transform(function ($item) {
@@ -185,25 +178,85 @@ class MediaController extends Controller
     }
 
     /**
-     * Построить строку фильтров для Meilisearch.
+     * Карта searchable-полей связанной модели для whereHasMorph.
+     *
+     * Каждый тип содержит два набора полей:
+     *  - exact: точное равенство (артикулы, коды, штрихкоды — идентификаторы,
+     *    где подстрочный поиск "550001" не должен цеплять "5500100").
+     *  - like: LIKE '%q%' (свободный текст: названия, заголовки).
+     * Плюс relations — связи, по которым тоже надо искать (brand.name, barcodes.barcode).
      */
-    private function buildMeilisearchFilters(?string $type, ?string $collection, ?string $modelType): string
+    private function morphSearchMap(): array
     {
-        $filters = [];
+        return [
+            Product::class => [
+                'exact' => ['code', 'sku', 'barcode', 'external_id'],
+                'like' => ['name'],
+                'relations' => [
+                    ['relation' => 'brand', 'field' => 'name', 'match' => 'like'],
+                    ['relation' => 'barcodes', 'field' => 'barcode', 'match' => 'exact'],
+                ],
+            ],
+            Brand::class => ['exact' => [], 'like' => ['name'], 'relations' => []],
+            Article::class => ['exact' => [], 'like' => ['title'], 'relations' => []],
+            News::class => ['exact' => [], 'like' => ['title'], 'relations' => []],
+            BrandStory::class => ['exact' => [], 'like' => ['title'], 'relations' => []],
+            StorySlide::class => ['exact' => [], 'like' => ['title'], 'relations' => []],
+            Story::class => ['exact' => [], 'like' => ['name'], 'relations' => []],
+            Promotion::class => ['exact' => [], 'like' => ['name'], 'relations' => []],
+        ];
+    }
 
-        if ($type) {
-            $filters[] = 'mime_type_group = "'.addslashes($type).'"';
+    /**
+     * Наложить поисковый фильтр на запрос медиа.
+     *
+     * Ищет:
+     *  - LIKE в name/file_name самого медиа;
+     *  - по связанной модели через whereHasMorph — exact для идентификаторов
+     *    (sku, штрихкод и т.п.) и LIKE для текста.
+     *
+     * Если задан фильтр "Тип сущности" — морф сужается до одного класса,
+     * SQL упрощается и работает быстрее.
+     */
+    private function applySearchFilter($query, string $search, ?string $modelType): void
+    {
+        $needle = '%'.$this->escapeLike($search).'%';
+        $morphMap = $this->morphSearchMap();
+
+        if ($modelType && isset($morphMap[$modelType])) {
+            $morphMap = [$modelType => $morphMap[$modelType]];
         }
 
-        if ($collection) {
-            $filters[] = 'collection_name = "'.addslashes($collection).'"';
-        }
+        $query->where(function ($q) use ($needle, $search, $morphMap) {
+            $q->where('name', 'like', $needle)
+                ->orWhere('file_name', 'like', $needle);
 
-        if ($modelType) {
-            $filters[] = 'model_type = "'.addslashes($modelType).'"';
-        }
+            foreach ($morphMap as $class => $fields) {
+                $q->orWhereHasMorph('model', [$class], function (Builder $b) use ($fields, $needle, $search) {
+                    $b->where(function (Builder $b) use ($fields, $needle, $search) {
+                        foreach ($fields['exact'] as $column) {
+                            $b->orWhere($column, '=', $search);
+                        }
+                        foreach ($fields['like'] as $column) {
+                            $b->orWhere($column, 'like', $needle);
+                        }
+                        foreach ($fields['relations'] as $rel) {
+                            $b->orWhereHas($rel['relation'], fn (Builder $r) => $rel['match'] === 'exact'
+                                ? $r->where($rel['field'], '=', $search)
+                                : $r->where($rel['field'], 'like', $needle));
+                        }
+                    });
+                });
+            }
+        });
+    }
 
-        return implode(' AND ', $filters);
+    /**
+     * Экранировать спецсимволы LIKE, чтобы "50%" не матчил что попало.
+     */
+    private function escapeLike(string $value): string
+    {
+        return str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $value);
     }
 
     /**
