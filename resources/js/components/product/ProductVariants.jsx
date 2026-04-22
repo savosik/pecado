@@ -9,8 +9,9 @@ import { LuCheck, LuClock3, LuCircleX } from 'react-icons/lu';
  * Текущий вариант выделяется рамкой.
  */
 export default function ProductVariants({ variants = [], currentProductId, modelName = '' }) {
-    const { currency } = usePage().props;
+    const { currency, auth } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
+    const user = auth?.user?.status === 'active' ? auth.user : null;
 
     if (!variants || variants.length === 0) return null;
 
@@ -105,37 +106,39 @@ export default function ProductVariants({ variants = [], currentProductId, model
                                     <Text fontSize="sm" fontWeight="600" truncate>
                                         {label}
                                     </Text>
-                                    <Flex align="center" justify="space-between" mt="0.5">
-                                        {/* Цена — фиксированная высота для выравнивания */}
-                                        <Flex direction="column" align="flex-start" minW="0" gap="0">
-                                            {hasSale ? (
-                                                <>
-                                                    <Text as="span" fontSize="2xs" lineHeight="1.2" color="gray.400" textDecoration="line-through">
-                                                        {formatPrice(variant.base_price)}
-                                                    </Text>
-                                                    <Text as="span" fontSize="xs" lineHeight="1.2" fontWeight="500" color="red.600" _dark={{ color: 'red.400' }}>
-                                                        {formatPrice(variant.sale_price)}
-                                                    </Text>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Text as="span" fontSize="2xs" lineHeight="1.2" visibility="hidden">
-                                                        &nbsp;
-                                                    </Text>
-                                                    <Text as="span" fontSize="xs" lineHeight="1.2" fontWeight="500">
-                                                        {formatPrice(variant.base_price)}
-                                                    </Text>
-                                                </>
-                                            )}
+                                    {user && (
+                                        <Flex align="center" justify="space-between" mt="0.5">
+                                            {/* Цена — фиксированная высота для выравнивания */}
+                                            <Flex direction="column" align="flex-start" minW="0" gap="0">
+                                                {hasSale ? (
+                                                    <>
+                                                        <Text as="span" fontSize="2xs" lineHeight="1.2" color="gray.400" textDecoration="line-through">
+                                                            {formatPrice(variant.base_price)}
+                                                        </Text>
+                                                        <Text as="span" fontSize="xs" lineHeight="1.2" fontWeight="500" color="red.600" _dark={{ color: 'red.400' }}>
+                                                            {formatPrice(variant.sale_price)}
+                                                        </Text>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Text as="span" fontSize="2xs" lineHeight="1.2" visibility="hidden">
+                                                            &nbsp;
+                                                        </Text>
+                                                        <Text as="span" fontSize="xs" lineHeight="1.2" fontWeight="500">
+                                                            {formatPrice(variant.base_price)}
+                                                        </Text>
+                                                    </>
+                                                )}
+                                            </Flex>
+                                            {/* Статус наличия — фиксированная ширина для выравнивания */}
+                                            <Flex align="center" gap="1" flexShrink={0}>
+                                                <StatusIcon size={12} color={status.iconColor} />
+                                                <Text fontSize="2xs" fontWeight="500" color={status.color} whiteSpace="nowrap">
+                                                    {status.text}
+                                                </Text>
+                                            </Flex>
                                         </Flex>
-                                        {/* Статус наличия — фиксированная ширина для выравнивания */}
-                                        <Flex align="center" gap="1" flexShrink={0}>
-                                            <StatusIcon size={12} color={status.iconColor} />
-                                            <Text fontSize="2xs" fontWeight="500" color={status.color} whiteSpace="nowrap">
-                                                {status.text}
-                                            </Text>
-                                        </Flex>
-                                    </Flex>
+                                    )}
                                 </Box>
                             </Flex>
                         </Box>
