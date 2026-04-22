@@ -30,16 +30,8 @@ export default function ProductVariants({ variants = [], currentProductId, model
         return { text: 'Нет в наличии', icon: LuCircleX, color: 'red.600', iconColor: '#dc2626' };
     };
 
-    /** Компактная подпись варианта: отличительные атрибуты → отличие в названии → артикул → id */
-    const getVariantLabel = (variant) => {
-        if (variant.diff_attrs && variant.diff_attrs.length > 0) {
-            return variant.diff_attrs.map(a => a.value).join(', ');
-        }
-        if (variant.diff_name) {
-            return variant.diff_name;
-        }
-        return variant.sku || `#${variant.id}`;
-    };
+    /** Подпись варианта формируется на бэке в едином режиме для всей модели (attrs/name/sku). */
+    const getVariantLabel = (variant) => variant.label || variant.sku || `#${variant.id}`;
 
     return (
         <Box mb="4">

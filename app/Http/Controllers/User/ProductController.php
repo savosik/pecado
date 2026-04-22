@@ -385,26 +385,64 @@ class ProductController extends Controller
             $variantArrays = ProductQueryService::enrichProductsWithDiscounts($variantArrays);
             $variantArrays = ProductQueryService::convertProductsPrices($variantArrays);
 
-            // Добавляем diff_attrs к каждому варианту
+            // Собираем diff_attrs для каждого варианта (отладочно) и одновременно строим готовые подписи по атрибутам.
+            $attrsLabels = [];
+            $attrsLabelsOk = count($diffAttrNames) > 0;
             foreach ($variantArrays as &$va) {
                 $va['diff_attrs'] = [];
+                $seen = [];
+                $parts = [];
                 foreach ($diffAttrNames as $an) {
-                    if (isset($attrMap[$an][$va['id']])) {
-                        $va['diff_attrs'][] = [
-                            'name' => $an,
-                            'value' => $attrMap[$an][$va['id']],
-                        ];
+                    if (! isset($attrMap[$an][$va['id']])) {
+                        continue;
                     }
+                    $value = $attrMap[$an][$va['id']];
+                    $va['diff_attrs'][] = ['name' => $an, 'value' => $value];
+
+                    $key = mb_strtolower(trim((string) $value));
+                    if ($key === '' || isset($seen[$key])) {
+                        continue;
+                    }
+                    $seen[$key] = true;
+                    $parts[] = $value;
                 }
+                $label = implode(', ', $parts);
+                if ($label === '') {
+                    $attrsLabelsOk = false;
+                }
+                $attrsLabels[$va['id']] = $label;
             }
             unset($va);
+
+            // Уникальность подписей по атрибутам в пределах модели
+            if ($attrsLabelsOk) {
+                $lowerLabels = array_map(fn ($l) => mb_strtolower($l), $attrsLabels);
+                if (count(array_unique($lowerLabels)) !== count($attrsLabels)) {
+                    $attrsLabelsOk = false;
+                }
+            }
 
             // Вычисляем отличительную часть названий (общий префикс/суффикс по словам отбрасываются)
             $diffNames = $this->computeVariantDiffNames(
                 $variantProducts->pluck('name', 'id')->all()
             );
+
+            // Выбираем единый режим подписи для всей модели: attrs → name → sku.
+            $labelMode = 'sku';
+            if ($attrsLabelsOk) {
+                $labelMode = 'attrs';
+            } elseif (count($diffNames) === count($variantArrays)) {
+                $labelMode = 'name';
+            }
+
             foreach ($variantArrays as &$va) {
                 $va['diff_name'] = $diffNames[$va['id']] ?? null;
+                $va['label_mode'] = $labelMode;
+                $va['label'] = match ($labelMode) {
+                    'attrs' => $attrsLabels[$va['id']],
+                    'name' => $diffNames[$va['id']],
+                    default => $va['sku'] !== '' && $va['sku'] !== null ? $va['sku'] : '#'.$va['id'],
+                };
             }
             unset($va);
 
