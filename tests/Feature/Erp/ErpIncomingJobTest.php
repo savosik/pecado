@@ -2414,6 +2414,126 @@ class ErpIncomingJobTest extends TestCase
     }
 
     #[Test]
+    public function product_updated_full_replace_removes_stale_attributes_through_queue(): void
+    {
+        // Создаём товар с двумя атрибутами через product.created
+        $createJob = $this->makeJob([
+            'event' => 'product.created',
+            'uuid' => '00000000-0000-4000-a000-0000000000a1',
+            'name' => 'Товар с двумя атрибутами',
+            'attributes' => [
+                [
+                    'property_uuid' => '00000000-0000-4000-a000-0000000000a2',
+                    'property_label' => 'Цвет',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Красный',
+                ],
+                [
+                    'property_uuid' => '00000000-0000-4000-a000-0000000000a3',
+                    'property_label' => 'Размер',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'XL',
+                ],
+            ],
+            'message_id' => 'msg-fullrepl-create',
+        ]);
+        $createJob->fire();
+
+        $product = Product::where('external_id', '00000000-0000-4000-a000-0000000000a1')->first();
+        $this->assertEquals(2, $product->attributeValues()->count());
+
+        // product.updated с полным списком из одного атрибута — второй должен быть удалён
+        $updateJob = $this->makeJob([
+            'event' => 'product.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000000a1',
+            'attributes' => [
+                [
+                    'property_uuid' => '00000000-0000-4000-a000-0000000000a2',
+                    'property_label' => 'Цвет',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Красный',
+                ],
+            ],
+            'message_id' => 'msg-fullrepl-update',
+        ]);
+        $updateJob->fire();
+
+        $product->refresh();
+        $this->assertEquals(1, $product->attributeValues()->count());
+    }
+
+    #[Test]
+    public function product_updated_empty_attributes_wipes_all_through_queue(): void
+    {
+        $createJob = $this->makeJob([
+            'event' => 'product.created',
+            'uuid' => '00000000-0000-4000-a000-0000000000b1',
+            'name' => 'Товар для полной очистки',
+            'attributes' => [
+                [
+                    'property_uuid' => '00000000-0000-4000-a000-0000000000b2',
+                    'property_label' => 'Материал',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Силикон',
+                ],
+            ],
+            'message_id' => 'msg-wipe-create',
+        ]);
+        $createJob->fire();
+
+        $product = Product::where('external_id', '00000000-0000-4000-a000-0000000000b1')->first();
+        $this->assertEquals(1, $product->attributeValues()->count());
+
+        $updateJob = $this->makeJob([
+            'event' => 'product.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000000b1',
+            'attributes' => [],
+            'message_id' => 'msg-wipe-update',
+        ]);
+        $updateJob->fire();
+
+        $product->refresh();
+        $this->assertEquals(0, $product->attributeValues()->count());
+    }
+
+    #[Test]
+    public function product_updated_without_attributes_field_keeps_them_through_queue(): void
+    {
+        $createJob = $this->makeJob([
+            'event' => 'product.created',
+            'uuid' => '00000000-0000-4000-a000-0000000000c1',
+            'name' => 'Товар с сохранением атрибутов',
+            'attributes' => [
+                [
+                    'property_uuid' => '00000000-0000-4000-a000-0000000000c2',
+                    'property_label' => 'Длина',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => '20см',
+                ],
+            ],
+            'message_id' => 'msg-keep-create',
+        ]);
+        $createJob->fire();
+
+        $updateJob = $this->makeJob([
+            'event' => 'product.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000000c1',
+            'name' => 'Только имя обновлено',
+            'message_id' => 'msg-keep-update',
+        ]);
+        $updateJob->fire();
+
+        $product = Product::where('external_id', '00000000-0000-4000-a000-0000000000c1')->first();
+        $this->assertEquals('Только имя обновлено', $product->name);
+        $this->assertEquals(1, $product->attributeValues()->count());
+    }
+
+    #[Test]
     public function product_created_preserves_existing_base_price(): void
     {
         // Создаём товар с ценой вручную (как будто price.updated уже отработал)

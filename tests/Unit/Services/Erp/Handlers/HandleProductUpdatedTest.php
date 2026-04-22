@@ -65,13 +65,12 @@ class HandleProductUpdatedTest extends TestCase
     }
 
     #[Test]
-    public function updates_attributes_partially(): void
+    public function full_replace_removes_attributes_missing_from_payload(): void
     {
         $product = Product::factory()->create([
             'external_id' => 'partial-upd-003',
         ]);
 
-        // Сначала добавляем старый атрибут
         $oldAttr = Attribute::create([
             'external_id' => 'old-prop-uuid',
             'name' => 'Старый',
@@ -85,7 +84,6 @@ class HandleProductUpdatedTest extends TestCase
 
         $this->assertEquals(1, $product->attributeValues()->count());
 
-        // Обновляем атрибуты через product.updated
         $this->handler->handle([
             'event' => 'product.updated',
             'message_id' => 'msg-upd-003',
@@ -101,21 +99,46 @@ class HandleProductUpdatedTest extends TestCase
             ],
         ]);
 
-        // v4: мерж — старый атрибут сохраняется, новый добавляется
-        $this->assertEquals(2, $product->attributeValues()->count());
+        // v13: full-replace — старый атрибут удалён, остался только новый
+        $this->assertEquals(1, $product->attributeValues()->count());
 
         $newAttr = Attribute::where('external_id', 'new-prop-uuid')->first();
         $this->assertNotNull($newAttr);
-
-        // Проверяем что новый атрибут добавлен
         $newPav = $product->attributeValues()->where('attribute_id', $newAttr->id)->first();
         $this->assertNotNull($newPav);
         $this->assertEquals('новое значение', $newPav->text_value);
 
-        // Старый атрибут тоже на месте
-        $oldPav = $product->attributeValues()->where('attribute_id', $oldAttr->id)->first();
-        $this->assertNotNull($oldPav);
-        $this->assertEquals('старое значение', $oldPav->text_value);
+        $this->assertNull($product->attributeValues()->where('attribute_id', $oldAttr->id)->first());
+    }
+
+    #[Test]
+    public function empty_attributes_array_removes_all_product_attributes(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'empty-attrs-upd',
+        ]);
+
+        $attr = Attribute::create([
+            'external_id' => 'attr-to-wipe',
+            'name' => 'К удалению',
+            'slug' => 'k-udaleniyu',
+            'type' => 'string',
+        ]);
+        $product->attributeValues()->create([
+            'attribute_id' => $attr->id,
+            'text_value' => 'значение',
+        ]);
+
+        $this->assertEquals(1, $product->attributeValues()->count());
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-upd-empty-attrs',
+            'uuid' => 'empty-attrs-upd',
+            'attributes' => [],
+        ]);
+
+        $this->assertEquals(0, $product->attributeValues()->count());
     }
 
     #[Test]
@@ -383,5 +406,127 @@ class HandleProductUpdatedTest extends TestCase
         $product->refresh();
         $this->assertEquals('Новое название', $product->name);
         $this->assertTrue($product->is_marked);
+    }
+
+    // ──────────────────────────────────────────────
+    // v13: full-replace семантика атрибутов
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function full_replace_partial_overlap_keeps_survivor_drops_missing(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'overlap-upd-001',
+        ]);
+
+        $keepAttr = Attribute::create([
+            'external_id' => 'attr-keep',
+            'name' => 'Цвет',
+            'slug' => 'tsvet',
+            'type' => 'string',
+        ]);
+        $dropAttr = Attribute::create([
+            'external_id' => 'attr-drop',
+            'name' => 'Размер',
+            'slug' => 'razmer',
+            'type' => 'string',
+        ]);
+        $product->attributeValues()->create([
+            'attribute_id' => $keepAttr->id,
+            'text_value' => 'Красный',
+        ]);
+        $product->attributeValues()->create([
+            'attribute_id' => $dropAttr->id,
+            'text_value' => 'XL',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-overlap-001',
+            'uuid' => 'overlap-upd-001',
+            'attributes' => [
+                [
+                    'property_uuid' => 'attr-keep',
+                    'property_label' => 'Цвет',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Синий',
+                ],
+            ],
+        ]);
+
+        $this->assertEquals(1, $product->attributeValues()->count());
+        $kept = $product->attributeValues()->where('attribute_id', $keepAttr->id)->first();
+        $this->assertNotNull($kept);
+        $this->assertEquals('Синий', $kept->text_value);
+        $this->assertNull($product->attributeValues()->where('attribute_id', $dropAttr->id)->first());
+    }
+
+    #[Test]
+    public function updates_attribute_type_when_value_type_changed(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'type-change-upd',
+        ]);
+
+        $attr = Attribute::create([
+            'external_id' => 'attr-type-001',
+            'name' => 'Флаг',
+            'slug' => 'flag',
+            'type' => 'string',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-type-change',
+            'uuid' => 'type-change-upd',
+            'attributes' => [
+                [
+                    'property_uuid' => 'attr-type-001',
+                    'property_label' => 'Флаг',
+                    'value_type' => 'boolean',
+                    'value_uuid' => null,
+                    'value_label' => true,
+                ],
+            ],
+        ]);
+
+        $attr->refresh();
+        $this->assertEquals('boolean', $attr->type);
+
+        $pav = $product->attributeValues()->where('attribute_id', $attr->id)->first();
+        $this->assertNotNull($pav);
+        $this->assertTrue((bool) $pav->boolean_value);
+        $this->assertNull($pav->text_value);
+    }
+
+    #[Test]
+    public function is_idempotent_on_repeated_attributes_payload(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'idem-upd-001',
+        ]);
+
+        $payload = [
+            'event' => 'product.updated',
+            'message_id' => 'msg-idem-001',
+            'uuid' => 'idem-upd-001',
+            'attributes' => [
+                [
+                    'property_uuid' => 'attr-idem',
+                    'property_label' => 'Материал',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Силикон',
+                ],
+            ],
+        ];
+
+        $this->handler->handle($payload);
+        $this->handler->handle($payload);
+        $this->handler->handle($payload);
+
+        $this->assertEquals(1, $product->attributeValues()->count());
+        $this->assertEquals(1, Attribute::where('external_id', 'attr-idem')->count());
     }
 }

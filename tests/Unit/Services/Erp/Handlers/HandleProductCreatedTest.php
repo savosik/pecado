@@ -650,4 +650,150 @@ class HandleProductCreatedTest extends TestCase
         $this->assertNotNull($product);
         $this->assertFalse($product->is_marked);
     }
+
+    // ──────────────────────────────────────────────
+    // v13: full-replace семантика атрибутов
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function full_replace_wipes_stale_attributes_on_repeated_product_created(): void
+    {
+        $category = Category::factory()->create(['uuid' => 'cat-full-replace-001']);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-fr-001',
+            'uuid' => 'prod-fr-001',
+            'name' => 'FR товар',
+            'code' => 'FR-001',
+            'sku' => 'FR-001',
+            'category_uuid' => 'cat-full-replace-001',
+            'attributes' => [
+                [
+                    'property_uuid' => 'fr-color',
+                    'property_label' => 'Цвет',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Красный',
+                ],
+                [
+                    'property_uuid' => 'fr-size',
+                    'property_label' => 'Размер',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'M',
+                ],
+            ],
+        ]);
+
+        $product = Product::where('external_id', 'prod-fr-001')->first();
+        $this->assertEquals(2, $product->attributeValues()->count());
+
+        // Повторный product.created: size пропал из payload
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-fr-002',
+            'uuid' => 'prod-fr-001',
+            'name' => 'FR товар',
+            'code' => 'FR-001',
+            'sku' => 'FR-001',
+            'category_uuid' => 'cat-full-replace-001',
+            'attributes' => [
+                [
+                    'property_uuid' => 'fr-color',
+                    'property_label' => 'Цвет',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'Красный',
+                ],
+            ],
+        ]);
+
+        $product->refresh();
+        $this->assertEquals(1, $product->attributeValues()->count());
+        $color = Attribute::where('external_id', 'fr-color')->first();
+        $this->assertNotNull($product->attributeValues()->where('attribute_id', $color->id)->first());
+    }
+
+    #[Test]
+    public function empty_attributes_array_on_product_created_wipes_all(): void
+    {
+        $category = Category::factory()->create(['uuid' => 'cat-fr-empty']);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-fr-empty-1',
+            'uuid' => 'prod-fr-empty',
+            'name' => 'Пусто',
+            'code' => 'FR-EMP',
+            'sku' => 'FR-EMP',
+            'category_uuid' => 'cat-fr-empty',
+            'attributes' => [
+                [
+                    'property_uuid' => 'fr-empty-attr',
+                    'property_label' => 'Лишний',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'значение',
+                ],
+            ],
+        ]);
+
+        $product = Product::where('external_id', 'prod-fr-empty')->first();
+        $this->assertEquals(1, $product->attributeValues()->count());
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-fr-empty-2',
+            'uuid' => 'prod-fr-empty',
+            'name' => 'Пусто',
+            'code' => 'FR-EMP',
+            'sku' => 'FR-EMP',
+            'category_uuid' => 'cat-fr-empty',
+            'attributes' => [],
+        ]);
+
+        $product->refresh();
+        $this->assertEquals(0, $product->attributeValues()->count());
+    }
+
+    #[Test]
+    public function missing_attributes_field_does_not_touch_existing_on_product_created(): void
+    {
+        $category = Category::factory()->create(['uuid' => 'cat-fr-missing']);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-fr-missing-1',
+            'uuid' => 'prod-fr-missing',
+            'name' => 'Сохраняем',
+            'code' => 'FR-KEEP',
+            'sku' => 'FR-KEEP',
+            'category_uuid' => 'cat-fr-missing',
+            'attributes' => [
+                [
+                    'property_uuid' => 'fr-keep-attr',
+                    'property_label' => 'Сохранить',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'на месте',
+                ],
+            ],
+        ]);
+
+        // Повторный product.created без поля attributes — атрибуты трогать не должны
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-fr-missing-2',
+            'uuid' => 'prod-fr-missing',
+            'name' => 'Новое имя',
+            'code' => 'FR-KEEP',
+            'sku' => 'FR-KEEP',
+            'category_uuid' => 'cat-fr-missing',
+        ]);
+
+        $product = Product::where('external_id', 'prod-fr-missing')->first();
+        $this->assertEquals(1, $product->attributeValues()->count());
+        $this->assertEquals('Новое имя', $product->name);
+    }
 }

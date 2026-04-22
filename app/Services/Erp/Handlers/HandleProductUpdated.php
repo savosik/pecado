@@ -2,19 +2,35 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Models\Attribute;
+use App\Models\AttributeValue;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductAttributeValue;
 use App\Models\ProductModel;
+use Illuminate\Database\ConcurrencyErrorDetector;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Throwable;
 
 /**
  * US-13 v3: Обработка события product.updated из 1С.
  * Частичное обновление — обновляет только поля, переданные в payload.
  * Не затрагивает поля, отсутствующие в сообщении.
  * base_price не обновляется (используйте price.updated).
+ *
+ * v13: атрибуты синхронизируются по full-replace (см. docs-erp/rules/catalog.md):
+ *   - поле attributes отсутствует → состав атрибутов товара не трогаем
+ *   - attributes: []            → удалить все атрибуты товара
+ *   - attributes: [...]         → полная замена: записи в product_attribute_values,
+ *                                 отсутствующие в массиве, удаляются
+ *
+ * Под 6 параллельными воркерами erp_in.catalog оборачиваем транзакцию в retry()
+ * для обработки deadlock/1062 на общих справочных таблицах (attributes, attribute_values,
+ * attribute_category).
  */
 class HandleProductUpdated
 {
@@ -30,6 +46,25 @@ class HandleProductUpdated
             return;
         }
 
+        retry([100, 250], function () use ($payload): void {
+            $this->processPayload($payload);
+        }, function (int $attempt, Throwable $e) use ($uuid): int {
+            Log::warning('product.updated: deadlock, повторная попытка обработки', [
+                'product_uuid' => $uuid,
+                'attempt' => $attempt + 1,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $attempt === 1 ? 100 : 250;
+        }, function (Throwable $e): bool {
+            return $this->shouldRetryOnDeadlock($e);
+        });
+    }
+
+    protected function processPayload(array $payload): void
+    {
+        $uuid = $payload['uuid'];
+
         $product = Product::where('external_id', $uuid)->first();
 
         if (! $product) {
@@ -41,27 +76,22 @@ class HandleProductUpdated
         DB::transaction(function () use ($product, $payload, $uuid) {
             $updateData = [];
 
-            // --- Название ---
             if (array_key_exists('name', $payload)) {
                 $updateData['name'] = $payload['name'];
             }
 
-            // --- Код ---
             if (array_key_exists('code', $payload)) {
                 $updateData['code'] = $payload['code'];
             }
 
-            // --- Артикул ---
             if (array_key_exists('sku', $payload)) {
                 $updateData['sku'] = $payload['sku'];
             }
 
-            // --- Описание ---
             if (array_key_exists('description', $payload)) {
                 $updateData['description'] = $payload['description'];
             }
 
-            // --- Категория ---
             if (array_key_exists('category_uuid', $payload)) {
                 $categoryUuid = $payload['category_uuid'];
                 if ($categoryUuid) {
@@ -72,7 +102,6 @@ class HandleProductUpdated
                 }
             }
 
-            // --- Бренд (v4: объект {uuid, name} | v3: строка | null) ---
             if (array_key_exists('brand', $payload)) {
                 $brandData = $payload['brand'];
                 if ($brandData) {
@@ -82,7 +111,6 @@ class HandleProductUpdated
                 }
             }
 
-            // --- Модель товара ---
             if (array_key_exists('model', $payload)) {
                 $modelData = $payload['model'];
                 if (! empty($modelData)) {
@@ -92,17 +120,14 @@ class HandleProductUpdated
                 }
             }
 
-            // --- Скрыть в интернете (v10) ---
             if (array_key_exists('hidden', $payload)) {
                 $updateData['hidden'] = (bool) $payload['hidden'];
             }
 
-            // --- Маркированный товар «Честный знак» (v12.9) ---
             if (array_key_exists('is_marked', $payload)) {
                 $updateData['is_marked'] = (bool) $payload['is_marked'];
             }
 
-            // Применяем обновление полей (без base_price!)
             if (! empty($updateData)) {
                 $product->update($updateData);
             }
@@ -127,136 +152,223 @@ class HandleProductUpdated
                     DB::table('product_barcodes')->upsert($rows, ['product_id', 'barcode'], ['updated_at']);
                     $product->barcodes()->whereNotIn('barcode', $barcodeValues)->delete();
                 } else {
-                    // Список пустой — удаляем все штрихкоды товара
                     $product->barcodes()->delete();
                 }
             }
 
-            // --- Атрибуты (v4: мерж, не полная замена) ---
+            // --- Атрибуты (v13: full-replace) ---
             $processedAttributeIds = [];
+            $attributesInPayload = array_key_exists('attributes', $payload);
 
-            if (array_key_exists('attributes', $payload)) {
+            if ($attributesInPayload) {
                 $attributes = $payload['attributes'] ?? [];
 
-                foreach ($attributes as $attrData) {
-                    if (! is_array($attrData)) {
-                        continue;
-                    }
-
-                    $propertyUuid = $attrData['property_uuid'] ?? null;
-                    $propertyLabel = $attrData['property_label'] ?? null;
-                    $valueType = $attrData['value_type'] ?? 'string';
-                    $valueUuid = $attrData['value_uuid'] ?? null;
-                    $valueLabel = $attrData['value_label'] ?? null;
-
-                    if (! $propertyUuid || ! $propertyLabel) {
-                        continue;
-                    }
-
-                    $siteType = match ($valueType) {
-                        'number' => 'number',
-                        'boolean' => 'boolean',
-                        'reference' => 'select',
-                        'date-time' => 'date-time',
-                        default => 'string',
-                    };
-
-                    // Найти или создать атрибут по external_id (property_uuid)
-                    // 1С — мастер-каталог. При конфликте slug с данными из sex-opt.ru
-                    // перезаписываем external_id на значение из 1С.
-                    $attribute = \App\Models\Attribute::where('external_id', $propertyUuid)->first();
-
-                    if (! $attribute) {
-                        $baseSlug = Str::slug($propertyLabel) ?: 'attr-'.Str::slug($propertyUuid);
-
-                        // Ищем по slug — возможно сущность пришла из sex-opt.ru с другим external_id
-                        $attribute = \App\Models\Attribute::where('slug', $baseSlug)->first();
-
-                        if ($attribute) {
-                            // Перезаписываем external_id на значение из 1С (1С — мастер)
-                            $attribute->update([
-                                'external_id' => $propertyUuid,
-                                'name' => $propertyLabel,
-                                'type' => $siteType,
-                            ]);
-                        } else {
-                            $attribute = \App\Models\Attribute::create([
-                                'external_id' => $propertyUuid,
-                                'name' => $propertyLabel,
-                                'slug' => $baseSlug,
-                                'type' => $siteType,
-                                'is_active' => \App\Models\Attribute::hasCyrillicName($propertyLabel),
-                            ]);
-                        }
-                    } else {
-                        $attribute->update([
-                            'name' => $propertyLabel,
-                            'type' => $siteType,
-                        ]);
-                    }
-
-                    $processedAttributeIds[] = $attribute->id;
-
-                    $attributeValueId = null;
-                    if ($valueUuid) {
-                        $attrValue = \App\Models\AttributeValue::updateOrCreate(
-                            ['external_id' => $valueUuid],
-                            [
-                                'attribute_id' => $attribute->id,
-                                'value' => $valueLabel ?? $valueUuid,
-                            ]
-                        );
-                        $attributeValueId = $attrValue->id;
-                    }
-
-                    // text_value пишем только для строковых/select-атрибутов — boolean иначе даёт "1".
-                    $pivotData = [
-                        'attribute_value_id' => $attributeValueId,
-                        'text_value' => null,
-                        'number_value' => null,
-                        'boolean_value' => null,
-                        'datetime_value' => null,
-                    ];
-
-                    if ($siteType === 'number' && is_numeric($valueLabel)) {
-                        $pivotData['number_value'] = (float) $valueLabel;
-                    } elseif ($siteType === 'boolean') {
-                        $pivotData['boolean_value'] = filter_var($valueLabel, FILTER_VALIDATE_BOOLEAN);
-                    } elseif ($siteType === 'date-time' && $valueLabel) {
-                        try {
-                            $pivotData['datetime_value'] = \Carbon\Carbon::parse($valueLabel)->toDateTimeString();
-                        } catch (\Exception $e) {
-                            Log::warning('Неверный формат даты атрибута', ['value' => $valueLabel]);
-                        }
-                    } else {
-                        $pivotData['text_value'] = (string) ($valueLabel ?? '');
-                    }
-
-                    \App\Models\ProductAttributeValue::updateOrCreate(
-                        [
-                            'product_id' => $product->id,
-                            'attribute_id' => $attribute->id,
-                        ],
-                        $pivotData
-                    );
+                if (! is_array($attributes)) {
+                    $attributes = [];
                 }
+
+                foreach ($attributes as $attrData) {
+                    $attributeId = $this->syncAttribute($product, $attrData);
+                    if ($attributeId !== null) {
+                        $processedAttributeIds[] = $attributeId;
+                    }
+                }
+
+                // Full-replace: удаляем связи товара с атрибутами, которых нет в payload.
+                // Пустой массив → удаляются все атрибуты товара.
+                $stale = ProductAttributeValue::where('product_id', $product->id);
+                if (! empty($processedAttributeIds)) {
+                    $stale->whereNotIn('attribute_id', $processedAttributeIds);
+                }
+                $stale->delete();
             }
 
             // --- Привязка атрибутов к категории товара ---
+            // Атомарный insertOrIgnore вместо syncWithoutDetaching: при 6 воркерах
+            // non-atomic SELECT+INSERT ловит Duplicate entry на уникальном индексе.
             if (! empty($processedAttributeIds) && $product->category_id) {
-                $category = Category::find($product->category_id);
-                if ($category) {
-                    $category->attributes()->syncWithoutDetaching($processedAttributeIds);
-                }
+                $now = now();
+                $rows = array_map(fn ($aid) => [
+                    'attribute_id' => $aid,
+                    'category_id' => $product->category_id,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ], $processedAttributeIds);
+                DB::table('attribute_category')->insertOrIgnore($rows);
             }
 
             Log::info('product.updated: товар обновлён (частичное)', [
                 'uuid' => $uuid,
                 'updated_fields' => array_keys($updateData),
                 'has_barcodes' => array_key_exists('barcodes', $payload),
-                'has_attributes' => array_key_exists('attributes', $payload),
+                'has_attributes' => $attributesInPayload,
+                'attributes_count' => count($processedAttributeIds),
             ]);
         });
+    }
+
+    /**
+     * Синхронизация одного атрибута товара. Возвращает attribute_id, либо null если
+     * запись пропущена (некорректный элемент payload).
+     */
+    protected function syncAttribute(Product $product, mixed $attrData): ?int
+    {
+        if (! is_array($attrData)) {
+            return null;
+        }
+
+        $propertyUuid = $attrData['property_uuid'] ?? null;
+        $propertyLabel = $attrData['property_label'] ?? null;
+        $valueType = $attrData['value_type'] ?? 'string';
+        $valueUuid = $attrData['value_uuid'] ?? null;
+        $valueLabel = $attrData['value_label'] ?? null;
+
+        if (! $propertyUuid || ! $propertyLabel) {
+            return null;
+        }
+
+        $siteType = match ($valueType) {
+            'number' => 'number',
+            'boolean' => 'boolean',
+            'reference' => 'select',
+            'date-time' => 'date-time',
+            default => 'string',
+        };
+
+        // 1С — мастер-каталог. При конфликте slug с данными из sex-opt.ru
+        // перезаписываем external_id на значение из 1С.
+        $attribute = Attribute::where('external_id', $propertyUuid)->first();
+
+        if (! $attribute) {
+            $baseSlug = Str::slug($propertyLabel) ?: 'attr-'.Str::slug($propertyUuid);
+            $attribute = Attribute::where('slug', $baseSlug)->first();
+
+            if ($attribute) {
+                $attribute->update([
+                    'external_id' => $propertyUuid,
+                    'name' => $propertyLabel,
+                    'type' => $siteType,
+                ]);
+            } else {
+                $attribute = Attribute::create([
+                    'external_id' => $propertyUuid,
+                    'name' => $propertyLabel,
+                    'slug' => $baseSlug,
+                    'type' => $siteType,
+                    'is_active' => Attribute::hasCyrillicName($propertyLabel),
+                ]);
+            }
+        } else {
+            $attribute->update([
+                'name' => $propertyLabel,
+                'type' => $siteType,
+            ]);
+        }
+
+        $attributeValueId = null;
+        if ($valueUuid) {
+            $attributeValueId = $this->resolveAttributeValueId($attribute->id, $valueUuid, $valueLabel);
+        }
+
+        // text_value пишем только для строковых/select-атрибутов — boolean иначе даёт "1".
+        $pivotData = [
+            'attribute_value_id' => $attributeValueId,
+            'text_value' => null,
+            'number_value' => null,
+            'boolean_value' => null,
+            'datetime_value' => null,
+        ];
+
+        if ($siteType === 'number' && is_numeric($valueLabel)) {
+            $pivotData['number_value'] = (float) $valueLabel;
+        } elseif ($siteType === 'boolean') {
+            $pivotData['boolean_value'] = filter_var($valueLabel, FILTER_VALIDATE_BOOLEAN);
+        } elseif ($siteType === 'date-time' && $valueLabel) {
+            try {
+                $pivotData['datetime_value'] = \Carbon\Carbon::parse($valueLabel)->toDateTimeString();
+            } catch (\Exception $e) {
+                Log::warning('Неверный формат даты атрибута', ['value' => $valueLabel]);
+            }
+        } else {
+            $pivotData['text_value'] = (string) ($valueLabel ?? '');
+        }
+
+        ProductAttributeValue::updateOrCreate(
+            [
+                'product_id' => $product->id,
+                'attribute_id' => $attribute->id,
+            ],
+            $pivotData
+        );
+
+        return $attribute->id;
+    }
+
+    /**
+     * Поиск/создание значения атрибута с защитой от гонки по уникальному
+     * индексу (attribute_id, value).
+     */
+    protected function resolveAttributeValueId(int $attributeId, string $valueUuid, mixed $valueLabel): ?int
+    {
+        $valueStr = (string) ($valueLabel ?? $valueUuid);
+
+        $attrValue = AttributeValue::where('external_id', $valueUuid)->first();
+
+        if ($attrValue) {
+            $duplicate = AttributeValue::where('attribute_id', $attributeId)
+                ->where('value', $valueStr)
+                ->where('id', '!=', $attrValue->id)
+                ->first();
+
+            if ($duplicate) {
+                $attrValue->update(['external_id' => null]);
+                $duplicate->update(['external_id' => $valueUuid]);
+
+                return $duplicate->id;
+            }
+
+            $attrValue->update([
+                'attribute_id' => $attributeId,
+                'value' => $valueStr,
+            ]);
+
+            return $attrValue->id;
+        }
+
+        $attrValue = AttributeValue::where('attribute_id', $attributeId)
+            ->where('value', $valueStr)
+            ->first();
+
+        if ($attrValue) {
+            $attrValue->update(['external_id' => $valueUuid]);
+
+            return $attrValue->id;
+        }
+
+        // Атомарный upsert — защита от гонки при параллельных воркерах
+        $attrValue = AttributeValue::updateOrCreate(
+            ['attribute_id' => $attributeId, 'value' => $valueStr],
+            ['external_id' => $valueUuid]
+        );
+
+        return $attrValue->id;
+    }
+
+    protected function shouldRetryOnDeadlock(Throwable $e): bool
+    {
+        /** @var ConcurrencyErrorDetector $detector */
+        $detector = app(ConcurrencyErrorDetector::class);
+
+        if ($detector->causedByConcurrencyError($e)) {
+            return true;
+        }
+
+        if ($e instanceof QueryException
+            && (int) ($e->errorInfo[1] ?? 0) === 1062) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
@@ -266,7 +378,6 @@ class HandleProductUpdated
      */
     private function resolveBrandId(mixed $brandData): ?int
     {
-        // v4: объект {uuid, name}
         if (is_array($brandData)) {
             $uuid = $brandData['uuid'] ?? null;
             $name = $brandData['name'] ?? null;
@@ -277,33 +388,21 @@ class HandleProductUpdated
 
             $slug = Str::slug($name) ?: 'brand-'.Str::slug($uuid);
 
-            // 1С — мастер. При конфликте slug перезаписываем external_id.
             $brand = Brand::where('external_id', $uuid)->first();
 
-            if (! $brand) {
-                // Ищем по slug — возможно бренд пришёл из sex-opt.ru с другим external_id
-                $brand = Brand::where('slug', $slug)->first();
-
-                if ($brand) {
-                    $brand->update([
-                        'external_id' => $uuid,
-                        'name' => $name,
-                    ]);
-                } else {
-                    $brand = Brand::create([
-                        'external_id' => $uuid,
-                        'name' => $name,
-                        'slug' => $slug,
-                    ]);
-                }
-            } else {
+            if ($brand) {
                 $brand->update(['name' => $name]);
+            } else {
+                // Атомарный upsert по slug — защита от гонки и дедупликация с sex-opt.ru
+                $brand = Brand::updateOrCreate(
+                    ['slug' => $slug],
+                    ['external_id' => $uuid, 'name' => $name]
+                );
             }
 
             return $brand->id;
         }
 
-        // v3: строка (обратная совместимость)
         if (is_string($brandData) && $brandData !== '') {
             $brand = Brand::where('name', $brandData)->first();
             if (! $brand) {
@@ -337,7 +436,6 @@ class HandleProductUpdated
             return null;
         }
 
-        // 1. Ищем по external_id (uuid)
         if ($uuid) {
             $productModel = ProductModel::where('external_id', $uuid)->first();
 
@@ -351,7 +449,6 @@ class HandleProductUpdated
             }
         }
 
-        // 2. Fallback: ищем по name — возможно модель уже создана с другим external_id
         if ($name) {
             $productModel = ProductModel::where('name', $name)->first();
 
@@ -365,12 +462,17 @@ class HandleProductUpdated
             }
         }
 
-        // 3. Создаём новую модель
-        $productModel = ProductModel::create(array_filter([
-            'external_id' => $uuid,
-            'name' => $name ?? $uuid,
-            'code' => $code,
-        ]));
+        if ($uuid) {
+            $productModel = ProductModel::updateOrCreate(
+                ['external_id' => $uuid],
+                array_filter(['name' => $name ?? $uuid, 'code' => $code])
+            );
+        } else {
+            $productModel = ProductModel::create(array_filter([
+                'name' => $name,
+                'code' => $code,
+            ]));
+        }
 
         return $productModel->id;
     }

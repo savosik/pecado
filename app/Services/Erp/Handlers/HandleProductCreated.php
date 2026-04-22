@@ -65,6 +65,7 @@ class HandleProductCreated
         $barcodes = $payload['barcodes'] ?? [];
         $modelData = $payload['model'] ?? null;
         $attributes = $payload['attributes'] ?? [];
+        $attributesInPayload = array_key_exists('attributes', $payload);
         $hidden = (bool) ($payload['hidden'] ?? false);
         $isMarked = (bool) ($payload['is_marked'] ?? false);
 
@@ -74,7 +75,8 @@ class HandleProductCreated
         // и позволяет безопасно пережить кратковременный deadlock при массовой выгрузке.
         $this->runInTransaction(function () use (
             $uuid, $name, $code, $sku, $categoryUuid, $brandData,
-            $description, $barcodes, $modelData, $attributes, $hidden, $isMarked, &$category
+            $description, $barcodes, $modelData, $attributes, $attributesInPayload,
+            $hidden, $isMarked, &$category
         ) {
             // --- Категория ---
             $categoryId = null;
@@ -149,11 +151,14 @@ class HandleProductCreated
                 }
             }
 
-            // --- Атрибуты (v4: мерж, не полная замена) ---
-            // Формат: [{ property_uuid, property_label, value_type, value_uuid, value_label }]
+            // --- Атрибуты (v13: full-replace) ---
+            // Формат: [{ property_uuid, property_label, value_type, value_uuid, value_label }].
+            // attributes в payload отсутствует → не трогаем (идемпотентность повторной обработки).
+            // attributes передан (включая []) → синхронизируем состав: записи в
+            // product_attribute_values, отсутствующие в массиве, удаляются.
             $processedAttributeIds = [];
 
-            if (! empty($attributes) && is_array($attributes)) {
+            if ($attributesInPayload && is_array($attributes)) {
 
                 foreach ($attributes as $attrData) {
                     if (! is_array($attrData)) {
@@ -289,6 +294,16 @@ class HandleProductCreated
                         $pivotData
                     );
                 }
+            }
+
+            // Full-replace: если поле attributes передано, чистим связи, которых больше нет.
+            // Пустой массив → удаляются все атрибуты товара.
+            if ($attributesInPayload) {
+                $stale = \App\Models\ProductAttributeValue::where('product_id', $product->id);
+                if (! empty($processedAttributeIds)) {
+                    $stale->whereNotIn('attribute_id', $processedAttributeIds);
+                }
+                $stale->delete();
             }
 
             // --- Привязка атрибутов к категории товара ---
