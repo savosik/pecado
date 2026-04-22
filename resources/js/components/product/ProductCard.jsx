@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX, LuClock3 } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
@@ -183,18 +183,33 @@ export default function ProductCard({ product, loading = false }) {
                             <Flex align="center" gap="1" fontSize="xs" fontWeight="500">
                                 {isInStock ? (
                                     <>
-                                        <LuCheck size={14} color="var(--chakra-colors-green-600)" />
-                                        <Text color="green.600" lineClamp="1">В наличии</Text>
+                                        <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="В наличии" title="В наличии">
+                                            <LuWarehouse size={16} color="var(--chakra-colors-green-600)" />
+                                        </Box>
+                                        <Box display={{ base: 'none', md: 'inline-flex' }}>
+                                            <LuCheck size={14} color="var(--chakra-colors-green-600)" />
+                                        </Box>
+                                        <Text color="green.600" lineClamp="1" display={{ base: 'none', md: 'block' }}>В наличии</Text>
                                     </>
                                 ) : isPreorder ? (
                                     <>
-                                        <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
-                                        <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                                        <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="Предзаказ" title="Предзаказ">
+                                            <LuTruck size={16} color="var(--chakra-colors-yellow-500)" />
+                                        </Box>
+                                        <Box display={{ base: 'none', md: 'inline-flex' }}>
+                                            <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
+                                        </Box>
+                                        <Text color="orange.500" lineClamp="1" display={{ base: 'none', md: 'block' }}>Предзаказ</Text>
                                     </>
                                 ) : (
                                     <>
-                                        <LuCircleX size={14} color="var(--chakra-colors-red-600)" />
-                                        <Text color="red.600" lineClamp="1">Нет в наличии</Text>
+                                        <Box display={{ base: 'inline-flex', md: 'none' }} aria-label="Нет в наличии" title="Нет в наличии">
+                                            <LuPackageX size={16} color="var(--chakra-colors-red-600)" />
+                                        </Box>
+                                        <Box display={{ base: 'none', md: 'inline-flex' }}>
+                                            <LuCircleX size={14} color="var(--chakra-colors-red-600)" />
+                                        </Box>
+                                        <Text color="red.600" lineClamp="1" display={{ base: 'none', md: 'block' }}>Нет в наличии</Text>
                                     </>
                                 )}
                             </Flex>
