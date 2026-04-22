@@ -618,7 +618,62 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                 </Badge>
             </Flex>
 
-            <Box overflowX="auto">
+            {/* Мобильная раскладка — карточки товаров вместо таблицы */}
+            <Stack gap="3" display={{ base: 'flex', md: 'none' }}>
+                {items.map((it) => {
+                    const pid = it.product?.id || it.id;
+                    const qty = Number(it.quantity || 0);
+                    const priceDisc = Number(it.price_discounted ?? it.price ?? 0);
+                    const priceReg = Number(it.price_regular ?? priceDisc);
+                    const totalDisc = Number(it.total_amount_discounted ?? it.total_amount ?? 0);
+
+                    return (
+                        <Box
+                            key={pid}
+                            borderWidth="1px"
+                            borderColor="border"
+                            rounded="md"
+                            p="3"
+                        >
+                            <Text fontWeight="medium" lineClamp={2}>
+                                {it.product?.name || 'Товар'}
+                            </Text>
+                            {(it.product?.brand?.name || it.product?.sku) && (
+                                <Flex gap="1" mt="0.5" flexWrap="wrap">
+                                    {it.product?.brand?.name && (
+                                        <Text fontSize="xs" color="fg.muted">
+                                            {it.product.brand.name}
+                                        </Text>
+                                    )}
+                                    {it.product?.sku && (
+                                        <Text fontSize="xs" color="fg.muted">
+                                            • {it.product.sku}
+                                        </Text>
+                                    )}
+                                </Flex>
+                            )}
+                            <Flex justify="space-between" align="flex-end" gap="3" mt="2">
+                                <Flex direction="column" fontSize="sm" color="fg.muted">
+                                    <Text>
+                                        {qty} шт × {fmt(priceDisc)} {currencySymbol}
+                                    </Text>
+                                    {priceReg !== priceDisc && (
+                                        <Text fontSize="xs" textDecoration="line-through">
+                                            {fmt(priceReg)} {currencySymbol}
+                                        </Text>
+                                    )}
+                                </Flex>
+                                <Text fontWeight="600" fontSize="md" whiteSpace="nowrap">
+                                    {fmt(totalDisc)} {currencySymbol}
+                                </Text>
+                            </Flex>
+                        </Box>
+                    );
+                })}
+            </Stack>
+
+            {/* Таблица — на планшетах и шире */}
+            <Box overflowX="auto" display={{ base: 'none', md: 'block' }}>
                 <Table.Root size="sm" variant="outline">
                     <Table.Header>
                         <Table.Row bg="bg.muted">
