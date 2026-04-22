@@ -124,6 +124,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
 
     return (
         <Tabs.Root defaultValue={tabs[0].key} variant="line">
+            <Text fontSize="2xs" color="gray.400" mb="1">debug: tabs-v2</Text>
             <Box overflowX="auto" css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
                 <Tabs.List borderBottomWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
                     {tabs.map(tab => (
