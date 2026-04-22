@@ -123,10 +123,9 @@ export default function ProductDetailTabs({ specifications = {}, description = '
     const additionalVideos = media.filter(m => m.type === 'video');
 
     return (
-        <Tabs.Root defaultValue={tabs[0].key} variant="line">
-            <Text fontSize="2xs" color="gray.400" mb="1">debug: tabs-v2</Text>
+        <Tabs.Root defaultValue={tabs[0].key} variant="line" colorPalette="pecado">
             <Box overflowX="auto" css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-                <Tabs.List borderBottomWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                <Tabs.List>
                     {tabs.map(tab => (
                         <Tabs.Trigger
                             key={tab.key}
@@ -135,12 +134,6 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                             fontWeight="500"
                             px="4" py="3"
                             whiteSpace="nowrap"
-                            _selected={{
-                                color: 'pecado.600',
-                                borderBottomColor: 'pecado.500',
-                                '--indicator-offset-x': '1rem',
-                                _dark: { color: 'pecado.400', borderBottomColor: 'pecado.400' }
-                            }}
                         >
                             {tab.label}
                         </Tabs.Trigger>
