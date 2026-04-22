@@ -198,8 +198,15 @@ export default function ProductDetailTabs({ specifications = {}, description = '
             {/* Описание */}
             {hasDesc && (
                 <Tabs.Content value="description" pt="4">
-                    <Box p={{ base: '3', md: '5' }} rounded="sm">
-                        <ContentRenderer content={description} />
+                    <Box
+                        p={{ base: '3', md: '5' }}
+                        rounded="sm"
+                        css={{
+                            '& > div': { lineHeight: '1.5em' },
+                            '& p': { marginTop: '0.5em', marginBottom: '0.5em' },
+                        }}
+                    >
+                        <ContentRenderer content={description} proseSize="md" />
                     </Box>
                 </Tabs.Content>
             )}
