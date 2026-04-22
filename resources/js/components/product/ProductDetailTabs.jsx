@@ -137,6 +137,7 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                             _selected={{
                                 color: 'pecado.600',
                                 borderBottomColor: 'pecado.500',
+                                '--indicator-offset-x': '1rem',
                                 _dark: { color: 'pecado.400', borderBottomColor: 'pecado.400' }
                             }}
                         >
