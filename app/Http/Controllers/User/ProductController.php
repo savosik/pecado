@@ -327,6 +327,14 @@ class ProductController extends Controller
 
                     $value = $av->attributeValue?->value ?? $av->text_value;
                     if ($value === null || $value === '') {
+                        if ($av->number_value !== null) {
+                            $formatted = rtrim(rtrim(number_format((float) $av->number_value, 4, '.', ''), '0'), '.');
+                            $value = $attr->unit ? $formatted.' '.$attr->unit : $formatted;
+                        } elseif ($av->boolean_value !== null) {
+                            $value = $av->boolean_value ? 'Да' : 'Нет';
+                        }
+                    }
+                    if ($value === null || $value === '') {
                         continue;
                     }
 
