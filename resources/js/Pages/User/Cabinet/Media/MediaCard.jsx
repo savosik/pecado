@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import {
-    Box, Card, Image, Text, HStack, Badge, VStack, IconButton, Checkbox,
+    Box, Card, Image, Text, HStack, Badge, VStack, IconButton,
 } from '@chakra-ui/react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { LuDownload, LuImage, LuVideo, LuFileText, LuFile, LuEye } from 'react-icons/lu';
 
 export default function MediaCard({ item, selected, onToggleSelection, onOpenLightbox }) {
@@ -85,19 +86,16 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
                     top="2"
                     left="2"
                     onClick={(e) => e.stopPropagation()}
+                    bg={{ base: 'white', _dark: 'gray.800' }}
+                    borderRadius="sm"
+                    shadow="sm"
+                    p="0.5"
                 >
-                    <Checkbox.Root
+                    <Checkbox
                         size="md"
                         checked={selected}
                         onCheckedChange={() => onToggleSelection(item.id)}
-                    >
-                        <Checkbox.HiddenInput />
-                        <Checkbox.Control
-                            bg={{ base: 'white', _dark: 'gray.800' }}
-                            _dark={{ bg: 'gray.800' }}
-                            shadow="sm"
-                        />
-                    </Checkbox.Root>
+                    />
                 </Box>
 
                 {/* Download — top right, visible on hover */}
