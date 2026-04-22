@@ -21,15 +21,33 @@ export default function ProductDetailTabs({ specifications = {}, description = '
 
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
     
-    // Фильтруем характеристики, убирая те, у которых значение "нет", и форматируем числа
+    // Фильтруем характеристики, убирая те, у которых значение "нет", и форматируем числа/даты
     const validSpecifications = useMemo(() => {
+        const monthsRu = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+        const formatValue = (raw) => {
+            const val = String(raw ?? '').trim();
+            if (/^-?\d+\.\d+$/.test(val)) {
+                return parseFloat(val).toString();
+            }
+            // ISO-даты: 2029-10-01 или 2029-10-01T00:00:00(+03:00|Z)
+            const dateMatch = val.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
+            if (dateMatch) {
+                const [, y, m, d, hh, mm] = dateMatch;
+                const monthIdx = parseInt(m, 10) - 1;
+                const day = parseInt(d, 10);
+                if (monthIdx >= 0 && monthIdx < 12) {
+                    const base = `${day} ${monthsRu[monthIdx]} ${y}`;
+                    return hh && !(hh === '00' && mm === '00') ? `${base}, ${hh}:${mm}` : base;
+                }
+            }
+            return val;
+        };
+
         const specs = {};
         for (const [k, v] of Object.entries(specifications || {})) {
-            let val = String(v ?? '').trim();
-            if (val.toLowerCase() !== 'нет') {
-                if (/^-?\d+\.\d+$/.test(val)) {
-                    val = parseFloat(val).toString();
-                }
+            const val = formatValue(v);
+            if (val.toLowerCase() !== 'нет' && val !== '') {
                 specs[k] = val;
             }
         }
@@ -163,11 +181,19 @@ export default function ProductDetailTabs({ specifications = {}, description = '
 
                             return (
                                 <Flex key={key} align="baseline" gap="2" fontSize="sm" py="1" overflow="hidden">
-                                    <Text color="gray.500" _dark={{ color: 'gray.400' }} flexShrink={0} truncate title={key}>
+                                    <Text
+                                        color="gray.500"
+                                        _dark={{ color: 'gray.400' }}
+                                        flex="0 1 auto"
+                                        minW={0}
+                                        maxW="60%"
+                                        truncate
+                                        title={key}
+                                    >
                                         {key}
                                     </Text>
-                                    <Box flex="1" borderBottomWidth="1px" borderStyle="dotted" borderColor="gray.300" _dark={{ borderColor: 'gray.600' }} transform="translateY(2px)" flexShrink={1} minW="10px" />
-                                    <Box flexShrink={1} maxW="55%" textAlign="right" overflow="hidden">
+                                    <Box flex="1 1 10px" borderBottomWidth="1px" borderStyle="dotted" borderColor="gray.300" _dark={{ borderColor: 'gray.600' }} transform="translateY(2px)" minW="10px" />
+                                    <Box flex="0 1 auto" minW={0} maxW="60%" textAlign="right" overflow="hidden">
                                         <Text
                                             fontWeight="500"
                                             title={valStr}
