@@ -78,7 +78,7 @@ export default function ProductQuickViewModal() {
             <Flex
                 position="relative"
                 zIndex="1"
-                h="100%"
+                h="100dvh"
                 w="100%"
                 alignItems="flex-start"
                 justifyContent="center"
@@ -98,7 +98,7 @@ export default function ProductQuickViewModal() {
                         borderRadius={{ base: 'lg', md: 'xl' }}
                         boxShadow="xl"
                         overflow="hidden"
-                        maxH={{ base: 'calc(100vh - 1rem)', md: 'calc(100vh - 3rem)', lg: 'calc(100vh - 52px - 1.5rem)' }}
+                        maxH={{ base: 'calc(100dvh - 1rem)', md: 'calc(100dvh - 3rem)', lg: 'calc(100dvh - 52px - 1.5rem)' }}
                         display="flex"
                         flexDirection="column"
                         transform={visible ? 'scale(1)' : 'scale(0.96)'}
