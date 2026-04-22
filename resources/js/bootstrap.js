@@ -42,8 +42,8 @@ if (typeof document !== 'undefined') {
             const CATALOG_SECTIONS = ['novinki', 'bestsellery', 'favorites'];
             if (CATALOG_SECTIONS.includes(match[1])) return;
 
-            // На странице товара — обычная навигация
-            if (window.location.pathname.match(/^\/products\/([^/]+)$/)) return;
+            // На детальной странице товара — обычная навигация (флаг ставит Pages/User/Products/Show.jsx)
+            if (window.__isProductDetailPage) return;
 
             // Модификаторы и средняя кнопка — не перехватываем
             if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

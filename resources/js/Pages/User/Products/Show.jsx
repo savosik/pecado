@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import { Box, Grid, GridItem } from '@chakra-ui/react';
 import UserLayout from '../UserLayout';
@@ -19,6 +20,13 @@ export default function Show() {
 
     const productInfoProps = buildProductInfoProps(product, currencySymbol);
     const { price, isPreorder, inStock: isInStock } = productInfoProps;
+
+    // Флаг для глобального перехватчика QuickView в bootstrap.js:
+    // на детальной странице товара клики по ссылкам /products/{slug} идут обычной навигацией.
+    useEffect(() => {
+        window.__isProductDetailPage = true;
+        return () => { window.__isProductDetailPage = false; };
+    }, []);
 
     return (
         <UserLayout>
