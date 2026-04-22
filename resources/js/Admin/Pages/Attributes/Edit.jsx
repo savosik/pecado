@@ -97,6 +97,7 @@ export default function Edit({ attribute, types, categoryTree, attributeGroups }
         is_active: attribute.is_active !== undefined ? !!attribute.is_active : true,
         show_on_site: attribute.show_on_site !== undefined ? !!attribute.show_on_site : true,
         show_in_export: attribute.show_in_export !== undefined ? !!attribute.show_in_export : true,
+        is_variant_forming: !!attribute.is_variant_forming,
         sort_order: attribute.sort_order || 0,
         values: attribute.values || [],
         category_ids: (attribute.categories || []).map(c => c.id),
@@ -336,6 +337,21 @@ export default function Edit({ attribute, types, categoryTree, attributeGroups }
                                                     colorPalette="blue"
                                                 />
                                                 <Text size="sm">{data.show_in_export ? 'Да' : 'Нет'}</Text>
+                                            </HStack>
+                                        </FormField>
+
+                                        <FormField
+                                            label="Вариантообразующий"
+                                            error={errors.is_variant_forming}
+                                            helperText="Используется для подписей вариантов одной модели (например: Аромат, Цвет, Размер)"
+                                        >
+                                            <HStack gap={4} mt={2}>
+                                                <Switch
+                                                    checked={data.is_variant_forming}
+                                                    onCheckedChange={(e) => setData('is_variant_forming', e.checked)}
+                                                    colorPalette="purple"
+                                                />
+                                                <Text size="sm">{data.is_variant_forming ? 'Да' : 'Нет'}</Text>
                                             </HStack>
                                         </FormField>
 

@@ -316,9 +316,41 @@ class ProductController extends Controller
                 ->with(['brand', 'media', 'tags', 'attributeValues.attribute', 'attributeValues.attributeValue'])
                 ->get();
 
-            // Собираем атрибуты ВСЕХ товаров модели для сравнения.
-            // Исключаем технические атрибуты (number/boolean типы, упаковка, весá и т.д.)
-            $allProducts = $variantProducts;
+            // Собираем информацию обо всех атрибутах товаров модели.
+            $attrInfo = []; // attr_name => ['type' => string, 'variant_forming' => bool, 'values' => [pid => value]]
+            foreach ($variantProducts as $p) {
+                foreach ($p->attributeValues as $av) {
+                    $attr = $av->attribute;
+                    if (! $attr || ! $attr->is_active || ! $attr->show_on_site) {
+                        continue;
+                    }
+
+                    $value = $av->attributeValue?->value ?? $av->text_value;
+                    if ($value === null || $value === '') {
+                        continue;
+                    }
+
+                    if (! isset($attrInfo[$attr->name])) {
+                        $attrInfo[$attr->name] = [
+                            'type' => $attr->type,
+                            'variant_forming' => (bool) $attr->is_variant_forming,
+                            'values' => [],
+                        ];
+                    }
+                    $attrInfo[$attr->name]['values'][$p->id] = $value;
+                }
+            }
+
+            // Режим: если хоть один атрибут в модели помечен как вариантообразующий — работаем только по флагу.
+            // Иначе — старая эвристика (исключения по типу/имени).
+            $hasFlaggedAttr = false;
+            foreach ($attrInfo as $info) {
+                if ($info['variant_forming']) {
+                    $hasFlaggedAttr = true;
+                    break;
+                }
+            }
+
             $excludedTypes = ['number', 'boolean'];
             $excludedNames = [
                 'Composition', 'Классификация для отчетности',
@@ -327,36 +359,23 @@ class ProductController extends Controller
                 'Количество в комплекте', 'Количество изделий в розничной упаковке',
                 'Коробок в упаковке',
             ];
-            $attrMap = []; // attr_name => [product_id => value]
-            foreach ($allProducts as $p) {
-                foreach ($p->attributeValues as $av) {
-                    $attr = $av->attribute;
-                    if (! $attr) {
-                        continue;
-                    }
-                    if (! $attr->is_active || ! $attr->show_on_site) {
-                        continue;
-                    }
-                    if (in_array($attr->type, $excludedTypes)) {
-                        continue;
-                    }
-                    if (in_array($attr->name, $excludedNames)) {
-                        continue;
-                    }
 
-                    $value = $av->attributeValue?->value ?? $av->text_value;
-                    if ($value !== null && $value !== '') {
-                        $attrMap[$attr->name][$p->id] = $value;
+            $attrMap = []; // attr_name => [product_id => value]
+            $diffAttrNames = [];
+            foreach ($attrInfo as $name => $info) {
+                if ($hasFlaggedAttr) {
+                    if (! $info['variant_forming']) {
+                        continue;
+                    }
+                } else {
+                    if (in_array($info['type'], $excludedTypes, true) || in_array($name, $excludedNames, true)) {
+                        continue;
                     }
                 }
-            }
 
-            // Находим отличающиеся атрибуты — те, где значения не у всех одинаковые
-            $diffAttrNames = [];
-            foreach ($attrMap as $attrName => $productValues) {
-                $unique = array_unique(array_values($productValues));
-                if (count($unique) > 1) {
-                    $diffAttrNames[] = $attrName;
+                $attrMap[$name] = $info['values'];
+                if (count(array_unique(array_values($info['values']))) > 1) {
+                    $diffAttrNames[] = $name;
                 }
             }
 
@@ -377,6 +396,15 @@ class ProductController extends Controller
                         ];
                     }
                 }
+            }
+            unset($va);
+
+            // Вычисляем отличительную часть названий (общий префикс/суффикс по словам отбрасываются)
+            $diffNames = $this->computeVariantDiffNames(
+                $variantProducts->pluck('name', 'id')->all()
+            );
+            foreach ($variantArrays as &$va) {
+                $va['diff_name'] = $diffNames[$va['id']] ?? null;
             }
             unset($va);
 
@@ -537,5 +565,97 @@ class ProductController extends Controller
         $props['sortOptions'] = CatalogSort::options();
 
         return Inertia::render('User/Products/Index', $props);
+    }
+
+    /**
+     * Вычисляет отличительную часть названия для каждого варианта модели.
+     *
+     * Отрезает у всех названий общий префикс и суффикс (сравнение по словам, регистронезависимо),
+     * возвращая только середину. Подчищает знаки препинания на краях.
+     *
+     * Возвращает [product_id => diff_name|null]. null — если механизм не сработал
+     * (пустая отличительная часть хотя бы у одного варианта или дубликаты).
+     *
+     * @param  array<int, string>  $names  [product_id => name]
+     * @return array<int, string|null>
+     */
+    private function computeVariantDiffNames(array $names): array
+    {
+        if (count($names) < 2) {
+            return [];
+        }
+
+        $origTokens = [];
+        $lowerTokens = [];
+        foreach ($names as $id => $name) {
+            $tokens = preg_split('/\s+/u', trim((string) $name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            if (empty($tokens)) {
+                return [];
+            }
+            $origTokens[$id] = $tokens;
+            $lowerTokens[$id] = array_map(fn ($t) => mb_strtolower($t), $tokens);
+        }
+
+        $minLen = min(array_map('count', $lowerTokens));
+
+        $prefixLen = 0;
+        for ($i = 0; $i < $minLen; $i++) {
+            $first = null;
+            $equal = true;
+            foreach ($lowerTokens as $tokens) {
+                if ($first === null) {
+                    $first = $tokens[$i];
+                } elseif ($tokens[$i] !== $first) {
+                    $equal = false;
+                    break;
+                }
+            }
+            if ($equal) {
+                $prefixLen++;
+            } else {
+                break;
+            }
+        }
+
+        $suffixLen = 0;
+        for ($i = 1; $i <= $minLen - $prefixLen; $i++) {
+            $first = null;
+            $equal = true;
+            foreach ($lowerTokens as $tokens) {
+                $token = $tokens[count($tokens) - $i];
+                if ($first === null) {
+                    $first = $token;
+                } elseif ($token !== $first) {
+                    $equal = false;
+                    break;
+                }
+            }
+            if ($equal) {
+                $suffixLen++;
+            } else {
+                break;
+            }
+        }
+
+        $result = [];
+        $seen = [];
+        foreach ($origTokens as $id => $tokens) {
+            $middle = array_slice($tokens, $prefixLen, count($tokens) - $prefixLen - $suffixLen);
+            $diff = preg_replace('/^[\s,.;:\-—–()\[\]]+|[\s,.;:\-—–()\[\]]+$/u', '', implode(' ', $middle));
+
+            if ($diff === null || mb_strlen($diff) < 2) {
+                return [];
+            }
+
+            $key = mb_strtolower($diff);
+            if (isset($seen[$key])) {
+                return [];
+            }
+            $seen[$key] = true;
+
+            $result[$id] = $diff;
+        }
+
+        return $result;
     }
 }

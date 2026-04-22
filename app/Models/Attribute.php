@@ -23,6 +23,7 @@ class Attribute extends Model
         'is_active',
         'show_on_site',
         'show_in_export',
+        'is_variant_forming',
         'sort_order',
         'attribute_group_id',
     ];
@@ -39,6 +40,7 @@ class Attribute extends Model
             'is_active' => 'boolean',
             'show_on_site' => 'boolean',
             'show_in_export' => 'boolean',
+            'is_variant_forming' => 'boolean',
             'sort_order' => 'integer',
         ];
     }

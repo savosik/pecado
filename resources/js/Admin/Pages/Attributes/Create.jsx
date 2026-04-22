@@ -19,6 +19,7 @@ export default function Create({ types, categoryTree, attributeGroups }) {
         is_active: true,
         show_on_site: true,
         show_in_export: true,
+        is_variant_forming: false,
         sort_order: 0,
         values: [],
         category_ids: [],
@@ -177,6 +178,21 @@ export default function Create({ types, categoryTree, attributeGroups }) {
                                                     colorPalette="blue"
                                                 />
                                                 <Text size="sm">{data.show_in_export ? 'Да' : 'Нет'}</Text>
+                                            </HStack>
+                                        </FormField>
+
+                                        <FormField
+                                            label="Вариантообразующий"
+                                            error={errors.is_variant_forming}
+                                            helperText="Используется для подписей вариантов одной модели (например: Аромат, Цвет, Размер)"
+                                        >
+                                            <HStack gap={4} mt={2}>
+                                                <Switch
+                                                    checked={data.is_variant_forming}
+                                                    onCheckedChange={(e) => setData('is_variant_forming', e.checked)}
+                                                    colorPalette="purple"
+                                                />
+                                                <Text size="sm">{data.is_variant_forming ? 'Да' : 'Нет'}</Text>
                                             </HStack>
                                         </FormField>
 
