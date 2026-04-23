@@ -323,6 +323,17 @@ export default function OrdersIndex({ filters, statuses, types }) {
 
                                         {/* Правая часть: сумма */}
                                         <VStack gap="0" align="end" flexShrink="0">
+                                            {Number(order.original_total_converted || 0) > Number(order.total_converted || 0) && (
+                                                <Text
+                                                    fontSize="xs"
+                                                    color="gray.400"
+                                                    fontFamily="mono"
+                                                    textDecoration="line-through"
+                                                    whiteSpace="nowrap"
+                                                >
+                                                    {fmt(order.original_total_converted)} {currencySymbol}
+                                                </Text>
+                                            )}
                                             <Text fontWeight="700" fontSize="lg" fontFamily="mono" whiteSpace="nowrap">
                                                 {fmt(order.total_converted)} {currencySymbol}
                                             </Text>

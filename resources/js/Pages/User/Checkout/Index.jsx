@@ -119,21 +119,56 @@ export default function CheckoutIndex({
                             rounded="lg"
                             p={{ base: '3', md: '5' }}
                         >
-                            <Flex justify="space-between" align="center">
-                                <Text fontWeight="600" fontSize="lg">
-                                    Итого ({grandTotal.quantity ?? 0} шт.)
-                                </Text>
-                                <Flex gap="3" align="center">
-                                    {Number(grandTotal.amount_regular || 0) > Number(grandTotal.amount_discounted || 0) && (
-                                        <Text fontSize="sm" color="fg.muted" textDecoration="line-through">
-                                            {fmt(grandTotal.amount_regular)} {currencySymbol}
+                            {(() => {
+                                const grandRegular = Number(grandTotal.amount_regular || 0);
+                                const grandDiscounted = Number(grandTotal.amount_discounted || 0);
+                                const grandHasDiscount = grandRegular > grandDiscounted;
+                                return (
+                                    <Flex
+                                        direction={{ base: 'column', md: 'row' }}
+                                        justify="space-between"
+                                        align={{ base: 'stretch', md: 'center' }}
+                                        gap="3"
+                                    >
+                                        <Text fontWeight="600" fontSize="lg">
+                                            Итого ({grandTotal.quantity ?? 0} шт.)
                                         </Text>
-                                    )}
-                                    <Text fontSize="xl" fontWeight="bold">
-                                        {fmt(grandTotal.amount_discounted)} {currencySymbol}
-                                    </Text>
-                                </Flex>
-                            </Flex>
+                                        <Stack gap="1" minW={{ md: '280px' }}>
+                                            {grandHasDiscount ? (
+                                                <>
+                                                    <Flex justify="space-between">
+                                                        <Text fontSize="sm" color="fg.muted">Сумма без скидки</Text>
+                                                        <Text fontSize="sm" color="fg.muted" textDecoration="line-through">
+                                                            {fmt(grandRegular)} {currencySymbol}
+                                                        </Text>
+                                                    </Flex>
+                                                    <Flex justify="space-between">
+                                                        <Text fontSize="sm" color="green.600" _dark={{ color: 'green.400' }}>
+                                                            Сумма скидки
+                                                        </Text>
+                                                        <Text fontSize="sm" color="green.600" _dark={{ color: 'green.400' }}>
+                                                            −{fmt(grandRegular - grandDiscounted)} {currencySymbol}
+                                                        </Text>
+                                                    </Flex>
+                                                    <Flex justify="space-between" pt="1" borderTopWidth="1px" borderColor="border">
+                                                        <Text fontSize="lg" fontWeight="bold">Итого</Text>
+                                                        <Text fontSize="lg" fontWeight="bold">
+                                                            {fmt(grandDiscounted)} {currencySymbol}
+                                                        </Text>
+                                                    </Flex>
+                                                </>
+                                            ) : (
+                                                <Flex justify="space-between" gap="3">
+                                                    <Text fontSize="lg" fontWeight="bold">Итого</Text>
+                                                    <Text fontSize="lg" fontWeight="bold">
+                                                        {fmt(grandDiscounted)} {currencySymbol}
+                                                    </Text>
+                                                </Flex>
+                                            )}
+                                        </Stack>
+                                    </Flex>
+                                );
+                            })()}
                         </Box>
 
                         {/* ═══ Компания ═══ */}
@@ -598,7 +633,7 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
     const totalQty = totals?.quantity ?? items.reduce((s, it) => s + Number(it.quantity || 0), 0);
     const totalRegular = Number(totals?.amount_regular ?? 0);
     const totalDiscounted = Number(totals?.amount_discounted ?? 0);
-    const hasDiscount = totalRegular > 0 && totalRegular !== totalDiscounted;
+    const hasDiscount = totalRegular > 0 && totalRegular > totalDiscounted;
 
     return (
         <Box
@@ -654,14 +689,14 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                             )}
                             <Flex justify="space-between" align="flex-end" gap="3" mt="2">
                                 <Flex direction="column" fontSize="sm" color="fg.muted">
-                                    <Text>
-                                        {qty} шт × {fmt(priceDisc)} {currencySymbol}
-                                    </Text>
                                     {priceReg !== priceDisc && (
                                         <Text fontSize="xs" textDecoration="line-through">
                                             {fmt(priceReg)} {currencySymbol}
                                         </Text>
                                     )}
+                                    <Text>
+                                        {qty} шт × {fmt(priceDisc)} {currencySymbol}
+                                    </Text>
                                 </Flex>
                                 <Text fontWeight="600" fontSize="md" whiteSpace="nowrap">
                                     {fmt(totalDisc)} {currencySymbol}
@@ -679,7 +714,9 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                         <Table.Row bg="bg.muted">
                             <Table.ColumnHeader>Название</Table.ColumnHeader>
                             <Table.ColumnHeader w="90px" textAlign="center">Кол-во</Table.ColumnHeader>
-                            <Table.ColumnHeader w="130px" textAlign="right">Цена ({currencySymbol})</Table.ColumnHeader>
+                            <Table.ColumnHeader w="130px" textAlign="right">Цена без скидки</Table.ColumnHeader>
+                            <Table.ColumnHeader w="80px" textAlign="right">Скидка</Table.ColumnHeader>
+                            <Table.ColumnHeader w="130px" textAlign="right">Цена со скидкой</Table.ColumnHeader>
                             <Table.ColumnHeader w="130px" textAlign="right">Сумма ({currencySymbol})</Table.ColumnHeader>
                         </Table.Row>
                     </Table.Header>
@@ -690,6 +727,9 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                             const priceDisc = Number(it.price_discounted ?? it.price ?? 0);
                             const priceReg = Number(it.price_regular ?? priceDisc);
                             const totalDisc = Number(it.total_amount_discounted ?? it.total_amount ?? 0);
+                            const discountPct = priceReg > 0 && priceReg > priceDisc
+                                ? Math.round((1 - priceDisc / priceReg) * 100)
+                                : 0;
 
                             return (
                                 <Table.Row key={pid}>
@@ -711,16 +751,13 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                                         </Flex>
                                     </Table.Cell>
                                     <Table.Cell textAlign="center">{qty}</Table.Cell>
+                                    <Table.Cell textAlign="right">{fmt(priceReg)}</Table.Cell>
                                     <Table.Cell textAlign="right">
-                                        {priceReg !== priceDisc && (
-                                            <Text fontSize="xs" color="fg.muted" textDecoration="line-through">
-                                                {fmt(priceReg)}
-                                            </Text>
-                                        )}
-                                        <Text fontWeight="medium">{fmt(priceDisc)}</Text>
+                                        {discountPct > 0 ? `${discountPct}%` : '—'}
                                     </Table.Cell>
-                                    <Table.Cell textAlign="right">
-                                        <Text fontWeight="medium">{fmt(totalDisc)}</Text>
+                                    <Table.Cell textAlign="right">{fmt(priceDisc)}</Table.Cell>
+                                    <Table.Cell textAlign="right" fontWeight="600">
+                                        {fmt(totalDisc)}
                                     </Table.Cell>
                                 </Table.Row>
                             );
@@ -731,15 +768,40 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
 
             <Separator my="3" />
 
-            <Flex justify="flex-end" gap="4" align="center">
-                {hasDiscount && (
-                    <Text fontSize="sm" color="fg.muted" textDecoration="line-through">
-                        {fmt(totalRegular)} {currencySymbol}
-                    </Text>
-                )}
-                <Text fontSize="lg" fontWeight="bold">
-                    {fmt(totalDiscounted)} {currencySymbol}
-                </Text>
+            <Flex justify="flex-end">
+                <Stack gap="1" minW="280px">
+                    {hasDiscount ? (
+                        <>
+                            <Flex justify="space-between">
+                                <Text fontSize="sm" color="fg.muted">Сумма без скидки</Text>
+                                <Text fontSize="sm" color="fg.muted" textDecoration="line-through">
+                                    {fmt(totalRegular)} {currencySymbol}
+                                </Text>
+                            </Flex>
+                            <Flex justify="space-between">
+                                <Text fontSize="sm" color="green.600" _dark={{ color: 'green.400' }}>
+                                    Сумма скидки
+                                </Text>
+                                <Text fontSize="sm" color="green.600" _dark={{ color: 'green.400' }}>
+                                    −{fmt(totalRegular - totalDiscounted)} {currencySymbol}
+                                </Text>
+                            </Flex>
+                            <Flex justify="space-between" pt="1" borderTopWidth="1px" borderColor="border">
+                                <Text fontSize="md" fontWeight="bold">Итого</Text>
+                                <Text fontSize="md" fontWeight="bold">
+                                    {fmt(totalDiscounted)} {currencySymbol}
+                                </Text>
+                            </Flex>
+                        </>
+                    ) : (
+                        <Flex justify="space-between">
+                            <Text fontSize="md" fontWeight="bold">Итого</Text>
+                            <Text fontSize="md" fontWeight="bold">
+                                {fmt(totalDiscounted)} {currencySymbol}
+                            </Text>
+                        </Flex>
+                    )}
+                </Stack>
             </Flex>
         </Box>
     );

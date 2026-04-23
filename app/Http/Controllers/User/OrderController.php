@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Services\CurrencyService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,7 +29,11 @@ class OrderController extends Controller
         $query = Order::query()
             ->where('user_id', $user->id)
             ->with(['company'])
-            ->withCount(['items', 'shipments']);
+            ->withCount(['items', 'shipments'])
+            ->addSelect([
+                'original_total_amount' => OrderItem::selectRaw('COALESCE(SUM(base_price * quantity), 0)')
+                    ->whereColumn('order_id', 'orders.id'),
+            ]);
 
         // Поиск по UUID или ID
         if ($search = $request->input('search')) {
@@ -87,6 +92,8 @@ class OrderController extends Controller
         // Трансформация данных
         $orders->getCollection()->transform(function ($order) use ($currency) {
             $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
+            $originalTotalAmount = (float) ($order->original_total_amount ?? 0);
+            $originalTotalConverted = $this->convertAmount($originalTotalAmount, $order->currency_code, $currency);
 
             return [
                 'id' => $order->id,
@@ -97,6 +104,8 @@ class OrderController extends Controller
                 'type' => $order->type?->value,
                 'total_amount' => $order->total_amount,
                 'total_converted' => $totalConverted,
+                'original_total_amount' => $originalTotalAmount,
+                'original_total_converted' => $originalTotalConverted,
                 'currency_code' => $order->currency_code,
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
