@@ -62,6 +62,7 @@ class HandleProductCreated
         $categoryUuid = $payload['category_uuid'] ?? null;
         $brandData = $payload['brand'] ?? null;
         $description = $payload['description'] ?? null;
+        $descriptionHtml = $payload['description_html'] ?? null;
         $barcodes = $payload['barcodes'] ?? [];
         $modelData = $payload['model'] ?? null;
         $attributes = $payload['attributes'] ?? [];
@@ -75,7 +76,7 @@ class HandleProductCreated
         // и позволяет безопасно пережить кратковременный deadlock при массовой выгрузке.
         $this->runInTransaction(function () use (
             $uuid, $name, $code, $sku, $categoryUuid, $brandData,
-            $description, $barcodes, $modelData, $attributes, $attributesInPayload,
+            $description, $descriptionHtml, $barcodes, $modelData, $attributes, $attributesInPayload,
             $hidden, $isMarked, &$category
         ) {
             // --- Категория ---
@@ -117,6 +118,7 @@ class HandleProductCreated
                     'code' => $code,
                     'sku' => $sku,
                     'description' => $description,
+                    'description_html' => $descriptionHtml,
                     'category_id' => $categoryId,
                     'brand_id' => $brandId,
                     'model_id' => $modelId,

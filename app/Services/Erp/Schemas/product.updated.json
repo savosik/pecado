@@ -30,6 +30,13 @@
                 "null"
             ]
         },
+        "description_html": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "HTML-версия описания товара. Семантика частичного обновления: если поле отсутствует в payload — Product.description_html не трогаем; если передано (включая null/пустую строку) — перезаписываем."
+        },
         "category_uuid": {
             "type": "string",
             "format": "uuid"

@@ -489,6 +489,62 @@ class HandleProductUpdatedTest extends TestCase
         $this->assertTrue($product->is_marked);
     }
 
+    #[Test]
+    public function updates_description_html_when_field_present(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-upd-desc-html-001',
+            'description_html' => '<p>старый</p>',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-upd-desc-html-001',
+            'description_html' => '<p>новый</p>',
+        ]);
+
+        $product->refresh();
+        $this->assertSame('<p>новый</p>', $product->description_html);
+    }
+
+    #[Test]
+    public function clears_description_html_when_field_null(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-upd-desc-html-002',
+            'description_html' => '<p>был</p>',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-upd-desc-html-002',
+            'description_html' => null,
+        ]);
+
+        $product->refresh();
+        $this->assertNull($product->description_html);
+    }
+
+    #[Test]
+    public function preserves_description_html_when_field_absent_from_payload(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-upd-desc-html-003',
+            'description_html' => '<p>не трогать</p>',
+            'name' => 'Прежнее название',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-upd-desc-html-003',
+            'name' => 'Новое название',
+        ]);
+
+        $product->refresh();
+        $this->assertEquals('Новое название', $product->name);
+        $this->assertSame('<p>не трогать</p>', $product->description_html);
+    }
+
     // ──────────────────────────────────────────────
     // v13: full-replace семантика атрибутов
     // ──────────────────────────────────────────────

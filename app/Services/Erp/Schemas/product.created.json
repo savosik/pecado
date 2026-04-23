@@ -33,6 +33,13 @@
                 "null"
             ]
         },
+        "description_html": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "HTML-версия описания товара. Полностью перезаписывает Product.description_html. Для удаления передавать null или пустую строку."
+        },
         "category_uuid": {
             "type": "string",
             "format": "uuid"

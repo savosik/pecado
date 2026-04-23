@@ -806,6 +806,39 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function stores_description_html_from_payload(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-desc-html-001',
+            'uuid' => 'prod-desc-html-001',
+            'name' => 'Товар с HTML-описанием',
+            'description' => 'Короткое описание',
+            'description_html' => '<p>Подробное <strong>HTML</strong> описание</p>',
+        ]);
+
+        $product = Product::where('external_id', 'prod-desc-html-001')->first();
+        $this->assertNotNull($product);
+        $this->assertSame('Короткое описание', $product->description);
+        $this->assertSame('<p>Подробное <strong>HTML</strong> описание</p>', $product->description_html);
+    }
+
+    #[Test]
+    public function description_html_is_null_when_missing_in_payload(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-desc-html-002',
+            'uuid' => 'prod-desc-html-002',
+            'name' => 'Товар без HTML-описания',
+        ]);
+
+        $product = Product::where('external_id', 'prod-desc-html-002')->first();
+        $this->assertNotNull($product);
+        $this->assertNull($product->description_html);
+    }
+
+    #[Test]
     public function missing_attributes_field_does_not_touch_existing_on_product_created(): void
     {
         $category = Category::factory()->create(['uuid' => 'cat-fr-missing']);

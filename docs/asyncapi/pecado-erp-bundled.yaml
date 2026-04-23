@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 13.0.0
+  version: 13.1.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -1767,7 +1767,20 @@ channels:
               type:
                 - string
                 - 'null'
-              description: Описание товара
+              description: Описание товара (plain-text / краткое)
+            description_html:
+              type:
+                - string
+                - 'null'
+              description: >
+                HTML-версия описания товара (rich-text). Полностью
+                перезаписывает
+
+                `products.description_html` на сайте. `null` или пустая строка —
+
+                очищают поле. Используется на карточке товара и в выгрузках
+
+                маркетплейсов (приоритет `description_html > description`).
             category_uuid:
               type: string
               format: uuid
@@ -1945,6 +1958,18 @@ channels:
               type:
                 - string
                 - 'null'
+              description: Описание товара (plain-text / краткое)
+            description_html:
+              type:
+                - string
+                - 'null'
+              description: >
+                HTML-версия описания (rich-text). Семантика частичного
+                обновления:
+
+                - поле отсутствует в payload → `description_html` не трогаем;
+
+                - передано (включая `null` или пустую строку) → перезаписываем.
             category_uuid:
               type: string
               format: uuid
@@ -5331,7 +5356,16 @@ components:
             type:
               - string
               - 'null'
-            description: Описание товара
+            description: Описание товара (plain-text / краткое)
+          description_html:
+            type:
+              - string
+              - 'null'
+            description: |
+              HTML-версия описания товара (rich-text). Полностью перезаписывает
+              `products.description_html` на сайте. `null` или пустая строка —
+              очищают поле. Используется на карточке товара и в выгрузках
+              маркетплейсов (приоритет `description_html > description`).
           category_uuid:
             type: string
             format: uuid
@@ -5508,6 +5542,15 @@ components:
             type:
               - string
               - 'null'
+            description: Описание товара (plain-text / краткое)
+          description_html:
+            type:
+              - string
+              - 'null'
+            description: |
+              HTML-версия описания (rich-text). Семантика частичного обновления:
+              - поле отсутствует в payload → `description_html` не трогаем;
+              - передано (включая `null` или пустую строку) → перезаписываем.
           category_uuid:
             type: string
             format: uuid
@@ -7605,7 +7648,16 @@ components:
           type:
             - string
             - 'null'
-          description: Описание товара
+          description: Описание товара (plain-text / краткое)
+        description_html:
+          type:
+            - string
+            - 'null'
+          description: |
+            HTML-версия описания товара (rich-text). Полностью перезаписывает
+            `products.description_html` на сайте. `null` или пустая строка —
+            очищают поле. Используется на карточке товара и в выгрузках
+            маркетплейсов (приоритет `description_html > description`).
         category_uuid:
           type: string
           format: uuid
@@ -7762,6 +7814,15 @@ components:
           type:
             - string
             - 'null'
+          description: Описание товара (plain-text / краткое)
+        description_html:
+          type:
+            - string
+            - 'null'
+          description: |
+            HTML-версия описания (rich-text). Семантика частичного обновления:
+            - поле отсутствует в payload → `description_html` не трогаем;
+            - передано (включая `null` или пустую строку) → перезаписываем.
         category_uuid:
           type: string
           format: uuid

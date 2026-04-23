@@ -92,6 +92,10 @@ class HandleProductUpdated
                 $updateData['description'] = $payload['description'];
             }
 
+            if (array_key_exists('description_html', $payload)) {
+                $updateData['description_html'] = $payload['description_html'];
+            }
+
             if (array_key_exists('category_uuid', $payload)) {
                 $categoryUuid = $payload['category_uuid'];
                 if ($categoryUuid) {

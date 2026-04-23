@@ -2534,6 +2534,74 @@ class ErpIncomingJobTest extends TestCase
     }
 
     #[Test]
+    public function product_created_saves_description_html_through_queue(): void
+    {
+        $job = $this->makeJob([
+            'event' => 'product.created',
+            'uuid' => '00000000-0000-4000-a000-0000000000d1',
+            'name' => 'Товар с HTML-описанием',
+            'description' => 'Короткое описание',
+            'description_html' => '<p>Подробное <strong>HTML</strong> описание</p>',
+            'message_id' => 'msg-desc-html-created',
+        ]);
+        $job->fire();
+
+        $product = Product::where('external_id', '00000000-0000-4000-a000-0000000000d1')->first();
+        $this->assertNotNull($product);
+        $this->assertSame('Короткое описание', $product->description);
+        $this->assertSame('<p>Подробное <strong>HTML</strong> описание</p>', $product->description_html);
+    }
+
+    #[Test]
+    public function product_updated_overwrites_description_html_through_queue(): void
+    {
+        $createJob = $this->makeJob([
+            'event' => 'product.created',
+            'uuid' => '00000000-0000-4000-a000-0000000000d2',
+            'name' => 'Товар',
+            'description_html' => '<p>старый</p>',
+            'message_id' => 'msg-desc-html-create',
+        ]);
+        $createJob->fire();
+
+        $updateJob = $this->makeJob([
+            'event' => 'product.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000000d2',
+            'description_html' => '<p>новый</p>',
+            'message_id' => 'msg-desc-html-update',
+        ]);
+        $updateJob->fire();
+
+        $product = Product::where('external_id', '00000000-0000-4000-a000-0000000000d2')->first();
+        $this->assertSame('<p>новый</p>', $product->description_html);
+    }
+
+    #[Test]
+    public function product_updated_without_description_html_keeps_it_through_queue(): void
+    {
+        $createJob = $this->makeJob([
+            'event' => 'product.created',
+            'uuid' => '00000000-0000-4000-a000-0000000000d3',
+            'name' => 'Товар',
+            'description_html' => '<p>не трогать</p>',
+            'message_id' => 'msg-desc-html-keep-create',
+        ]);
+        $createJob->fire();
+
+        $updateJob = $this->makeJob([
+            'event' => 'product.updated',
+            'uuid' => '00000000-0000-4000-a000-0000000000d3',
+            'name' => 'Только имя',
+            'message_id' => 'msg-desc-html-keep-update',
+        ]);
+        $updateJob->fire();
+
+        $product = Product::where('external_id', '00000000-0000-4000-a000-0000000000d3')->first();
+        $this->assertEquals('Только имя', $product->name);
+        $this->assertSame('<p>не трогать</p>', $product->description_html);
+    }
+
+    #[Test]
     public function product_created_preserves_existing_base_price(): void
     {
         // Создаём товар с ценой вручную (как будто price.updated уже отработал)

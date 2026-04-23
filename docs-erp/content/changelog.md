@@ -6,6 +6,34 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.1.0] — 2026-04-23
+
+> `product.created` / `product.updated`: появилось поле `description_html` — HTML-версия описания товара
+
+### Добавлено
+
+- **`product.created.description_html`** — HTML-версия описания (rich-text). Полностью перезаписывает `products.description_html` на сайте. `null` или пустая строка очищают поле
+- **`product.updated.description_html`** — частичное обновление: поле обрабатывается только если присутствует в payload. Если передано (включая `null` / пустую строку) — перезаписывает `products.description_html`; отсутствие поля оставляет текущее значение
+
+### Причина
+
+- На сайте уже есть колонка `products.description_html`, которую редактор заполняет в админке, и она имеет приоритет над `description` в выгрузках маркетплейсов. До v13.1 1С могла передавать только `description` (plain-text), из-за чего при синхронизации карточки с 1С HTML-версия не обновлялась
+- Добавление отдельного поля вместо переиспользования `description` сохраняет разделение plain-text / rich-text и совместимость со старым поведением (обработчик по-прежнему пишет `description` в `products.description`)
+
+### Миграция (1С)
+
+- Если в номенклатуре 1С есть rich-text описание — передавать его в `product.created.description_html` / `product.updated.description_html`
+- Если HTML-описания нет — поле можно не передавать; сайт сохранит текущее значение `products.description_html`
+
+### Критерии приёмки
+
+- [ ] `product.created` с `description_html: "<p>…</p>"` → `products.description_html` содержит переданный HTML
+- [ ] `product.updated` с `description_html` → `products.description_html` перезаписан
+- [ ] `product.updated` без поля `description_html` → `products.description_html` не изменился
+- [ ] `product.updated` с `description_html: null` → `products.description_html` очищен
+
+---
+
 ## [13.0.0] — 2026-04-22
 
 > Атрибуты товаров: смена семантики с **merge** на **full-replace** + выравнивание `product.updated` handler-а с `product.created` (retry на deadlock, `insertOrIgnore` на `attribute_category`)
