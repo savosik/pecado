@@ -21,6 +21,7 @@ class NewsController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('short_description', 'like', "%{$search}%")
                     ->orWhere('detailed_description', 'like', "%{$search}%");
             });
         }
@@ -61,6 +62,7 @@ class NewsController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:news,slug',
+            'short_description' => 'nullable|string',
             'detailed_description' => 'required|string',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',
@@ -119,6 +121,7 @@ class NewsController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:news,slug,'.$news->id,
+            'short_description' => 'nullable|string',
             'detailed_description' => 'required|string',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',

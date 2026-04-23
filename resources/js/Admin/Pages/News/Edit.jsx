@@ -11,6 +11,7 @@ export default function Edit({ news, regions = [] }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         title: news.title || '',
         slug: news.slug || '',
+        short_description: news.short_description || '',
         detailed_description: news.detailed_description || '',
         is_published: news.is_published ?? true,
         published_at: news.published_at ? news.published_at.slice(0, 16) : '',
@@ -99,6 +100,14 @@ export default function Edit({ news, regions = [] }) {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField label="Краткое описание" error={errors.short_description} helperText="Необязательно. Используется как аннотация в списке новостей и результатах поиска. Если пусто — будет автоматически извлечён текст из полного описания.">
+                                <Textarea
+                                    value={data.short_description}
+                                    onChange={(e) => setData('short_description', e.target.value)}
+                                    rows={3}
+                                />
+                            </FormField>
 
                             <FormField label="Полное описание" error={errors.detailed_description} required>
                                 <EditorJsEditor

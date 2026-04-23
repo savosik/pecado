@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Helpers\ContentHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Article;
 use App\Models\Brand;
@@ -315,7 +316,8 @@ class SearchController extends Controller
                         'id' => $newsItem->id,
                         'title' => $newsItem->title,
                         'slug' => $newsItem->slug,
-                        'excerpt' => $this->truncateText($newsItem->detailed_description),
+                        'excerpt' => $newsItem->short_description
+                            ?: ContentHelper::extractText($newsItem->detailed_description, 150),
                         'published_at' => $newsItem->published_at?->format('d.m.Y'),
                         'type' => 'news',
                         'type_label' => 'Новость',
@@ -360,23 +362,5 @@ class SearchController extends Controller
                 'semanticRatio' => config('search.hybrid.semantic_ratio'),
             ],
         ];
-    }
-
-    /**
-     * Обрезать HTML-текст до указанной длины с многоточием.
-     */
-    private function truncateText(?string $html, int $length = 150): ?string
-    {
-        if (! $html) {
-            return null;
-        }
-
-        $text = strip_tags($html);
-
-        if (mb_strlen($text) <= $length) {
-            return $text;
-        }
-
-        return mb_substr($text, 0, $length).'…';
     }
 }

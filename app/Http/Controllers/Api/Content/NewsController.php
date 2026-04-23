@@ -23,7 +23,7 @@ class NewsController extends Controller
      *
      * Поддерживает поиск, сортировку и пагинацию.
      *
-     * @queryParam search string Поиск по заголовку и описанию
+     * @queryParam search string Поиск по заголовку, краткому и полному описанию
      * @queryParam sort_by string Поле сортировки (id, title, published_at, created_at). Default: id
      * @queryParam sort_order string Направление (asc, desc). Default: desc
      * @queryParam per_page integer Записей на странице (5–100). Default: 15
@@ -36,6 +36,7 @@ class NewsController extends Controller
         if ($search = $request->input('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
+                    ->orWhere('short_description', 'like', "%{$search}%")
                     ->orWhere('detailed_description', 'like', "%{$search}%");
             });
         }
@@ -88,6 +89,7 @@ class NewsController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'slug' => 'nullable|string|max:255|unique:news,slug',
+            'short_description' => 'nullable|string',
             'detailed_description' => 'required|string',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',
@@ -130,6 +132,7 @@ class NewsController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'slug' => 'sometimes|string|max:255|unique:news,slug,'.$news->id,
+            'short_description' => 'nullable|string',
             'detailed_description' => 'sometimes|required|string',
             'is_published' => 'boolean',
             'published_at' => 'nullable|date',
@@ -176,6 +179,7 @@ class NewsController extends Controller
             'id' => $news->id,
             'title' => $news->title,
             'slug' => $news->slug,
+            'short_description' => $news->short_description,
             'detailed_description' => $news->detailed_description,
             'is_published' => (bool) $news->is_published,
             'published_at' => $news->published_at?->toIso8601String(),

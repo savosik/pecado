@@ -12,14 +12,15 @@ use Spatie\Tags\HasTags;
 class News extends Model implements HasMedia
 {
     use \App\Traits\HasContentMedia;
-
     use \App\Traits\HasRegions;
+
     /** @use HasFactory<\Database\Factories\NewsFactory> */
     use HasFactory, HasTags, Searchable;
 
     protected $fillable = [
         'title',
         'slug',
+        'short_description',
         'detailed_description',
         'is_published',
         'published_at',
@@ -47,6 +48,7 @@ class News extends Model implements HasMedia
             'title_translit' => SearchHelper::transliterate($title),
             'title_cyrillic' => SearchHelper::transliterateToCyrillic($title),
             'title_layout' => SearchHelper::convertLayout($title),
+            'short_description' => $this->short_description,
         ];
     }
 

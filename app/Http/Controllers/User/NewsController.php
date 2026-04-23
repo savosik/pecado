@@ -46,7 +46,8 @@ class NewsController extends Controller
                 'id' => $item->id,
                 'title' => $item->title,
                 'slug' => $item->slug,
-                'excerpt' => ContentHelper::extractText($item->detailed_description, 160),
+                'excerpt' => $item->short_description
+                    ?: ContentHelper::extractText($item->detailed_description, 160),
                 'image' => $item->getFirstMediaUrl('list-item') ?: null,
                 'published_at' => $item->published_at?->toISOString(),
                 'tags' => TagHelper::names($item->tags),
@@ -87,6 +88,7 @@ class NewsController extends Controller
         $sanitizedContent = $isJson ? $content : clean($content);
 
         $descriptionText = $newsItem->meta_description
+            ?: $newsItem->short_description
             ?: ContentHelper::extractText($newsItem->detailed_description, 160);
 
         // Structured data (Article)
