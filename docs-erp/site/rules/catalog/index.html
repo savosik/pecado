@@ -1656,6 +1656,7 @@
 <li><code>model</code> — nullable. Источник — доп. реквизит из настройки <code>СвойствоМодель</code></li>
 <li><strong>(v10)</strong> <code>hidden = true</code> → товар не отображается (ни в каталоге, ни в поиске)</li>
 <li><strong>(v12.9)</strong> <code>is_marked</code> (boolean) — признак маркированного товара («Честный знак»). Сохраняется в <code>products.is_marked</code>. Строго <code>true</code>/<code>false</code>, строки <code>"Да"</code>/<code>"Нет"</code> отклоняются JSON-парсером</li>
+<li><strong>(v13)</strong> <code>attributes</code> — <strong>полный актуальный список</strong> атрибутов товара (семантика full-replace). При создании 1С всегда передаёт полный набор; атрибуты, отсутствующие в массиве, у товара не будут созданы</li>
 </ul>
 <h3 id="_5">Критерии приёмки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1665,22 +1666,31 @@
 <li>[ ] Товары с <code>hidden = true</code> не видны на сайте</li>
 <li>[ ] <strong>(v12.9)</strong> При <code>is_marked = true</code> товар помечен как маркированный в БД сайта (<code>products.is_marked = 1</code>)</li>
 <li>[ ] <strong>(v12.9)</strong> При <code>is_marked = false</code> флаг снимается (<code>products.is_marked = 0</code>)</li>
+<li>[ ] <strong>(v13)</strong> 1С передаёт полный список атрибутов; сайт сохраняет их и удаляет прежние связи товара с атрибутами, отсутствующими в массиве</li>
 </ul>
 <hr />
 <h2 id="productupdated">Товары (product.updated) — частичное обновление<a class="headerlink" href="#productupdated" title="Permanent link">&para;</a></h2>
 <h3 id="-_2">Бизнес-правила<a class="headerlink" href="#-_2" title="Permanent link">&para;</a></h3>
 <ul>
 <li>Отправляет <strong>только изменённые поля</strong>. Обязательны: <code>event</code>, <code>message_id</code>, <code>uuid</code></li>
-<li><code>attributes</code> содержит <strong>только изменённые</strong> атрибуты — сайт мержит по <code>property_uuid</code></li>
 <li>Цена <strong>не обновляется</strong> через <code>product.updated</code> — используйте <code>price.updated</code></li>
 <li><strong>(v12.9)</strong> <code>is_marked</code> обновляется только если поле <strong>присутствует</strong> в payload. Отсутствие поля сохраняет текущее значение</li>
+<li><strong>(v13)</strong> <code>attributes</code> — особая семантика <strong>full-replace</strong>, отличающаяся от остальных полей:<ul>
+<li><strong>отсутствие поля <code>attributes</code></strong> в payload → состав атрибутов не трогаем (например, обновление только <code>name</code>)</li>
+<li><strong><code>attributes: []</code></strong> → удалить все атрибуты у товара</li>
+<li><strong><code>attributes: [...]</code></strong> → полная замена: атрибуты, отсутствующие в массиве, удаляются у товара</li>
+<li>если обновление затрагивает состав/значения атрибутов, 1С обязана передавать <strong>полный актуальный список</strong>, а не только изменённые</li>
+</ul>
+</li>
 </ul>
 <h3 id="_6">Критерии приёмки<a class="headerlink" href="#_6" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Частичное обновление — неизменённые поля сохраняются</li>
-<li>[ ] Атрибуты мержатся по <code>property_uuid</code></li>
 <li>[ ] При изменении <code>hidden</code> отправляется <code>product.updated</code> с полем <code>hidden</code></li>
 <li>[ ] <strong>(v12.9)</strong> При изменении признака маркировки отправляется <code>product.updated</code> с полем <code>is_marked</code>, сайт применяет новое значение к <code>products.is_marked</code></li>
+<li>[ ] <strong>(v13)</strong> Если поле <code>attributes</code> в payload отсутствует — <code>product_attribute_values</code> товара не изменяются</li>
+<li>[ ] <strong>(v13)</strong> Если <code>attributes: []</code> — все связи товара с атрибутами удаляются</li>
+<li>[ ] <strong>(v13)</strong> Если <code>attributes</code> содержит полный список — записи в <code>product_attribute_values</code>, отсутствующие в массиве, удаляются</li>
 </ul>
 
 
