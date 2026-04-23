@@ -676,7 +676,7 @@ class ProductController extends Controller
             $middle = array_slice($tokens, $prefixLen, count($tokens) - $prefixLen - $suffixLen);
             $diff = preg_replace('/^[\s,.;:\-—–()\[\]]+|[\s,.;:\-—–()\[\]]+$/u', '', implode(' ', $middle));
 
-            if ($diff === null || mb_strlen($diff) < 2) {
+            if ($diff === null || $diff === '') {
                 return [];
             }
 
