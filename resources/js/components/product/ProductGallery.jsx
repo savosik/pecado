@@ -458,6 +458,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                     position="fixed" inset="0" zIndex="2000"
                     bg="blackAlpha.900"
                     display="flex" flexDirection="column"
+                    onClick={(e) => e.stopPropagation()}
                 >
                     {/* Шапка */}
                     <Flex align="center" justify="space-between" p={{ base: '3', md: '4' }} position="relative">
