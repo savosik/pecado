@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import DOMPurify from 'dompurify';
 import { Box, Flex, Text, Button, Table } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
@@ -17,8 +17,6 @@ import ContentRenderer from '@/components/content/ContentRenderer';
  * }} props
  */
 export default function ProductDetailTabs({ specifications = {}, description = '', media = [], certificates = [], sizeChart = null }) {
-    const [expandedSpecs, setExpandedSpecs] = useState(new Set());
-
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
     
     // Фильтруем характеристики, убирая те, у которых значение "нет", и форматируем числа/даты
@@ -165,58 +163,24 @@ export default function ProductDetailTabs({ specifications = {}, description = '
                     <Box
                         display="grid"
                         gridTemplateColumns={{ base: '1fr', md: '1fr 1fr' }}
-                        gapX="8" gapY="2"
+                        columnGap={{ base: '6', md: '10' }}
+                        rowGap="2"
                     >
-                        {Object.entries(validSpecifications).map(([key, value]) => {
-                            const valStr = String(value ?? '');
-                            const isExpanded = expandedSpecs.has(key);
-                            const showToggle = valStr.length > 80;
-                            const toggle = () => {
-                                setExpandedSpecs(prev => {
-                                    const next = new Set(prev);
-                                    next.has(key) ? next.delete(key) : next.add(key);
-                                    return next;
-                                });
-                            };
-
-                            return (
-                                <Flex key={key} align="baseline" gap="2" fontSize="sm" py="1" overflow="hidden">
-                                    <Text
-                                        color="gray.500"
-                                        _dark={{ color: 'gray.400' }}
-                                        flex="0 1 auto"
-                                        minW={0}
-                                        maxW="60%"
-                                        truncate
-                                        title={key}
-                                    >
-                                        {key}
-                                    </Text>
-                                    <Box flex="1 1 10px" borderBottomWidth="1px" borderStyle="dotted" borderColor="gray.300" _dark={{ borderColor: 'gray.600' }} transform="translateY(2px)" minW="10px" />
-                                    <Box flex="0 1 auto" minW={0} maxW="60%" textAlign="right" overflow="hidden">
-                                        <Text
-                                            fontWeight="500"
-                                            title={valStr}
-                                            css={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                                            lineClamp={isExpanded ? undefined : 2}
-                                        >
-                                            {valStr}
-                                        </Text>
-                                        {showToggle && (
-                                            <Text
-                                                as="button" onClick={toggle}
-                                                mt="1" fontSize="xs" color="gray.500"
-                                                _hover={{ color: 'gray.700' }}
-                                                textDecoration="underline"
-                                                textUnderlineOffset="2px"
-                                            >
-                                                {isExpanded ? 'скрыть' : 'ещё'}
-                                            </Text>
-                                        )}
-                                    </Box>
-                                </Flex>
-                            );
-                        })}
+                        {Object.entries(validSpecifications).map(([key, value]) => (
+                            <Text
+                                key={key}
+                                fontSize="sm"
+                                lineHeight="1.5"
+                                css={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                            >
+                                <Text as="span" color="gray.500" _dark={{ color: 'gray.400' }}>
+                                    {key}:{' '}
+                                </Text>
+                                <Text as="span" fontWeight="500" color="gray.800" _dark={{ color: 'gray.100' }}>
+                                    {String(value ?? '')}
+                                </Text>
+                            </Text>
+                        ))}
                     </Box>
                 </Tabs.Content>
             )}
