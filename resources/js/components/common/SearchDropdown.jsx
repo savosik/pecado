@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Box, Flex, Text, Input, IconButton, Spinner, Badge } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuX, LuClock3, LuSearch, LuArrowRight, LuHeart, LuCheck, LuCircleX } from 'react-icons/lu';
+import { LuX, LuClock3, LuSearch, LuArrowRight, LuHeart, LuCheck, LuCircleX, LuImageOff } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
 import CartQuantityControl from '@/components/product/CartQuantityControl';
 import { useProductHelpers } from '@/hooks/useProductHelpers';
@@ -20,6 +20,8 @@ function ProductItem({ product, onClick }) {
     } = useProductHelpers(product);
 
     const imageUrl = product.thumbnail || product.image_url || product.thumb_url || product.main_image;
+    const [imageBroken, setImageBroken] = useState(false);
+    const showPlaceholder = !imageUrl || imageBroken;
 
     return (
         <Flex
@@ -45,9 +47,23 @@ function ProductItem({ product, onClick }) {
                 overflow="hidden"
                 bg="gray.100"
                 _dark={{ bg: 'gray.700' }}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
             >
-                {imageUrl && (
-                    <Box as="img" src={imageUrl} alt={product.name} w="100%" h="100%" objectFit="cover" />
+                {showPlaceholder ? (
+                    <LuImageOff size={20} color="var(--chakra-colors-gray-400)" />
+                ) : (
+                    <Box
+                        as="img"
+                        src={imageUrl}
+                        alt=""
+                        loading="lazy"
+                        w="100%"
+                        h="100%"
+                        objectFit="cover"
+                        onError={() => setImageBroken(true)}
+                    />
                 )}
             </Box>
 
