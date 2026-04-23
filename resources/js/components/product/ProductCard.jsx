@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX } from 'react-icons/lu';
@@ -12,7 +12,7 @@ import { useProductHelpers } from '@/hooks/useProductHelpers';
  *
  * @param {{ product: Object, loading?: boolean }} props
  */
-export default function ProductCard({ product, loading = false }) {
+function ProductCard({ product, loading = false }) {
     const {
         user, isFav, toggleFavorite, formatPrice,
         hasSale, isInStock, isPreorder, brandName,
@@ -20,6 +20,13 @@ export default function ProductCard({ product, loading = false }) {
     } = useProductHelpers(product);
 
     const [isImageHovered, setIsImageHovered] = useState(false);
+    const handleMouseEnter = useCallback(() => setIsImageHovered(true), []);
+    const handleMouseLeave = useCallback(() => setIsImageHovered(false), []);
+    const stopPropagation = useCallback((e) => e.stopPropagation(), []);
+    const preventAndStop = useCallback((e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    }, []);
 
     // Скелетон
     if (loading) {
@@ -74,8 +81,8 @@ export default function ProductCard({ product, loading = false }) {
             {/* Мини-галерея */}
             <Box
                 position="relative"
-                onMouseEnter={() => setIsImageHovered(true)}
-                onMouseLeave={() => setIsImageHovered(false)}
+                onMouseEnter={handleMouseEnter}
+                onMouseLeave={handleMouseLeave}
             >
                 <Link href={`/products/${product.slug}`}>
                     <ProductMiniGallery product={product} maxImages={6} showMainImage isHovered={isImageHovered} />
@@ -122,7 +129,7 @@ export default function ProductCard({ product, loading = false }) {
                                     color="gray.400"
                                     _hover={{ textDecoration: 'underline' }}
                                     display="block"
-                                    onClick={(e) => e.stopPropagation()}
+                                    onClick={stopPropagation}
                                 >
                                     {brandName}
                                 </Text>
@@ -236,7 +243,7 @@ export default function ProductCard({ product, loading = false }) {
 
                         {/* Корзина — скрываем, если нет в наличии и не предзаказ, или цена 0 */}
                         {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
-                            <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                            <Box onClick={preventAndStop}>
                                 <CartQuantityControl productId={product.id} size="sm" fullWidth />
                             </Box>
                         )}
@@ -246,3 +253,5 @@ export default function ProductCard({ product, loading = false }) {
         </Box>
     );
 }
+
+export default memo(ProductCard);

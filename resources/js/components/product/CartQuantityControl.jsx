@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { memo, useEffect, useState, useRef, useCallback } from 'react';
 import { Box, Button, Spinner } from '@chakra-ui/react';
 import { LuShoppingCart } from 'react-icons/lu';
 import { usePage } from '@inertiajs/react';
@@ -6,6 +6,14 @@ import { useCartStore } from '@/stores/useCartStore';
 import QuantityControl from '@/components/common/QuantityControl';
 import { LOGIN_URL } from '@/constants/user';
 import { toastInfo } from '@/utils/toast';
+
+const SIZE_MAP = {
+    xs: { btn: 'xs', icon: 12 },
+    sm: { btn: 'sm', icon: 14 },
+    md: { btn: 'md', icon: 16 },
+    lg: { btn: 'lg', icon: 18 },
+    xl: { btn: 'xl', icon: 20 },
+};
 
 /**
  * Контрол количества товара, привязанный к Zustand-стору корзины.
@@ -19,7 +27,7 @@ import { toastInfo } from '@/utils/toast';
  *   fullWidth?: boolean,
  * }} props
  */
-export default function CartQuantityControl({ productId, disabled = false, size = 'md', fullWidth = false }) {
+function CartQuantityControl({ productId, disabled = false, size = 'md', fullWidth = false }) {
     const { auth } = usePage().props;
     const user = auth?.user?.status === 'active' ? auth.user : null;
 
@@ -28,15 +36,7 @@ export default function CartQuantityControl({ productId, disabled = false, size 
     const initRef = useRef(false);
     const pidRef = useRef(Number(productId));
 
-    // Маппинг размеров на Chakra button size и иконку
-    const sizeMap = {
-        xs: { btn: 'xs', icon: 12 },
-        sm: { btn: 'sm', icon: 14 },
-        md: { btn: 'md', icon: 16 },
-        lg: { btn: 'lg', icon: 18 },
-        xl: { btn: 'xl', icon: 20 },
-    };
-    const s = sizeMap[size] || sizeMap.md;
+    const s = SIZE_MAP[size] || SIZE_MAP.md;
 
     // Обновляем pid ref при смене productId
     useEffect(() => {
@@ -163,3 +163,5 @@ export default function CartQuantityControl({ productId, disabled = false, size 
         </Box>
     );
 }
+
+export default memo(CartQuantityControl);

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { memo, useCallback, useMemo, useState } from 'react';
 import {
     Box,
     Table,
@@ -16,6 +16,35 @@ import {
     LuInbox,
 } from 'react-icons/lu';
 import { Pagination } from './Pagination';
+
+const DataTableRow = memo(function DataTableRow({ row, columns, selectable, isSelected, onToggleSelect }) {
+    const handleCheckboxChange = useCallback((e) => {
+        onToggleSelect(row.id, e.checked);
+    }, [row.id, onToggleSelect]);
+
+    return (
+        <Table.Row
+            _hover={{ bg: 'bg.muted' }}
+            transition="background 0.2s"
+        >
+            {selectable && (
+                <Table.Cell>
+                    <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={handleCheckboxChange}
+                    />
+                </Table.Cell>
+            )}
+            {columns.map((column) => (
+                <Table.Cell key={column.key}>
+                    {column.render
+                        ? column.render(row[column.key], row)
+                        : row[column.key]}
+                </Table.Cell>
+            ))}
+        </Table.Row>
+    );
+});
 
 /**
  * DataTable - универсальный компонент таблицы с пагинацией, сортировкой и фильтрацией
@@ -47,39 +76,34 @@ export const DataTable = ({
 }) => {
     const [selectedRows, setSelectedRows] = useState([]);
 
-    // Обработка выбора всех строк
-    const handleSelectAll = (checked) => {
+    const handleSelectAll = useCallback((checked) => {
         if (checked) {
             setSelectedRows(data.map(row => row.id));
         } else {
             setSelectedRows([]);
         }
-    };
+    }, [data]);
 
-    // Обработка выбора одной строки
-    const handleSelectRow = (id, checked) => {
-        if (checked) {
-            setSelectedRows([...selectedRows, id]);
-        } else {
-            setSelectedRows(selectedRows.filter(rowId => rowId !== id));
-        }
-    };
+    const handleSelectRow = useCallback((id, checked) => {
+        setSelectedRows((prev) => (
+            checked ? [...prev, id] : prev.filter(rowId => rowId !== id)
+        ));
+    }, []);
 
-    // Обработка клика по заголовку для сортировки
-    const handleSort = (column) => {
+    const handleSort = useCallback((column) => {
         if (!column.sortable || !onSort) return;
 
         const newDirection =
             sortColumn === column.key && sortDirection === 'asc' ? 'desc' : 'asc';
         onSort(column.key, newDirection);
-    };
+    }, [onSort, sortColumn, sortDirection]);
 
-    // Очистка выбранных строк после выполнения действия
-    const handleBulkAction = (action) => {
+    const handleBulkAction = useCallback((action) => {
         action(selectedRows);
         setSelectedRows([]);
-    };
+    }, [selectedRows]);
 
+    const selectedSet = useMemo(() => new Set(selectedRows), [selectedRows]);
     const isAllSelected = data.length > 0 && selectedRows.length === data.length;
     const isSomeSelected = selectedRows.length > 0 && selectedRows.length < data.length;
 
@@ -188,27 +212,14 @@ export const DataTable = ({
                             ) : (
                                 // Данные
                                 data.map((row) => (
-                                    <Table.Row
+                                    <DataTableRow
                                         key={row.id}
-                                        _hover={{ bg: 'bg.muted' }}
-                                        transition="background 0.2s"
-                                    >
-                                        {selectable && (
-                                            <Table.Cell>
-                                                <Checkbox
-                                                    checked={selectedRows.includes(row.id)}
-                                                    onCheckedChange={(e) => handleSelectRow(row.id, e.checked)}
-                                                />
-                                            </Table.Cell>
-                                        )}
-                                        {columns.map((column) => (
-                                            <Table.Cell key={column.key}>
-                                                {column.render
-                                                    ? column.render(row[column.key], row)
-                                                    : row[column.key]}
-                                            </Table.Cell>
-                                        ))}
-                                    </Table.Row>
+                                        row={row}
+                                        columns={columns}
+                                        selectable={selectable}
+                                        isSelected={selectedSet.has(row.id)}
+                                        onToggleSelect={handleSelectRow}
+                                    />
                                 ))
                             )}
                         </Table.Body>

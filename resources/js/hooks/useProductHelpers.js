@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { usePage } from '@inertiajs/react';
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
 
@@ -45,16 +45,16 @@ export function useProductHelpers(product) {
         return unsub;
     }, [product?.id, user]);
 
-    const toggleFavorite = (e) => {
+    const toggleFavorite = useCallback((e) => {
         e?.preventDefault?.();
         e?.stopPropagation?.();
-        useFavoritesStore.getState().toggle(product.id);
-    };
+        useFavoritesStore.getState().toggle(product?.id);
+    }, [product?.id]);
 
-    const formatPrice = (value) => {
+    const formatPrice = useCallback((value) => {
         if (value === null || value === undefined) return '';
         return Number(value).toLocaleString('ru-RU') + ' ' + currencySymbol;
-    };
+    }, [currencySymbol]);
 
     const price = product?.base_price ?? null;
     const salePrice = product?.sale_price || null;

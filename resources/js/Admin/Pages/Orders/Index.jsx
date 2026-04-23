@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
 import { LuPlus, LuFilter, LuX, LuTrash2 } from "react-icons/lu";
@@ -40,13 +40,16 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
 
     const isTrashed = !!filters?.trashed;
 
-    const toggleTrashed = () => {
+    const toggleTrashed = useCallback(() => {
         router.get(route('admin.orders.index'), { trashed: isTrashed ? undefined : 1 }, { preserveState: false });
-    };
+    }, [isTrashed]);
 
-    const openDeleteAllDialog = () => setDeleteAllDialogOpen(true);
-    const closeDeleteAllDialog = () => setDeleteAllDialogOpen(false);
-    const confirmDeleteAll = () => {
+    const openDeleteAllDialog = useCallback(() => setDeleteAllDialogOpen(true), []);
+    const closeDeleteAllDialog = useCallback(() => setDeleteAllDialogOpen(false), []);
+    const openForceDeleteAllDialog = useCallback(() => setForceDeleteAllDialogOpen(true), []);
+    const closeForceDeleteAllDialog = useCallback(() => setForceDeleteAllDialogOpen(false), []);
+
+    const confirmDeleteAll = useCallback(() => {
         setDeleteAllProcessing(true);
         router.delete(route('admin.bulk-delete-all', 'orders'), {
             onSuccess: () => {
@@ -59,9 +62,9 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                 setDeleteAllProcessing(false);
             },
         });
-    };
+    }, []);
 
-    const confirmForceDeleteAll = () => {
+    const confirmForceDeleteAll = useCallback(() => {
         setForceDeleteAllProcessing(true);
         router.delete(route('admin.bulk-force-delete-all', 'orders'), {
             onSuccess: () => {
@@ -74,7 +77,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                 setForceDeleteAllProcessing(false);
             },
         });
-    };
+    }, []);
     const [selectedOrders, setSelectedOrders] = useState([]);
     const [showFilters, setShowFilters] = useState(false);
     const [bulkStatus, setBulkStatus] = useState("");
@@ -88,7 +91,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
         amount_to:   filters?.amount_to || "",
     });
 
-    const handleSort = (field, direction) => {
+    const handleSort = useCallback((field, direction) => {
         router.get(route("admin.orders.index"), {
             ...filters,
             sort_by: field,
@@ -97,9 +100,9 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
             preserveState: true,
             replace: true,
         });
-    };
+    }, [filters]);
 
-    const handleApplyFilters = () => {
+    const handleApplyFilters = useCallback(() => {
         router.get(route("admin.orders.index"), {
             ...filters,
             ...localFilters,
@@ -107,9 +110,9 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
             preserveState: true,
             replace: true,
         });
-    };
+    }, [filters, localFilters]);
 
-    const handleResetFilters = () => {
+    const handleResetFilters = useCallback(() => {
         setLocalFilters({
             status: "", type: "", company_id: "",
             date_from: "", date_to: "", amount_from: "", amount_to: "",
@@ -119,9 +122,9 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
             sort_by: filters?.sort_by,
             sort_order: filters?.sort_order,
         }, { preserveState: true, replace: true });
-    };
+    }, [filters?.search, filters?.sort_by, filters?.sort_order]);
 
-    const handleBulkStatusUpdate = () => {
+    const handleBulkStatusUpdate = useCallback(() => {
         if (selectedOrders.length === 0) {
             toaster.create({
                 description: "Выберите заказы для обновления статуса",
@@ -151,25 +154,33 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                 setBulkStatus("");
             },
         });
-    };
+    }, [selectedOrders, bulkStatus]);
 
-    const handleSelectAll = (checked) => {
+    const handleSelectAll = useCallback((checked) => {
         if (checked) {
             setSelectedOrders(orders.data.map(order => order.id));
         } else {
             setSelectedOrders([]);
         }
-    };
+    }, [orders.data]);
 
-    const handleSelectOrder = (orderId, checked) => {
-        if (checked) {
-            setSelectedOrders([...selectedOrders, orderId]);
-        } else {
-            setSelectedOrders(selectedOrders.filter(id => id !== orderId));
-        }
-    };
+    const handleSelectOrder = useCallback((orderId, checked) => {
+        setSelectedOrders((prev) => (
+            checked ? [...prev, orderId] : prev.filter(id => id !== orderId)
+        ));
+    }, []);
 
-    const columns = [
+    const selectedOrdersSet = useMemo(() => new Set(selectedOrders), [selectedOrders]);
+
+    const openDeleteDialog = useCallback((order) => setDeleteId(order.id), []);
+    const openForceDeleteDialog = useCallback((order) => setForceDeleteId(order.id), []);
+    const closeDeleteDialog = useCallback(() => setDeleteId(null), []);
+    const closeForceDeleteDialog = useCallback(() => setForceDeleteId(null), []);
+    const clearSelection = useCallback(() => setSelectedOrders([]), []);
+    const toggleShowFilters = useCallback(() => setShowFilters((prev) => !prev), []);
+    const goToCreateOrder = useCallback(() => router.visit(route("admin.orders.create")), []);
+
+    const columns = useMemo(() => [
         {
             label: (
                 <Checkbox
@@ -180,7 +191,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
             key: "select",
             render: (_, order) => (
                 <Checkbox
-                    checked={selectedOrders.includes(order.id)}
+                    checked={selectedOrdersSet.has(order.id)}
                     onCheckedChange={(e) => handleSelectOrder(order.id, e.checked)}
                 />
             ),
@@ -254,10 +265,10 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                     </IconButton>
                 ) : null,
             }
-            : createActionsColumn('admin.orders', (order) => setDeleteId(order.id), { permissionPrefix: 'orders' }),
-    ];
+            : createActionsColumn('admin.orders', openDeleteDialog, { permissionPrefix: 'orders' }),
+    ], [selectedOrders.length, orders.data, selectedOrdersSet, isTrashed, can, handleSelectAll, handleSelectOrder, openDeleteDialog]);
 
-    const handleDelete = () => {
+    const handleDelete = useCallback(() => {
         if (deleteId) {
             router.delete(route("admin.orders.destroy", deleteId), {
                 onSuccess: () => {
@@ -269,9 +280,9 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                 },
             });
         }
-    };
+    }, [deleteId]);
 
-    const handleForceDelete = () => {
+    const handleForceDelete = useCallback(() => {
         if (forceDeleteId) {
             router.delete(route("admin.orders.force-delete", forceDeleteId), {
                 onSuccess: () => {
@@ -280,7 +291,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                 },
             });
         }
-    };
+    }, [forceDeleteId]);
 
     return (
         <>
@@ -299,8 +310,8 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                             <DeleteAllButton
                                 sectionLabel="удалённые заказы окончательно"
                                 dialogOpen={forceDeleteAllDialogOpen}
-                                onOpen={() => setForceDeleteAllDialogOpen(true)}
-                                onClose={() => setForceDeleteAllDialogOpen(false)}
+                                onOpen={openForceDeleteAllDialog}
+                                onClose={closeForceDeleteAllDialog}
                                 onConfirm={confirmForceDeleteAll}
                                 isLoading={forceDeleteAllProcessing}
                             />
@@ -315,14 +326,14 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                             />
                         )}
                         <Button
-                            onClick={() => setShowFilters(!showFilters)}
+                            onClick={toggleShowFilters}
                             variant="outline"
                         >
                             <LuFilter /> {showFilters ? "Скрыть фильтры" : "Фильтры"}
                         </Button>
                         {!isTrashed && can('orders.create') && (
                             <Button
-                                onClick={() => router.visit(route("admin.orders.create"))}
+                                onClick={goToCreateOrder}
                                 colorPalette="blue"
                             >
                                 <LuPlus /> Создать заказ
@@ -468,7 +479,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                             Применить статус
                         </Button>
                         )}
-                        <Button onClick={() => setSelectedOrders([])} variant="ghost">
+                        <Button onClick={clearSelection} variant="ghost">
                             Отменить выбор
                         </Button>
                     </HStack>
@@ -487,7 +498,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
 
             <ConfirmDialog
                 open={!!deleteId}
-                onClose={() => setDeleteId(null)}
+                onClose={closeDeleteDialog}
                 onConfirm={handleDelete}
                 title="Удаление заказа"
                 description="Вы уверены, что хотите удалить этот заказ? Это действие нельзя отменить."
@@ -495,7 +506,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
 
             <ConfirmDialog
                 open={!!forceDeleteId}
-                onClose={() => setForceDeleteId(null)}
+                onClose={closeForceDeleteDialog}
                 onConfirm={handleForceDelete}
                 title="Окончательное удаление заказа"
                 description="Вы уверены, что хотите окончательно удалить этот заказ? Запись будет удалена безвозвратно."
