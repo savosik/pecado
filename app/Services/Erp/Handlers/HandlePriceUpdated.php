@@ -24,7 +24,7 @@ class HandlePriceUpdated
             return;
         }
 
-        $product = Product::where('external_id', $productUuid)->first();
+        $product = Product::withoutGlobalScopes()->where('external_id', $productUuid)->first();
 
         if (! $product) {
             Log::info('price.updated: товар не найден по UUID, событие проигнорировано', [

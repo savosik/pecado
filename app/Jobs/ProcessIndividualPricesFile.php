@@ -121,7 +121,8 @@ class ProcessIndividualPricesFile implements ShouldQueue
      */
     private function loadMaps(): array
     {
-        $products = Product::whereNotNull('external_id')
+        $products = Product::withoutGlobalScopes()
+            ->whereNotNull('external_id')
             ->pluck('id', 'external_id')
             ->toArray();
 

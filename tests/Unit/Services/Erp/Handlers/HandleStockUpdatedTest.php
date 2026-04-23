@@ -92,6 +92,33 @@ class HandleStockUpdatedTest extends TestCase
     }
 
     #[Test]
+    public function it_updates_stock_for_hidden_product(): void
+    {
+        // v13.2: HiddenScope не должен прятать товар от stock.updated.
+        $product = Product::factory()->create([
+            'external_id' => 'hidden-stock-uuid',
+            'hidden' => true,
+        ]);
+        $warehouse = Warehouse::factory()->create([
+            'external_id' => 'w1a2b3c4-hidden',
+        ]);
+
+        $handler = new HandleStockUpdated;
+        $handler->handle([
+            'event' => 'stock.updated',
+            'product_uuid' => 'hidden-stock-uuid',
+            'warehouse_uuid' => 'w1a2b3c4-hidden',
+            'quantity' => 7,
+        ]);
+
+        $this->assertDatabaseHas('product_warehouse', [
+            'product_id' => $product->id,
+            'warehouse_id' => $warehouse->id,
+            'quantity' => 7,
+        ]);
+    }
+
+    #[Test]
     public function it_ignores_unknown_warehouse_without_error(): void
     {
         $product = Product::factory()->create([

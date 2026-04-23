@@ -105,6 +105,27 @@ class HandlePriceUpdatedTest extends TestCase
     }
 
     #[Test]
+    public function it_updates_hidden_product_price(): void
+    {
+        // v13.2: HiddenScope не должен прятать товар от ERP-обработчика.
+        $product = Product::factory()->create([
+            'external_id' => 'hidden-price-uuid',
+            'base_price' => 100.00,
+            'hidden' => true,
+        ]);
+
+        $handler = new HandlePriceUpdated;
+        $handler->handle([
+            'event' => 'price.updated',
+            'product_uuid' => 'hidden-price-uuid',
+            'price' => 999.00,
+        ]);
+
+        $product = Product::withoutGlobalScopes()->find($product->id);
+        $this->assertEquals(999.00, (float) $product->base_price);
+    }
+
+    #[Test]
     public function it_overwrites_existing_price(): void
     {
         $product = Product::factory()->create([

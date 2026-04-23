@@ -27,7 +27,7 @@ class HandleStockUpdated
             return;
         }
 
-        $product = Product::where('external_id', $productUuid)->first();
+        $product = Product::withoutGlobalScopes()->where('external_id', $productUuid)->first();
 
         if (! $product) {
             Log::info('stock.updated: товар не найден по UUID, событие проигнорировано', [

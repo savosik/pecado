@@ -146,7 +146,7 @@ class HandleOrderCreated
             foreach ($items as $item) {
                 $productUuid = $item['product_uuid'] ?? null;
                 $product = $productUuid
-                    ? Product::where('external_id', $productUuid)->first()
+                    ? Product::withoutGlobalScopes()->where('external_id', $productUuid)->first()
                     : null;
 
                 $quantity = $item['quantity'] ?? 0;

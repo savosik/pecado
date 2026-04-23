@@ -76,7 +76,7 @@ class HandleShipmentUpdated
         $totalAmount = 0;
 
         foreach ($items as $item) {
-            $product = Product::where('external_id', $item['product_uuid'] ?? '')->first();
+            $product = Product::withoutGlobalScopes()->where('external_id', $item['product_uuid'] ?? '')->first();
 
             $quantity = $item['quantity'] ?? 0;
             $price = $item['price'] ?? 0;

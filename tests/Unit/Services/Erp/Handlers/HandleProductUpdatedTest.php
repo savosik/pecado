@@ -264,7 +264,56 @@ class HandleProductUpdatedTest extends TestCase
         ]);
 
         // Товар не должен быть создан
-        $this->assertEquals(0, Product::count());
+        $this->assertEquals(0, Product::withoutGlobalScopes()->count());
+    }
+
+    #[Test]
+    public function reactivates_hidden_product_and_replaces_attributes(): void
+    {
+        // v13.2: ранее HiddenScope отфильтровывал скрытые товары в запросе
+        // Product::where('external_id',...), и handler не мог их снова включить.
+        $product = Product::factory()->create([
+            'external_id' => 'hidden-reactivate-001',
+            'hidden' => true,
+        ]);
+
+        $oldAttr = Attribute::create([
+            'external_id' => 'old-attr-uuid',
+            'name' => 'Старый',
+            'slug' => 'staryj-reactivate',
+            'type' => 'string',
+        ]);
+        $product->attributeValues()->create([
+            'attribute_id' => $oldAttr->id,
+            'text_value' => 'старое значение',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-reactivate-001',
+            'uuid' => 'hidden-reactivate-001',
+            'hidden' => false,
+            'attributes' => [
+                [
+                    'property_uuid' => 'da37d762-eb85-11e9-bd16-a1d8f1f55cb8',
+                    'property_label' => 'Высота, см',
+                    'value_type' => 'number',
+                    'value_uuid' => null,
+                    'value_label' => 15,
+                ],
+            ],
+        ]);
+
+        $product = Product::withoutGlobalScopes()->where('external_id', 'hidden-reactivate-001')->first();
+        $this->assertNotNull($product);
+        $this->assertFalse((bool) $product->hidden);
+        $this->assertEquals(1, $product->attributeValues()->count());
+
+        $newAttr = Attribute::where('external_id', 'da37d762-eb85-11e9-bd16-a1d8f1f55cb8')->first();
+        $this->assertNotNull($newAttr);
+        $pav = $product->attributeValues()->where('attribute_id', $newAttr->id)->first();
+        $this->assertNotNull($pav);
+        $this->assertEquals(15.0, (float) $pav->number_value);
     }
 
     #[Test]

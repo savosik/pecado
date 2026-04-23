@@ -145,7 +145,7 @@ class HandleOrderUpdated
 
         foreach ($items as $item) {
             $productUuid = $item['product_uuid'] ?? '';
-            $product = Product::where('external_id', $productUuid)->first();
+            $product = Product::withoutGlobalScopes()->where('external_id', $productUuid)->first();
 
             if (! $product) {
                 Log::info('HandleOrderUpdated: товар не найден, позиция пропущена', [

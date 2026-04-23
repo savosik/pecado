@@ -65,7 +65,7 @@ class HandleProductUpdated
     {
         $uuid = $payload['uuid'];
 
-        $product = Product::where('external_id', $uuid)->first();
+        $product = Product::withoutGlobalScopes()->where('external_id', $uuid)->first();
 
         if (! $product) {
             Log::warning('product.updated: товар не найден', ['uuid' => $uuid]);

@@ -6,6 +6,22 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.1.1] — 2026-04-23
+
+> Фикс: ERP-обработчики игнорируют `HiddenScope` — скрытый товар снова можно обновлять/включать из 1С
+
+### Исправлено
+
+- `HandleProductUpdated`, `HandlePriceUpdated`, `HandleStockUpdated`, `HandleOrderCreated`, `HandleOrderUpdated`, `HandleShipmentCreated`, `HandleShipmentUpdated`, `ProcessIndividualPricesFile` — поиск товара по `external_id` теперь выполняется с `Product::withoutGlobalScopes()`
+- Ранее глобальный `HiddenScope` (Eloquent) исключал товары с `hidden = true` из любых запросов `Product::query()` на сайте. Как побочный эффект, после того как 1С присылала `product.updated` с `hidden: true`, все последующие сообщения по этому товару (включая `product.updated` с `hidden: false`, обновления цен, остатков, позиций заказов и реализаций) не находили товар и тихо игнорировались с warning `товар не найден`, но при этом попадали в `erp_processed_messages` (идемпотентность) и логировались в `erp_bus_messages` со статусом `success`
+
+### Причина
+
+- 1С — мастер-каталог, бэкофисные обработчики обязаны «видеть» все товары, включая скрытые. Иначе скрытый товар навсегда становится «мёртвой зоной»: обратно включить через `product.updated` его нельзя, обновлять остатки и цены тоже нельзя
+- Видимость в публичном каталоге регулируется полем `products.hidden`, а не фильтрацией ERP-обработчиков
+
+---
+
 ## [13.1.0] — 2026-04-23
 
 > `product.created` / `product.updated`: появилось поле `description_html` — HTML-версия описания товара
