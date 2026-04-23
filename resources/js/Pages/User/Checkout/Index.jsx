@@ -111,7 +111,8 @@ export default function CheckoutIndex({
                             />
                         )}
 
-                        {/* ═══ Общий итог ═══ */}
+                        {/* ═══ Общий итог — только если есть обе группы товаров ═══ */}
+                        {instockItems.length > 0 && preorderItems.length > 0 && (
                         <Box
                             bg="bg"
                             borderWidth="1px"
@@ -170,6 +171,7 @@ export default function CheckoutIndex({
                                 );
                             })()}
                         </Box>
+                        )}
 
                         {/* ═══ Компания ═══ */}
                         <Box
