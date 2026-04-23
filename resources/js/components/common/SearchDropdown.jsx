@@ -1,77 +1,218 @@
 import { useMemo } from 'react';
-import { Box, Flex, Text, Input, IconButton, Spinner } from '@chakra-ui/react';
+import { Box, Flex, Text, Input, IconButton, Spinner, Badge } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuX, LuClock3, LuSearch, LuArrowRight } from 'react-icons/lu';
+import { LuX, LuClock3, LuSearch, LuArrowRight, LuHeart, LuCheck, LuCircleX } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
+import CartQuantityControl from '@/components/product/CartQuantityControl';
+import { useProductHelpers } from '@/hooks/useProductHelpers';
 import SearchSection from './SearchSection';
 
 /**
- * Компактная карточка товара для дропдауна поиска.
+ * Горизонтальная карточка товара для дропдауна поиска.
+ * По смыслу — компактный ProductListItem: миниатюра + артикул/бренд + название +
+ * бейджи + цена и кнопка «В корзину» (CartQuantityControl из grid-карточки).
  */
 function ProductItem({ product, onClick }) {
-    const price = product.price ?? product.base_price;
-    const imageUrl = product.thumbnail || product.image_url || product.thumb_url || product.main_image;
-    const inStock = (product.stock_quantity ?? 0) > 0;
-    const inPreorder = (product.preorder_quantity ?? 0) > 0;
+    const {
+        user, isFav, toggleFavorite, formatPrice,
+        hasSale, isInStock, isPreorder, brandName,
+        price, salePrice, discountPct,
+    } = useProductHelpers(product);
 
-    // Статус наличия в регионе пользователя
-    let stockLabel, stockColor;
-    if (inStock) {
-        stockLabel = 'В наличии';
-        stockColor = 'green.500';
-    } else if (inPreorder) {
-        stockLabel = 'Предзаказ';
-        stockColor = 'orange.500';
-    } else {
-        stockLabel = 'Нет в наличии';
-        stockColor = 'red.500';
-    }
+    const imageUrl = product.thumbnail || product.image_url || product.thumb_url || product.main_image;
 
     return (
         <Flex
-            as={Link}
-            href={`/products/${product.slug}`}
-            onClick={onClick}
-            align="center"
+            align="stretch"
             gap="3"
             px="3"
-            py="1.5"
+            py="2"
+            borderBottom="1px solid"
+            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
             _hover={{ bg: 'gray.50' }}
             _dark={{ _hover: { bg: 'gray.700' } }}
-            cursor="pointer"
             transition="background 0.15s"
         >
             {/* Миниатюра */}
-            {imageUrl && (
-                <Box
-                    w="40px"
-                    h="60px"
-                    flexShrink="0"
-                    borderRadius="md"
-                    overflow="hidden"
-                    bg="gray.100"
-                    _dark={{ bg: 'gray.700' }}
-                >
+            <Box
+                as={Link}
+                href={`/products/${product.slug}`}
+                onClick={onClick}
+                w={{ base: '72px', md: '90px' }}
+                minH={{ base: '90px', md: '100px' }}
+                flexShrink="0"
+                borderRadius="md"
+                overflow="hidden"
+                bg="gray.100"
+                _dark={{ bg: 'gray.700' }}
+            >
+                {imageUrl && (
                     <Box as="img" src={imageUrl} alt={product.name} w="100%" h="100%" objectFit="cover" />
-                </Box>
-            )}
-            {/* Название + бренд/артикул + цена + статус */}
-            <Box flex="1" minW="0">
-                <Text fontSize="sm" lineClamp="1" fontWeight="400">
+                )}
+            </Box>
+
+            {/* Информация */}
+            <Flex flex="1" minW="0" direction="column" gap="1">
+                {/* Артикул / бренд + сердечко */}
+                <Flex align="start" justify="space-between" gap="2">
+                    <Box flex="1" minW="0">
+                        <Flex align="center" gap="1.5" wrap="wrap" lineHeight="1">
+                            {product.sku && (
+                                <Text fontSize="xs" fontWeight="700" color="gray.500">
+                                    {product.sku}
+                                </Text>
+                            )}
+                            {brandName && (
+                                <>
+                                    {product.sku && <Text fontSize="xs" color="gray.300">/</Text>}
+                                    {product.brand_slug ? (
+                                        <Text
+                                            as={Link}
+                                            href={`/brands/${product.brand_slug}`}
+                                            onClick={onClick}
+                                            fontSize="xs"
+                                            color="gray.500"
+                                            textTransform="capitalize"
+                                            _hover={{ textDecoration: 'underline' }}
+                                            lineClamp="1"
+                                        >
+                                            {brandName}
+                                        </Text>
+                                    ) : (
+                                        <Text
+                                            fontSize="xs"
+                                            color="gray.500"
+                                            textTransform="capitalize"
+                                            lineClamp="1"
+                                        >
+                                            {brandName}
+                                        </Text>
+                                    )}
+                                </>
+                            )}
+                        </Flex>
+                    </Box>
+                    {user && (
+                        <IconButton
+                            aria-label="В избранное"
+                            variant="ghost"
+                            size="xs"
+                            borderRadius="sm"
+                            onClick={toggleFavorite}
+                            color={isFav ? 'red.500' : 'gray.400'}
+                            _hover={{ color: 'red.500' }}
+                            minW="6"
+                            h="6"
+                            flexShrink="0"
+                        >
+                            <LuHeart size={14} fill={isFav ? 'currentColor' : 'none'} />
+                        </IconButton>
+                    )}
+                </Flex>
+
+                {/* Название */}
+                <Text
+                    as={Link}
+                    href={`/products/${product.slug}`}
+                    onClick={onClick}
+                    fontSize="sm"
+                    fontWeight="500"
+                    lineHeight="1.25"
+                    display="-webkit-box"
+                    css={{
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                    }}
+                    _hover={{ textDecoration: 'underline' }}
+                >
                     {product.name}
                 </Text>
-                <Text fontSize="xs" color="gray.400" lineClamp="1">
-                    {[product.brand_name, product.sku].filter(Boolean).join(' · ')}
-                </Text>
-                <Flex align="center" gap="2">
+
+                {/* Бейджи */}
+                {(product.is_new || product.is_bestseller || (hasSale && discountPct) || product.is_marked) && (
+                    <Flex gap="1" wrap="wrap">
+                        {product.is_bestseller && (
+                            <Badge colorPalette="orange" fontSize="2xs" fontWeight="700" borderRadius="md" px="1.5">
+                                Хит
+                            </Badge>
+                        )}
+                        {product.is_new && (
+                            <Badge colorPalette="green" fontSize="2xs" fontWeight="700" borderRadius="md" px="1.5">
+                                Новинка
+                            </Badge>
+                        )}
+                        {hasSale && discountPct && (
+                            <Badge colorPalette="red" fontSize="2xs" fontWeight="700" borderRadius="md" px="1.5">
+                                −{Math.round(discountPct)}%
+                            </Badge>
+                        )}
+                        {product.is_marked && (
+                            <Badge colorPalette="gray" fontSize="2xs" fontWeight="700" borderRadius="md" px="1.5">
+                                Марк
+                            </Badge>
+                        )}
+                    </Flex>
+                )}
+
+                {/* Нижняя строка: статус + цена + корзина */}
+                <Flex
+                    mt="auto"
+                    pt="1"
+                    align="end"
+                    justify="space-between"
+                    gap="2"
+                    wrap="wrap"
+                >
+                    {/* Статус наличия */}
+                    <Flex align="center" gap="1" fontSize="xs" fontWeight="500" flexShrink="0">
+                        {isInStock ? (
+                            <>
+                                <LuCheck size={13} color="var(--chakra-colors-green-600)" />
+                                <Text color="green.600" lineClamp="1">В наличии</Text>
+                            </>
+                        ) : isPreorder ? (
+                            <>
+                                <LuClock3 size={13} color="var(--chakra-colors-orange-500)" />
+                                <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                            </>
+                        ) : (
+                            <>
+                                <LuCircleX size={13} color="var(--chakra-colors-red-600)" />
+                                <Text color="red.600" lineClamp="1">Нет в наличии</Text>
+                            </>
+                        )}
+                    </Flex>
+
+                    {/* Цена */}
                     {price != null && (
-                        <Text fontSize="xs" fontWeight="600" color={inStock ? undefined : 'gray.400'}>
-                            {Number(price).toLocaleString('ru-RU')} ₽
-                        </Text>
+                        <Flex direction="column" alignItems="flex-end" flexShrink="0" lineHeight="1">
+                            {hasSale && (
+                                <Text fontSize="2xs" color="gray.400" textDecoration="line-through">
+                                    {formatPrice(price)}
+                                </Text>
+                            )}
+                            <Text
+                                fontSize="md"
+                                fontWeight="700"
+                                color={hasSale ? 'red.600' : undefined}
+                            >
+                                {formatPrice(hasSale ? salePrice : price)}
+                            </Text>
+                        </Flex>
                     )}
-                    <Text fontSize="2xs" color={stockColor}>{stockLabel}</Text>
                 </Flex>
-            </Box>
+
+                {/* Кнопка «В корзину» / pill-контрол (как в grid-карточке) */}
+                {user && (isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
+                    <Box
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        mt="1"
+                    >
+                        <CartQuantityControl productId={product.id} size="xs" fullWidth />
+                    </Box>
+                )}
+            </Flex>
         </Flex>
     );
 }
@@ -438,7 +579,7 @@ export default function SearchDropdown({
             borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
             borderRadius="lg"
             shadow="lg"
-            maxH="384px"
+            maxH="min(640px, calc(100vh - 120px))"
             overflowY="auto"
             zIndex="50"
         >
