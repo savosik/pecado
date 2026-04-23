@@ -349,8 +349,8 @@ class ProductController extends Controller
                 }
             }
 
-            // Режим: если хоть один атрибут в модели помечен как вариантообразующий — работаем только по флагу.
-            // Иначе — старая эвристика (исключения по типу/имени).
+            // Режим attrs работает ТОЛЬКО если хотя бы один атрибут модели явно помечен is_variant_forming=1.
+            // Без явного флага — никакой эвристики: падаем на fallback name → sku.
             $hasFlaggedAttr = false;
             foreach ($attrInfo as $info) {
                 if ($info['variant_forming']) {
@@ -359,31 +359,18 @@ class ProductController extends Controller
                 }
             }
 
-            $excludedTypes = ['number', 'boolean'];
-            $excludedNames = [
-                'Composition', 'Классификация для отчетности',
-                'Подходит для маркетплейсов', 'Маркированный товар',
-                'Рекомендации по применению',
-                'Количество в комплекте', 'Количество изделий в розничной упаковке',
-                'Коробок в упаковке',
-            ];
-
             $attrMap = []; // attr_name => [product_id => value]
             $diffAttrNames = [];
-            foreach ($attrInfo as $name => $info) {
-                if ($hasFlaggedAttr) {
+            if ($hasFlaggedAttr) {
+                foreach ($attrInfo as $name => $info) {
                     if (! $info['variant_forming']) {
                         continue;
                     }
-                } else {
-                    if (in_array($info['type'], $excludedTypes, true) || in_array($name, $excludedNames, true)) {
-                        continue;
-                    }
-                }
 
-                $attrMap[$name] = $info['values'];
-                if (count(array_unique(array_values($info['values']))) > 1) {
-                    $diffAttrNames[] = $name;
+                    $attrMap[$name] = $info['values'];
+                    if (count(array_unique(array_values($info['values']))) > 1) {
+                        $diffAttrNames[] = $name;
+                    }
                 }
             }
 
