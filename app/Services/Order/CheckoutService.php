@@ -86,7 +86,8 @@ class CheckoutService implements CheckoutServiceInterface
                     'type' => OrderType::ORDER,
                 ]));
                 $total = $this->createOrderItems($instockOrder, $inStockCartItems, $user);
-                $instockOrder->update(['total_amount' => $total]);
+                $instockOrder->total_amount = $total;
+                $instockOrder->saveQuietly();
                 OrderCreated::dispatch($instockOrder);
                 $orders->push($instockOrder);
             }
@@ -97,7 +98,8 @@ class CheckoutService implements CheckoutServiceInterface
                     'type' => OrderType::PREORDER,
                 ]));
                 $total = $this->createOrderItems($preorderOrder, $preorderCartItems, $user);
-                $preorderOrder->update(['total_amount' => $total]);
+                $preorderOrder->total_amount = $total;
+                $preorderOrder->saveQuietly();
                 OrderCreated::dispatch($preorderOrder);
                 $orders->push($preorderOrder);
             }
