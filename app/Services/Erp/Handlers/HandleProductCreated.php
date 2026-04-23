@@ -175,6 +175,13 @@ class HandleProductCreated
                         continue;
                     }
 
+                    // Пустой атрибут (нет ни value_uuid, ни value_label) — не пишем pivot.
+                    // Атрибут НЕ добавляется в $processedAttributeIds: full-replace cleanup
+                    // ниже удалит существующую запись для (product_id, attribute_id), если была.
+                    if (! $valueUuid && ($valueLabel === null || $valueLabel === '')) {
+                        continue;
+                    }
+
                     // Маппинг value_type из 1С в тип атрибута на сайте
                     $siteType = match ($valueType) {
                         'number' => 'number',

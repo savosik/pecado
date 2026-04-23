@@ -173,6 +173,87 @@ class HandleProductUpdatedTest extends TestCase
     }
 
     #[Test]
+    public function removes_existing_pivot_when_payload_attribute_is_empty(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'upd-empty-attr',
+        ]);
+
+        $attr = Attribute::create([
+            'external_id' => 'prop-empty-uuid',
+            'name' => 'Пустой',
+            'slug' => 'pustoj',
+            'type' => 'select',
+        ]);
+
+        // Имитируем ровно тот мусор, который накопился на dev:
+        // attribute_value_id = NULL, text_value = ''
+        $product->attributeValues()->create([
+            'attribute_id' => $attr->id,
+            'attribute_value_id' => null,
+            'text_value' => '',
+        ]);
+        $this->assertEquals(1, $product->attributeValues()->count());
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-upd-empty-attr',
+            'uuid' => 'upd-empty-attr',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-empty-uuid',
+                    'property_label' => 'Пустой',
+                    'value_type' => 'reference',
+                    'value_uuid' => null,
+                    'value_label' => null,
+                ],
+            ],
+        ]);
+
+        $this->assertEquals(0, $product->attributeValues()->count());
+    }
+
+    #[Test]
+    public function does_not_create_pivot_for_empty_attribute_alongside_valid_one(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'upd-mixed-attrs',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-upd-mixed-attrs',
+            'uuid' => 'upd-mixed-attrs',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-valid-uuid',
+                    'property_label' => 'Валидный',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => 'значение',
+                ],
+                [
+                    'property_uuid' => 'prop-empty-uuid',
+                    'property_label' => 'Пустой',
+                    'value_type' => 'reference',
+                    'value_uuid' => null,
+                    'value_label' => null,
+                ],
+            ],
+        ]);
+
+        // Только валидный атрибут получил pivot
+        $this->assertEquals(1, $product->attributeValues()->count());
+
+        $validAttr = Attribute::where('external_id', 'prop-valid-uuid')->first();
+        $this->assertNotNull($validAttr);
+        $this->assertEquals(
+            'значение',
+            $product->attributeValues()->where('attribute_id', $validAttr->id)->first()->text_value
+        );
+    }
+
+    #[Test]
     public function warns_when_product_not_found(): void
     {
         $this->handler->handle([

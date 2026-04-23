@@ -227,6 +227,13 @@ class HandleProductUpdated
             return null;
         }
 
+        // Пустой атрибут (нет ни value_uuid, ни value_label) — не пишем pivot.
+        // Возврат null исключает атрибут из $processedAttributeIds → full-replace
+        // cleanup в вызывающем коде уберёт устаревшую запись, если она была.
+        if (! $valueUuid && ($valueLabel === null || $valueLabel === '')) {
+            return null;
+        }
+
         $siteType = match ($valueType) {
             'number' => 'number',
             'boolean' => 'boolean',

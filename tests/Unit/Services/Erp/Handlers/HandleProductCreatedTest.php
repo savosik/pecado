@@ -104,6 +104,54 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function skips_attribute_with_empty_value_uuid_and_null_value_label(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-prod-empty-attr-001',
+            'uuid' => 'prod-uuid-empty-attr-001',
+            'name' => 'Товар с пустым атрибутом',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-empty-uuid',
+                    'property_label' => 'Пустой атрибут',
+                    'value_type' => 'reference',
+                    'value_uuid' => null,
+                    'value_label' => null,
+                ],
+            ],
+        ]);
+
+        $product = Product::where('external_id', 'prod-uuid-empty-attr-001')->first();
+        $this->assertNotNull($product);
+        $this->assertEquals(0, $product->attributeValues()->count());
+    }
+
+    #[Test]
+    public function skips_attribute_with_empty_value_uuid_and_empty_string_label(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-prod-empty-attr-002',
+            'uuid' => 'prod-uuid-empty-attr-002',
+            'name' => 'Товар с пустой строкой в атрибуте',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-empty-str-uuid',
+                    'property_label' => 'Пустая строка',
+                    'value_type' => 'string',
+                    'value_uuid' => null,
+                    'value_label' => '',
+                ],
+            ],
+        ]);
+
+        $product = Product::where('external_id', 'prod-uuid-empty-attr-002')->first();
+        $this->assertNotNull($product);
+        $this->assertEquals(0, $product->attributeValues()->count());
+    }
+
+    #[Test]
     public function maps_value_type_reference_to_select(): void
     {
         $this->handler->handle([
