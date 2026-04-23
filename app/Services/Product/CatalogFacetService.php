@@ -310,11 +310,14 @@ class CatalogFacetService
         // Сортируем по sort_order и убираем вспомогательное поле
         usort($grouped, fn ($a, $b) => ($a['sort_order'] ?? 0) <=> ($b['sort_order'] ?? 0));
 
-        // Для inline number-атрибутов сортируем значения по числовому значению
+        // Для inline number-атрибутов сортируем значения по числовому значению.
+        // Fallback на 'value' нужен на случай «смешанных» атрибутов: часть записей
+        // с attribute_value_id (select-цикл, без raw_value), часть inline.
         foreach ($grouped as &$attr) {
             if ($attr['type'] === 'inline') {
                 usort($attr['values'], function ($a, $b) {
-                    return floatval($a['raw_value']) <=> floatval($b['raw_value']);
+                    return floatval($a['raw_value'] ?? $a['value'] ?? 0)
+                        <=> floatval($b['raw_value'] ?? $b['value'] ?? 0);
                 });
             }
             unset($attr['sort_order']);
