@@ -1,5 +1,5 @@
 import { memo, useEffect, useState, useRef, useCallback } from 'react';
-import { Box, Button, Spinner } from '@chakra-ui/react';
+import { Box, Button, IconButton, Spinner } from '@chakra-ui/react';
 import { LuShoppingCart } from 'react-icons/lu';
 import { usePage } from '@inertiajs/react';
 import { useCartStore } from '@/stores/useCartStore';
@@ -25,9 +25,10 @@ const SIZE_MAP = {
  *   disabled?: boolean,
  *   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl',
  *   fullWidth?: boolean,
+ *   variant?: 'full' | 'compact',
  * }} props
  */
-function CartQuantityControl({ productId, disabled = false, size = 'md', fullWidth = false }) {
+function CartQuantityControl({ productId, disabled = false, size = 'md', fullWidth = false, variant = 'full' }) {
     const { auth } = usePage().props;
     const user = auth?.user?.status === 'active' ? auth.user : null;
 
@@ -119,8 +120,28 @@ function CartQuantityControl({ productId, disabled = false, size = 'md', fullWid
         useCartStore.getState().setQuantity(productId, 1);
     }, [user, productId]);
 
+    const isCompact = variant === 'compact';
+
     // Для гостей или если qty = 0 — кнопка «В корзину»
     if (!user || qty <= 0) {
+        if (isCompact) {
+            return (
+                <IconButton
+                    aria-label="В корзину"
+                    size={s.btn}
+                    bg="#9e1b32"
+                    color="white"
+                    _hover={{ bg: '#7a1527' }}
+                    variant="solid"
+                    borderRadius="md"
+                    onClick={handleAdd}
+                    disabled={disabled}
+                >
+                    <LuShoppingCart size={s.icon} />
+                </IconButton>
+            );
+        }
+
         return (
             <Button
                 size={s.btn}
@@ -142,13 +163,17 @@ function CartQuantityControl({ productId, disabled = false, size = 'md', fullWid
 
     // Pill-контрол с индикатором синхронизации
     return (
-        <Box w="100%" position="relative">
+        <Box
+            w={isCompact ? undefined : '100%'}
+            display={isCompact ? 'inline-block' : 'block'}
+            position="relative"
+        >
             <QuantityControl
                 value={qty}
                 onChange={handleChange}
                 min={0}
                 size={size}
-                fullWidth={fullWidth}
+                fullWidth={isCompact ? false : fullWidth}
             />
             {syncing && (
                 <Box

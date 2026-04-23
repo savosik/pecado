@@ -175,7 +175,7 @@ function ProductItem({ product, onClick }) {
                 <Flex
                     mt="auto"
                     pt="1"
-                    align="end"
+                    align="center"
                     justify="space-between"
                     gap="2"
                     wrap="wrap"
@@ -200,34 +200,31 @@ function ProductItem({ product, onClick }) {
                         )}
                     </Flex>
 
-                    {/* Цена */}
-                    {price != null && (
-                        <Flex direction="column" alignItems="flex-end" flexShrink="0" lineHeight="1">
-                            {hasSale && (
-                                <Text fontSize="2xs" color="gray.400" textDecoration="line-through">
-                                    {formatPrice(price)}
+                    {/* Цена + компактный контрол корзины */}
+                    <Flex align="center" gap="2" flexShrink="0">
+                        {price != null && (
+                            <Flex direction="column" alignItems="flex-end" lineHeight="1">
+                                {hasSale && (
+                                    <Text fontSize="2xs" color="gray.400" textDecoration="line-through">
+                                        {formatPrice(price)}
+                                    </Text>
+                                )}
+                                <Text
+                                    fontSize="md"
+                                    fontWeight="700"
+                                    color={hasSale ? 'red.600' : undefined}
+                                >
+                                    {formatPrice(hasSale ? salePrice : price)}
                                 </Text>
-                            )}
-                            <Text
-                                fontSize="md"
-                                fontWeight="700"
-                                color={hasSale ? 'red.600' : undefined}
-                            >
-                                {formatPrice(hasSale ? salePrice : price)}
-                            </Text>
-                        </Flex>
-                    )}
+                            </Flex>
+                        )}
+                        {user && (isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
+                            <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                <CartQuantityControl productId={product.id} size="xs" variant="compact" />
+                            </Box>
+                        )}
+                    </Flex>
                 </Flex>
-
-                {/* Кнопка «В корзину» / pill-контрол (как в grid-карточке) */}
-                {user && (isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
-                    <Box
-                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-                        mt="1"
-                    >
-                        <CartQuantityControl productId={product.id} size="xs" fullWidth />
-                    </Box>
-                )}
             </Flex>
         </Flex>
     );
