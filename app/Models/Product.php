@@ -110,6 +110,14 @@ class Product extends Model implements HasMedia
         ];
     }
 
+    /**
+     * Отрендеренный markdown описания в HTML (для публичной выдачи на фронт).
+     */
+    public function getDescriptionRenderedAttribute(): ?string
+    {
+        return app(\App\Services\MarkdownRenderer::class)->toHtml($this->description);
+    }
+
     public function registerMediaCollections(): void
     {
         $this->addMediaCollection('main')

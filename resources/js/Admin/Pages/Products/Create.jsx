@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, EditorJsEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector, SimpleWysiwyg } from '@/Admin/Components';
+import { PageHeader, FormField, FormActions, ImageUploader, MultipleImageUploader, VideoUploader, SelectRelation, EditorJsEditor, MarkdownTextEditor, TagSelector, BarcodeSelector, CertificateSelector, CategoryTreeSelector, EntitySelector, SimpleWysiwyg } from '@/Admin/Components';
 import { Box, Card, SimpleGrid, Input, Textarea, Stack, Tabs } from '@chakra-ui/react';
 
 import { Field } from '@/components/ui/field';
@@ -440,13 +440,15 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                     <FormField
                                         label="Полное описание"
                                         error={errors.description}
-                                        helperText="Подробное описание товара (текст для выгрузок)"
+                                        helperText="Подробное описание товара в формате Markdown. На сайте отображается как отформатированный HTML."
+                                        w="100%"
+                                        alignItems="stretch"
                                     >
-                                        <Textarea
+                                        <MarkdownTextEditor
                                             value={data.description}
-                                            onChange={(e) => setData('description', e.target.value)}
-                                            placeholder="Введите полное описание товара"
-                                            rows={6}
+                                            onChange={(val) => setData('description', val)}
+                                            placeholder="Введите описание товара в формате Markdown..."
+                                            minHeight={320}
                                         />
                                     </FormField>
 

@@ -521,6 +521,7 @@ class ProductController extends Controller
         $productData['code'] = $product->code;
         $productData['barcode'] = $product->barcode;
         $productData['description'] = $product->description;
+        $productData['description_rendered'] = $product->description_rendered;
         $productData['description_html'] = $product->description_html;
         $productData['rich_content'] = $product->rich_content;
         $productData['short_description'] = $product->short_description;

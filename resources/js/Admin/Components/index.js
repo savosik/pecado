@@ -13,6 +13,7 @@ export { ImageUploader } from './ImageUploader';
 export { MultipleImageUploader } from './MultipleImageUploader';
 export { VideoUploader } from './VideoUploader';
 export { MarkdownEditor } from './Editor/MarkdownEditor';
+export { MarkdownTextEditor } from './Editor/MarkdownTextEditor';
 export { default as EditorJsEditor } from './Editor/EditorJsEditor';
 export { SelectRelation } from './SelectRelation';
 export { BarcodeSelector } from './BarcodeSelector';

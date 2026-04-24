@@ -45,11 +45,12 @@ function isEmptyHtml(html) {
 
 /**
  * Возвращает описание товара с правильной цепочкой приоритетов:
- * rich_content (если есть блоки) → description_html → description → short_description
+ * rich_content (если есть блоки) → description_html → description_rendered (markdown→html) → short_description
  *
  * Учитывает:
  * - Editor.js при пустом контенте сохраняет { blocks: [] }
  * - WYSIWYG может оставить <p><br></p> как «пустой» HTML
+ * - description в базе хранится как markdown; бэкенд отдаёт уже отрендеренный HTML в description_rendered
  */
 export function getProductDescription(product) {
     // rich_content — только если есть реальные блоки
@@ -59,7 +60,7 @@ export function getProductDescription(product) {
     }
 
     if (!isEmptyHtml(product.description_html)) return product.description_html;
-    if (product.description?.trim()) return product.description;
+    if (!isEmptyHtml(product.description_rendered)) return product.description_rendered;
     if (product.short_description?.trim()) return product.short_description;
 
     return null;
