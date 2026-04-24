@@ -103,6 +103,11 @@ export default function ProductVariants({ variants = [], currentProductId, model
 
                                 {/* Информация */}
                                 <Box flex="1" minW="0">
+                                    {variant.sku && variant.label_mode !== 'sku' && (
+                                        <Text fontSize="9px" lineHeight="1" color="gray.400" _dark={{ color: 'gray.500' }} truncate>
+                                            {variant.sku}
+                                        </Text>
+                                    )}
                                     <Text fontSize="sm" fontWeight="600" truncate>
                                         {label}
                                     </Text>
