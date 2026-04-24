@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import { Box, Flex, Text, Button, Table, Heading } from '@chakra-ui/react';
+import { Box, Flex, Text, Button, Table } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
 import { LuDownload, LuFileText } from 'react-icons/lu';
 import ContentRenderer from '@/components/content/ContentRenderer';
@@ -177,28 +177,31 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
             {hasSpecs && (
                 <Tabs.Content value="specs" pt="4">
                     {hasGroups ? (
-                        <Flex direction="column" gap={{ base: '5', md: '6' }}>
+                        <Box
+                            css={{
+                                columnGap: '2.5rem',
+                                '@media (min-width: 768px)': { columnCount: 2 },
+                            }}
+                        >
                             {validSpecGroups.map((group) => (
-                                <Box key={group.name}>
-                                    <Heading
+                                <Box
+                                    key={group.name}
+                                    mb="5"
+                                    css={{ breakInside: 'avoid', WebkitColumnBreakInside: 'avoid', pageBreakInside: 'avoid' }}
+                                >
+                                    <Text
                                         as="h3"
-                                        fontSize={{ base: 'sm', md: 'md' }}
+                                        fontSize="xs"
                                         fontWeight="600"
-                                        color="gray.900"
-                                        _dark={{ color: 'gray.100', borderColor: 'gray.700' }}
-                                        pb="2"
-                                        mb="3"
-                                        borderBottom="1px solid"
-                                        borderColor="gray.200"
+                                        color="gray.500"
+                                        _dark={{ color: 'gray.400' }}
+                                        textTransform="uppercase"
+                                        letterSpacing="0.04em"
+                                        mb="1.5"
                                     >
                                         {group.name}
-                                    </Heading>
-                                    <Box
-                                        display="grid"
-                                        gridTemplateColumns={{ base: '1fr', md: '1fr 1fr' }}
-                                        columnGap={{ base: '6', md: '10' }}
-                                        rowGap="2"
-                                    >
+                                    </Text>
+                                    <Flex direction="column" gap="0.5">
                                         {group.items.map((item) => (
                                             <Text
                                                 key={item.name}
@@ -214,10 +217,10 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
                                                 </Text>
                                             </Text>
                                         ))}
-                                    </Box>
+                                    </Flex>
                                 </Box>
                             ))}
-                        </Flex>
+                        </Box>
                     ) : (
                         <Box
                             display="grid"
