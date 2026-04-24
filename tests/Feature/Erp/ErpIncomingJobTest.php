@@ -1600,7 +1600,7 @@ class ErpIncomingJobTest extends TestCase
     public function shipment_created_creates_shipment_through_job(): void
     {
         $product = Product::factory()->create(['external_id' => '00000000-0000-4000-a000-00000000000d']);
-        $user = User::factory()->create();
+        $user = User::factory()->create(['erp_id' => '00000000-0000-4000-a000-000000003100']);
         $company = Company::factory()->create([
             'user_id' => $user->id,
             'tax_id' => '1234567890',
@@ -1610,6 +1610,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-000000000031',
             'tax_id' => '1234567890',
+            'partner_uuid' => '00000000-0000-4000-a000-000000003100',
             'number' => '29УТ-000031',
             'date' => '2026-02-16',
             'status' => 'completed',

@@ -15,6 +15,22 @@
             "type": "string",
             "format": "uuid"
         },
+        "contractor_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге, fallback на tax_id+partner_uuid."
+        },
+        "partner_uuid": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "format": "uuid",
+            "description": "UUID партнёра-владельца. Нужен для корректного фильтра user_id при fallback-поиске Company по tax_id."
+        },
         "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",

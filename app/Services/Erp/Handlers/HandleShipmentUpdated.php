@@ -2,8 +2,10 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentUpdated
@@ -12,6 +14,9 @@ class HandleShipmentUpdated
      * Обработка события shipment.updated из 1С.
      * v3: отправляется при перепроведении или изменении реализации.
      * Обновляет статус реализации и позиции по UUID.
+     *
+     * v13.2: при смене tax_id или появлении contractor_uuid в payload —
+     * пере-резолвит Company с приоритетом UUID и fallback на tax_id + user_id.
      */
     public function handle(array $payload): void
     {
@@ -52,6 +57,24 @@ class HandleShipmentUpdated
             $shipment->erp_number = $payload['number'];
         }
 
+        // Обновление tax_id + пере-резолв Company (v13.2)
+        $contractorUuid = $payload['contractor_uuid'] ?? null;
+        $partnerUuid = $payload['partner_uuid'] ?? null;
+        $taxId = array_key_exists('tax_id', $payload) ? $payload['tax_id'] : $shipment->tax_id;
+
+        if ($contractorUuid || array_key_exists('tax_id', $payload)) {
+            [$companyId, $userId] = $this->resolveCompanyAndUser($contractorUuid, $taxId, $partnerUuid);
+            if ($companyId !== null) {
+                $shipment->company_id = $companyId;
+            }
+            if ($userId !== null) {
+                $shipment->user_id = $userId;
+            }
+            if (array_key_exists('tax_id', $payload)) {
+                $shipment->tax_id = $taxId;
+            }
+        }
+
         $shipment->save();
 
         // Обновление позиций (если переданы)
@@ -63,6 +86,46 @@ class HandleShipmentUpdated
             'uuid' => $uuid,
             'status' => $payload['status'] ?? 'не изменён',
         ]);
+    }
+
+    /**
+     * Резолв Company + User по приоритету: contractor_uuid → tax_id + user_id.
+     *
+     * @return array{0: ?int, 1: ?int} [company_id, user_id]
+     */
+    private function resolveCompanyAndUser(?string $contractorUuid, ?string $taxId, ?string $partnerUuid): array
+    {
+        $userId = null;
+        if ($partnerUuid) {
+            $userId = User::where('erp_id', $partnerUuid)->value('id');
+        }
+
+        $company = null;
+
+        if ($contractorUuid) {
+            $company = Company::withoutGlobalScopes()
+                ->where('erp_id', $contractorUuid)
+                ->first();
+        }
+
+        if (! $company && $taxId && $userId) {
+            $company = Company::withoutGlobalScopes()
+                ->where('user_id', $userId)
+                ->where('tax_id', $taxId)
+                ->first();
+
+            if ($company && $contractorUuid && ! $company->erp_id) {
+                Company::withoutEvents(function () use ($company, $contractorUuid) {
+                    $company->update(['erp_id' => $contractorUuid]);
+                });
+            }
+        }
+
+        if ($company) {
+            return [$company->id, $company->user_id ?? $userId];
+        }
+
+        return [null, $userId];
     }
 
     /**

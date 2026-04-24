@@ -5,6 +5,7 @@ namespace App\Services\Erp\Handlers;
 use App\Models\Company;
 use App\Models\Product;
 use App\Models\Shipment;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 class HandleShipmentCreated
@@ -13,6 +14,12 @@ class HandleShipmentCreated
      * Обработка события shipment.created из 1С.
      * v3: отправляется при первом проведении реализации.
      * Создаёт или обновляет реализацию по UUID (идемпотентно).
+     *
+     * Матчинг Company (v13.2):
+     *  1. По erp_id = contractor_uuid (глобально уникальный, приоритет).
+     *  2. Fallback: по tax_id + user_id (резолв через partner_uuid). Без user_id
+     *     fallback не выполняется — иначе можно найти чужую Company с тем же ИНН.
+     *  3. Если Company не найдена — shipment сохраняется с company_id = null.
      */
     public function handle(array $payload): void
     {
@@ -25,20 +32,10 @@ class HandleShipmentCreated
         }
 
         $contractorInn = $payload['tax_id'] ?? null;
-        $companyId = null;
-        $userId = null;
+        $contractorUuid = $payload['contractor_uuid'] ?? null;
+        $partnerUuid = $payload['partner_uuid'] ?? null;
 
-        // Поиск компании по ИНН контрагента
-        if ($contractorInn) {
-            $company = Company::withoutGlobalScopes()
-                ->where('tax_id', $contractorInn)
-                ->first();
-
-            if ($company) {
-                $companyId = $company->id;
-                $userId = $company->user_id;
-            }
-        }
+        [$companyId, $userId] = $this->resolveCompanyAndUser($contractorUuid, $contractorInn, $partnerUuid);
 
         $fields = [
             'number' => $payload['number'] ?? null,
@@ -71,6 +68,46 @@ class HandleShipmentCreated
             'uuid' => $uuid,
             'company_id' => $companyId,
         ]);
+    }
+
+    /**
+     * Резолв Company + User по приоритету: contractor_uuid → tax_id + user_id.
+     *
+     * @return array{0: ?int, 1: ?int} [company_id, user_id]
+     */
+    private function resolveCompanyAndUser(?string $contractorUuid, ?string $taxId, ?string $partnerUuid): array
+    {
+        $userId = null;
+        if ($partnerUuid) {
+            $userId = User::where('erp_id', $partnerUuid)->value('id');
+        }
+
+        $company = null;
+
+        if ($contractorUuid) {
+            $company = Company::withoutGlobalScopes()
+                ->where('erp_id', $contractorUuid)
+                ->first();
+        }
+
+        if (! $company && $taxId && $userId) {
+            $company = Company::withoutGlobalScopes()
+                ->where('user_id', $userId)
+                ->where('tax_id', $taxId)
+                ->first();
+
+            if ($company && $contractorUuid && ! $company->erp_id) {
+                Company::withoutEvents(function () use ($company, $contractorUuid) {
+                    $company->update(['erp_id' => $contractorUuid]);
+                });
+            }
+        }
+
+        if ($company) {
+            return [$company->id, $company->user_id ?? $userId];
+        }
+
+        return [null, $userId];
     }
 
     /**

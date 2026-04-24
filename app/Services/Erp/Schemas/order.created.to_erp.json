@@ -63,6 +63,13 @@
                 "null"
             ],
             "properties": {
+                "uuid": {
+                    "type": [
+                        "string",
+                        "null"
+                    ],
+                    "description": "UUID контрагента в 1С (Company.erp_id на сайте), если уже выгружен. 1С матчит по UUID с приоритетом, fallback на tax_id."
+                },
                 "country": {
                     "type": [
                         "string",

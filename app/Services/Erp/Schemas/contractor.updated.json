@@ -1,0 +1,131 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "contractor.updated",
+    "title": "contractor.updated (1С → Сайт)",
+    "description": "Обновление атрибутов существующего контрагента. Сайт сначала ищет Company по uuid (приоритет), затем fallback по tax_id + user_id (резолв через partner_uuid). Все поля кроме event, message_id, uuid — опциональны (частичное обновление). partner_uuid требуется для fallback-матчинга и привязки erp_id существующего контрагента, созданного на сайте.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "const": "contractor.updated"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "uuid": {
+            "type": "string",
+            "format": "uuid"
+        },
+        "partner_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID партнёра-владельца. Нужен для fallback-матчинга по tax_id и для привязки существующей Company к erp_id (ленивый backfill)."
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "legal_name": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "tax_id": {
+            "type": "string",
+            "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
+            "minLength": 1
+        },
+        "tax_code": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "registration_number": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "okpo_code": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+        },
+        "legal_address": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "actual_address": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "phone": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "email": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "bank_accounts": {
+            "type": [
+                "array",
+                "null"
+            ],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "bank_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "bank_bik": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "correspondent_account": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "account_number": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "message_id",
+        "uuid"
+    ]
+}

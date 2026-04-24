@@ -9,6 +9,8 @@ use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
 use App\Services\Erp\Handlers\HandleCategoryUpdated;
 use App\Services\Erp\Handlers\HandleContractorCreated;
+use App\Services\Erp\Handlers\HandleContractorDeleted;
+use App\Services\Erp\Handlers\HandleContractorUpdated;
 use App\Services\Erp\Handlers\HandleExchangeRateUpdated;
 use App\Services\Erp\Handlers\HandleIndividualPricesReady;
 use App\Services\Erp\Handlers\HandleOrderCreated;
@@ -59,6 +61,8 @@ class ErpIncomingJob extends BaseJob
         'stock.updated' => HandleStockUpdated::class,
         // US-07: Контрагенты
         'contractor.created' => HandleContractorCreated::class,
+        'contractor.updated' => HandleContractorUpdated::class,
+        'contractor.deleted' => HandleContractorDeleted::class,
         // US-08: Заказы
         'order.created' => HandleOrderCreated::class,
         'order.updated' => HandleOrderUpdated::class,

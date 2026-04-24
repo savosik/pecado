@@ -4,6 +4,7 @@ namespace App\Services\Erp\Handlers;
 
 use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
+use App\Listeners\PublishContractorToErp;
 use App\Models\ClientStatus;
 use App\Models\Region;
 use App\Models\User;
@@ -111,6 +112,9 @@ class HandlePartnerCreated
                 'login' => $user->email,
                 'erp_id' => $uuid,
             ]);
+
+            // v13.2: после того как партнёр получил UUID — догоняем зависшие Company
+            PublishContractorToErp::catchupForUser($user->refresh());
 
             return;
         }

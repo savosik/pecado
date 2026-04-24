@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 13.1.0
+  version: 13.2.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -63,6 +63,10 @@ channels:
         $ref: '#/components/messages/PartnerDeleted'
       contractorCreated:
         $ref: '#/components/messages/ContractorCreated'
+      contractorUpdated:
+        $ref: '#/components/messages/ContractorUpdated'
+      contractorDeleted:
+        $ref: '#/components/messages/ContractorDeleted'
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -326,6 +330,28 @@ channels:
           autoDelete: false
         bindingVersion: 0.3.0
 
+  erpOutContractors:
+    address: erp_out.contractors
+    title: Контрагенты (Сайт → 1С)
+    description: |
+      Очередь для контрагентов, созданных на сайте. Сообщения публикуются
+      при первом заполнении `tax_id` у Company. Routing key: `contractor.created`.
+      1С слушает очередь напрямую через AMQP (у сайта нет воркера для этой очереди).
+      После обработки 1С отвечает `contractor.updated` с назначенным UUID в `erp_in.partners`.
+    messages:
+      contractorCreatedFromSite:
+        $ref: '#/components/messages/ContractorCreatedFromSite'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_out.contractors
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
 # ──────────────────────────────────────────────
 # Operations
 # ──────────────────────────────────────────────
@@ -490,14 +516,97 @@ operations:
       Обработчик: `HandleContractorCreated`
 
       Сайт создаёт контрагента с привязкой к партнёру по `partner_uuid`.
-      Поле `country` гарантированно не null.
-      Первый банковский счёт имеет `is_primary = true`.
-      Сопоставление контрагента при заказе — по ИНН (`tax_id`).
+      Поле `country` гарантированно не null. Первый банковский счёт имеет `is_primary = true`.
+
+      **Стратегия матчинга Company (v13.2):**
+      1. По `Company.erp_id = uuid` (приоритет, идемпотентность).
+      2. Fallback: по `tax_id + user_id` (где `user_id` резолвится из `partner_uuid → User.erp_id`). При fallback `erp_id` проставляется ленивым backfill.
     action: receive
     channel:
       $ref: '#/channels/erpInPartners'
     messages:
       - $ref: '#/channels/erpInPartners/messages/contractorCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+
+  receiveContractorUpdated:
+    title: Обновление контрагента
+    summary: 1С обновляет атрибуты контрагента → Сайт синхронизирует Company
+    description: |
+      Обработчик: `HandleContractorUpdated` (v13.2, новое).
+
+      Используется для двух сценариев:
+      - **Привязка UUID** после первой публикации `contractor.created` сайтом — 1С
+        генерирует свой UUID и возвращает его через это событие; сайт находит Company
+        по `tax_id + user_id` и проставляет `erp_id` (ленивый backfill).
+      - **Частичное обновление атрибутов** существующего контрагента — только переданные
+        поля обновляются (`array_filter`), `bank_accounts` заменяется только если явно передан.
+
+      Стратегия матчинга Company:
+      1. По `erp_id = uuid` (приоритет).
+      2. Fallback: по `tax_id + user_id` (резолв через `partner_uuid → User.erp_id`).
+      3. Если не найдена — warning, ничего не создаём (это задача `contractor.created`).
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/contractorUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+
+  receiveContractorDeleted:
+    title: Удаление контрагента
+    summary: 1С удаляет контрагента → Сайт soft-deletes Company
+    description: |
+      Обработчик: `HandleContractorDeleted` (v13.2, новое).
+
+      Для идентификации достаточно `uuid` или `tax_id`. Soft-delete Company
+      выполняется через `SoftDeletes::delete()` с `Company::withoutEvents()`.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/contractorDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+
+  sendContractorCreated:
+    title: Отправка контрагента в 1С
+    summary: Сайт → 1С при создании Company с заполненным tax_id
+    description: |
+      Публикуется через `PublishContractorToErpJob` при событии `CompanyCreated`
+      или `CompanyUpdated` (v13.2, новое).
+
+      **Триггер публикации** — первое заполнение `tax_id` у Company:
+      - Create с непустым `tax_id` → публикуем.
+      - Update, где `tax_id` стал непустым (ранее был пуст) → публикуем.
+      - Иначе — не публикуем (дальнейшие обновления идут через 1С как авторитет).
+
+      **Предусловие**: у партнёра-владельца должен быть заполнен `User.erp_id`.
+      Если его ещё нет — публикация откладывается (log info). После того как партнёр
+      получит UUID через `partner.updated`, `PublishUserToErp` догонит зависшие Company.
+
+      **Формат `uuid` в payload** — локальный UUIDv4 для корреляции на стороне 1С;
+      1С генерирует собственный UUID независимо и возвращает его через `contractor.updated`.
+
+      Можно отключить env-флагом `PUBLISH_CONTRACTORS_TO_ERP=false` для быстрого отката.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutContractors'
+    messages:
+      - $ref: '#/channels/erpOutContractors/messages/contractorCreatedFromSite'
     bindings:
       amqp:
         bindingVersion: 0.3.0
@@ -995,6 +1104,33 @@ components:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
         $ref: '#/components/schemas/ContractorCreatedPayload'
+
+    ContractorUpdated:
+      name: contractor.updated
+      title: Контрагент обновлён (1С → Сайт)
+      summary: Привязка UUID и/или частичное обновление атрибутов контрагента
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ContractorUpdatedPayload'
+
+    ContractorDeleted:
+      name: contractor.deleted
+      title: Контрагент удалён (1С → Сайт)
+      summary: Soft-delete контрагента на сайте
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ContractorDeletedPayload'
+
+    ContractorCreatedFromSite:
+      name: contractor.created
+      title: Контрагент создан (Сайт → 1С)
+      summary: Публикация при первом заполнении tax_id у Company
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ContractorCreatedFromSitePayload'
 
     # ── US-08: order.created (1С → Сайт) ─────
     OrderCreatedFromErp:
@@ -1740,6 +1876,182 @@ components:
           items:
             $ref: '#/components/schemas/BankAccount'
 
+    ContractorUpdatedPayload:
+      type: object
+      description: |
+        Частичное обновление атрибутов существующего контрагента (v13.2).
+        Все поля кроме `event`, `message_id`, `uuid` — опциональны. `partner_uuid`
+        требуется для fallback-матчинга по `tax_id + user_id` и привязки `erp_id`
+        к Company, созданной на сайте (ленивый backfill).
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: contractor.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-contractor-upd-c1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+          description: "UUID партнёра-владельца. Требуется для fallback-матчинга и backfill erp_id."
+        name:
+          type: string
+        legal_name:
+          type:
+            - string
+            - 'null'
+        tax_id:
+          type: string
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
+        tax_code:
+          type:
+            - string
+            - 'null'
+        registration_number:
+          type:
+            - string
+            - 'null'
+        okpo_code:
+          type:
+            - string
+            - 'null'
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        legal_address:
+          type:
+            - string
+            - 'null'
+        actual_address:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          description: "Массив банковских счетов. Если передан — полностью заменяет существующий. Если null или не передан — банковские счета не трогаются."
+          items:
+            $ref: '#/components/schemas/BankAccount'
+
+    ContractorDeletedPayload:
+      type: object
+      description: |
+        Удаление контрагента (v13.2). Soft-delete на сайте. Для идентификации
+        достаточно `uuid` или `tax_id`.
+      required:
+        - event
+      properties:
+        event:
+          type: string
+          const: contractor.deleted
+        message_id:
+          type: string
+          examples:
+            - 'msg-contractor-del-c1a2b3c4'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+          description: "UUID партнёра-владельца. Нужен при fallback-поиске по tax_id."
+        tax_id:
+          type: string
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
+      oneOf:
+        - required: [uuid]
+        - required: [tax_id]
+
+    ContractorCreatedFromSitePayload:
+      type: object
+      description: |
+        Создание контрагента на сайте — отправка в 1С (v13.2). Триггер: первое
+        заполнение `tax_id` у Company. 1С матчит по `tax_id` в рамках партнёра
+        (`partner_uuid`); при создании генерирует собственный UUID и возвращает
+        его через `contractor.updated`. Поле `uuid` в этом payload — локальный
+        UUIDv4 сайта для корреляции.
+      required:
+        - event
+        - uuid
+        - partner_uuid
+        - tax_id
+        - name
+        - country
+      properties:
+        event:
+          type: string
+          const: contractor.created
+        message_id:
+          type: string
+          examples:
+            - 'msg-contractor-site-c1a2b3c4'
+        timestamp:
+          $ref: '#/components/schemas/ISO8601DateTime'
+        uuid:
+          type: string
+          minLength: 1
+          description: "Локальный UUID сайта для корреляции. 1С генерирует свой UUID независимо."
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+          description: "UUID партнёра-владельца. Без этого 1С не сможет привязать контрагента."
+        name:
+          type: string
+        legal_name:
+          type:
+            - string
+            - 'null'
+        tax_id:
+          type: string
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
+        tax_code:
+          type:
+            - string
+            - 'null'
+        registration_number:
+          type:
+            - string
+            - 'null'
+        okpo_code:
+          type:
+            - string
+            - 'null'
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        legal_address:
+          type:
+            - string
+            - 'null'
+        actual_address:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          items:
+            $ref: '#/components/schemas/BankAccount'
+
     # ── US-08: Заказы ────────────────────────
     OrderItem:
       type: object
@@ -1772,6 +2084,12 @@ components:
     OrderContractor:
       type: object
       properties:
+        uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге, fallback на tax_id. Опционально (v13.2)."
         country:
           $ref: '#/components/schemas/CountryCode'
         name:
@@ -2097,6 +2415,18 @@ components:
             - 'msg-shipment-s1a2b3c4'
         uuid:
           $ref: '#/components/schemas/UUID'
+        contractor_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге Company, fallback на tax_id + partner_uuid. Опционально (v13.2)."
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: "UUID партнёра-владельца. Нужен для корректного фильтра user_id при fallback-поиске Company по tax_id (v13.2)."
         tax_id:
           type: string
           description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
@@ -2148,6 +2478,18 @@ components:
             - 'msg-shipment-s1a2b3c4'
         uuid:
           $ref: '#/components/schemas/UUID'
+        contractor_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге Company, fallback на tax_id + partner_uuid. Опционально (v13.2)."
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: "UUID партнёра-владельца. Нужен для корректного фильтра user_id при fallback-поиске Company по tax_id (v13.2)."
         tax_id:
           type: string
           description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
@@ -2191,9 +2533,15 @@ components:
         - current_balance
         - overdue_debt
       properties:
+        uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге Company и заполнении ContractorBalance.contractor_uuid (v13.2)."
         tax_id:
           type: string
-          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.) — основной идентификатор для матчинга"
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.). Fallback-идентификатор для матчинга, когда uuid ещё не выгружен."
         current_balance:
           type: number
           description: Текущий баланс (отрицательное = задолженность)

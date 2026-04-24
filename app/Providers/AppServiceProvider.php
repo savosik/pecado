@@ -86,6 +86,16 @@ class AppServiceProvider extends ServiceProvider
         );
 
         \Illuminate\Support\Facades\Event::listen(
+            \App\Events\CompanyCreated::class,
+            \App\Listeners\PublishContractorToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\CompanyUpdated::class,
+            \App\Listeners\PublishContractorToErp::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderCreated::class,
             \App\Listeners\PublishOrderToErp::class,
         );

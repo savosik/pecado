@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 13.1.0
+  version: 13.2.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -447,6 +447,184 @@ channels:
                   is_primary:
                     type: boolean
                     description: Основной счёт (первый = true, остальные = false)
+      contractorUpdated:
+        name: contractor.updated
+        title: Контрагент обновлён (1С → Сайт)
+        summary: Привязка UUID и/или частичное обновление атрибутов контрагента
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >
+            Частичное обновление атрибутов существующего контрагента (v13.2).
+
+            Все поля кроме `event`, `message_id`, `uuid` — опциональны.
+            `partner_uuid`
+
+            требуется для fallback-матчинга по `tax_id + user_id` и привязки
+            `erp_id`
+
+            к Company, созданной на сайте (ленивый backfill).
+          required:
+            - event
+            - message_id
+            - uuid
+          properties:
+            event:
+              type: string
+              const: contractor.updated
+            message_id:
+              type: string
+              examples:
+                - msg-contractor-upd-c1a2b3c4
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            name:
+              type: string
+            legal_name:
+              type:
+                - string
+                - 'null'
+            tax_id:
+              type: string
+              description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+            tax_code:
+              type:
+                - string
+                - 'null'
+            registration_number:
+              type:
+                - string
+                - 'null'
+            okpo_code:
+              type:
+                - string
+                - 'null'
+            country:
+              type: string
+              minLength: 2
+              maxLength: 2
+              description: ISO alpha-2 код страны
+              examples:
+                - RU
+                - KZ
+                - BY
+            legal_address:
+              type:
+                - string
+                - 'null'
+            actual_address:
+              type:
+                - string
+                - 'null'
+            phone:
+              type:
+                - string
+                - 'null'
+            email:
+              type:
+                - string
+                - 'null'
+            bank_accounts:
+              type:
+                - array
+                - 'null'
+              description: >-
+                Массив банковских счетов. Если передан — полностью заменяет
+                существующий. Если null или не передан — банковские счета не
+                трогаются.
+              items:
+                type: object
+                required:
+                  - account_number
+                  - is_primary
+                properties:
+                  bank_name:
+                    type:
+                      - string
+                      - 'null'
+                    description: Наименование банка
+                  bank_bik:
+                    type:
+                      - string
+                      - 'null'
+                    description: БИК банка
+                  correspondent_account:
+                    type:
+                      - string
+                      - 'null'
+                    description: Корреспондентский счёт
+                  account_number:
+                    type: string
+                    description: Номер счёта
+                  is_primary:
+                    type: boolean
+                    description: Основной счёт (первый = true, остальные = false)
+      contractorDeleted:
+        name: contractor.deleted
+        title: Контрагент удалён (1С → Сайт)
+        summary: Soft-delete контрагента на сайте
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >
+            Удаление контрагента (v13.2). Soft-delete на сайте. Для
+            идентификации
+
+            достаточно `uuid` или `tax_id`.
+          required:
+            - event
+          properties:
+            event:
+              type: string
+              const: contractor.deleted
+            message_id:
+              type: string
+              examples:
+                - msg-contractor-del-c1a2b3c4
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            tax_id:
+              type: string
+              description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+          oneOf:
+            - required:
+                - uuid
+            - required:
+                - tax_id
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -811,6 +989,15 @@ channels:
               oneOf:
                 - type: object
                   properties:
+                    uuid:
+                      type:
+                        - string
+                        - 'null'
+                      format: uuid
+                      description: >-
+                        UUID контрагента в 1С (Company.erp_id на сайте).
+                        Приоритет при матчинге, fallback на tax_id. Опционально
+                        (v13.2).
                     country:
                       type: string
                       minLength: 2
@@ -1231,6 +1418,23 @@ channels:
               description: UUID строка
               examples:
                 - 550e8400-e29b-41d4-a716-446655440000
+            contractor_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >-
+                UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+                матчинге Company, fallback на tax_id + partner_uuid. Опционально
+                (v13.2).
+            partner_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >-
+                UUID партнёра-владельца. Нужен для корректного фильтра user_id
+                при fallback-поиске Company по tax_id (v13.2).
             tax_id:
               type: string
               description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -1367,6 +1571,23 @@ channels:
               description: UUID строка
               examples:
                 - 550e8400-e29b-41d4-a716-446655440000
+            contractor_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >-
+                UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+                матчинге Company, fallback на tax_id + partner_uuid. Опционально
+                (v13.2).
+            partner_uuid:
+              type:
+                - string
+                - 'null'
+              format: uuid
+              description: >-
+                UUID партнёра-владельца. Нужен для корректного фильтра user_id
+                при fallback-поиске Company по tax_id (v13.2).
             tax_id:
               type: string
               description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -1555,11 +1776,21 @@ channels:
                   - current_balance
                   - overdue_debt
                 properties:
+                  uuid:
+                    type:
+                      - string
+                      - 'null'
+                    format: uuid
+                    description: >-
+                      UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
+                      при матчинге Company и заполнении
+                      ContractorBalance.contractor_uuid (v13.2).
                   tax_id:
                     type: string
                     description: >-
                       Налоговый идентификатор контрагента (ИНН / УНП / БИН и
-                      т.д.) — основной идентификатор для матчинга
+                      т.д.). Fallback-идентификатор для матчинга, когда uuid ещё
+                      не выгружен.
                   current_balance:
                     type: number
                     description: Текущий баланс (отрицательное = задолженность)
@@ -2393,6 +2624,15 @@ channels:
               oneOf:
                 - type: object
                   properties:
+                    uuid:
+                      type:
+                        - string
+                        - 'null'
+                      format: uuid
+                      description: >-
+                        UUID контрагента в 1С (Company.erp_id на сайте).
+                        Приоритет при матчинге, fallback на tax_id. Опционально
+                        (v13.2).
                     country:
                       type: string
                       minLength: 2
@@ -2778,6 +3018,169 @@ channels:
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
+  erpOutContractors:
+    address: erp_out.contractors
+    title: Контрагенты (Сайт → 1С)
+    description: >
+      Очередь для контрагентов, созданных на сайте. Сообщения публикуются
+
+      при первом заполнении `tax_id` у Company. Routing key:
+      `contractor.created`.
+
+      1С слушает очередь напрямую через AMQP (у сайта нет воркера для этой
+      очереди).
+
+      После обработки 1С отвечает `contractor.updated` с назначенным UUID в
+      `erp_in.partners`.
+    messages:
+      contractorCreatedFromSite:
+        name: contractor.created
+        title: Контрагент создан (Сайт → 1С)
+        summary: Публикация при первом заполнении tax_id у Company
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >
+            Создание контрагента на сайте — отправка в 1С (v13.2). Триггер:
+            первое
+
+            заполнение `tax_id` у Company. 1С матчит по `tax_id` в рамках
+            партнёра
+
+            (`partner_uuid`); при создании генерирует собственный UUID и
+            возвращает
+
+            его через `contractor.updated`. Поле `uuid` в этом payload —
+            локальный
+
+            UUIDv4 сайта для корреляции.
+          required:
+            - event
+            - uuid
+            - partner_uuid
+            - tax_id
+            - name
+            - country
+          properties:
+            event:
+              type: string
+              const: contractor.created
+            message_id:
+              type: string
+              examples:
+                - msg-contractor-site-c1a2b3c4
+            timestamp:
+              type: string
+              format: date-time
+              description: Дата и время в формате ISO 8601
+              examples:
+                - '2026-03-17T12:00:00+03:00'
+            uuid:
+              type: string
+              minLength: 1
+              description: >-
+                Локальный UUID сайта для корреляции. 1С генерирует свой UUID
+                независимо.
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            name:
+              type: string
+            legal_name:
+              type:
+                - string
+                - 'null'
+            tax_id:
+              type: string
+              description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+            tax_code:
+              type:
+                - string
+                - 'null'
+            registration_number:
+              type:
+                - string
+                - 'null'
+            okpo_code:
+              type:
+                - string
+                - 'null'
+            country:
+              type: string
+              minLength: 2
+              maxLength: 2
+              description: ISO alpha-2 код страны
+              examples:
+                - RU
+                - KZ
+                - BY
+            legal_address:
+              type:
+                - string
+                - 'null'
+            actual_address:
+              type:
+                - string
+                - 'null'
+            phone:
+              type:
+                - string
+                - 'null'
+            email:
+              type:
+                - string
+                - 'null'
+            bank_accounts:
+              type:
+                - array
+                - 'null'
+              items:
+                type: object
+                required:
+                  - account_number
+                  - is_primary
+                properties:
+                  bank_name:
+                    type:
+                      - string
+                      - 'null'
+                    description: Наименование банка
+                  bank_bik:
+                    type:
+                      - string
+                      - 'null'
+                    description: БИК банка
+                  correspondent_account:
+                    type:
+                      - string
+                      - 'null'
+                    description: Корреспондентский счёт
+                  account_number:
+                    type: string
+                    description: Номер счёта
+                  is_primary:
+                    type: boolean
+                    description: Основной счёт (первый = true, остальные = false)
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_out.contractors
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
 operations:
   receivePartnerCreated:
     title: Получение партнёра от 1С
@@ -2940,18 +3343,132 @@ operations:
   receiveContractorCreated:
     title: Получение контрагента от 1С
     summary: 1С создаёт/обновляет контрагента → Сайт привязывает к партнёру
-    description: |
+    description: >
       Обработчик: `HandleContractorCreated`
 
+
       Сайт создаёт контрагента с привязкой к партнёру по `partner_uuid`.
-      Поле `country` гарантированно не null.
-      Первый банковский счёт имеет `is_primary = true`.
-      Сопоставление контрагента при заказе — по ИНН (`tax_id`).
+
+      Поле `country` гарантированно не null. Первый банковский счёт имеет
+      `is_primary = true`.
+
+
+      **Стратегия матчинга Company (v13.2):**
+
+      1. По `Company.erp_id = uuid` (приоритет, идемпотентность).
+
+      2. Fallback: по `tax_id + user_id` (где `user_id` резолвится из
+      `partner_uuid → User.erp_id`). При fallback `erp_id` проставляется ленивым
+      backfill.
     action: receive
     channel:
       $ref: '#/channels/erpInPartners'
     messages:
       - $ref: '#/channels/erpInPartners/messages/contractorCreated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+  receiveContractorUpdated:
+    title: Обновление контрагента
+    summary: 1С обновляет атрибуты контрагента → Сайт синхронизирует Company
+    description: >
+      Обработчик: `HandleContractorUpdated` (v13.2, новое).
+
+
+      Используется для двух сценариев:
+
+      - **Привязка UUID** после первой публикации `contractor.created` сайтом —
+      1С
+        генерирует свой UUID и возвращает его через это событие; сайт находит Company
+        по `tax_id + user_id` и проставляет `erp_id` (ленивый backfill).
+      - **Частичное обновление атрибутов** существующего контрагента — только
+      переданные
+        поля обновляются (`array_filter`), `bank_accounts` заменяется только если явно передан.
+
+      Стратегия матчинга Company:
+
+      1. По `erp_id = uuid` (приоритет).
+
+      2. Fallback: по `tax_id + user_id` (резолв через `partner_uuid →
+      User.erp_id`).
+
+      3. Если не найдена — warning, ничего не создаём (это задача
+      `contractor.created`).
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/contractorUpdated'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+  receiveContractorDeleted:
+    title: Удаление контрагента
+    summary: 1С удаляет контрагента → Сайт soft-deletes Company
+    description: |
+      Обработчик: `HandleContractorDeleted` (v13.2, новое).
+
+      Для идентификации достаточно `uuid` или `tax_id`. Soft-delete Company
+      выполняется через `SoftDeletes::delete()` с `Company::withoutEvents()`.
+    action: receive
+    channel:
+      $ref: '#/channels/erpInPartners'
+    messages:
+      - $ref: '#/channels/erpInPartners/messages/contractorDeleted'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+  sendContractorCreated:
+    title: Отправка контрагента в 1С
+    summary: Сайт → 1С при создании Company с заполненным tax_id
+    description: >
+      Публикуется через `PublishContractorToErpJob` при событии `CompanyCreated`
+
+      или `CompanyUpdated` (v13.2, новое).
+
+
+      **Триггер публикации** — первое заполнение `tax_id` у Company:
+
+      - Create с непустым `tax_id` → публикуем.
+
+      - Update, где `tax_id` стал непустым (ранее был пуст) → публикуем.
+
+      - Иначе — не публикуем (дальнейшие обновления идут через 1С как
+      авторитет).
+
+
+      **Предусловие**: у партнёра-владельца должен быть заполнен `User.erp_id`.
+
+      Если его ещё нет — публикация откладывается (log info). После того как
+      партнёр
+
+      получит UUID через `partner.updated`, `PublishUserToErp` догонит зависшие
+      Company.
+
+
+      **Формат `uuid` в payload** — локальный UUIDv4 для корреляции на стороне
+      1С;
+
+      1С генерирует собственный UUID независимо и возвращает его через
+      `contractor.updated`.
+
+
+      Можно отключить env-флагом `PUBLISH_CONTRACTORS_TO_ERP=false` для быстрого
+      отката.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutContractors'
+    messages:
+      - $ref: '#/channels/erpOutContractors/messages/contractorCreatedFromSite'
     bindings:
       amqp:
         bindingVersion: 0.3.0
@@ -3971,6 +4488,317 @@ components:
                 is_primary:
                   type: boolean
                   description: Основной счёт (первый = true, остальные = false)
+    ContractorUpdated:
+      name: contractor.updated
+      title: Контрагент обновлён (1С → Сайт)
+      summary: Привязка UUID и/или частичное обновление атрибутов контрагента
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: >
+          Частичное обновление атрибутов существующего контрагента (v13.2).
+
+          Все поля кроме `event`, `message_id`, `uuid` — опциональны.
+          `partner_uuid`
+
+          требуется для fallback-матчинга по `tax_id + user_id` и привязки
+          `erp_id`
+
+          к Company, созданной на сайте (ленивый backfill).
+        required:
+          - event
+          - message_id
+          - uuid
+        properties:
+          event:
+            type: string
+            const: contractor.updated
+          message_id:
+            type: string
+            examples:
+              - msg-contractor-upd-c1a2b3c4
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          name:
+            type: string
+          legal_name:
+            type:
+              - string
+              - 'null'
+          tax_id:
+            type: string
+            description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+          tax_code:
+            type:
+              - string
+              - 'null'
+          registration_number:
+            type:
+              - string
+              - 'null'
+          okpo_code:
+            type:
+              - string
+              - 'null'
+          country:
+            type: string
+            minLength: 2
+            maxLength: 2
+            description: ISO alpha-2 код страны
+            examples:
+              - RU
+              - KZ
+              - BY
+          legal_address:
+            type:
+              - string
+              - 'null'
+          actual_address:
+            type:
+              - string
+              - 'null'
+          phone:
+            type:
+              - string
+              - 'null'
+          email:
+            type:
+              - string
+              - 'null'
+          bank_accounts:
+            type:
+              - array
+              - 'null'
+            description: >-
+              Массив банковских счетов. Если передан — полностью заменяет
+              существующий. Если null или не передан — банковские счета не
+              трогаются.
+            items:
+              type: object
+              required:
+                - account_number
+                - is_primary
+              properties:
+                bank_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: Наименование банка
+                bank_bik:
+                  type:
+                    - string
+                    - 'null'
+                  description: БИК банка
+                correspondent_account:
+                  type:
+                    - string
+                    - 'null'
+                  description: Корреспондентский счёт
+                account_number:
+                  type: string
+                  description: Номер счёта
+                is_primary:
+                  type: boolean
+                  description: Основной счёт (первый = true, остальные = false)
+    ContractorDeleted:
+      name: contractor.deleted
+      title: Контрагент удалён (1С → Сайт)
+      summary: Soft-delete контрагента на сайте
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: |
+          Удаление контрагента (v13.2). Soft-delete на сайте. Для идентификации
+          достаточно `uuid` или `tax_id`.
+        required:
+          - event
+        properties:
+          event:
+            type: string
+            const: contractor.deleted
+          message_id:
+            type: string
+            examples:
+              - msg-contractor-del-c1a2b3c4
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          tax_id:
+            type: string
+            description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+        oneOf:
+          - required:
+              - uuid
+          - required:
+              - tax_id
+    ContractorCreatedFromSite:
+      name: contractor.created
+      title: Контрагент создан (Сайт → 1С)
+      summary: Публикация при первом заполнении tax_id у Company
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: >
+          Создание контрагента на сайте — отправка в 1С (v13.2). Триггер: первое
+
+          заполнение `tax_id` у Company. 1С матчит по `tax_id` в рамках партнёра
+
+          (`partner_uuid`); при создании генерирует собственный UUID и
+          возвращает
+
+          его через `contractor.updated`. Поле `uuid` в этом payload — локальный
+
+          UUIDv4 сайта для корреляции.
+        required:
+          - event
+          - uuid
+          - partner_uuid
+          - tax_id
+          - name
+          - country
+        properties:
+          event:
+            type: string
+            const: contractor.created
+          message_id:
+            type: string
+            examples:
+              - msg-contractor-site-c1a2b3c4
+          timestamp:
+            type: string
+            format: date-time
+            description: Дата и время в формате ISO 8601
+            examples:
+              - '2026-03-17T12:00:00+03:00'
+          uuid:
+            type: string
+            minLength: 1
+            description: >-
+              Локальный UUID сайта для корреляции. 1С генерирует свой UUID
+              независимо.
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          name:
+            type: string
+          legal_name:
+            type:
+              - string
+              - 'null'
+          tax_id:
+            type: string
+            description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+          tax_code:
+            type:
+              - string
+              - 'null'
+          registration_number:
+            type:
+              - string
+              - 'null'
+          okpo_code:
+            type:
+              - string
+              - 'null'
+          country:
+            type: string
+            minLength: 2
+            maxLength: 2
+            description: ISO alpha-2 код страны
+            examples:
+              - RU
+              - KZ
+              - BY
+          legal_address:
+            type:
+              - string
+              - 'null'
+          actual_address:
+            type:
+              - string
+              - 'null'
+          phone:
+            type:
+              - string
+              - 'null'
+          email:
+            type:
+              - string
+              - 'null'
+          bank_accounts:
+            type:
+              - array
+              - 'null'
+            items:
+              type: object
+              required:
+                - account_number
+                - is_primary
+              properties:
+                bank_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: Наименование банка
+                bank_bik:
+                  type:
+                    - string
+                    - 'null'
+                  description: БИК банка
+                correspondent_account:
+                  type:
+                    - string
+                    - 'null'
+                  description: Корреспондентский счёт
+                account_number:
+                  type: string
+                  description: Номер счёта
+                is_primary:
+                  type: boolean
+                  description: Основной счёт (первый = true, остальные = false)
     OrderCreatedFromErp:
       name: order.created
       title: Заказ создан (1С → Сайт)
@@ -4063,6 +4891,14 @@ components:
             oneOf:
               - type: object
                 properties:
+                  uuid:
+                    type:
+                      - string
+                      - 'null'
+                    format: uuid
+                    description: >-
+                      UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
+                      при матчинге, fallback на tax_id. Опционально (v13.2).
                   country:
                     type: string
                     minLength: 2
@@ -4294,6 +5130,14 @@ components:
             oneOf:
               - type: object
                 properties:
+                  uuid:
+                    type:
+                      - string
+                      - 'null'
+                    format: uuid
+                    description: >-
+                      UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
+                      при матчинге, fallback на tax_id. Опционально (v13.2).
                   country:
                     type: string
                     minLength: 2
@@ -4787,6 +5631,23 @@ components:
             description: UUID строка
             examples:
               - 550e8400-e29b-41d4-a716-446655440000
+          contractor_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >-
+              UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+              матчинге Company, fallback на tax_id + partner_uuid. Опционально
+              (v13.2).
+          partner_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >-
+              UUID партнёра-владельца. Нужен для корректного фильтра user_id при
+              fallback-поиске Company по tax_id (v13.2).
           tax_id:
             type: string
             description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -4923,6 +5784,23 @@ components:
             description: UUID строка
             examples:
               - 550e8400-e29b-41d4-a716-446655440000
+          contractor_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >-
+              UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+              матчинге Company, fallback на tax_id + partner_uuid. Опционально
+              (v13.2).
+          partner_uuid:
+            type:
+              - string
+              - 'null'
+            format: uuid
+            description: >-
+              UUID партнёра-владельца. Нужен для корректного фильтра user_id при
+              fallback-поиске Company по tax_id (v13.2).
           tax_id:
             type: string
             description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -5094,11 +5972,21 @@ components:
                 - current_balance
                 - overdue_debt
               properties:
+                uuid:
+                  type:
+                    - string
+                    - 'null'
+                  format: uuid
+                  description: >-
+                    UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
+                    при матчинге Company и заполнении
+                    ContractorBalance.contractor_uuid (v13.2).
                 tax_id:
                   type: string
                   description: >-
-                    Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
-                    — основной идентификатор для матчинга
+                    Налоговый идентификатор контрагента (ИНН / УНП / БИН и
+                    т.д.). Fallback-идентификатор для матчинга, когда uuid ещё
+                    не выгружен.
                 current_balance:
                   type: number
                   description: Текущий баланс (отрицательное = задолженность)
@@ -6481,6 +7369,276 @@ components:
               is_primary:
                 type: boolean
                 description: Основной счёт (первый = true, остальные = false)
+    ContractorUpdatedPayload:
+      type: object
+      description: >
+        Частичное обновление атрибутов существующего контрагента (v13.2).
+
+        Все поля кроме `event`, `message_id`, `uuid` — опциональны.
+        `partner_uuid`
+
+        требуется для fallback-матчинга по `tax_id + user_id` и привязки
+        `erp_id`
+
+        к Company, созданной на сайте (ленивый backfill).
+      required:
+        - event
+        - message_id
+        - uuid
+      properties:
+        event:
+          type: string
+          const: contractor.updated
+        message_id:
+          type: string
+          examples:
+            - msg-contractor-upd-c1a2b3c4
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+        legal_name:
+          type:
+            - string
+            - 'null'
+        tax_id:
+          type: string
+          description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+        tax_code:
+          type:
+            - string
+            - 'null'
+        registration_number:
+          type:
+            - string
+            - 'null'
+        okpo_code:
+          type:
+            - string
+            - 'null'
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: ISO alpha-2 код страны
+          examples:
+            - RU
+            - KZ
+            - BY
+        legal_address:
+          type:
+            - string
+            - 'null'
+        actual_address:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          description: >-
+            Массив банковских счетов. Если передан — полностью заменяет
+            существующий. Если null или не передан — банковские счета не
+            трогаются.
+          items:
+            type: object
+            required:
+              - account_number
+              - is_primary
+            properties:
+              bank_name:
+                type:
+                  - string
+                  - 'null'
+                description: Наименование банка
+              bank_bik:
+                type:
+                  - string
+                  - 'null'
+                description: БИК банка
+              correspondent_account:
+                type:
+                  - string
+                  - 'null'
+                description: Корреспондентский счёт
+              account_number:
+                type: string
+                description: Номер счёта
+              is_primary:
+                type: boolean
+                description: Основной счёт (первый = true, остальные = false)
+    ContractorDeletedPayload:
+      type: object
+      description: |
+        Удаление контрагента (v13.2). Soft-delete на сайте. Для идентификации
+        достаточно `uuid` или `tax_id`.
+      required:
+        - event
+      properties:
+        event:
+          type: string
+          const: contractor.deleted
+        message_id:
+          type: string
+          examples:
+            - msg-contractor-del-c1a2b3c4
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        tax_id:
+          type: string
+          description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+      oneOf:
+        - required:
+            - uuid
+        - required:
+            - tax_id
+    ContractorCreatedFromSitePayload:
+      type: object
+      description: |
+        Создание контрагента на сайте — отправка в 1С (v13.2). Триггер: первое
+        заполнение `tax_id` у Company. 1С матчит по `tax_id` в рамках партнёра
+        (`partner_uuid`); при создании генерирует собственный UUID и возвращает
+        его через `contractor.updated`. Поле `uuid` в этом payload — локальный
+        UUIDv4 сайта для корреляции.
+      required:
+        - event
+        - uuid
+        - partner_uuid
+        - tax_id
+        - name
+        - country
+      properties:
+        event:
+          type: string
+          const: contractor.created
+        message_id:
+          type: string
+          examples:
+            - msg-contractor-site-c1a2b3c4
+        timestamp:
+          type: string
+          format: date-time
+          description: Дата и время в формате ISO 8601
+          examples:
+            - '2026-03-17T12:00:00+03:00'
+        uuid:
+          type: string
+          minLength: 1
+          description: >-
+            Локальный UUID сайта для корреляции. 1С генерирует свой UUID
+            независимо.
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+        legal_name:
+          type:
+            - string
+            - 'null'
+        tax_id:
+          type: string
+          description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+        tax_code:
+          type:
+            - string
+            - 'null'
+        registration_number:
+          type:
+            - string
+            - 'null'
+        okpo_code:
+          type:
+            - string
+            - 'null'
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: ISO alpha-2 код страны
+          examples:
+            - RU
+            - KZ
+            - BY
+        legal_address:
+          type:
+            - string
+            - 'null'
+        actual_address:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          items:
+            type: object
+            required:
+              - account_number
+              - is_primary
+            properties:
+              bank_name:
+                type:
+                  - string
+                  - 'null'
+                description: Наименование банка
+              bank_bik:
+                type:
+                  - string
+                  - 'null'
+                description: БИК банка
+              correspondent_account:
+                type:
+                  - string
+                  - 'null'
+                description: Корреспондентский счёт
+              account_number:
+                type: string
+                description: Номер счёта
+              is_primary:
+                type: boolean
+                description: Основной счёт (первый = true, остальные = false)
     OrderItem:
       type: object
       required:
@@ -6521,6 +7679,14 @@ components:
     OrderContractor:
       type: object
       properties:
+        uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >-
+            UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+            матчинге, fallback на tax_id. Опционально (v13.2).
         country:
           type: string
           minLength: 2
@@ -6675,6 +7841,14 @@ components:
           oneOf:
             - type: object
               properties:
+                uuid:
+                  type:
+                    - string
+                    - 'null'
+                  format: uuid
+                  description: >-
+                    UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
+                    при матчинге, fallback на tax_id. Опционально (v13.2).
                 country:
                   type: string
                   minLength: 2
@@ -7099,6 +8273,23 @@ components:
           description: UUID строка
           examples:
             - 550e8400-e29b-41d4-a716-446655440000
+        contractor_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >-
+            UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+            матчинге Company, fallback на tax_id + partner_uuid. Опционально
+            (v13.2).
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >-
+            UUID партнёра-владельца. Нужен для корректного фильтра user_id при
+            fallback-поиске Company по tax_id (v13.2).
         tax_id:
           type: string
           description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -7223,6 +8414,23 @@ components:
           description: UUID строка
           examples:
             - 550e8400-e29b-41d4-a716-446655440000
+        contractor_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >-
+            UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+            матчинге Company, fallback на tax_id + partner_uuid. Опционально
+            (v13.2).
+        partner_uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >-
+            UUID партнёра-владельца. Нужен для корректного фильтра user_id при
+            fallback-поиске Company по tax_id (v13.2).
         tax_id:
           type: string
           description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -7336,11 +8544,20 @@ components:
         - current_balance
         - overdue_debt
       properties:
+        uuid:
+          type:
+            - string
+            - 'null'
+          format: uuid
+          description: >-
+            UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+            матчинге Company и заполнении ContractorBalance.contractor_uuid
+            (v13.2).
         tax_id:
           type: string
           description: >-
-            Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.) —
-            основной идентификатор для матчинга
+            Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.).
+            Fallback-идентификатор для матчинга, когда uuid ещё не выгружен.
         current_balance:
           type: number
           description: Текущий баланс (отрицательное = задолженность)
@@ -7401,11 +8618,21 @@ components:
               - current_balance
               - overdue_debt
             properties:
+              uuid:
+                type:
+                  - string
+                  - 'null'
+                format: uuid
+                description: >-
+                  UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
+                  матчинге Company и заполнении
+                  ContractorBalance.contractor_uuid (v13.2).
               tax_id:
                 type: string
                 description: >-
-                  Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.) —
-                  основной идентификатор для матчинга
+                  Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.).
+                  Fallback-идентификатор для матчинга, когда uuid ещё не
+                  выгружен.
               current_balance:
                 type: number
                 description: Текущий баланс (отрицательное = задолженность)

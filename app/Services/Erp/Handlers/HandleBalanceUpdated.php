@@ -46,6 +46,7 @@ class HandleBalanceUpdated
         DB::transaction(function () use ($user, $contractors, $updatedAt) {
             foreach ($contractors as $contractorData) {
                 $contractorInn = $contractorData['tax_id'] ?? null;
+                $contractorUuid = $contractorData['uuid'] ?? null;
 
                 if (! $contractorInn) {
                     Log::warning('HandleBalanceUpdated: отсутствует tax_id', ['data' => $contractorData]);
@@ -53,18 +54,42 @@ class HandleBalanceUpdated
                     continue;
                 }
 
-                // Найти компанию по ИНН и пользователю
-                $company = Company::withoutGlobalScopes()
-                    ->where('user_id', $user->id)
-                    ->where('tax_id', $contractorInn)
-                    ->first();
+                // Матчинг Company (v13.2): приоритет по erp_id = uuid, fallback по tax_id + user_id.
+                $company = null;
+
+                if ($contractorUuid) {
+                    $company = Company::withoutGlobalScopes()
+                        ->where('user_id', $user->id)
+                        ->where('erp_id', $contractorUuid)
+                        ->first();
+                }
+
+                if (! $company) {
+                    $company = Company::withoutGlobalScopes()
+                        ->where('user_id', $user->id)
+                        ->where('tax_id', $contractorInn)
+                        ->first();
+
+                    // Backfill Company.erp_id при наличии UUID в payload
+                    if ($company && $contractorUuid && ! $company->erp_id) {
+                        Company::withoutEvents(function () use ($company, $contractorUuid) {
+                            $company->update(['erp_id' => $contractorUuid]);
+                        });
+                    }
+                }
 
                 $updateData = [
                     'company_id' => $company?->id,
+                    'contractor_uuid' => $contractorUuid,
                     'current_balance' => $contractorData['current_balance'] ?? 0,
                     'overdue_debt' => $contractorData['overdue_debt'] ?? 0,
                     'balance_erp_updated_at' => $updatedAt,
                 ];
+
+                // Если UUID не пришёл — не перезаписываем существующий contractor_uuid
+                if ($contractorUuid === null) {
+                    unset($updateData['contractor_uuid']);
+                }
 
                 /** @var ContractorBalance $balance */
                 $balance = ContractorBalance::updateOrCreate(

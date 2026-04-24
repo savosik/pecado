@@ -48,6 +48,7 @@ class SetupRabbitMQTopology extends Command
         'erp_out.orders' => ['order.created'],
         'erp_out.returns' => ['return.created'],
         'erp_out.partners' => ['partner.created'], // US-01 v2: Сайт → 1С
+        'erp_out.contractors' => ['contractor.created'], // US-07 v13.2: Сайт → 1С
     ];
 
     public function handle(): int

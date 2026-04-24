@@ -1,0 +1,139 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "contractor.created.to_erp",
+    "title": "contractor.created (Сайт → 1С)",
+    "description": "Создание контрагента на сайте — отправка данных в 1С. 1С матчит контрагента по tax_id в рамках партнёра (partner_uuid); при создании генерирует собственный UUID и возвращает его через contractor.updated.",
+    "type": "object",
+    "properties": {
+        "event": {
+            "type": "string",
+            "const": "contractor.created"
+        },
+        "message_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "timestamp": {
+            "type": "string",
+            "format": "date-time"
+        },
+        "uuid": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Локальный UUID сайта для корреляции. 1С генерирует свой UUID независимо и возвращает его через contractor.updated."
+        },
+        "partner_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID партнёра-владельца. Обязательный — без него 1С не сможет привязать контрагента."
+        },
+        "name": {
+            "type": "string",
+            "minLength": 1
+        },
+        "legal_name": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "tax_id": {
+            "type": "string",
+            "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
+            "minLength": 1
+        },
+        "tax_code": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "registration_number": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "okpo_code": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "country": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 2
+        },
+        "legal_address": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "actual_address": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "phone": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "email": {
+            "type": [
+                "string",
+                "null"
+            ]
+        },
+        "bank_accounts": {
+            "type": [
+                "array",
+                "null"
+            ],
+            "items": {
+                "type": "object",
+                "properties": {
+                    "bank_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "bank_bik": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "correspondent_account": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "account_number": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "is_primary": {
+                        "type": "boolean"
+                    }
+                },
+                "additionalProperties": true
+            }
+        }
+    },
+    "additionalProperties": true,
+    "required": [
+        "event",
+        "uuid",
+        "partner_uuid",
+        "tax_id",
+        "name",
+        "country"
+    ]
+}

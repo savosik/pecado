@@ -36,6 +36,8 @@ class ErpMessageValidator
         'stock.updated' => 'stock.updated.json',
         // US-07: Контрагенты
         'contractor.created' => 'contractor.created.json',
+        'contractor.updated' => 'contractor.updated.json',
+        'contractor.deleted' => 'contractor.deleted.json',
         // US-08: Заказы
         'order.created' => 'order.created.json',
         'order.updated' => 'order.updated.json',
@@ -67,6 +69,7 @@ class ErpMessageValidator
      */
     private const OUTBOUND_SCHEMA_MAP = [
         'partner.created' => 'partner.created.to_erp.json',
+        'contractor.created' => 'contractor.created.to_erp.json',
         'order.created' => 'order.created.to_erp.json',
         'return.created' => 'return.created.to_erp.json',
     ];

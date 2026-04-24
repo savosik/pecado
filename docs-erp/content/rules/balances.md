@@ -10,9 +10,14 @@
 - Баланс передаётся в разрезе контрагентов (`contractors[]`)
 - Просроченная задолженность детализируется по реализациям (`overdue_details[]`)
 - Каждая запись в `overdue_details` ссылается на реализацию через `shipment_uuid`
+- **(v13.2)** Идентификация контрагента:
+    - Приоритет — по `contractors[].uuid` (опциональное, `Company.erp_id` на сайте). Если передан — Company матчится по UUID, `ContractorBalance.contractor_uuid` заполняется ленивым backfill
+    - Fallback — по `tax_id` (ИНН) + `partner_uuid` для резолва `user_id`
+    - Ключ `ContractorBalance` в БД остаётся `[user_id, tax_id]` (unique); `contractor_uuid` хранится как вспомогательный идентификатор для ускорения матчинга в других сообщениях
 
 ## Критерии приёмки
 
 - [ ] Сайт принимает `balance.updated` и обновляет баланс партнёра
 - [ ] Баланс отображается в ЛК в разрезе контрагентов
 - [ ] Просроченная задолженность детализируется по реализациям
+- [ ] **(v13.2)** Company находится сначала по `contractors[].uuid`, затем fallback по `tax_id + user_id`. Если в payload пришёл UUID, а ранее `ContractorBalance.contractor_uuid` был пуст — поле проставляется ленивым backfill-ом

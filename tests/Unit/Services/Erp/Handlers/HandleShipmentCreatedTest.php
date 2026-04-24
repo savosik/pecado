@@ -53,9 +53,9 @@ class HandleShipmentCreatedTest extends TestCase
     }
 
     #[Test]
-    public function it_links_to_company_by_contractor_inn(): void
+    public function it_links_to_company_by_contractor_inn_when_partner_uuid_provided(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-002']);
         $company = Company::factory()->create([
             'user_id' => $user->id,
             'tax_id' => '9876543210',
@@ -66,6 +66,7 @@ class HandleShipmentCreatedTest extends TestCase
             'event' => 'shipment.created',
             'uuid' => 's1a2b3c4-test-0002',
             'tax_id' => '9876543210',
+            'partner_uuid' => 'partner-uuid-002',
             'date' => '2026-02-16',
             'status' => 'completed',
             'items' => [],
@@ -75,6 +76,85 @@ class HandleShipmentCreatedTest extends TestCase
         $this->assertNotNull($shipment);
         $this->assertEquals($company->id, $shipment->company_id);
         $this->assertEquals($user->id, $shipment->user_id);
+    }
+
+    #[Test]
+    public function it_does_not_link_to_other_users_company_with_same_tax_id_without_partner_uuid(): void
+    {
+        // Regression для v13.2 security-fix: без partner_uuid не должен найти чужую Company по ИНН
+        $user = User::factory()->create();
+        Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '9876543210',
+        ]);
+
+        $handler = new HandleShipmentCreated;
+        $handler->handle([
+            'event' => 'shipment.created',
+            'uuid' => 's1a2b3c4-test-0002b',
+            'tax_id' => '9876543210',
+            'date' => '2026-02-16',
+            'status' => 'completed',
+            'items' => [],
+        ]);
+
+        $shipment = Shipment::where('uuid', 's1a2b3c4-test-0002b')->first();
+        $this->assertNotNull($shipment);
+        $this->assertNull($shipment->company_id, 'Company не должна найтись без partner_uuid');
+        $this->assertNull($shipment->user_id);
+    }
+
+    #[Test]
+    public function it_links_to_company_by_contractor_uuid_as_priority(): void
+    {
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-003']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '1111111111',
+            'erp_id' => 'contractor-uuid-003',
+        ]);
+
+        $handler = new HandleShipmentCreated;
+        $handler->handle([
+            'event' => 'shipment.created',
+            'uuid' => 's1a2b3c4-test-0002c',
+            'contractor_uuid' => 'contractor-uuid-003',
+            'tax_id' => '1111111111',
+            'date' => '2026-02-16',
+            'status' => 'completed',
+            'items' => [],
+        ]);
+
+        $shipment = Shipment::where('uuid', 's1a2b3c4-test-0002c')->first();
+        $this->assertNotNull($shipment);
+        $this->assertEquals($company->id, $shipment->company_id);
+        $this->assertEquals($user->id, $shipment->user_id);
+    }
+
+    #[Test]
+    public function it_backfills_company_erp_id_when_found_by_inn_with_uuid_in_payload(): void
+    {
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-004']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '2222222222',
+            'erp_id' => null,
+        ]);
+
+        $handler = new HandleShipmentCreated;
+        $handler->handle([
+            'event' => 'shipment.created',
+            'uuid' => 's1a2b3c4-test-0002d',
+            'contractor_uuid' => 'contractor-uuid-004',
+            'tax_id' => '2222222222',
+            'partner_uuid' => 'partner-uuid-004',
+            'date' => '2026-02-16',
+            'status' => 'completed',
+            'items' => [],
+        ]);
+
+        $company->refresh();
+        $this->assertEquals('contractor-uuid-004', $company->erp_id, 'Company.erp_id должен быть заполнен lazy backfill');
     }
 
     #[Test]

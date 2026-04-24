@@ -6,6 +6,57 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.2.0] — 2026-04-24
+
+> Контрагенты: выравнивание workflow с партнёрами — добавлены `contractor.updated`, `contractor.deleted`, исходящее направление `contractor.created` (Сайт → 1С) через новую очередь `erp_out.contractors`. UUID становится основным идентификатором контрагента во всех сообщениях; ИНН остаётся fallback на переходный период
+
+### Добавлено
+
+- **Новый канал `erp_out.contractors`** — сайт публикует `contractor.created` при первом заполнении `tax_id` у Company. 1С слушает очередь напрямую через AMQP (у сайта нет воркера)
+- **`contractor.updated` (1С → Сайт)** — частичное обновление атрибутов контрагента. Основной сценарий: 1С возвращает назначенный UUID после обработки `contractor.created` от сайта. Обработчик `HandleContractorUpdated` находит Company по `erp_id`, fallback по `tax_id + user_id`, проставляет `erp_id` ленивым backfill-ом
+- **`contractor.deleted` (1С → Сайт)** — soft-delete Company. Достаточно `uuid` или `tax_id`. Обработчик `HandleContractorDeleted`
+- **Опциональные UUID-поля в существующих payload-ах:**
+    - `order.created.contractor.uuid` — UUID контрагента (обе стороны)
+    - `shipment.created.contractor_uuid`, `shipment.updated.contractor_uuid` — UUID контрагента; `partner_uuid` — для резолва user_id при fallback
+    - `balance.updated.contractors[].uuid` — UUID контрагента; заполняется в `ContractorBalance.contractor_uuid` ленивым backfill
+- **Listener `PublishContractorToErp`** + Job `PublishContractorToErpJob` — публикация при создании Company с непустым `tax_id` или при первом заполнении `tax_id` на апдейте. Откладывается, если у партнёра нет `User.erp_id`; догон через `PublishUserToErp` после выгрузки партнёра
+- **Env-флаг `PUBLISH_CONTRACTORS_TO_ERP`** (default `true`) — быстрый откат publisher без деплоя
+
+### Исправлено
+
+- **`HandleShipmentCreated` / `HandleShipmentUpdated`**: поиск Company без фильтра `user_id` мог найти чужую Company с тем же ИНН. Теперь поиск всегда требует `user_id` (резолв через `partner_uuid`), без него выполняется только UUID-поиск или shipment сохраняется с `company_id = null`
+- **`HandleOrderCreated`**: при fallback-поиске Company по `tax_id` добавлен фильтр `user_id`; при совпадении ИНН и наличии UUID в payload — backfill `Company.erp_id`
+
+### Изменено
+
+- **Стратегия матчинга контрагента во всех входящих обработчиках** — единый приоритет: `Company.erp_id = uuid` → `tax_id + user_id` → создать (только в `order.created` и `contractor.created`). Fallback-поиск без `user_id` больше не выполняется
+- **`ContractorBalance.contractor_uuid`** — поле было в БД, но не использовалось. С v13.2 заполняется при приёме `balance.updated`, если в payload передан `contractors[].uuid`
+
+### Причина
+
+- До v13.2 контрагент идентифицировался только по ИНН, который не гарантирован уникальный и может быть изменён менеджером в 1С после создания контрагента на сайте. Типичный кейс: пользователь создал контрагента с опечаткой в ИНН (лишняя цифра), заказ ушёл в 1С, менеджер исправил ИНН в 1С → все последующие реализации и балансы приходили с новым ИНН и не привязывались к Company на сайте. Переход на UUID-идентификацию по аналогии с партнёрами закрывает этот класс проблем
+- Security: поиск Company в `HandleShipmentCreated` без фильтра `user_id` — потенциальная утечка между партнёрами с совпадающим ИНН; устраняется тем же релизом
+
+### Миграция (1С)
+
+- Создать durable queue `erp_out.contractors` в RabbitMQ **до** выкатки consumer 1С. Очередь declared сайтом при первой публикации, но лучше объявить заранее
+- 1С должна слушать `erp_out.contractors` и обрабатывать `contractor.created` от сайта: матчинг по `tax_id` в рамках партнёра (`partner_uuid`), при создании — генерация собственного UUID и отправка `contractor.updated` в `erp_in.partners` с этим UUID
+- Добавить опциональный `contractor.uuid` в `order.created` (обе стороны), `contractor_uuid` + `partner_uuid` в `shipment.created` / `shipment.updated`, `uuid` в `balance.updated.contractors[]`. Все поля опциональны — старое поведение сохраняется до полной миграции
+- Поле `uuid` в исходящем `contractor.created` от сайта — локальный UUIDv4 для корреляции; 1С генерирует собственный UUID независимо
+
+### Критерии приёмки
+
+- [ ] Сайт публикует `contractor.created` в `erp_out.contractors` при создании Company с непустым `tax_id`
+- [ ] Публикация откладывается, если у партнёра нет `User.erp_id`; после получения UUID партнёром Company догоняется автоматически
+- [ ] Сайт принимает `contractor.updated` и привязывает `erp_id` к существующей Company (backfill по `tax_id + user_id`)
+- [ ] Сайт принимает `contractor.deleted` и делает soft-delete Company
+- [ ] `shipment.created` с `contractor_uuid` находит Company по UUID, не по `tax_id`
+- [ ] `shipment.created` без `partner_uuid` и без `contractor_uuid` не находит Company даже при совпадении `tax_id` (регрессия security-fix)
+- [ ] `balance.updated` с `contractors[].uuid` заполняет `ContractorBalance.contractor_uuid` и находит Company по UUID
+- [ ] `order.created` с `contractor.uuid` находит Company по UUID; без UUID работает fallback по `tax_id + user_id`
+
+---
+
 ## [13.1.1] — 2026-04-23
 
 > Фикс: ERP-обработчики игнорируют `HiddenScope` — скрытый товар снова можно обновлять/включать из 1С

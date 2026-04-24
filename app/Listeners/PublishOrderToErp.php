@@ -45,10 +45,11 @@ class PublishOrderToErp
             'timestamp' => now()->toIso8601String(),
         ];
 
-        // Данные контрагента (US-06: сопоставление в 1С по ИНН)
+        // Данные контрагента (v13.2: приоритет UUID, fallback на ИНН)
         if ($order->company) {
             $company = $order->company;
             $payload['contractor'] = [
+                'uuid' => $company->erp_id,
                 'country' => $company->country?->value ?? $company->country,
                 'name' => $company->name,
                 'legal_name' => $company->legal_name,
