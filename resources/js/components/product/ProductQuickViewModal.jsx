@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box, Flex, Grid, GridItem, IconButton, Spinner, Text } from '@chakra-ui/react';
+import { Box, Flex, Grid, GridItem, IconButton, Skeleton } from '@chakra-ui/react';
 import { LuX } from 'react-icons/lu';
 import { usePage } from '@inertiajs/react';
 import { useProductQuickView } from '@/contexts/ProductQuickViewContext';
@@ -133,10 +133,72 @@ export default function ProductQuickViewModal() {
                             py={{ base: '4', md: '6' }}
                         >
                             {loading || !product ? (
-                                <Flex align="center" justify="center" minH="200px">
-                                    <Spinner size="lg" color="purple.500" />
-                                    <Text ml="3" color="gray.500">Загрузка…</Text>
-                                </Flex>
+                                <>
+                                    {/* Mobile skeleton */}
+                                    <Box display={{ base: 'block', lg: 'none' }} spaceY="6">
+                                        <Box spaceY="3">
+                                            <Skeleton h="3" w="24" />
+                                            <Skeleton h="6" w="85%" />
+                                            <Skeleton h="3" w="32" />
+                                            <Flex align="baseline" gap="3" pt="1">
+                                                <Skeleton h="7" w="24" />
+                                                <Skeleton h="4" w="16" />
+                                            </Flex>
+                                            <Skeleton h="10" w="100%" mt="2" />
+                                        </Box>
+                                        <Flex gap="2" wrap="wrap">
+                                            {[0, 1, 2, 3].map((i) => (
+                                                <Skeleton key={i} h="16" w="16" borderRadius="md" />
+                                            ))}
+                                        </Flex>
+                                        <Skeleton css={{ aspectRatio: '3 / 4' }} w="100%" borderRadius="md" />
+                                        <Box spaceY="3">
+                                            <Flex gap="4">
+                                                <Skeleton h="5" w="24" />
+                                                <Skeleton h="5" w="28" />
+                                                <Skeleton h="5" w="20" />
+                                            </Flex>
+                                            <Skeleton h="3" w="100%" />
+                                            <Skeleton h="3" w="95%" />
+                                            <Skeleton h="3" w="80%" />
+                                        </Box>
+                                    </Box>
+
+                                    {/* Desktop skeleton */}
+                                    <Grid display={{ base: 'none', lg: 'grid' }} templateColumns="repeat(12, 1fr)" gap="6">
+                                        <GridItem colSpan={4}>
+                                            <Skeleton css={{ aspectRatio: '3 / 4' }} w="100%" borderRadius="md" />
+                                        </GridItem>
+                                        <GridItem colSpan={8} spaceY="6">
+                                            <Box spaceY="3">
+                                                <Skeleton h="3" w="28" />
+                                                <Skeleton h="8" w="80%" />
+                                                <Skeleton h="3" w="40" />
+                                                <Flex align="baseline" gap="3" pt="2">
+                                                    <Skeleton h="8" w="32" />
+                                                    <Skeleton h="5" w="20" />
+                                                </Flex>
+                                                <Skeleton h="11" w="60%" mt="2" />
+                                            </Box>
+                                            <Flex gap="2" wrap="wrap">
+                                                {[0, 1, 2, 3, 4].map((i) => (
+                                                    <Skeleton key={i} h="20" w="20" borderRadius="md" />
+                                                ))}
+                                            </Flex>
+                                            <Box spaceY="3">
+                                                <Flex gap="6">
+                                                    <Skeleton h="5" w="28" />
+                                                    <Skeleton h="5" w="32" />
+                                                    <Skeleton h="5" w="24" />
+                                                </Flex>
+                                                <Skeleton h="3" w="100%" />
+                                                <Skeleton h="3" w="95%" />
+                                                <Skeleton h="3" w="90%" />
+                                                <Skeleton h="3" w="70%" />
+                                            </Box>
+                                        </GridItem>
+                                    </Grid>
+                                </>
                             ) : (
                                 <>
                                     {/* Mobile layout */}
