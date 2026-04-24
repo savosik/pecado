@@ -108,7 +108,7 @@ export default function ProductVariants({ variants = [], currentProductId, model
                                             {variant.sku}
                                         </Text>
                                     )}
-                                    <Text fontSize="sm" fontWeight="600" truncate>
+                                    <Text fontSize="xs" fontWeight="600" lineClamp="2" lineHeight="1.25">
                                         {label}
                                     </Text>
                                     {user && (
