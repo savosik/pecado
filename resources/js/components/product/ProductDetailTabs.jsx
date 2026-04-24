@@ -1,58 +1,74 @@
 import { useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import { Box, Flex, Text, Button, Table } from '@chakra-ui/react';
+import { Box, Flex, Text, Button, Table, Heading } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
 import { LuDownload, LuFileText } from 'react-icons/lu';
 import ContentRenderer from '@/components/content/ContentRenderer';
+
+const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+
+function formatSpecValue(raw) {
+    const val = String(raw ?? '').trim();
+    if (/^-?\d+\.\d+$/.test(val)) {
+        return parseFloat(val).toString();
+    }
+    const dateMatch = val.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
+    if (dateMatch) {
+        const [, y, m, d, hh, mm] = dateMatch;
+        const monthIdx = parseInt(m, 10) - 1;
+        const day = parseInt(d, 10);
+        if (monthIdx >= 0 && monthIdx < 12) {
+            const base = `${day} ${MONTHS_RU[monthIdx]} ${y}`;
+            return hh && !(hh === '00' && mm === '00') ? `${base}, ${hh}:${mm}` : base;
+        }
+    }
+    return val;
+}
+
+function isValidSpecValue(val) {
+    return val !== '' && val.toLowerCase() !== 'нет';
+}
 
 /**
  * ProductDetailTabs — табы с описанием, характеристиками, размерной сеткой, сертификатами и медиа.
  *
  * @param {{
  *   specifications: Object,
+ *   specificationGroups: Array<{name: string, items: Array<{name: string, value: string}>}>,
  *   description: string,
  *   media: Array<{url: string, type: string}>,
  *   certificates: Array<{id: number, name: string, url: string}>,
  *   sizeChart: {name: string, values: Array<Array<string>>} | null
  * }} props
  */
-export default function ProductDetailTabs({ specifications = {}, description = '', media = [], certificates = [], sizeChart = null }) {
+export default function ProductDetailTabs({ specifications = {}, specificationGroups = [], description = '', media = [], certificates = [], sizeChart = null }) {
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
-    
-    // Фильтруем характеристики, убирая те, у которых значение "нет", и форматируем числа/даты
+
     const validSpecifications = useMemo(() => {
-        const monthsRu = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
-
-        const formatValue = (raw) => {
-            const val = String(raw ?? '').trim();
-            if (/^-?\d+\.\d+$/.test(val)) {
-                return parseFloat(val).toString();
-            }
-            // ISO-даты: 2029-10-01 или 2029-10-01T00:00:00(+03:00|Z)
-            const dateMatch = val.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::\d{2})?(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?)?$/);
-            if (dateMatch) {
-                const [, y, m, d, hh, mm] = dateMatch;
-                const monthIdx = parseInt(m, 10) - 1;
-                const day = parseInt(d, 10);
-                if (monthIdx >= 0 && monthIdx < 12) {
-                    const base = `${day} ${monthsRu[monthIdx]} ${y}`;
-                    return hh && !(hh === '00' && mm === '00') ? `${base}, ${hh}:${mm}` : base;
-                }
-            }
-            return val;
-        };
-
         const specs = {};
         for (const [k, v] of Object.entries(specifications || {})) {
-            const val = formatValue(v);
-            if (val.toLowerCase() !== 'нет' && val !== '') {
+            const val = formatSpecValue(v);
+            if (isValidSpecValue(val)) {
                 specs[k] = val;
             }
         }
         return specs;
     }, [specifications]);
 
-    const hasSpecs = Object.keys(validSpecifications).length > 0;
+    const validSpecGroups = useMemo(() => {
+        if (!Array.isArray(specificationGroups)) return [];
+        return specificationGroups
+            .map((g) => ({
+                name: g?.name ?? '',
+                items: (g?.items ?? [])
+                    .map((it) => ({ name: it?.name ?? '', value: formatSpecValue(it?.value) }))
+                    .filter((it) => it.name && isValidSpecValue(it.value)),
+            }))
+            .filter((g) => g.items.length > 0);
+    }, [specificationGroups]);
+
+    const hasGroups = validSpecGroups.length > 0;
+    const hasSpecs = hasGroups || Object.keys(validSpecifications).length > 0;
     const hasDesc = sanitizedDescription.trim().length > 0;
     const hasMedia = Array.isArray(media) && media.filter(m => m.type === 'image' || m.type === 'video').length > 0;
     const hasCerts = Array.isArray(certificates) && certificates.length > 0;
@@ -160,28 +176,72 @@ export default function ProductDetailTabs({ specifications = {}, description = '
             {/* Характеристики */}
             {hasSpecs && (
                 <Tabs.Content value="specs" pt="4">
-                    <Box
-                        display="grid"
-                        gridTemplateColumns={{ base: '1fr', md: '1fr 1fr' }}
-                        columnGap={{ base: '6', md: '10' }}
-                        rowGap="2"
-                    >
-                        {Object.entries(validSpecifications).map(([key, value]) => (
-                            <Text
-                                key={key}
-                                fontSize="sm"
-                                lineHeight="1.5"
-                                css={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
-                            >
-                                <Text as="span" color="gray.500" _dark={{ color: 'gray.400' }}>
-                                    {key}:{' '}
+                    {hasGroups ? (
+                        <Flex direction="column" gap={{ base: '5', md: '6' }}>
+                            {validSpecGroups.map((group) => (
+                                <Box key={group.name}>
+                                    <Heading
+                                        as="h3"
+                                        fontSize={{ base: 'sm', md: 'md' }}
+                                        fontWeight="600"
+                                        color="gray.900"
+                                        _dark={{ color: 'gray.100', borderColor: 'gray.700' }}
+                                        pb="2"
+                                        mb="3"
+                                        borderBottom="1px solid"
+                                        borderColor="gray.200"
+                                    >
+                                        {group.name}
+                                    </Heading>
+                                    <Box
+                                        display="grid"
+                                        gridTemplateColumns={{ base: '1fr', md: '1fr 1fr' }}
+                                        columnGap={{ base: '6', md: '10' }}
+                                        rowGap="2"
+                                    >
+                                        {group.items.map((item) => (
+                                            <Text
+                                                key={item.name}
+                                                fontSize="sm"
+                                                lineHeight="1.5"
+                                                css={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                                            >
+                                                <Text as="span" color="gray.500" _dark={{ color: 'gray.400' }}>
+                                                    {item.name}:{' '}
+                                                </Text>
+                                                <Text as="span" fontWeight="500" color="gray.800" _dark={{ color: 'gray.100' }}>
+                                                    {item.value}
+                                                </Text>
+                                            </Text>
+                                        ))}
+                                    </Box>
+                                </Box>
+                            ))}
+                        </Flex>
+                    ) : (
+                        <Box
+                            display="grid"
+                            gridTemplateColumns={{ base: '1fr', md: '1fr 1fr' }}
+                            columnGap={{ base: '6', md: '10' }}
+                            rowGap="2"
+                        >
+                            {Object.entries(validSpecifications).map(([key, value]) => (
+                                <Text
+                                    key={key}
+                                    fontSize="sm"
+                                    lineHeight="1.5"
+                                    css={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}
+                                >
+                                    <Text as="span" color="gray.500" _dark={{ color: 'gray.400' }}>
+                                        {key}:{' '}
+                                    </Text>
+                                    <Text as="span" fontWeight="500" color="gray.800" _dark={{ color: 'gray.100' }}>
+                                        {String(value ?? '')}
+                                    </Text>
                                 </Text>
-                                <Text as="span" fontWeight="500" color="gray.800" _dark={{ color: 'gray.100' }}>
-                                    {String(value ?? '')}
-                                </Text>
-                            </Text>
-                        ))}
-                    </Box>
+                            ))}
+                        </Box>
+                    )}
                 </Tabs.Content>
             )}
 

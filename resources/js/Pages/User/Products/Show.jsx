@@ -14,7 +14,7 @@ import { buildProductInfoProps, getProductDescription } from '@/utils/product';
  * Show — детальная страница товара.
  */
 export default function Show() {
-    const { product, media, categoryTrail, variants, certificates, specifications, sizeChart, currency, auth } = usePage().props;
+    const { product, media, categoryTrail, variants, certificates, specifications, specificationGroups, sizeChart, currency, auth } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
     const user = auth?.user || null;
 
@@ -59,6 +59,7 @@ export default function Show() {
 
                     <ProductDetailTabs
                         specifications={specifications}
+                        specificationGroups={specificationGroups}
                         description={getProductDescription(product)}
                         media={media}
                         certificates={certificates}
@@ -85,6 +86,7 @@ export default function Show() {
 
                         <ProductDetailTabs
                             specifications={specifications}
+                            specificationGroups={specificationGroups}
                             description={getProductDescription(product)}
                             media={media}
                             certificates={certificates}

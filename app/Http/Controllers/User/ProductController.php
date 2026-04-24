@@ -281,7 +281,7 @@ class ProductController extends Controller
             'brand',
             'model',
             'certificates.media',
-            'attributeValues.attribute',
+            'attributeValues.attribute.attributeGroup',
             'attributeValues.attributeValue',
             'media',
             'barcodes',
@@ -484,8 +484,11 @@ class ProductController extends Controller
             ];
         })->values()->toArray();
 
-        // Характеристики (атрибуты)
+        // Характеристики (атрибуты): плоский список + разбивка по группам
         $specifications = [];
+        $groupsBuffer = []; // group_key => [name, sort_order, items, order]
+        $ungroupedItems = [];
+
         foreach ($product->attributeValues as $av) {
             $attr = $av->attribute;
             $attrName = $attr?->name;
@@ -503,9 +506,60 @@ class ProductController extends Controller
                 $value = $av->attributeValue?->value ?? '';
             }
 
-            if ($value !== '' && $value !== null) {
-                $specifications[$attrName] = (string) $value;
+            if ($value === '' || $value === null) {
+                continue;
             }
+
+            $valueStr = (string) $value;
+            $specifications[$attrName] = $valueStr;
+
+            $group = $attr->attributeGroup;
+            $item = [
+                'name' => $attrName,
+                'value' => $valueStr,
+                'sort_order' => (int) ($attr->sort_order ?? 0),
+            ];
+
+            if ($group) {
+                $key = 'g_'.$group->id;
+                if (! isset($groupsBuffer[$key])) {
+                    $groupsBuffer[$key] = [
+                        'id' => $group->id,
+                        'name' => $group->name,
+                        'sort_order' => (int) ($group->sort_order ?? 0),
+                        'items' => [],
+                    ];
+                }
+                $groupsBuffer[$key]['items'][] = $item;
+            } else {
+                $ungroupedItems[] = $item;
+            }
+        }
+
+        // Сортировка: группы по sort_order (затем по имени), внутри — по sort_order атрибута (затем по имени)
+        $sortItems = function (array $items): array {
+            usort($items, function ($a, $b) {
+                return [$a['sort_order'], $a['name']] <=> [$b['sort_order'], $b['name']];
+            });
+
+            return array_map(fn ($i) => ['name' => $i['name'], 'value' => $i['value']], $items);
+        };
+
+        $specificationGroups = array_values($groupsBuffer);
+        usort($specificationGroups, function ($a, $b) {
+            return [$a['sort_order'], $a['name']] <=> [$b['sort_order'], $b['name']];
+        });
+        foreach ($specificationGroups as &$g) {
+            $g['items'] = $sortItems($g['items']);
+            unset($g['sort_order'], $g['id']);
+        }
+        unset($g);
+
+        if (! empty($ungroupedItems)) {
+            $specificationGroups[] = [
+                'name' => 'Прочее',
+                'items' => $sortItems($ungroupedItems),
+            ];
         }
 
         // Основные данные товара
@@ -555,6 +609,7 @@ class ProductController extends Controller
             'variants' => $variants,
             'certificates' => $certificates,
             'specifications' => $specifications,
+            'specificationGroups' => $specificationGroups,
             'sizeChart' => $sizeChart,
         ];
     }

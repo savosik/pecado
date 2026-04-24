@@ -50,6 +50,7 @@ export default function ProductQuickViewModal() {
     const variants = data?.variants ?? [];
     const certificates = data?.certificates ?? [];
     const specifications = data?.specifications ?? {};
+    const specificationGroups = data?.specificationGroups ?? [];
     const sizeChart = data?.sizeChart ?? null;
 
     const productInfoProps = product ? buildProductInfoProps(product, currencySymbol) : {};
@@ -154,6 +155,7 @@ export default function ProductQuickViewModal() {
 
                                         <ProductDetailTabs
                                             specifications={specifications}
+                                            specificationGroups={specificationGroups}
                                             description={getProductDescription(product)}
                                             media={media}
                                             certificates={certificates}
@@ -180,6 +182,7 @@ export default function ProductQuickViewModal() {
 
                                             <ProductDetailTabs
                                                 specifications={specifications}
+                                                specificationGroups={specificationGroups}
                                                 description={getProductDescription(product)}
                                                 media={media}
                                                 certificates={certificates}

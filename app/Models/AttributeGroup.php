@@ -12,6 +12,11 @@ class AttributeGroup extends Model
 
     protected $fillable = [
         'name',
+        'sort_order',
+    ];
+
+    protected $casts = [
+        'sort_order' => 'integer',
     ];
 
     /**
