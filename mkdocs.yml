@@ -74,6 +74,8 @@ nav:
     - "Фаза 3: Сквозные сценарии": tests/phase-3-e2e.md
     - "Фаза 4: Edge-кейсы": tests/phase-4-edge.md
   - Первоначальная выгрузка: initial-load.md
+  - Миграции:
+    - "v13.2 — UUID для контрагентов": migrations/v13.2-contractor-uuid.md
   - Открытые вопросы: open-questions.md
   - Ссылки:
     - "AsyncAPI (интерактивная)": https://dev.pecado.ru/docs/erp/
