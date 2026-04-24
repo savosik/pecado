@@ -70,6 +70,7 @@ class Product extends Model implements HasMedia
         'is_bestseller',
         'code',
         'sku',
+        'variant_name',
         'slug',
         'url',
         'barcode',

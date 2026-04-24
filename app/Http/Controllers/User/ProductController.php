@@ -432,6 +432,16 @@ class ProductController extends Controller
 
             foreach ($variantArrays as &$va) {
                 $va['diff_name'] = $diffNames[$va['id']] ?? null;
+
+                // Ручной приоритет: если у варианта заполнено variant_name,
+                // используем его как подпись — выше всех автофоллбеков (attrs → name → sku).
+                if (! empty($va['variant_name'])) {
+                    $va['label_mode'] = 'variant_name';
+                    $va['label'] = $va['variant_name'];
+
+                    continue;
+                }
+
                 $va['label_mode'] = $labelMode;
                 $va['label'] = match ($labelMode) {
                     'attrs' => $attrsLabels[$va['id']],

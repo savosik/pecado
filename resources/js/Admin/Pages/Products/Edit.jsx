@@ -27,6 +27,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         meta_title: product.meta_title || '',
         meta_description: product.meta_description || '',
         sku: product.sku || '',
+        variant_name: product.variant_name || '',
         code: product.code || '',
         external_id: product.external_id || '',
         url: product.url || '',
@@ -64,7 +65,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
     // Определяем, в каких табах есть ошибки
     // Определяем, в каких табах есть ошибки (мемоизируем)
     const tabErrors = useMemo(() => ({
-        general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
+        general: ['name', 'slug', 'sku', 'variant_name', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
         categories: ['category_id'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces', 'hidden'].some(field => errors[field]),
@@ -290,6 +291,18 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                                 value={data.sku}
                                                 onChange={(e) => setData('sku', e.target.value)}
                                                 placeholder="Введите артикул"
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="Название варианта"
+                                            error={errors.variant_name}
+                                            helperText="Если заполнено — отображается как подпись варианта на странице товара вместо автогенерируемой"
+                                        >
+                                            <Input
+                                                value={data.variant_name}
+                                                onChange={(e) => setData('variant_name', e.target.value)}
+                                                placeholder="Напр.: Красный XL"
                                             />
                                         </FormField>
 

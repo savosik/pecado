@@ -27,6 +27,7 @@ class ProductQueryService
             'name' => $product->name,
             'slug' => $product->slug,
             'sku' => $product->sku,
+            'variant_name' => $product->variant_name,
             'external_id' => $product->external_id,
             'base_price' => (float) $product->base_price,
             'brand_name' => $product->brand?->name,
