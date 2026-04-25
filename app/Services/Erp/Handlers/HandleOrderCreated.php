@@ -48,27 +48,39 @@ class HandleOrderCreated
             }
 
             // --- Контрагент (компания) ---
-            // Матчинг v13.2: приоритет по UUID (Company.erp_id), fallback по tax_id + user_id.
+            // Матчинг v13.3: приоритет по UUID (Company.erp_id), fallback по tax_id + tax_code
+            // без user_id (ИНН/КПП юридически уникальны). lockForUpdate защищает от race
+            // в окне SELECT → INSERT, UNIQUE-индекс БД — последний рубеж.
             $companyId = null;
-            if ($contractorData && (! empty($contractorData['tax_id']) || ! empty($contractorData['uuid']))) {
+            if ($contractorData && ! empty($contractorData['tax_id'])) {
                 $contractorUuid = $contractorData['uuid'] ?? null;
-                $contractorTaxId = $contractorData['tax_id'] ?? null;
+                $contractorTaxId = $contractorData['tax_id'];
+                $contractorTaxCode = $contractorData['tax_code'] ?? '';
 
                 $company = null;
 
                 if ($contractorUuid) {
                     $company = Company::withoutGlobalScopes()
+                        ->withTrashed()
                         ->where('erp_id', $contractorUuid)
+                        ->lockForUpdate()
                         ->first();
                 }
 
-                if (! $company && $contractorTaxId && $userId) {
+                if (! $company) {
+                    // tax_code: до миграции v13.3 в БД могут лежать NULL — трактуем NULL и '' как один ключ.
                     $company = Company::withoutGlobalScopes()
-                        ->where('user_id', $userId)
+                        ->withTrashed()
                         ->where('tax_id', $contractorTaxId)
+                        ->where(function ($q) use ($contractorTaxCode) {
+                            $q->where('tax_code', $contractorTaxCode);
+                            if ($contractorTaxCode === '') {
+                                $q->orWhereNull('tax_code');
+                            }
+                        })
+                        ->lockForUpdate()
                         ->first();
 
-                    // Backfill erp_id если UUID передан, а у Company его не было
                     if ($company && $contractorUuid && ! $company->erp_id) {
                         Company::withoutEvents(function () use ($company, $contractorUuid) {
                             $company->update(['erp_id' => $contractorUuid]);
@@ -76,9 +88,12 @@ class HandleOrderCreated
                     }
                 }
 
-                if (! $company && $contractorTaxId) {
-                    // Авто-создание компании из данных контрагента (fallback, если ни UUID, ни tax_id+user_id не дали совпадения)
-                    $company = Company::withoutEvents(function () use ($contractorData, $contractorUuid, $userId) {
+                if ($company && $company->trashed()) {
+                    $company->restoreQuietly();
+                }
+
+                if (! $company) {
+                    $company = Company::withoutEvents(function () use ($contractorData, $contractorUuid, $userId, $contractorTaxCode) {
                         return Company::create([
                             'user_id' => $userId,
                             'erp_id' => $contractorUuid,
@@ -87,7 +102,7 @@ class HandleOrderCreated
                             'legal_name' => $contractorData['legal_name'] ?? $contractorData['name'] ?? null,
                             'tax_id' => $contractorData['tax_id'],
                             'registration_number' => $contractorData['registration_number'] ?? null,
-                            'tax_code' => $contractorData['tax_code'] ?? null,
+                            'tax_code' => $contractorTaxCode,
                             'okpo_code' => $contractorData['okpo_code'] ?? null,
                             'legal_address' => $contractorData['legal_address'] ?? null,
                             'actual_address' => $contractorData['actual_address'] ?? null,
@@ -97,19 +112,17 @@ class HandleOrderCreated
                     });
 
                     Log::info('HandleOrderCreated: контрагент создан автоматически', [
-                        'tax_id' => $contractorData['tax_id'] ?? null,
+                        'tax_id' => $contractorTaxId,
+                        'tax_code' => $contractorTaxCode,
                         'erp_id' => $contractorUuid,
                         'company_id' => $company->id,
                     ]);
                 }
 
-                if ($company) {
-                    $companyId = $company->id;
+                $companyId = $company->id;
 
-                    // Если пользователь не найден по partner_uuid, берём владельца компании
-                    if (! $userId && $company->user_id) {
-                        $userId = $company->user_id;
-                    }
+                if (! $userId && $company->user_id) {
+                    $userId = $company->user_id;
                 }
             }
 

@@ -31,6 +31,7 @@ class HandleOrderCreatedTest extends TestCase
         $company = Company::factory()->create([
             'user_id' => $user->id,
             'tax_id' => '7710140679',
+            'tax_code' => '770101001',
         ]);
         $product = Product::factory()->create(['external_id' => 'prod-uuid-001']);
 
@@ -50,6 +51,7 @@ class HandleOrderCreatedTest extends TestCase
                 'country' => 'RU',
                 'name' => 'ООО Тест',
                 'tax_id' => '7710140679',
+                'tax_code' => '770101001',
             ],
             'items' => [
                 [

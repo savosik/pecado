@@ -159,11 +159,14 @@ class HandleContractorCreatedTest extends TestCase
     }
 
     #[Test]
-    public function it_logs_warning_when_partner_not_found(): void
+    public function it_creates_company_with_null_user_when_partner_not_found(): void
     {
+        // v13.3: контрагент может прийти раньше партнёра — создаём Company с user_id=NULL,
+        // партнёр привяжется при последующем partner.created.
         Log::shouldReceive('warning')
             ->once()
             ->withArgs(fn ($msg) => str_contains($msg, 'партнёр не найден'));
+        Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $handler = new HandleContractorCreated;
         $handler->handle([
@@ -171,10 +174,13 @@ class HandleContractorCreatedTest extends TestCase
             'uuid' => 'contractor-uuid-orphan',
             'partner_uuid' => 'nonexistent-partner-uuid',
             'name' => 'Компания без партнёра',
+            'tax_id' => '7777777777',
         ]);
 
-        $this->assertDatabaseMissing('companies', [
+        $this->assertDatabaseHas('companies', [
             'erp_id' => 'contractor-uuid-orphan',
+            'user_id' => null,
+            'tax_id' => '7777777777',
         ]);
     }
 
