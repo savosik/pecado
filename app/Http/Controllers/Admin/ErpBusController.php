@@ -26,6 +26,7 @@ class ErpBusController extends AdminController
         'erp_in.balance',
         'erp_in.segments',
         'erp_in.catalog',
+        'erp_in.promotions',
     ];
 
     private const DLQ_QUEUES = [
@@ -38,6 +39,7 @@ class ErpBusController extends AdminController
         'erp_dlq.balance',
         'erp_dlq.segments',
         'erp_dlq.catalog',
+        'erp_dlq.promotions',
     ];
 
     private const OUTGOING_QUEUES = [
