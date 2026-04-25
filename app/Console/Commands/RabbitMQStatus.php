@@ -47,6 +47,11 @@ class RabbitMQStatus extends Command
             'erp_out.partners',
             'erp_out.contractors',
         ],
+        'Внутренние Laravel-очереди' => [
+            'erp_publish',
+            'catalog-media',
+            'default',
+        ],
         'Внешние источники (Shovel)' => [
             'external.remains_for_website',
             'external.remains_for_erp',
@@ -137,22 +142,28 @@ class RabbitMQStatus extends Command
                 $q = $queueMap[$name] ?? null;
                 $ready = $q['messages_ready'] ?? 0;
                 $unacked = $q['messages_unacknowledged'] ?? 0;
+                $consumers = $q['consumers'] ?? 0;
                 $total = $ready + $unacked;
+
+                // erp_out.* потребляет 1С напрямую — отсутствие consumer-ов не аномалия.
+                $expectsLocalConsumer = ! str_starts_with($name, 'erp_out.');
 
                 if (! $q) {
                     $status = '⚠️  Не найдена';
                 } elseif (str_starts_with($name, 'erp_dlq.') && $total > 0) {
                     $status = "🔴 {$total} мёртвых";
+                } elseif ($expectsLocalConsumer && $consumers === 0 && $total > 0) {
+                    $status = "🔴 нет воркера ({$total} зависло)";
                 } elseif ($total > 0) {
                     $status = "🟡 {$ready} ожидают / {$unacked} в обработке";
                 } else {
                     $status = '🟢 Пустая';
                 }
 
-                $rows[] = [$name, $ready, $unacked, $status];
+                $rows[] = [$name, $ready, $unacked, $consumers, $status];
             }
 
-            $this->table(['Очередь', 'Ready', 'Unacked', 'Статус'], $rows);
+            $this->table(['Очередь', 'Ready', 'Unacked', 'Consumers', 'Статус'], $rows);
         }
     }
 

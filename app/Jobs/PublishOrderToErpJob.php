@@ -20,12 +20,9 @@ class PublishOrderToErpJob implements ShouldQueue
 
     public int $backoff = 10;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(public array $payload)
     {
-        //
+        $this->queue = 'erp_publish';
     }
 
     /**

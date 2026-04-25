@@ -25,7 +25,10 @@ class PublishContractorToErpJob implements ShouldQueue
 
     private const QUEUE_NAME = 'erp_out.contractors';
 
-    public function __construct(public array $payload) {}
+    public function __construct(public array $payload)
+    {
+        $this->queue = 'erp_publish';
+    }
 
     public function handle(): void
     {

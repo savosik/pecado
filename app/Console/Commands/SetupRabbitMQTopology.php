@@ -66,6 +66,19 @@ class SetupRabbitMQTopology extends Command
         'erp_out.contractors' => ['contractor.created'], // US-07 v13.2: Сайт → 1С
     ];
 
+    /**
+     * Внутренние Laravel-очереди для job-обёрток (без exchange/binding).
+     * Сюда диспатчатся ShouldQueue-классы; consumer — supervisor-программы.
+     *
+     * Декларация делает топологию детерминированной после `rabbitmq:setup`:
+     * очереди существуют сразу, не дожидаясь первого dispatch.
+     */
+    private const INTERNAL_QUEUES = [
+        'erp_publish',   // Publish*ToErpJob (Contractor/User/Order/Return)
+        'catalog-media', // DownloadProductMediaJob
+        'default',       // safety-net для job-ов без явного onQueue()
+    ];
+
     public function handle(): int
     {
         $host = config('queue.connections.rabbitmq.hosts.0.host', 'rabbitmq');
@@ -140,6 +153,12 @@ class SetupRabbitMQTopology extends Command
                 } catch (\Exception $e) {
                     // 404 / not_found — binding уже снят, это нормально (идемпотентность)
                 }
+            }
+
+            // 6.6. Внутренние Laravel-очереди (job-обёртки)
+            foreach (self::INTERNAL_QUEUES as $queue) {
+                $this->info("Создание внутренней очереди: {$queue}");
+                $channel->queue_declare($queue, false, true, false, false);
             }
 
             // 7. Внешние fanout-обменники и их очереди
