@@ -11,7 +11,8 @@ class ApplyModelBindings extends Command
 {
     protected $signature = 'products:apply-model-bindings
                             {--from= : Путь к JSON-артефакту привязок (по external_id+sku)}
-                            {--dry-run : Только вывести статистику, не записывать в БД}';
+                            {--dry-run : Только вывести статистику, не записывать в БД}
+                            {--purge : Перед применением сбросить ВСЕ model_id+variant_name и удалить существующие ProductModel}';
 
     protected $description = 'Создаёт ProductModel и привязывает товары через external_id+sku из артефакта product-model-bindings.json.';
 
@@ -38,6 +39,23 @@ class ApplyModelBindings extends Command
         $this->info("Артефакт: {$path}");
         $this->info("Версия: {$artifact['version']} | Сгенерирован: {$artifact['generated_at']}");
         $this->info('Моделей в артефакте: '.count($artifact['models']));
+
+        // --purge: полная очистка перед apply (убираем старые 1С-привязки)
+        if ($this->option('purge')) {
+            $oldProductsCount = Product::withoutGlobalScopes()->whereNotNull('model_id')->count();
+            $oldModelsCount = ProductModel::count();
+            if ($isDryRun) {
+                $this->warn("[dry-run] Будет очищено: {$oldProductsCount} привязок и удалено {$oldModelsCount} ProductModel");
+            } else {
+                $this->warn("⚠️  PURGE: сбрасываю model_id+variant_name у {$oldProductsCount} товаров и удаляю {$oldModelsCount} ProductModel");
+                Product::withoutGlobalScopes()->whereNotNull('model_id')->update([
+                    'model_id' => null,
+                    'variant_name' => null,
+                ]);
+                ProductModel::query()->delete();
+                $this->info('✓ Очистка завершена.');
+            }
+        }
 
         $modelsCreated = 0;
         $productsUpdated = 0;
