@@ -74,6 +74,16 @@ class HandleOrderUpdated
             $order->delivery_address = $payload['delivery_address'];
         }
 
+        // v13.7: аудит-метки 1С. array_key_exists, чтобы передача null
+        // тоже считалась явной операцией; отсутствие ключа — не трогаем БД.
+        // TZ-нормализация — в App\Casts\ErpDatetime.
+        if (array_key_exists('erp_created_at', $payload)) {
+            $order->erp_created_at = $payload['erp_created_at'];
+        }
+        if (array_key_exists('erp_updated_at', $payload)) {
+            $order->erp_updated_at = $payload['erp_updated_at'];
+        }
+
         $order->fromErp = true;
         $order->save();
 

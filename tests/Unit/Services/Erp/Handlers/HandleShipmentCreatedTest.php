@@ -310,4 +310,79 @@ class HandleShipmentCreatedTest extends TestCase
         $this->assertEquals(-5.00, (float) $item->manual_discount_percent);
         $this->assertEquals(5750.00, (float) $shipment->total_amount);
     }
+
+    #[Test]
+    public function it_saves_erp_timestamps_from_payload_v13_7(): void
+    {
+        $handler = new HandleShipmentCreated;
+        $handler->handle([
+            'event' => 'shipment.created',
+            'uuid' => 'shipment-erp-ts-001',
+            'tax_id' => '1234567890',
+            'number' => '29УТ-003413',
+            'date' => '2026-04-26',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'erp_created_at' => '2026-04-26T11:05:00+03:00',
+            'erp_updated_at' => '2026-04-26T11:05:00+03:00',
+            'items' => [],
+        ]);
+
+        $shipment = Shipment::where('uuid', 'shipment-erp-ts-001')->first();
+        $this->assertNotNull($shipment);
+        $this->assertNotNull($shipment->erp_created_at);
+        $this->assertNotNull($shipment->erp_updated_at);
+        // Eloquent хранит datetime в формате `Y-m-d H:i:s` без TZ; для 1С → Сайт
+        // практически TZ +03:00 (Europe/Moscow), поэтому проверяем стенограмму.
+        $this->assertEquals('2026-04-26 11:05:00', $shipment->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 11:05:00', $shipment->erp_updated_at->format('Y-m-d H:i:s'));
+        // Бизнес-поле date не должно подменяться аудит-метками
+        $this->assertEquals('2026-04-26', $shipment->date->format('Y-m-d'));
+    }
+
+    #[Test]
+    public function it_normalizes_erp_timestamps_to_moscow_timezone_v13_7(): void
+    {
+        // 1С может прислать payload в любой TZ; на сайте всегда хранится Europe/Moscow,
+        // чтобы стенограмма даты совпадала с тем, что менеджер видит в 1С.
+        $handler = new HandleShipmentCreated;
+        $handler->handle([
+            'event' => 'shipment.created',
+            'uuid' => 'shipment-erp-ts-utc',
+            'tax_id' => '1234567890',
+            'number' => '29УТ-003415',
+            'date' => '2026-04-26',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'erp_created_at' => '2026-04-26T08:05:00Z',  // UTC = 11:05:00 MSK
+            'erp_updated_at' => '2026-04-26T13:30:00+05:00', // = 11:30:00 MSK
+            'items' => [],
+        ]);
+
+        $shipment = Shipment::where('uuid', 'shipment-erp-ts-utc')->first();
+        $this->assertNotNull($shipment);
+        $this->assertEquals('2026-04-26 11:05:00', $shipment->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 11:30:00', $shipment->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function it_leaves_erp_timestamps_null_when_absent_from_payload_v13_7(): void
+    {
+        $handler = new HandleShipmentCreated;
+        $handler->handle([
+            'event' => 'shipment.created',
+            'uuid' => 'shipment-erp-ts-002',
+            'tax_id' => '1234567890',
+            'number' => '29УТ-003414',
+            'date' => '2026-04-26',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [],
+        ]);
+
+        $shipment = Shipment::where('uuid', 'shipment-erp-ts-002')->first();
+        $this->assertNotNull($shipment);
+        $this->assertNull($shipment->erp_created_at);
+        $this->assertNull($shipment->erp_updated_at);
+    }
 }

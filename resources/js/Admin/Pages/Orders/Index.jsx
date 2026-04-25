@@ -248,6 +248,14 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                 </Box>
             ),
         },
+        {
+            label: "Создано в 1С",
+            key: "erp_created_at",
+            sortable: false,
+            render: (_, order) => (
+                <Text fontSize="sm" color="gray.600">{order.erp_created_at || '—'}</Text>
+            ),
+        },
         isTrashed
             ? {
                 key: 'actions',

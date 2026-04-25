@@ -140,4 +140,50 @@ class HandleShipmentUpdatedTest extends TestCase
         $this->assertEquals('2026-03-01', $shipment->date->format('Y-m-d'));
         $this->assertEquals('KZT', $shipment->currency_code);
     }
+
+    #[Test]
+    public function it_updates_erp_updated_at_when_present_v13_7(): void
+    {
+        // Передаём строку без TZ, чтобы Eloquent сохранил её "как есть" (без TZ-конверсии),
+        // как оно работает при приёме payload от 1С (handler пишет строку в массив $fields).
+        $shipment = Shipment::factory()->create([
+            'uuid' => 'upd-ship-erp-ts-001',
+            'erp_created_at' => '2026-04-26 11:05:00',
+            'erp_updated_at' => '2026-04-26 11:05:00',
+        ]);
+
+        $handler = new HandleShipmentUpdated;
+        $handler->handle([
+            'event' => 'shipment.updated',
+            'uuid' => 'upd-ship-erp-ts-001',
+            'status' => 'completed',
+            'erp_updated_at' => '2026-04-26T15:30:00+03:00',
+        ]);
+
+        $shipment->refresh();
+        $this->assertEquals('2026-04-26 15:30:00', $shipment->erp_updated_at->format('Y-m-d H:i:s'));
+        // erp_created_at не должен быть затронут
+        $this->assertEquals('2026-04-26 11:05:00', $shipment->erp_created_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function it_keeps_existing_erp_timestamps_when_absent_v13_7(): void
+    {
+        $shipment = Shipment::factory()->create([
+            'uuid' => 'upd-ship-erp-ts-002',
+            'erp_created_at' => '2026-04-26 11:05:00',
+            'erp_updated_at' => '2026-04-26 11:05:00',
+        ]);
+
+        $handler = new HandleShipmentUpdated;
+        $handler->handle([
+            'event' => 'shipment.updated',
+            'uuid' => 'upd-ship-erp-ts-002',
+            'status' => 'completed',
+        ]);
+
+        $shipment->refresh();
+        $this->assertEquals('2026-04-26 11:05:00', $shipment->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 11:05:00', $shipment->erp_updated_at->format('Y-m-d H:i:s'));
+    }
 }

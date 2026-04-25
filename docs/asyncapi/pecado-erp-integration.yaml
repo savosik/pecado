@@ -2206,6 +2206,18 @@ components:
             $ref: '#/components/schemas/UUID'
         timestamp:
           $ref: '#/components/schemas/ISO8601DateTime'
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
         contractor:
           $ref: '#/components/schemas/OrderContractor'
         delivery_address:
@@ -2264,6 +2276,18 @@ components:
             - ready_to_ship
             - closed
             - deleted
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
         items:
           type: array
           description: |
@@ -2457,6 +2481,18 @@ components:
             - '29УТ-003413'
         date:
           $ref: '#/components/schemas/ISO8601Date'
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
         status:
           type: string
           const: completed
@@ -2519,6 +2555,18 @@ components:
             - '29УТ-003413'
         date:
           $ref: '#/components/schemas/ISO8601Date'
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
         status:
           type: string
           const: completed

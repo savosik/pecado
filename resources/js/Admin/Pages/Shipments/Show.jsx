@@ -67,6 +67,8 @@ export default function Show({ shipment, related_orders }) {
                             </Text>
                         </Box>
                         <InfoRow label="Создано" value={shipment.created_at} />
+                        <InfoRow label="Создано в 1С" value={shipment.erp_created_at || '—'} />
+                        <InfoRow label="Изменено в 1С" value={shipment.erp_updated_at || '—'} />
                     </SimpleGrid>
 
                     <Separator my={4} />

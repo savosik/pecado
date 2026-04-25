@@ -439,6 +439,52 @@ class HandleOrderUpdatedTest extends TestCase
     }
 
     #[Test]
+    public function it_updates_erp_updated_at_when_present_v13_7(): void
+    {
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-erp-upd-ts',
+            'erp_created_at' => '2026-04-26 10:15:32',
+            'erp_updated_at' => '2026-04-26 10:15:32',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid' => 'test-uuid-erp-upd-ts',
+            'status' => 'confirmed',
+            'erp_updated_at' => '2026-04-26T14:42:09+03:00',
+        ]);
+
+        $fresh = $order->fresh();
+        $this->assertEquals('2026-04-26 14:42:09', $fresh->erp_updated_at->format('Y-m-d H:i:s'));
+        // erp_created_at не должен быть затронут
+        $this->assertEquals('2026-04-26 10:15:32', $fresh->erp_created_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function it_keeps_existing_erp_timestamps_when_absent_from_payload_v13_7(): void
+    {
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-erp-keep-ts',
+            'erp_created_at' => '2026-04-26 10:15:32',
+            'erp_updated_at' => '2026-04-26 10:15:32',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid' => 'test-uuid-erp-keep-ts',
+            'status' => 'confirmed',
+        ]);
+
+        $fresh = $order->fresh();
+        $this->assertEquals('2026-04-26 10:15:32', $fresh->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 10:15:32', $fresh->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
     public function it_accepts_negative_discount_percent_as_markup_and_logs_neutral_summary(): void
     {
         $order = Order::factory()->create([

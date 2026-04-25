@@ -1003,6 +1003,22 @@ channels:
               description: Дата и время в формате ISO 8601
               examples:
                 - '2026-03-17T12:00:00+03:00'
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+                Опционально, добавлено в v13.7.
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения документа в 1С
+                (ISO-8601 с TZ). Опционально, добавлено в v13.7.
             contractor:
               type: object
               required:
@@ -1206,6 +1222,22 @@ channels:
                 - ready_to_ship
                 - closed
                 - deleted
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+                Опционально, добавлено в v13.7.
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения документа в 1С
+                (ISO-8601 с TZ). Опционально, добавлено в v13.7.
             items:
               type: array
               description: |
@@ -1467,6 +1499,22 @@ channels:
               description: Дата в формате yyyy-MM-dd
               examples:
                 - '2026-03-17'
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+                Опционально, добавлено в v13.7.
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения документа в 1С
+                (ISO-8601 с TZ). Опционально, добавлено в v13.7.
             status:
               type: string
               const: completed
@@ -1618,6 +1666,22 @@ channels:
               description: Дата в формате yyyy-MM-dd
               examples:
                 - '2026-03-17'
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+                Опционально, добавлено в v13.7.
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения документа в 1С
+                (ISO-8601 с TZ). Опционально, добавлено в v13.7.
             status:
               type: string
               const: completed
@@ -2792,6 +2856,22 @@ channels:
               description: Дата и время в формате ISO 8601
               examples:
                 - '2026-03-17T12:00:00+03:00'
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+                Опционально, добавлено в v13.7.
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения документа в 1С
+                (ISO-8601 с TZ). Опционально, добавлено в v13.7.
             contractor:
               type: object
               required:
@@ -5056,6 +5136,22 @@ components:
             description: Дата и время в формате ISO 8601
             examples:
               - '2026-03-17T12:00:00+03:00'
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+              Опционально, добавлено в v13.7.
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения документа в 1С
+              (ISO-8601 с TZ). Опционально, добавлено в v13.7.
           contractor:
             type: object
             required:
@@ -5293,6 +5389,22 @@ components:
             description: Дата и время в формате ISO 8601
             examples:
               - '2026-03-17T12:00:00+03:00'
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+              Опционально, добавлено в v13.7.
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения документа в 1С
+              (ISO-8601 с TZ). Опционально, добавлено в v13.7.
           contractor:
             type: object
             required:
@@ -5496,6 +5608,22 @@ components:
               - ready_to_ship
               - closed
               - deleted
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+              Опционально, добавлено в v13.7.
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения документа в 1С
+              (ISO-8601 с TZ). Опционально, добавлено в v13.7.
           items:
             type: array
             description: |
@@ -5830,6 +5958,22 @@ components:
             description: Дата в формате yyyy-MM-dd
             examples:
               - '2026-03-17'
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+              Опционально, добавлено в v13.7.
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения документа в 1С
+              (ISO-8601 с TZ). Опционально, добавлено в v13.7.
           status:
             type: string
             const: completed
@@ -5981,6 +6125,22 @@ components:
             description: Дата в формате yyyy-MM-dd
             examples:
               - '2026-03-17'
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+              Опционально, добавлено в v13.7.
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения документа в 1С
+              (ISO-8601 с TZ). Опционально, добавлено в v13.7.
           status:
             type: string
             const: completed
@@ -8154,6 +8314,22 @@ components:
           description: Дата и время в формате ISO 8601
           examples:
             - '2026-03-17T12:00:00+03:00'
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+            Опционально, добавлено в v13.7.
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время последнего изменения документа в 1С
+            (ISO-8601 с TZ). Опционально, добавлено в v13.7.
         contractor:
           type: object
           required:
@@ -8345,6 +8521,22 @@ components:
             - ready_to_ship
             - closed
             - deleted
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+            Опционально, добавлено в v13.7.
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время последнего изменения документа в 1С
+            (ISO-8601 с TZ). Опционально, добавлено в v13.7.
         items:
           type: array
           description: |
@@ -8624,6 +8816,22 @@ components:
           description: Дата в формате yyyy-MM-dd
           examples:
             - '2026-03-17'
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+            Опционально, добавлено в v13.7.
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время последнего изменения документа в 1С
+            (ISO-8601 с TZ). Опционально, добавлено в v13.7.
         status:
           type: string
           const: completed
@@ -8763,6 +8971,22 @@ components:
           description: Дата в формате yyyy-MM-dd
           examples:
             - '2026-03-17'
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ).
+            Опционально, добавлено в v13.7.
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время последнего изменения документа в 1С
+            (ISO-8601 с TZ). Опционально, добавлено в v13.7.
         status:
           type: string
           const: completed

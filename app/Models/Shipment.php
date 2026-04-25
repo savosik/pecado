@@ -24,6 +24,8 @@ class Shipment extends Model
         'status',
         'currency_code',
         'total_amount',
+        'erp_created_at',
+        'erp_updated_at',
     ];
 
     protected function casts(): array
@@ -31,6 +33,8 @@ class Shipment extends Model
         return [
             'date' => 'date',
             'total_amount' => 'decimal:2',
+            'erp_created_at' => \App\Casts\ErpDatetime::class,
+            'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
     }
 

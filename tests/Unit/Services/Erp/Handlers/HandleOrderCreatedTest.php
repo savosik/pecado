@@ -332,6 +332,70 @@ class HandleOrderCreatedTest extends TestCase
     }
 
     #[Test]
+    public function saves_erp_timestamps_from_payload_v13_7(): void
+    {
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-erp-ts-001',
+            'uuid' => 'order-erp-ts-001',
+            'status' => 'pending',
+            'type' => 'order',
+            'erp_created_at' => '2026-04-26T10:15:32+03:00',
+            'erp_updated_at' => '2026-04-26T10:15:32+03:00',
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-erp-ts-001')->first();
+        $this->assertNotNull($order);
+        $this->assertNotNull($order->erp_created_at);
+        $this->assertNotNull($order->erp_updated_at);
+        // Eloquent хранит datetime в формате `Y-m-d H:i:s` без TZ; для 1С → Сайт
+        // практически TZ +03:00 (Europe/Moscow), поэтому проверяем стенограмму.
+        $this->assertEquals('2026-04-26 10:15:32', $order->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 10:15:32', $order->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function normalizes_erp_timestamps_to_moscow_timezone_v13_7(): void
+    {
+        // 1С может прислать payload в любой TZ; на сайте всегда хранится Europe/Moscow,
+        // чтобы стенограмма даты совпадала с тем, что менеджер видит в 1С.
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-erp-tz-utc',
+            'uuid' => 'order-erp-ts-utc',
+            'status' => 'pending',
+            'type' => 'order',
+            'erp_created_at' => '2026-04-26T07:15:32Z',  // UTC = 10:15:32 MSK
+            'erp_updated_at' => '2026-04-26T11:42:09+05:00', // = 09:42:09 MSK
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-erp-ts-utc')->first();
+        $this->assertNotNull($order);
+        $this->assertEquals('2026-04-26 10:15:32', $order->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 09:42:09', $order->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function leaves_erp_timestamps_null_when_absent_from_payload_v13_7(): void
+    {
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-erp-ts-002',
+            'uuid' => 'order-erp-ts-002',
+            'status' => 'pending',
+            'type' => 'order',
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-erp-ts-002')->first();
+        $this->assertNotNull($order);
+        $this->assertNull($order->erp_created_at);
+        $this->assertNull($order->erp_updated_at);
+    }
+
+    #[Test]
     public function accepts_negative_discount_percent_as_markup_and_uses_final_price_for_total(): void
     {
         $product = Product::factory()->create(['external_id' => 'prod-negative-discount-001']);

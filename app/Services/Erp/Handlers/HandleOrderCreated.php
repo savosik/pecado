@@ -160,6 +160,16 @@ class HandleOrderCreated
                     'comment' => $payload['comment'] ?? null,
                 ];
 
+                // v13.7: аудит-метки 1С (опционально). При отсутствии в payload
+                // на upsert не перезаписываем — пишем только то, что прислали.
+                // TZ-нормализация — в App\Casts\ErpDatetime.
+                if (array_key_exists('erp_created_at', $payload)) {
+                    $fields['erp_created_at'] = $payload['erp_created_at'];
+                }
+                if (array_key_exists('erp_updated_at', $payload)) {
+                    $fields['erp_updated_at'] = $payload['erp_updated_at'];
+                }
+
                 if ($existingOrder) {
                     if ($existingOrder->trashed()) {
                         $existingOrder->restoreQuietly();

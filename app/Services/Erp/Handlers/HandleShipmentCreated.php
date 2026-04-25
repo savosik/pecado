@@ -48,6 +48,16 @@ class HandleShipmentCreated
             'currency_code' => $payload['currency_code'] ?? null,
         ];
 
+        // v13.7: аудит-метки 1С (опционально). Передача null — явная установка,
+        // отсутствие ключа — не трогаем существующее значение в БД.
+        // TZ-нормализация — в App\Casts\ErpDatetime.
+        if (array_key_exists('erp_created_at', $payload)) {
+            $fields['erp_created_at'] = $payload['erp_created_at'];
+        }
+        if (array_key_exists('erp_updated_at', $payload)) {
+            $fields['erp_updated_at'] = $payload['erp_updated_at'];
+        }
+
         $shipment = Shipment::withTrashed()->where('uuid', $uuid)->first();
 
         if ($shipment) {

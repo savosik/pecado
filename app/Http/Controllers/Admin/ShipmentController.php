@@ -93,6 +93,8 @@ class ShipmentController extends Controller
                 'items_count' => $shipment->items->count(),
                 'created_at' => $shipment->created_at->format('d.m.Y H:i'),
                 'deleted_at' => $shipment->deleted_at?->format('d.m.Y H:i'),
+                'erp_created_at' => $shipment->erp_created_at?->format('d.m.Y H:i'),
+                'erp_updated_at' => $shipment->erp_updated_at?->format('d.m.Y H:i'),
                 'user' => $shipment->user ? [
                     'id' => $shipment->user->id,
                     'name' => $shipment->user->name,
@@ -135,6 +137,8 @@ class ShipmentController extends Controller
                 'currency_code' => $shipment->currency_code,
                 'total_amount' => $shipment->total_amount,
                 'created_at' => $shipment->created_at->format('d.m.Y H:i'),
+                'erp_created_at' => $shipment->erp_created_at?->format('d.m.Y H:i'),
+                'erp_updated_at' => $shipment->erp_updated_at?->format('d.m.Y H:i'),
                 'user' => $shipment->user ? [
                     'id' => $shipment->user->id,
                     'name' => $shipment->user->name,

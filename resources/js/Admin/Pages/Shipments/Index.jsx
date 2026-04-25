@@ -186,6 +186,14 @@ export default function Index({ shipments, filters, statuses, trashedCount }) {
                 </Box>
             ),
         },
+        {
+            key: 'erp_created_at',
+            label: 'Создано в 1С',
+            sortable: false,
+            render: (_, row) => (
+                <Text fontSize="sm" color="gray.600">{row.erp_created_at || '—'}</Text>
+            ),
+        },
         isTrashed
             ? {
                 key: 'actions',

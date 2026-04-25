@@ -42,6 +42,16 @@
             "type": "string",
             "format": "date"
         },
+        "erp_created_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        },
+        "erp_updated_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        },
         "status": {
             "type": "string"
         },

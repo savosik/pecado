@@ -27,6 +27,16 @@
             "type": ["string", "null"],
             "description": "Адрес доставки (строка). Сайт создаёт или находит запись в delivery_addresses."
         },
+        "erp_created_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        },
+        "erp_updated_at": {
+            "type": ["string", "null"],
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
+        },
         "items": {
             "type": "array",
             "items": {

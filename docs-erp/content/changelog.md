@@ -6,6 +6,84 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.7.0] — 2026-04-26
+
+> Аудит-метки 1С на заказах и реализациях. Добавлены опциональные поля
+> `erp_created_at` / `erp_updated_at` (ISO-8601 datetime) в события `order.created`,
+> `order.updated`, `shipment.created`, `shipment.updated`. Сайт теперь хранит и
+> отображает в админке момент создания/изменения документа на стороне 1С отдельно
+> от локальных Laravel-таймстампов.
+
+### Добавлено
+
+- **`order.created` / `order.updated`** (1С → Сайт) — два опциональных поля
+  `erp_created_at`, `erp_updated_at` (`format: date-time`, nullable). Семантика —
+  момент создания/изменения документа в 1С. Не required, обратная совместимость
+  с v13.6 сохранена.
+- **`shipment.created` / `shipment.updated`** (1С → Сайт) — те же два поля.
+  **Не путать** с бизнес-полем `date` (день отгрузки): `date` — календарная дата
+  проведения, аудит-метки — момент действия в 1С с TZ.
+- **БД:** в `orders` и `shipments` добавлены колонки `erp_created_at`,
+  `erp_updated_at` (`timestamp NULL`, без индексов). Миграция
+  `2026_04_26_*_add_erp_timestamps_to_orders_and_shipments`.
+- **Модели** `Order`, `Shipment` — оба поля в `$fillable`, cast `datetime`.
+- **Часовой пояс приложения** — `config/app.php:timezone` переведён с `UTC`
+  на `Europe/Moscow` (с возможностью override через `APP_TIMEZONE`). Все
+  таймстампы в БД и в админке отображаются в MSK без явных конверсий.
+- **Cast `App\Casts\ErpDatetime`** — единая точка нормализации аудит-меток.
+  При записи приводит любой входящий ISO-8601 (`+03:00`, `Z`, `+05:00` и т.п.)
+  к `app.timezone` и сохраняет в БД как `Y-m-d H:i:s` без TZ-маркера. Это
+  гарантирует, что стенограмма в БД и в админке совпадает с тем, что менеджер
+  видит в 1С, независимо от суффикса в payload.
+- **Обработчики:**
+    - `HandleOrderCreated` / `HandleShipmentCreated` — пишут обе метки в БД
+      при наличии в payload, иначе оставляют `null`. Нормализация TZ — в cast.
+    - `HandleOrderUpdated` / `HandleShipmentUpdated` — обновляют только те
+      поля, которые присутствуют в payload (через `array_key_exists`); отсутствие
+      ключа = существующее значение в БД не перезаписывается.
+- **Админка:**
+    - Карточки `/admin/orders/{id}` и `/admin/shipments/{id}` — строки
+      «Создано в 1С» / «Изменено в 1С» (формат `dd.mm.yyyy HH:MM`). Если
+      поле пустое — выводится «—».
+    - Списки `/admin/orders`, `/admin/shipments` — отдельная колонка
+      «Создано в 1С».
+- **Документация:**
+    - Новая страница [`guides/erp-timestamps-for-1c.md`](guides/erp-timestamps-for-1c.md) —
+      инструкция для 1С-разработчиков (какие реквизиты выгружать, формат, чек-лист).
+    - `rules/orders.md`, `rules/shipments.md` — короткие блоки с описанием
+      новых полей и предупреждением о различии с бизнес-`date` для отгрузок.
+- **Регрессионные тесты** в `HandleOrderCreatedTest`,
+  `HandleOrderUpdatedTest`, `HandleShipmentCreatedTest`,
+  `HandleShipmentUpdatedTest` — payload c метками сохраняется в БД; payload
+  без меток оставляет колонки `null`; апдейт без `erp_updated_at` не теряет
+  ранее сохранённое значение.
+
+### Действия для интеграторов 1С
+
+- В правила конвертации `order.created`, `order.updated`, `shipment.created`,
+  `shipment.updated` добавить выгрузку `erp_created_at` / `erp_updated_at` в
+  ISO-8601 с TZ Europe/Moscow. Источник — `Документ.Дата` /
+  `ХранилищеИсторииДокумента` (или регистр версионирования объектов).
+- Для `*.updated` достаточно передавать только `erp_updated_at`.
+- Поля **не обязательны** — старые правила без них продолжат работать,
+  колонки на сайте останутся `NULL`. Подробный гайд: [«Аудит-метки 1С»](guides/erp-timestamps-for-1c.md).
+
+### Совместимость
+
+- На стороне 1С менять схему сообщений или routing keys **не требуется**.
+- Сайт принимает payload без новых полей без ошибок (поля nullable,
+  не required).
+- В исходящих схемах (Сайт → 1С) поля **не добавлены** — это аудит-метки
+  1С, сайт ими не владеет.
+
+### Документация
+
+- `rules/orders.md`, `rules/shipments.md` — упомянуты новые поля.
+- `guides/erp-timestamps-for-1c.md` — отдельный гайд для интеграторов 1С
+  (новый раздел навигации «Гайды для 1С»).
+
+---
+
 ## [13.6.0] — 2026-04-25
 
 > **BREAKING.** Контрагенты: устранение дублей. UUID контрагента теперь обязателен

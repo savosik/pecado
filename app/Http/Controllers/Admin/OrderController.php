@@ -111,6 +111,8 @@ class OrderController extends AdminController
                 'currency_code' => $order->currency_code ?? '₽',
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
                 'deleted_at' => $order->deleted_at?->format('d.m.Y H:i'),
+                'erp_created_at' => $order->erp_created_at?->format('d.m.Y H:i'),
+                'erp_updated_at' => $order->erp_updated_at?->format('d.m.Y H:i'),
                 'user' => $order->user ? [
                     'id' => $order->user->id,
                     'name' => $order->user->name,
@@ -260,6 +262,8 @@ class OrderController extends AdminController
                 'comment' => $order->comment,
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
+                'erp_created_at' => $order->erp_created_at?->format('d.m.Y H:i'),
+                'erp_updated_at' => $order->erp_updated_at?->format('d.m.Y H:i'),
                 'user' => $order->user ? [
                     'id' => $order->user->id,
                     'name' => $order->user->name,

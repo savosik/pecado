@@ -38,6 +38,8 @@ class Order extends Model
         'currency_code',
         'parent_id',
         'type',
+        'erp_created_at',
+        'erp_updated_at',
     ];
 
     /**
@@ -53,6 +55,8 @@ class Order extends Model
             'exchange_rate' => 'decimal:10',
             'rate_coefficient' => 'decimal:4',
             'type' => \App\Enums\OrderType::class,
+            'erp_created_at' => \App\Casts\ErpDatetime::class,
+            'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
     }
 

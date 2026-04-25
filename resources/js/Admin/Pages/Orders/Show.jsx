@@ -116,6 +116,14 @@ const OrderShow = () => {
                                 <Text color="fg.muted">Дата создания:</Text>
                                 <Text>{order.created_at}</Text>
                             </HStack>
+                            <HStack justify="space-between">
+                                <Text color="fg.muted">Создано в 1С:</Text>
+                                <Text>{order.erp_created_at || '—'}</Text>
+                            </HStack>
+                            <HStack justify="space-between">
+                                <Text color="fg.muted">Изменено в 1С:</Text>
+                                <Text>{order.erp_updated_at || '—'}</Text>
+                            </HStack>
                             {order.comment && (
                                 <Box>
                                     <Text color="fg.muted" mb={1}>Комментарий:</Text>

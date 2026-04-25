@@ -57,6 +57,16 @@ class HandleShipmentUpdated
             $shipment->erp_number = $payload['number'];
         }
 
+        // v13.7: аудит-метки 1С. array_key_exists, чтобы передача null
+        // тоже считалась явной операцией; отсутствие ключа — БД не трогаем.
+        // TZ-нормализация — в App\Casts\ErpDatetime.
+        if (array_key_exists('erp_created_at', $payload)) {
+            $shipment->erp_created_at = $payload['erp_created_at'];
+        }
+        if (array_key_exists('erp_updated_at', $payload)) {
+            $shipment->erp_updated_at = $payload['erp_updated_at'];
+        }
+
         // Обновление tax_id + пере-резолв Company (v13.2)
         $contractorUuid = $payload['contractor_uuid'] ?? null;
         $partnerUuid = $payload['partner_uuid'] ?? null;
