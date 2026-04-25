@@ -81,28 +81,43 @@
 
 **Зависимости:** 1.1 (категории)
 
-🔵 **1С отправляет** `product.created` с `category_uuid`, `brand`, `attributes`.
+🔵 **1С отправляет** `product.created` с `category_uuid`, `brand`, `attributes` (полный набор), `description_html`, `is_marked`, габаритами и классификацией.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/product.created.json)
 
 - [ ] Товар создан с `external_id`
 - [ ] `category_id` указывает на правильную категорию
 - [ ] Бренд создан/привязан
-- [ ] Атрибуты созданы
+- [ ] Атрибуты созданы из массива `attributes[]` (v13.0: 1С обязана передавать **полный** актуальный набор)
 - [ ] `hidden = false` — товар видим
+- [ ] `description_html` сохранён в `products.description_html`; на карточке товара рендерится HTML-описание (v13.1.0)
+- [ ] `is_marked` сохранён в `products.is_marked`; для отсутствующего поля — `false` по умолчанию (v12.9)
+- [ ] Габариты и логистика (v13.3): `weight_gross`, `weight_net`, `width`, `height`, `depth`, `hs_code`, `abc_xyz`, `turnover` сохранены в одноимённые колонки `products`; отсутствие любого поля → `null`
+- [ ] В админке `/admin/products/{id}/edit` появилась вкладка «Габариты и логистика» с тремя секциями (вес, габариты, классификация)
 
 ---
 
-## 1.4 — Товар со скрытием (`hidden = true`)
+## 1.4 — Товар со скрытием (`hidden = true`) и регрессия HiddenScope
 
-**Зависимости:** 1.1
+**Зависимости:** 1.3
 
-🔵 **1С отправляет** `product.created` с `hidden = true`.
+🔵 **Шаг A.** 1С отправляет `product.created` с `hidden: true`.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/product.created.json)
 
 - [ ] Товар создан с `hidden = true`
 - [ ] Товар **НЕ** отображается в каталоге и поиске
+- [ ] В админке (которая видит скрытые) товар присутствует
+
+🔵 **Шаг B (v13.1.1).** 1С отправляет `product.updated` с `hidden: false` для этого же товара.
+
+- [ ] Запись в БД обновлена: `hidden = false`
+- [ ] Товар вернулся в каталог
+- [ ] В `erp_bus_messages` сообщение со статусом `success`, **без** warning «товар не найден»
+
+🔵 **Шаг C.** 1С отправляет для скрытого товара `price.updated` и `stock.updated`.
+
+- [ ] Цены и остатки обновляются даже у скрытых товаров (v13.1.1: HiddenScope обходится во всех ERP-handler-ах)
 
 ---
 
@@ -110,14 +125,57 @@
 
 **Зависимости:** 1.3
 
-🔵 **1С отправляет** `product.updated` с новым `name` и новым атрибутом.
+### A) Обновление имени и `is_marked`
+
+🔵 **1С отправляет** `product.updated` с новым `name` и `is_marked: true`, **без** поля `attributes`.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/product.updated.json)
 
 - [ ] `name` обновлён
-- [ ] Старые атрибуты **сохранены** (мерж по `property_uuid`)
-- [ ] Новый атрибут добавлен
+- [ ] `is_marked = true` в БД (v12.9)
+- [ ] Состав атрибутов **не изменился** (поле не передано)
 - [ ] `sku`, `code`, `category_uuid` НЕ изменились
+- [ ] `description_html` НЕ изменился (поле не передано)
+
+### B) Full-replace атрибутов (v13.0, BREAKING)
+
+Исходное состояние товара: атрибуты `А`, `Б`, `В`.
+
+🔵 **1С отправляет** `product.updated` с `attributes: [А]` (только А).
+
+- [ ] У товара остался ровно один атрибут — `А`
+- [ ] `Б` и `В` **удалены** из `product_attribute_values`
+- [ ] Если в payload передать `attributes: []` — у товара удаляются **все** связи с атрибутами
+
+### C) Обновление `description_html` (v13.1.0)
+
+🔵 **1С отправляет** `product.updated` с `description_html: "<p>новое</p>"`.
+
+- [ ] `products.description_html` перезаписан
+- [ ] На карточке отображается новый HTML
+
+🔵 **1С отправляет** `product.updated` с `description_html: null`.
+
+- [ ] `products.description_html` очищен
+
+🔵 **1С отправляет** `product.updated` **без** поля `description_html`.
+
+- [ ] `products.description_html` НЕ изменился (частичное обновление)
+
+### D) Обновление габаритов и классификации (v13.3)
+
+🔵 **1С отправляет** `product.updated` с `weight_gross: 1.250`, `width: 30`, `hs_code: "8517620000"` (без остальных полей).
+
+- [ ] `products.weight_gross`, `products.width`, `products.hs_code` обновлены
+- [ ] `weight_net`, `height`, `depth`, `abc_xyz`, `turnover` НЕ изменились (частичное обновление)
+
+🔵 **1С отправляет** `product.updated` с `abc_xyz: null`.
+
+- [ ] `products.abc_xyz` очищен (передача `null` = очистка)
+
+🔵 **1С отправляет** `product.updated` с `weight_gross: -5`.
+
+- [ ] Значение отброшено и сохранено как `null` (отрицательные числа не принимаются)
 
 ---
 
@@ -246,14 +304,48 @@
 
 **Зависимости:** 1.9 (партнёр)
 
-🔵 **1С отправляет** `contractor.created` с `bank_accounts`.
+🔵 **1С отправляет** `contractor.created` с `uuid`, `tax_id`, `bank_accounts`.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/contractor.created.json)
 
 - [ ] Контрагент создан, привязан к пользователю
+- [ ] `Company.erp_id` = `uuid` из payload (v13.2: UUID — основной идентификатор)
 - [ ] `tax_id`, `legal_name` заполнены
 - [ ] 2 банковских счёта, первый `is_primary = true`
 - [ ] Контрагент в ЛК → «Компании»
+
+---
+
+## 1.12а — Привязка `erp_id` через `contractor.updated` (v13.2)
+
+**Зависимости:** 1.9 (партнёр), у пользователя на сайте уже есть Company с `tax_id`, но **без** `erp_id` (например, создана до v13.2)
+
+🔵 **1С отправляет** `contractor.updated` с `uuid`, `partner_uuid`, `tax_id`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/contractor.updated.json)
+
+- [ ] Сайт нашёл Company по `tax_id + user_id` (резолв через `partner_uuid`)
+- [ ] `Company.erp_id` заполнен `uuid` из payload (ленивый backfill)
+- [ ] Повторный `contractor.updated` с тем же `uuid` идемпотентен — обновляет по `erp_id`
+
+🔵 **1С отправляет** `contractor.updated` с тем же `uuid`, но новым `tax_id` (менеджер исправил ИНН).
+
+- [ ] `Company.tax_id` обновлён, `erp_id` остался прежним
+- [ ] Все последующие `shipment.*` и `balance.updated` находят ту же Company по UUID
+
+---
+
+## 1.12б — Удаление контрагента (`contractor.deleted`, v13.2)
+
+**Зависимости:** 1.12 или 1.12а
+
+🔵 **1С отправляет** `contractor.deleted` с `uuid` (или `tax_id` + `partner_uuid`).
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/contractor.deleted.json)
+
+- [ ] Company сделан soft-delete (`deleted_at` заполнен)
+- [ ] Контрагент пропал из ЛК → «Компании»
+- [ ] Существующие реализации/балансы остались, но контрагент в них помечен как удалённый
 
 ---
 
@@ -336,13 +428,40 @@
 
 **Зависимости:** 1.12 (контрагент), 1.13 (заказ)
 
-🔵 **1С отправляет** `shipment.created` с `tax_id` и `items`.
+🔵 **1С отправляет** `shipment.created` с **обязательным** `number`, `partner_uuid`, `contractor_uuid`, `tax_id` и `items`.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/shipment.created.json)
 
-- [ ] Реализация создана, привязана к контрагенту по `tax_id`
+- [ ] Реализация создана с `erp_number` = `number` из payload (v12.12: `number` обязателен, непустая строка)
+- [ ] Привязка к контрагенту: приоритет `contractor_uuid` (Company.erp_id), fallback `tax_id + user_id` (v13.2)
+- [ ] `user_id` определён по `partner_uuid` (User.erp_id)
 - [ ] Позиция связана с заказом через `order_uuid`
-- [ ] Реализация в ЛК
+- [ ] В ЛК отображается `erp_number` (а не технический `id`), v12.12
+
+🔵 **Негативный кейс.** 1С отправляет `shipment.created` **без** `number` (или `number: null` / пустая строка).
+
+- [ ] Сообщение **отклонено** валидатором (v12.12)
+- [ ] Запись в `erp_bus_messages` со статусом `failed` и сообщением валидатора
+- [ ] Реализация **НЕ** создана
+
+🔵 **Регрессия security (v13.2).** 1С отправляет `shipment.created` без `partner_uuid` и без `contractor_uuid`, только с `tax_id`, который случайно совпадает с Company другого пользователя.
+
+- [ ] Сайт **НЕ** привязывает Shipment к чужой Company по совпадению `tax_id` (поиск без `user_id` запрещён)
+- [ ] Shipment сохраняется с `company_id = null` (либо вообще не сохраняется — зависит от обязательности FK; см. бизнес-правила)
+
+---
+
+## 1.16а — Обновление реализации (`shipment.updated`)
+
+**Зависимости:** 1.16
+
+🔵 **1С отправляет** `shipment.updated` для существующей реализации с обновлёнными `items` и обязательным `number`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/shipment.updated.json) (v12.10: отдельная схема)
+
+- [ ] Реализация обновлена, `erp_number` синхронизирован
+- [ ] `partner_uuid` + `contractor_uuid` корректно резолвят Company (v13.2)
+- [ ] Сообщение **без** `number` отклоняется (v12.12)
 
 ---
 
@@ -350,11 +469,13 @@
 
 **Зависимости:** 1.9 (партнёр), 1.12 (контрагент), 1.16 (реализация)
 
-🔵 **1С отправляет** `balance.updated` с `overdue_details`.
+🔵 **1С отправляет** `balance.updated` с `partner_uuid`, `contractors[].uuid`, `overdue_details`.
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/balance.updated.json)
 
 - [ ] Баланс обновлён
+- [ ] `ContractorBalance.contractor_uuid` заполнен значением `contractors[].uuid` (v13.2: ленивый backfill)
+- [ ] Поиск Company идёт по UUID с приоритетом, fallback на `tax_id` (с фильтром `user_id`)
 - [ ] Просрочка детализирована по реализации
 - [ ] Баланс в ЛК в разрезе контрагентов
 
@@ -388,3 +509,57 @@
 
 - [ ] Цена **обновлена** (UPSERT)
 - [ ] Другие цены партнёра **НЕ удалены**
+
+---
+
+## 1.20 — Промо-флаги товаров (`promotion.created`, v12.11)
+
+**Зависимости:** 1.3 (товары)
+
+🔵 **1С отправляет** в `erp_in.promotions` сообщение `promotion.created` с `uuid`, `type: "new"` и массивом `items[]` из 3 товаров.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/promotion.created.json)
+
+- [ ] В таблице `erp_promotions` появилась запись с `uuid` и `type = new`
+- [ ] В pivot `erp_promotion_product` — три привязки
+- [ ] У всех трёх товаров `products.is_new = true` (агрегат через `EXISTS()`)
+- [ ] В админке/каталоге у товаров отображается бейдж «Новинка»
+
+🔵 **1С отправляет** `promotion.updated` с тем же `uuid` и **другим** составом (1 товар вместо 3).
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/promotion.updated.json)
+
+- [ ] Состав в pivot обновлён (только один товар)
+- [ ] У выбывших товаров `is_new = false`, у оставшегося — `is_new = true`
+
+🔵 **1С отправляет** `promotion.created` с `type: "bestseller"` и `type: "liquidation"` для других UUID и наборов товаров.
+
+- [ ] У соответствующих товаров включились `is_bestseller` и `is_liquidation`
+- [ ] Один товар может быть в нескольких промо-группах одного типа одновременно
+
+🔵 **1С отправляет** `promotion.deleted` с `uuid`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/promotion.deleted.json)
+
+- [ ] Запись `erp_promotions` удалена, pivot очищен
+- [ ] Флаги `is_new` / `is_bestseller` / `is_liquidation` пересчитаны (если товар не остался в другой группе того же типа — флаг сбрасывается в `false`)
+
+---
+
+## 1.21 — Внешние остатки склада «Тюмень Основной» (v12.15)
+
+**Зависимости:** 1.3 (товары), 0.1.7 (очередь `external.remains_for_website`), 0.5 (UUID склада в config)
+
+🔵 **ESB Москва публикует** в `external.remains_for_website` сообщение `product.quantity.updated` (envelope ESB) с `payload.uid` товара и массивом `remains[]`, где есть склад «Тюмень Основной» и несколько других складов.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/external.product_quantity_updated.json)
+
+- [ ] В `product_warehouse.quantity` для склада «Тюмень Основной» записано `max(0, quantity - reserve)`
+- [ ] Остальные склады **проигнорированы** (только Тюмень Основной)
+- [ ] `organization_remains[]` проигнорировано
+- [ ] В `erp_processed_messages` запись с префиксом `external-remains:`
+- [ ] Идемпотентность: повторное сообщение с тем же `uid` не дублирует запись
+
+🔵 **ESB присылает** сообщение для товара с неизвестным `payload.uid` и `payload.code`.
+
+- [ ] Сообщение тихо пропущено (warning в логах), очередь не блокируется

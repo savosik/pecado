@@ -1012,6 +1012,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#05-esb-v1215" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.5 Внешние остатки (ESB, v12.15)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1173,6 +1184,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../open-questions/" class="md-nav__link">
         
@@ -1216,10 +1316,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
             
   
   
@@ -1237,8 +1337,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1409,6 +1509,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#05-esb-v1215" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0.5 Внешние остатки (ESB, v12.15)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1464,13 +1575,13 @@
 <td>0.1.4</td>
 <td>Входящие очереди</td>
 <td>UI → Queues</td>
-<td><code>erp_in.*</code> (8 очередей)</td>
+<td><code>erp_in.*</code> (включая <code>erp_in.promotions</code>, v12.11)</td>
 </tr>
 <tr>
 <td>0.1.5</td>
 <td>Исходящие очереди</td>
 <td>UI → Queues</td>
-<td><code>erp_out.*</code> (3 очереди)</td>
+<td><code>erp_out.partners</code>, <code>erp_out.orders</code>, <code>erp_out.returns</code>, <code>erp_out.contractors</code> (v13.2)</td>
 </tr>
 <tr>
 <td>0.1.6</td>
@@ -1480,9 +1591,27 @@
 </tr>
 <tr>
 <td>0.1.7</td>
+<td>Внешние остатки (ESB)</td>
+<td>UI → Queues</td>
+<td><code>external.remains_for_website</code>, <code>external.remains_for_erp</code> + exchange <code>external.remains</code> (fanout, v12.14)</td>
+</tr>
+<tr>
+<td>0.1.8</td>
+<td>Shovel <code>moscow-remains</code></td>
+<td>UI → Admin → Shovel Status</td>
+<td>Состояние <code>running</code>, тянет из ESB (v12.14)</td>
+</tr>
+<tr>
+<td>0.1.9</td>
+<td>Пользователи и права</td>
+<td><code>rabbitmqctl list_users</code> / <code>list_user_permissions erp_1c</code></td>
+<td><code>pecado_admin</code>, <code>pecado_app</code>, <code>erp_1c</code>; у <code>erp_1c</code> есть configure/write/read на <code>external.remains_for_erp</code> (v12.14, fix 2026-04-25)</td>
+</tr>
+<tr>
+<td>0.1.10</td>
 <td>Пересоздание</td>
 <td><code>docker exec pecado-app php artisan rabbitmq:setup</code></td>
-<td>Топология создана</td>
+<td>Топология (включая promotions, contractors, external.remains) создана идемпотентно</td>
 </tr>
 </tbody>
 </table>
@@ -1500,13 +1629,19 @@
 <tr>
 <td>0.2.1</td>
 <td>Supervisor</td>
-<td><code>docker exec pecado-app supervisorctl status</code></td>
-<td>Все <code>erp-*-consumer</code> в <code>RUNNING</code></td>
+<td><code>docker exec pecado-worker supervisorctl status</code></td>
+<td>Все <code>erp-*-consumer</code> + <code>erp-promotions-consumer</code> + <code>external-remains-consumer</code> в <code>RUNNING</code></td>
 </tr>
 <tr>
 <td>0.2.2</td>
+<td>Concurrency на каталоге/ценах</td>
+<td><code>supervisorctl status erp-catalog-consumer</code></td>
+<td><code>numprocs=6</code> для <code>catalog</code> и <code>prices</code> (v13.0)</td>
+</tr>
+<tr>
+<td>0.2.3</td>
 <td>Перезапуск</td>
-<td><code>docker exec pecado-app supervisorctl restart all</code></td>
+<td><code>docker exec pecado-worker supervisorctl restart all</code></td>
 <td>Все <code>RUNNING</code></td>
 </tr>
 </tbody>
@@ -1605,6 +1740,37 @@
 <p class="admonition-title">Запишите UUID складов</p>
 <p>Они понадобятся 1С-нику для формирования payload.</p>
 </div>
+<h2 id="05-esb-v1215">0.5 Внешние остатки (ESB, v12.15)<a class="headerlink" href="#05-esb-v1215" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Что проверить</th>
+<th>Где</th>
+<th>Ожидаемый результат</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0.5.1</td>
+<td>UUID склада «Тюмень Основной»</td>
+<td><code>config/erp.php</code> → <code>external_remains.tyumen_warehouse_uuid</code> или env <code>EXTERNAL_REMAINS_TYUMEN_WAREHOUSE_UUID</code></td>
+<td>Совпадает с UUID этого склада в 1С Pecado (по умолчанию <code>f8083799-0838-11e0-a1ea-505054503030</code>)</td>
+</tr>
+<tr>
+<td>0.5.2</td>
+<td>Consumer внешних остатков</td>
+<td><code>supervisorctl status external-remains-consumer</code></td>
+<td><code>RUNNING</code></td>
+</tr>
+<tr>
+<td>0.5.3</td>
+<td>Логирование шины</td>
+<td>env <code>ERP_BUS_LOGGING_ENABLED=true</code> (опционально)</td>
+<td>Все входящие/исходящие пишутся в <code>erp_bus_messages</code> (v12.6)</td>
+</tr>
+</tbody>
+</table>
 
 
 

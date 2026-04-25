@@ -1151,6 +1151,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../open-questions/" class="md-nav__link">
         
@@ -1194,10 +1283,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
             
   
   
@@ -1215,8 +1304,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1393,12 +1482,19 @@
 <li>Баланс передаётся в разрезе контрагентов (<code>contractors[]</code>)</li>
 <li>Просроченная задолженность детализируется по реализациям (<code>overdue_details[]</code>)</li>
 <li>Каждая запись в <code>overdue_details</code> ссылается на реализацию через <code>shipment_uuid</code></li>
+<li><strong>(v13.2)</strong> Идентификация контрагента:<ul>
+<li>Приоритет — по <code>contractors[].uuid</code> (опциональное, <code>Company.erp_id</code> на сайте). Если передан — Company матчится по UUID, <code>ContractorBalance.contractor_uuid</code> заполняется ленивым backfill</li>
+<li>Fallback — по <code>tax_id</code> (ИНН) + <code>partner_uuid</code> для резолва <code>user_id</code></li>
+<li>Ключ <code>ContractorBalance</code> в БД остаётся <code>[user_id, tax_id]</code> (unique); <code>contractor_uuid</code> хранится как вспомогательный идентификатор для ускорения матчинга в других сообщениях</li>
+</ul>
+</li>
 </ul>
 <h2 id="_2">Критерии приёмки<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] Сайт принимает <code>balance.updated</code> и обновляет баланс партнёра</li>
 <li>[ ] Баланс отображается в ЛК в разрезе контрагентов</li>
 <li>[ ] Просроченная задолженность детализируется по реализациям</li>
+<li>[ ] <strong>(v13.2)</strong> Company находится сначала по <code>contractors[].uuid</code>, затем fallback по <code>tax_id + user_id</code>. Если в payload пришёл UUID, а ранее <code>ContractorBalance.contractor_uuid</code> был пуст — поле проставляется ленивым backfill-ом</li>
 </ul>
 
 

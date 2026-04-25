@@ -1085,6 +1085,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#34-uuid-workflow-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 — UUID-workflow контрагента (v13.2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#35-v1213-breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 — Возврат через реализацию (v12.13 BREAKING)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1162,6 +1184,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../open-questions/" class="md-nav__link">
         
@@ -1205,10 +1316,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
             
   
   
@@ -1226,8 +1337,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1387,6 +1498,28 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#34-uuid-workflow-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 — UUID-workflow контрагента (v13.2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#35-v1213-breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 — Возврат через реализацию (v12.13 BREAKING)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1539,8 +1672,8 @@
 <tr>
 <td>1</td>
 <td>🔵 1С</td>
-<td><code>shipment.created</code></td>
-<td>Реализация появилась</td>
+<td><code>shipment.created</code> (с обязательным <code>number</code>, v12.12)</td>
+<td>Реализация появилась, <code>erp_number</code> заполнен</td>
 </tr>
 <tr>
 <td>2</td>
@@ -1562,6 +1695,112 @@
 </tr>
 </tbody>
 </table>
+<hr />
+<h2 id="34-uuid-workflow-v132">3.4 — UUID-workflow контрагента (v13.2)<a class="headerlink" href="#34-uuid-workflow-v132" title="Permanent link">&para;</a></h2>
+<p>Полный сценарий синхронизации Company между сайтом и 1С через UUID + переживание смены ИНН менеджером.</p>
+<table>
+<thead>
+<tr>
+<th>Шаг</th>
+<th>Кто</th>
+<th>Действие</th>
+<th>Проверка</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>🟢 Сайт</td>
+<td>Пользователь в ЛК создаёт Company с <code>tax_id = "7710140679"</code></td>
+<td>В <code>erp_out.contractors</code> — <code>contractor.created</code> с <code>partner_uuid</code> и <code>tax_id</code> (v13.2)</td>
+</tr>
+<tr>
+<td>2</td>
+<td>🔵 1С</td>
+<td>Принимает <code>contractor.created</code>, создаёт контрагента, отправляет <code>contractor.updated</code> в <code>erp_in.partners</code> с назначенным UUID</td>
+<td>На сайте <code>Company.erp_id</code> заполнен (ленивый backfill, см. 1.12а)</td>
+</tr>
+<tr>
+<td>3</td>
+<td>🔵 1С</td>
+<td>Менеджер правит ИНН на <code>"7710140600"</code> → <code>contractor.updated</code> с тем же <code>uuid</code> и новым <code>tax_id</code></td>
+<td><code>Company.tax_id</code> обновлён по UUID, <code>erp_id</code> остался прежним</td>
+</tr>
+<tr>
+<td>4</td>
+<td>🔵 1С</td>
+<td><code>shipment.created</code> с <code>contractor_uuid</code> + <code>partner_uuid</code> + новым <code>tax_id</code> (v12.12: <code>number</code> обязателен)</td>
+<td>Shipment привязан к правильной Company по UUID, в ЛК отображается с <code>erp_number</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>🔵 1С</td>
+<td><code>balance.updated</code> с <code>contractors[].uuid</code> + новым <code>tax_id</code></td>
+<td><code>ContractorBalance.contractor_uuid</code> заполнен, баланс обновлён</td>
+</tr>
+<tr>
+<td>6</td>
+<td>🔵 1С</td>
+<td><code>contractor.deleted</code> с <code>uuid</code></td>
+<td>Company → soft-delete, исчезает из ЛК</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Итоговая проверка:</strong></p>
+<ul>
+<li>[ ] Смена ИНН в 1С не ломает связь с Company на сайте</li>
+<li>[ ] Все последующие сообщения находят Company по UUID независимо от ИНН</li>
+<li>[ ] Регрессия security: <code>shipment.created</code> без <code>partner_uuid</code> и без <code>contractor_uuid</code> НЕ привязывается к чужой Company по совпадению <code>tax_id</code></li>
+</ul>
+<hr />
+<h2 id="35-v1213-breaking">3.5 — Возврат через реализацию (v12.13 BREAKING)<a class="headerlink" href="#35-v1213-breaking" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Шаг</th>
+<th>Кто</th>
+<th>Действие</th>
+<th>Проверка</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>🟢 Сайт</td>
+<td>Пользователь оформляет заказ</td>
+<td><code>order.created</code> → <code>erp_out.orders</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>🔵 1С</td>
+<td><code>order.updated</code> <code>confirmed</code> → <code>ready_to_ship</code> → <code>closed</code></td>
+<td>Статусы прошли</td>
+</tr>
+<tr>
+<td>3</td>
+<td>🔵 1С</td>
+<td><code>shipment.created</code> с <code>number</code> (v12.12) и <code>items[].price</code></td>
+<td>Реализация в ЛК с ERP-номером</td>
+</tr>
+<tr>
+<td>4</td>
+<td>🟢 Сайт</td>
+<td>Пользователь идёт в ЛК → Реализация → Возврат и оформляет возврат</td>
+<td><code>return.created</code> → <code>erp_out.returns</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>🔵 1С</td>
+<td>Принимает <code>return.created</code></td>
+<td>В payload <strong>нет</strong> корневого <code>order_uuid</code>; есть <code>items[].shipment_uuid</code>, <code>items[].shipment_number</code>, <code>items[].price</code>, <code>items[].currency_code</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Итоговая проверка:</strong></p>
+<ul>
+<li>[ ] Возврат в 1С привязан к конкретной реализации, а не к заказу</li>
+<li>[ ] Сумма возврата = сумма по <code>price × quantity</code> из payload и совпадает с реализацией</li>
+</ul>
 
 
 

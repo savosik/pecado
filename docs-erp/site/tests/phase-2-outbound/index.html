@@ -1058,10 +1058,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#24-returncreated" class="md-nav__link">
+  <a href="#24-returncreated-v1213-breaking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.4 — Создание возврата (return.created)
+        2.4 — Создание возврата (return.created, v12.13 BREAKING)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#25-contractorcreated-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 — Публикация контрагента (contractor.created, v13.2)
       
     </span>
   </a>
@@ -1173,6 +1184,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../open-questions/" class="md-nav__link">
         
@@ -1216,10 +1316,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
             
   
   
@@ -1237,8 +1337,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1399,10 +1499,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#24-returncreated" class="md-nav__link">
+  <a href="#24-returncreated-v1213-breaking" class="md-nav__link">
     <span class="md-ellipsis">
       
-        2.4 — Создание возврата (return.created)
+        2.4 — Создание возврата (return.created, v12.13 BREAKING)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#25-contractorcreated-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 — Публикация контрагента (contractor.created, v13.2)
       
     </span>
   </a>
@@ -1464,12 +1575,13 @@
 <li>[ ] Если передан <code>status</code> — он из enum: <code>pending</code>, <code>confirmed</code>, <code>ready_to_ship</code>, <code>closed</code>, <code>deleted</code></li>
 <li>[ ] <code>type</code> передаётся строкой; для обычного заказа ожидается <code>order</code></li>
 <li>[ ] <code>partner_uuid</code> может быть строкой или <code>null</code></li>
-<li>[ ] <code>contractor</code> может быть объектом или <code>null</code>; если объект передан, в нём есть <code>tax_id</code>, <code>legal_name</code>, <code>bank_accounts</code></li>
+<li>[ ] <code>contractor</code> может быть объектом или <code>null</code>; если объект передан, в нём есть <code>tax_id</code>, <code>legal_name</code>, <code>bank_accounts</code> и опциональный <code>uuid</code> (UUID контрагента в 1С, v13.2)</li>
 <li>[ ] <code>items[]</code> содержит <code>quantity</code>, <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code>; <code>product_uuid</code> может быть <code>null</code></li>
 <li>[ ] <code>discount_percent &gt; 0</code> трактуется как скидка, <code>discount_percent &lt; 0</code> — как наценка; при расхождении источником истины считается <code>final_price</code></li>
 <li>[ ] <code>currency_code</code>, <code>exchange_rate</code>, <code>rate_coefficient</code>, <code>delivery_address</code>, <code>comment</code> могут быть заполнены либо <code>null</code></li>
-<li>[ ] 1С сопоставляет контрагента по ИНН</li>
+<li>[ ] 1С сопоставляет контрагента: приоритет <code>contractor.uuid</code>, fallback <code>tax_id</code> (v13.2)</li>
 <li>[ ] Если склад не найден — <code>ОсновнойСклад</code></li>
+<li>[ ] <strong>Эхо-фикс (2026-04-23):</strong> при оформлении нового заказа в очереди публикуется только <code>order.created</code>; <code>order.updated</code> НЕ предшествует <code>order.created</code></li>
 </ul>
 <hr />
 <h2 id="23-ordercreated-type-preorder">2.3 — Предзаказ (<code>order.created</code>, <code>type: "preorder"</code>)<a class="headerlink" href="#23-ordercreated-type-preorder" title="Permanent link">&para;</a></h2>
@@ -1483,21 +1595,51 @@
 <li>[ ] <code>warehouse_uuids</code> содержит UUID склада предзаказа</li>
 </ul>
 <hr />
-<h2 id="24-returncreated">2.4 — Создание возврата (<code>return.created</code>)<a class="headerlink" href="#24-returncreated" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Отложено</p>
-<p>US-09 отложен на следующий скоп.</p>
-</div>
-<p><strong>Зависимости:</strong> 1.13 или 2.2 (заказ в статусе <code>closed</code>)</p>
-<p>🟢 Создать возврат через ЛК → Заказ → Возврат.</p>
+<h2 id="24-returncreated-v1213-breaking">2.4 — Создание возврата (<code>return.created</code>, v12.13 BREAKING)<a class="headerlink" href="#24-returncreated-v1213-breaking" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.16 (реализация), у пользователя есть закрытый заказ с проведённой реализацией</p>
+<p>🟢 Создать возврат через ЛК → Реализация → Возврат (привязка возврата теперь к <strong>реализации</strong>, а не к заказу).</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/return.created.to_erp.json">JSON Schema</a></p>
 </blockquote>
 <ul>
 <li>[ ] В <code>erp_out.returns</code> — сообщение <code>return.created</code></li>
 <li>[ ] Обязательные поля по схеме: <code>event</code>, <code>uuid</code>, <code>items</code></li>
-<li>[ ] <code>order_uuid</code> и <code>partner_uuid</code> могут быть строкой или <code>null</code></li>
-<li>[ ] <code>items[]</code> содержит <code>quantity</code>; <code>product_uuid</code> и <code>reason</code> могут быть <code>null</code></li>
+<li>[ ] <strong>Поле <code>order_uuid</code> в корне отсутствует</strong> (v12.13: удалено)</li>
+<li>[ ] <code>partner_uuid</code> может быть строкой или <code>null</code></li>
+<li>[ ] Каждый элемент <code>items[]</code> содержит:<ul>
+<li><code>shipment_uuid</code> — UUID реализации (новое обязательное поле, v12.13)</li>
+<li><code>shipment_number</code> — человекочитаемый номер реализации (новое обязательное поле, v12.13)</li>
+<li><code>price</code> — snapshot цены из <code>ShipmentItem.price</code></li>
+<li><code>currency_code</code> — валюта реализации</li>
+<li><code>quantity</code></li>
+<li>опциональный <code>subtotal = price × quantity</code></li>
+<li><code>product_uuid</code> и <code>reason</code> могут быть <code>null</code></li>
+</ul>
+</li>
+<li>[ ] 1С привязывает возврат к конкретной реализации по <code>shipment_uuid</code> (а не к заказу)</li>
+<li>[ ] Бухгалтерия возвратов сходится с реализацией по сумме <code>price × quantity</code></li>
+</ul>
+<hr />
+<h2 id="25-contractorcreated-v132">2.5 — Публикация контрагента (<code>contractor.created</code>, v13.2)<a class="headerlink" href="#25-contractorcreated-v132" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.9 (партнёр с <code>User.erp_id</code>)</p>
+<p>🟢 <strong>Разработчик сайта</strong> в ЛК → «Компании» создаёт новый контрагент с непустым <code>tax_id</code> (или впервые заполняет <code>tax_id</code> у существующей Company).</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/contractor.created.to_erp.json">JSON Schema</a></p>
+</blockquote>
+<p><strong>Проверка (1С-ник):</strong></p>
+<ul>
+<li>[ ] В очереди <code>erp_out.contractors</code> появилось сообщение <code>contractor.created</code></li>
+<li>[ ] Обязательные поля: <code>event</code>, <code>uuid</code> (локальный UUIDv4 сайта для корреляции), <code>partner_uuid</code>, <code>tax_id</code>, <code>name</code></li>
+<li>[ ] Опциональные: <code>legal_name</code>, <code>country</code>, <code>tax_code</code>, <code>registration_number</code>, <code>okpo_code</code>, <code>legal_address</code>, <code>actual_address</code>, <code>phone</code>, <code>email</code>, <code>bank_accounts[]</code></li>
+<li>[ ] Сайт <strong>НЕ</strong> публикует, если у партнёра нет <code>User.erp_id</code> (откладывается до получения UUID; затем <code>PublishUserToErp</code> догоняет)</li>
+<li>[ ] env <code>PUBLISH_CONTRACTORS_TO_ERP=false</code> — kill-switch, отключает publisher без деплоя</li>
+</ul>
+<p>🟢 <strong>1С обрабатывает</strong> <code>contractor.created</code> от сайта:</p>
+<ul>
+<li>[ ] Матчинг контрагента в 1С по <code>tax_id</code> <strong>в рамках партнёра</strong> (<code>partner_uuid</code>)</li>
+<li>[ ] Если не найден — создать нового, 1С генерирует <strong>собственный</strong> UUID</li>
+<li>[ ] <strong><code>uuid</code> из payload сайта использовать только для корреляции</strong>, не как ссылку на сущность 1С</li>
+<li>[ ] После обработки 1С отправляет <code>contractor.updated</code> в <code>erp_in.partners</code> с назначенным UUID — сайт привязывает <code>Company.erp_id</code> (см. 1.12а)</li>
 </ul>
 
 

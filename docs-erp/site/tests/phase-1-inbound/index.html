@@ -1063,10 +1063,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#14-hidden-true" class="md-nav__link">
+  <a href="#14-hidden-true-hiddenscope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1.4 — Товар со скрытием (hidden = true)
+        1.4 — Товар со скрытием (hidden = true) и регрессия HiddenScope
       
     </span>
   </a>
@@ -1081,6 +1081,56 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="1.5 — Обновление товара (product.updated)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-is_marked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A) Обновление имени и is_marked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-full-replace-v130-breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B) Full-replace атрибутов (v13.0, BREAKING)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-description_html-v1310" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C) Обновление description_html (v13.1.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-v133" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D) Обновление габаритов и классификации (v13.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1177,6 +1227,28 @@
     <span class="md-ellipsis">
       
         1.12 — Контрагенты (contractor.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-erp_id-contractorupdated-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12а — Привязка erp_id через contractor.updated (v13.2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-contractordeleted-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12б — Удаление контрагента (contractor.deleted, v13.2)
       
     </span>
   </a>
@@ -1289,6 +1361,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#116-shipmentupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.16а — Обновление реализации (shipment.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#117-balanceupdated" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1343,6 +1426,28 @@
     <span class="md-ellipsis">
       
         1.19 — Дельта индивидуальных цен
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#120-promotioncreated-v1211" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.20 — Промо-флаги товаров (promotion.created, v12.11)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#121-v1215" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.21 — Внешние остатки склада «Тюмень Основной» (v12.15)
       
     </span>
   </a>
@@ -1482,6 +1587,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../open-questions/" class="md-nav__link">
         
@@ -1525,10 +1719,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
             
   
   
@@ -1546,8 +1740,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1741,10 +1935,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#14-hidden-true" class="md-nav__link">
+  <a href="#14-hidden-true-hiddenscope" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1.4 — Товар со скрытием (hidden = true)
+        1.4 — Товар со скрытием (hidden = true) и регрессия HiddenScope
       
     </span>
   </a>
@@ -1759,6 +1953,56 @@
       
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="1.5 — Обновление товара (product.updated)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a-is_marked" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A) Обновление имени и is_marked
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b-full-replace-v130-breaking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B) Full-replace атрибутов (v13.0, BREAKING)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#c-description_html-v1310" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        C) Обновление description_html (v13.1.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#d-v133" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        D) Обновление габаритов и классификации (v13.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1855,6 +2099,28 @@
     <span class="md-ellipsis">
       
         1.12 — Контрагенты (contractor.created)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-erp_id-contractorupdated-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12а — Привязка erp_id через contractor.updated (v13.2)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#112-contractordeleted-v132" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.12б — Удаление контрагента (contractor.deleted, v13.2)
       
     </span>
   </a>
@@ -1967,6 +2233,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#116-shipmentupdated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.16а — Обновление реализации (shipment.updated)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#117-balanceupdated" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2021,6 +2298,28 @@
     <span class="md-ellipsis">
       
         1.19 — Дельта индивидуальных цен
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#120-promotioncreated-v1211" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.20 — Промо-флаги товаров (promotion.created, v12.11)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#121-v1215" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.21 — Внешние остатки склада «Тюмень Основной» (v12.15)
       
     </span>
   </a>
@@ -2112,7 +2411,7 @@
 <hr />
 <h2 id="13-productcreated">1.3 — Товары (<code>product.created</code>)<a class="headerlink" href="#13-productcreated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.1 (категории)</p>
-<p>🔵 <strong>1С отправляет</strong> <code>product.created</code> с <code>category_uuid</code>, <code>brand</code>, <code>attributes</code>.</p>
+<p>🔵 <strong>1С отправляет</strong> <code>product.created</code> с <code>category_uuid</code>, <code>brand</code>, <code>attributes</code> (полный набор), <code>description_html</code>, <code>is_marked</code>, габаритами и классификацией.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/product.created.json">JSON Schema</a></p>
 </blockquote>
@@ -2120,32 +2419,85 @@
 <li>[ ] Товар создан с <code>external_id</code></li>
 <li>[ ] <code>category_id</code> указывает на правильную категорию</li>
 <li>[ ] Бренд создан/привязан</li>
-<li>[ ] Атрибуты созданы</li>
+<li>[ ] Атрибуты созданы из массива <code>attributes[]</code> (v13.0: 1С обязана передавать <strong>полный</strong> актуальный набор)</li>
 <li>[ ] <code>hidden = false</code> — товар видим</li>
+<li>[ ] <code>description_html</code> сохранён в <code>products.description_html</code>; на карточке товара рендерится HTML-описание (v13.1.0)</li>
+<li>[ ] <code>is_marked</code> сохранён в <code>products.is_marked</code>; для отсутствующего поля — <code>false</code> по умолчанию (v12.9)</li>
+<li>[ ] Габариты и логистика (v13.3): <code>weight_gross</code>, <code>weight_net</code>, <code>width</code>, <code>height</code>, <code>depth</code>, <code>hs_code</code>, <code>abc_xyz</code>, <code>turnover</code> сохранены в одноимённые колонки <code>products</code>; отсутствие любого поля → <code>null</code></li>
+<li>[ ] В админке <code>/admin/products/{id}/edit</code> появилась вкладка «Габариты и логистика» с тремя секциями (вес, габариты, классификация)</li>
 </ul>
 <hr />
-<h2 id="14-hidden-true">1.4 — Товар со скрытием (<code>hidden = true</code>)<a class="headerlink" href="#14-hidden-true" title="Permanent link">&para;</a></h2>
-<p><strong>Зависимости:</strong> 1.1</p>
-<p>🔵 <strong>1С отправляет</strong> <code>product.created</code> с <code>hidden = true</code>.</p>
+<h2 id="14-hidden-true-hiddenscope">1.4 — Товар со скрытием (<code>hidden = true</code>) и регрессия HiddenScope<a class="headerlink" href="#14-hidden-true-hiddenscope" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3</p>
+<p>🔵 <strong>Шаг A.</strong> 1С отправляет <code>product.created</code> с <code>hidden: true</code>.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/product.created.json">JSON Schema</a></p>
 </blockquote>
 <ul>
 <li>[ ] Товар создан с <code>hidden = true</code></li>
 <li>[ ] Товар <strong>НЕ</strong> отображается в каталоге и поиске</li>
+<li>[ ] В админке (которая видит скрытые) товар присутствует</li>
+</ul>
+<p>🔵 <strong>Шаг B (v13.1.1).</strong> 1С отправляет <code>product.updated</code> с <code>hidden: false</code> для этого же товара.</p>
+<ul>
+<li>[ ] Запись в БД обновлена: <code>hidden = false</code></li>
+<li>[ ] Товар вернулся в каталог</li>
+<li>[ ] В <code>erp_bus_messages</code> сообщение со статусом <code>success</code>, <strong>без</strong> warning «товар не найден»</li>
+</ul>
+<p>🔵 <strong>Шаг C.</strong> 1С отправляет для скрытого товара <code>price.updated</code> и <code>stock.updated</code>.</p>
+<ul>
+<li>[ ] Цены и остатки обновляются даже у скрытых товаров (v13.1.1: HiddenScope обходится во всех ERP-handler-ах)</li>
 </ul>
 <hr />
 <h2 id="15-productupdated">1.5 — Обновление товара (<code>product.updated</code>)<a class="headerlink" href="#15-productupdated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.3</p>
-<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с новым <code>name</code> и новым атрибутом.</p>
+<h3 id="a-is_marked">A) Обновление имени и <code>is_marked</code><a class="headerlink" href="#a-is_marked" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с новым <code>name</code> и <code>is_marked: true</code>, <strong>без</strong> поля <code>attributes</code>.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/product.updated.json">JSON Schema</a></p>
 </blockquote>
 <ul>
 <li>[ ] <code>name</code> обновлён</li>
-<li>[ ] Старые атрибуты <strong>сохранены</strong> (мерж по <code>property_uuid</code>)</li>
-<li>[ ] Новый атрибут добавлен</li>
+<li>[ ] <code>is_marked = true</code> в БД (v12.9)</li>
+<li>[ ] Состав атрибутов <strong>не изменился</strong> (поле не передано)</li>
 <li>[ ] <code>sku</code>, <code>code</code>, <code>category_uuid</code> НЕ изменились</li>
+<li>[ ] <code>description_html</code> НЕ изменился (поле не передано)</li>
+</ul>
+<h3 id="b-full-replace-v130-breaking">B) Full-replace атрибутов (v13.0, BREAKING)<a class="headerlink" href="#b-full-replace-v130-breaking" title="Permanent link">&para;</a></h3>
+<p>Исходное состояние товара: атрибуты <code>А</code>, <code>Б</code>, <code>В</code>.</p>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с <code>attributes: [А]</code> (только А).</p>
+<ul>
+<li>[ ] У товара остался ровно один атрибут — <code>А</code></li>
+<li>[ ] <code>Б</code> и <code>В</code> <strong>удалены</strong> из <code>product_attribute_values</code></li>
+<li>[ ] Если в payload передать <code>attributes: []</code> — у товара удаляются <strong>все</strong> связи с атрибутами</li>
+</ul>
+<h3 id="c-description_html-v1310">C) Обновление <code>description_html</code> (v13.1.0)<a class="headerlink" href="#c-description_html-v1310" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с <code>description_html: "&lt;p&gt;новое&lt;/p&gt;"</code>.</p>
+<ul>
+<li>[ ] <code>products.description_html</code> перезаписан</li>
+<li>[ ] На карточке отображается новый HTML</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с <code>description_html: null</code>.</p>
+<ul>
+<li>[ ] <code>products.description_html</code> очищен</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> <strong>без</strong> поля <code>description_html</code>.</p>
+<ul>
+<li>[ ] <code>products.description_html</code> НЕ изменился (частичное обновление)</li>
+</ul>
+<h3 id="d-v133">D) Обновление габаритов и классификации (v13.3)<a class="headerlink" href="#d-v133" title="Permanent link">&para;</a></h3>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с <code>weight_gross: 1.250</code>, <code>width: 30</code>, <code>hs_code: "8517620000"</code> (без остальных полей).</p>
+<ul>
+<li>[ ] <code>products.weight_gross</code>, <code>products.width</code>, <code>products.hs_code</code> обновлены</li>
+<li>[ ] <code>weight_net</code>, <code>height</code>, <code>depth</code>, <code>abc_xyz</code>, <code>turnover</code> НЕ изменились (частичное обновление)</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с <code>abc_xyz: null</code>.</p>
+<ul>
+<li>[ ] <code>products.abc_xyz</code> очищен (передача <code>null</code> = очистка)</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>product.updated</code> с <code>weight_gross: -5</code>.</p>
+<ul>
+<li>[ ] Значение отброшено и сохранено как <code>null</code> (отрицательные числа не принимаются)</li>
 </ul>
 <hr />
 <h2 id="16-priceupdated">1.6 — Базовые цены (<code>price.updated</code>)<a class="headerlink" href="#16-priceupdated" title="Permanent link">&para;</a></h2>
@@ -2256,15 +2608,45 @@
 <hr />
 <h2 id="112-contractorcreated">1.12 — Контрагенты (<code>contractor.created</code>)<a class="headerlink" href="#112-contractorcreated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.9 (партнёр)</p>
-<p>🔵 <strong>1С отправляет</strong> <code>contractor.created</code> с <code>bank_accounts</code>.</p>
+<p>🔵 <strong>1С отправляет</strong> <code>contractor.created</code> с <code>uuid</code>, <code>tax_id</code>, <code>bank_accounts</code>.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/contractor.created.json">JSON Schema</a></p>
 </blockquote>
 <ul>
 <li>[ ] Контрагент создан, привязан к пользователю</li>
+<li>[ ] <code>Company.erp_id</code> = <code>uuid</code> из payload (v13.2: UUID — основной идентификатор)</li>
 <li>[ ] <code>tax_id</code>, <code>legal_name</code> заполнены</li>
 <li>[ ] 2 банковских счёта, первый <code>is_primary = true</code></li>
 <li>[ ] Контрагент в ЛК → «Компании»</li>
+</ul>
+<hr />
+<h2 id="112-erp_id-contractorupdated-v132">1.12а — Привязка <code>erp_id</code> через <code>contractor.updated</code> (v13.2)<a class="headerlink" href="#112-erp_id-contractorupdated-v132" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.9 (партнёр), у пользователя на сайте уже есть Company с <code>tax_id</code>, но <strong>без</strong> <code>erp_id</code> (например, создана до v13.2)</p>
+<p>🔵 <strong>1С отправляет</strong> <code>contractor.updated</code> с <code>uuid</code>, <code>partner_uuid</code>, <code>tax_id</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/contractor.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Сайт нашёл Company по <code>tax_id + user_id</code> (резолв через <code>partner_uuid</code>)</li>
+<li>[ ] <code>Company.erp_id</code> заполнен <code>uuid</code> из payload (ленивый backfill)</li>
+<li>[ ] Повторный <code>contractor.updated</code> с тем же <code>uuid</code> идемпотентен — обновляет по <code>erp_id</code></li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>contractor.updated</code> с тем же <code>uuid</code>, но новым <code>tax_id</code> (менеджер исправил ИНН).</p>
+<ul>
+<li>[ ] <code>Company.tax_id</code> обновлён, <code>erp_id</code> остался прежним</li>
+<li>[ ] Все последующие <code>shipment.*</code> и <code>balance.updated</code> находят ту же Company по UUID</li>
+</ul>
+<hr />
+<h2 id="112-contractordeleted-v132">1.12б — Удаление контрагента (<code>contractor.deleted</code>, v13.2)<a class="headerlink" href="#112-contractordeleted-v132" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.12 или 1.12а</p>
+<p>🔵 <strong>1С отправляет</strong> <code>contractor.deleted</code> с <code>uuid</code> (или <code>tax_id</code> + <code>partner_uuid</code>).</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/contractor.deleted.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Company сделан soft-delete (<code>deleted_at</code> заполнен)</li>
+<li>[ ] Контрагент пропал из ЛК → «Компании»</li>
+<li>[ ] Существующие реализации/балансы остались, но контрагент в них помечен как удалённый</li>
 </ul>
 <hr />
 <h2 id="113-ordercreated">1.13 — Заказ от менеджера (<code>order.created</code>)<a class="headerlink" href="#113-ordercreated" title="Permanent link">&para;</a></h2>
@@ -2333,24 +2715,51 @@
 <hr />
 <h2 id="116-shipmentcreated">1.16 — Реализации (<code>shipment.created</code>)<a class="headerlink" href="#116-shipmentcreated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.12 (контрагент), 1.13 (заказ)</p>
-<p>🔵 <strong>1С отправляет</strong> <code>shipment.created</code> с <code>tax_id</code> и <code>items</code>.</p>
+<p>🔵 <strong>1С отправляет</strong> <code>shipment.created</code> с <strong>обязательным</strong> <code>number</code>, <code>partner_uuid</code>, <code>contractor_uuid</code>, <code>tax_id</code> и <code>items</code>.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/shipment.created.json">JSON Schema</a></p>
 </blockquote>
 <ul>
-<li>[ ] Реализация создана, привязана к контрагенту по <code>tax_id</code></li>
+<li>[ ] Реализация создана с <code>erp_number</code> = <code>number</code> из payload (v12.12: <code>number</code> обязателен, непустая строка)</li>
+<li>[ ] Привязка к контрагенту: приоритет <code>contractor_uuid</code> (Company.erp_id), fallback <code>tax_id + user_id</code> (v13.2)</li>
+<li>[ ] <code>user_id</code> определён по <code>partner_uuid</code> (User.erp_id)</li>
 <li>[ ] Позиция связана с заказом через <code>order_uuid</code></li>
-<li>[ ] Реализация в ЛК</li>
+<li>[ ] В ЛК отображается <code>erp_number</code> (а не технический <code>id</code>), v12.12</li>
+</ul>
+<p>🔵 <strong>Негативный кейс.</strong> 1С отправляет <code>shipment.created</code> <strong>без</strong> <code>number</code> (или <code>number: null</code> / пустая строка).</p>
+<ul>
+<li>[ ] Сообщение <strong>отклонено</strong> валидатором (v12.12)</li>
+<li>[ ] Запись в <code>erp_bus_messages</code> со статусом <code>failed</code> и сообщением валидатора</li>
+<li>[ ] Реализация <strong>НЕ</strong> создана</li>
+</ul>
+<p>🔵 <strong>Регрессия security (v13.2).</strong> 1С отправляет <code>shipment.created</code> без <code>partner_uuid</code> и без <code>contractor_uuid</code>, только с <code>tax_id</code>, который случайно совпадает с Company другого пользователя.</p>
+<ul>
+<li>[ ] Сайт <strong>НЕ</strong> привязывает Shipment к чужой Company по совпадению <code>tax_id</code> (поиск без <code>user_id</code> запрещён)</li>
+<li>[ ] Shipment сохраняется с <code>company_id = null</code> (либо вообще не сохраняется — зависит от обязательности FK; см. бизнес-правила)</li>
+</ul>
+<hr />
+<h2 id="116-shipmentupdated">1.16а — Обновление реализации (<code>shipment.updated</code>)<a class="headerlink" href="#116-shipmentupdated" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.16</p>
+<p>🔵 <strong>1С отправляет</strong> <code>shipment.updated</code> для существующей реализации с обновлёнными <code>items</code> и обязательным <code>number</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/shipment.updated.json">JSON Schema</a> (v12.10: отдельная схема)</p>
+</blockquote>
+<ul>
+<li>[ ] Реализация обновлена, <code>erp_number</code> синхронизирован</li>
+<li>[ ] <code>partner_uuid</code> + <code>contractor_uuid</code> корректно резолвят Company (v13.2)</li>
+<li>[ ] Сообщение <strong>без</strong> <code>number</code> отклоняется (v12.12)</li>
 </ul>
 <hr />
 <h2 id="117-balanceupdated">1.17 — Баланс (<code>balance.updated</code>)<a class="headerlink" href="#117-balanceupdated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.9 (партнёр), 1.12 (контрагент), 1.16 (реализация)</p>
-<p>🔵 <strong>1С отправляет</strong> <code>balance.updated</code> с <code>overdue_details</code>.</p>
+<p>🔵 <strong>1С отправляет</strong> <code>balance.updated</code> с <code>partner_uuid</code>, <code>contractors[].uuid</code>, <code>overdue_details</code>.</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/balance.updated.json">JSON Schema</a></p>
 </blockquote>
 <ul>
 <li>[ ] Баланс обновлён</li>
+<li>[ ] <code>ContractorBalance.contractor_uuid</code> заполнен значением <code>contractors[].uuid</code> (v13.2: ленивый backfill)</li>
+<li>[ ] Поиск Company идёт по UUID с приоритетом, fallback на <code>tax_id</code> (с фильтром <code>user_id</code>)</li>
 <li>[ ] Просрочка детализирована по реализации</li>
 <li>[ ] Баланс в ЛК в разрезе контрагентов</li>
 </ul>
@@ -2376,6 +2785,58 @@
 <ul>
 <li>[ ] Цена <strong>обновлена</strong> (UPSERT)</li>
 <li>[ ] Другие цены партнёра <strong>НЕ удалены</strong></li>
+</ul>
+<hr />
+<h2 id="120-promotioncreated-v1211">1.20 — Промо-флаги товаров (<code>promotion.created</code>, v12.11)<a class="headerlink" href="#120-promotioncreated-v1211" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товары)</p>
+<p>🔵 <strong>1С отправляет</strong> в <code>erp_in.promotions</code> сообщение <code>promotion.created</code> с <code>uuid</code>, <code>type: "new"</code> и массивом <code>items[]</code> из 3 товаров.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/promotion.created.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] В таблице <code>erp_promotions</code> появилась запись с <code>uuid</code> и <code>type = new</code></li>
+<li>[ ] В pivot <code>erp_promotion_product</code> — три привязки</li>
+<li>[ ] У всех трёх товаров <code>products.is_new = true</code> (агрегат через <code>EXISTS()</code>)</li>
+<li>[ ] В админке/каталоге у товаров отображается бейдж «Новинка»</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>promotion.updated</code> с тем же <code>uuid</code> и <strong>другим</strong> составом (1 товар вместо 3).</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/promotion.updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Состав в pivot обновлён (только один товар)</li>
+<li>[ ] У выбывших товаров <code>is_new = false</code>, у оставшегося — <code>is_new = true</code></li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>promotion.created</code> с <code>type: "bestseller"</code> и <code>type: "liquidation"</code> для других UUID и наборов товаров.</p>
+<ul>
+<li>[ ] У соответствующих товаров включились <code>is_bestseller</code> и <code>is_liquidation</code></li>
+<li>[ ] Один товар может быть в нескольких промо-группах одного типа одновременно</li>
+</ul>
+<p>🔵 <strong>1С отправляет</strong> <code>promotion.deleted</code> с <code>uuid</code>.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/promotion.deleted.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] Запись <code>erp_promotions</code> удалена, pivot очищен</li>
+<li>[ ] Флаги <code>is_new</code> / <code>is_bestseller</code> / <code>is_liquidation</code> пересчитаны (если товар не остался в другой группе того же типа — флаг сбрасывается в <code>false</code>)</li>
+</ul>
+<hr />
+<h2 id="121-v1215">1.21 — Внешние остатки склада «Тюмень Основной» (v12.15)<a class="headerlink" href="#121-v1215" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 1.3 (товары), 0.1.7 (очередь <code>external.remains_for_website</code>), 0.5 (UUID склада в config)</p>
+<p>🔵 <strong>ESB Москва публикует</strong> в <code>external.remains_for_website</code> сообщение <code>product.quantity.updated</code> (envelope ESB) с <code>payload.uid</code> товара и массивом <code>remains[]</code>, где есть склад «Тюмень Основной» и несколько других складов.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/external.product_quantity_updated.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] В <code>product_warehouse.quantity</code> для склада «Тюмень Основной» записано <code>max(0, quantity - reserve)</code></li>
+<li>[ ] Остальные склады <strong>проигнорированы</strong> (только Тюмень Основной)</li>
+<li>[ ] <code>organization_remains[]</code> проигнорировано</li>
+<li>[ ] В <code>erp_processed_messages</code> запись с префиксом <code>external-remains:</code></li>
+<li>[ ] Идемпотентность: повторное сообщение с тем же <code>uid</code> не дублирует запись</li>
+</ul>
+<p>🔵 <strong>ESB присылает</strong> сообщение для товара с неизвестным <code>payload.uid</code> и <code>payload.code</code>.</p>
+<ul>
+<li>[ ] Сообщение тихо пропущено (warning в логах), очередь не блокируется</li>
 </ul>
 
 

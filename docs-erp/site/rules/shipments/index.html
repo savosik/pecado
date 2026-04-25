@@ -1162,6 +1162,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Миграции
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Миграции
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.2-contractor-uuid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../open-questions/" class="md-nav__link">
         
@@ -1205,10 +1294,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
         
           
-          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
             
   
   
@@ -1226,8 +1315,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_9">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1438,7 +1527,11 @@
 <li>Одна реализация может включать позиции из <strong>нескольких заказов</strong></li>
 <li>Связь с заказами через <code>order_uuid</code> в каждой позиции</li>
 <li>Расчёт задолженности ведётся по реализациям, не по заказам</li>
-<li><code>contractor_inn</code> — привязка к контрагенту по ИНН</li>
+<li>Привязка к контрагенту:<ul>
+<li><strong>(v13.2)</strong> Приоритет — по <code>contractor_uuid</code> (опциональное поле, <code>Company.erp_id</code> на сайте). Глобально уникальный идентификатор, не ломается при правке ИНН в 1С</li>
+<li><strong>Fallback</strong> — по <code>tax_id</code> (ИНН) <strong>в паре с <code>partner_uuid</code></strong>. <code>partner_uuid</code> нужен для резолва <code>user_id</code> и фильтра Company по владельцу. Без <code>partner_uuid</code> fallback-поиск не выполняется (security-fix v13.2)</li>
+</ul>
+</li>
 <li><strong>(v12.3)</strong> Если передан <code>number</code> — сайт сохраняет его как <code>erp_number</code>. Это номер реализации из 1С, который отображается пользователю</li>
 <li><strong>(v12.10)</strong> У <code>shipment.updated</code> <strong>собственная JSON Schema</strong> (<code>shipment.updated.json</code>), отделённая от <code>shipment.created.json</code>. Пока структуры payload-ов идентичны; разделение выполнено на вырост — для независимой эволюции <code>updated</code> при появлении у него собственных полей</li>
 <li><strong>(v12.11) <code>number</code> обязательно для <code>shipment.created</code> и <code>shipment.updated</code>.</strong> 1С обязана передавать номер реализации непустой строкой. Сообщения без <code>number</code> отклоняются валидатором и отправляются в DLQ. Причина: без ERP-номера покупатель в ЛК видит только технический <code>id</code> сайта, а менеджер в 1С — ERP-номер; это ломает коммуникацию клиент-менеджер при обсуждении отгрузки</li>
@@ -1446,7 +1539,7 @@
 <h2 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <ul>
 <li>[ ] Сайт принимает <code>shipment.created</code>, <code>shipment.updated</code>, <code>shipment.deleted</code></li>
-<li>[ ] Реализация привязывается к контрагенту по ИНН</li>
+<li>[ ] <strong>(v13.2)</strong> Company находится сначала по <code>contractor_uuid</code>, затем fallback по <code>tax_id + user_id</code> (резолв через <code>partner_uuid</code>). Поиск без <code>partner_uuid</code> / <code>user_id</code> не выполняется — иначе можно найти чужую Company с тем же ИНН</li>
 <li>[ ] Позиции связаны с заказами через <code>order_uuid</code></li>
 <li>[ ] Реализация отображается в ЛК</li>
 <li>[ ] <strong>(v12.10)</strong> Валидация <code>shipment.updated</code> использует схему <code>shipment.updated.json</code> (поле <code>event</code> = <code>shipment.updated</code>)</li>
