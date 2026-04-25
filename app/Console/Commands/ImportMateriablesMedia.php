@@ -89,15 +89,21 @@ class ImportMateriablesMedia extends Command
                     ->timeout($pageTimeout)
                     ->connectTimeout(15)
                     ->acceptJson()
+                    ->retry(5, 3000, throw: false)
                     ->get($endpoint, ['page' => $page]);
             } catch (\Throwable $e) {
-                $this->error("  HTTP-ошибка на стр. {$page}: {$e->getMessage()}");
-                break;
+                $this->warn("  HTTP-ошибка на стр. {$page} после ретраев: {$e->getMessage()}");
+                $this->warn('  Пропускаем страницу, продолжаем со следующей.');
+                $page++;
+
+                continue;
             }
 
             if (! $response->successful()) {
-                $this->error("  HTTP {$response->status()} на стр. {$page}; останавливаемся");
-                break;
+                $this->warn("  HTTP {$response->status()} на стр. {$page}; пропускаем");
+                $page++;
+
+                continue;
             }
 
             $payload = (array) $response->json('payload', []);
