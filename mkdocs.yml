@@ -76,6 +76,7 @@ nav:
   - Первоначальная выгрузка: initial-load.md
   - Миграции:
     - "v13.2 — UUID для контрагентов": migrations/v13.2-contractor-uuid.md
+    - "v13.6 — UNIQUE на (ИНН, КПП)": migrations/v13.6-uniq-companies.md
   - Открытые вопросы: open-questions.md
   - Ссылки:
     - "AsyncAPI (интерактивная)": https://dev.pecado.ru/docs/erp/

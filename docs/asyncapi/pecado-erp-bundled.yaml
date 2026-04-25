@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 13.3.0
+  version: 13.6.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -935,6 +935,7 @@ channels:
             - uuid
             - status
             - partner_uuid
+            - contractor
             - items
           properties:
             event:
@@ -1003,96 +1004,92 @@ channels:
               examples:
                 - '2026-03-17T12:00:00+03:00'
             contractor:
-              oneOf:
-                - type: object
-                  properties:
-                    uuid:
-                      type:
-                        - string
-                        - 'null'
-                      format: uuid
-                      description: >-
-                        UUID контрагента в 1С (Company.erp_id на сайте).
-                        Приоритет при матчинге, fallback на tax_id. Опционально
-                        (v13.2).
-                    country:
-                      type: string
-                      minLength: 2
-                      maxLength: 2
-                      description: ISO alpha-2 код страны
-                      examples:
-                        - RU
-                        - KZ
-                        - BY
-                    name:
-                      type: string
-                    legal_name:
-                      type: string
-                    tax_id:
-                      type: string
-                      description: >-
-                        Налоговый идентификатор контрагента (ИНН / УНП / БИН и
-                        т.д.)
-                    registration_number:
-                      type:
-                        - string
-                        - 'null'
-                    tax_code:
-                      type:
-                        - string
-                        - 'null'
-                    okpo_code:
-                      type:
-                        - string
-                        - 'null'
-                    legal_address:
-                      type:
-                        - string
-                        - 'null'
-                    actual_address:
-                      type:
-                        - string
-                        - 'null'
-                    phone:
-                      type:
-                        - string
-                        - 'null'
-                    email:
-                      type:
-                        - string
-                        - 'null'
-                    bank_accounts:
-                      type:
-                        - array
-                        - 'null'
-                      items:
-                        type: object
-                        required:
-                          - account_number
-                          - is_primary
-                        properties:
-                          bank_name:
-                            type:
-                              - string
-                              - 'null'
-                            description: Наименование банка
-                          bank_bik:
-                            type:
-                              - string
-                              - 'null'
-                            description: БИК банка
-                          correspondent_account:
-                            type:
-                              - string
-                              - 'null'
-                            description: Корреспондентский счёт
-                          account_number:
-                            type: string
-                            description: Номер счёта
-                          is_primary:
-                            type: boolean
-                            description: Основной счёт (первый = true, остальные = false)
-                - type: 'null'
+              type: object
+              required:
+                - uuid
+                - tax_id
+              properties:
+                uuid:
+                  type: string
+                  format: uuid
+                  description: >-
+                    UUID контрагента в 1С (Company.erp_id на сайте). Required с
+                    v13.3 — приоритет при матчинге, fallback на tax_id+tax_code.
+                country:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  description: ISO alpha-2 код страны
+                  examples:
+                    - RU
+                    - KZ
+                    - BY
+                name:
+                  type: string
+                legal_name:
+                  type: string
+                tax_id:
+                  type: string
+                  description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+                registration_number:
+                  type:
+                    - string
+                    - 'null'
+                tax_code:
+                  type:
+                    - string
+                    - 'null'
+                okpo_code:
+                  type:
+                    - string
+                    - 'null'
+                legal_address:
+                  type:
+                    - string
+                    - 'null'
+                actual_address:
+                  type:
+                    - string
+                    - 'null'
+                phone:
+                  type:
+                    - string
+                    - 'null'
+                email:
+                  type:
+                    - string
+                    - 'null'
+                bank_accounts:
+                  type:
+                    - array
+                    - 'null'
+                  items:
+                    type: object
+                    required:
+                      - account_number
+                      - is_primary
+                    properties:
+                      bank_name:
+                        type:
+                          - string
+                          - 'null'
+                        description: Наименование банка
+                      bank_bik:
+                        type:
+                          - string
+                          - 'null'
+                        description: БИК банка
+                      correspondent_account:
+                        type:
+                          - string
+                          - 'null'
+                        description: Корреспондентский счёт
+                      account_number:
+                        type: string
+                        description: Номер счёта
+                      is_primary:
+                        type: boolean
+                        description: Основной счёт (первый = true, остальные = false)
             delivery_address:
               type: string
               description: Адрес доставки
@@ -1415,6 +1412,7 @@ channels:
             - event
             - message_id
             - uuid
+            - contractor_uuid
             - tax_id
             - number
             - date
@@ -1436,22 +1434,19 @@ channels:
               examples:
                 - 550e8400-e29b-41d4-a716-446655440000
             contractor_uuid:
-              type:
-                - string
-                - 'null'
+              type: string
               format: uuid
               description: >-
-                UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
-                матчинге Company, fallback на tax_id + partner_uuid. Опционально
-                (v13.2).
+                UUID контрагента в 1С (Company.erp_id на сайте). Required с
+                v13.3 — приоритет при матчинге Company, fallback на tax_id.
             partner_uuid:
               type:
                 - string
                 - 'null'
               format: uuid
               description: >-
-                UUID партнёра-владельца. Нужен для корректного фильтра user_id
-                при fallback-поиске Company по tax_id (v13.2).
+                UUID партнёра-владельца. Опциональное поле — отгрузка может быть
+                технической (внутренние перемещения).
             tax_id:
               type: string
               description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -1568,6 +1563,7 @@ channels:
             - event
             - message_id
             - uuid
+            - contractor_uuid
             - tax_id
             - number
             - date
@@ -1589,22 +1585,19 @@ channels:
               examples:
                 - 550e8400-e29b-41d4-a716-446655440000
             contractor_uuid:
-              type:
-                - string
-                - 'null'
+              type: string
               format: uuid
               description: >-
-                UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
-                матчинге Company, fallback на tax_id + partner_uuid. Опционально
-                (v13.2).
+                UUID контрагента в 1С (Company.erp_id на сайте). Required с
+                v13.3 — приоритет при матчинге Company, fallback на tax_id.
             partner_uuid:
               type:
                 - string
                 - 'null'
               format: uuid
               description: >-
-                UUID партнёра-владельца. Нужен для корректного фильтра user_id
-                при fallback-поиске Company по tax_id (v13.2).
+                UUID партнёра-владельца. Опциональное поле — отгрузка может быть
+                технической (внутренние перемещения).
             tax_id:
               type: string
               description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -2731,6 +2724,7 @@ channels:
             - uuid
             - status
             - partner_uuid
+            - contractor
             - items
           properties:
             event:
@@ -2799,96 +2793,92 @@ channels:
               examples:
                 - '2026-03-17T12:00:00+03:00'
             contractor:
-              oneOf:
-                - type: object
-                  properties:
-                    uuid:
-                      type:
-                        - string
-                        - 'null'
-                      format: uuid
-                      description: >-
-                        UUID контрагента в 1С (Company.erp_id на сайте).
-                        Приоритет при матчинге, fallback на tax_id. Опционально
-                        (v13.2).
-                    country:
-                      type: string
-                      minLength: 2
-                      maxLength: 2
-                      description: ISO alpha-2 код страны
-                      examples:
-                        - RU
-                        - KZ
-                        - BY
-                    name:
-                      type: string
-                    legal_name:
-                      type: string
-                    tax_id:
-                      type: string
-                      description: >-
-                        Налоговый идентификатор контрагента (ИНН / УНП / БИН и
-                        т.д.)
-                    registration_number:
-                      type:
-                        - string
-                        - 'null'
-                    tax_code:
-                      type:
-                        - string
-                        - 'null'
-                    okpo_code:
-                      type:
-                        - string
-                        - 'null'
-                    legal_address:
-                      type:
-                        - string
-                        - 'null'
-                    actual_address:
-                      type:
-                        - string
-                        - 'null'
-                    phone:
-                      type:
-                        - string
-                        - 'null'
-                    email:
-                      type:
-                        - string
-                        - 'null'
-                    bank_accounts:
-                      type:
-                        - array
-                        - 'null'
-                      items:
-                        type: object
-                        required:
-                          - account_number
-                          - is_primary
-                        properties:
-                          bank_name:
-                            type:
-                              - string
-                              - 'null'
-                            description: Наименование банка
-                          bank_bik:
-                            type:
-                              - string
-                              - 'null'
-                            description: БИК банка
-                          correspondent_account:
-                            type:
-                              - string
-                              - 'null'
-                            description: Корреспондентский счёт
-                          account_number:
-                            type: string
-                            description: Номер счёта
-                          is_primary:
-                            type: boolean
-                            description: Основной счёт (первый = true, остальные = false)
-                - type: 'null'
+              type: object
+              required:
+                - uuid
+                - tax_id
+              properties:
+                uuid:
+                  type: string
+                  format: uuid
+                  description: >-
+                    UUID контрагента в 1С (Company.erp_id на сайте). Required с
+                    v13.3 — приоритет при матчинге, fallback на tax_id+tax_code.
+                country:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+                  description: ISO alpha-2 код страны
+                  examples:
+                    - RU
+                    - KZ
+                    - BY
+                name:
+                  type: string
+                legal_name:
+                  type: string
+                tax_id:
+                  type: string
+                  description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+                registration_number:
+                  type:
+                    - string
+                    - 'null'
+                tax_code:
+                  type:
+                    - string
+                    - 'null'
+                okpo_code:
+                  type:
+                    - string
+                    - 'null'
+                legal_address:
+                  type:
+                    - string
+                    - 'null'
+                actual_address:
+                  type:
+                    - string
+                    - 'null'
+                phone:
+                  type:
+                    - string
+                    - 'null'
+                email:
+                  type:
+                    - string
+                    - 'null'
+                bank_accounts:
+                  type:
+                    - array
+                    - 'null'
+                  items:
+                    type: object
+                    required:
+                      - account_number
+                      - is_primary
+                    properties:
+                      bank_name:
+                        type:
+                          - string
+                          - 'null'
+                        description: Наименование банка
+                      bank_bik:
+                        type:
+                          - string
+                          - 'null'
+                        description: БИК банка
+                      correspondent_account:
+                        type:
+                          - string
+                          - 'null'
+                        description: Корреспондентский счёт
+                      account_number:
+                        type: string
+                        description: Номер счёта
+                      is_primary:
+                        type: boolean
+                        description: Основной счёт (первый = true, остальные = false)
             delivery_address:
               type: string
               description: Адрес доставки
@@ -4998,6 +4988,7 @@ components:
           - uuid
           - status
           - partner_uuid
+          - contractor
           - items
         properties:
           event:
@@ -5066,95 +5057,92 @@ components:
             examples:
               - '2026-03-17T12:00:00+03:00'
           contractor:
-            oneOf:
-              - type: object
-                properties:
-                  uuid:
-                    type:
-                      - string
-                      - 'null'
-                    format: uuid
-                    description: >-
-                      UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
-                      при матчинге, fallback на tax_id. Опционально (v13.2).
-                  country:
-                    type: string
-                    minLength: 2
-                    maxLength: 2
-                    description: ISO alpha-2 код страны
-                    examples:
-                      - RU
-                      - KZ
-                      - BY
-                  name:
-                    type: string
-                  legal_name:
-                    type: string
-                  tax_id:
-                    type: string
-                    description: >-
-                      Налоговый идентификатор контрагента (ИНН / УНП / БИН и
-                      т.д.)
-                  registration_number:
-                    type:
-                      - string
-                      - 'null'
-                  tax_code:
-                    type:
-                      - string
-                      - 'null'
-                  okpo_code:
-                    type:
-                      - string
-                      - 'null'
-                  legal_address:
-                    type:
-                      - string
-                      - 'null'
-                  actual_address:
-                    type:
-                      - string
-                      - 'null'
-                  phone:
-                    type:
-                      - string
-                      - 'null'
-                  email:
-                    type:
-                      - string
-                      - 'null'
-                  bank_accounts:
-                    type:
-                      - array
-                      - 'null'
-                    items:
-                      type: object
-                      required:
-                        - account_number
-                        - is_primary
-                      properties:
-                        bank_name:
-                          type:
-                            - string
-                            - 'null'
-                          description: Наименование банка
-                        bank_bik:
-                          type:
-                            - string
-                            - 'null'
-                          description: БИК банка
-                        correspondent_account:
-                          type:
-                            - string
-                            - 'null'
-                          description: Корреспондентский счёт
-                        account_number:
-                          type: string
-                          description: Номер счёта
-                        is_primary:
-                          type: boolean
-                          description: Основной счёт (первый = true, остальные = false)
-              - type: 'null'
+            type: object
+            required:
+              - uuid
+              - tax_id
+            properties:
+              uuid:
+                type: string
+                format: uuid
+                description: >-
+                  UUID контрагента в 1С (Company.erp_id на сайте). Required с
+                  v13.3 — приоритет при матчинге, fallback на tax_id+tax_code.
+              country:
+                type: string
+                minLength: 2
+                maxLength: 2
+                description: ISO alpha-2 код страны
+                examples:
+                  - RU
+                  - KZ
+                  - BY
+              name:
+                type: string
+              legal_name:
+                type: string
+              tax_id:
+                type: string
+                description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+              registration_number:
+                type:
+                  - string
+                  - 'null'
+              tax_code:
+                type:
+                  - string
+                  - 'null'
+              okpo_code:
+                type:
+                  - string
+                  - 'null'
+              legal_address:
+                type:
+                  - string
+                  - 'null'
+              actual_address:
+                type:
+                  - string
+                  - 'null'
+              phone:
+                type:
+                  - string
+                  - 'null'
+              email:
+                type:
+                  - string
+                  - 'null'
+              bank_accounts:
+                type:
+                  - array
+                  - 'null'
+                items:
+                  type: object
+                  required:
+                    - account_number
+                    - is_primary
+                  properties:
+                    bank_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: Наименование банка
+                    bank_bik:
+                      type:
+                        - string
+                        - 'null'
+                      description: БИК банка
+                    correspondent_account:
+                      type:
+                        - string
+                        - 'null'
+                      description: Корреспондентский счёт
+                    account_number:
+                      type: string
+                      description: Номер счёта
+                    is_primary:
+                      type: boolean
+                      description: Основной счёт (первый = true, остальные = false)
           delivery_address:
             type: string
             description: Адрес доставки
@@ -5237,6 +5225,7 @@ components:
           - uuid
           - status
           - partner_uuid
+          - contractor
           - items
         properties:
           event:
@@ -5305,95 +5294,92 @@ components:
             examples:
               - '2026-03-17T12:00:00+03:00'
           contractor:
-            oneOf:
-              - type: object
-                properties:
-                  uuid:
-                    type:
-                      - string
-                      - 'null'
-                    format: uuid
-                    description: >-
-                      UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
-                      при матчинге, fallback на tax_id. Опционально (v13.2).
-                  country:
-                    type: string
-                    minLength: 2
-                    maxLength: 2
-                    description: ISO alpha-2 код страны
-                    examples:
-                      - RU
-                      - KZ
-                      - BY
-                  name:
-                    type: string
-                  legal_name:
-                    type: string
-                  tax_id:
-                    type: string
-                    description: >-
-                      Налоговый идентификатор контрагента (ИНН / УНП / БИН и
-                      т.д.)
-                  registration_number:
-                    type:
-                      - string
-                      - 'null'
-                  tax_code:
-                    type:
-                      - string
-                      - 'null'
-                  okpo_code:
-                    type:
-                      - string
-                      - 'null'
-                  legal_address:
-                    type:
-                      - string
-                      - 'null'
-                  actual_address:
-                    type:
-                      - string
-                      - 'null'
-                  phone:
-                    type:
-                      - string
-                      - 'null'
-                  email:
-                    type:
-                      - string
-                      - 'null'
-                  bank_accounts:
-                    type:
-                      - array
-                      - 'null'
-                    items:
-                      type: object
-                      required:
-                        - account_number
-                        - is_primary
-                      properties:
-                        bank_name:
-                          type:
-                            - string
-                            - 'null'
-                          description: Наименование банка
-                        bank_bik:
-                          type:
-                            - string
-                            - 'null'
-                          description: БИК банка
-                        correspondent_account:
-                          type:
-                            - string
-                            - 'null'
-                          description: Корреспондентский счёт
-                        account_number:
-                          type: string
-                          description: Номер счёта
-                        is_primary:
-                          type: boolean
-                          description: Основной счёт (первый = true, остальные = false)
-              - type: 'null'
+            type: object
+            required:
+              - uuid
+              - tax_id
+            properties:
+              uuid:
+                type: string
+                format: uuid
+                description: >-
+                  UUID контрагента в 1С (Company.erp_id на сайте). Required с
+                  v13.3 — приоритет при матчинге, fallback на tax_id+tax_code.
+              country:
+                type: string
+                minLength: 2
+                maxLength: 2
+                description: ISO alpha-2 код страны
+                examples:
+                  - RU
+                  - KZ
+                  - BY
+              name:
+                type: string
+              legal_name:
+                type: string
+              tax_id:
+                type: string
+                description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+              registration_number:
+                type:
+                  - string
+                  - 'null'
+              tax_code:
+                type:
+                  - string
+                  - 'null'
+              okpo_code:
+                type:
+                  - string
+                  - 'null'
+              legal_address:
+                type:
+                  - string
+                  - 'null'
+              actual_address:
+                type:
+                  - string
+                  - 'null'
+              phone:
+                type:
+                  - string
+                  - 'null'
+              email:
+                type:
+                  - string
+                  - 'null'
+              bank_accounts:
+                type:
+                  - array
+                  - 'null'
+                items:
+                  type: object
+                  required:
+                    - account_number
+                    - is_primary
+                  properties:
+                    bank_name:
+                      type:
+                        - string
+                        - 'null'
+                      description: Наименование банка
+                    bank_bik:
+                      type:
+                        - string
+                        - 'null'
+                      description: БИК банка
+                    correspondent_account:
+                      type:
+                        - string
+                        - 'null'
+                      description: Корреспондентский счёт
+                    account_number:
+                      type: string
+                      description: Номер счёта
+                    is_primary:
+                      type: boolean
+                      description: Основной счёт (первый = true, остальные = false)
           delivery_address:
             type: string
             description: Адрес доставки
@@ -5789,6 +5775,7 @@ components:
           - event
           - message_id
           - uuid
+          - contractor_uuid
           - tax_id
           - number
           - date
@@ -5810,22 +5797,19 @@ components:
             examples:
               - 550e8400-e29b-41d4-a716-446655440000
           contractor_uuid:
-            type:
-              - string
-              - 'null'
+            type: string
             format: uuid
             description: >-
-              UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
-              матчинге Company, fallback на tax_id + partner_uuid. Опционально
-              (v13.2).
+              UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3
+              — приоритет при матчинге Company, fallback на tax_id.
           partner_uuid:
             type:
               - string
               - 'null'
             format: uuid
             description: >-
-              UUID партнёра-владельца. Нужен для корректного фильтра user_id при
-              fallback-поиске Company по tax_id (v13.2).
+              UUID партнёра-владельца. Опциональное поле — отгрузка может быть
+              технической (внутренние перемещения).
           tax_id:
             type: string
             description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -5942,6 +5926,7 @@ components:
           - event
           - message_id
           - uuid
+          - contractor_uuid
           - tax_id
           - number
           - date
@@ -5963,22 +5948,19 @@ components:
             examples:
               - 550e8400-e29b-41d4-a716-446655440000
           contractor_uuid:
-            type:
-              - string
-              - 'null'
+            type: string
             format: uuid
             description: >-
-              UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
-              матчинге Company, fallback на tax_id + partner_uuid. Опционально
-              (v13.2).
+              UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3
+              — приоритет при матчинге Company, fallback на tax_id.
           partner_uuid:
             type:
               - string
               - 'null'
             format: uuid
             description: >-
-              UUID партнёра-владельца. Нужен для корректного фильтра user_id при
-              fallback-поиске Company по tax_id (v13.2).
+              UUID партнёра-владельца. Опциональное поле — отгрузка может быть
+              технической (внутренние перемещения).
           tax_id:
             type: string
             description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -8011,15 +7993,16 @@ components:
             discount_percent итоговая цена может быть выше base_price
     OrderContractor:
       type: object
+      required:
+        - uuid
+        - tax_id
       properties:
         uuid:
-          type:
-            - string
-            - 'null'
+          type: string
           format: uuid
           description: >-
-            UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
-            матчинге, fallback на tax_id. Опционально (v13.2).
+            UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 —
+            приоритет при матчинге, fallback на tax_id+tax_code.
         country:
           type: string
           minLength: 2
@@ -8103,6 +8086,7 @@ components:
         - uuid
         - status
         - partner_uuid
+        - contractor
         - items
       properties:
         event:
@@ -8171,93 +8155,92 @@ components:
           examples:
             - '2026-03-17T12:00:00+03:00'
         contractor:
-          oneOf:
-            - type: object
-              properties:
-                uuid:
-                  type:
-                    - string
-                    - 'null'
-                  format: uuid
-                  description: >-
-                    UUID контрагента в 1С (Company.erp_id на сайте). Приоритет
-                    при матчинге, fallback на tax_id. Опционально (v13.2).
-                country:
-                  type: string
-                  minLength: 2
-                  maxLength: 2
-                  description: ISO alpha-2 код страны
-                  examples:
-                    - RU
-                    - KZ
-                    - BY
-                name:
-                  type: string
-                legal_name:
-                  type: string
-                tax_id:
-                  type: string
-                  description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
-                registration_number:
-                  type:
-                    - string
-                    - 'null'
-                tax_code:
-                  type:
-                    - string
-                    - 'null'
-                okpo_code:
-                  type:
-                    - string
-                    - 'null'
-                legal_address:
-                  type:
-                    - string
-                    - 'null'
-                actual_address:
-                  type:
-                    - string
-                    - 'null'
-                phone:
-                  type:
-                    - string
-                    - 'null'
-                email:
-                  type:
-                    - string
-                    - 'null'
-                bank_accounts:
-                  type:
-                    - array
-                    - 'null'
-                  items:
-                    type: object
-                    required:
-                      - account_number
-                      - is_primary
-                    properties:
-                      bank_name:
-                        type:
-                          - string
-                          - 'null'
-                        description: Наименование банка
-                      bank_bik:
-                        type:
-                          - string
-                          - 'null'
-                        description: БИК банка
-                      correspondent_account:
-                        type:
-                          - string
-                          - 'null'
-                        description: Корреспондентский счёт
-                      account_number:
-                        type: string
-                        description: Номер счёта
-                      is_primary:
-                        type: boolean
-                        description: Основной счёт (первый = true, остальные = false)
-            - type: 'null'
+          type: object
+          required:
+            - uuid
+            - tax_id
+          properties:
+            uuid:
+              type: string
+              format: uuid
+              description: >-
+                UUID контрагента в 1С (Company.erp_id на сайте). Required с
+                v13.3 — приоритет при матчинге, fallback на tax_id+tax_code.
+            country:
+              type: string
+              minLength: 2
+              maxLength: 2
+              description: ISO alpha-2 код страны
+              examples:
+                - RU
+                - KZ
+                - BY
+            name:
+              type: string
+            legal_name:
+              type: string
+            tax_id:
+              type: string
+              description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+            registration_number:
+              type:
+                - string
+                - 'null'
+            tax_code:
+              type:
+                - string
+                - 'null'
+            okpo_code:
+              type:
+                - string
+                - 'null'
+            legal_address:
+              type:
+                - string
+                - 'null'
+            actual_address:
+              type:
+                - string
+                - 'null'
+            phone:
+              type:
+                - string
+                - 'null'
+            email:
+              type:
+                - string
+                - 'null'
+            bank_accounts:
+              type:
+                - array
+                - 'null'
+              items:
+                type: object
+                required:
+                  - account_number
+                  - is_primary
+                properties:
+                  bank_name:
+                    type:
+                      - string
+                      - 'null'
+                    description: Наименование банка
+                  bank_bik:
+                    type:
+                      - string
+                      - 'null'
+                    description: БИК банка
+                  correspondent_account:
+                    type:
+                      - string
+                      - 'null'
+                    description: Корреспондентский счёт
+                  account_number:
+                    type: string
+                    description: Номер счёта
+                  is_primary:
+                    type: boolean
+                    description: Основной счёт (первый = true, остальные = false)
         delivery_address:
           type: string
           description: Адрес доставки
@@ -8586,6 +8569,7 @@ components:
         - event
         - message_id
         - uuid
+        - contractor_uuid
         - tax_id
         - number
         - date
@@ -8607,22 +8591,19 @@ components:
           examples:
             - 550e8400-e29b-41d4-a716-446655440000
         contractor_uuid:
-          type:
-            - string
-            - 'null'
+          type: string
           format: uuid
           description: >-
-            UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
-            матчинге Company, fallback на tax_id + partner_uuid. Опционально
-            (v13.2).
+            UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 —
+            приоритет при матчинге Company, fallback на tax_id.
         partner_uuid:
           type:
             - string
             - 'null'
           format: uuid
           description: >-
-            UUID партнёра-владельца. Нужен для корректного фильтра user_id при
-            fallback-поиске Company по tax_id (v13.2).
+            UUID партнёра-владельца. Опциональное поле — отгрузка может быть
+            технической (внутренние перемещения).
         tax_id:
           type: string
           description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
@@ -8727,6 +8708,7 @@ components:
         - event
         - message_id
         - uuid
+        - contractor_uuid
         - tax_id
         - number
         - date
@@ -8748,22 +8730,19 @@ components:
           examples:
             - 550e8400-e29b-41d4-a716-446655440000
         contractor_uuid:
-          type:
-            - string
-            - 'null'
+          type: string
           format: uuid
           description: >-
-            UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при
-            матчинге Company, fallback на tax_id + partner_uuid. Опционально
-            (v13.2).
+            UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 —
+            приоритет при матчинге Company, fallback на tax_id.
         partner_uuid:
           type:
             - string
             - 'null'
           format: uuid
           description: >-
-            UUID партнёра-владельца. Нужен для корректного фильтра user_id при
-            fallback-поиске Company по tax_id (v13.2).
+            UUID партнёра-владельца. Опциональное поле — отгрузка может быть
+            технической (внутренние перемещения).
         tax_id:
           type: string
           description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)

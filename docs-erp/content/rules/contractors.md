@@ -16,22 +16,33 @@
 > с собственной DLQ `erp_dlq.contractors` и отдельным supervisor-консьюмером.
 > Ранее (v13.2–v13.4) они шли в общую очередь `erp_in.partners`.
 
-## Стратегия матчинга (v13.2)
+## Стратегия матчинга (v13.6)
 
-До v13.2 контрагент идентифицировался только по ИНН (`tax_id`). Если менеджер
-в 1С исправлял ИНН после создания контрагента на сайте (например, убирал лишнюю
-цифру), матчинг ломался — последующие реализации и балансы переставали привязываться
-к Company. С v13.2 основной идентификатор — UUID контрагента (`Company.erp_id` на
-сайте, ссылка в 1С), ИНН остаётся fallback-ом на переходный период.
+> **BREAKING с v13.6:** `contractor.uuid` обязателен в `order.created`,
+> `contractor_uuid` обязателен в `shipment.created` / `shipment.updated`.
+> Уникальность Company гарантируется на уровне БД через
+> `UNIQUE(tax_id, tax_code, deleted_at)`.
 
-Приоритет при поиске Company во всех входящих обработчиках:
+### Бизнес-правило
 
-1. **По UUID** — `Company.erp_id = contractor.uuid / contractor_uuid / contractors[].uuid`.
-2. **Fallback по ИНН** — `Company.tax_id = tax_id` **+ `user_id` партнёра** (резолв через
-   `partner_uuid → User.erp_id`). Без фильтра по `user_id` поиск не выполняется:
-   в противном случае можно найти чужую Company с тем же ИНН.
-3. **Ленивый backfill `erp_id`** — если Company найдена по ИНН, а в payload пришёл UUID,
-   сайт привязывает `Company.erp_id = uuid` через `Company::withoutEvents()`.
+Уникальность контрагента — пара **(ИНН, КПП)**, юридически. Разные КПП у одного
+ИНН — это разные подразделения (например, головной офис и филиал) и должны
+существовать как разные Company. У ИП КПП отсутствует — храним как пустую строку
+`''` (NOT NULL DEFAULT '').
+
+### Алгоритм (применяется во всех входящих обработчиках)
+
+1. **По UUID** — `Company.erp_id = contractor.uuid / contractor_uuid`.
+2. **Fallback по (ИНН, КПП)** — `Company.tax_id = tax_id AND Company.tax_code = tax_code`.
+   `user_id` в фильтр **не входит** (ИНН+КПП юридически уникальны), что позволяет
+   найти Company даже до того, как сайт привязал её к партнёру.
+3. **Ленивый backfill `erp_id`** — если Company найдена по ИНН/КПП, а в payload
+   пришёл UUID, сайт привязывает `Company.erp_id = uuid` через `withoutEvents()`.
+4. **Soft-deleted** — найденная мягко-удалённая Company восстанавливается
+   (`restoreQuietly()`).
+5. **Lock** — поиск выполняется внутри `DB::transaction` с `lockForUpdate()`,
+   защищая от race-condition при параллельной обработке. UNIQUE-индекс БД —
+   последний рубеж защиты от дублей.
 
 ## contractor.created (Сайт → 1С) — v13.2
 

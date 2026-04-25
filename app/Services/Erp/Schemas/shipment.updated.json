@@ -16,12 +16,9 @@
             "format": "uuid"
         },
         "contractor_uuid": {
-            "type": [
-                "string",
-                "null"
-            ],
+            "type": "string",
             "format": "uuid",
-            "description": "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге, fallback на tax_id+partner_uuid."
+            "description": "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге, fallback на tax_id."
         },
         "partner_uuid": {
             "type": [
@@ -29,7 +26,7 @@
                 "null"
             ],
             "format": "uuid",
-            "description": "UUID партнёра-владельца. Нужен для корректного фильтра user_id при fallback-поиске Company по tax_id."
+            "description": "UUID партнёра-владельца. Опциональное поле — отгрузка может быть технической (внутренние перемещения)."
         },
         "tax_id": {
             "type": "string",
@@ -100,6 +97,7 @@
     "required": [
         "event",
         "uuid",
-        "number"
+        "number",
+        "contractor_uuid"
     ]
 }

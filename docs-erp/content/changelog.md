@@ -6,6 +6,68 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.6.0] — 2026-04-25
+
+> **BREAKING.** Контрагенты: устранение дублей. UUID контрагента теперь обязателен
+> в `order.created`, `shipment.created`, `shipment.updated`. На уровне БД добавлен
+> уникальный индекс `(tax_id, tax_code, deleted_at)`. Регрессия инцидента
+> 2026-04-25 (3093 дубля контрагентов на dev из-за отсутствия защиты).
+
+### Изменено (BREAKING)
+
+- **`order.created`** — `contractor` и `partner_uuid` теперь required в верхнем
+  уровне; внутри `contractor` — `uuid` и `tax_id` required. Сообщения без этих
+  полей **отклоняются валидатором** и попадают в `erp_validation_errors`.
+- **`shipment.created` / `shipment.updated`** — `contractor_uuid` теперь required.
+  `partner_uuid` остаётся optional (отгрузка может быть технической / внутреннее
+  перемещение).
+
+### Изменено (внутреннее)
+
+- **`HandleOrderCreated`** и **`HandleContractorCreated`** — переписан блок
+  поиска и создания Company:
+    - Fallback по `tax_id + tax_code` без фильтра `user_id` (ИНН/КПП юридически
+      уникальны).
+    - `lockForUpdate` внутри `DB::transaction` против race-condition в окне
+      SELECT → INSERT.
+    - Soft-deleted Company восстанавливается (`restoreQuietly`), а не дублируется.
+    - Backfill `Company.erp_id` если найдено по ИНН/КПП и UUID есть в payload.
+- **`HandleContractorCreated`** допускает создание Company с `user_id=NULL`,
+  если `partner.created` ещё не дошёл (раньше делал early return).
+- **БД:** `companies.tax_code` теперь `NOT NULL DEFAULT ''` (NULL → '' через
+  backfill). Добавлен `UNIQUE(tax_id, tax_code, deleted_at)`.
+
+### Добавлено
+
+- **`artisan erp:cleanup-contractor-by-tax-id {tax_id} {--dry-run|--force}`** —
+  hard delete всех Company по ИНН + связанных Order. Используется для
+  адресной очистки демо-данных и подготовки к UNIQUE-миграции.
+- **5 регрессионных интеграционных тестов** в `CompanyDeduplicationTest`.
+
+### Действия для интеграторов 1С
+
+- Все `order.created` события **обязаны** содержать `partner_uuid` и блок
+  `contractor` с `uuid` и `tax_id`. Сообщения без этих полей теперь отклоняются.
+- Все `shipment.created` / `shipment.updated` события **обязаны** содержать
+  `contractor_uuid`.
+- Если контрагент в 1С ещё не имеет UUID — сначала отправьте `contractor.created`
+  / `contractor.updated` для генерации UUID, потом `order` / `shipment`.
+
+### Совместимость
+
+- Сценарий «1С шлёт `contractor.created` раньше `partner.created`» теперь
+  поддерживается: Company создаётся с `user_id=NULL`, привязка к партнёру
+  происходит post-factum.
+- Soft-delete Company перестаёт быть источником дублей: повторный
+  `order.created` или `contractor.created` восстанавливает запись.
+
+### Документация
+
+- `rules/contractors.md` — обновлена стратегия матчинга на v13.6.
+- `migrations/v13.6-uniq-companies.md` — инструкция по миграции для прода.
+
+---
+
 ## [13.5.0] — 2026-04-25
 
 > Контрагенты: выделена собственная очередь `erp_in.contractors` (с DLQ `erp_dlq.contractors` и отдельным supervisor-консьюмером). Раньше события `contractor.*` шли в общую очередь с партнёрами `erp_in.partners`. Заодно очередь `erp_in.promotions` явно объявлена в топологии.

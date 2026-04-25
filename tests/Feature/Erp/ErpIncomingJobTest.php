@@ -877,6 +877,13 @@ class ErpIncomingJobTest extends TestCase
             'status' => 'pending',
             'type' => 'order',
             'message_id' => 'msg-order-upsert-first',
+            'partner_uuid' => '00000000-0000-4000-a000-000000001b01',
+            'contractor' => [
+                'uuid' => '00000000-0000-4000-a000-000000002b01',
+                'tax_id' => '7711000001',
+                'tax_code' => '770101001',
+                'name' => 'ООО Upsert',
+            ],
         ];
 
         $this->makeJob($payload)->fire();
@@ -914,6 +921,13 @@ class ErpIncomingJobTest extends TestCase
             'status' => 'pending',
             'type' => 'order',
             'message_id' => 'msg-order-dupnumber-first',
+            'partner_uuid' => '00000000-0000-4000-a000-000000001b02',
+            'contractor' => [
+                'uuid' => '00000000-0000-4000-a000-000000002b02',
+                'tax_id' => '7711000002',
+                'tax_code' => '770101001',
+                'name' => 'ООО DupNumber',
+            ],
         ];
 
         $this->makeJob($firstPayload)->fire();
@@ -925,6 +939,13 @@ class ErpIncomingJobTest extends TestCase
             'status' => 'pending',
             'type' => 'order',
             'message_id' => 'msg-order-dupnumber-second',
+            'partner_uuid' => '00000000-0000-4000-a000-000000001b02',
+            'contractor' => [
+                'uuid' => '00000000-0000-4000-a000-000000002b02',
+                'tax_id' => '7711000002',
+                'tax_code' => '770101001',
+                'name' => 'ООО DupNumber',
+            ],
         ];
 
         // Не должно бросить исключение
@@ -946,8 +967,11 @@ class ErpIncomingJobTest extends TestCase
             'status' => 'pending',
             'type' => 'order',
             'message_id' => 'msg-order-no-country',
+            'partner_uuid' => '00000000-0000-4000-a000-000000001c01',
             'contractor' => [
+                'uuid' => '00000000-0000-4000-a000-000000002c01',
                 'tax_id' => '7701234567',
+                'tax_code' => '770101001',
                 'name' => 'ООО Без страны',
                 // поле country намеренно отсутствует
             ],
@@ -1609,6 +1633,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-000000000031',
+            'contractor_uuid' => '00000000-0000-4000-a000-000000031000',
             'tax_id' => '1234567890',
             'partner_uuid' => '00000000-0000-4000-a000-000000003100',
             'number' => '29УТ-000031',
@@ -1657,6 +1682,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'shipment.updated',
             'uuid' => '00000000-0000-4000-a000-000000000032',
+            'contractor_uuid' => '00000000-0000-4000-a000-000000032000',
             'tax_id' => '1234567890',
             'number' => '29УТ-000032',
             'date' => '2026-02-16',
@@ -1747,6 +1773,7 @@ class ErpIncomingJobTest extends TestCase
         $createJob = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
+            'contractor_uuid' => '00000000-0000-4000-a000-00000002f000',
             'tax_id' => '5555555555',
             'number' => '29УТ-00002F',
             'date' => '2026-02-16',
@@ -1770,6 +1797,7 @@ class ErpIncomingJobTest extends TestCase
         $updateJob = $this->makeJob([
             'event' => 'shipment.updated',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
+            'contractor_uuid' => '00000000-0000-4000-a000-00000002f000',
             'tax_id' => '5555555555',
             'number' => '29УТ-00002F',
             'date' => '2026-02-16',
@@ -1803,6 +1831,7 @@ class ErpIncomingJobTest extends TestCase
         $dupJob = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-00000000002f',
+            'contractor_uuid' => '00000000-0000-4000-a000-00000002f000',
             'tax_id' => '5555555555',
             'number' => '29УТ-00002F',
             'items' => [],
@@ -1825,6 +1854,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'shipment.created',
             'uuid' => '00000000-0000-4000-a000-000000000a02',
+            'contractor_uuid' => '00000000-0000-4000-a000-000000a02000',
             'message_id' => 'msg-ship-neg-disc-001',
             'tax_id' => '1234567890',
             'number' => '29УТ-000A02',
@@ -1943,6 +1973,63 @@ class ErpIncomingJobTest extends TestCase
 
         $this->assertDatabaseMissing('shipments', [
             'uuid' => '00000000-0000-4000-a000-000000000b05',
+        ]);
+    }
+
+    #[Test]
+    public function order_created_without_contractor_uuid_fails_schema_validation(): void
+    {
+        // v13.6: contractor.uuid и partner_uuid обязательны. Сообщения без них
+        // должны отклоняться валидатором — Order и Company не создаются.
+        $job = $this->makeJob([
+            'event' => 'order.created',
+            'uuid' => '00000000-0000-4000-a000-000000d6c01',
+            'message_id' => 'msg-order-no-contractor-uuid',
+            'number' => 'ORD-NO-UUID-001',
+            'status' => 'pending',
+            'type' => 'order',
+            'partner_uuid' => '00000000-0000-4000-a000-000000d6c02',
+            'contractor' => [
+                'tax_id' => '5410165679',
+                'name' => '21 ООО',
+                // contractor.uuid намеренно отсутствует — должно отклоняться
+            ],
+            'items' => [],
+        ]);
+
+        $job->fire();
+
+        $this->assertDatabaseMissing('orders', [
+            'uuid' => '00000000-0000-4000-a000-000000d6c01',
+        ]);
+        $this->assertDatabaseMissing('companies', [
+            'tax_id' => '5410165679',
+        ]);
+    }
+
+    #[Test]
+    public function shipment_created_without_contractor_uuid_fails_schema_validation(): void
+    {
+        // v13.6: contractor_uuid обязателен в shipment.created.
+        $job = $this->makeJob([
+            'event' => 'shipment.created',
+            'uuid' => '00000000-0000-4000-a000-000000d6c03',
+            'tax_id' => '1234567890',
+            'number' => '29УТ-D6C03',
+            'date' => '2026-04-25',
+            'status' => 'completed',
+            'currency_code' => 'RUB',
+            'items' => [
+                ['product_uuid' => '00000000-0000-4000-a000-000000d6c04', 'quantity' => 1, 'price' => 500.00],
+            ],
+            'message_id' => 'msg-ship-no-contractor-uuid',
+            // contractor_uuid намеренно отсутствует
+        ]);
+
+        $job->fire();
+
+        $this->assertDatabaseMissing('shipments', [
+            'uuid' => '00000000-0000-4000-a000-000000d6c03',
         ]);
     }
 

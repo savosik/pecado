@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 13.3.0
+  version: 13.6.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -2101,13 +2101,14 @@ components:
 
     OrderContractor:
       type: object
+      required:
+        - uuid
+        - tax_id
       properties:
         uuid:
-          type:
-            - string
-            - 'null'
+          type: string
           format: uuid
-          description: "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге, fallback на tax_id. Опционально (v13.2)."
+          description: "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге, fallback на tax_id+tax_code."
         country:
           $ref: '#/components/schemas/CountryCode'
         name:
@@ -2160,6 +2161,7 @@ components:
         - uuid
         - status
         - partner_uuid
+        - contractor
         - items
       properties:
         event:
@@ -2205,9 +2207,7 @@ components:
         timestamp:
           $ref: '#/components/schemas/ISO8601DateTime'
         contractor:
-          oneOf:
-            - $ref: '#/components/schemas/OrderContractor'
-            - type: 'null'
+          $ref: '#/components/schemas/OrderContractor'
         delivery_address:
           type: string
           description: Адрес доставки
@@ -2417,6 +2417,7 @@ components:
         - event
         - message_id
         - uuid
+        - contractor_uuid
         - tax_id
         - number
         - date
@@ -2434,17 +2435,15 @@ components:
         uuid:
           $ref: '#/components/schemas/UUID'
         contractor_uuid:
-          type:
-            - string
-            - 'null'
+          type: string
           format: uuid
-          description: "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге Company, fallback на tax_id + partner_uuid. Опционально (v13.2)."
+          description: "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге Company, fallback на tax_id."
         partner_uuid:
           type:
             - string
             - 'null'
           format: uuid
-          description: "UUID партнёра-владельца. Нужен для корректного фильтра user_id при fallback-поиске Company по tax_id (v13.2)."
+          description: "UUID партнёра-владельца. Опциональное поле — отгрузка может быть технической (внутренние перемещения)."
         tax_id:
           type: string
           description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
@@ -2480,6 +2479,7 @@ components:
         - event
         - message_id
         - uuid
+        - contractor_uuid
         - tax_id
         - number
         - date
@@ -2497,17 +2497,15 @@ components:
         uuid:
           $ref: '#/components/schemas/UUID'
         contractor_uuid:
-          type:
-            - string
-            - 'null'
+          type: string
           format: uuid
-          description: "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге Company, fallback на tax_id + partner_uuid. Опционально (v13.2)."
+          description: "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге Company, fallback на tax_id."
         partner_uuid:
           type:
             - string
             - 'null'
           format: uuid
-          description: "UUID партнёра-владельца. Нужен для корректного фильтра user_id при fallback-поиске Company по tax_id (v13.2)."
+          description: "UUID партнёра-владельца. Опциональное поле — отгрузка может быть технической (внутренние перемещения)."
         tax_id:
           type: string
           description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"

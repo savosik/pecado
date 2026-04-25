@@ -199,6 +199,38 @@ class CompanyDeduplicationTest extends TestCase
     }
 
     #[Test]
+    public function ip_without_kpp_is_treated_as_distinct_per_tax_id(): void
+    {
+        // Два разных ИП (12-значный ИНН, КПП = '') — две Company, не конфликтуют.
+        // Повторный payload для одного ИП не создаёт дубль.
+        $handler = app(HandleOrderCreated::class);
+
+        foreach ([
+            ['order' => 'order-ip-001', 'tax_id' => '500100732259', 'name' => 'ИП Иванов'],
+            ['order' => 'order-ip-002', 'tax_id' => '770301287604', 'name' => 'ИП Петров'],
+            ['order' => 'order-ip-003', 'tax_id' => '500100732259', 'name' => 'ИП Иванов (повтор)'],
+        ] as $idx => $data) {
+            $handler->handle([
+                'event' => 'order.created',
+                'message_id' => "msg-ip-{$idx}",
+                'uuid' => $data['order'],
+                'status' => 'pending',
+                'contractor' => [
+                    'country' => 'RU',
+                    'name' => $data['name'],
+                    'tax_id' => $data['tax_id'],
+                    // tax_code намеренно опущен — ИП не имеет КПП
+                ],
+                'items' => [],
+            ]);
+        }
+
+        $this->assertEquals(2, Company::withoutGlobalScopes()->count(), 'Два разных ИП = две Company');
+        $this->assertEquals(1, Company::withoutGlobalScopes()->where('tax_id', '500100732259')->count(), 'Повтор по тому же ИП не плодит дубль');
+        $this->assertEquals(1, Company::withoutGlobalScopes()->where('tax_id', '770301287604')->count());
+    }
+
+    #[Test]
     public function different_tax_codes_for_same_tax_id_are_treated_as_distinct(): void
     {
         // Обособленные подразделения у одного юрлица: один ИНН — несколько КПП.

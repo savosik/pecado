@@ -28,7 +28,8 @@
         },
         "partner_uuid": {
             "type": "string",
-            "format": "uuid"
+            "format": "uuid",
+            "description": "UUID партнёра (User.erp_id). Required с v13.3."
         },
         "warehouse_uuids": {
             "type": "array",
@@ -42,18 +43,13 @@
             "format": "date-time"
         },
         "contractor": {
-            "type": [
-                "object",
-                "null"
-            ],
+            "type": "object",
+            "required": ["uuid", "tax_id"],
             "properties": {
                 "uuid": {
-                    "type": [
-                        "string",
-                        "null"
-                    ],
+                    "type": "string",
                     "format": "uuid",
-                    "description": "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге, fallback на tax_id."
+                    "description": "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге, fallback на tax_id+tax_code."
                 },
                 "country": {
                     "type": "string",
@@ -200,6 +196,8 @@
     "additionalProperties": true,
     "required": [
         "event",
-        "uuid"
+        "uuid",
+        "partner_uuid",
+        "contractor"
     ]
 }
