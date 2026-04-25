@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 13.2.0
+  version: 13.3.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -2076,6 +2076,99 @@ channels:
                     name:
                       type: string
                 - type: 'null'
+            weight_gross:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: >
+                (v13.3) Вес брутто упаковки в **килограммах**. Источник 1С —
+
+                `Упаковки.Вес` (первая непомеченная упаковка). Десятичный
+
+                разделитель — точка. Хранится в `products.weight_gross`
+                (`decimal(10,3)`).
+              examples:
+                - 1.25
+            weight_net:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: |
+                (v13.3) Вес нетто товара в **килограммах**. Источник 1С —
+                `Номенклатура.ЕдиницаИзмерения.Вес`. Хранится в
+                `products.weight_net` (`decimal(10,3)`).
+              examples:
+                - 1
+            width:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: >
+                (v13.3) Ширина упаковки в **сантиметрах**. Источник 1С —
+
+                `Упаковки.Ширина`. Хранится в `products.width`
+                (`decimal(10,2)`).
+              examples:
+                - 32.5
+            height:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: >
+                (v13.3) Высота упаковки в **сантиметрах**. Источник 1С —
+
+                `Упаковки.Высота`. Хранится в `products.height`
+                (`decimal(10,2)`).
+              examples:
+                - 12
+            depth:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: >
+                (v13.3) Глубина упаковки в **сантиметрах**. Источник 1С —
+
+                `Упаковки.Глубина`. Хранится в `products.depth`
+                (`decimal(10,2)`).
+              examples:
+                - 8
+            hs_code:
+              type:
+                - string
+                - 'null'
+              maxLength: 20
+              description: |
+                (v13.3) Код ТН ВЭД (Гармонизированная система). Источник 1С —
+                `Номенклатура.КодТНВЭД.Код`. Хранится как строка в
+                `products.hs_code` (`varchar(20)`). Поле `tnved` (legacy)
+                продолжает работать независимо.
+              examples:
+                - '6204620000'
+            abc_xyz:
+              type:
+                - string
+                - 'null'
+              maxLength: 5
+              description: |
+                (v13.3) ABC/XYZ-классификация товара. Двухсимвольный код вида
+                `AX`, `BY`, `CZ`. Хранится в `products.abc_xyz` (`varchar(5)`).
+              examples:
+                - AX
+            turnover:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: |
+                (v13.3) Коэффициент оборачиваемости товара. Хранится в
+                `products.turnover` (`decimal(12,4)`).
+              examples:
+                - 14.75
             attributes:
               type: array
               description: >
@@ -2257,6 +2350,74 @@ channels:
                     name:
                       type: string
                 - type: 'null'
+            weight_gross:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: >
+                (v13.3) Вес брутто упаковки в **килограммах**. Семантика
+                частичного
+
+                обновления: поле отсутствует в payload — `products.weight_gross`
+                не
+
+                трогаем; передано (включая `null`) — перезаписываем.
+            weight_net:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: |
+                (v13.3) Вес нетто товара в **килограммах**. Семантика частичного
+                обновления.
+            width:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: |
+                (v13.3) Ширина упаковки в **сантиметрах**. Семантика частичного
+                обновления.
+            height:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: |
+                (v13.3) Высота упаковки в **сантиметрах**. Семантика частичного
+                обновления.
+            depth:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: |
+                (v13.3) Глубина упаковки в **сантиметрах**. Семантика частичного
+                обновления.
+            hs_code:
+              type:
+                - string
+                - 'null'
+              maxLength: 20
+              description: |
+                (v13.3) Код ТН ВЭД. Семантика частичного обновления.
+            abc_xyz:
+              type:
+                - string
+                - 'null'
+              maxLength: 5
+              description: >
+                (v13.3) ABC/XYZ-классификация товара. Семантика частичного
+                обновления.
+            turnover:
+              type:
+                - number
+                - 'null'
+              minimum: 0
+              description: |
+                (v13.3) Коэффициент оборачиваемости товара. Семантика частичного
+                обновления.
             attributes:
               type: array
               description: >
@@ -6318,6 +6479,93 @@ components:
                   name:
                     type: string
               - type: 'null'
+          weight_gross:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: >
+              (v13.3) Вес брутто упаковки в **килограммах**. Источник 1С —
+
+              `Упаковки.Вес` (первая непомеченная упаковка). Десятичный
+
+              разделитель — точка. Хранится в `products.weight_gross`
+              (`decimal(10,3)`).
+            examples:
+              - 1.25
+          weight_net:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Вес нетто товара в **килограммах**. Источник 1С —
+              `Номенклатура.ЕдиницаИзмерения.Вес`. Хранится в
+              `products.weight_net` (`decimal(10,3)`).
+            examples:
+              - 1
+          width:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Ширина упаковки в **сантиметрах**. Источник 1С —
+              `Упаковки.Ширина`. Хранится в `products.width` (`decimal(10,2)`).
+            examples:
+              - 32.5
+          height:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Высота упаковки в **сантиметрах**. Источник 1С —
+              `Упаковки.Высота`. Хранится в `products.height` (`decimal(10,2)`).
+            examples:
+              - 12
+          depth:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Глубина упаковки в **сантиметрах**. Источник 1С —
+              `Упаковки.Глубина`. Хранится в `products.depth` (`decimal(10,2)`).
+            examples:
+              - 8
+          hs_code:
+            type:
+              - string
+              - 'null'
+            maxLength: 20
+            description: |
+              (v13.3) Код ТН ВЭД (Гармонизированная система). Источник 1С —
+              `Номенклатура.КодТНВЭД.Код`. Хранится как строка в
+              `products.hs_code` (`varchar(20)`). Поле `tnved` (legacy)
+              продолжает работать независимо.
+            examples:
+              - '6204620000'
+          abc_xyz:
+            type:
+              - string
+              - 'null'
+            maxLength: 5
+            description: |
+              (v13.3) ABC/XYZ-классификация товара. Двухсимвольный код вида
+              `AX`, `BY`, `CZ`. Хранится в `products.abc_xyz` (`varchar(5)`).
+            examples:
+              - AX
+          turnover:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Коэффициент оборачиваемости товара. Хранится в
+              `products.turnover` (`decimal(12,4)`).
+            examples:
+              - 14.75
           attributes:
             type: array
             description: >
@@ -6495,6 +6743,74 @@ components:
                   name:
                     type: string
               - type: 'null'
+          weight_gross:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: >
+              (v13.3) Вес брутто упаковки в **килограммах**. Семантика
+              частичного
+
+              обновления: поле отсутствует в payload — `products.weight_gross`
+              не
+
+              трогаем; передано (включая `null`) — перезаписываем.
+          weight_net:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Вес нетто товара в **килограммах**. Семантика частичного
+              обновления.
+          width:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Ширина упаковки в **сантиметрах**. Семантика частичного
+              обновления.
+          height:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Высота упаковки в **сантиметрах**. Семантика частичного
+              обновления.
+          depth:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Глубина упаковки в **сантиметрах**. Семантика частичного
+              обновления.
+          hs_code:
+            type:
+              - string
+              - 'null'
+            maxLength: 20
+            description: |
+              (v13.3) Код ТН ВЭД. Семантика частичного обновления.
+          abc_xyz:
+            type:
+              - string
+              - 'null'
+            maxLength: 5
+            description: >
+              (v13.3) ABC/XYZ-классификация товара. Семантика частичного
+              обновления.
+          turnover:
+            type:
+              - number
+              - 'null'
+            minimum: 0
+            description: |
+              (v13.3) Коэффициент оборачиваемости товара. Семантика частичного
+              обновления.
           attributes:
             type: array
             description: >
@@ -8949,6 +9265,93 @@ components:
                 name:
                   type: string
             - type: 'null'
+        weight_gross:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: >
+            (v13.3) Вес брутто упаковки в **килограммах**. Источник 1С —
+
+            `Упаковки.Вес` (первая непомеченная упаковка). Десятичный
+
+            разделитель — точка. Хранится в `products.weight_gross`
+            (`decimal(10,3)`).
+          examples:
+            - 1.25
+        weight_net:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Вес нетто товара в **килограммах**. Источник 1С —
+            `Номенклатура.ЕдиницаИзмерения.Вес`. Хранится в
+            `products.weight_net` (`decimal(10,3)`).
+          examples:
+            - 1
+        width:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Ширина упаковки в **сантиметрах**. Источник 1С —
+            `Упаковки.Ширина`. Хранится в `products.width` (`decimal(10,2)`).
+          examples:
+            - 32.5
+        height:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Высота упаковки в **сантиметрах**. Источник 1С —
+            `Упаковки.Высота`. Хранится в `products.height` (`decimal(10,2)`).
+          examples:
+            - 12
+        depth:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Глубина упаковки в **сантиметрах**. Источник 1С —
+            `Упаковки.Глубина`. Хранится в `products.depth` (`decimal(10,2)`).
+          examples:
+            - 8
+        hs_code:
+          type:
+            - string
+            - 'null'
+          maxLength: 20
+          description: |
+            (v13.3) Код ТН ВЭД (Гармонизированная система). Источник 1С —
+            `Номенклатура.КодТНВЭД.Код`. Хранится как строка в
+            `products.hs_code` (`varchar(20)`). Поле `tnved` (legacy)
+            продолжает работать независимо.
+          examples:
+            - '6204620000'
+        abc_xyz:
+          type:
+            - string
+            - 'null'
+          maxLength: 5
+          description: |
+            (v13.3) ABC/XYZ-классификация товара. Двухсимвольный код вида
+            `AX`, `BY`, `CZ`. Хранится в `products.abc_xyz` (`varchar(5)`).
+          examples:
+            - AX
+        turnover:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Коэффициент оборачиваемости товара. Хранится в
+            `products.turnover` (`decimal(12,4)`).
+          examples:
+            - 14.75
         attributes:
           type: array
           description: >
@@ -9106,6 +9509,70 @@ components:
                 name:
                   type: string
             - type: 'null'
+        weight_gross:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Вес брутто упаковки в **килограммах**. Семантика частичного
+            обновления: поле отсутствует в payload — `products.weight_gross` не
+            трогаем; передано (включая `null`) — перезаписываем.
+        weight_net:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Вес нетто товара в **килограммах**. Семантика частичного
+            обновления.
+        width:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Ширина упаковки в **сантиметрах**. Семантика частичного
+            обновления.
+        height:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Высота упаковки в **сантиметрах**. Семантика частичного
+            обновления.
+        depth:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Глубина упаковки в **сантиметрах**. Семантика частичного
+            обновления.
+        hs_code:
+          type:
+            - string
+            - 'null'
+          maxLength: 20
+          description: |
+            (v13.3) Код ТН ВЭД. Семантика частичного обновления.
+        abc_xyz:
+          type:
+            - string
+            - 'null'
+          maxLength: 5
+          description: >
+            (v13.3) ABC/XYZ-классификация товара. Семантика частичного
+            обновления.
+        turnover:
+          type:
+            - number
+            - 'null'
+          minimum: 0
+          description: |
+            (v13.3) Коэффициент оборачиваемости товара. Семантика частичного
+            обновления.
         attributes:
           type: array
           description: >

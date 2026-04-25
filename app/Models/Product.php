@@ -75,6 +75,14 @@ class Product extends Model implements HasMedia
         'url',
         'barcode',
         'tnved',
+        'weight_gross',
+        'weight_net',
+        'width',
+        'height',
+        'depth',
+        'hs_code',
+        'abc_xyz',
+        'turnover',
         'is_marked',
         'is_liquidation',
         'for_marketplaces',
@@ -108,6 +116,12 @@ class Product extends Model implements HasMedia
             'hidden' => 'boolean',
             'pros_cons' => 'array',
             'rich_content' => 'array',
+            'weight_gross' => 'decimal:3',
+            'weight_net' => 'decimal:3',
+            'width' => 'decimal:2',
+            'height' => 'decimal:2',
+            'depth' => 'decimal:2',
+            'turnover' => 'decimal:4',
         ];
     }
 

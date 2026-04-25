@@ -8,7 +8,7 @@ import { Box, Card, SimpleGrid, Input, Textarea, Stack, Tabs } from '@chakra-ui/
 
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
-import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuListChecks, LuFolderTree } from 'react-icons/lu';
+import { LuFileText, LuTag, LuDollarSign, LuAlignLeft, LuImage, LuWarehouse, LuListChecks, LuFolderTree, LuPackage } from 'react-icons/lu';
 import { WarehousesSection } from './Components/WarehousesSection';
 import { CategoryAttributesSection } from './Components/CategoryAttributesSection';
 
@@ -33,6 +33,14 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         url: product.url || '',
         barcodes: product.barcodes || [],
         tnved: product.tnved || '',
+        weight_gross: product.weight_gross ?? '',
+        weight_net: product.weight_net ?? '',
+        width: product.width ?? '',
+        height: product.height ?? '',
+        depth: product.depth ?? '',
+        hs_code: product.hs_code ?? '',
+        abc_xyz: product.abc_xyz ?? '',
+        turnover: product.turnover ?? '',
         is_new: product.is_new || false,
         is_bestseller: product.is_bestseller || false,
         is_marked: product.is_marked || false,
@@ -72,6 +80,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         descriptions: ['short_description', 'description', 'description_html', 'meta_title', 'meta_description'].some(field => errors[field]),
         richContent: ['rich_content'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
+        logistics: ['weight_gross', 'weight_net', 'width', 'height', 'depth', 'hs_code', 'abc_xyz', 'turnover'].some(field => errors[field]),
     }), [errors]);
 
     // Мемоизируем опции для селектов
@@ -241,6 +250,14 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                 </Tabs.Trigger>
                                 <Tabs.Trigger value="inventory">
                                     <LuWarehouse /> Склады
+                                </Tabs.Trigger>
+                                <Tabs.Trigger value="logistics">
+                                    <LuPackage /> Габариты и логистика
+                                    {tabErrors.logistics && (
+                                        <Box as="span" color="red.500" ml={2} fontWeight="bold">
+                                            ⚠️
+                                        </Box>
+                                    )}
                                 </Tabs.Trigger>
                                 <Tabs.Trigger value="attributes">
                                     <LuListChecks /> Атрибуты
@@ -668,6 +685,125 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                         onChange={(wh) => setData('warehouses', wh)}
                                         error={errors.warehouses}
                                     />
+                                </Stack>
+                            </Tabs.Content>
+
+                            {/* Таб: Габариты и логистика */}
+                            <Tabs.Content value="logistics">
+                                <Stack gap={6} mt={6}>
+                                    <Box>
+                                        <Box fontSize="md" fontWeight="semibold" mb={3}>Вес</Box>
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <FormField
+                                                label="Вес брутто, кг"
+                                                error={errors.weight_gross}
+                                                helperText="Из «Упаковки.Вес» в 1С (первая непомеченная упаковка)"
+                                            >
+                                                <Input
+                                                    type="number"
+                                                    step="0.001"
+                                                    min="0"
+                                                    value={data.weight_gross}
+                                                    onChange={(e) => setData('weight_gross', e.target.value)}
+                                                    placeholder="0.000"
+                                                />
+                                            </FormField>
+                                            <FormField
+                                                label="Вес нетто, кг"
+                                                error={errors.weight_net}
+                                                helperText="Из «Номенклатура.ЕдиницаИзмерения.Вес» в 1С"
+                                            >
+                                                <Input
+                                                    type="number"
+                                                    step="0.001"
+                                                    min="0"
+                                                    value={data.weight_net}
+                                                    onChange={(e) => setData('weight_net', e.target.value)}
+                                                    placeholder="0.000"
+                                                />
+                                            </FormField>
+                                        </SimpleGrid>
+                                    </Box>
+
+                                    <Box>
+                                        <Box fontSize="md" fontWeight="semibold" mb={3}>Габариты упаковки</Box>
+                                        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                                            <FormField label="Ширина, см" error={errors.width}>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={data.width}
+                                                    onChange={(e) => setData('width', e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                            </FormField>
+                                            <FormField label="Высота, см" error={errors.height}>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={data.height}
+                                                    onChange={(e) => setData('height', e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                            </FormField>
+                                            <FormField label="Глубина, см" error={errors.depth}>
+                                                <Input
+                                                    type="number"
+                                                    step="0.01"
+                                                    min="0"
+                                                    value={data.depth}
+                                                    onChange={(e) => setData('depth', e.target.value)}
+                                                    placeholder="0.00"
+                                                />
+                                            </FormField>
+                                        </SimpleGrid>
+                                    </Box>
+
+                                    <Box>
+                                        <Box fontSize="md" fontWeight="semibold" mb={3}>Классификация</Box>
+                                        <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                                            <FormField
+                                                label="Код ТН ВЭД"
+                                                error={errors.hs_code}
+                                                helperText="Из «Номенклатура.КодТНВЭД.Код», до 20 символов"
+                                            >
+                                                <Input
+                                                    value={data.hs_code}
+                                                    onChange={(e) => setData('hs_code', e.target.value)}
+                                                    maxLength={20}
+                                                    placeholder="6204620000"
+                                                />
+                                            </FormField>
+                                            <FormField
+                                                label="ABC/XYZ"
+                                                error={errors.abc_xyz}
+                                                helperText="Класс ABC/XYZ, например AX"
+                                            >
+                                                <Input
+                                                    value={data.abc_xyz}
+                                                    onChange={(e) => setData('abc_xyz', e.target.value.toUpperCase())}
+                                                    maxLength={5}
+                                                    placeholder="AX"
+                                                />
+                                            </FormField>
+                                            <FormField
+                                                label="Оборачиваемость"
+                                                error={errors.turnover}
+                                                helperText="Коэффициент оборачиваемости товара"
+                                            >
+                                                <Input
+                                                    type="number"
+                                                    step="0.0001"
+                                                    min="0"
+                                                    value={data.turnover}
+                                                    onChange={(e) => setData('turnover', e.target.value)}
+                                                    placeholder="0.0000"
+                                                />
+                                            </FormField>
+                                        </SimpleGrid>
+                                    </Box>
                                 </Stack>
                             </Tabs.Content>
 

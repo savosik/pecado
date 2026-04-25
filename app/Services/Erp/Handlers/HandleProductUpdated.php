@@ -132,6 +132,20 @@ class HandleProductUpdated
                 $updateData['is_marked'] = (bool) $payload['is_marked'];
             }
 
+            foreach (['weight_gross', 'weight_net', 'width', 'height', 'depth', 'turnover'] as $numericField) {
+                if (array_key_exists($numericField, $payload)) {
+                    $updateData[$numericField] = $this->normalizeNumeric($payload[$numericField]);
+                }
+            }
+
+            if (array_key_exists('hs_code', $payload)) {
+                $updateData['hs_code'] = $this->normalizeString($payload['hs_code'], 20);
+            }
+
+            if (array_key_exists('abc_xyz', $payload)) {
+                $updateData['abc_xyz'] = $this->normalizeString($payload['abc_xyz'], 5);
+            }
+
             if (! empty($updateData)) {
                 $product->update($updateData);
             }
@@ -380,6 +394,47 @@ class HandleProductUpdated
         }
 
         return false;
+    }
+
+    /**
+     * Привести числовое поле payload к float или null.
+     * Принимает int/float/numeric-string. Отрицательные значения и не-числа → null.
+     */
+    private function normalizeNumeric(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $float = (float) $value;
+
+        return $float < 0 ? null : $float;
+    }
+
+    /**
+     * Привести строковое поле payload к строке заданной максимальной длины или null.
+     */
+    private function normalizeString(mixed $value, int $maxLength): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            $value = (string) $value;
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return mb_substr($value, 0, $maxLength);
     }
 
     /**

@@ -715,4 +715,102 @@ class HandleProductUpdatedTest extends TestCase
         $this->assertEquals(1, $product->attributeValues()->count());
         $this->assertEquals(1, Attribute::where('external_id', 'attr-idem')->count());
     }
+
+    #[Test]
+    public function partial_update_changes_only_provided_dimensions(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'partial-dims-001',
+            'weight_gross' => 1.500,
+            'weight_net' => 1.200,
+            'width' => 30.00,
+            'height' => 10.00,
+            'depth' => 5.00,
+            'hs_code' => '1111111111',
+            'abc_xyz' => 'AY',
+            'turnover' => 5.0000,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-dims-partial-001',
+            'uuid' => 'partial-dims-001',
+            'weight_gross' => 2.250,
+            'hs_code' => '6204620000',
+        ]);
+
+        $product->refresh();
+        $this->assertEquals('2.250', (string) $product->weight_gross);
+        $this->assertEquals('6204620000', $product->hs_code);
+        // Остальные поля не изменены
+        $this->assertEquals('1.200', (string) $product->weight_net);
+        $this->assertEquals('30.00', (string) $product->width);
+        $this->assertEquals('10.00', (string) $product->height);
+        $this->assertEquals('5.00', (string) $product->depth);
+        $this->assertEquals('AY', $product->abc_xyz);
+        $this->assertEquals('5.0000', (string) $product->turnover);
+    }
+
+    #[Test]
+    public function update_without_dimensions_preserves_existing_values(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'preserve-dims-001',
+            'name' => 'Старое имя',
+            'weight_gross' => 1.500,
+            'weight_net' => 1.200,
+            'width' => 30.00,
+            'height' => 10.00,
+            'depth' => 5.00,
+            'hs_code' => '1111111111',
+            'abc_xyz' => 'AX',
+            'turnover' => 5.0000,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-preserve-dims-001',
+            'uuid' => 'preserve-dims-001',
+            'name' => 'Новое имя',
+        ]);
+
+        $product->refresh();
+        $this->assertEquals('Новое имя', $product->name);
+        $this->assertEquals('1.500', (string) $product->weight_gross);
+        $this->assertEquals('1.200', (string) $product->weight_net);
+        $this->assertEquals('30.00', (string) $product->width);
+        $this->assertEquals('10.00', (string) $product->height);
+        $this->assertEquals('5.00', (string) $product->depth);
+        $this->assertEquals('1111111111', $product->hs_code);
+        $this->assertEquals('AX', $product->abc_xyz);
+        $this->assertEquals('5.0000', (string) $product->turnover);
+    }
+
+    #[Test]
+    public function update_with_null_clears_dimension_field(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'clear-dims-001',
+            'weight_gross' => 1.500,
+            'hs_code' => '6204620000',
+            'abc_xyz' => 'AX',
+            'turnover' => 12.3456,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-clear-dims-001',
+            'uuid' => 'clear-dims-001',
+            'weight_gross' => null,
+            'hs_code' => null,
+            'abc_xyz' => null,
+            'turnover' => null,
+        ]);
+
+        $product->refresh();
+        $this->assertNull($product->weight_gross);
+        $this->assertNull($product->hs_code);
+        $this->assertNull($product->abc_xyz);
+        $this->assertNull($product->turnover);
+    }
 }

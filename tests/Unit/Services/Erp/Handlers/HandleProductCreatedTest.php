@@ -877,4 +877,82 @@ class HandleProductCreatedTest extends TestCase
         $this->assertEquals(1, $product->attributeValues()->count());
         $this->assertEquals('Новое имя', $product->name);
     }
+
+    #[Test]
+    public function creates_product_with_dimensions_and_classification(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-dims-001',
+            'uuid' => 'prod-dims-001',
+            'name' => 'Товар с габаритами',
+            'code' => 'DIMS-001',
+            'sku' => 'DIMS-001',
+            'weight_gross' => 1.250,
+            'weight_net' => 1.000,
+            'width' => 32.5,
+            'height' => 12.0,
+            'depth' => 8.0,
+            'hs_code' => '6204620000',
+            'abc_xyz' => 'AX',
+            'turnover' => 14.7500,
+        ]);
+
+        $product = Product::where('external_id', 'prod-dims-001')->first();
+        $this->assertNotNull($product);
+        $this->assertEquals('1.250', (string) $product->weight_gross);
+        $this->assertEquals('1.000', (string) $product->weight_net);
+        $this->assertEquals('32.50', (string) $product->width);
+        $this->assertEquals('12.00', (string) $product->height);
+        $this->assertEquals('8.00', (string) $product->depth);
+        $this->assertEquals('6204620000', $product->hs_code);
+        $this->assertEquals('AX', $product->abc_xyz);
+        $this->assertEquals('14.7500', (string) $product->turnover);
+    }
+
+    #[Test]
+    public function creates_product_without_dimensions_keeps_columns_null(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-no-dims-001',
+            'uuid' => 'prod-no-dims-001',
+            'name' => 'Товар без габаритов',
+            'code' => 'NODIMS-001',
+            'sku' => 'NODIMS-001',
+        ]);
+
+        $product = Product::where('external_id', 'prod-no-dims-001')->first();
+        $this->assertNotNull($product);
+        $this->assertNull($product->weight_gross);
+        $this->assertNull($product->weight_net);
+        $this->assertNull($product->width);
+        $this->assertNull($product->height);
+        $this->assertNull($product->depth);
+        $this->assertNull($product->hs_code);
+        $this->assertNull($product->abc_xyz);
+        $this->assertNull($product->turnover);
+    }
+
+    #[Test]
+    public function negative_dimensions_are_normalised_to_null(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-neg-dims-001',
+            'uuid' => 'prod-neg-dims-001',
+            'name' => 'Товар с отрицательными габаритами',
+            'code' => 'NEG-001',
+            'sku' => 'NEG-001',
+            'weight_gross' => -5,
+            'width' => -10,
+            'turnover' => -1.5,
+        ]);
+
+        $product = Product::where('external_id', 'prod-neg-dims-001')->first();
+        $this->assertNotNull($product);
+        $this->assertNull($product->weight_gross);
+        $this->assertNull($product->width);
+        $this->assertNull($product->turnover);
+    }
 }

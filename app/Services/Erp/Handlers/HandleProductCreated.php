@@ -69,6 +69,14 @@ class HandleProductCreated
         $attributesInPayload = array_key_exists('attributes', $payload);
         $hidden = (bool) ($payload['hidden'] ?? false);
         $isMarked = (bool) ($payload['is_marked'] ?? false);
+        $weightGross = $this->normalizeNumeric($payload['weight_gross'] ?? null);
+        $weightNet = $this->normalizeNumeric($payload['weight_net'] ?? null);
+        $width = $this->normalizeNumeric($payload['width'] ?? null);
+        $height = $this->normalizeNumeric($payload['height'] ?? null);
+        $depth = $this->normalizeNumeric($payload['depth'] ?? null);
+        $hsCode = $this->normalizeString($payload['hs_code'] ?? null, 20);
+        $abcXyz = $this->normalizeString($payload['abc_xyz'] ?? null, 5);
+        $turnover = $this->normalizeNumeric($payload['turnover'] ?? null);
 
         $category = null;
 
@@ -77,7 +85,8 @@ class HandleProductCreated
         $this->runInTransaction(function () use (
             $uuid, $name, $code, $sku, $categoryUuid, $brandData,
             $description, $descriptionHtml, $barcodes, $modelData, $attributes, $attributesInPayload,
-            $hidden, $isMarked, &$category
+            $hidden, $isMarked, $weightGross, $weightNet, $width, $height, $depth,
+            $hsCode, $abcXyz, $turnover, &$category
         ) {
             // --- Категория ---
             $categoryId = null;
@@ -124,6 +133,14 @@ class HandleProductCreated
                     'model_id' => $modelId,
                     'hidden' => $hidden,
                     'is_marked' => $isMarked,
+                    'weight_gross' => $weightGross,
+                    'weight_net' => $weightNet,
+                    'width' => $width,
+                    'height' => $height,
+                    'depth' => $depth,
+                    'hs_code' => $hsCode,
+                    'abc_xyz' => $abcXyz,
+                    'turnover' => $turnover,
                     // Цена не перезаписывается здесь — она управляется через price.updated (US-02)
                     'base_price' => $basePrice,
                 ]
@@ -339,6 +356,47 @@ class HandleProductCreated
                 'attributes' => count($attributes),
             ]);
         });
+    }
+
+    /**
+     * Привести числовое поле payload к float или null.
+     * Принимает int/float/numeric-string. Отрицательные значения и не-числа → null.
+     */
+    private function normalizeNumeric(mixed $value): ?float
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $float = (float) $value;
+
+        return $float < 0 ? null : $float;
+    }
+
+    /**
+     * Привести строковое поле payload к строке заданной максимальной длины или null.
+     */
+    private function normalizeString(mixed $value, int $maxLength): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (! is_string($value)) {
+            $value = (string) $value;
+        }
+
+        $value = trim($value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        return mb_substr($value, 0, $maxLength);
     }
 
     protected function shouldRetryOnDeadlock(Throwable $e): bool
