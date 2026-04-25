@@ -4,6 +4,7 @@ namespace App\Services\Search;
 
 use App\Models\Product;
 use App\Services\Product\ProductQueryService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -75,5 +76,47 @@ class ExactProductMatcher
         $len = mb_strlen($q);
 
         return $len >= self::MIN_LEN && $len <= self::MAX_LEN;
+    }
+
+    /**
+     * Содержит ли хотя бы один товар в выдаче точное вхождение запроса
+     * (case-insensitive) в имя/артикул/код/штрихкод/бренд.
+     *
+     * Используется, чтобы понять: показ результатов — это «точный матч в каком-то
+     * поле» или «фаззи-результаты по соседним токенам». Во втором случае фронт
+     * рисует баннер «Точного совпадения не найдено — похожие товары».
+     *
+     * @param  Collection<int, Product>  $products
+     */
+    public function hasLiteralMatch(Collection $products, string $query): bool
+    {
+        $needle = mb_strtolower(trim($query));
+        if ($needle === '') {
+            return false;
+        }
+
+        foreach ($products as $p) {
+            $parts = [
+                $p->name,
+                $p->sku,
+                $p->code,
+                $p->barcode,
+                $p->variant_name,
+                $p->brand?->name,
+            ];
+
+            if ($p->relationLoaded('barcodes')) {
+                foreach ($p->barcodes as $b) {
+                    $parts[] = $b->barcode;
+                }
+            }
+
+            $haystack = mb_strtolower(implode(' ', array_filter($parts, fn ($v) => $v !== null && $v !== '')));
+            if ($haystack !== '' && mb_strpos($haystack, $needle) !== false) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

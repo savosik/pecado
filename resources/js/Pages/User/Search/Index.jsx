@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import { Box, Flex, Text, Badge, SimpleGrid, Heading } from '@chakra-ui/react';
-import { LuSearch } from 'react-icons/lu';
+import { LuSearch, LuInfo } from 'react-icons/lu';
 import UserLayout from '@/Pages/User/UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageHeader from '@/components/common/PageHeader';
@@ -189,6 +189,31 @@ export default function SearchIndex({ query, results, productsMeta }) {
             {/* Товары — ProductGrid (идентично каталогу) */}
             {products.length > 0 && (
                 <SearchSection title="Товары">
+                    {meta?.no_exact_match && (
+                        <Flex
+                            align="flex-start"
+                            gap="3"
+                            p="4"
+                            mb="4"
+                            bg="orange.50"
+                            borderLeft="4px solid"
+                            borderColor="orange.400"
+                            borderRadius="md"
+                            _dark={{ bg: 'orange.900/30', borderColor: 'orange.300' }}
+                        >
+                            <Box color="orange.500" mt="0.5" _dark={{ color: 'orange.300' }}>
+                                <LuInfo size={20} />
+                            </Box>
+                            <Box>
+                                <Text fontWeight="semibold" color="fg">
+                                    Точного совпадения по запросу «{q}» не найдено
+                                </Text>
+                                <Text fontSize="sm" color="fg.muted" mt="1">
+                                    Показаны похожие товары. Проверьте артикул или штрихкод — возможно, в нём опечатка.
+                                </Text>
+                            </Box>
+                        </Flex>
+                    )}
                     <ProductGrid products={products} />
 
                     {/* Пагинация товаров */}

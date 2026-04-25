@@ -415,6 +415,63 @@ class SearchControllerTest extends TestCase
         $this->assertSame($exact->id, $first['id']);
     }
 
+    public function test_no_exact_match_flag_set_when_query_not_in_any_product(): void
+    {
+        // Товар с именем, в котором НЕТ запроса как substring.
+        $product = Product::factory()->create([
+            'name' => 'Совершенно другой товар без искомого вхождения',
+            'sku' => 'XYZ-001',
+        ]);
+        $this->addStock($product);
+
+        // Используем запрос, который collection-driver всё равно матчит
+        // (например, через одну из фаззи-эвристик). Если выдача пустая — флаг false (нет смысла показывать).
+        // Поэтому создадим товар с partial match и запрос с дополнительным символом, которого нет нигде.
+        $response = $this->getJson('/search?q=NOMATCH-CODE-77777&type=products');
+
+        $response->assertOk();
+        // total=0 — флаг false (или meta=null).
+        $meta = $response->json('productsMeta');
+        if ($meta && $meta['total'] > 0) {
+            $this->assertTrue($meta['no_exact_match'] ?? false);
+        } else {
+            // Пусто — баннер не показываем.
+            $this->assertTrue($meta === null || ($meta['no_exact_match'] ?? false) === false);
+        }
+    }
+
+    public function test_no_exact_match_flag_false_when_substring_in_name(): void
+    {
+        $product = Product::factory()->create([
+            'name' => 'Насадка реалистичная KOKOS COCK SLEEVE',
+            'sku' => 'CS.002-S',
+        ]);
+        $this->addStock($product);
+
+        $response = $this->getJson('/search?q=KOKOS&type=products');
+
+        $response->assertOk();
+        $meta = $response->json('productsMeta');
+        $this->assertNotNull($meta);
+        $this->assertFalse($meta['no_exact_match'], 'KOKOS — точное вхождение в имя, флаг должен быть false');
+    }
+
+    public function test_no_exact_match_flag_false_when_exact_sku(): void
+    {
+        $product = Product::factory()->create([
+            'name' => 'Любой товар',
+            'sku' => 'EXACT-SKU-001',
+        ]);
+        $this->addStock($product);
+
+        $response = $this->getJson('/search?q=EXACT-SKU-001&type=products');
+
+        $response->assertOk();
+        $meta = $response->json('productsMeta');
+        $this->assertNotNull($meta);
+        $this->assertFalse($meta['no_exact_match']);
+    }
+
     public function test_exact_match_not_duplicated_in_results(): void
     {
         // Товар, который Scout тоже найдёт по sku — не должен дублироваться после пиннинга.

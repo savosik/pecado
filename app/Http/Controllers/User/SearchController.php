@@ -241,6 +241,11 @@ class SearchController extends Controller
                     $products->prepend($exactMatch);
                 }
 
+                // Точное вхождение запроса (case-insensitive) в name/sku/code/barcode/brand
+                // хотя бы одного из товаров? Если нет — Scout вернул только фаззи-соседей,
+                // фронт покажет «Точного совпадения не найдено — похожие товары».
+                $hasExact = $exactMatch !== null || $this->exactMatcher->hasLiteralMatch($products, $query);
+
                 // Преобразование через ProductQueryService (полный формат, как в каталоге)
                 $productArray = $products
                     ->map(fn (Product $product) => ProductQueryService::productToArray($product))
@@ -265,6 +270,7 @@ class SearchController extends Controller
                     'total' => $total,
                     'from' => $paginated->firstItem(),
                     'to' => $paginated->lastItem(),
+                    'no_exact_match' => $total > 0 && ! $hasExact,
                 ];
             } catch (\Throwable $e) {
                 \Illuminate\Support\Facades\Log::warning('SearchController: Scout запрос упал', [
@@ -284,6 +290,7 @@ class SearchController extends Controller
                         'total' => 1,
                         'from' => 1,
                         'to' => 1,
+                        'no_exact_match' => false,
                     ];
                 } else {
                     $results['products'] = [];
