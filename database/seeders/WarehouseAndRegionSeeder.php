@@ -27,10 +27,6 @@ class WarehouseAndRegionSeeder extends Seeder
                 'name' => 'Москва Основной',
                 'external_id' => '40301d16-3847-11e1-8034-001e6711ed1d',
             ],
-            [
-                'name' => 'Москва Предзаказы',
-                'external_id' => '3d0a3eb9-0c23-11ee-8ddc-ee348b24c7ce',
-            ],
         ];
 
         foreach ($warehouses as $data) {
