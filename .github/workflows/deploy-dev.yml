@@ -378,6 +378,10 @@ jobs:
           echo "==> [5.3/7] Настройка топологии RabbitMQ (exchanges, queues, shovels)..."
           sg docker -c 'docker compose exec -T app php artisan rabbitmq:setup' || true
 
+          echo "==> [5.4/7] Синхронизация настроек Meilisearch (typoTolerance, searchable, synonyms)..."
+          sg docker -c 'docker compose exec -T app php artisan scout:sync-index-settings' || true
+          sg docker -c 'docker compose exec -T app php artisan meilisearch:sync-synonyms' || true
+
           echo "==> [6/7] Перезапуск очередей..."
           sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
