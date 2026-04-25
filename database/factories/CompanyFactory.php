@@ -30,7 +30,7 @@ class CompanyFactory extends Factory
             'legal_name' => 'ООО "'.fake()->company().'"',
             'tax_id' => $this->generateTaxId($country),
             'registration_number' => $country === Country::RU ? fake()->numerify('1##############') : null,
-            'tax_code' => $country === Country::RU ? fake()->numerify('#########') : null,
+            'tax_code' => $country === Country::RU ? fake()->numerify('#########') : '',
             'okpo_code' => in_array($country, [Country::RU, Country::BY]) ? fake()->numerify('########') : null,
             'legal_address' => fake()->address(),
             'actual_address' => fake()->optional()->address(),
@@ -75,7 +75,7 @@ class CompanyFactory extends Factory
             'country' => Country::BY,
             'tax_id' => fake()->numerify('#########'),
             'registration_number' => null,
-            'tax_code' => null,
+            'tax_code' => '',
             'okpo_code' => fake()->numerify('########'),
         ]);
     }
@@ -89,7 +89,7 @@ class CompanyFactory extends Factory
             'country' => Country::KZ,
             'tax_id' => fake()->numerify('############'),
             'registration_number' => null,
-            'tax_code' => null,
+            'tax_code' => '',
             'okpo_code' => null,
         ]);
     }
