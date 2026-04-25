@@ -73,6 +73,8 @@ class ExcelCatalogPreset extends AbstractPreset
             'Остаток', 'В наличии', 'Описание', 'Краткое описание',
             'Meta Title', 'Meta Description', 'Главное фото', 'Доп. фото',
             'Новинка', 'Бестселлер', 'URL',
+            'Вес брутто, кг', 'Вес нетто, кг',
+            'Ширина, м', 'Высота, м', 'Глубина, м', 'Код ТН ВЭД',
         ];
         $fixedCount = count($fixedHeaders);
 
@@ -124,6 +126,29 @@ class ExcelCatalogPreset extends AbstractPreset
                 $sheet->setCellValue([$col++, $row], $item['is_new'] ? 'Да' : 'Нет');
                 $sheet->setCellValue([$col++, $row], $item['is_bestseller'] ? 'Да' : 'Нет');
                 $sheet->setCellValue([$col++, $row], $item['url'] ?? '');
+
+                // Габариты и вес
+                if ($item['weight_gross'] !== null) {
+                    $sheet->setCellValueExplicit([$col, $row], (string) $item['weight_gross'], DataType::TYPE_NUMERIC);
+                }
+                $col++;
+                if ($item['weight_net'] !== null) {
+                    $sheet->setCellValueExplicit([$col, $row], (string) $item['weight_net'], DataType::TYPE_NUMERIC);
+                }
+                $col++;
+                if ($item['width'] !== null) {
+                    $sheet->setCellValueExplicit([$col, $row], (string) $item['width'], DataType::TYPE_NUMERIC);
+                }
+                $col++;
+                if ($item['height'] !== null) {
+                    $sheet->setCellValueExplicit([$col, $row], (string) $item['height'], DataType::TYPE_NUMERIC);
+                }
+                $col++;
+                if ($item['depth'] !== null) {
+                    $sheet->setCellValueExplicit([$col, $row], (string) $item['depth'], DataType::TYPE_NUMERIC);
+                }
+                $col++;
+                $sheet->setCellValue([$col++, $row], $item['hs_code'] ?? '');
 
                 // Атрибуты — динамические колонки
                 foreach ($item['attributes'] as $attr) {

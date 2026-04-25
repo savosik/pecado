@@ -54,6 +54,7 @@ class ShopifyCsvPreset extends AbstractPreset
             'Variant Inventory Qty', 'Variant Price', 'Variant Compare At Price',
             'Variant Barcode', 'Image Src', 'Image Position', 'Image Alt Text',
             'SEO Title', 'SEO Description', 'Status',
+            'Weight Gross (kg)', 'Width (m)', 'Height (m)', 'Depth (m)', 'HS Code',
         ];
     }
 
@@ -73,17 +74,26 @@ class ShopifyCsvPreset extends AbstractPreset
                     ->map(fn ($a) => "{$a['name']}:{$a['value']}")
                     ->implode(', ');
 
+                $variantGrams = $item['weight_net'] !== null
+                    ? (string) (int) round($item['weight_net'] * 1000)
+                    : '';
+
                 $row = [
                     $handle, $item['name'], $item['description'] ?? '',
                     $item['brand_name'] ?? '', $item['category_path'] ?? '',
                     $item['category_name'] ?? '', $tags, 'TRUE',
-                    $item['sku'] ?? '', '',
+                    $item['sku'] ?? '', $variantGrams,
                     (string) $item['stock'], (string) $item['price'],
                     $item['base_price'] > $item['price'] ? (string) $item['base_price'] : '',
                     $item['barcode'] ?? '', $item['main_image'] ?? '',
                     $item['main_image'] ? '1' : '', $item['name'],
                     $item['meta_title'] ?? '', $item['meta_description'] ?? '',
                     $item['stock'] > 0 ? 'active' : 'draft',
+                    $item['weight_gross'] !== null ? (string) $item['weight_gross'] : '',
+                    $item['width'] !== null ? (string) $item['width'] : '',
+                    $item['height'] !== null ? (string) $item['height'] : '',
+                    $item['depth'] !== null ? (string) $item['depth'] : '',
+                    $item['hs_code'] ?? '',
                 ];
                 fputcsv($stream, $row);
 

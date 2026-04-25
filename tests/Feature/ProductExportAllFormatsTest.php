@@ -88,6 +88,14 @@ class ProductExportAllFormatsTest extends TestCase
             ['key' => 'warehouses.pivot.quantity', 'label' => 'Остатки по складам', 'modifiers' => ['separator' => ', ']],
             ['key' => 'total_stock', 'label' => 'Суммарный остаток'],
 
+            // ─── Габариты и вес ───
+            ['key' => 'weight_gross', 'label' => 'Вес брутто, кг'],
+            ['key' => 'weight_net', 'label' => 'Вес нетто, кг'],
+            ['key' => 'width', 'label' => 'Ширина, м'],
+            ['key' => 'height', 'label' => 'Высота, м'],
+            ['key' => 'depth', 'label' => 'Глубина, м'],
+            ['key' => 'hs_code', 'label' => 'Код ТН ВЭД'],
+
             // ─── Штрихкоды ───
             ['key' => 'barcodes.barcode', 'label' => 'Все штрихкоды', 'modifiers' => ['separator' => ', ']],
 

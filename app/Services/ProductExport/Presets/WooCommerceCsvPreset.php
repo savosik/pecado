@@ -61,6 +61,8 @@ class WooCommerceCsvPreset extends AbstractPreset
                     'Short description', 'Description', 'Sale price', 'Regular price',
                     'Stock', 'In stock?', 'Categories', 'Tags', 'Images',
                     'Meta: _seo_title', 'Meta: _seo_description', 'External ID', 'Brands',
+                    'Weight (kg)', 'Length (m)', 'Width (m)', 'Height (m)',
+                    'Meta: _weight_gross', 'Meta: _hs_code',
                 ];
                 for ($i = 1; $i <= $maxAttrs; $i++) {
                     $headers[] = "Attribute {$i} name";
@@ -85,6 +87,12 @@ class WooCommerceCsvPreset extends AbstractPreset
                     $item['category_path'] ?? '', '', $allImages,
                     $item['meta_title'] ?? '', $item['meta_description'] ?? '',
                     $item['external_id'] ?? '', $item['brand_name'] ?? '',
+                    $item['weight_net'] !== null ? (string) $item['weight_net'] : '',
+                    $item['depth'] !== null ? (string) $item['depth'] : '',
+                    $item['width'] !== null ? (string) $item['width'] : '',
+                    $item['height'] !== null ? (string) $item['height'] : '',
+                    $item['weight_gross'] !== null ? (string) $item['weight_gross'] : '',
+                    $item['hs_code'] ?? '',
                 ];
 
                 foreach ($item['attributes'] as $attr) {

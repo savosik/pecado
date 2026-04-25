@@ -60,6 +60,8 @@ class CsCartCsvPreset extends AbstractPreset
                     'Images', 'Detailed description', 'Short description',
                     'Meta keywords', 'Meta description', 'Search words',
                     'Page title', 'Brand/Manufacturer',
+                    'Weight (kg)', 'Weight gross (kg)',
+                    'Box length (m)', 'Box width (m)', 'Box height (m)', 'HS code',
                 ];
                 for ($i = 1; $i <= $maxAttrs; $i++) {
                     $headers[] = "Feature {$i} name";
@@ -85,6 +87,12 @@ class CsCartCsvPreset extends AbstractPreset
                     $item['short_description'] ?? '', '',
                     $item['meta_description'] ?? '', $item['name'],
                     $item['meta_title'] ?? '', $item['brand_name'] ?? '',
+                    $item['weight_net'] !== null ? (string) $item['weight_net'] : '',
+                    $item['weight_gross'] !== null ? (string) $item['weight_gross'] : '',
+                    $item['depth'] !== null ? (string) $item['depth'] : '',
+                    $item['width'] !== null ? (string) $item['width'] : '',
+                    $item['height'] !== null ? (string) $item['height'] : '',
+                    $item['hs_code'] ?? '',
                 ];
 
                 foreach ($item['attributes'] as $attr) {

@@ -97,9 +97,9 @@
 |---|---|---|---|---|---|
 | `weight_gross` | number, nullable | `Упаковки.Вес` (первая непомеченная упаковка) | `products.weight_gross` `decimal(10,3)` | кг | `1.250` |
 | `weight_net` | number, nullable | `Номенклатура.ЕдиницаИзмерения.Вес` | `products.weight_net` `decimal(10,3)` | кг | `1.000` |
-| `width` | number, nullable | `Упаковки.Ширина` | `products.width` `decimal(10,2)` | см | `32.50` |
-| `height` | number, nullable | `Упаковки.Высота` | `products.height` `decimal(10,2)` | см | `12.00` |
-| `depth` | number, nullable | `Упаковки.Глубина` | `products.depth` `decimal(10,2)` | см | `8.00` |
+| `width` | number, nullable | `Упаковки.Ширина` | `products.width` `decimal(10,2)` | м | `0.32` |
+| `height` | number, nullable | `Упаковки.Высота` | `products.height` `decimal(10,2)` | м | `0.12` |
+| `depth` | number, nullable | `Упаковки.Глубина` | `products.depth` `decimal(10,2)` | м | `0.08` |
 | `hs_code` | string, nullable, ≤20 | `Номенклатура.КодТНВЭД.Код` | `products.hs_code` `varchar(20)` | — | `"6204620000"` |
 | `abc_xyz` | string, nullable, ≤5 | Классификация ABC/XYZ | `products.abc_xyz` `varchar(5)` | — | `"AX"` |
 | `turnover` | number, nullable | Коэффициент оборачиваемости | `products.turnover` `decimal(12,4)` | — | `14.7500` |

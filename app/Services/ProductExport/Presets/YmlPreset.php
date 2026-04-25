@@ -155,6 +155,40 @@ class YmlPreset extends AbstractPreset
                 // Количество на складе
                 $xml->writeElement('count', (string) $item['stock']);
 
+                // Вес нетто (стандартный YML-тег) — в килограммах
+                if ($item['weight_net'] !== null) {
+                    $xml->writeElement('weight', (string) $item['weight_net']);
+                }
+
+                // Габариты упаковки (стандартный YML-тег) — длина/ширина/высота в см
+                // Внутренне храним в метрах, конвертируем в см для YML-стандарта
+                if ($item['depth'] !== null || $item['width'] !== null || $item['height'] !== null) {
+                    $xml->writeElement(
+                        'dimensions',
+                        sprintf(
+                            '%s/%s/%s',
+                            number_format((float) ($item['depth'] ?? 0) * 100, 2, '.', ''),
+                            number_format((float) ($item['width'] ?? 0) * 100, 2, '.', ''),
+                            number_format((float) ($item['height'] ?? 0) * 100, 2, '.', ''),
+                        )
+                    );
+                }
+
+                // Дополнительные характеристики
+                if ($item['weight_gross'] !== null) {
+                    $xml->startElement('param');
+                    $xml->writeAttribute('name', 'Вес брутто');
+                    $xml->writeAttribute('unit', 'кг');
+                    $xml->text((string) $item['weight_gross']);
+                    $xml->endElement();
+                }
+                if ($item['hs_code']) {
+                    $xml->startElement('param');
+                    $xml->writeAttribute('name', 'Код ТН ВЭД');
+                    $xml->text($item['hs_code']);
+                    $xml->endElement();
+                }
+
                 // Все атрибуты как <param>
                 foreach ($item['attributes'] as $attr) {
                     $xml->startElement('param');

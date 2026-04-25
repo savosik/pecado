@@ -58,6 +58,8 @@ class TildaCsvPreset extends AbstractPreset
                     'Brand', 'SKU', 'Category', 'Title', 'Description', 'Text',
                     'Photo', 'Price', 'Price Old', 'Quantity', 'External ID',
                     'Parent UID', 'Mark',
+                    'Weight Net (kg)', 'Weight Gross (kg)',
+                    'Width (m)', 'Height (m)', 'Depth (m)', 'HS Code',
                 ];
                 for ($i = 1; $i <= $maxAttrs; $i++) {
                     $headers[] = "Characteristic {$i} Title";
@@ -88,6 +90,12 @@ class TildaCsvPreset extends AbstractPreset
                     (string) $item['stock'],
                     $item['external_id'] ?? (string) $item['id'],
                     '', implode(',', $marks),
+                    $item['weight_net'] !== null ? (string) $item['weight_net'] : '',
+                    $item['weight_gross'] !== null ? (string) $item['weight_gross'] : '',
+                    $item['width'] !== null ? (string) $item['width'] : '',
+                    $item['height'] !== null ? (string) $item['height'] : '',
+                    $item['depth'] !== null ? (string) $item['depth'] : '',
+                    $item['hs_code'] ?? '',
                 ];
 
                 foreach ($item['attributes'] as $attr) {

@@ -14,7 +14,7 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 - **`weight_gross`** (number, nullable, кг) — вес брутто из `Упаковки.Вес` (первая непомеченная упаковка), сохраняется в `products.weight_gross` `decimal(10, 3)`
 - **`weight_net`** (number, nullable, кг) — вес нетто из `Номенклатура.ЕдиницаИзмерения.Вес`, сохраняется в `products.weight_net` `decimal(10, 3)`
-- **`width`**, **`height`**, **`depth`** (number, nullable, см) — габариты упаковки из `Упаковки.Ширина/Высота/Глубина`, сохраняются в `products.width/height/depth` `decimal(10, 2)`
+- **`width`**, **`height`**, **`depth`** (number, nullable, м) — габариты упаковки из `Упаковки.Ширина/Высота/Глубина`, сохраняются в `products.width/height/depth` `decimal(10, 2)`
 - **`hs_code`** (string, nullable, ≤20) — нормализованный код ТН ВЭД из `Номенклатура.КодТНВЭД.Код`, сохраняется в `products.hs_code` `varchar(20)`. Legacy-поле `tnved` остаётся неизменным для обратной совместимости со старыми сценариями выгрузок
 - **`abc_xyz`** (string, nullable, ≤5) — класс ABC/XYZ (например, `AX`), сохраняется в `products.abc_xyz` `varchar(5)`
 - **`turnover`** (number, nullable) — коэффициент оборачиваемости товара, сохраняется в `products.turnover` `decimal(12, 4)`

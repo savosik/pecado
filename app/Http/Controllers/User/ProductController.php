@@ -572,6 +572,38 @@ class ProductController extends Controller
             ];
         }
 
+        // Габариты и логистика — берутся из колонок самого товара
+        $logisticsFields = [
+            ['name' => 'Вес брутто, кг', 'value' => $product->weight_gross],
+            ['name' => 'Вес нетто, кг', 'value' => $product->weight_net],
+            ['name' => 'Ширина, м', 'value' => $product->width],
+            ['name' => 'Высота, м', 'value' => $product->height],
+            ['name' => 'Глубина, м', 'value' => $product->depth],
+            ['name' => 'Код ТН ВЭД', 'value' => $product->hs_code],
+        ];
+        $logisticsItems = [];
+        foreach ($logisticsFields as $field) {
+            $value = $field['value'];
+            if ($value === null || $value === '') {
+                continue;
+            }
+            if (is_numeric($value) && (float) $value === 0.0) {
+                continue;
+            }
+            $valueStr = (string) $value;
+            $specifications[$field['name']] = $valueStr;
+            $logisticsItems[] = [
+                'name' => $field['name'],
+                'value' => $valueStr,
+            ];
+        }
+        if (! empty($logisticsItems)) {
+            $specificationGroups[] = [
+                'name' => 'Габариты и логистика',
+                'items' => $logisticsItems,
+            ];
+        }
+
         // Основные данные товара
         $productData = ProductQueryService::productToArray($product);
 

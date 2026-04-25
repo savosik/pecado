@@ -164,7 +164,7 @@
 
 ### D) Обновление габаритов и классификации (v13.3)
 
-🔵 **1С отправляет** `product.updated` с `weight_gross: 1.250`, `width: 30`, `hs_code: "8517620000"` (без остальных полей).
+🔵 **1С отправляет** `product.updated` с `weight_gross: 1.250`, `width: 0.30`, `hs_code: "8517620000"` (без остальных полей).
 
 - [ ] `products.weight_gross`, `products.width`, `products.hs_code` обновлены
 - [ ] `weight_net`, `height`, `depth`, `abc_xyz`, `turnover` НЕ изменились (частичное обновление)

@@ -97,6 +97,14 @@ class FieldRegistry
             new Fields\WarehousesQuantityField,
             new Fields\TotalStockField,
 
+            // Габариты и вес
+            new Fields\WeightGrossField,
+            new Fields\WeightNetField,
+            new Fields\WidthField,
+            new Fields\HeightField,
+            new Fields\DepthField,
+            new Fields\HsCodeField,
+
             // Штрихкоды
             new Fields\BarcodesField,
 

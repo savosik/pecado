@@ -4011,7 +4011,7 @@
 <ul>
 <li><strong><code>weight_gross</code></strong> (number, nullable, кг) — вес брутто из <code>Упаковки.Вес</code> (первая непомеченная упаковка), сохраняется в <code>products.weight_gross</code> <code>decimal(10, 3)</code></li>
 <li><strong><code>weight_net</code></strong> (number, nullable, кг) — вес нетто из <code>Номенклатура.ЕдиницаИзмерения.Вес</code>, сохраняется в <code>products.weight_net</code> <code>decimal(10, 3)</code></li>
-<li><strong><code>width</code></strong>, <strong><code>height</code></strong>, <strong><code>depth</code></strong> (number, nullable, см) — габариты упаковки из <code>Упаковки.Ширина/Высота/Глубина</code>, сохраняются в <code>products.width/height/depth</code> <code>decimal(10, 2)</code></li>
+<li><strong><code>width</code></strong>, <strong><code>height</code></strong>, <strong><code>depth</code></strong> (number, nullable, м) — габариты упаковки из <code>Упаковки.Ширина/Высота/Глубина</code>, сохраняются в <code>products.width/height/depth</code> <code>decimal(10, 2)</code></li>
 <li><strong><code>hs_code</code></strong> (string, nullable, ≤20) — нормализованный код ТН ВЭД из <code>Номенклатура.КодТНВЭД.Код</code>, сохраняется в <code>products.hs_code</code> <code>varchar(20)</code>. Legacy-поле <code>tnved</code> остаётся неизменным для обратной совместимости со старыми сценариями выгрузок</li>
 <li><strong><code>abc_xyz</code></strong> (string, nullable, ≤5) — класс ABC/XYZ (например, <code>AX</code>), сохраняется в <code>products.abc_xyz</code> <code>varchar(5)</code></li>
 <li><strong><code>turnover</code></strong> (number, nullable) — коэффициент оборачиваемости товара, сохраняется в <code>products.turnover</code> <code>decimal(12, 4)</code></li>

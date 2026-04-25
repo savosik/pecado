@@ -133,6 +133,14 @@ class JsonCatalogPreset extends AbstractPreset
                 'is_new' => $item['is_new'],
                 'is_bestseller' => $item['is_bestseller'],
             ],
+            'logistics' => [
+                'weight_gross_kg' => $item['weight_gross'],
+                'weight_net_kg' => $item['weight_net'],
+                'width_m' => $item['width'],
+                'height_m' => $item['height'],
+                'depth_m' => $item['depth'],
+                'hs_code' => $item['hs_code'],
+            ],
         ];
 
         return $product;

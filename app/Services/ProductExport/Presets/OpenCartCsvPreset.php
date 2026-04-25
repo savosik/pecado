@@ -63,6 +63,7 @@ class OpenCartCsvPreset extends AbstractPreset
                     'price', 'quantity', 'status', 'image', 'additional_images',
                     'description(ru)', 'meta_title(ru)', 'meta_description(ru)',
                     'manufacturer', 'upc', 'weight',
+                    'weight_gross', 'length', 'width', 'height', 'hs_code',
                 ];
                 for ($i = 1; $i <= $maxAttrs; $i++) {
                     $headers[] = "attribute_name_{$i}";
@@ -91,7 +92,12 @@ class OpenCartCsvPreset extends AbstractPreset
                     $item['meta_description'] ?? '',
                     $item['brand_name'] ?? '',
                     $item['barcode'] ?? '',
-                    '',
+                    $item['weight_net'] !== null ? (string) $item['weight_net'] : '',
+                    $item['weight_gross'] !== null ? (string) $item['weight_gross'] : '',
+                    $item['depth'] !== null ? (string) $item['depth'] : '',
+                    $item['width'] !== null ? (string) $item['width'] : '',
+                    $item['height'] !== null ? (string) $item['height'] : '',
+                    $item['hs_code'] ?? '',
                 ];
 
                 foreach ($item['attributes'] as $attr) {

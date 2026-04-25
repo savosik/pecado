@@ -57,6 +57,8 @@ class VkMarketCsvPreset extends AbstractPreset
                 $headers = [
                     'Название', 'Описание', 'Фото (ссылки через запятую)', 'Категория',
                     'Цена', 'Старая цена', 'Артикул', 'В наличии', 'Бренд',
+                    'Вес брутто, кг', 'Вес нетто, кг',
+                    'Ширина, м', 'Высота, м', 'Глубина, м', 'Код ТН ВЭД',
                 ];
                 for ($i = 1; $i <= $maxAttrs; $i++) {
                     $headers[] = "Свойство {$i} название";
@@ -76,6 +78,12 @@ class VkMarketCsvPreset extends AbstractPreset
                     $item['base_price'] > $item['price'] ? (string) $item['base_price'] : '',
                     $item['sku'] ?? '', $item['stock'] > 0 ? 'Да' : 'Нет',
                     $item['brand_name'] ?? '',
+                    $item['weight_gross'] !== null ? (string) $item['weight_gross'] : '',
+                    $item['weight_net'] !== null ? (string) $item['weight_net'] : '',
+                    $item['width'] !== null ? (string) $item['width'] : '',
+                    $item['height'] !== null ? (string) $item['height'] : '',
+                    $item['depth'] !== null ? (string) $item['depth'] : '',
+                    $item['hs_code'] ?? '',
                 ];
 
                 foreach ($item['attributes'] as $attr) {

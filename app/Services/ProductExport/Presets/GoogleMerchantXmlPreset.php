@@ -127,6 +127,26 @@ class GoogleMerchantXmlPreset extends AbstractPreset
                     $xml->writeElement('g:product_type', $item['category_path']);
                 }
 
+                // Габариты и вес (стандартные g:-теги Google Shopping)
+                if ($item['weight_net'] !== null) {
+                    $xml->writeElement('g:shipping_weight', number_format($item['weight_net'], 3, '.', '').' kg');
+                }
+                if ($item['weight_gross'] !== null) {
+                    $xml->writeElement('g:product_weight', number_format($item['weight_gross'], 3, '.', '').' kg');
+                }
+                if ($item['depth'] !== null) {
+                    $xml->writeElement('g:product_length', number_format($item['depth'], 2, '.', '').' m');
+                }
+                if ($item['width'] !== null) {
+                    $xml->writeElement('g:product_width', number_format($item['width'], 2, '.', '').' m');
+                }
+                if ($item['height'] !== null) {
+                    $xml->writeElement('g:product_height', number_format($item['height'], 2, '.', '').' m');
+                }
+                if ($item['hs_code']) {
+                    $xml->writeElement('g:hs_code', $item['hs_code']);
+                }
+
                 // Атрибуты через custom labels
                 $attrIndex = 0;
                 foreach ($item['attributes'] as $attr) {

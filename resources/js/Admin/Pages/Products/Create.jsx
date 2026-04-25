@@ -594,7 +594,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                     <Box>
                                         <Box fontSize="md" fontWeight="semibold" mb={3}>Габариты упаковки</Box>
                                         <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
-                                            <FormField label="Ширина, см" error={errors.width}>
+                                            <FormField label="Ширина, м" error={errors.width}>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
@@ -604,7 +604,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                                     placeholder="0.00"
                                                 />
                                             </FormField>
-                                            <FormField label="Высота, см" error={errors.height}>
+                                            <FormField label="Высота, м" error={errors.height}>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
@@ -614,7 +614,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                                     placeholder="0.00"
                                                 />
                                             </FormField>
-                                            <FormField label="Глубина, см" error={errors.depth}>
+                                            <FormField label="Глубина, м" error={errors.depth}>
                                                 <Input
                                                     type="number"
                                                     step="0.01"
