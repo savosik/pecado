@@ -21,11 +21,13 @@ class DevDataCleanup extends Command
     {
         if (app()->isProduction()) {
             $this->error('Команда запрещена в production!');
+
             return self::FAILURE;
         }
 
         if (! $this->option('force') && ! $this->confirm('Удалить ВСЕ данные (товары, заказы, пользователей кроме админов)? Это необратимо!')) {
             $this->info('Отменено.');
+
             return self::SUCCESS;
         }
 
