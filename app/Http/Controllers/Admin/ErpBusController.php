@@ -18,26 +18,26 @@ class ErpBusController extends AdminController
      */
     private const INCOMING_QUEUES = [
         'erp_in.partners',
+        'erp_in.contractors',
         'erp_in.prices',
         'erp_in.stock',
         'erp_in.orders',
         'erp_in.returns',
         'erp_in.documents',
         'erp_in.balance',
-        'erp_in.segments',
         'erp_in.catalog',
         'erp_in.promotions',
     ];
 
     private const DLQ_QUEUES = [
         'erp_dlq.partners',
+        'erp_dlq.contractors',
         'erp_dlq.prices',
         'erp_dlq.stock',
         'erp_dlq.orders',
         'erp_dlq.returns',
         'erp_dlq.documents',
         'erp_dlq.balance',
-        'erp_dlq.segments',
         'erp_dlq.catalog',
         'erp_dlq.promotions',
     ];
@@ -46,6 +46,7 @@ class ErpBusController extends AdminController
         'erp_out.orders',
         'erp_out.returns',
         'erp_out.partners',
+        'erp_out.contractors',
     ];
 
     /**

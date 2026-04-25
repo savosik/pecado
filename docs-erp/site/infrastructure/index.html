@@ -1744,8 +1744,13 @@
 <tbody>
 <tr>
 <td><code>erp_in.partners</code></td>
-<td><code>partner.*</code>, <code>contractor.*</code></td>
-<td><code>partner.created</code>, <code>partner.updated</code>, <code>partner.deleted</code>, <code>contractor.created</code></td>
+<td><code>partner.*</code></td>
+<td><code>partner.created</code>, <code>partner.updated</code>, <code>partner.deleted</code></td>
+</tr>
+<tr>
+<td><code>erp_in.contractors</code></td>
+<td><code>contractor.*</code></td>
+<td><code>contractor.created</code>, <code>contractor.updated</code>, <code>contractor.deleted</code></td>
 </tr>
 <tr>
 <td><code>erp_in.prices</code></td>
@@ -1782,6 +1787,11 @@
 <td><code>category.*</code>, <code>product.*</code></td>
 <td>Каталог и номенклатура</td>
 </tr>
+<tr>
+<td><code>erp_in.promotions</code></td>
+<td><code>promotion.*</code></td>
+<td><code>promotion.created</code>, <code>promotion.updated</code>, <code>promotion.deleted</code></td>
+</tr>
 </tbody>
 </table>
 <h2 id="1_1">Исходящие очереди (Сайт → 1С)<a class="headerlink" href="#1_1" title="Permanent link">&para;</a></h2>
@@ -1808,6 +1818,11 @@
 <td><code>erp_out.partners</code></td>
 <td><code>partner.created</code></td>
 <td>Активированные пользователи</td>
+</tr>
+<tr>
+<td><code>erp_out.contractors</code></td>
+<td><code>contractor.created</code></td>
+<td>Контрагенты с заполненным <code>tax_id</code> (v13.2)</td>
 </tr>
 </tbody>
 </table>
@@ -2031,9 +2046,27 @@
 </tr>
 <tr>
 <td><code>contractor.created</code></td>
+<td>Сайт → 1С</td>
+<td><code>site.events</code></td>
+<td><code>erp_out.contractors</code></td>
+</tr>
+<tr>
+<td><code>contractor.created</code></td>
 <td>1С → Сайт</td>
 <td><code>erp.events</code></td>
-<td><code>erp_in.partners</code></td>
+<td><code>erp_in.contractors</code></td>
+</tr>
+<tr>
+<td><code>contractor.updated</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.contractors</code></td>
+</tr>
+<tr>
+<td><code>contractor.deleted</code></td>
+<td>1С → Сайт</td>
+<td><code>erp.events</code></td>
+<td><code>erp_in.contractors</code></td>
 </tr>
 <tr>
 <td><code>price.updated</code></td>

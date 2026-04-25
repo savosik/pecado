@@ -1781,7 +1781,7 @@
 </ul>
 <p><strong>Сводка:</strong></p>
 <ul>
-<li>Сайт принимает новые события <code>contractor.updated</code> и <code>contractor.deleted</code> (очередь <code>erp_in.partners</code>, routing keys <code>contractor.*</code>).</li>
+<li>Сайт принимает новые события <code>contractor.updated</code> и <code>contractor.deleted</code> (очередь <code>erp_in.contractors</code>, routing keys <code>contractor.*</code>; до v13.5 очередь была <code>erp_in.partners</code>).</li>
 <li>Сайт публикует <code>contractor.created</code> в новую очередь <code>erp_out.contractors</code> при создании Company с непустым <code>tax_id</code>.</li>
 <li>Во все сообщения, где фигурирует контрагент, добавлены опциональные UUID-поля: <code>contractor.uuid</code> (order.created), <code>contractor_uuid</code> + <code>partner_uuid</code> (shipment.*), <code>contractors[].uuid</code> (balance.updated).</li>
 <li>Все UUID-поля <strong>опциональны</strong> — сайт работает с 1С любой версии. При наличии UUID матчинг идёт по нему, иначе — fallback на <code>tax_id + user_id</code>.</li>
@@ -1790,7 +1790,7 @@
 <h3 id="a-rabbitmq">A. Инфраструктура RabbitMQ<a class="headerlink" href="#a-rabbitmq" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] <strong>Очередь <code>erp_out.contractors</code></strong> уже объявлена сайтом через <code>artisan rabbitmq:setup</code> (durable, bind на exchange <code>site.events</code> с routing key <code>contractor.created</code>). Ничего создавать руками не нужно; 1С достаточно подписаться на consume.</li>
-<li>[ ] Входящие контрагентские события (<code>contractor.updated</code>, <code>contractor.deleted</code>) от 1С идут в существующую очередь <strong><code>erp_in.partners</code></strong> (routing keys <code>contractor.*</code> уже привязаны к <code>erp.events</code>). Отдельная очередь не нужна.</li>
+<li>[ ] Входящие контрагентские события (<code>contractor.created</code>, <code>contractor.updated</code>, <code>contractor.deleted</code>) от 1С идут в очередь <strong><code>erp_in.contractors</code></strong> (routing keys <code>contractor.*</code> привязаны к <code>erp.events</code>; v13.5 — выделена из <code>erp_in.partners</code>).</li>
 </ul>
 <h3 id="b-contractorcreated-1">B. Потребление <code>contractor.created</code> (Сайт → 1С)<a class="headerlink" href="#b-contractorcreated-1" title="Permanent link">&para;</a></h3>
 <p>Сайт публикует <code>contractor.created</code> при <strong>первом заполнении <code>tax_id</code></strong> у Company
@@ -1802,7 +1802,7 @@
 <li>Если не найден — создать нового контрагента с привязкой к партнёру, 1С присваивает собственный UUID.</li>
 </ul>
 </li>
-<li>[ ] После обработки <strong>отправить <code>contractor.updated</code></strong> в <code>erp_in.partners</code> с назначенным UUID (<code>uuid</code> в payload) и теми же реквизитами, которые были в <code>contractor.created</code> от сайта (в частности — тем же <code>tax_id</code>). Сайт найдёт Company по <code>tax_id + user_id</code>, привяжет <code>erp_id = uuid</code> (ленивый backfill).</li>
+<li>[ ] После обработки <strong>отправить <code>contractor.updated</code></strong> в <code>erp_in.contractors</code> с назначенным UUID (<code>uuid</code> в payload) и теми же реквизитами, которые были в <code>contractor.created</code> от сайта (в частности — тем же <code>tax_id</code>). Сайт найдёт Company по <code>tax_id + user_id</code>, привяжет <code>erp_id = uuid</code> (ленивый backfill).</li>
 <li>[ ] Поле <code>uuid</code> в <code>contractor.created</code> от сайта — <strong>локальный UUIDv4 сайта для корреляции</strong>. 1С генерирует свой UUID независимо, не использует переданный как ссылку.</li>
 </ul>
 <p><strong>Схема:</strong> <a href="https://dev.pecado.ru/docs/erp/schemas/contractor.created.to_erp.json"><code>contractor.created.to_erp.json</code></a>.</p>

@@ -6,6 +6,29 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.5.0] — 2026-04-25
+
+> Контрагенты: выделена собственная очередь `erp_in.contractors` (с DLQ `erp_dlq.contractors` и отдельным supervisor-консьюмером). Раньше события `contractor.*` шли в общую очередь с партнёрами `erp_in.partners`. Заодно очередь `erp_in.promotions` явно объявлена в топологии.
+
+### Изменено
+
+- **`erp_in.contractors`** — новая выделенная durable-очередь для входящих событий `contractor.created` / `contractor.updated` / `contractor.deleted`. Routing keys `contractor.*` теперь биндятся **только** к ней (с `erp_in.partners` снимаются при первом запуске `artisan rabbitmq:setup` после деплоя).
+- **`erp_dlq.contractors`** — собственная DLQ. `x-dead-letter-routing-key` = `contractor.created`.
+- **Отдельный supervisor consumer** `erp-contractors-consumer` (1 процесс, connection `rabbitmq-erp-incoming`, `--tries=3 --backoff=15`).
+- **Админка `/admin/erp-bus`** теперь показывает `erp_in.contractors`, `erp_dlq.contractors`, `erp_out.contractors`. Удалены отображения мёртвых ссылок `erp_in.segments` / `erp_dlq.segments`.
+
+### Действия для интеграторов 1С
+
+- На стороне 1С менять ничего не нужно: routing keys `contractor.*` остались прежними, exchange `erp.events` тот же. Сообщения автоматически попадут в новую очередь.
+- Если в момент деплоя в `erp_in.partners` находились необработанные сообщения `contractor.*` — они дочитываются прежним консьюмером (`erp-partners-consumer`) до полного опустошения, новые сообщения сразу идут в `erp_in.contractors`.
+
+### Совместимость
+
+- 1С продолжает отвечать `contractor.updated` с UUID после `contractor.created` от сайта — но теперь ответ оказывается в `erp_in.contractors`, а не в `erp_in.partners`. Поведение сайта не меняется.
+- Документация: `rules/contractors.md`, `migrations/v13.2-contractor-uuid.md`, `tests/phase-2-outbound.md`, `infrastructure.md` приведены в соответствие.
+
+---
+
 ## [13.3.0] — 2026-04-25
 
 > `product.created` / `product.updated`: восемь новых опциональных системных полей — физические габариты, вес и аналитические показатели (классификация ABC/XYZ, оборачиваемость, ТН ВЭД)

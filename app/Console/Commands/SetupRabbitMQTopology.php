@@ -31,7 +31,8 @@ class SetupRabbitMQTopology extends Command
      * Входящие очереди (1С → Сайт) с routing keys.
      */
     private const INCOMING_QUEUES = [
-        'erp_in.partners' => ['partner.*', 'contractor.*'],
+        'erp_in.partners' => ['partner.*'],
+        'erp_in.contractors' => ['contractor.*'],
         'erp_in.prices' => ['price.*', 'exchange_rate.*', 'individual_prices.*'],
         'erp_in.stock' => ['stock.*'],
         'erp_in.orders' => ['order.*'],
@@ -40,6 +41,19 @@ class SetupRabbitMQTopology extends Command
         'erp_in.balance' => ['balance.*'],
         'erp_in.catalog' => ['category.*', 'product.*'],
         'erp_in.promotions' => ['promotion.*'],
+    ];
+
+    /**
+     * Устаревшие bindings, которые надо снять при первом запуске после миграций.
+     *
+     * v13.5 (2026-04-25): contractor.* выделены из erp_in.partners в erp_in.contractors.
+     * queue_unbind идемпотентен — если binding уже снят, повтор не падает.
+     *
+     * @var array<int, array{queue: string, exchange: string, key: string}>
+     */
+    private const STALE_BINDINGS = [
+        ['queue' => 'erp_in.partners', 'exchange' => 'erp.events', 'key' => 'contractor.*'],
+        ['queue' => 'erp_dlq.partners', 'exchange' => 'erp.dlx', 'key' => 'contractor.*'],
     ];
 
     /**
@@ -115,6 +129,16 @@ class SetupRabbitMQTopology extends Command
                 foreach ($routingKeys as $key) {
                     $this->info("  Binding: {$key} → {$queue}");
                     $channel->queue_bind($queue, 'site.events', $key);
+                }
+            }
+
+            // 6.5. Снятие устаревших bindings (миграции топологии)
+            foreach (self::STALE_BINDINGS as $b) {
+                try {
+                    $channel->queue_unbind($b['queue'], $b['exchange'], $b['key']);
+                    $this->info("  Снят устаревший binding: {$b['key']} ✗ {$b['queue']}");
+                } catch (\Exception $e) {
+                    // 404 / not_found — binding уже снят, это нормально (идемпотентность)
                 }
             }
 

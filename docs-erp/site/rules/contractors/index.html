@@ -1845,17 +1845,17 @@
 <tr>
 <td><code>contractor.created</code></td>
 <td>1С → Сайт</td>
-<td><code>erp_in.partners</code></td>
+<td><code>erp_in.contractors</code></td>
 </tr>
 <tr>
 <td><code>contractor.updated</code></td>
 <td>1С → Сайт</td>
-<td><code>erp_in.partners</code></td>
+<td><code>erp_in.contractors</code></td>
 </tr>
 <tr>
 <td><code>contractor.deleted</code></td>
 <td>1С → Сайт</td>
-<td><code>erp_in.partners</code></td>
+<td><code>erp_in.contractors</code></td>
 </tr>
 <tr>
 <td><code>contractor.created</code></td>
@@ -1864,6 +1864,11 @@
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>v13.5:</strong> входящие <code>contractor.*</code> выделены в отдельную очередь <code>erp_in.contractors</code>
+с собственной DLQ <code>erp_dlq.contractors</code> и отдельным supervisor-консьюмером.
+Ранее (v13.2–v13.4) они шли в общую очередь <code>erp_in.partners</code>.</p>
+</blockquote>
 <h2 id="v132">Стратегия матчинга (v13.2)<a class="headerlink" href="#v132" title="Permanent link">&para;</a></h2>
 <p>До v13.2 контрагент идентифицировался только по ИНН (<code>tax_id</code>). Если менеджер
 в 1С исправлял ИНН после создания контрагента на сайте (например, убирал лишнюю

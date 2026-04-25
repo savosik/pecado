@@ -7,10 +7,14 @@
 
 | Событие | Направление | Очередь |
 |---|---|---|
-| `contractor.created` | 1С → Сайт | `erp_in.partners` |
-| `contractor.updated` | 1С → Сайт | `erp_in.partners` |
-| `contractor.deleted` | 1С → Сайт | `erp_in.partners` |
+| `contractor.created` | 1С → Сайт | `erp_in.contractors` |
+| `contractor.updated` | 1С → Сайт | `erp_in.contractors` |
+| `contractor.deleted` | 1С → Сайт | `erp_in.contractors` |
 | `contractor.created` | Сайт → 1С | `erp_out.contractors` (v13.2) |
+
+> **v13.5:** входящие `contractor.*` выделены в отдельную очередь `erp_in.contractors`
+> с собственной DLQ `erp_dlq.contractors` и отдельным supervisor-консьюмером.
+> Ранее (v13.2–v13.4) они шли в общую очередь `erp_in.partners`.
 
 ## Стратегия матчинга (v13.2)
 

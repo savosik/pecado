@@ -1639,7 +1639,7 @@
 <li>[ ] Матчинг контрагента в 1С по <code>tax_id</code> <strong>в рамках партнёра</strong> (<code>partner_uuid</code>)</li>
 <li>[ ] Если не найден — создать нового, 1С генерирует <strong>собственный</strong> UUID</li>
 <li>[ ] <strong><code>uuid</code> из payload сайта использовать только для корреляции</strong>, не как ссылку на сущность 1С</li>
-<li>[ ] После обработки 1С отправляет <code>contractor.updated</code> в <code>erp_in.partners</code> с назначенным UUID — сайт привязывает <code>Company.erp_id</code> (см. 1.12а)</li>
+<li>[ ] После обработки 1С отправляет <code>contractor.updated</code> в <code>erp_in.contractors</code> с назначенным UUID — сайт привязывает <code>Company.erp_id</code> (см. 1.12а)</li>
 </ul>
 
 

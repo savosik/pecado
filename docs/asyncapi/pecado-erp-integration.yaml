@@ -50,10 +50,10 @@ channels:
   # ── Входящие (1С → Сайт) ──────────────────
   erpInPartners:
     address: erp_in.partners
-    title: Партнёры и контрагенты (1С → Сайт)
+    title: Партнёры (1С → Сайт)
     description: |
-      Очередь для событий партнёров и контрагентов.
-      Routing keys: `partner.*`, `contractor.*`
+      Очередь для событий партнёров (пользователей сайта).
+      Routing keys: `partner.*`
     messages:
       partnerCreatedFromErp:
         $ref: '#/components/messages/PartnerCreatedFromErp'
@@ -61,6 +61,24 @@ channels:
         $ref: '#/components/messages/PartnerUpdatedFromErp'
       partnerDeleted:
         $ref: '#/components/messages/PartnerDeleted'
+    servers:
+      - $ref: '#/servers/rabbitmq'
+    bindings:
+      amqp:
+        is: queue
+        queue:
+          name: erp_in.partners
+          durable: true
+          autoDelete: false
+        bindingVersion: 0.3.0
+
+  erpInContractors:
+    address: erp_in.contractors
+    title: Контрагенты (1С → Сайт)
+    description: |
+      Очередь для событий контрагентов (юрлиц/Company пользователей сайта).
+      Routing keys: `contractor.*`
+    messages:
       contractorCreated:
         $ref: '#/components/messages/ContractorCreated'
       contractorUpdated:
@@ -73,7 +91,7 @@ channels:
       amqp:
         is: queue
         queue:
-          name: erp_in.partners
+          name: erp_in.contractors
           durable: true
           autoDelete: false
         bindingVersion: 0.3.0
@@ -337,7 +355,7 @@ channels:
       Очередь для контрагентов, созданных на сайте. Сообщения публикуются
       при первом заполнении `tax_id` у Company. Routing key: `contractor.created`.
       1С слушает очередь напрямую через AMQP (у сайта нет воркера для этой очереди).
-      После обработки 1С отвечает `contractor.updated` с назначенным UUID в `erp_in.partners`.
+      После обработки 1С отвечает `contractor.updated` с назначенным UUID в `erp_in.contractors`.
     messages:
       contractorCreatedFromSite:
         $ref: '#/components/messages/ContractorCreatedFromSite'
@@ -523,9 +541,9 @@ operations:
       2. Fallback: по `tax_id + user_id` (где `user_id` резолвится из `partner_uuid → User.erp_id`). При fallback `erp_id` проставляется ленивым backfill.
     action: receive
     channel:
-      $ref: '#/channels/erpInPartners'
+      $ref: '#/channels/erpInContractors'
     messages:
-      - $ref: '#/channels/erpInPartners/messages/contractorCreated'
+      - $ref: '#/channels/erpInContractors/messages/contractorCreated'
     bindings:
       amqp:
         bindingVersion: 0.3.0
@@ -552,9 +570,9 @@ operations:
       3. Если не найдена — warning, ничего не создаём (это задача `contractor.created`).
     action: receive
     channel:
-      $ref: '#/channels/erpInPartners'
+      $ref: '#/channels/erpInContractors'
     messages:
-      - $ref: '#/channels/erpInPartners/messages/contractorUpdated'
+      - $ref: '#/channels/erpInContractors/messages/contractorUpdated'
     bindings:
       amqp:
         bindingVersion: 0.3.0
@@ -572,9 +590,9 @@ operations:
       выполняется через `SoftDeletes::delete()` с `Company::withoutEvents()`.
     action: receive
     channel:
-      $ref: '#/channels/erpInPartners'
+      $ref: '#/channels/erpInContractors'
     messages:
-      - $ref: '#/channels/erpInPartners/messages/contractorDeleted'
+      - $ref: '#/channels/erpInContractors/messages/contractorDeleted'
     bindings:
       amqp:
         bindingVersion: 0.3.0
