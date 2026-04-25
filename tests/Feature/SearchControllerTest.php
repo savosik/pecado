@@ -294,4 +294,142 @@ class SearchControllerTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    // ─── Точный матч по коду / артикулу / штрихкоду ────────
+
+    public function test_exact_sku_match_pinned_first(): void
+    {
+        // Чужой товар с похожим именем (Scout по name тоже его найдёт),
+        // но без точного совпадения по SKU.
+        $other = Product::factory()->create([
+            'name' => 'Насадка УТ-00008062 классическая',
+            'sku' => 'УТ-00008082',
+        ]);
+        $this->addStock($other);
+
+        $exact = Product::factory()->create([
+            'name' => 'Насадка УТ-00008062 другая модель',
+            'sku' => 'УТ-00008062',
+        ]);
+        $this->addStock($exact);
+
+        $response = $this->getJson('/search?q='.urlencode('УТ-00008062').'&type=products');
+
+        $response->assertOk();
+        $first = $response->json('results.products.0');
+
+        $this->assertSame($exact->id, $first['id'], 'Точный матч по SKU должен быть первым в выдаче');
+    }
+
+    public function test_exact_code_match_pinned_first(): void
+    {
+        $other = Product::factory()->create([
+            'name' => 'Презервативы Ganzo classic',
+            'code' => 'ОТ-00004522',
+        ]);
+        $this->addStock($other);
+
+        $exact = Product::factory()->create([
+            'name' => 'Презервативы Ganzo latex',
+            'code' => 'ОТ-00004152',
+        ]);
+        $this->addStock($exact);
+
+        $response = $this->getJson('/search?q='.urlencode('ОТ-00004152').'&type=products');
+
+        $response->assertOk();
+        $first = $response->json('results.products.0');
+
+        $this->assertSame($exact->id, $first['id']);
+    }
+
+    public function test_exact_barcode_match_pinned_first(): void
+    {
+        $other = Product::factory()->create([
+            'name' => 'Товар с другим штрихкодом',
+            'barcode' => '4607004920455',
+        ]);
+        $this->addStock($other);
+
+        $exact = Product::factory()->create([
+            'name' => 'Товар с искомым штрихкодом',
+        ]);
+        $exact->barcodes()->create(['barcode' => '4607004920454']);
+        $this->addStock($exact);
+
+        $response = $this->getJson('/search?q=4607004920454&type=products');
+
+        $response->assertOk();
+        $first = $response->json('results.products.0');
+
+        $this->assertSame($exact->id, $first['id'], 'Точный матч из product_barcodes должен быть первым');
+    }
+
+    public function test_short_query_skips_fast_path(): void
+    {
+        $product = Product::factory()->create([
+            'name' => 'Тестовый товар',
+            'sku' => 'abc',
+        ]);
+        $this->addStock($product);
+
+        // 3 символа — fast-path не должен срабатывать (минимум 4).
+        // Но валидатор требует min:2, так что 3 проходят валидацию.
+        $response = $this->getJson('/search?q=abc&type=products');
+
+        // Просто проверяем 200 OK; матчер вернёт null и контроллер пойдёт обычным путём.
+        $response->assertOk();
+    }
+
+    public function test_exact_match_with_query_containing_space_skipped(): void
+    {
+        $product = Product::factory()->create([
+            'name' => 'Товар',
+            'sku' => 'УТ-00008062',
+        ]);
+        $this->addStock($product);
+
+        // Запрос с пробелом — не должен пытаться точный матч, идёт обычный поиск.
+        $response = $this->getJson('/search?q='.urlencode('УТ 00008062').'&type=products');
+
+        $response->assertOk();
+    }
+
+    public function test_suggestions_pins_exact_sku_match(): void
+    {
+        Product::factory()->create([
+            'name' => 'Насадка ABC-001 классическая',
+            'sku' => 'ABC-002',
+        ]);
+
+        $exact = Product::factory()->create([
+            'name' => 'Насадка ABC-001 другая',
+            'sku' => 'ABC-001',
+        ]);
+
+        $response = $this->getJson('/api/search/suggestions?q=ABC-001');
+
+        $response->assertOk();
+        $first = $response->json('0');
+
+        $this->assertSame($exact->id, $first['id']);
+    }
+
+    public function test_exact_match_not_duplicated_in_results(): void
+    {
+        // Товар, который Scout тоже найдёт по sku — не должен дублироваться после пиннинга.
+        $exact = Product::factory()->create([
+            'name' => 'Уникальное имя для теста',
+            'sku' => 'UNIQ-12345',
+        ]);
+        $this->addStock($exact);
+
+        $response = $this->getJson('/search?q=UNIQ-12345&type=products');
+
+        $response->assertOk();
+        $ids = collect($response->json('results.products'))->pluck('id')->all();
+        $occurrences = count(array_filter($ids, fn ($id) => $id === $exact->id));
+
+        $this->assertSame(1, $occurrences, 'Точный матч не должен дублироваться в выдаче');
+    }
 }

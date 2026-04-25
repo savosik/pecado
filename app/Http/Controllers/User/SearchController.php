@@ -11,6 +11,7 @@ use App\Models\News;
 use App\Models\Product;
 use App\Models\SearchHistory;
 use App\Services\Product\ProductQueryService;
+use App\Services\Search\ExactProductMatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -24,6 +25,8 @@ use Inertia\Response as InertiaResponse;
  */
 class SearchController extends Controller
 {
+    public function __construct(private readonly ExactProductMatcher $exactMatcher) {}
+
     /**
      * Основной поиск по всем сущностям.
      *
@@ -115,6 +118,8 @@ class SearchController extends Controller
             'q.min' => 'Минимум 2 символа для поиска.',
         ]);
 
+        $exactMatch = $this->exactMatcher->match($validated['q']);
+
         try {
             $searchBuilder = Product::search($validated['q'])
                 ->query(fn ($q) => $q->with(['brand', 'media']));
@@ -124,13 +129,18 @@ class SearchController extends Controller
                 $searchBuilder->options($hybridOptions);
             }
 
-            $products = $searchBuilder
-                ->take(8)
-                ->get()
-                ->map(fn (Product $product) => $this->formatProductCompact($product));
+            $products = $searchBuilder->take(8)->get();
         } catch (\Throwable) {
             $products = collect();
         }
+
+        if ($exactMatch !== null) {
+            $products = $products->reject(fn (Product $p) => $p->id === $exactMatch->id)->values();
+            $products->prepend($exactMatch);
+            $products = $products->take(8);
+        }
+
+        $products = $products->map(fn (Product $product) => $this->formatProductCompact($product));
 
         return response()->json($products);
     }
@@ -196,6 +206,9 @@ class SearchController extends Controller
         if ($searchAll || $type === 'products') {
             $perPage = $limit ?? 20;
 
+            // Fast-path: точное совпадение по sku/code/barcode (только на первой странице).
+            $exactMatch = $page === 1 ? $this->exactMatcher->match($query) : null;
+
             try {
                 $searchBuilder = Product::search($query)
                     ->query(function ($q) {
@@ -220,6 +233,14 @@ class SearchController extends Controller
                     })->values();
                 }
 
+                // Пин точного матча первым; если Scout его не вернул — total +1.
+                $exactWasInScout = false;
+                if ($exactMatch !== null) {
+                    $exactWasInScout = $products->contains(fn (Product $p) => $p->id === $exactMatch->id);
+                    $products = $products->reject(fn (Product $p) => $p->id === $exactMatch->id)->values();
+                    $products->prepend($exactMatch);
+                }
+
                 // Преобразование через ProductQueryService (полный формат, как в каталоге)
                 $productArray = $products
                     ->map(fn (Product $product) => ProductQueryService::productToArray($product))
@@ -233,17 +254,41 @@ class SearchController extends Controller
                 $results['products'] = $productArray;
 
                 // Мета-данные пагинации
+                $total = $paginated->total();
+                if ($exactMatch !== null && ! $exactWasInScout) {
+                    $total += 1;
+                }
                 $results['_products_meta'] = [
                     'current_page' => $paginated->currentPage(),
                     'last_page' => $paginated->lastPage(),
                     'per_page' => $paginated->perPage(),
-                    'total' => $paginated->total(),
+                    'total' => $total,
                     'from' => $paginated->firstItem(),
                     'to' => $paginated->lastItem(),
                 ];
-            } catch (\Throwable) {
-                $results['products'] = [];
-                $results['_products_meta'] = null;
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('SearchController: Scout запрос упал', [
+                    'query' => $query,
+                    'error' => $e->getMessage(),
+                ]);
+                // Scout упал — отдаём хотя бы точный матч, если он есть.
+                if ($exactMatch !== null) {
+                    $exactArray = [ProductQueryService::productToArray($exactMatch)];
+                    $exactArray = ProductQueryService::enrichProductsWithDiscounts($exactArray);
+                    $exactArray = ProductQueryService::convertProductsPrices($exactArray);
+                    $results['products'] = $exactArray;
+                    $results['_products_meta'] = [
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'per_page' => $perPage,
+                        'total' => 1,
+                        'from' => 1,
+                        'to' => 1,
+                    ];
+                } else {
+                    $results['products'] = [];
+                    $results['_products_meta'] = null;
+                }
             }
         }
 

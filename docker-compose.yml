@@ -95,7 +95,7 @@ services:
       start_period: 30s
 
   meilisearch:
-    image: getmeili/meilisearch:v1.14
+    image: getmeili/meilisearch:v1.16
     container_name: pecado-meilisearch
     restart: unless-stopped
     environment:
