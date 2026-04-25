@@ -8,6 +8,7 @@ use App\Models\Certificate;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class DevDataCleanup extends Command
@@ -86,13 +87,12 @@ class DevDataCleanup extends Command
         });
 
         $this->step('Медиа товаров, брендов, категорий, сертификатов', function () {
-            $types = [
+            $this->deleteMediaForTypes([
                 \App\Models\Product::class,
                 Brand::class,
                 Category::class,
                 Certificate::class,
-            ];
-            Media::whereIn('model_type', $types)->each(fn ($m) => $m->delete());
+            ]);
         });
 
         $this->step('Товары', function () {
@@ -159,6 +159,32 @@ class DevDataCleanup extends Command
         $this->info('Готово. Данные очищены.');
 
         return self::SUCCESS;
+    }
+
+    private function deleteMediaForTypes(array $modelTypes): void
+    {
+        // Группируем по диску и удаляем директории {model_id}/{uuid}/ батчами
+        DB::table('media')
+            ->whereIn('model_type', $modelTypes)
+            ->select('disk', 'conversions_disk', 'model_id', 'uuid')
+            ->orderBy('id')
+            ->chunk(500, function ($records) {
+                $byDisk = $records->groupBy('disk');
+
+                foreach ($byDisk as $diskName => $items) {
+                    $dirs = $items->map(fn ($m) => "{$m->model_id}/{$m->uuid}")->unique()->values()->all();
+
+                    foreach ($dirs as $dir) {
+                        try {
+                            Storage::disk($diskName)->deleteDirectory($dir);
+                        } catch (\Throwable) {
+                            // файл уже удалён или недоступен — пропускаем
+                        }
+                    }
+                }
+            });
+
+        DB::table('media')->whereIn('model_type', $modelTypes)->delete();
     }
 
     private function step(string $label, callable $fn): void
