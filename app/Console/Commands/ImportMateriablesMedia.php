@@ -23,6 +23,14 @@ class ImportMateriablesMedia extends Command
 
     private const CENSOR_TAG_NAME = 'Цензура';
 
+    private const UTP_TAG_NAME = 'УТП';
+
+    private const PICTURE_MATERIAL_TYPES = ['product_picture'];
+
+    private const VIDEO_MATERIAL_TYPES = ['product_video', 'promo_video'];
+
+    private const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
     public function handle(): int
     {
         $baseUrl = (string) config('services.media_sex_opt.base_url');
@@ -209,6 +217,7 @@ class ImportMateriablesMedia extends Command
         $videos = [];
 
         foreach ($materials as $material) {
+            $type = (string) ($material['type'] ?? '');
             $files = (array) ($material['files'] ?? []);
             $files = array_values(array_filter($files, fn ($f) => empty($f['is_preview'])));
 
@@ -216,15 +225,16 @@ class ImportMateriablesMedia extends Command
                 continue;
             }
 
-            $isVideoMaterial = ($material['type'] ?? '') === 'product_video';
-            $isVideo = $isVideoMaterial || $this->filesContainVideo($files);
-
-            if ($isVideo) {
+            if (in_array($type, self::VIDEO_MATERIAL_TYPES, true)) {
                 $picked = $this->pickVideoFile($files);
                 if ($picked !== null) {
                     $videos[] = $picked;
                 }
 
+                continue;
+            }
+
+            if (! in_array($type, self::PICTURE_MATERIAL_TYPES, true)) {
                 continue;
             }
 
@@ -234,34 +244,52 @@ class ImportMateriablesMedia extends Command
             }
         }
 
+        // УТП-картинки — кандидаты на главное; внутри: чистые > цензурные.
+        usort($images, function (array $a, array $b) {
+            if ($a['utp'] !== $b['utp']) {
+                return $b['utp'] <=> $a['utp'];
+            }
+
+            return $a['censored'] <=> $b['censored'];
+        });
+
+        $urls = array_map(fn (array $i) => $i['url'], $images);
+
         return [
-            'image_main' => $images[0] ?? '',
-            'additional_images' => array_slice($images, 1),
+            'image_main' => $urls[0] ?? '',
+            'additional_images' => array_slice($urls, 1),
             'product_videos' => $videos,
         ];
     }
 
     /**
-     * Среди файлов одного material предпочитает версию без тега «Цензура».
-     * Если все версии цензурные — берёт первую.
+     * Среди файлов одного material выбирает изображение и метаданные тегов
+     * (УТП и Цензура), которые потом используются для сортировки картинок.
      *
      * @param  array<int,array<string,mixed>>  $files
+     * @return array{url:string,utp:bool,censored:bool}|null
      */
-    private function pickImageFile(array $files): ?string
+    private function pickImageFile(array $files): ?array
     {
         $clean = null;
         $censored = null;
 
         foreach ($files as $file) {
             $url = (string) ($file['file'] ?? '');
-            if ($url === '') {
+            if ($url === '' || ! $this->isImageFile($file)) {
                 continue;
             }
 
-            if ($this->fileHasCensorTag($file)) {
-                $censored ??= $url;
+            $entry = [
+                'url' => $url,
+                'utp' => $this->fileHasUtpTag($file),
+                'censored' => $this->fileHasCensorTag($file),
+            ];
+
+            if ($entry['censored']) {
+                $censored ??= $entry;
             } else {
-                $clean ??= $url;
+                $clean ??= $entry;
             }
         }
 
@@ -269,7 +297,7 @@ class ImportMateriablesMedia extends Command
     }
 
     /**
-     * Берёт первый валидный URL видеофайла.
+     * Берёт первый валидный URL видеофайла размером не больше MAX_VIDEO_BYTES.
      *
      * @param  array<int,array<string,mixed>>  $files
      */
@@ -277,32 +305,50 @@ class ImportMateriablesMedia extends Command
     {
         foreach ($files as $file) {
             $url = (string) ($file['file'] ?? '');
-            if ($url !== '') {
-                return $url;
+            if ($url === '' || ! $this->isVideoFile($file)) {
+                continue;
             }
+
+            $size = (int) ($this->fileMetaValue($file, 'size') ?? 0);
+            if ($size > 0 && $size > self::MAX_VIDEO_BYTES) {
+                continue;
+            }
+
+            return $url;
         }
 
         return null;
     }
 
     /**
-     * @param  array<int,array<string,mixed>>  $files
+     * @param  array<string,mixed>  $file
      */
-    private function filesContainVideo(array $files): bool
+    private function isImageFile(array $file): bool
     {
-        foreach ($files as $file) {
-            $type = $this->fileMetaValue($file, 'type');
-            if ($type === 'video') {
-                return true;
-            }
-
-            $mime = $this->fileMetaValue($file, 'mime_type');
-            if (is_string($mime) && str_starts_with($mime, 'video/')) {
-                return true;
-            }
+        if (($file['type'] ?? null) === 'common_image') {
+            return true;
         }
 
-        return false;
+        $mime = $this->fileMetaValue($file, 'mime_type');
+        if (is_string($mime) && str_starts_with($mime, 'image/')) {
+            return true;
+        }
+
+        return $this->fileMetaValue($file, 'type') === 'image';
+    }
+
+    /**
+     * @param  array<string,mixed>  $file
+     */
+    private function isVideoFile(array $file): bool
+    {
+        if ($this->fileMetaValue($file, 'type') === 'video') {
+            return true;
+        }
+
+        $mime = $this->fileMetaValue($file, 'mime_type');
+
+        return is_string($mime) && str_starts_with($mime, 'video/');
     }
 
     /**
@@ -329,6 +375,20 @@ class ImportMateriablesMedia extends Command
                 return true;
             }
             if (($tag['name'] ?? null) === self::CENSOR_TAG_NAME) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param  array<string,mixed>  $file
+     */
+    private function fileHasUtpTag(array $file): bool
+    {
+        foreach ((array) ($file['tags'] ?? []) as $tag) {
+            if (($tag['name'] ?? null) === self::UTP_TAG_NAME) {
                 return true;
             }
         }
