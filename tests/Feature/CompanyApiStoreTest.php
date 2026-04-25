@@ -28,7 +28,7 @@ class CompanyApiStoreTest extends TestCase
             'country' => 'RU',
             'name' => 'Тест',
             'legal_name' => 'ООО Тест',
-            'tax_id' => '7701234567',
+            'tax_id' => '7707083893',
         ];
 
         $response = $this->actingAs($user)->postJson('/cabinet/companies/api', $payload);
@@ -38,7 +38,7 @@ class CompanyApiStoreTest extends TestCase
 
         $this->assertDatabaseHas('companies', [
             'user_id' => $user->id,
-            'tax_id' => '7701234567',
+            'tax_id' => '7707083893',
             'legal_name' => 'ООО Тест',
         ]);
     }
@@ -60,7 +60,7 @@ class CompanyApiStoreTest extends TestCase
         $otherUser = User::factory()->create();
         Company::factory()->create([
             'user_id' => $otherUser->id,
-            'tax_id' => '9999999999',
+            'tax_id' => '7710140679',
         ]);
 
         $user = User::factory()->create();
@@ -69,7 +69,7 @@ class CompanyApiStoreTest extends TestCase
             'country' => 'RU',
             'name' => 'Тест',
             'legal_name' => 'ООО Тест',
-            'tax_id' => '9999999999',
+            'tax_id' => '7710140679',
         ]);
 
         $response->assertStatus(422)

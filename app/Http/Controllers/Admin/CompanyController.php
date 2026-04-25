@@ -6,6 +6,7 @@ use App\Enums\Country;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Rules\TaxId;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -74,7 +75,7 @@ class CompanyController extends Controller
             'country' => 'required|string',
             'name' => 'required|string|max:255',
             'legal_name' => 'nullable|string|max:255',
-            'tax_id' => 'nullable|string|max:255',
+            'tax_id' => ['required', 'string', 'max:255', new TaxId($request->input('country'))],
             'registration_number' => 'nullable|string|max:255',
             'tax_code' => 'nullable|string|max:255',
             'okpo_code' => 'nullable|string|max:255',
@@ -83,6 +84,8 @@ class CompanyController extends Controller
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id',
+        ], [
+            'tax_id.required' => 'ИНН обязателен.',
         ]);
 
         $company = Company::create($validated);
@@ -110,7 +113,7 @@ class CompanyController extends Controller
             'country' => 'required|string',
             'name' => 'required|string|max:255',
             'legal_name' => 'nullable|string|max:255',
-            'tax_id' => 'nullable|string|max:255',
+            'tax_id' => ['required', 'string', 'max:255', new TaxId($request->input('country'))],
             'registration_number' => 'nullable|string|max:255',
             'tax_code' => 'nullable|string|max:255',
             'okpo_code' => 'nullable|string|max:255',
@@ -119,6 +122,8 @@ class CompanyController extends Controller
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email' => 'nullable|email|max:255',
             'erp_id' => 'nullable|string|max:255|unique:companies,erp_id,'.$company->id,
+        ], [
+            'tax_id.required' => 'ИНН обязателен.',
         ]);
 
         $company->update($validated);

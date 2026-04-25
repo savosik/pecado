@@ -6,6 +6,7 @@ import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
 import { useState, useRef } from 'react';
 import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
+import { validateTaxId } from '@/utils/taxId';
 
 const emptyBankAccount = {
     bank_name: '',
@@ -16,7 +17,7 @@ const emptyBankAccount = {
 };
 
 export default function Edit({ company, countries }) {
-    const { data, setData, put, processing, errors, transform } = useForm({
+    const { data, setData, put, processing, errors, setError, clearErrors, transform } = useForm({
         user_id: company.user_id || '',
         country: company.country || '',
         name: company.name || '',
@@ -97,6 +98,12 @@ export default function Edit({ company, countries }) {
 
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        clearErrors('tax_id');
+        const taxIdError = validateTaxId(data.tax_id, data.country);
+        if (taxIdError) {
+            setError('tax_id', taxIdError);
+            return;
+        }
         closeAfterSaveRef.current = shouldClose;
         put(route('admin.companies.update', company.id), {
             onSuccess: () => {
@@ -205,10 +212,15 @@ export default function Edit({ company, countries }) {
                                     </FormField>
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                        <FormField label="ИНН" error={errors.tax_id}>
+                                        <FormField label="ИНН" error={errors.tax_id} required>
                                             <Input
                                                 value={data.tax_id}
                                                 onChange={(e) => setData('tax_id', e.target.value)}
+                                                onBlur={() => {
+                                                    const err = validateTaxId(data.tax_id, data.country);
+                                                    if (err) setError('tax_id', err);
+                                                    else clearErrors('tax_id');
+                                                }}
                                             />
                                         </FormField>
 

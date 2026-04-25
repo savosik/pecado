@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Enums\Country;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
+use App\Rules\TaxId;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -98,6 +99,7 @@ class CompanyController extends Controller
                 'required',
                 'string',
                 'max:255',
+                new TaxId($request->input('country')),
                 Rule::unique('companies', 'tax_id')->whereNull('deleted_at'),
             ],
             'registration_number' => ['nullable', 'string', 'max:255'],
@@ -139,11 +141,22 @@ class CompanyController extends Controller
 
     private function validateCompany(Request $request, ?int $companyId = null): array
     {
+        $taxIdUnique = Rule::unique('companies', 'tax_id')->whereNull('deleted_at');
+        if ($companyId !== null) {
+            $taxIdUnique->ignore($companyId);
+        }
+
         return $request->validate([
             'country' => ['required', 'string'],
             'name' => ['required', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
-            'tax_id' => ['nullable', 'string', 'max:255'],
+            'tax_id' => [
+                'required',
+                'string',
+                'max:255',
+                new TaxId($request->input('country')),
+                $taxIdUnique,
+            ],
             'registration_number' => ['nullable', 'string', 'max:255'],
             'tax_code' => ['nullable', 'string', 'max:255'],
             'okpo_code' => ['nullable', 'string', 'max:255'],
@@ -155,6 +168,8 @@ class CompanyController extends Controller
             'country.required' => 'Выберите страну.',
             'name.required' => 'Название обязательно.',
             'name.max' => 'Название не должно превышать 255 символов.',
+            'tax_id.required' => 'ИНН обязателен.',
+            'tax_id.unique' => 'Компания с таким ИНН уже зарегистрирована в системе.',
             'phone.regex' => 'Введите корректный номер телефона.',
             'email.email' => 'Введите корректный email.',
         ]);

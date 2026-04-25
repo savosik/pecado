@@ -10,6 +10,7 @@ import { PhoneInput } from '@/components/common/PhoneInput';
 import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
+import { validateTaxId } from '@/utils/taxId';
 
 function SectionHeading({ icon: Icon, children }) {
     return (
@@ -58,8 +59,15 @@ export default function Form({ company, countries = [] }) {
         const errs = {};
         if (!form.name.trim()) errs.name = 'Название обязательно.';
         if (!form.country) errs.country = 'Выберите страну.';
+        const taxIdError = validateTaxId(form.tax_id, form.country);
+        if (taxIdError) errs.tax_id = taxIdError;
         if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errs.email = 'Введите корректный email.';
         return errs;
+    };
+
+    const handleTaxIdBlur = () => {
+        const err = validateTaxId(form.tax_id, form.country);
+        setErrors(prev => ({ ...prev, tax_id: err || undefined }));
     };
 
     const handleSubmit = (e) => {
@@ -204,9 +212,14 @@ export default function Form({ company, countries = [] }) {
                             <SectionHeading icon={LuFileText}>Юридические реквизиты</SectionHeading>
                             <VStack gap="4" align="stretch" pt="3">
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
-                                    <Field.Root invalid={!!errors.tax_id}>
-                                        <Field.Label fontSize="sm" fontWeight="600">ИНН</Field.Label>
-                                        <Input value={form.tax_id} onChange={(e) => handleChange('tax_id', e.target.value)} placeholder="7707083893" />
+                                    <Field.Root invalid={!!errors.tax_id} required>
+                                        <Field.Label fontSize="sm" fontWeight="600">ИНН *</Field.Label>
+                                        <Input
+                                            value={form.tax_id}
+                                            onChange={(e) => handleChange('tax_id', e.target.value)}
+                                            onBlur={handleTaxIdBlur}
+                                            placeholder="7707083893"
+                                        />
                                         {errors.tax_id && <Field.ErrorText>{errors.tax_id}</Field.ErrorText>}
                                     </Field.Root>
 

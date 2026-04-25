@@ -5,9 +5,10 @@ import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput } from '
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs } from '@chakra-ui/react';
 
 import { toaster } from '@/components/ui/toaster';
+import { validateTaxId } from '@/utils/taxId';
 
 export default function Create({ countries }) {
-    const { data, setData, post, processing, errors, transform } = useForm({
+    const { data, setData, post, processing, errors, setError, clearErrors, transform } = useForm({
         user_id: '',
         country: '',
         name: '',
@@ -32,6 +33,12 @@ export default function Create({ countries }) {
 
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
+        clearErrors('tax_id');
+        const taxIdError = validateTaxId(data.tax_id, data.country);
+        if (taxIdError) {
+            setError('tax_id', taxIdError);
+            return;
+        }
         closeAfterSaveRef.current = shouldClose;
         post(route('admin.companies.store'), {
             onSuccess: () => {
@@ -139,10 +146,15 @@ export default function Create({ countries }) {
                                     </FormField>
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                        <FormField label="ИНН" error={errors.tax_id}>
+                                        <FormField label="ИНН" error={errors.tax_id} required>
                                             <Input
                                                 value={data.tax_id}
                                                 onChange={(e) => setData('tax_id', e.target.value)}
+                                                onBlur={() => {
+                                                    const err = validateTaxId(data.tax_id, data.country);
+                                                    if (err) setError('tax_id', err);
+                                                    else clearErrors('tax_id');
+                                                }}
                                                 placeholder="1234567890"
                                             />
                                         </FormField>
