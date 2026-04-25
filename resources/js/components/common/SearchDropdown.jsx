@@ -25,7 +25,7 @@ function ProductItem({ product, onClick }) {
 
     return (
         <Flex
-            align="stretch"
+            align="flex-start"
             gap="2.5"
             px="3"
             py="1.5"
@@ -35,13 +35,13 @@ function ProductItem({ product, onClick }) {
             _dark={{ _hover: { bg: 'gray.700' } }}
             transition="background 0.15s"
         >
-            {/* Миниатюра */}
+            {/* Миниатюра — пропорция 2:3 */}
             <Box
                 as={Link}
                 href={`/products/${product.slug}`}
                 onClick={onClick}
-                w={{ base: '56px', md: '64px' }}
-                h={{ base: '56px', md: '64px' }}
+                w={{ base: '48px', md: '56px' }}
+                h={{ base: '72px', md: '84px' }}
                 flexShrink="0"
                 borderRadius="md"
                 overflow="hidden"
@@ -558,7 +558,7 @@ export default function SearchDropdown({
                 </Flex>
 
                 {/* Контент */}
-                <Box flex="1" overflowY="auto">
+                <Box flex="1" overflowY="auto" overflowX="hidden">
                     {renderContent()}
                 </Box>
             </Box>
@@ -584,6 +584,7 @@ export default function SearchDropdown({
             shadow="lg"
             maxH="min(640px, calc(100vh - 120px))"
             overflowY="auto"
+            overflowX="hidden"
             zIndex="50"
         >
             {content}
