@@ -370,7 +370,7 @@ jobs:
           ensure_user "${RABBITMQ_MANAGEMENT_USER}" "${RABBITMQ_MANAGEMENT_PASSWORD}" "administrator" ".*" ".*" ".*"
           ensure_user "${RABBITMQ_USER}"            "${RABBITMQ_PASSWORD}"            ""               ".*" ".*" ".*"
           if [ -n "${RABBITMQ_ERP_USER:-}" ] && [ -n "${RABBITMQ_ERP_PASSWORD:-}" ]; then
-            ensure_user "${RABBITMQ_ERP_USER}"      "${RABBITMQ_ERP_PASSWORD}"        "" 'erp\..*|erp_out\..*' 'erp\..*' 'erp_out\..*'
+            ensure_user "${RABBITMQ_ERP_USER}"      "${RABBITMQ_ERP_PASSWORD}"        "" 'erp\..*|erp_out\..*|external\..*' 'erp\..*' 'erp_out\..*|external\..*'
           fi
           # Удаляем дефолтного guest, если он остался (безопаснее)
           sg docker -c 'docker compose exec -T rabbitmq rabbitmqctl delete_user guest' 2>/dev/null || true
