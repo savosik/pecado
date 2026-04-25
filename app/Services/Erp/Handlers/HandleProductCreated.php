@@ -249,17 +249,18 @@ class HandleProductCreated
                     // Найти или создать значение атрибута (если есть value_uuid)
                     $attributeValueId = null;
                     if ($valueUuid) {
-                        $valueStr = $valueLabel ?? $valueUuid;
+                        $valueStr = (string) ($valueLabel ?? $valueUuid);
+                        $valueHash = \App\Models\AttributeValue::hashValue($valueStr);
                         $attrValue = \App\Models\AttributeValue::where('external_id', $valueUuid)->first();
 
                         if ($attrValue) {
                             $duplicate = \App\Models\AttributeValue::where('attribute_id', $attribute->id)
-                                ->where('value', $valueStr)
+                                ->where('value_hash', $valueHash)
                                 ->where('id', '!=', $attrValue->id)
                                 ->first();
 
                             if ($duplicate) {
-                                // Избегаем Integrity constraint violation на (attribute_id, value)
+                                // Избегаем Integrity constraint violation на (attribute_id, value_hash)
                                 // Передаем external_id дубликату
                                 $attrValue->update(['external_id' => null]);
                                 $duplicate->update(['external_id' => $valueUuid]);
@@ -272,7 +273,7 @@ class HandleProductCreated
                             }
                         } else {
                             $attrValue = \App\Models\AttributeValue::where('attribute_id', $attribute->id)
-                                ->where('value', $valueStr)
+                                ->where('value_hash', $valueHash)
                                 ->first();
 
                             if ($attrValue) {
@@ -280,8 +281,8 @@ class HandleProductCreated
                             } else {
                                 // Атомарный upsert — защита от гонки при параллельных воркерах
                                 $attrValue = \App\Models\AttributeValue::updateOrCreate(
-                                    ['attribute_id' => $attribute->id, 'value' => $valueStr],
-                                    ['external_id' => $valueUuid]
+                                    ['attribute_id' => $attribute->id, 'value_hash' => $valueHash],
+                                    ['value' => $valueStr, 'external_id' => $valueUuid]
                                 );
                             }
                         }

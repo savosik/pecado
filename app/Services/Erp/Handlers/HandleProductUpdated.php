@@ -331,17 +331,18 @@ class HandleProductUpdated
 
     /**
      * Поиск/создание значения атрибута с защитой от гонки по уникальному
-     * индексу (attribute_id, value).
+     * индексу (attribute_id, value_hash).
      */
     protected function resolveAttributeValueId(int $attributeId, string $valueUuid, mixed $valueLabel): ?int
     {
         $valueStr = (string) ($valueLabel ?? $valueUuid);
+        $valueHash = AttributeValue::hashValue($valueStr);
 
         $attrValue = AttributeValue::where('external_id', $valueUuid)->first();
 
         if ($attrValue) {
             $duplicate = AttributeValue::where('attribute_id', $attributeId)
-                ->where('value', $valueStr)
+                ->where('value_hash', $valueHash)
                 ->where('id', '!=', $attrValue->id)
                 ->first();
 
@@ -361,7 +362,7 @@ class HandleProductUpdated
         }
 
         $attrValue = AttributeValue::where('attribute_id', $attributeId)
-            ->where('value', $valueStr)
+            ->where('value_hash', $valueHash)
             ->first();
 
         if ($attrValue) {
@@ -372,8 +373,8 @@ class HandleProductUpdated
 
         // Атомарный upsert — защита от гонки при параллельных воркерах
         $attrValue = AttributeValue::updateOrCreate(
-            ['attribute_id' => $attributeId, 'value' => $valueStr],
-            ['external_id' => $valueUuid]
+            ['attribute_id' => $attributeId, 'value_hash' => $valueHash],
+            ['value' => $valueStr, 'external_id' => $valueUuid]
         );
 
         return $attrValue->id;

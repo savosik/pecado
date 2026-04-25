@@ -955,4 +955,31 @@ class HandleProductCreatedTest extends TestCase
         $this->assertNull($product->width);
         $this->assertNull($product->turnover);
     }
+
+    #[Test]
+    public function creates_attribute_value_with_long_text_label(): void
+    {
+        $longLabel = str_repeat('Хранить вдали от прямых солнечных лучей. ', 20); // ~800 символов
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-long-attr-001',
+            'uuid' => 'prod-long-attr-001',
+            'name' => 'Товар с длинным значением атрибута',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-storage-uuid',
+                    'property_label' => 'Условия хранения и обработки',
+                    'value_type' => 'reference',
+                    'value_uuid' => 'val-storage-uuid-001',
+                    'value_label' => $longLabel,
+                ],
+            ],
+        ]);
+
+        $value = AttributeValue::where('external_id', 'val-storage-uuid-001')->first();
+        $this->assertNotNull($value);
+        $this->assertSame($longLabel, $value->value);
+        $this->assertSame(hash('sha256', $longLabel), $value->value_hash);
+    }
 }
