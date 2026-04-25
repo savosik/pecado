@@ -163,58 +163,60 @@ function ProductItem({ product, onClick }) {
                     {product.name}
                 </Text>
 
-                {/* Нижняя строка: статус + цена + корзина */}
-                <Flex
-                    align="center"
-                    justify="space-between"
-                    gap="2"
-                    wrap="wrap"
-                >
-                    {/* Статус наличия */}
-                    <Flex align="center" gap="1" fontSize="xs" fontWeight="500" flexShrink="0">
-                        {isInStock ? (
-                            <>
-                                <LuCheck size={12} color="var(--chakra-colors-green-600)" />
-                                <Text color="green.600" lineClamp="1">В наличии</Text>
-                            </>
-                        ) : isPreorder ? (
-                            <>
-                                <LuClock3 size={12} color="var(--chakra-colors-orange-500)" />
-                                <Text color="orange.500" lineClamp="1">Предзаказ</Text>
-                            </>
-                        ) : (
-                            <>
-                                <LuCircleX size={12} color="var(--chakra-colors-red-600)" />
-                                <Text color="red.600" lineClamp="1">Нет в наличии</Text>
-                            </>
-                        )}
-                    </Flex>
+                {/* Нижняя строка: статус + цена + корзина — только для авторизованных */}
+                {user && (
+                    <Flex
+                        align="center"
+                        justify="space-between"
+                        gap="2"
+                        wrap="wrap"
+                    >
+                        {/* Статус наличия */}
+                        <Flex align="center" gap="1" fontSize="xs" fontWeight="500" flexShrink="0">
+                            {isInStock ? (
+                                <>
+                                    <LuCheck size={12} color="var(--chakra-colors-green-600)" />
+                                    <Text color="green.600" lineClamp="1">В наличии</Text>
+                                </>
+                            ) : isPreorder ? (
+                                <>
+                                    <LuClock3 size={12} color="var(--chakra-colors-orange-500)" />
+                                    <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                                </>
+                            ) : (
+                                <>
+                                    <LuCircleX size={12} color="var(--chakra-colors-red-600)" />
+                                    <Text color="red.600" lineClamp="1">Нет в наличии</Text>
+                                </>
+                            )}
+                        </Flex>
 
-                    {/* Цена + компактный контрол корзины */}
-                    <Flex align="center" gap="2" flexShrink="0">
-                        {price != null && (
-                            <Flex align="baseline" gap="1" lineHeight="1">
-                                {hasSale && (
-                                    <Text fontSize="2xs" color="gray.400" textDecoration="line-through">
-                                        {formatPrice(price)}
+                        {/* Цена + компактный контрол корзины */}
+                        <Flex align="center" gap="2" flexShrink="0">
+                            {price != null && (
+                                <Flex align="baseline" gap="1" lineHeight="1">
+                                    {hasSale && (
+                                        <Text fontSize="2xs" color="gray.400" textDecoration="line-through">
+                                            {formatPrice(price)}
+                                        </Text>
+                                    )}
+                                    <Text
+                                        fontSize="sm"
+                                        fontWeight="700"
+                                        color={hasSale ? 'red.600' : undefined}
+                                    >
+                                        {formatPrice(hasSale ? salePrice : price)}
                                     </Text>
-                                )}
-                                <Text
-                                    fontSize="sm"
-                                    fontWeight="700"
-                                    color={hasSale ? 'red.600' : undefined}
-                                >
-                                    {formatPrice(hasSale ? salePrice : price)}
-                                </Text>
-                            </Flex>
-                        )}
-                        {user && (isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
-                            <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                                <CartQuantityControl productId={product.id} size="xs" variant="compact" />
-                            </Box>
-                        )}
+                                </Flex>
+                            )}
+                            {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
+                                <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                                    <CartQuantityControl productId={product.id} size="xs" variant="compact" />
+                                </Box>
+                            )}
+                        </Flex>
                     </Flex>
-                </Flex>
+                )}
             </Flex>
         </Flex>
     );
