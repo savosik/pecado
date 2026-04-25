@@ -51,10 +51,8 @@ class DevDataCleanup extends Command
         });
 
         $this->step('Пользователи (не-админы)', function () {
-            $adminIds = DB::table('model_has_roles')
-                ->join('roles', 'model_has_roles.role_id', '=', 'roles.id')
-                ->where('roles.name', 'admin')
-                ->pluck('model_has_roles.model_id');
+            // Сохраняем всех пользователей с любой ролью — покупатели ролей не имеют
+            $adminIds = DB::table('model_has_roles')->pluck('model_id')->unique();
 
             DB::table('favorites')->whereNotIn('user_id', $adminIds)->delete();
             DB::table('wishlist_items')->whereNotIn('user_id', $adminIds)->delete();
