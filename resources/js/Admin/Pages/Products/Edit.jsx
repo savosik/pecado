@@ -30,6 +30,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
         variant_name: product.variant_name || '',
         code: product.code || '',
         external_id: product.external_id || '',
+        sex_opt_id: product.sex_opt_id || '',
         url: product.url || '',
         barcodes: product.barcodes || [],
         tnved: product.tnved || '',
@@ -73,7 +74,7 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
     // Определяем, в каких табах есть ошибки
     // Определяем, в каких табах есть ошибки (мемоизируем)
     const tabErrors = useMemo(() => ({
-        general: ['name', 'slug', 'sku', 'variant_name', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
+        general: ['name', 'slug', 'sku', 'variant_name', 'code', 'external_id', 'sex_opt_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
         categories: ['category_id'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces', 'hidden'].some(field => errors[field]),
@@ -343,6 +344,17 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                                 value={data.external_id}
                                                 onChange={(e) => setData('external_id', e.target.value)}
                                                 placeholder="Внешний ID"
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="Ид sex-opt"
+                                            error={errors.sex_opt_id}
+                                        >
+                                            <Input
+                                                value={data.sex_opt_id}
+                                                onChange={(e) => setData('sex_opt_id', e.target.value)}
+                                                placeholder="Ид sex-opt"
                                             />
                                         </FormField>
 

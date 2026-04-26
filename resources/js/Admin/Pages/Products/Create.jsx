@@ -28,6 +28,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
         sku: '',
         code: '',
         external_id: '',
+        sex_opt_id: '',
         url: '',
         barcodes: [],
         tnved: '',
@@ -67,7 +68,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
 
     // Определяем, в каких табах есть ошибки (мемоизируем, чтобы не пересчитывать при каждом вводе)
     const tabErrors = useMemo(() => ({
-        general: ['name', 'slug', 'sku', 'code', 'external_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
+        general: ['name', 'slug', 'sku', 'code', 'external_id', 'sex_opt_id', 'url', 'barcodes', 'tnved'].some(field => errors[field]),
         categories: ['category_id'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
@@ -250,6 +251,17 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                                 value={data.external_id}
                                                 onChange={(e) => setData('external_id', e.target.value)}
                                                 placeholder="Внешний ID"
+                                            />
+                                        </FormField>
+
+                                        <FormField
+                                            label="Ид sex-opt"
+                                            error={errors.sex_opt_id}
+                                        >
+                                            <Input
+                                                value={data.sex_opt_id}
+                                                onChange={(e) => setData('sex_opt_id', e.target.value)}
+                                                placeholder="Ид sex-opt"
                                             />
                                         </FormField>
 

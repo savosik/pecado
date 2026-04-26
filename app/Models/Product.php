@@ -66,6 +66,7 @@ class Product extends Model implements HasMedia
         'name',
         'base_price',
         'external_id',
+        'sex_opt_id',
         'is_new',
         'is_bestseller',
         'code',
