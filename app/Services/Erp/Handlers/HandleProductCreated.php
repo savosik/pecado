@@ -114,17 +114,29 @@ class HandleProductCreated
                 $brandId = $this->resolveBrandId($brandData);
             }
 
-            // --- Модель товара ---
-            $modelId = null;
-            if (! empty($modelData)) {
-                $modelId = $this->resolveModelId($modelData);
-            }
-
             // --- Upsert товара ---
             // withoutGlobalScopes: HiddenScope фильтрует hidden=true, без него мы не найдём
             // скрытый товар и создадим дубликат с тем же external_id → ошибка 1062.
             $existing = Product::withoutGlobalScopes()->where('external_id', $uuid)->first();
             $basePrice = $existing?->base_price ?? 0;
+
+            // --- Модель товара ---
+            // Если включён preserve_existing и у товара уже есть model_id — сохраняем его
+            // и не вызываем resolveModelId (иначе побочный эффект: ручная ProductModel,
+            // совпавшая по name, получила бы external_id 1С).
+            $preserveExistingModel = (bool) config('erp.product_models.preserve_existing', true);
+            if ($preserveExistingModel && $existing?->model_id) {
+                $modelId = $existing->model_id;
+                Log::info('product.created: model_id сохранён (preserve_existing)', [
+                    'product_uuid' => $uuid,
+                    'current_model_id' => $modelId,
+                ]);
+            } else {
+                $modelId = null;
+                if (! empty($modelData)) {
+                    $modelId = $this->resolveModelId($modelData);
+                }
+            }
 
             $fields = [
                 'name' => $name,
@@ -545,10 +557,15 @@ class HandleProductCreated
             $productModel = ProductModel::where('name', $name)->first();
 
             if ($productModel) {
-                $productModel->update(array_filter([
-                    'external_id' => $uuid,
-                    'code' => $code,
-                ]));
+                $isManual = $productModel->external_id === null
+                    && (bool) config('erp.product_models.preserve_existing', true);
+
+                if (! $isManual) {
+                    $productModel->update(array_filter([
+                        'external_id' => $uuid,
+                        'code' => $code,
+                    ]));
+                }
 
                 return $productModel->id;
             }

@@ -975,4 +975,80 @@ class HandleProductUpdatedTest extends TestCase
         $product->refresh();
         $this->assertNull($product->erp_updated_at);
     }
+
+    #[Test]
+    public function preserves_existing_model_id_on_product_updated(): void
+    {
+        config()->set('erp.product_models.preserve_existing', true);
+
+        $manual = \App\Models\ProductModel::create([
+            'name' => 'Ручная модель',
+        ]);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-preserve-upd-001',
+            'model_id' => $manual->id,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-preserve-upd-001',
+            'model' => ['uuid' => 'erp-model-uuid', 'name' => 'Совсем другая модель'],
+        ]);
+
+        $product->refresh();
+        $this->assertEquals($manual->id, $product->model_id, 'model_id не должен перезаписываться');
+
+        $manual->refresh();
+        $this->assertNull($manual->external_id, 'ручная ProductModel не должна получить external_id');
+    }
+
+    #[Test]
+    public function flag_off_overwrites_model_id_on_product_updated(): void
+    {
+        config()->set('erp.product_models.preserve_existing', false);
+
+        $manual = \App\Models\ProductModel::create([
+            'name' => 'Старая ручная',
+        ]);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-flag-off-upd-001',
+            'model_id' => $manual->id,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-flag-off-upd-001',
+            'model' => ['uuid' => 'new-erp-uuid', 'name' => 'Новая 1С-модель'],
+        ]);
+
+        $product->refresh();
+        $this->assertNotEquals($manual->id, $product->model_id, 'при выключенном флаге model_id меняется');
+
+        $newModel = \App\Models\ProductModel::where('external_id', 'new-erp-uuid')->first();
+        $this->assertNotNull($newModel);
+        $this->assertEquals($newModel->id, $product->model_id);
+    }
+
+    #[Test]
+    public function sets_model_id_when_product_has_none(): void
+    {
+        config()->set('erp.product_models.preserve_existing', true);
+
+        $product = Product::factory()->create([
+            'external_id' => 'prod-no-model-upd-001',
+            'model_id' => null,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-no-model-upd-001',
+            'model' => ['uuid' => 'erp-model-uuid', 'name' => 'Модель из 1С'],
+        ]);
+
+        $product->refresh();
+        $this->assertNotNull($product->model_id, 'если model_id был null — записываем то, что прислал 1С');
+
+        $model = \App\Models\ProductModel::find($product->model_id);
+        $this->assertEquals('erp-model-uuid', $model->external_id);
+    }
 }

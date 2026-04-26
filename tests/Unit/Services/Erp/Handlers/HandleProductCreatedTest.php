@@ -379,6 +379,89 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function preserves_existing_model_id_on_repeated_product_created(): void
+    {
+        config()->set('erp.product_models.preserve_existing', true);
+
+        // 1. Ручная ProductModel (без external_id) и товар, к ней привязанный
+        $manual = \App\Models\ProductModel::create([
+            'name' => 'Ручная модель',
+        ]);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-preserve-001',
+            'model_id' => $manual->id,
+        ]);
+
+        // 2. Из 1С приходит product.created с другой моделью
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-preserve-001',
+            'name' => 'Тот же товар',
+            'model' => ['uuid' => 'erp-model-uuid', 'name' => 'Модель из 1С'],
+        ]);
+
+        $product->refresh();
+        $this->assertEquals($manual->id, $product->model_id, 'model_id товара должен сохраниться');
+
+        $manual->refresh();
+        $this->assertNull($manual->external_id, 'ручная ProductModel не должна получить external_id');
+    }
+
+    #[Test]
+    public function does_not_overwrite_external_id_of_manual_model_matched_by_name(): void
+    {
+        config()->set('erp.product_models.preserve_existing', true);
+
+        // Ручная модель: external_id=null, name="Манекен"
+        $manual = \App\Models\ProductModel::create([
+            'name' => 'Манекен',
+        ]);
+
+        // Из 1С приходит товар с моделью с тем же name, но с UUID
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-name-match-001',
+            'name' => 'Товар',
+            'model' => ['uuid' => 'erp-model-uuid', 'name' => 'Манекен'],
+        ]);
+
+        $manual->refresh();
+        $this->assertNull($manual->external_id, 'external_id ручной модели не должен меняться');
+
+        // Товар привязан к нашей ручной модели (а не к новой)
+        $this->assertEquals(1, \App\Models\ProductModel::count());
+        $product = Product::where('external_id', 'prod-name-match-001')->first();
+        $this->assertEquals($manual->id, $product->model_id);
+    }
+
+    #[Test]
+    public function flag_off_restores_legacy_overwrite_behavior(): void
+    {
+        config()->set('erp.product_models.preserve_existing', false);
+
+        $manual = \App\Models\ProductModel::create([
+            'name' => 'Старая ручная',
+        ]);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-flag-off-001',
+            'model_id' => $manual->id,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-flag-off-001',
+            'name' => 'Товар',
+            'model' => ['uuid' => 'new-erp-uuid', 'name' => 'Старая ручная'],
+        ]);
+
+        $manual->refresh();
+        $this->assertEquals('new-erp-uuid', $manual->external_id, 'при выключенном флаге external_id перезаписывается');
+
+        $product->refresh();
+        $this->assertEquals($manual->id, $product->model_id);
+    }
+
+    #[Test]
     public function retries_product_created_on_deadlock_and_finishes_on_third_attempt(): void
     {
         $handler = \Mockery::mock(HandleProductCreated::class)

@@ -121,11 +121,19 @@ class HandleProductUpdated
             }
 
             if (array_key_exists('model', $payload)) {
-                $modelData = $payload['model'];
-                if (! empty($modelData)) {
-                    $updateData['model_id'] = $this->resolveModelId($modelData);
+                $preserveExisting = (bool) config('erp.product_models.preserve_existing', true);
+                if ($preserveExisting && $product->model_id !== null) {
+                    Log::info('product.updated: model_id сохранён (preserve_existing)', [
+                        'product_uuid' => $uuid,
+                        'current_model_id' => $product->model_id,
+                    ]);
                 } else {
-                    $updateData['model_id'] = null;
+                    $modelData = $payload['model'];
+                    if (! empty($modelData)) {
+                        $updateData['model_id'] = $this->resolveModelId($modelData);
+                    } else {
+                        $updateData['model_id'] = null;
+                    }
                 }
             }
 
@@ -554,10 +562,15 @@ class HandleProductUpdated
             $productModel = ProductModel::where('name', $name)->first();
 
             if ($productModel) {
-                $productModel->update(array_filter([
-                    'external_id' => $uuid,
-                    'code' => $code,
-                ]));
+                $isManual = $productModel->external_id === null
+                    && (bool) config('erp.product_models.preserve_existing', true);
+
+                if (! $isManual) {
+                    $productModel->update(array_filter([
+                        'external_id' => $uuid,
+                        'code' => $code,
+                    ]));
+                }
 
                 return $productModel->id;
             }
