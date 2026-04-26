@@ -71,6 +71,23 @@ return [
             'throw' => true,
         ],
 
+        // Read-only диск, указывающий на dev MinIO.
+        // Используется локальной разработкой (MEDIA_DISK=s3_dev_readonly),
+        // чтобы видеть те же товарные изображения, что и dev-сервер,
+        // не загрязняя shared dev-bucket новыми загрузками.
+        's3_dev_readonly' => [
+            'driver' => 's3',
+            'key' => env('DEV_S3_KEY'),
+            'secret' => env('DEV_S3_SECRET'),
+            'region' => env('DEV_S3_REGION', 'us-east-1'),
+            'bucket' => env('DEV_S3_BUCKET', 'pecado'),
+            'endpoint' => env('DEV_S3_ENDPOINT'),
+            'use_path_style_endpoint' => true,
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
     ],
 
     /*

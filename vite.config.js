@@ -20,8 +20,8 @@ export default defineConfig({
         strictPort: true,
         cors: true,  // Enable CORS for Docker cross-container requests
         hmr: {
-            host: 'localhost',
-            clientPort: 5174,
+            host: process.env.VITE_HMR_HOST || 'localhost',
+            clientPort: parseInt(process.env.VITE_HMR_CLIENT_PORT || '5174', 10),
         },
         watch: {
             usePolling: true,

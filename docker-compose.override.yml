@@ -1,0 +1,19 @@
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: pecado-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - nginx
+    networks:
+      - pecado-network
+
+volumes:
+  caddy-data:
+  caddy-config:
