@@ -12,7 +12,8 @@ use Illuminate\Support\Str;
 class RestoreCachedMedia extends Command
 {
     protected $signature = 'catalog:restore-cached-media
-        {--dry-run : Показать что будет восстановлено, без изменений в БД}';
+        {--dry-run : Показать что будет восстановлено, без изменений в БД}
+        {--regenerate : После восстановления оригиналов запустить media-library:regenerate, чтобы пересоздать конверсии и responsive-images}';
 
     protected $description = 'Восстановить медиа для товаров из кэша MinIO (без скачивания файлов из интернета)';
 
@@ -43,6 +44,7 @@ class RestoreCachedMedia extends Command
 
         $restored = 0;
         $notCached = 0;
+        $createdMediaIds = [];
 
         foreach ($products as $product) {
             $code = $product->code;
@@ -98,6 +100,7 @@ class RestoreCachedMedia extends Command
                     $media->manipulations = [];
                     $media->order_column = $order++;
                     $media->save();
+                    $createdMediaIds[] = $media->id;
 
                     if ($opts['singleFile']) {
                         break; // одиночная коллекция — берём только первый файл
@@ -126,6 +129,31 @@ class RestoreCachedMedia extends Command
         }
 
         $this->info('═══════════════════════════════════════');
+
+        if ($dryRun) {
+            return self::SUCCESS;
+        }
+
+        if ($this->option('regenerate')) {
+            if (empty($createdMediaIds)) {
+                $this->line('  Регенерация конверсий пропущена — нечего восстанавливать.');
+
+                return self::SUCCESS;
+            }
+
+            $this->newLine();
+            $this->info('Запускаю media-library:regenerate ('.count($createdMediaIds).' записей)…');
+            $this->call('media-library:regenerate', [
+                'modelType' => Product::class,
+                '--ids' => array_map('strval', $createdMediaIds),
+                '--with-responsive-images' => true,
+                '--force' => true,
+            ]);
+        } elseif (! empty($createdMediaIds)) {
+            $this->newLine();
+            $this->warn('  У восстановленных записей нет конверсий и responsive-images.');
+            $this->line('  Запустите <comment>php artisan media-library:regenerate --with-responsive-images --force "App\\Models\\Product"</comment> или повторите команду с флагом --regenerate.');
+        }
 
         return self::SUCCESS;
     }

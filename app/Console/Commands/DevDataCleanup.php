@@ -13,9 +13,11 @@ use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class DevDataCleanup extends Command
 {
-    protected $signature = 'dev:cleanup {--force : Пропустить подтверждение}';
+    protected $signature = 'dev:cleanup
+        {--force : Пропустить подтверждение}
+        {--purge-product-media : Также удалить из MinIO оригиналы файлов товаров (products-media/{code}/...). По умолчанию они сохраняются для последующего восстановления через catalog:restore-cached-media}';
 
-    protected $description = '[DEV ONLY] Полная очистка данных: товары, бренды, категории, атрибуты, заказы, пользователи (кроме админов)';
+    protected $description = '[DEV ONLY] Полная очистка данных: товары, бренды, категории, атрибуты, заказы, пользователи (кроме админов). Оригиналы медиа товаров в MinIO по умолчанию сохраняются.';
 
     public function handle(): int
     {
@@ -88,9 +90,12 @@ class DevDataCleanup extends Command
             DB::table('taggables')->where('taggable_type', \App\Models\Product::class)->delete();
         });
 
-        $this->step('Медиа товаров, брендов, категорий, сертификатов', function () {
+        $this->step('Медиа товаров (записи БД + конверсии)', function () {
+            $this->deleteProductMedia($this->option('purge-product-media'));
+        });
+
+        $this->step('Медиа брендов, категорий, сертификатов', function () {
             $this->deleteMediaForTypes([
-                \App\Models\Product::class,
                 Brand::class,
                 Category::class,
                 Certificate::class,
@@ -160,28 +165,84 @@ class DevDataCleanup extends Command
         $this->newLine();
         $this->info('Готово. Данные очищены.');
 
+        if (! $this->option('purge-product-media')) {
+            $this->newLine();
+            $this->line('  Оригиналы медиа товаров сохранены в MinIO (products-media/{code}/...).');
+            $this->line('  Восстановить их в БД после повторной загрузки товаров: <comment>php artisan catalog:restore-cached-media --regenerate</comment>');
+        }
+
         return self::SUCCESS;
     }
 
+    /**
+     * Для товаров используется кастомный ProductPathGenerator: оригиналы лежат
+     * по пути products-media/{code}/{collection}/, а конверсии и
+     * responsive-images — в подпапках conversions/ и responsive-images/.
+     *
+     * По умолчанию мы удаляем только производные файлы (конверсии) и записи
+     * media в БД, чтобы оригиналы можно было повторно подвязать через
+     * catalog:restore-cached-media. Полный снос включается опцией
+     * --purge-product-media.
+     */
+    private function deleteProductMedia(bool $purgeOriginals): void
+    {
+        $productMorph = (new \App\Models\Product)->getMorphClass();
+
+        DB::table('media')
+            ->where('model_type', $productMorph)
+            ->select('id', 'disk', 'conversions_disk', 'model_id', 'uuid', 'collection_name', 'custom_properties')
+            ->orderBy('id')
+            ->chunk(500, function ($records) use ($purgeOriginals) {
+                foreach ($records as $row) {
+                    $props = json_decode((string) $row->custom_properties, true) ?: [];
+                    $code = $props['product_code'] ?? null;
+
+                    if ($code) {
+                        $base = "products-media/{$code}/{$row->collection_name}";
+                        $this->deleteDirSafely($row->conversions_disk ?: $row->disk, "{$base}/conversions");
+                        $this->deleteDirSafely($row->conversions_disk ?: $row->disk, "{$base}/responsive-images");
+
+                        if ($purgeOriginals) {
+                            $this->deleteDirSafely($row->disk, $base);
+                        }
+
+                        continue;
+                    }
+
+                    // Fallback на DefaultPathGenerator: media-запись без product_code
+                    // (теоретически возможно для legacy-данных) — удаляем целиком.
+                    $this->deleteDirSafely($row->disk, "{$row->model_id}/{$row->uuid}");
+                }
+            });
+
+        DB::table('media')->where('model_type', $productMorph)->delete();
+    }
+
+    private function deleteDirSafely(string $diskName, string $dir): void
+    {
+        try {
+            Storage::disk($diskName)->deleteDirectory($dir);
+        } catch (\Throwable) {
+            // файл уже удалён или диск недоступен — пропускаем
+        }
+    }
+
+    /**
+     * Удаление media для моделей с DefaultPathGenerator (Brand, Category,
+     * Certificate). Файлы лежат по пути {model_id}/{uuid}/.
+     */
     private function deleteMediaForTypes(array $modelTypes): void
     {
-        // Группируем по диску и удаляем директории {model_id}/{uuid}/ батчами
         DB::table('media')
             ->whereIn('model_type', $modelTypes)
-            ->select('disk', 'conversions_disk', 'model_id', 'uuid')
+            ->select('disk', 'model_id', 'uuid')
             ->orderBy('id')
             ->chunk(500, function ($records) {
-                $byDisk = $records->groupBy('disk');
-
-                foreach ($byDisk as $diskName => $items) {
+                foreach ($records->groupBy('disk') as $diskName => $items) {
                     $dirs = $items->map(fn ($m) => "{$m->model_id}/{$m->uuid}")->unique()->values()->all();
 
                     foreach ($dirs as $dir) {
-                        try {
-                            Storage::disk($diskName)->deleteDirectory($dir);
-                        } catch (\Throwable) {
-                            // файл уже удалён или недоступен — пропускаем
-                        }
+                        $this->deleteDirSafely($diskName, $dir);
                     }
                 }
             });
