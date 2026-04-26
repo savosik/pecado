@@ -352,13 +352,22 @@ channels:
     address: erp_out.contractors
     title: Контрагенты (Сайт → 1С)
     description: |
-      Очередь для контрагентов, созданных на сайте. Сообщения публикуются
-      при первом заполнении `tax_id` у Company. Routing key: `contractor.created`.
+      Очередь для контрагентов сайта. Содержит два события:
+      - `contractor.created` — публикуется при первом заполнении `tax_id` у Company.
+      - `contractor.updated` — публикуется при изменении уже синхронизированной Company
+        (имеющей `erp_id`) либо при изменении её банковских реквизитов
+        (`CompanyBankAccount` create/update/delete).
+
       1С слушает очередь напрямую через AMQP (у сайта нет воркера для этой очереди).
-      После обработки 1С отвечает `contractor.updated` с назначенным UUID в `erp_in.contractors`.
+      После первой публикации `contractor.created` 1С отвечает `contractor.updated`
+      с назначенным UUID в `erp_in.contractors`; этот ответ НЕ триггерит обратную
+      публикацию (защита от петли через `Company::withoutEvents()` + транзиентный
+      флаг `Company->fromErp`).
     messages:
       contractorCreatedFromSite:
         $ref: '#/components/messages/ContractorCreatedFromSite'
+      contractorUpdatedFromSite:
+        $ref: '#/components/messages/ContractorUpdatedFromSite'
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -625,6 +634,50 @@ operations:
       $ref: '#/channels/erpOutContractors'
     messages:
       - $ref: '#/channels/erpOutContractors/messages/contractorCreatedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+
+  sendContractorUpdated:
+    title: Обновление контрагента в 1С
+    summary: Сайт → 1С при изменении уже синхронизированной Company или её банковских реквизитов
+    description: |
+      Публикуется через `PublishContractorToErpJob` (тот же job, что и для
+      `contractor.created`, разный `event` в payload).
+
+      **Триггеры публикации:**
+      - `CompanyUpdated` для Company с уже заполненным `erp_id` и изменением
+        хотя бы одного из значимых полей (`name`, `legal_name`, `tax_id`,
+        `tax_code`, `registration_number`, `okpo_code`, `legal_address`,
+        `actual_address`, `phone`, `email`, `country`).
+      - Создание / обновление / удаление `CompanyBankAccount` у Company
+        с заполненным `erp_id` (Observer `CompanyBankAccountObserver`).
+
+      **Защита от петли** (важно — иначе `contractor.updated` от 1С триггерит
+      обратную публикацию и так до бесконечности):
+      1. `HandleContractorUpdated` обновляет Company через `Company::withoutEvents()`.
+      2. Перед обновлением выставляется транзиентный флаг `Company->fromErp = true`,
+         который проверяет listener (страховка, если кто-то забудет `withoutEvents()`).
+      3. Блок пересборки `bank_accounts` в `HandleContractorUpdated` обёрнут в
+         `CompanyBankAccount::withoutEvents()` — Observer на банке не сработает.
+
+      **Предусловия:**
+      - У контрагента должен быть `Company.erp_id` (UUID, выданный 1С).
+        Если `erp_id` пуст — публикуется не `contractor.updated`, а `contractor.created`
+        при первом заполнении `tax_id` (см. `sendContractorCreated`).
+      - У партнёра-владельца должен быть `User.erp_id`. Иначе — log info, выход.
+
+      **Формат `uuid` в payload** — это `Company.erp_id` (UUID, выданный 1С).
+
+      Отключается тем же env-флагом `PUBLISH_CONTRACTORS_TO_ERP=false`.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutContractors'
+    messages:
+      - $ref: '#/channels/erpOutContractors/messages/contractorUpdatedFromSite'
     bindings:
       amqp:
         bindingVersion: 0.3.0
@@ -1149,6 +1202,15 @@ components:
         - $ref: '#/components/messageTraits/erpEnvelope'
       payload:
         $ref: '#/components/schemas/ContractorCreatedFromSitePayload'
+
+    ContractorUpdatedFromSite:
+      name: contractor.updated
+      title: Контрагент обновлён (Сайт → 1С)
+      summary: Публикация при изменении синхронизированной Company или её банковских реквизитов
+      traits:
+        - $ref: '#/components/messageTraits/erpEnvelope'
+      payload:
+        $ref: '#/components/schemas/ContractorUpdatedFromSitePayload'
 
     # ── US-08: order.created (1С → Сайт) ─────
     OrderCreatedFromErp:
@@ -2067,6 +2129,84 @@ components:
           type:
             - array
             - 'null'
+          items:
+            $ref: '#/components/schemas/BankAccount'
+
+    ContractorUpdatedFromSitePayload:
+      type: object
+      description: |
+        Обновление контрагента на сайте — отправка в 1С. Триггеры: изменение
+        значимых полей уже синхронизированной Company (с заполненным `erp_id`)
+        либо create/update/delete `CompanyBankAccount` у такой Company.
+        Поле `uuid` — это `Company.erp_id` (UUID, выданный 1С).
+        1С матчит контрагента строго по `uuid`.
+      required:
+        - event
+        - uuid
+        - partner_uuid
+        - tax_id
+        - name
+        - country
+      properties:
+        event:
+          type: string
+          const: contractor.updated
+        message_id:
+          type: string
+          examples:
+            - 'msg-contractor-upd-c1a2b3c4'
+        timestamp:
+          $ref: '#/components/schemas/ISO8601DateTime'
+        uuid:
+          $ref: '#/components/schemas/UUID'
+          description: "UUID контрагента в 1С (Company.erp_id). Обязателен для матчинга."
+        partner_uuid:
+          $ref: '#/components/schemas/UUID'
+          description: "UUID партнёра-владельца."
+        name:
+          type: string
+        legal_name:
+          type:
+            - string
+            - 'null'
+        tax_id:
+          type: string
+          description: "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)"
+        tax_code:
+          type:
+            - string
+            - 'null'
+        registration_number:
+          type:
+            - string
+            - 'null'
+        okpo_code:
+          type:
+            - string
+            - 'null'
+        country:
+          $ref: '#/components/schemas/CountryCode'
+        legal_address:
+          type:
+            - string
+            - 'null'
+        actual_address:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          description: "Полный актуальный набор банковских счетов контрагента."
           items:
             $ref: '#/components/schemas/BankAccount'
 

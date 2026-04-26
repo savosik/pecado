@@ -95,6 +95,8 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishContractorToErp::class,
         );
 
+        \App\Models\CompanyBankAccount::observe(\App\Observers\CompanyBankAccountObserver::class);
+
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderCreated::class,
             \App\Listeners\PublishOrderToErp::class,

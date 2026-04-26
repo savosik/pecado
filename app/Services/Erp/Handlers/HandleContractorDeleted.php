@@ -56,6 +56,10 @@ class HandleContractorDeleted
             return;
         }
 
+        // Маркер "пришло из 1С" — на случай, если какой-нибудь Observer всё же
+        // среагирует на удаление, он увидит флаг и пропустит публикацию.
+        $company->fromErp = true;
+
         Company::withoutEvents(function () use ($company) {
             $company->delete();
         });

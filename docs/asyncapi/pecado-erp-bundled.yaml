@@ -3270,16 +3270,29 @@ channels:
     address: erp_out.contractors
     title: Контрагенты (Сайт → 1С)
     description: >
-      Очередь для контрагентов, созданных на сайте. Сообщения публикуются
+      Очередь для контрагентов сайта. Содержит два события:
 
-      при первом заполнении `tax_id` у Company. Routing key:
-      `contractor.created`.
+      - `contractor.created` — публикуется при первом заполнении `tax_id` у
+      Company.
+
+      - `contractor.updated` — публикуется при изменении уже синхронизированной
+      Company
+        (имеющей `erp_id`) либо при изменении её банковских реквизитов
+        (`CompanyBankAccount` create/update/delete).
 
       1С слушает очередь напрямую через AMQP (у сайта нет воркера для этой
       очереди).
 
-      После обработки 1С отвечает `contractor.updated` с назначенным UUID в
-      `erp_in.contractors`.
+      После первой публикации `contractor.created` 1С отвечает
+      `contractor.updated`
+
+      с назначенным UUID в `erp_in.contractors`; этот ответ НЕ триггерит
+      обратную
+
+      публикацию (защита от петли через `Company::withoutEvents()` +
+      транзиентный
+
+      флаг `Company->fromErp`).
     messages:
       contractorCreatedFromSite:
         name: contractor.created
@@ -3392,6 +3405,144 @@ channels:
               type:
                 - array
                 - 'null'
+              items:
+                type: object
+                required:
+                  - account_number
+                  - is_primary
+                properties:
+                  bank_name:
+                    type:
+                      - string
+                      - 'null'
+                    description: Наименование банка
+                  bank_bik:
+                    type:
+                      - string
+                      - 'null'
+                    description: БИК банка
+                  correspondent_account:
+                    type:
+                      - string
+                      - 'null'
+                    description: Корреспондентский счёт
+                  account_number:
+                    type: string
+                    description: Номер счёта
+                  is_primary:
+                    type: boolean
+                    description: Основной счёт (первый = true, остальные = false)
+      contractorUpdatedFromSite:
+        name: contractor.updated
+        title: Контрагент обновлён (Сайт → 1С)
+        summary: >-
+          Публикация при изменении синхронизированной Company или её банковских
+          реквизитов
+        traits:
+          - headers:
+              type: object
+              properties:
+                contentType:
+                  type: string
+                  const: application/json
+            contentType: application/json
+        payload:
+          type: object
+          description: >
+            Обновление контрагента на сайте — отправка в 1С. Триггеры: изменение
+
+            значимых полей уже синхронизированной Company (с заполненным
+            `erp_id`)
+
+            либо create/update/delete `CompanyBankAccount` у такой Company.
+
+            Поле `uuid` — это `Company.erp_id` (UUID, выданный 1С).
+
+            1С матчит контрагента строго по `uuid`.
+          required:
+            - event
+            - uuid
+            - partner_uuid
+            - tax_id
+            - name
+            - country
+          properties:
+            event:
+              type: string
+              const: contractor.updated
+            message_id:
+              type: string
+              examples:
+                - msg-contractor-upd-c1a2b3c4
+            timestamp:
+              type: string
+              format: date-time
+              description: Дата и время в формате ISO 8601
+              examples:
+                - '2026-03-17T12:00:00+03:00'
+            uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            partner_uuid:
+              type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+            name:
+              type: string
+            legal_name:
+              type:
+                - string
+                - 'null'
+            tax_id:
+              type: string
+              description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+            tax_code:
+              type:
+                - string
+                - 'null'
+            registration_number:
+              type:
+                - string
+                - 'null'
+            okpo_code:
+              type:
+                - string
+                - 'null'
+            country:
+              type: string
+              minLength: 2
+              maxLength: 2
+              description: ISO alpha-2 код страны
+              examples:
+                - RU
+                - KZ
+                - BY
+            legal_address:
+              type:
+                - string
+                - 'null'
+            actual_address:
+              type:
+                - string
+                - 'null'
+            phone:
+              type:
+                - string
+                - 'null'
+            email:
+              type:
+                - string
+                - 'null'
+            bank_accounts:
+              type:
+                - array
+                - 'null'
+              description: Полный актуальный набор банковских счетов контрагента.
               items:
                 type: object
                 required:
@@ -3717,6 +3868,62 @@ operations:
       $ref: '#/channels/erpOutContractors'
     messages:
       - $ref: '#/channels/erpOutContractors/messages/contractorCreatedFromSite'
+    bindings:
+      amqp:
+        bindingVersion: 0.3.0
+    tags:
+      - name: US-07
+      - name: contractors
+  sendContractorUpdated:
+    title: Обновление контрагента в 1С
+    summary: >-
+      Сайт → 1С при изменении уже синхронизированной Company или её банковских
+      реквизитов
+    description: >
+      Публикуется через `PublishContractorToErpJob` (тот же job, что и для
+
+      `contractor.created`, разный `event` в payload).
+
+
+      **Триггеры публикации:**
+
+      - `CompanyUpdated` для Company с уже заполненным `erp_id` и изменением
+        хотя бы одного из значимых полей (`name`, `legal_name`, `tax_id`,
+        `tax_code`, `registration_number`, `okpo_code`, `legal_address`,
+        `actual_address`, `phone`, `email`, `country`).
+      - Создание / обновление / удаление `CompanyBankAccount` у Company
+        с заполненным `erp_id` (Observer `CompanyBankAccountObserver`).
+
+      **Защита от петли** (важно — иначе `contractor.updated` от 1С триггерит
+
+      обратную публикацию и так до бесконечности):
+
+      1. `HandleContractorUpdated` обновляет Company через
+      `Company::withoutEvents()`.
+
+      2. Перед обновлением выставляется транзиентный флаг `Company->fromErp =
+      true`,
+         который проверяет listener (страховка, если кто-то забудет `withoutEvents()`).
+      3. Блок пересборки `bank_accounts` в `HandleContractorUpdated` обёрнут в
+         `CompanyBankAccount::withoutEvents()` — Observer на банке не сработает.
+
+      **Предусловия:**
+
+      - У контрагента должен быть `Company.erp_id` (UUID, выданный 1С).
+        Если `erp_id` пуст — публикуется не `contractor.updated`, а `contractor.created`
+        при первом заполнении `tax_id` (см. `sendContractorCreated`).
+      - У партнёра-владельца должен быть `User.erp_id`. Иначе — log info, выход.
+
+
+      **Формат `uuid` в payload** — это `Company.erp_id` (UUID, выданный 1С).
+
+
+      Отключается тем же env-флагом `PUBLISH_CONTRACTORS_TO_ERP=false`.
+    action: send
+    channel:
+      $ref: '#/channels/erpOutContractors'
+    messages:
+      - $ref: '#/channels/erpOutContractors/messages/contractorUpdatedFromSite'
     bindings:
       amqp:
         bindingVersion: 0.3.0
@@ -5020,6 +5227,139 @@ components:
             type:
               - array
               - 'null'
+            items:
+              type: object
+              required:
+                - account_number
+                - is_primary
+              properties:
+                bank_name:
+                  type:
+                    - string
+                    - 'null'
+                  description: Наименование банка
+                bank_bik:
+                  type:
+                    - string
+                    - 'null'
+                  description: БИК банка
+                correspondent_account:
+                  type:
+                    - string
+                    - 'null'
+                  description: Корреспондентский счёт
+                account_number:
+                  type: string
+                  description: Номер счёта
+                is_primary:
+                  type: boolean
+                  description: Основной счёт (первый = true, остальные = false)
+    ContractorUpdatedFromSite:
+      name: contractor.updated
+      title: Контрагент обновлён (Сайт → 1С)
+      summary: >-
+        Публикация при изменении синхронизированной Company или её банковских
+        реквизитов
+      traits:
+        - headers:
+            type: object
+            properties:
+              contentType:
+                type: string
+                const: application/json
+          contentType: application/json
+      payload:
+        type: object
+        description: |
+          Обновление контрагента на сайте — отправка в 1С. Триггеры: изменение
+          значимых полей уже синхронизированной Company (с заполненным `erp_id`)
+          либо create/update/delete `CompanyBankAccount` у такой Company.
+          Поле `uuid` — это `Company.erp_id` (UUID, выданный 1С).
+          1С матчит контрагента строго по `uuid`.
+        required:
+          - event
+          - uuid
+          - partner_uuid
+          - tax_id
+          - name
+          - country
+        properties:
+          event:
+            type: string
+            const: contractor.updated
+          message_id:
+            type: string
+            examples:
+              - msg-contractor-upd-c1a2b3c4
+          timestamp:
+            type: string
+            format: date-time
+            description: Дата и время в формате ISO 8601
+            examples:
+              - '2026-03-17T12:00:00+03:00'
+          uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          partner_uuid:
+            type: string
+            format: uuid
+            description: UUID строка
+            examples:
+              - 550e8400-e29b-41d4-a716-446655440000
+          name:
+            type: string
+          legal_name:
+            type:
+              - string
+              - 'null'
+          tax_id:
+            type: string
+            description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+          tax_code:
+            type:
+              - string
+              - 'null'
+          registration_number:
+            type:
+              - string
+              - 'null'
+          okpo_code:
+            type:
+              - string
+              - 'null'
+          country:
+            type: string
+            minLength: 2
+            maxLength: 2
+            description: ISO alpha-2 код страны
+            examples:
+              - RU
+              - KZ
+              - BY
+          legal_address:
+            type:
+              - string
+              - 'null'
+          actual_address:
+            type:
+              - string
+              - 'null'
+          phone:
+            type:
+              - string
+              - 'null'
+          email:
+            type:
+              - string
+              - 'null'
+          bank_accounts:
+            type:
+              - array
+              - 'null'
+            description: Полный актуальный набор банковских счетов контрагента.
             items:
               type: object
               required:
@@ -8087,6 +8427,125 @@ components:
           type:
             - array
             - 'null'
+          items:
+            type: object
+            required:
+              - account_number
+              - is_primary
+            properties:
+              bank_name:
+                type:
+                  - string
+                  - 'null'
+                description: Наименование банка
+              bank_bik:
+                type:
+                  - string
+                  - 'null'
+                description: БИК банка
+              correspondent_account:
+                type:
+                  - string
+                  - 'null'
+                description: Корреспондентский счёт
+              account_number:
+                type: string
+                description: Номер счёта
+              is_primary:
+                type: boolean
+                description: Основной счёт (первый = true, остальные = false)
+    ContractorUpdatedFromSitePayload:
+      type: object
+      description: |
+        Обновление контрагента на сайте — отправка в 1С. Триггеры: изменение
+        значимых полей уже синхронизированной Company (с заполненным `erp_id`)
+        либо create/update/delete `CompanyBankAccount` у такой Company.
+        Поле `uuid` — это `Company.erp_id` (UUID, выданный 1С).
+        1С матчит контрагента строго по `uuid`.
+      required:
+        - event
+        - uuid
+        - partner_uuid
+        - tax_id
+        - name
+        - country
+      properties:
+        event:
+          type: string
+          const: contractor.updated
+        message_id:
+          type: string
+          examples:
+            - msg-contractor-upd-c1a2b3c4
+        timestamp:
+          type: string
+          format: date-time
+          description: Дата и время в формате ISO 8601
+          examples:
+            - '2026-03-17T12:00:00+03:00'
+        uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        partner_uuid:
+          type: string
+          format: uuid
+          description: UUID строка
+          examples:
+            - 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+        legal_name:
+          type:
+            - string
+            - 'null'
+        tax_id:
+          type: string
+          description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)
+        tax_code:
+          type:
+            - string
+            - 'null'
+        registration_number:
+          type:
+            - string
+            - 'null'
+        okpo_code:
+          type:
+            - string
+            - 'null'
+        country:
+          type: string
+          minLength: 2
+          maxLength: 2
+          description: ISO alpha-2 код страны
+          examples:
+            - RU
+            - KZ
+            - BY
+        legal_address:
+          type:
+            - string
+            - 'null'
+        actual_address:
+          type:
+            - string
+            - 'null'
+        phone:
+          type:
+            - string
+            - 'null'
+        email:
+          type:
+            - string
+            - 'null'
+        bank_accounts:
+          type:
+            - array
+            - 'null'
+          description: Полный актуальный набор банковских счетов контрагента.
           items:
             type: object
             required:

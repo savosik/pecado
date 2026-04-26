@@ -13,7 +13,10 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
 
 /**
- * US-07 v13.2: Публикация contractor.created в erp_out.contractors (Сайт → 1С).
+ * US-07: Публикация контрагента в erp_out.contractors (Сайт → 1С).
+ *
+ * Используется и для contractor.created (v13.2), и для contractor.updated (v13.X) —
+ * конкретное событие определяется payload['event'].
  */
 class PublishContractorToErpJob implements ShouldQueue
 {
@@ -56,7 +59,7 @@ class PublishContractorToErpJob implements ShouldQueue
                 self::QUEUE_NAME
             );
 
-            Log::info('contractor.created опубликован в '.self::QUEUE_NAME, [
+            Log::info("{$event} опубликован в ".self::QUEUE_NAME, [
                 'uuid' => $this->payload['uuid'] ?? null,
                 'partner_uuid' => $this->payload['partner_uuid'] ?? null,
                 'tax_id' => $this->payload['tax_id'] ?? null,
@@ -64,7 +67,7 @@ class PublishContractorToErpJob implements ShouldQueue
 
             ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, self::QUEUE_NAME);
         } catch (\Exception $e) {
-            Log::error('Не удалось опубликовать contractor.created в ERP: '.$e->getMessage(), [
+            Log::error("Не удалось опубликовать {$event} в ERP: ".$e->getMessage(), [
                 'payload' => $this->payload,
             ]);
             ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), self::QUEUE_NAME);

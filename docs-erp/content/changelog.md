@@ -6,6 +6,57 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.8.0] — 2026-04-26
+
+> Двусторонний обмен данными контрагента: сайт теперь публикует
+> `contractor.updated` (Сайт → 1С) при локальном изменении уже синхронизированной
+> Company и при изменении её банковских реквизитов. До v13.8 такие правки
+> оставались только на сайте.
+
+### Добавлено
+
+- **`contractor.updated` (Сайт → 1С)** — новое исходящее событие в очередь
+  `erp_out.contractors` (тот же job `PublishContractorToErpJob`, отличие
+  в `payload.event`). Триггеры:
+    - `CompanyUpdated` для Company с заполненным `erp_id` и изменением
+      хотя бы одного из значимых полей (`name`, `legal_name`, `tax_id`,
+      `tax_code`, `registration_number`, `okpo_code`, `legal_address`,
+      `actual_address`, `phone`, `email`, `country`).
+    - Создание / обновление / удаление `CompanyBankAccount` у такой Company
+      (Observer `CompanyBankAccountObserver`). В payload уезжает полный
+      актуальный набор счетов в `bank_accounts[]`.
+- **JSON Schema** [`contractor.updated.to_erp.json`](/docs/erp/schemas/contractor.updated.to_erp.json) —
+  обязательные поля `event`, `uuid`, `partner_uuid`, `tax_id`, `name`, `country`.
+  `uuid` — `format: uuid`, это `Company.erp_id` (UUID, выданный 1С).
+- **AsyncAPI** — добавлены message `ContractorUpdatedFromSite`, payload
+  `ContractorUpdatedFromSitePayload`, operation `sendContractorUpdated`.
+- **Защита от петли** — три уровня:
+    - `Company::withoutEvents()` в `HandleContractorCreated/Updated/Deleted`
+      (уже было).
+    - Транзиентный флаг `Company->fromErp = true` — выставляется в
+      `HandleContractor*`, проверяется в listener `PublishContractorToErp`
+      и в `CompanyBankAccountObserver`.
+    - `CompanyBankAccount::withoutEvents()` вокруг блока пересборки
+      банковских счетов в `HandleContractorCreated/Updated`.
+
+### Изменено
+
+- **Listener `PublishContractorToErp`** — обновлена логика `resolveFromUpdated`:
+  для Company с `erp_id` публикует `contractor.updated` при изменении значимых
+  полей; для Company без `erp_id` поведение прежнее (`contractor.created` при
+  первом заполнении `tax_id`).
+- **`HandleContractorCreated/Updated/Deleted`** — после резолва модели
+  выставляют `$company->fromErp = true`.
+- **`PublishContractorToErpJob`** — лог-сообщения параметризованы по `event`
+  (раньше всегда писали «contractor.created опубликован»).
+
+### Откат
+
+- Тот же фиче-флаг `PUBLISH_CONTRACTORS_TO_ERP=false` гасит обе публикации —
+  `contractor.created` и `contractor.updated`.
+
+---
+
 ## [13.7.0] — 2026-04-26
 
 > Аудит-метки 1С на заказах и реализациях. Добавлены опциональные поля

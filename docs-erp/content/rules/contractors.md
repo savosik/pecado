@@ -1,6 +1,6 @@
 # Контрагенты
 
-> **JSON Schema:** [`contractor.created.json`](/docs/erp/schemas/contractor.created.json) | [`contractor.updated.json`](/docs/erp/schemas/contractor.updated.json) | [`contractor.deleted.json`](/docs/erp/schemas/contractor.deleted.json) | [`contractor.created.to_erp.json`](/docs/erp/schemas/contractor.created.to_erp.json)  
+> **JSON Schema:** [`contractor.created.json`](/docs/erp/schemas/contractor.created.json) | [`contractor.updated.json`](/docs/erp/schemas/contractor.updated.json) | [`contractor.deleted.json`](/docs/erp/schemas/contractor.deleted.json) | [`contractor.created.to_erp.json`](/docs/erp/schemas/contractor.created.to_erp.json) | [`contractor.updated.to_erp.json`](/docs/erp/schemas/contractor.updated.to_erp.json)  
 > **AsyncAPI:** [Полная спецификация](/docs/erp/spec.yaml)
 
 ## Направления обмена
@@ -11,6 +11,7 @@
 | `contractor.updated` | 1С → Сайт | `erp_in.contractors` |
 | `contractor.deleted` | 1С → Сайт | `erp_in.contractors` |
 | `contractor.created` | Сайт → 1С | `erp_out.contractors` (v13.2) |
+| `contractor.updated` | Сайт → 1С | `erp_out.contractors` (v13.8) |
 
 > **v13.5:** входящие `contractor.*` выделены в отдельную очередь `erp_in.contractors`
 > с собственной DLQ `erp_dlq.contractors` и отдельным supervisor-консьюмером.
@@ -50,9 +51,10 @@
 
 - Пользователь создаёт Company в ЛК или в checkout с непустым `tax_id` → публикуется.
 - Пользователь обновляет Company и заполняет `tax_id` впервые (ранее был пуст) → публикуется.
-- Пользователь обновляет уже отправленного контрагента (любое поле) → **не публикуется**.
-  После первой публикации 1С становится авторитетом; дальнейшие изменения приходят
-  от 1С через `contractor.updated`.
+- Пользователь обновляет уже синхронизированного контрагента → публикуется как
+  `contractor.updated` (Сайт → 1С), см. отдельный раздел ниже. Однонаправленность
+  «1С — авторитет» сохраняется только в смысле UUID: сайт не присваивает свой UUID,
+  но фактические изменения данных в админке должны доезжать до 1С.
 
 ### Предусловия
 
@@ -76,6 +78,61 @@
 
 - Фиче-флаг `PUBLISH_CONTRACTORS_TO_ERP=false` полностью отключает publisher
   без деплоя (listener молча пропускает события).
+
+## contractor.updated (Сайт → 1С) — v13.8
+
+### Назначение
+
+Передавать в 1С локальные изменения данных уже синхронизированного контрагента —
+включая создание / обновление / удаление банковских реквизитов. До v13.8 такие
+изменения оставались только на сайте и не доезжали до 1С, что приводило к
+расхождению данных.
+
+### Триггер публикации
+
+- `Company` с уже заполненным `erp_id` обновлена в админке, и изменилось хотя
+  бы одно из значимых полей: `name`, `legal_name`, `tax_id`, `tax_code`,
+  `registration_number`, `okpo_code`, `legal_address`, `actual_address`,
+  `phone`, `email`, `country`.
+- `CompanyBankAccount` создан / обновлён / удалён у такой Company
+  (Observer `CompanyBankAccountObserver`). В payload уезжает полный актуальный
+  набор счетов в `bank_accounts[]`.
+
+Если у Company ещё нет `erp_id` (не синхронизирована с 1С), вместо
+`contractor.updated` публикуется `contractor.created` при первом заполнении
+`tax_id` — см. раздел выше.
+
+### Защита от петли
+
+«1С прислала `contractor.updated` → сайт обновил Company → сайт отправил
+`contractor.updated` обратно → 1С обновила → …» — три уровня защиты:
+
+1. **`Company::withoutEvents()`** в `HandleContractorCreated/Updated/Deleted` —
+   событие `CompanyUpdated` не диспатчится, listener `PublishContractorToErp`
+   не вызывается.
+2. **Транзиентный флаг `Company->fromErp = true`** — выставляется в
+   `HandleContractor*` сразу после резолва модели. И listener
+   `PublishContractorToErp`, и `CompanyBankAccountObserver` проверяют флаг
+   и пропускают публикацию. Страховка на случай, если кто-то забудет
+   `withoutEvents()`.
+3. **`CompanyBankAccount::withoutEvents()`** в `HandleContractorCreated/Updated`
+   при пересборке банковских счетов — Observer не вызывается на каждом счёте.
+
+### Поле `uuid` в payload
+
+- `Company.erp_id` (UUID, выданный 1С). Обязателен — 1С матчит контрагента
+  строго по этому UUID.
+
+### Формат
+
+- **Обязательные поля:** `event`, `uuid`, `partner_uuid`, `tax_id`, `name`, `country`.
+- `bank_accounts[]` — полный актуальный набор счетов (1С полностью замещает
+  свой набор полученным из payload).
+
+### Откат
+
+- Тот же фиче-флаг `PUBLISH_CONTRACTORS_TO_ERP=false` отключает обе
+  публикации — `contractor.created` и `contractor.updated`.
 
 ## contractor.updated (1С → Сайт) — v13.2
 
@@ -115,7 +172,8 @@
 
 - [ ] Сайт публикует `contractor.created` при создании Company с `tax_id`
 - [ ] Публикация откладывается, если у партнёра нет `User.erp_id`
-- [ ] Повторное сохранение Company (после первой публикации) НЕ триггерит публикацию
+- [ ] Повторное сохранение Company с `erp_id` теперь публикует `contractor.updated`
+      (с v13.8) — но **только** при изменении хотя бы одного значимого поля.
 - [ ] Сайт принимает `contractor.updated` и привязывает `erp_id` к существующей Company (backfill по `tax_id + user_id`)
 - [ ] `contractor.updated` обновляет только переданные поля; `bank_accounts` заменяется только при явной передаче массива
 - [ ] Сайт принимает `contractor.deleted` и делает soft-delete Company по UUID или tax_id
@@ -123,3 +181,6 @@
 - [ ] UUID-поля (`contractor.uuid`, `contractor_uuid`, `contractors[].uuid`) опциональны — переходный период не требует синхронной выкатки 1С
 - [ ] `country` не `null` в `contractor.created`
 - [ ] Банковские счета создаются из `bank_accounts[]`, первый счёт — `is_primary = true`
+- [ ] Сайт публикует `contractor.updated` (Сайт → 1С) при изменении Company с `erp_id`
+- [ ] Сайт публикует `contractor.updated` (Сайт → 1С) при создании/обновлении/удалении `CompanyBankAccount` у такой Company
+- [ ] Входящий `contractor.updated` от 1С **не** триггерит обратную публикацию (петля разорвана через `withoutEvents()` + `Company->fromErp`)

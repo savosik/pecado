@@ -70,6 +70,7 @@ class ErpMessageValidator
     private const OUTBOUND_SCHEMA_MAP = [
         'partner.created' => 'partner.created.to_erp.json',
         'contractor.created' => 'contractor.created.to_erp.json',
+        'contractor.updated' => 'contractor.updated.to_erp.json',
         'order.created' => 'order.created.to_erp.json',
         'return.created' => 'return.created.to_erp.json',
     ];

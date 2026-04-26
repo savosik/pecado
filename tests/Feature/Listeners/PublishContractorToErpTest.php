@@ -7,7 +7,9 @@ use App\Events\CompanyUpdated;
 use App\Jobs\PublishContractorToErpJob;
 use App\Listeners\PublishContractorToErp;
 use App\Models\Company;
+use App\Models\CompanyBankAccount;
 use App\Models\User;
+use App\Services\Erp\Handlers\HandleContractorUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
@@ -225,21 +227,162 @@ class PublishContractorToErpTest extends TestCase
     }
 
     #[Test]
-    public function it_does_not_republish_on_tax_id_change_when_erp_id_already_set(): void
+    public function it_publishes_contractor_updated_when_synced_company_changes(): void
     {
-        // Кейс: Company создана на сайте, опубликована, 1С вернула UUID.
-        // Затем пользователь (или другой handler) меняет tax_id — повторная
-        // публикация не должна произойти, 1С уже авторитет.
-        $user = User::factory()->create(['erp_id' => 'partner-pub-009']);
+        // v13.8: Company уже синхронизирована с 1С (имеет erp_id). При
+        // изменении значимого поля (legal_address) уезжает contractor.updated.
+        $user = User::factory()->create(['erp_id' => '11111111-1111-1111-1111-000000000099']);
         $company = Company::factory()->create([
             'user_id' => $user->id,
             'tax_id' => '1234567890',
-            'erp_id' => 'contractor-assigned-by-erp',
+            'erp_id' => '22222222-2222-2222-2222-000000000099',
+            'legal_address' => 'Адрес исходный',
         ]);
 
         Queue::fake();
 
-        $company->update(['tax_id' => '0987654321']);
+        $company->update(['legal_address' => 'Адрес обновлённый']);
+
+        Queue::assertPushed(PublishContractorToErpJob::class, function ($job) use ($user, $company) {
+            return $job->payload['event'] === 'contractor.updated'
+                && $job->payload['uuid'] === $company->erp_id
+                && $job->payload['partner_uuid'] === $user->erp_id
+                && $job->payload['legal_address'] === 'Адрес обновлённый';
+        });
+    }
+
+    #[Test]
+    public function it_does_not_publish_contractor_updated_when_no_significant_field_changed(): void
+    {
+        // Company с erp_id, но изменения нет — ничего не пушим.
+        $user = User::factory()->create(['erp_id' => '11111111-1111-1111-1111-000000000088']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '1234567890',
+            'erp_id' => '22222222-2222-2222-2222-000000000088',
+        ]);
+
+        Queue::fake();
+
+        $listener = new PublishContractorToErp;
+        $listener->handle(new CompanyUpdated($company));
+
+        Queue::assertNotPushed(PublishContractorToErpJob::class);
+    }
+
+    #[Test]
+    public function it_does_not_dispatch_when_from_erp_flag_is_set(): void
+    {
+        // Уровень 2 защиты от петли: даже если сработают события (withoutEvents
+        // забыли), флаг fromErp заставит listener пропустить публикацию.
+        $user = User::factory()->create(['erp_id' => '11111111-1111-1111-1111-000000000077']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '1234567890',
+            'erp_id' => '22222222-2222-2222-2222-000000000077',
+            'legal_address' => 'Старый адрес',
+        ]);
+
+        Queue::fake();
+
+        $company->fromErp = true;
+        $company->update(['legal_address' => 'Изменённый адрес']);
+
+        Queue::assertNotPushed(PublishContractorToErpJob::class);
+    }
+
+    #[Test]
+    public function handle_contractor_updated_does_not_trigger_publish_loop(): void
+    {
+        // Реалистичная репродукция петли: 1С прислала contractor.updated →
+        // HandleContractorUpdated обновил Company через withoutEvents.
+        // Listener PublishContractorToErp НЕ должен опубликовать обратно.
+        $user = User::factory()->create(['erp_id' => '11111111-1111-1111-1111-000000000066']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '1234567890',
+            'erp_id' => '22222222-2222-2222-2222-000000000066',
+            'legal_address' => 'Старый адрес',
+        ]);
+
+        Queue::fake();
+
+        (new HandleContractorUpdated)->handle([
+            'event' => 'contractor.updated',
+            'uuid' => $company->erp_id,
+            'partner_uuid' => $user->erp_id,
+            'tax_id' => '1234567890',
+            'legal_address' => 'Адрес из 1С',
+        ]);
+
+        Queue::assertNotPushed(PublishContractorToErpJob::class);
+    }
+
+    #[Test]
+    public function bank_account_create_triggers_contractor_updated(): void
+    {
+        // v13.8: добавление банковского счёта у синхронизированной Company →
+        // contractor.updated с актуальным набором счетов.
+        $user = User::factory()->create(['erp_id' => '11111111-1111-1111-1111-000000000055']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '1234567890',
+            'erp_id' => '22222222-2222-2222-2222-000000000055',
+        ]);
+
+        Queue::fake();
+
+        CompanyBankAccount::create([
+            'company_id' => $company->id,
+            'bank_name' => 'Сбербанк',
+            'bank_bik' => '044525225',
+            'correspondent_account' => '30101810400000000225',
+            'account_number' => '40702810000000001234',
+            'is_primary' => true,
+        ]);
+
+        Queue::assertPushed(PublishContractorToErpJob::class, function ($job) use ($company) {
+            $accounts = $job->payload['bank_accounts'] ?? [];
+
+            return $job->payload['event'] === 'contractor.updated'
+                && $job->payload['uuid'] === $company->erp_id
+                && count($accounts) === 1
+                && $accounts[0]['account_number'] === '40702810000000001234'
+                && $accounts[0]['is_primary'] === true;
+        });
+    }
+
+    #[Test]
+    public function bank_account_change_during_erp_inbound_does_not_trigger_publish(): void
+    {
+        // Петля при банковских реквизитах: 1С прислала contractor.updated с
+        // bank_accounts → HandleContractorUpdated пересобрал счета. Observer
+        // НЕ должен опубликовать обратно (CompanyBankAccount::withoutEvents
+        // + Company->fromErp).
+        $user = User::factory()->create(['erp_id' => '11111111-1111-1111-1111-000000000044']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '1234567890',
+            'erp_id' => '22222222-2222-2222-2222-000000000044',
+        ]);
+
+        Queue::fake();
+
+        (new HandleContractorUpdated)->handle([
+            'event' => 'contractor.updated',
+            'uuid' => $company->erp_id,
+            'partner_uuid' => $user->erp_id,
+            'tax_id' => '1234567890',
+            'bank_accounts' => [
+                [
+                    'bank_name' => 'Сбербанк',
+                    'bank_bik' => '044525225',
+                    'correspondent_account' => '30101810400000000225',
+                    'account_number' => '40702810000000005555',
+                    'is_primary' => true,
+                ],
+            ],
+        ]);
 
         Queue::assertNotPushed(PublishContractorToErpJob::class);
     }

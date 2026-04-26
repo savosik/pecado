@@ -4,6 +4,7 @@ namespace App\Services\Erp\Handlers;
 
 use App\Jobs\NormalizeCompanyDataJob;
 use App\Models\Company;
+use App\Models\CompanyBankAccount;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -117,19 +118,27 @@ class HandleContractorCreated
             });
         });
 
-        // Синхронизация банковских счетов (v5)
-        if (is_array($bankAccounts)) {
-            $company->bankAccounts()->delete();
+        // Маркер "пришло из 1С" — listener PublishContractorToErp и
+        // CompanyBankAccountObserver проверяют его и пропускают публикацию.
+        $company->fromErp = true;
 
-            foreach ($bankAccounts as $account) {
-                $company->bankAccounts()->create([
-                    'bank_name' => $account['bank_name'] ?? null,
-                    'bank_bik' => $account['bank_bik'] ?? null,
-                    'correspondent_account' => $account['correspondent_account'] ?? null,
-                    'account_number' => $account['account_number'] ?? '',
-                    'is_primary' => $account['is_primary'] ?? false,
-                ]);
-            }
+        // Синхронизация банковских счетов (v5).
+        // CompanyBankAccount::withoutEvents — не триггерим Observer, иначе при
+        // каждом счёте уйдёт contractor.updated обратно в 1С (петля).
+        if (is_array($bankAccounts)) {
+            CompanyBankAccount::withoutEvents(function () use ($company, $bankAccounts) {
+                $company->bankAccounts()->delete();
+
+                foreach ($bankAccounts as $account) {
+                    $company->bankAccounts()->create([
+                        'bank_name' => $account['bank_name'] ?? null,
+                        'bank_bik' => $account['bank_bik'] ?? null,
+                        'correspondent_account' => $account['correspondent_account'] ?? null,
+                        'account_number' => $account['account_number'] ?? '',
+                        'is_primary' => $account['is_primary'] ?? false,
+                    ]);
+                }
+            });
         }
 
         $action = $company->wasRecentlyCreated ? 'создан' : 'обновлён';

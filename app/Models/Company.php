@@ -15,6 +15,12 @@ class Company extends Model
 {
     use HasFactory, SoftDeletes;
 
+    // Транзиентный флаг: модель только что обновлена входящим сообщением из 1С
+    // (HandleContractor*). Listener PublishContractorToErp и Observer
+    // CompanyBankAccountObserver проверяют его и пропускают публикацию обратно
+    // в 1С — страховка от петли поверх Company::withoutEvents().
+    public bool $fromErp = false;
+
     /**
      * The "booted" method of the model.
      */

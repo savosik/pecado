@@ -4,6 +4,7 @@ namespace App\Services\Erp\Handlers;
 
 use App\Jobs\NormalizeCompanyDataJob;
 use App\Models\Company;
+use App\Models\CompanyBankAccount;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
@@ -75,6 +76,10 @@ class HandleContractorUpdated
             return;
         }
 
+        // Маркер "пришло из 1С" — listener PublishContractorToErp и
+        // CompanyBankAccountObserver проверяют его и пропускают публикацию.
+        $company->fromErp = true;
+
         $this->updateCompany($company, $payload, $bindErpId);
 
         Log::info('contractor.updated: контрагент обновлён', [
@@ -124,21 +129,25 @@ class HandleContractorUpdated
             });
         }
 
-        // bank_accounts: только если явно передан (не null, не отсутствует)
+        // bank_accounts: только если явно передан (не null, не отсутствует).
+        // CompanyBankAccount::withoutEvents — иначе на каждом счёте сработает
+        // Observer и отправит contractor.updated обратно в 1С (петля).
         $bankAccounts = $payload['bank_accounts'] ?? null;
 
         if (is_array($bankAccounts)) {
-            $company->bankAccounts()->delete();
+            CompanyBankAccount::withoutEvents(function () use ($company, $bankAccounts) {
+                $company->bankAccounts()->delete();
 
-            foreach ($bankAccounts as $account) {
-                $company->bankAccounts()->create([
-                    'bank_name' => $account['bank_name'] ?? null,
-                    'bank_bik' => $account['bank_bik'] ?? null,
-                    'correspondent_account' => $account['correspondent_account'] ?? null,
-                    'account_number' => $account['account_number'] ?? '',
-                    'is_primary' => $account['is_primary'] ?? false,
-                ]);
-            }
+                foreach ($bankAccounts as $account) {
+                    $company->bankAccounts()->create([
+                        'bank_name' => $account['bank_name'] ?? null,
+                        'bank_bik' => $account['bank_bik'] ?? null,
+                        'correspondent_account' => $account['correspondent_account'] ?? null,
+                        'account_number' => $account['account_number'] ?? '',
+                        'is_primary' => $account['is_primary'] ?? false,
+                    ]);
+                }
+            });
         }
     }
 }

@@ -10,30 +10,45 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
- * US-07 v13.2: Слушает CompanyCreated / CompanyUpdated и публикует
- * contractor.created в erp_out.contractors.
+ * US-07: Слушает CompanyCreated / CompanyUpdated и публикует исходящие
+ * сообщения о контрагенте в erp_out.contractors.
  *
- * Триггер — первое заполнение tax_id у Company:
- *  - CompanyCreated с непустым tax_id → публикуем.
- *  - CompanyUpdated, где tax_id стал непустым (ранее был пуст) → публикуем.
- *  - Иначе — не публикуем. После первой публикации 1С становится
- *    авторитетом; обновления контрагента приходят через contractor.updated.
+ * Два сценария публикации:
+ *  - contractor.created (v13.2): первое заполнение tax_id у Company без erp_id.
+ *  - contractor.updated (v13.X): значимое изменение Company с уже заполненным
+ *    erp_id (синхронизированный с 1С контрагент). Также триггерится из
+ *    CompanyBankAccountObserver при изменении банковских реквизитов.
  *
- * Защита от петли contractor.updated → CompanyUpdated → contractor.created → ... —
+ * Защита от петли contractor.updated → CompanyUpdated → contractor.updated → ... —
  * три уровня:
- *  1. Входящие handlers (HandleContractorCreated / HandleContractorUpdated /
- *     HandleContractorDeleted / HandleOrderCreated / HandleShipment*) обновляют
+ *  1. Входящие handlers (HandleContractorCreated/Updated/Deleted) обновляют
  *     Company через Company::withoutEvents() — CompanyUpdated не диспатчится.
- *  2. resolveFromUpdated публикует ТОЛЬКО при первом заполнении tax_id
- *     (wasChanged + getOriginal === пусто). Любой другой апдейт (в т.ч.
- *     если withoutEvents окажется забыт) не публикуется.
- *  3. Явная проверка erp_id: если Company уже имеет UUID из 1С, публикация
- *     не выполняется (1С уже авторитет, повторное сообщение не нужно).
+ *  2. Транзиентный флаг $company->fromErp выставляется в HandleContractor* перед
+ *     любыми операциями. Listener проверяет его и пропускает публикацию.
+ *  3. Для contractor.created: явная проверка erp_id (если уже есть — не публикуем).
  *
- * Откат — env-флаг PUBLISH_CONTRACTORS_TO_ERP=false.
+ * Откат — env-флаг PUBLISH_CONTRACTORS_TO_ERP=false (общий для обоих событий).
  */
 class PublishContractorToErp
 {
+    /**
+     * Поля Company, изменение которых триггерит contractor.updated.
+     * Меняется состав — обнови описание в docs-erp/content/rules/contractors.md.
+     */
+    private const SIGNIFICANT_FIELDS = [
+        'name',
+        'legal_name',
+        'tax_id',
+        'tax_code',
+        'registration_number',
+        'okpo_code',
+        'legal_address',
+        'actual_address',
+        'phone',
+        'email',
+        'country',
+    ];
+
     public function handle(object $event): void
     {
         if (! (bool) config('erp.publish_contractors', true)) {
@@ -50,12 +65,25 @@ class PublishContractorToErp
             return;
         }
 
-        $this->dispatch($company);
+        // Маркер: модель в составе resolveFromUpdated может быть либо
+        // "первое заполнение tax_id" (publishCompany / contractor.created),
+        // либо "значимое изменение синхронизированного контрагента"
+        // (publishCompanyUpdated / contractor.updated). Решает наличие erp_id.
+        if (! empty($company->erp_id)) {
+            self::publishCompanyUpdated($company);
+        } else {
+            self::publishCompany($company);
+        }
     }
 
     private function resolveFromCreated(CompanyCreated $event): ?Company
     {
         $company = $event->company;
+
+        // Уровень 2: модель пришла из обработки входящего сообщения 1С.
+        if ($company->fromErp ?? false) {
+            return null;
+        }
 
         if (empty($company->tax_id)) {
             return null;
@@ -74,27 +102,32 @@ class PublishContractorToErp
     {
         $company = $event->company;
 
-        // Защита от петли: Company уже синхронизирована с 1С (имеет erp_id).
-        // contractor.updated от 1С → HandleContractorUpdated обновляет Company
-        // через withoutEvents, но страховка — даже если апдейт придёт без
-        // withoutEvents, мы не опубликуем обратно в 1С.
-        if (! empty($company->erp_id)) {
+        // Уровень 2: модель только что обновлена входящим сообщением 1С.
+        if ($company->fromErp ?? false) {
             return null;
         }
 
-        // Публикуем только при первом заполнении tax_id (было пусто → стало непусто).
-        // Это гарантирует, что любой другой апдейт (rename, смена адреса и т.п.)
-        // не триггерит повторную публикацию.
+        // Сценарий A: Company уже синхронизирована с 1С (есть erp_id).
+        // Публикуем contractor.updated, если изменилось хотя бы одно
+        // значимое поле.
+        if (! empty($company->erp_id)) {
+            foreach (self::SIGNIFICANT_FIELDS as $field) {
+                if ($company->wasChanged($field)) {
+                    return $company;
+                }
+            }
+
+            return null;
+        }
+
+        // Сценарий B: Company ещё не синхронизирована с 1С (erp_id пуст).
+        // Публикуем contractor.created только при первом заполнении tax_id
+        // (было пусто → стало непусто). Любой другой апдейт игнорируется.
         if ($company->wasChanged('tax_id') && empty($company->getOriginal('tax_id')) && ! empty($company->tax_id)) {
             return $company;
         }
 
         return null;
-    }
-
-    private function dispatch(Company $company): void
-    {
-        self::publishCompany($company);
     }
 
     /**
@@ -114,9 +147,10 @@ class PublishContractorToErp
             return;
         }
 
-        // Финальная защита от петли: Company с уже назначенным erp_id не публикуется.
+        // Финальная защита от петли: Company с уже назначенным erp_id не публикуется
+        // как contractor.created — для неё используется publishCompanyUpdated.
         if (! empty($company->erp_id)) {
-            Log::info('PublishContractorToErp: пропуск публикации — Company уже имеет erp_id', [
+            Log::info('PublishContractorToErp: пропуск contractor.created — Company уже имеет erp_id', [
                 'company_id' => $company->id,
                 'erp_id' => $company->erp_id,
             ]);
@@ -127,7 +161,7 @@ class PublishContractorToErp
         $partnerUuid = $company->user?->erp_id;
 
         if (empty($partnerUuid)) {
-            Log::info('PublishContractorToErp: партнёр ещё не выгружен в 1С, публикация отложена', [
+            Log::info('PublishContractorToErp: партнёр ещё не выгружен в 1С, contractor.created отложен', [
                 'company_id' => $company->id,
                 'user_id' => $company->user_id,
                 'tax_id' => $company->tax_id,
@@ -136,22 +170,11 @@ class PublishContractorToErp
             return;
         }
 
-        $bankAccounts = $company->bankAccounts
-            ->map(fn ($account) => [
-                'bank_name' => $account->bank_name,
-                'bank_bik' => $account->bank_bik,
-                'correspondent_account' => $account->correspondent_account,
-                'account_number' => $account->account_number,
-                'is_primary' => (bool) $account->is_primary,
-            ])
-            ->values()
-            ->toArray();
-
         $payload = [
             'event' => 'contractor.created',
             'message_id' => 'msg-'.Str::uuid()->toString(),
             'timestamp' => now()->toIso8601String(),
-            'uuid' => (string) ($company->erp_id ?? Str::uuid()->toString()),
+            'uuid' => (string) Str::uuid(),
             'partner_uuid' => (string) $partnerUuid,
             'tax_id' => (string) $company->tax_id,
             'name' => $company->name,
@@ -164,7 +187,66 @@ class PublishContractorToErp
             'actual_address' => $company->actual_address,
             'phone' => $company->phone,
             'email' => $company->email,
-            'bank_accounts' => $bankAccounts,
+            'bank_accounts' => self::serializeBankAccounts($company),
+        ];
+
+        PublishContractorToErpJob::dispatch($payload);
+    }
+
+    /**
+     * Публикует contractor.updated для синхронизированной с 1С Company
+     * (имеющей erp_id). Используется и listener-ом, и
+     * CompanyBankAccountObserver-ом при изменении банковских реквизитов.
+     */
+    public static function publishCompanyUpdated(Company $company): void
+    {
+        if (! (bool) config('erp.publish_contractors', true)) {
+            return;
+        }
+
+        if (empty($company->erp_id)) {
+            Log::warning('PublishContractorToErp: contractor.updated требует erp_id, публикация пропущена', [
+                'company_id' => $company->id,
+                'tax_id' => $company->tax_id,
+            ]);
+
+            return;
+        }
+
+        if (empty($company->tax_id)) {
+            return;
+        }
+
+        $partnerUuid = $company->user?->erp_id;
+
+        if (empty($partnerUuid)) {
+            Log::info('PublishContractorToErp: партнёр ещё не выгружен в 1С, contractor.updated отложен', [
+                'company_id' => $company->id,
+                'user_id' => $company->user_id,
+                'erp_id' => $company->erp_id,
+            ]);
+
+            return;
+        }
+
+        $payload = [
+            'event' => 'contractor.updated',
+            'message_id' => 'msg-'.Str::uuid()->toString(),
+            'timestamp' => now()->toIso8601String(),
+            'uuid' => (string) $company->erp_id,
+            'partner_uuid' => (string) $partnerUuid,
+            'tax_id' => (string) $company->tax_id,
+            'name' => $company->name,
+            'legal_name' => $company->legal_name,
+            'country' => self::resolveCountryCode($company->country),
+            'tax_code' => $company->tax_code,
+            'registration_number' => $company->registration_number,
+            'okpo_code' => $company->okpo_code,
+            'legal_address' => $company->legal_address,
+            'actual_address' => $company->actual_address,
+            'phone' => $company->phone,
+            'email' => $company->email,
+            'bank_accounts' => self::serializeBankAccounts($company),
         ];
 
         PublishContractorToErpJob::dispatch($payload);
@@ -190,6 +272,23 @@ class PublishContractorToErp
         foreach ($companies as $company) {
             self::publishCompany($company->loadMissing(['user', 'bankAccounts']));
         }
+    }
+
+    /**
+     * Сериализует банковские счета Company для payload-а 1С.
+     */
+    private static function serializeBankAccounts(Company $company): array
+    {
+        return $company->bankAccounts
+            ->map(fn ($account) => [
+                'bank_name' => $account->bank_name,
+                'bank_bik' => $account->bank_bik,
+                'correspondent_account' => $account->correspondent_account,
+                'account_number' => $account->account_number,
+                'is_primary' => (bool) $account->is_primary,
+            ])
+            ->values()
+            ->toArray();
     }
 
     /**
