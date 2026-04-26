@@ -850,4 +850,66 @@ class HandleProductUpdatedTest extends TestCase
 
         $this->assertSame(2, $product->barcodes()->count());
     }
+
+    #[Test]
+    public function date_time_attribute_with_valid_iso_value_is_persisted(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-date-upd-ok-001',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-date-upd-ok-001',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-shelf-life-uuid',
+                    'property_label' => 'Срок годности',
+                    'value_type' => 'date-time',
+                    'value_uuid' => null,
+                    'value_label' => '2027-08-15T00:00:00+03:00',
+                ],
+            ],
+        ]);
+
+        $attr = Attribute::where('external_id', 'prop-shelf-life-uuid')->first();
+        $this->assertSame('date-time', $attr->type);
+
+        $pav = $product->attributeValues()->where('attribute_id', $attr->id)->first();
+        $this->assertNotNull($pav->datetime_value);
+        $this->assertSame('2027-08-15', $pav->datetime_value->toDateString());
+        $this->assertNull($pav->text_value);
+    }
+
+    #[Test]
+    public function date_time_attribute_with_1c_stub_year_is_stored_as_null(): void
+    {
+        // 1С шлёт 1900-01-01 для незаполненного срока годности — TIMESTAMP отвергал
+        // такую дату, ронял product.updated, и из-за full-replace cleanup'а на сайте
+        // оставались устаревшие срока. Проверяем, что теперь стаб тихо пишется как NULL.
+        $product = Product::factory()->create([
+            'external_id' => 'prod-date-upd-stub-001',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-date-upd-stub-001',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-shelf-life-uuid',
+                    'property_label' => 'Срок годности',
+                    'value_type' => 'date-time',
+                    'value_uuid' => null,
+                    'value_label' => '1900-01-01T00:00:00+03:00',
+                ],
+            ],
+        ]);
+
+        $attr = Attribute::where('external_id', 'prop-shelf-life-uuid')->first();
+        $pav = $product->attributeValues()->where('attribute_id', $attr->id)->first();
+
+        $this->assertNotNull($pav, 'pivot-запись должна создаться');
+        $this->assertNull($pav->datetime_value, 'Стаб 1С должен превратиться в NULL');
+        $this->assertNull($pav->text_value);
+    }
 }

@@ -314,9 +314,24 @@ class HandleProductCreated
                         $pivotData['boolean_value'] = filter_var($valueLabel, FILTER_VALIDATE_BOOLEAN);
                     } elseif ($siteType === 'date-time' && $valueLabel) {
                         try {
-                            $pivotData['datetime_value'] = \Carbon\Carbon::parse($valueLabel)->toDateTimeString();
+                            $parsed = \Carbon\Carbon::parse($valueLabel);
+                            // 1С шлёт стабы 0001-01-01 / 1900-01-01 для незаполненных дат —
+                            // отбрасываем, чтобы не засорять каталог и не ловить out-of-range.
+                            if ($parsed->year < 2000) {
+                                Log::warning('Атрибут date-time: значение похоже на стаб 1С, пишем NULL', [
+                                    'product_uuid' => $uuid,
+                                    'property_uuid' => $propertyUuid,
+                                    'value' => $valueLabel,
+                                ]);
+                            } else {
+                                $pivotData['datetime_value'] = $parsed->toDateTimeString();
+                            }
                         } catch (\Exception $e) {
-                            Log::warning('Неверный формат даты атрибута', ['value' => $valueLabel]);
+                            Log::warning('Неверный формат даты атрибута', [
+                                'product_uuid' => $uuid,
+                                'property_uuid' => $propertyUuid,
+                                'value' => $valueLabel,
+                            ]);
                         }
                     } else {
                         $pivotData['text_value'] = (string) ($valueLabel ?? '');

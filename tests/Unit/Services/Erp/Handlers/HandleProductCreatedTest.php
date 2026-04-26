@@ -685,6 +685,67 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function date_time_attribute_with_valid_iso_value_is_persisted(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-date-ok-001',
+            'name' => 'Товар со сроком годности',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-shelf-life-uuid',
+                    'property_label' => 'Срок годности',
+                    'value_type' => 'date-time',
+                    'value_uuid' => null,
+                    'value_label' => '2027-08-15T00:00:00+03:00',
+                ],
+            ],
+        ]);
+
+        $attr = Attribute::where('external_id', 'prop-shelf-life-uuid')->first();
+        $this->assertSame('date-time', $attr->type);
+
+        $pav = Product::where('external_id', 'prod-date-ok-001')->first()
+            ->attributeValues()->where('attribute_id', $attr->id)->first();
+
+        $this->assertNotNull($pav->datetime_value);
+        $this->assertSame('2027-08-15', $pav->datetime_value->toDateString());
+        $this->assertNull($pav->text_value);
+    }
+
+    #[Test]
+    public function date_time_attribute_with_1c_stub_year_is_stored_as_null(): void
+    {
+        // 1С шлёт 1900-01-01 (или 0001-01-01) как «незаполненный срок годности».
+        // Эта дата не помещается в TIMESTAMP и до фикса роняла product.created
+        // ошибкой SQLSTATE[22007]. Проверяем, что теперь она тихо пишется как NULL.
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-date-stub-001',
+            'name' => 'Товар с пустым сроком годности',
+            'attributes' => [
+                [
+                    'property_uuid' => 'prop-shelf-life-uuid',
+                    'property_label' => 'Срок годности',
+                    'value_type' => 'date-time',
+                    'value_uuid' => null,
+                    'value_label' => '1900-01-01T00:00:00+03:00',
+                ],
+            ],
+        ]);
+
+        $product = Product::where('external_id', 'prod-date-stub-001')->first();
+        $this->assertNotNull($product, 'Товар должен быть создан, несмотря на стаб-дату');
+
+        $attr = Attribute::where('external_id', 'prop-shelf-life-uuid')->first();
+        $pav = $product->attributeValues()->where('attribute_id', $attr->id)->first();
+
+        $this->assertNotNull($pav, 'pivot-запись должна создаться');
+        $this->assertNull($pav->datetime_value, 'Стаб 1С должен превратиться в NULL');
+        $this->assertNull($pav->text_value);
+    }
+
+    #[Test]
     public function is_marked_defaults_to_false_when_missing(): void
     {
         $this->handler->handle([
