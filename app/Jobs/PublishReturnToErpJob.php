@@ -20,6 +20,8 @@ class PublishReturnToErpJob implements ShouldQueue
 
     public int $backoff = 10;
 
+    private const QUEUE_NAME = 'erp_out.returns';
+
     public function __construct(public array $payload)
     {
         $this->queue = 'erp_publish';
@@ -43,7 +45,7 @@ class PublishReturnToErpJob implements ShouldQueue
                 'uuid' => $this->payload['uuid'] ?? null,
             ]);
             $validator->logValidationError($event, 'outgoing', $validation['errors'], $this->payload);
-            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', implode('; ', $validation['errors']), 'erp_out.returns');
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', implode('; ', $validation['errors']), self::QUEUE_NAME);
 
             return;
         }
@@ -51,19 +53,19 @@ class PublishReturnToErpJob implements ShouldQueue
         try {
             Queue::connection('rabbitmq')->pushRaw(
                 json_encode($this->payload, JSON_UNESCAPED_UNICODE),
-                'erp_out.returns'
+                self::QUEUE_NAME
             );
 
-            Log::info('return.created опубликован в erp_out.returns', [
+            Log::info($event.' опубликован в '.self::QUEUE_NAME, [
                 'return_id' => $this->payload['uuid'] ?? null,
             ]);
 
-            ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, 'erp_out.returns');
+            ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, self::QUEUE_NAME);
         } catch (\Exception $e) {
-            Log::error('Не удалось опубликовать return.created в ERP: '.$e->getMessage(), [
+            Log::error("Не удалось опубликовать {$event} в ERP: ".$e->getMessage(), [
                 'payload' => $this->payload,
             ]);
-            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), 'erp_out.returns');
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), self::QUEUE_NAME);
             throw $e;
         }
     }

@@ -164,6 +164,7 @@ class ErpIncomingJob extends BaseJob
                     $payload,
                     'failed',
                     implode('; ', $validation['errors']),
+                    $this->getQueue(),
                 );
 
                 // Удаляем невалидное сообщение — повторная обработка не поможет
@@ -182,7 +183,7 @@ class ErpIncomingJob extends BaseJob
             }
 
             // Логируем успешную обработку в шину ERP
-            ErpBusLogger::logIncoming($event, $payload);
+            ErpBusLogger::logIncoming($event, $payload, 'success', null, $this->getQueue());
 
             $this->delete();
         } catch (\Throwable $e) {
@@ -197,6 +198,7 @@ class ErpIncomingJob extends BaseJob
                 $payload ?? [],
                 'failed',
                 $e->getMessage(),
+                $this->getQueue(),
             );
 
             // Release back to queue for retry

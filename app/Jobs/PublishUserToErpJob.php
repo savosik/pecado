@@ -20,6 +20,8 @@ class PublishUserToErpJob implements ShouldQueue
 
     public int $backoff = 30;
 
+    private const QUEUE_NAME = 'erp_out.partners';
+
     public function __construct(public array $payload)
     {
         $this->queue = 'erp_publish';
@@ -44,7 +46,7 @@ class PublishUserToErpJob implements ShouldQueue
                 'uuid' => $this->payload['uuid'] ?? null,
             ]);
             $validator->logValidationError($event, 'outgoing', $validation['errors'], $this->payload);
-            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', implode('; ', $validation['errors']), 'erp_out.partners');
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', implode('; ', $validation['errors']), self::QUEUE_NAME);
 
             return;
         }
@@ -52,20 +54,20 @@ class PublishUserToErpJob implements ShouldQueue
         try {
             Queue::connection('rabbitmq')->pushRaw(
                 json_encode($this->payload, JSON_UNESCAPED_UNICODE),
-                'erp_out.partners'
+                self::QUEUE_NAME
             );
 
-            Log::info('partner.created опубликован в erp_out.partners', [
+            Log::info($event.' опубликован в '.self::QUEUE_NAME, [
                 'uuid' => $this->payload['uuid'] ?? null,
                 'login' => $this->payload['login'] ?? null,
             ]);
 
-            ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, 'erp_out.partners');
+            ErpBusLogger::logOutgoing($event, $this->payload, 'success', null, self::QUEUE_NAME);
         } catch (\Exception $e) {
-            Log::error('Не удалось опубликовать partner.created в ERP: '.$e->getMessage(), [
+            Log::error("Не удалось опубликовать {$event} в ERP: ".$e->getMessage(), [
                 'payload' => $this->payload,
             ]);
-            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), 'erp_out.partners');
+            ErpBusLogger::logOutgoing($event, $this->payload, 'failed', $e->getMessage(), self::QUEUE_NAME);
             throw $e;
         }
     }
