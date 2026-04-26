@@ -73,6 +73,8 @@ class ReturnCreatedEventTest extends TestCase
             $item = $payload['items'][0] ?? [];
 
             return $payload['event'] === 'return.created'
+                && is_string($payload['message_id'] ?? null)
+                && preg_match('/^msg-[0-9a-f-]{36}$/', $payload['message_id']) === 1
                 && $payload['uuid'] === 'return-evt-uuid-001'
                 && ! array_key_exists('order_uuid', $payload)
                 && $payload['partner_uuid'] === 'partner-ret-evt-001'

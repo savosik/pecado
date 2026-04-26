@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 13.8.0
+  version: 13.9.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -2470,6 +2470,7 @@ components:
         по которой была оформлена реализация.
       required:
         - event
+        - message_id
         - uuid
         - partner_uuid
         - items

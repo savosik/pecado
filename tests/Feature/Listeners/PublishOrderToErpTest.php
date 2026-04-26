@@ -111,6 +111,80 @@ class PublishOrderToErpTest extends TestCase
     }
 
     #[Test]
+    public function order_created_payload_includes_message_id(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'msg-id-test-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $messageId = $job->payload['message_id'] ?? null;
+
+            return is_string($messageId)
+                && str_starts_with($messageId, 'msg-')
+                && preg_match('/^msg-[0-9a-f-]{36}$/', $messageId) === 1;
+        });
+    }
+
+    #[Test]
+    public function order_updated_payload_includes_message_id(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'msg-id-upd-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new \App\Events\OrderUpdated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return ($job->payload['event'] ?? null) === 'order.updated'
+                && is_string($job->payload['message_id'] ?? null)
+                && str_starts_with($job->payload['message_id'], 'msg-');
+        });
+    }
+
+    #[Test]
+    public function order_deleted_payload_includes_message_id(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'msg-id-del-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new \App\Events\OrderDeleted($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return ($job->payload['event'] ?? null) === 'order.deleted'
+                && is_string($job->payload['message_id'] ?? null)
+                && str_starts_with($job->payload['message_id'], 'msg-');
+        });
+    }
+
+    #[Test]
     public function order_created_payload_includes_partner_uuid(): void
     {
         Queue::fake();

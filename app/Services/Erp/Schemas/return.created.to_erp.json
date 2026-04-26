@@ -9,6 +9,11 @@
             "type": "string",
             "const": "return.created"
         },
+        "message_id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Уникальный идентификатор сообщения для идемпотентности (формат: msg-<uuid>)."
+        },
         "uuid": {
             "type": "string",
             "format": "uuid"
@@ -70,6 +75,7 @@
     },
     "required": [
         "event",
+        "message_id",
         "uuid",
         "items"
     ],

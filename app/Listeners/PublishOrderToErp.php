@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Jobs\PublishOrderToErpJob;
+use Illuminate\Support\Str;
 
 class PublishOrderToErp
 {
@@ -33,6 +34,7 @@ class PublishOrderToErp
 
         $payload = [
             'event' => $eventName,
+            'message_id' => 'msg-'.Str::uuid()->toString(),
             'uuid' => $order->uuid,
             'number' => $order->number,
             'date' => $order->created_at->toIso8601String(),

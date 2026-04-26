@@ -6,6 +6,36 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [13.9.0] — 2026-04-26
+
+> Унификация исходящих сообщений: `order.created`, `order.updated`,
+> `order.deleted` и `return.created` теперь несут `message_id` —
+> как и `partner.created`/`contractor.*`. До v13.9 эти сообщения
+> уходили без идентификатора, что нарушало принцип идемпотентности
+> и оставляло пустую колонку «Message ID» в админке `erp-bus/messages`.
+
+### Изменено
+
+- **Listener `PublishOrderToErp`** — добавлен `message_id` в формате
+  `msg-<uuid>` в payload для всех трёх событий (`order.created`,
+  `order.updated`, `order.deleted`).
+- **Listener `PublishReturnToErp`** — добавлен `message_id` в формате
+  `msg-<uuid>` в payload для `return.created`.
+- **JSON Schema** [`order.created.to_erp.json`](/docs/erp/schemas/order.created.to_erp.json),
+  [`return.created.to_erp.json`](/docs/erp/schemas/return.created.to_erp.json) —
+  поле `message_id` (`type: string`, `minLength: 1`) добавлено в `properties`
+  и в `required`.
+- **AsyncAPI** `ReturnCreatedPayload` — `message_id` добавлен в `required`
+  (свойство уже было описано).
+
+### Совместимость
+
+Изменение **обратно несовместимо** для consumer-ов в 1С, валидирующих
+схему строго: исходящие `order.*` и `return.created` без `message_id`
+теперь невалидны. С 13.9.0 сайт всегда генерирует `message_id`.
+
+---
+
 ## [13.8.0] — 2026-04-26
 
 > Двусторонний обмен данными контрагента: сайт теперь публикует

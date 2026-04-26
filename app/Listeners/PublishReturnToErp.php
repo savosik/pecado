@@ -3,6 +3,7 @@
 namespace App\Listeners;
 
 use App\Jobs\PublishReturnToErpJob;
+use Illuminate\Support\Str;
 
 class PublishReturnToErp
 {
@@ -18,6 +19,7 @@ class PublishReturnToErp
 
         $payload = [
             'event' => 'return.created',
+            'message_id' => 'msg-'.Str::uuid()->toString(),
             'uuid' => $return->uuid,
             'partner_uuid' => $return->user?->erp_id,
             'timestamp' => now()->toIso8601String(),
