@@ -115,9 +115,12 @@ fix_env_value() {
   ok "  ~ $key обновлён на '$desired' (было: '${current#*=}')"
 }
 
-log "Проверяю APP_URL / SESSION_DOMAIN…"
+log "Проверяю APP_URL / SESSION_DOMAIN / MEDIA_DISK…"
 fix_env_value APP_URL http://loc.pecado.ru
 fix_env_value SESSION_DOMAIN loc.pecado.ru
+# Локально читаем медиа из dev MinIO. В .env.example стоит 'public',
+# чтобы CI не падал, поэтому форсим тут.
+fix_env_value MEDIA_DISK s3_dev_readonly
 
 # ─── 4. docker compose up -d ──────────────────────────────────────────
 log "Поднимаю стек: docker compose up -d…"

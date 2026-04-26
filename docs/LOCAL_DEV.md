@@ -50,7 +50,7 @@ docker compose run --rm app php artisan key:generate
 - `SESSION_DOMAIN=loc.pecado.ru`
 - `SANCTUM_STATEFUL_DOMAINS=loc.pecado.ru`
 - `VITE_HMR_HOST=loc.pecado.ru`
-- `MEDIA_DISK=s3_dev_readonly`
+- `MEDIA_DISK=s3_dev_readonly` (в `.env.example` стоит `public` — чтобы CI не лез в закрытый dev MinIO; локально форсит `make setup`)
 - `DEV_S3_*`, `DEV_DB_SSH_HOST`
 
 ### 5. Поднять стек
