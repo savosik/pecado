@@ -41,6 +41,7 @@ return [
 
     'sex_opt' => [
         'api_token' => env('SEX_OPT_API_TOKEN'),
+        'export_url' => env('SEX_OPT_EXPORT_URL'),
     ],
 
     /*

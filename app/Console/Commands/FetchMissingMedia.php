@@ -19,10 +19,18 @@ class FetchMissingMedia extends Command
 
     private string $baseUrl = 'https://backend.sex-opt.ru/api/v3/shop/products';
 
-    private string $token = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczpcL1wvYmFja2VuZC5zZXgtb3B0LnJ1XC9hcGlcL3YzXC9hdXRoXC9qd3QiLCJpYXQiOjE3NzQzNTQ1NjgsImV4cCI6MTc4OTkwNjU2OCwibmJmIjoxNzc0MzU0NTY4LCJqdGkiOiI4VmRuMTlBS0VUb1FlWXhCIiwic3ViIjo0NDQ2LCJwcnYiOiI0YWMwNWMwZjhhYzA4ZjM2NGNiNGQwM2ZiOGUxZjYzMWZlYzMyMmU4Iiwic2Vzc2lvbl90b2tlbiI6IjcyODgzNTBjNjEwYWViNDdmNmZhNjZkZTc2ODVlZjM1In0.V2AB5xn2qHIeTFN6eSMmxjMy6VIJf5QDZt0ze9QPkuA';
+    private string $token = '';
 
     public function handle(): int
     {
+        $token = (string) (config('services.sex_opt.api_token') ?? '');
+        if ($token === '') {
+            $this->error('Не задан токен sex-opt API (SEX_OPT_API_TOKEN в .env / services.sex_opt.api_token)');
+
+            return self::FAILURE;
+        }
+        $this->token = $token;
+
         $dryRun = (bool) $this->option('dry-run');
         $poolTimeout = (int) $this->option('pool-timeout');
         $retryTimeout = (int) $this->option('retry-timeout');
@@ -66,7 +74,8 @@ class FetchMissingMedia extends Command
             }
         }
 
-        // ═══ ШАГ 1: Параллельный поиск по SKU/code ═══
+        // ═══ ШАГ 1: Параллельный поиск по code/barcode ═══
+        // sku/article намеренно не используется — у sex-opt он часто дублируется между разными товарами.
         $this->info("Шаг 1/2: Поиск товаров на sex-opt.ru (параллельно, pool={$poolSize}, timeout={$poolTimeout}s)...");
 
         [$remoteIds, $failedSearch, $notMatched] = $this->searchBatch(
@@ -93,7 +102,7 @@ class FetchMissingMedia extends Command
         $found = count($remoteIds);
         $this->info("  Найдено на sex-opt.ru: {$found} из ".count($searchTerms));
         if (! empty($notMatched)) {
-            $this->warn('  Не совпал code/sku в результатах поиска: '.count($notMatched));
+            $this->warn('  Не совпал code/barcode в результатах поиска: '.count($notMatched));
         }
         if (! empty($failedSearch)) {
             $this->warn('  HTTP-ошибки/таймауты (даже после retry): '.count($failedSearch));

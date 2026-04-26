@@ -17,8 +17,13 @@ class ImportCatalogMedia extends Command
 
     public function handle(): int
     {
-        $url = $this->option('url')
-            ?: 'https://customers.sex-opt.ru/api/public/export/660?auth_token=kqQKCZA73oORObUK3ApLy7xKJ7FYnYajFRekGsqp';
+        $url = $this->option('url') ?: config('services.sex_opt.export_url');
+
+        if (! is_string($url) || $url === '') {
+            $this->error('Не задан URL экспорта (--url= или SEX_OPT_EXPORT_URL в .env / services.sex_opt.export_url)');
+
+            return self::FAILURE;
+        }
 
         $missingOnly = $this->option('missing-only');
 
@@ -66,11 +71,11 @@ class ImportCatalogMedia extends Command
         $skippedHasMedia = 0;
 
         foreach ($items as $item) {
-            $uid = $item['uid'] ?? '';
+            $uuid = $item['uuid'] ?? '';
 
-            $bar->setMessage($uid);
+            $bar->setMessage($uuid);
 
-            if (empty($uid)) {
+            if (empty($uuid)) {
                 $skipped++;
                 $bar->advance();
 
@@ -78,14 +83,14 @@ class ImportCatalogMedia extends Command
             }
 
             // Если --missing-only и товар уже имеет главное изображение — пропускаем
-            if ($missingOnly && ! isset($productIdsWithoutMainImage[$uid])) {
+            if ($missingOnly && ! isset($productIdsWithoutMainImage[$uuid])) {
                 $skippedHasMedia++;
                 $bar->advance();
 
                 continue;
             }
 
-            $product = Product::where('external_id', $uid)->first();
+            $product = Product::where('external_id', $uuid)->first();
 
             if (! $product) {
                 $skipped++;
