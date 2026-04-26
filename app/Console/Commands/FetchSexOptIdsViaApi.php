@@ -57,7 +57,8 @@ class FetchSexOptIdsViaApi extends Command
             $query->limit($limit);
         }
 
-        $products = $query->get(['id', 'name', 'sku', 'code', 'external_id', 'barcode']);
+        $products = $query->with('barcodes:id,product_id,barcode')
+            ->get(['id', 'name', 'sku', 'code', 'external_id', 'barcode']);
         $this->info('К обработке: '.$products->count());
         if ($products->isEmpty()) {
             return self::SUCCESS;
@@ -73,11 +74,20 @@ class FetchSexOptIdsViaApi extends Command
         foreach ($products as $product) {
             $bar->advance();
 
-            $candidates = array_values(array_unique(array_filter([
-                $product->code,
-                $product->barcode,
-                $product->sku,
-            ])));
+            // Только надёжные ключи: 1С code и штрихкоды (12-13 цифр).
+            // sku/article намеренно не используется — у sex-opt он часто пересекается между разными товарами.
+            $barcodes = array_values(array_filter(
+                array_merge(
+                    [$product->barcode],
+                    $product->barcodes->pluck('barcode')->all(),
+                ),
+                fn ($b) => is_string($b) && preg_match('/^\d{12,14}$/', $b),
+            ));
+
+            $candidates = array_values(array_unique(array_filter(array_merge(
+                [$product->code],
+                $barcodes,
+            ))));
 
             $found = null;
             $matchVia = null;
@@ -160,17 +170,23 @@ class FetchSexOptIdsViaApi extends Command
             return null;
         }
 
+        // Сравниваем строго по 1С code или barcode. article (sku) намеренно игнорируем —
+        // у sex-opt он часто переиспользуется между товарами разных кодов.
+        $ourBarcodes = collect([$product->barcode])
+            ->merge($product->relationLoaded('barcodes') ? $product->barcodes->pluck('barcode') : [])
+            ->filter(fn ($b) => is_string($b) && $b !== '')
+            ->unique()
+            ->all();
+
         $strict = [];
         foreach ($payload as $item) {
-            $article = (string) ($item['article'] ?? '');
             $code = (string) ($item['code'] ?? '');
             $barcode = (string) ($item['barcode'] ?? '');
 
             $codeMatch = $product->code !== null && $product->code !== '' && $code === (string) $product->code;
-            $articleMatch = $product->sku !== null && $product->sku !== '' && $article === (string) $product->sku;
-            $barcodeMatch = $product->barcode !== null && $product->barcode !== '' && $barcode === (string) $product->barcode;
+            $barcodeMatch = $barcode !== '' && in_array($barcode, $ourBarcodes, true);
 
-            if ($codeMatch || $articleMatch || $barcodeMatch) {
+            if ($codeMatch || $barcodeMatch) {
                 $strict[] = $item;
             }
         }
