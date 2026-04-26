@@ -1,7 +1,7 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton } from "@chakra-ui/react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { HStack, Badge, Button, Input, Box, VStack, Text, IconButton, Icon } from "@chakra-ui/react";
 import { Head, usePage, router } from "@inertiajs/react";
-import { LuPlus, LuFilter, LuX, LuTrash2 } from "react-icons/lu";
+import { LuPlus, LuFilter, LuX, LuTrash2, LuSearch } from "react-icons/lu";
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable } from "@/Admin/Components/DataTable";
@@ -90,6 +90,40 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
         amount_from: filters?.amount_from || "",
         amount_to:   filters?.amount_to || "",
     });
+
+    const [searchInput, setSearchInput] = useState(filters?.search || "");
+    const lastSentSearchRef = useRef(filters?.search || "");
+
+    useEffect(() => {
+        const next = (filters?.search || "");
+        if (next !== lastSentSearchRef.current) {
+            lastSentSearchRef.current = next;
+            setSearchInput(next);
+        }
+    }, [filters?.search]);
+
+    useEffect(() => {
+        const trimmed = searchInput.trim();
+        if (trimmed === (lastSentSearchRef.current || "")) {
+            return;
+        }
+        const handle = setTimeout(() => {
+            lastSentSearchRef.current = trimmed;
+            router.get(route("admin.orders.index"), {
+                ...filters,
+                search: trimmed || undefined,
+            }, {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            });
+        }, 350);
+        return () => clearTimeout(handle);
+    }, [searchInput, filters]);
+
+    const handleClearSearch = useCallback(() => {
+        setSearchInput("");
+    }, []);
 
     const handleSort = useCallback((field, direction) => {
         router.get(route("admin.orders.index"), {
@@ -350,6 +384,44 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                     </HStack>
                 }
             />
+
+            {/* Поиск */}
+            <Box mb={4} position="relative">
+                <Box
+                    position="absolute"
+                    top="50%"
+                    left={3}
+                    transform="translateY(-50%)"
+                    color="fg.muted"
+                    pointerEvents="none"
+                    display="flex"
+                    alignItems="center"
+                >
+                    <Icon as={LuSearch} boxSize={4} />
+                </Box>
+                <Input
+                    value={searchInput}
+                    onChange={(e) => setSearchInput(e.target.value)}
+                    placeholder="Поиск по номеру, UUID, клиенту, компании, ИНН, товару…"
+                    pl={9}
+                    pr={searchInput ? 10 : 3}
+                    aria-label="Поиск заказов"
+                />
+                {searchInput && (
+                    <IconButton
+                        aria-label="Очистить поиск"
+                        variant="ghost"
+                        size="xs"
+                        position="absolute"
+                        top="50%"
+                        right={2}
+                        transform="translateY(-50%)"
+                        onClick={handleClearSearch}
+                    >
+                        <LuX />
+                    </IconButton>
+                )}
+            </Box>
 
             {/* Расширенные фильтры */}
             {showFilters && (

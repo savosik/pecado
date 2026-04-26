@@ -39,15 +39,29 @@ class OrderController extends AdminController
             : Order::query()->with(['user', 'company', 'items']);
 
         // Поиск
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('uuid', 'like', "%{$search}%")
-                    ->orWhere('number', 'like', "%{$search}%")
-                    ->orWhere('erp_number', 'like', "%{$search}%")
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $like = "%{$search}%";
+            $query->where(function ($q) use ($search, $like) {
+                $q->where('uuid', 'like', $like)
+                    ->orWhere('number', 'like', $like)
+                    ->orWhere('erp_number', 'like', $like)
                     ->orWhere('id', $search)
-                    ->orWhereHas('user', function ($userQuery) use ($search) {
-                        $userQuery->where('name', 'like', "%{$search}%")
-                            ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhereHas('user', function ($userQuery) use ($like) {
+                        $userQuery->where('name', 'like', $like)
+                            ->orWhere('email', 'like', $like);
+                    })
+                    ->orWhereHas('company', function ($companyQuery) use ($like) {
+                        $companyQuery->where('name', 'like', $like)
+                            ->orWhere('legal_name', 'like', $like)
+                            ->orWhere('tax_id', 'like', $like);
+                    })
+                    ->orWhereHas('items', function ($itemQuery) use ($like) {
+                        $itemQuery->where('name', 'like', $like)
+                            ->orWhereHas('product', function ($productQuery) use ($like) {
+                                $productQuery->where('name', 'like', $like)
+                                    ->orWhere('sku', 'like', $like);
+                            });
                     });
             });
         }
