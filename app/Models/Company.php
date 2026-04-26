@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\Country;
 use App\Models\Scopes\CompanyScope;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -48,6 +49,15 @@ class Company extends Model
         return [
             'country' => Country::class,
         ];
+    }
+
+    // КПП обязателен NOT NULL для составного UNIQUE (tax_id, tax_code, deleted_at).
+    // ИП и иностранные компании КПП не имеют — пишем пустую строку.
+    protected function taxCode(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value) => $value ?? '',
+        );
     }
 
     /**
