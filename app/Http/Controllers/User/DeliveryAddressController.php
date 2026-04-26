@@ -12,7 +12,9 @@ class DeliveryAddressController extends Controller
 {
     public function index()
     {
-        $addresses = DeliveryAddress::orderBy('created_at', 'desc')->get();
+        $addresses = DeliveryAddress::where('user_id', Auth::id())
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return Inertia::render('User/Cabinet/DeliveryAddresses/Index', [
             'addresses' => $addresses,

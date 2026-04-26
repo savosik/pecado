@@ -18,6 +18,7 @@ class CompanyController extends Controller
     {
         $companies = Company::withCount('bankAccounts')
             ->with(['contractorBalance.overdueDetails'])
+            ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
             ->paginate(15);
 
