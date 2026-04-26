@@ -39,11 +39,6 @@ return [
         'api_key' => env('YANDEX_MAPS_API_KEY', ''),
     ],
 
-    'media_sex_opt' => [
-        'base_url' => env('SEX_OPT_MEDIA_BASE_URL', 'https://backend.media.sex-opt.ru'),
-        'token' => env('SEX_OPT_MEDIA_TOKEN'),
-    ],
-
     /*
     |--------------------------------------------------------------------------
     | OAuth Providers
