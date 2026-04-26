@@ -254,12 +254,13 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
 
             {/* Описание */}
             {hasDesc && (
-                <Tabs.Content value="description" pt="4">
+                <Tabs.Content value="description" pt="3">
                     <Box
-                        p={{ base: '3', md: '5' }}
-                        rounded="sm"
                         css={{
-                            '& > div': { lineHeight: '1.5em' },
+                            '& > div': {
+                                lineHeight: '1.5em',
+                                color: 'var(--chakra-colors-fg) !important',
+                            },
                             '& p': { marginTop: '0.5em', marginBottom: '0.5em' },
                         }}
                     >
