@@ -33,7 +33,7 @@ class HandleProductCreated
             return;
         }
 
-        retry([100, 250], function () use ($payload): void {
+        retry([100, 250, 500, 1000], function () use ($payload): void {
             $this->processPayload($payload);
         }, function (int $attempt, Throwable $e) use ($uuid): int {
             Log::warning('product.created: deadlock, повторная попытка обработки', [
@@ -42,7 +42,12 @@ class HandleProductCreated
                 'error' => $e->getMessage(),
             ]);
 
-            return $attempt === 1 ? 100 : 250;
+            return match ($attempt) {
+                1 => 100,
+                2 => 250,
+                3 => 500,
+                default => 1000,
+            };
         }, function (Throwable $e): bool {
             return $this->shouldRetryOnDeadlock($e);
         });
@@ -147,15 +152,19 @@ class HandleProductCreated
             );
 
             // --- Штрих-коды ---
-            // Upsert: вставляем новые, удаляем отсутствующие — избегаем deadlock при параллельных воркерах
+            // insertOrIgnore вместо upsert: ON DUPLICATE KEY UPDATE даёт gap-locks
+            // на уникальном индексе (product_id, barcode) и при 6 параллельных воркерах
+            // регулярно ловит deadlock. INSERT IGNORE при дубликате не берёт gap-lock.
+            // Поле updated_at нигде не читается — touch не нужен.
             if (! empty($barcodes)) {
                 $barcodeValues = collect($barcodes)
                     ->map(fn ($v) => trim((string) $v))
                     ->filter(fn ($v) => $v !== '')
+                    ->unique()
+                    ->sort()
                     ->values();
 
                 if ($barcodeValues->isNotEmpty()) {
-                    // Upsert всех штрихкодов (insert or ignore)
                     $now = now();
                     $rows = $barcodeValues->map(fn ($b) => [
                         'product_id' => $product->id,
@@ -163,7 +172,7 @@ class HandleProductCreated
                         'created_at' => $now,
                         'updated_at' => $now,
                     ])->toArray();
-                    DB::table('product_barcodes')->upsert($rows, ['product_id', 'barcode'], ['updated_at']);
+                    DB::table('product_barcodes')->insertOrIgnore($rows);
 
                     // Удаляем штрихкоды которых больше нет в списке
                     $product->barcodes()->whereNotIn('barcode', $barcodeValues)->delete();

@@ -46,7 +46,7 @@ class HandleProductUpdated
             return;
         }
 
-        retry([100, 250], function () use ($payload): void {
+        retry([100, 250, 500, 1000], function () use ($payload): void {
             $this->processPayload($payload);
         }, function (int $attempt, Throwable $e) use ($uuid): int {
             Log::warning('product.updated: deadlock, повторная попытка обработки', [
@@ -55,7 +55,12 @@ class HandleProductUpdated
                 'error' => $e->getMessage(),
             ]);
 
-            return $attempt === 1 ? 100 : 250;
+            return match ($attempt) {
+                1 => 100,
+                2 => 250,
+                3 => 500,
+                default => 1000,
+            };
         }, function (Throwable $e): bool {
             return $this->shouldRetryOnDeadlock($e);
         });
@@ -151,12 +156,16 @@ class HandleProductUpdated
             }
 
             // --- Штрих-коды (полная замена, только если поле передано) ---
-            // Upsert: вставляем новые, удаляем отсутствующие — избегаем deadlock при параллельных воркерах
+            // insertOrIgnore вместо upsert: ON DUPLICATE KEY UPDATE даёт gap-locks
+            // на уникальном индексе (product_id, barcode) и при 6 параллельных воркерах
+            // регулярно ловит deadlock. INSERT IGNORE при дубликате не берёт gap-lock.
             if (array_key_exists('barcodes', $payload)) {
                 $barcodes = $payload['barcodes'] ?? [];
                 $barcodeValues = collect($barcodes)
                     ->map(fn ($v) => trim((string) $v))
                     ->filter(fn ($v) => $v !== '')
+                    ->unique()
+                    ->sort()
                     ->values();
 
                 if ($barcodeValues->isNotEmpty()) {
@@ -167,7 +176,7 @@ class HandleProductUpdated
                         'created_at' => $now,
                         'updated_at' => $now,
                     ])->toArray();
-                    DB::table('product_barcodes')->upsert($rows, ['product_id', 'barcode'], ['updated_at']);
+                    DB::table('product_barcodes')->insertOrIgnore($rows);
                     $product->barcodes()->whereNotIn('barcode', $barcodeValues)->delete();
                 } else {
                     $product->barcodes()->delete();

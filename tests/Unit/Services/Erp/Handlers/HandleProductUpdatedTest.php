@@ -813,4 +813,41 @@ class HandleProductUpdatedTest extends TestCase
         $this->assertNull($product->abc_xyz);
         $this->assertNull($product->turnover);
     }
+
+    #[Test]
+    public function reprocessing_with_same_barcodes_is_idempotent(): void
+    {
+        // Идемпотентность необходима из-за повторной обработки сообщений (deadlock retry,
+        // requeue из RabbitMQ). insertOrIgnore вместо upsert не должен падать на дубликате.
+        $product = Product::factory()->create([
+            'external_id' => 'barcodes-idem-upd-001',
+        ]);
+
+        $payload = [
+            'event' => 'product.updated',
+            'uuid' => 'barcodes-idem-upd-001',
+            'barcodes' => ['4627173260060', '4650514400498'],
+        ];
+
+        $this->handler->handle($payload);
+        $this->handler->handle($payload);
+
+        $this->assertSame(2, $product->barcodes()->count());
+    }
+
+    #[Test]
+    public function deduplicates_barcodes_within_single_payload(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'barcodes-dup-upd-001',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'barcodes-dup-upd-001',
+            'barcodes' => ['111', '222', '111', ' 111 '],
+        ]);
+
+        $this->assertSame(2, $product->barcodes()->count());
+    }
 }

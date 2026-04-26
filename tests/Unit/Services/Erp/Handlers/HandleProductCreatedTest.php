@@ -982,4 +982,43 @@ class HandleProductCreatedTest extends TestCase
         $this->assertSame($longLabel, $value->value);
         $this->assertSame(hash('sha256', $longLabel), $value->value_hash);
     }
+
+    #[Test]
+    public function reprocessing_with_same_barcodes_is_idempotent(): void
+    {
+        // Идемпотентность необходима из-за повторной обработки сообщений (deadlock retry,
+        // requeue из RabbitMQ). insertOrIgnore вместо upsert не должен падать на дубликате.
+        $payload = [
+            'event' => 'product.created',
+            'uuid' => 'prod-barcodes-idem-001',
+            'name' => 'Товар со штрихкодами',
+            'barcodes' => ['4627173260060', '4650514400498'],
+        ];
+
+        $this->handler->handle($payload);
+        $this->handler->handle($payload);
+
+        $product = Product::where('external_id', 'prod-barcodes-idem-001')->first();
+        $this->assertNotNull($product);
+        $this->assertSame(2, $product->barcodes()->count());
+        $this->assertDatabaseHas('product_barcodes', ['product_id' => $product->id, 'barcode' => '4627173260060']);
+        $this->assertDatabaseHas('product_barcodes', ['product_id' => $product->id, 'barcode' => '4650514400498']);
+    }
+
+    #[Test]
+    public function deduplicates_barcodes_within_single_payload(): void
+    {
+        // 1С может прислать дубликаты в массиве — collection->unique() должен это сгладить
+        // до того, как до БД дойдёт INSERT с двумя одинаковыми (product_id, barcode).
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-barcodes-dup-001',
+            'name' => 'Товар с дубликатами штрихкодов',
+            'barcodes' => ['111', '222', '111', ' 111 '],
+        ]);
+
+        $product = Product::where('external_id', 'prod-barcodes-dup-001')->first();
+        $this->assertNotNull($product);
+        $this->assertSame(2, $product->barcodes()->count());
+    }
 }
