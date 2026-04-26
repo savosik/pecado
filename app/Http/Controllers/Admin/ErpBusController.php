@@ -126,7 +126,9 @@ class ErpBusController extends AdminController
      */
     public function messages(Request $request): Response
     {
-        $query = ErpBusMessage::query()->orderByDesc('created_at');
+        $query = ErpBusMessage::query()
+            ->select(['id', 'direction', 'routing_key', 'event', 'message_id', 'status', 'created_at'])
+            ->orderByDesc('created_at');
 
         // Фильтры
         if ($direction = $request->get('direction')) {
