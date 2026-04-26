@@ -11,7 +11,7 @@ import { LuCheck, LuClock3, LuCircleX } from 'react-icons/lu';
 export default function ProductVariants({ variants = [], currentProductId, modelName = '' }) {
     const { currency, auth } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
-    const user = auth?.user?.status === 'active' ? auth.user : null;
+    const user = auth?.user && (auth.user.status === 'active' || auth.user.is_admin) ? auth.user : null;
 
     if (!variants || variants.length === 0) return null;
 

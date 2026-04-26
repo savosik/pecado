@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -41,6 +42,7 @@ class DatabaseSeeder extends Seeder
                 [
                     'name' => $data['name'],
                     'password' => $data['password'],
+                    'status' => UserStatus::ACTIVE,
                 ]
             );
             $user->syncRoles([$data['role']]);
