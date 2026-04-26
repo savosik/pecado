@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
+use App\Models\Order;
 use App\Models\Shipment;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -122,8 +124,21 @@ class ShipmentController extends Controller
     {
         $shipment->load(['user', 'company', 'items.product', 'items.order']);
 
-        // Получить связанные заказы
-        $relatedOrders = $shipment->getRelatedOrders();
+        // Получить связанные заказы с расширенными данными для карточного отображения
+        $orderUuids = $shipment->items()
+            ->whereNotNull('order_uuid')
+            ->pluck('order_uuid')
+            ->unique()
+            ->values();
+
+        $relatedOrders = $orderUuids->isNotEmpty()
+            ? Order::withoutGlobalScopes()
+                ->whereIn('uuid', $orderUuids)
+                ->with(['company:id,name', 'user:id,name,email'])
+                ->withCount(['items', 'shipments'])
+                ->orderByDesc('created_at')
+                ->get()
+            : collect();
 
         return Inertia::render('Admin/Pages/Shipments/Show', [
             'shipment' => [
@@ -173,7 +188,35 @@ class ShipmentController extends Controller
                     'id' => $order->id,
                     'uuid' => $order->uuid,
                     'number' => $order->number,
+                    'erp_number' => $order->erp_number,
+                    'type' => $order->type?->value,
+                    'type_label' => $order->type?->value === 'preorder' ? 'Предзаказ' : 'Заказ со склада',
                     'status' => $order->status?->value,
+                    'status_label' => match ($order->status) {
+                        OrderStatus::PENDING => 'Ожидает',
+                        OrderStatus::CONFIRMED => 'Подтверждён',
+                        OrderStatus::READY_TO_SHIP => 'К отгрузке',
+                        OrderStatus::CLOSED => 'Закрыт',
+                        OrderStatus::DELETED => 'Удалён',
+                        default => 'Неизвестно',
+                    },
+                    'total_amount' => $order->total_amount,
+                    'currency_code' => $order->currency_code,
+                    'items_count' => $order->items_count,
+                    'shipments_count' => $order->shipments_count,
+                    'delivery_address' => $order->delivery_address,
+                    'comment' => $order->comment,
+                    'created_at' => $order->created_at?->format('d.m.Y H:i'),
+                    'erp_created_at' => $order->erp_created_at?->format('d.m.Y H:i'),
+                    'company' => $order->company ? [
+                        'id' => $order->company->id,
+                        'name' => $order->company->name,
+                    ] : null,
+                    'user' => $order->user ? [
+                        'id' => $order->user->id,
+                        'name' => $order->user->name,
+                        'email' => $order->user->email,
+                    ] : null,
                 ];
             }),
         ]);

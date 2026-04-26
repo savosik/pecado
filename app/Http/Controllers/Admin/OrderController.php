@@ -261,18 +261,37 @@ class OrderController extends AdminController
      */
     public function show(Order $order): Response
     {
-        $order->load(['user', 'company', 'items.product', 'cart', 'statusHistories.user', 'changeLogs.user']);
+        $order->load([
+            'user',
+            'company',
+            'items.product',
+            'cart',
+            'statusHistories.user',
+            'changeLogs.user',
+            'parent:id,number,erp_number',
+            'shipments' => fn ($q) => $q->withCount('items')->orderByDesc('date'),
+        ]);
 
         return Inertia::render('Admin/Pages/Orders/Show', [
             'order' => [
                 'id' => $order->id,
                 'uuid' => $order->uuid,
                 'number' => $order->number,
+                'erp_number' => $order->erp_number,
                 'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
                 'total_amount' => $order->total_amount,
                 'currency_code' => $order->currency_code,
+                'exchange_rate' => $order->exchange_rate,
+                'rate_coefficient' => $order->rate_coefficient,
+                'parent_id' => $order->parent_id,
+                'parent' => $order->parent ? [
+                    'id' => $order->parent->id,
+                    'number' => $order->parent->number,
+                    'erp_number' => $order->parent->erp_number,
+                ] : null,
+                'cart_id' => $order->cart_id,
                 'comment' => $order->comment,
                 'created_at' => $order->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
@@ -332,6 +351,29 @@ class OrderController extends AdminController
                         'created_at_human' => $log->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
+                'shipments' => $order->shipments->map(function ($shipment) {
+                    return [
+                        'id' => $shipment->id,
+                        'uuid' => $shipment->uuid,
+                        'number' => $shipment->number,
+                        'erp_number' => $shipment->erp_number,
+                        'date' => $shipment->date?->format('Y-m-d'),
+                        'status' => $shipment->status,
+                        'status_label' => match ($shipment->status) {
+                            'completed' => 'Выполнена',
+                            'in_progress' => 'В обработке',
+                            'new' => 'Новая',
+                            'cancelled' => 'Отменена',
+                            default => $shipment->status,
+                        },
+                        'total_amount' => $shipment->total_amount,
+                        'currency_code' => $shipment->currency_code,
+                        'items_count' => $shipment->items_count,
+                        'tax_id' => $shipment->tax_id,
+                        'erp_created_at' => $shipment->erp_created_at?->format('d.m.Y H:i'),
+                        'erp_updated_at' => $shipment->erp_updated_at?->format('d.m.Y H:i'),
+                    ];
+                }),
             ],
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
@@ -345,13 +387,22 @@ class OrderController extends AdminController
      */
     public function edit(Order $order): Response
     {
-        $order->load(['user', 'company', 'items.product.media', 'items.product.brand', 'statusHistories.user']);
+        $order->load([
+            'user',
+            'company',
+            'items.product.media',
+            'items.product.brand',
+            'statusHistories.user',
+            'changeLogs.user',
+            'parent:id,number,erp_number',
+        ]);
 
         return Inertia::render('Admin/Pages/Orders/Edit', [
             'order' => [
                 'id' => $order->id,
                 'uuid' => $order->uuid,
                 'number' => $order->number,
+                'erp_number' => $order->erp_number,
                 'type' => $order->type?->value,
                 'user_id' => $order->user_id,
                 'company_id' => $order->company_id,
@@ -360,6 +411,19 @@ class OrderController extends AdminController
                 'comment' => $order->comment,
                 'currency_code' => $order->currency_code,
                 'total_amount' => $order->total_amount,
+                'exchange_rate' => $order->exchange_rate,
+                'rate_coefficient' => $order->rate_coefficient,
+                'parent_id' => $order->parent_id,
+                'parent' => $order->parent ? [
+                    'id' => $order->parent->id,
+                    'number' => $order->parent->number,
+                    'erp_number' => $order->parent->erp_number,
+                ] : null,
+                'cart_id' => $order->cart_id,
+                'created_at' => $order->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
+                'erp_created_at' => $order->erp_created_at?->format('d.m.Y H:i'),
+                'erp_updated_at' => $order->erp_updated_at?->format('d.m.Y H:i'),
                 'user' => $order->user ? [
                     'id' => $order->user->id,
                     'name' => $order->user->name,
@@ -396,6 +460,20 @@ class OrderController extends AdminController
                         'comment' => $history->comment,
                         'created_at' => $history->created_at->format('d.m.Y H:i'),
                         'created_at_human' => $history->created_at->locale('ru')->diffForHumans(),
+                    ];
+                }),
+                'change_logs' => $order->changeLogs->map(function ($log) {
+                    return [
+                        'id' => $log->id,
+                        'type' => $log->type,
+                        'summary' => $log->summary,
+                        'changes' => $log->changes,
+                        'source' => $log->source,
+                        'user_name' => $log->user?->name,
+                        'old_total' => $log->old_total,
+                        'new_total' => $log->new_total,
+                        'created_at' => $log->created_at->format('d.m.Y H:i'),
+                        'created_at_human' => $log->created_at->locale('ru')->diffForHumans(),
                     ];
                 }),
             ],

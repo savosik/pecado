@@ -18,6 +18,7 @@ import { PageHeader } from "@/Admin/Components/PageHeader";
 import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
+import { RelatedShipmentsSection } from "./Components/RelatedShipmentsSection";
 
 const getStatusColor = (status) => {
     const colors = {
@@ -97,6 +98,22 @@ const OrderShow = () => {
                                 <Text fontFamily="mono" fontSize="sm">{order.number || ("#" + order.id)}</Text>
                             </HStack>
                             <HStack justify="space-between">
+                                <Text color="fg.muted">Номер 1С:</Text>
+                                <Text fontFamily="mono" fontSize="sm">{order.erp_number || '—'}</Text>
+                            </HStack>
+                            {order.parent && (
+                                <HStack justify="space-between">
+                                    <Text color="fg.muted">Родительский заказ:</Text>
+                                    <Button
+                                        variant="ghost"
+                                        size="xs"
+                                        onClick={() => router.visit(route("admin.orders.show", order.parent.id))}
+                                    >
+                                        {order.parent.erp_number || order.parent.number || ("#" + order.parent.id)}
+                                    </Button>
+                                </HStack>
+                            )}
+                            <HStack justify="space-between">
                                 <Text color="fg.muted">Тип:</Text>
                                 <Badge colorPalette={getTypeColor(order.type)} variant="subtle">
                                     {getTypeLabel(order.type)}
@@ -112,6 +129,14 @@ const OrderShow = () => {
                                 <Text color="fg.muted">Сумма:</Text>
                                 <Text fontWeight="bold">{fmt(order.total_amount)} {order.currency_code || "₽"}</Text>
                             </HStack>
+                            {(parseFloat(order.exchange_rate) !== 1 || parseFloat(order.rate_coefficient) !== 1) && (
+                                <HStack justify="space-between">
+                                    <Text color="fg.muted">Курс × коэф.:</Text>
+                                    <Text fontFamily="mono" fontSize="sm">
+                                        {parseFloat(order.exchange_rate || 1)} × {parseFloat(order.rate_coefficient || 1)}
+                                    </Text>
+                                </HStack>
+                            )}
                             <HStack justify="space-between">
                                 <Text color="fg.muted">Дата создания:</Text>
                                 <Text>{order.created_at}</Text>
@@ -275,6 +300,13 @@ const OrderShow = () => {
                     </HStack>
                 </Card.Footer>
             </Card.Root>
+
+            {/* Реализации по заказу */}
+            {order.shipments?.length > 0 && (
+                <Box mt={6}>
+                    <RelatedShipmentsSection shipments={order.shipments} />
+                </Box>
+            )}
 
             {/* Полная история заказа: статусы + изменения атрибутов/состава */}
             <Box mt={6}>

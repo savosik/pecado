@@ -4,6 +4,7 @@ import { PageHeader } from '@/Admin/Components';
 import {
     Box, Text, Badge, Card, HStack, VStack, Table, Separator, SimpleGrid,
 } from '@chakra-ui/react';
+import { RelatedOrdersSection } from './Components/RelatedOrdersSection';
 
 const STATUS_COLORS = {
     new: 'blue',
@@ -232,42 +233,8 @@ export default function Show({ shipment, related_orders }) {
             </Card.Root>
 
             {/* Связанные заказы */}
-            {related_orders && related_orders.length > 0 && (
-                <Card.Root>
-                    <Card.Header>
-                        <Text fontWeight="semibold" fontSize="lg">Связанные заказы ({related_orders.length})</Text>
-                    </Card.Header>
-                    <Card.Body p={0}>
-                        <Table.Root size="sm">
-                            <Table.Header>
-                                <Table.Row>
-                                    <Table.ColumnHeader>ID</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Номер</Table.ColumnHeader>
-                                    <Table.ColumnHeader>Статус</Table.ColumnHeader>
-                                </Table.Row>
-                            </Table.Header>
-                            <Table.Body>
-                                {related_orders.map((order) => (
-                                    <Table.Row key={order.id}>
-                                        <Table.Cell>
-                                            <Link href={route('admin.orders.show', order.id)}>
-                                                <Text color="blue.600" _hover={{ textDecoration: 'underline' }} fontWeight="600">
-                                                    #{order.id}
-                                                </Text>
-                                            </Link>
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Text fontFamily="mono" fontSize="sm">{order.number}</Text>
-                                        </Table.Cell>
-                                        <Table.Cell>
-                                            <Badge>{order.status}</Badge>
-                                        </Table.Cell>
-                                    </Table.Row>
-                                ))}
-                            </Table.Body>
-                        </Table.Root>
-                    </Card.Body>
-                </Card.Root>
+            {related_orders?.length > 0 && (
+                <RelatedOrdersSection orders={related_orders} />
             )}
         </>
     );

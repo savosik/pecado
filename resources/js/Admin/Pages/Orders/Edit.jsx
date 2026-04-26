@@ -1,14 +1,18 @@
 import React, { useState , useRef } from "react";
 import { Head, router, useForm } from "@inertiajs/react";
 import {
+    Badge,
     Box,
     Button,
     Card,
     Grid,
     HStack,
     Input,
+    SimpleGrid,
+    Text,
     Textarea,
     Tabs,
+    VStack,
     createListCollection,
 } from "@chakra-ui/react";
 import { LuSave, LuX } from "react-icons/lu";
@@ -19,7 +23,19 @@ import { toaster } from "@/components/ui/toaster";
 import { Select } from "@/components/ui/select";
 import OrderItemsEditor from "@/Admin/Components/OrderItemsEditor";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
-import { StatusHistoryTimeline } from "./Components/StatusHistoryTimeline";
+import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
+
+const getTypeLabel = (type) => type === "preorder" ? "Предзаказ" : "Заказ со склада";
+const getTypeColor = (type) => type === "preorder" ? "purple" : "teal";
+
+function MetaRow({ label, children }) {
+    return (
+        <HStack justify="space-between" align="start" gap={4}>
+            <Text color="fg.muted" fontSize="sm" minW="140px">{label}</Text>
+            <Box textAlign="right">{children}</Box>
+        </HStack>
+    );
+}
 
 const Edit = ({ order, statuses, currencies }) => {
     const { data, setData, put, processing, errors , transform } = useForm({
@@ -138,11 +154,15 @@ const Edit = ({ order, statuses, currencies }) => {
 
     return (
         <>
-            <Head title={`Редактировать заказ ${order.number || ("#" + order.id)}`} />
+            <Head title={`Редактировать заказ ${order.erp_number || order.number || ("#" + order.id)}`} />
 
             <PageHeader
-                title={`Редактировать заказ ${order.number || ("#" + order.id)}`}
-                subtitle={`Номер: ${order.number || ("#" + order.id)}`}
+                title={`Редактировать заказ ${order.erp_number || order.number || ("#" + order.id)}`}
+                subtitle={
+                    order.erp_number && order.number
+                        ? `1С: ${order.erp_number} · Внутр.: ${order.number}`
+                        : `Номер: ${order.erp_number || order.number || ("#" + order.id)}`
+                }
                 actions={
                     <HStack>
                         <Button
@@ -173,6 +193,78 @@ const Edit = ({ order, statuses, currencies }) => {
                     </Tabs.List>
 
                     <Tabs.Content value="general">
+                        {/* Системная информация (read-only) */}
+                        <Card.Root mb={4}>
+                            <Card.Header>
+                                <Text fontWeight="semibold" fontSize="md">Системная информация</Text>
+                            </Card.Header>
+                            <Card.Body>
+                                <SimpleGrid columns={{ base: 1, md: 2 }} gap={3}>
+                                    <MetaRow label="Внутренний номер">
+                                        <Text fontFamily="mono" fontSize="sm">
+                                            {order.number || `#${order.id}`}
+                                        </Text>
+                                    </MetaRow>
+                                    <MetaRow label="Номер 1С">
+                                        {order.erp_number ? (
+                                            <Badge colorPalette="blue" variant="subtle" fontFamily="mono">
+                                                {order.erp_number}
+                                            </Badge>
+                                        ) : (
+                                            <Text color="fg.muted" fontSize="sm">—</Text>
+                                        )}
+                                    </MetaRow>
+                                    <MetaRow label="Тип">
+                                        <Badge colorPalette={getTypeColor(order.type)} variant="subtle">
+                                            {getTypeLabel(order.type)}
+                                        </Badge>
+                                    </MetaRow>
+                                    <MetaRow label="UUID">
+                                        <Text fontFamily="mono" fontSize="xs" color="fg.muted">
+                                            {order.uuid || '—'}
+                                        </Text>
+                                    </MetaRow>
+                                    <MetaRow label="Создано">
+                                        <Text fontSize="sm">{order.created_at || '—'}</Text>
+                                    </MetaRow>
+                                    <MetaRow label="Обновлено">
+                                        <Text fontSize="sm">{order.updated_at || '—'}</Text>
+                                    </MetaRow>
+                                    <MetaRow label="Создано в 1С">
+                                        <Text fontSize="sm">{order.erp_created_at || '—'}</Text>
+                                    </MetaRow>
+                                    <MetaRow label="Изменено в 1С">
+                                        <Text fontSize="sm">{order.erp_updated_at || '—'}</Text>
+                                    </MetaRow>
+                                    {(parseFloat(order.exchange_rate) !== 1 || parseFloat(order.rate_coefficient) !== 1) && (
+                                        <MetaRow label="Курс × коэф.">
+                                            <Text fontFamily="mono" fontSize="sm">
+                                                {parseFloat(order.exchange_rate || 1)} × {parseFloat(order.rate_coefficient || 1)}
+                                            </Text>
+                                        </MetaRow>
+                                    )}
+                                    {order.parent && (
+                                        <MetaRow label="Родительский заказ">
+                                            <Button
+                                                variant="ghost"
+                                                size="xs"
+                                                onClick={() => router.visit(route("admin.orders.show", order.parent.id))}
+                                            >
+                                                {order.parent.erp_number || order.parent.number || `#${order.parent.id}`}
+                                            </Button>
+                                        </MetaRow>
+                                    )}
+                                    {order.cart_id && (
+                                        <MetaRow label="Источник">
+                                            <Text fontSize="sm" color="fg.muted">
+                                                Корзина #{order.cart_id}
+                                            </Text>
+                                        </MetaRow>
+                                    )}
+                                </SimpleGrid>
+                            </Card.Body>
+                        </Card.Root>
+
                         <Card.Root>
                             <Card.Body gap={6}>
                                 {/* Пользователь */}
@@ -305,7 +397,10 @@ const Edit = ({ order, statuses, currencies }) => {
                     </Tabs.Content>
 
                     <Tabs.Content value="history">
-                        <StatusHistoryTimeline histories={order.status_histories || []} />
+                        <OrderHistoryTimeline
+                            statusHistories={order.status_histories || []}
+                            changeLogs={order.change_logs || []}
+                        />
                     </Tabs.Content>
                 </Tabs.Root>
             </form>
