@@ -182,10 +182,10 @@ export default function ProductInfo({
                 <Box data-sticky-anchor="true">
                     {/* Цена + кнопки (Корзина + Избранное) — одной строкой */}
                     <Flex
-                        align={{ base: 'stretch', md: 'center' }}
-                        direction={{ base: 'column', md: 'row' }}
-                        justify="space-between"
-                        gap="3"
+                        align="center"
+                        wrap="wrap"
+                        columnGap="6"
+                        rowGap="3"
                         mb="1"
                     >
                         <Flex align="baseline" wrap="wrap" columnGap="3" rowGap="1">
@@ -208,7 +208,7 @@ export default function ProductInfo({
                             )}
                         </Flex>
 
-                        <Flex align="center" gap="3" flexShrink="0">
+                        <Flex align="center" gap="2" flexShrink="0">
                             {(inStock || isPreorder) && price > 0 && (
                                 <Box w="200px">
                                     <CartQuantityControl productId={productId} size="lg" />
