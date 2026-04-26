@@ -14,6 +14,7 @@ class Certificate extends Model implements HasMedia
 
     protected $fillable = [
         'external_id',
+        'sex_opt_id',
         'name',
         'type',
         'issued_at',

@@ -39,6 +39,10 @@ return [
         'api_key' => env('YANDEX_MAPS_API_KEY', ''),
     ],
 
+    'sex_opt' => [
+        'api_token' => env('SEX_OPT_API_TOKEN'),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | OAuth Providers
