@@ -1082,4 +1082,60 @@ class HandleProductCreatedTest extends TestCase
         $this->assertNotNull($product);
         $this->assertSame(2, $product->barcodes()->count());
     }
+
+    #[Test]
+    public function saves_erp_timestamps_from_payload_v13_10(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-prod-erp-ts-001',
+            'uuid' => 'prod-erp-ts-001',
+            'name' => 'Товар с аудит-метками',
+            'erp_created_at' => '2024-09-15T11:42:00+03:00',
+            'erp_updated_at' => '2026-04-26T08:11:09+03:00',
+        ]);
+
+        $product = Product::where('external_id', 'prod-erp-ts-001')->first();
+        $this->assertNotNull($product);
+        $this->assertNotNull($product->erp_created_at);
+        $this->assertNotNull($product->erp_updated_at);
+        // Стенограмма даты в БД совпадает с payload в TZ Europe/Moscow.
+        $this->assertEquals('2024-09-15 11:42:00', $product->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 08:11:09', $product->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function normalizes_erp_timestamps_to_moscow_timezone_v13_10(): void
+    {
+        // Любая входящая TZ нормализуется к Europe/Moscow (см. App\Casts\ErpDatetime).
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-prod-erp-tz-utc',
+            'uuid' => 'prod-erp-ts-utc',
+            'name' => 'Товар TZ',
+            'erp_created_at' => '2024-09-15T08:42:00Z',           // UTC = 11:42:00 MSK
+            'erp_updated_at' => '2026-04-26T13:11:09+05:00',      // = 11:11:09 MSK
+        ]);
+
+        $product = Product::where('external_id', 'prod-erp-ts-utc')->first();
+        $this->assertNotNull($product);
+        $this->assertEquals('2024-09-15 11:42:00', $product->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 11:11:09', $product->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function leaves_erp_timestamps_null_when_absent_from_payload_v13_10(): void
+    {
+        $this->handler->handle([
+            'event' => 'product.created',
+            'message_id' => 'msg-prod-erp-ts-002',
+            'uuid' => 'prod-erp-ts-002',
+            'name' => 'Товар без аудит-меток',
+        ]);
+
+        $product = Product::where('external_id', 'prod-erp-ts-002')->first();
+        $this->assertNotNull($product);
+        $this->assertNull($product->erp_created_at);
+        $this->assertNull($product->erp_updated_at);
+    }
 }

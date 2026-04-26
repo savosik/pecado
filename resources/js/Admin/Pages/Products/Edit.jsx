@@ -393,6 +393,24 @@ export default function Edit({ product, brands, categoryTree, modelName, sizeCha
                                             />
                                         </FormField>
                                     </SimpleGrid>
+
+                                    <Box>
+                                        <Box fontSize="md" fontWeight="semibold" mb={3}>Аудит-метки 1С</Box>
+                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
+                                            <FormField
+                                                label="Создано в 1С"
+                                                helperText="Дата создания номенклатуры в 1С (только для чтения, приходит по шине ERP)"
+                                            >
+                                                <Input value={product.erp_created_at || '—'} readOnly disabled />
+                                            </FormField>
+                                            <FormField
+                                                label="Изменено в 1С"
+                                                helperText="Дата последнего изменения номенклатуры в 1С (только для чтения, приходит по шине ERP)"
+                                            >
+                                                <Input value={product.erp_updated_at || '—'} readOnly disabled />
+                                            </FormField>
+                                        </SimpleGrid>
+                                    </Box>
                                 </Stack>
                             </Tabs.Content>
 

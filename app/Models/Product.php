@@ -84,6 +84,8 @@ class Product extends Model implements HasMedia
         'hs_code',
         'abc_xyz',
         'turnover',
+        'erp_created_at',
+        'erp_updated_at',
         'is_marked',
         'is_liquidation',
         'for_marketplaces',
@@ -123,6 +125,8 @@ class Product extends Model implements HasMedia
             'height' => 'decimal:2',
             'depth' => 'decimal:2',
             'turnover' => 'decimal:4',
+            'erp_created_at' => \App\Casts\ErpDatetime::class,
+            'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];
     }
 

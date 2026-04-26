@@ -151,6 +151,16 @@ class HandleProductUpdated
                 $updateData['abc_xyz'] = $this->normalizeString($payload['abc_xyz'], 5);
             }
 
+            // v13.10: аудит-метки 1С (опционально). array_key_exists, чтобы передача null
+            // явно очищала поле, а отсутствие ключа сохраняло текущее значение.
+            // TZ-нормализация — в App\Casts\ErpDatetime.
+            if (array_key_exists('erp_created_at', $payload)) {
+                $updateData['erp_created_at'] = $payload['erp_created_at'];
+            }
+            if (array_key_exists('erp_updated_at', $payload)) {
+                $updateData['erp_updated_at'] = $payload['erp_updated_at'];
+            }
+
             if (! empty($updateData)) {
                 $product->update($updateData);
             }

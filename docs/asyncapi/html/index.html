@@ -1183,7 +1183,9 @@ Routing keys: <code>category.*</code>, <code>product.*</code></p>
 <code>AX</code>, <code>BY</code>, <code>CZ</code>. Хранится в <code>products.abc_xyz</code> (<code>varchar(5)</code>).</p>
 </div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;AX&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">turnover</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) Коэффициент оборачиваемости товара. Хранится в
 <code>products.turnover</code> (<code>decimal(12,4)</code>).</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>14.75</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>14.75</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_created_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_updated_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
 сайт синхронизирует состав атрибутов товара строго по этому массиву.
 Атрибуты, отсутствующие в массиве, <strong>удаляются</strong> у товара.
 Пустой массив <code>[]</code> означает «удалить все атрибуты товара».
@@ -1226,6 +1228,8 @@ Routing keys: <code>category.*</code>, <code>product.*</code></p>
   <span class="hljs-attr">"hs_code"</span>: <span class="hljs-string">"6204620000"</span>,
   <span class="hljs-attr">"abc_xyz"</span>: <span class="hljs-string">"AX"</span>,
   <span class="hljs-attr">"turnover"</span>: <span class="hljs-number">14.75</span>,
+  <span class="hljs-attr">"erp_created_at"</span>: <span class="hljs-string">"2019-08-24T14:15:22Z"</span>,
+  <span class="hljs-attr">"erp_updated_at"</span>: <span class="hljs-string">"2019-08-24T14:15:22Z"</span>,
   <span class="hljs-attr">"attributes"</span>: [
     {
       <span class="hljs-attr">"property_uuid"</span>: <span class="hljs-string">"550e8400-e29b-41d4-a716-446655440000"</span>,
@@ -1278,6 +1282,8 @@ Routing keys: <code>category.*</code>, <code>product.*</code></p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">abc_xyz</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 5 characters</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) ABC/XYZ-классификация товара. Семантика частичного обновления.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">turnover</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) Коэффициент оборачиваемости товара. Семантика частичного
 обновления.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_created_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_updated_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
 сайт синхронизирует состав атрибутов товара строго по этому массиву.
 Атрибуты, отсутствующие в массиве, <strong>удаляются</strong> у товара.
@@ -1322,6 +1328,8 @@ Routing keys: <code>category.*</code>, <code>product.*</code></p>
   <span class="hljs-attr">"hs_code"</span>: <span class="hljs-string">"string"</span>,
   <span class="hljs-attr">"abc_xyz"</span>: <span class="hljs-string">"strin"</span>,
   <span class="hljs-attr">"turnover"</span>: <span class="hljs-number">0</span>,
+  <span class="hljs-attr">"erp_created_at"</span>: <span class="hljs-string">"2019-08-24T14:15:22Z"</span>,
+  <span class="hljs-attr">"erp_updated_at"</span>: <span class="hljs-string">"2019-08-24T14:15:22Z"</span>,
   <span class="hljs-attr">"attributes"</span>: [
     {
       <span class="hljs-attr">"property_uuid"</span>: <span class="hljs-string">"550e8400-e29b-41d4-a716-446655440000"</span>,
@@ -1776,7 +1784,9 @@ UUIDv4 сайта для корреляции.</p>
 <code>AX</code>, <code>BY</code>, <code>CZ</code>. Хранится в <code>products.abc_xyz</code> (<code>varchar(5)</code>).</p>
 </div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;AX&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">turnover</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) Коэффициент оборачиваемости товара. Хранится в
 <code>products.turnover</code> (<code>decimal(12,4)</code>).</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>14.75</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>14.75</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_created_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_updated_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
 сайт синхронизирует состав атрибутов товара строго по этому массиву.
 Атрибуты, отсутствующие в массиве, <strong>удаляются</strong> у товара.
 Пустой массив <code>[]</code> означает «удалить все атрибуты товара».
@@ -1817,6 +1827,8 @@ UUIDv4 сайта для корреляции.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">abc_xyz</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 5 characters</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) ABC/XYZ-классификация товара. Семантика частичного обновления.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">turnover</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) Коэффициент оборачиваемости товара. Семантика частичного
 обновления.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_created_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_updated_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
 сайт синхронизирует состав атрибутов товара строго по этому массиву.
 Атрибуты, отсутствующие в массиве, <strong>удаляются</strong> у товара.
@@ -2192,7 +2204,9 @@ UUIDv4 сайта для корреляции.</p>
 <code>AX</code>, <code>BY</code>, <code>CZ</code>. Хранится в <code>products.abc_xyz</code> (<code>varchar(5)</code>).</p>
 </div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>&quot;AX&quot;</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">turnover</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) Коэффициент оборачиваемости товара. Хранится в
 <code>products.turnover</code> (<code>decimal(12,4)</code>).</p>
-</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>14.75</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
+</div></div><ul class="text-xs">Examples values:<!-- --> <li class="border inline-block text-orange-600 rounded ml-1 py-0 px-2 break-all"><span>14.75</span></li></ul></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_created_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_updated_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button><div class="text-red-600 text-xs">required</div></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
 сайт синхронизирует состав атрибутов товара строго по этому массиву.
 Атрибуты, отсутствующие в массиве, <strong>удаляются</strong> у товара.
 Пустой массив <code>[]</code> означает «удалить все атрибуты товара».
@@ -2230,6 +2244,8 @@ UUIDv4 сайта для корреляции.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">abc_xyz</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&lt;= 5 characters</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) ABC/XYZ-классификация товара. Семантика частичного обновления.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">turnover</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">number | null</div><div class="inline-block"><span class="bg-purple-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">&gt;= 0</span></div><div><div class="prose max-w-none text-sm"><p>(v13.3) Коэффициент оборачиваемости товара. Семантика частичного
 обновления.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_created_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.</p>
+</div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><span class="break-anywhere text-sm italic">erp_updated_at</span></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">string | null</div><div class="inline-block"><span class="bg-yellow-600 font-bold no-underline text-white rounded lowercase mr-2 p-1 text-xs">format: <!-- -->date-time</span></div><div><div class="prose max-w-none text-sm"><p>Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.</p>
 </div></div></div></div></div></div><div><div class="flex py-2"><div class="min-w-1/4 mr-2"><button class="focus:outline-none undefined" type="button"><div class="inline-block"><span class="break-anywhere text-sm italic">attributes</span></div><svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 20 20" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg" class="inline-block align-baseline cursor-pointer ml-0.5 -mb-1 w-5 h-5 transform transition-transform duration-150 ease-linear  "><path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path></svg></button><button type="button" class="ml-1 text-sm text-gray-500">Expand all</button></div><div><div><div class="capitalize text-sm text-teal-500 font-bold inline-block mr-2">array&lt;object&gt;</div><div class="inline-block"></div><div><div class="prose max-w-none text-sm"><p>Полный актуальный список атрибутов товара. Семантика <strong>full-replace</strong>:
 сайт синхронизирует состав атрибутов товара строго по этому массиву.
 Атрибуты, отсутствующие в массиве, <strong>удаляются</strong> у товара.
@@ -2335,10 +2351,10 @@ UUIDv4 сайта для корреляции.</p>
                   "contentType": {
                     "type": "string",
                     "const": "application/json",
-                    "x-parser-schema-id": "<anonymous-schema-812>"
+                    "x-parser-schema-id": "<anonymous-schema-820>"
                   }
                 },
-                "x-parser-schema-id": "<anonymous-schema-811>"
+                "x-parser-schema-id": "<anonymous-schema-819>"
               },
               "contentType": "application/json"
             }
@@ -5264,6 +5280,24 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "x-parser-schema-id": "<anonymous-schema-344>"
               },
+              "erp_created_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.",
+                "x-parser-schema-id": "<anonymous-schema-345>"
+              },
+              "erp_updated_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.",
+                "x-parser-schema-id": "<anonymous-schema-346>"
+              },
               "attributes": {
                 "type": "array",
                 "description": "Полный актуальный список атрибутов товара. Семантика **full-replace**:\nсайт синхронизирует состав атрибутов товара строго по этому массиву.\nАтрибуты, отсутствующие в массиве, **удаляются** у товара.\nПустой массив `[]` означает «удалить все атрибуты товара».\n1С обязана передавать полный набор атрибутов при создании товара.\n",
@@ -5280,7 +5314,7 @@ UUIDv4 сайта для корреляции.</p>
                       "format": "uuid",
                       "description": "UUID строка",
                       "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                      "x-parser-schema-id": "<anonymous-schema-347>"
+                      "x-parser-schema-id": "<anonymous-schema-349>"
                     },
                     "property_label": {
                       "type": "string",
@@ -5288,7 +5322,7 @@ UUIDv4 сайта для корреляции.</p>
                       "examples": [
                         "Цвет"
                       ],
-                      "x-parser-schema-id": "<anonymous-schema-348>"
+                      "x-parser-schema-id": "<anonymous-schema-350>"
                     },
                     "value_type": {
                       "type": "string",
@@ -5303,17 +5337,17 @@ UUIDv4 сайта для корреляции.</p>
                       "examples": [
                         "reference"
                       ],
-                      "x-parser-schema-id": "<anonymous-schema-349>"
+                      "x-parser-schema-id": "<anonymous-schema-351>"
                     },
                     "value_uuid": {
                       "oneOf": [
                         "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
                         {
                           "type": "null",
-                          "x-parser-schema-id": "<anonymous-schema-351>"
+                          "x-parser-schema-id": "<anonymous-schema-353>"
                         }
                       ],
-                      "x-parser-schema-id": "<anonymous-schema-350>"
+                      "x-parser-schema-id": "<anonymous-schema-352>"
                     },
                     "value_label": {
                       "type": [
@@ -5326,12 +5360,12 @@ UUIDv4 сайта для корреляции.</p>
                       "examples": [
                         "Розовый"
                       ],
-                      "x-parser-schema-id": "<anonymous-schema-352>"
+                      "x-parser-schema-id": "<anonymous-schema-354>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-346>"
+                  "x-parser-schema-id": "<anonymous-schema-348>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-345>"
+                "x-parser-schema-id": "<anonymous-schema-347>"
               }
             },
             "x-parser-schema-id": "<anonymous-schema-316>"
@@ -5345,10 +5379,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-354>"
+                "x-parser-schema-id": "<anonymous-schema-356>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-353>"
+            "x-parser-schema-id": "<anonymous-schema-355>"
           },
           "contentType": "application/json",
           "name": "product.updated",
@@ -5369,30 +5403,30 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "product.updated",
-                "x-parser-schema-id": "<anonymous-schema-356>"
+                "x-parser-schema-id": "<anonymous-schema-358>"
               },
               "message_id": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-357>"
+                "x-parser-schema-id": "<anonymous-schema-359>"
               },
               "uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-358>"
+                "x-parser-schema-id": "<anonymous-schema-360>"
               },
               "name": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-359>"
+                "x-parser-schema-id": "<anonymous-schema-361>"
               },
               "code": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-360>"
+                "x-parser-schema-id": "<anonymous-schema-362>"
               },
               "sku": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-361>"
+                "x-parser-schema-id": "<anonymous-schema-363>"
               },
               "description": {
                 "type": [
@@ -5400,7 +5434,7 @@ UUIDv4 сайта для корреляции.</p>
                   "null"
                 ],
                 "description": "Описание товара (plain-text / краткое)",
-                "x-parser-schema-id": "<anonymous-schema-362>"
+                "x-parser-schema-id": "<anonymous-schema-364>"
               },
               "description_html": {
                 "type": [
@@ -5408,34 +5442,34 @@ UUIDv4 сайта для корреляции.</p>
                   "null"
                 ],
                 "description": "HTML-версия описания (rich-text). Семантика частичного обновления:\n- поле отсутствует в payload → `description_html` не трогаем;\n- передано (включая `null` или пустую строку) → перезаписываем.\n",
-                "x-parser-schema-id": "<anonymous-schema-363>"
+                "x-parser-schema-id": "<anonymous-schema-365>"
               },
               "category_uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-364>"
+                "x-parser-schema-id": "<anonymous-schema-366>"
               },
               "hidden": {
                 "type": "boolean",
                 "description": "Флаг «Скрыть в интернете» (v10)",
-                "x-parser-schema-id": "<anonymous-schema-365>"
+                "x-parser-schema-id": "<anonymous-schema-367>"
               },
               "is_marked": {
                 "type": "boolean",
                 "description": "Признак маркированного товара (обязательная маркировка «Честный знак»). Строго boolean true/false.",
-                "x-parser-schema-id": "<anonymous-schema-366>"
+                "x-parser-schema-id": "<anonymous-schema-368>"
               },
               "brand": {
                 "oneOf": [
                   "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.brand.oneOf[0]",
                   {
                     "type": "null",
-                    "x-parser-schema-id": "<anonymous-schema-368>"
+                    "x-parser-schema-id": "<anonymous-schema-370>"
                   }
                 ],
-                "x-parser-schema-id": "<anonymous-schema-367>"
+                "x-parser-schema-id": "<anonymous-schema-369>"
               },
               "barcodes": {
                 "type": "array",
@@ -5444,19 +5478,19 @@ UUIDv4 сайта для корреляции.</p>
                     "string",
                     "number"
                   ],
-                  "x-parser-schema-id": "<anonymous-schema-370>"
+                  "x-parser-schema-id": "<anonymous-schema-372>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-369>"
+                "x-parser-schema-id": "<anonymous-schema-371>"
               },
               "model": {
                 "oneOf": [
                   "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.model.oneOf[0]",
                   {
                     "type": "null",
-                    "x-parser-schema-id": "<anonymous-schema-372>"
+                    "x-parser-schema-id": "<anonymous-schema-374>"
                   }
                 ],
-                "x-parser-schema-id": "<anonymous-schema-371>"
+                "x-parser-schema-id": "<anonymous-schema-373>"
               },
               "weight_gross": {
                 "type": [
@@ -5465,7 +5499,7 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "minimum": 0,
                 "description": "(v13.3) Вес брутто упаковки в **килограммах**. Семантика частичного\nобновления: поле отсутствует в payload — `products.weight_gross` не\nтрогаем; передано (включая `null`) — перезаписываем.\n",
-                "x-parser-schema-id": "<anonymous-schema-373>"
+                "x-parser-schema-id": "<anonymous-schema-375>"
               },
               "weight_net": {
                 "type": [
@@ -5474,7 +5508,7 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "minimum": 0,
                 "description": "(v13.3) Вес нетто товара в **килограммах**. Семантика частичного\nобновления.\n",
-                "x-parser-schema-id": "<anonymous-schema-374>"
+                "x-parser-schema-id": "<anonymous-schema-376>"
               },
               "width": {
                 "type": [
@@ -5483,7 +5517,7 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "minimum": 0,
                 "description": "(v13.3) Ширина упаковки в **метрах**. Семантика частичного\nобновления.\n",
-                "x-parser-schema-id": "<anonymous-schema-375>"
+                "x-parser-schema-id": "<anonymous-schema-377>"
               },
               "height": {
                 "type": [
@@ -5492,7 +5526,7 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "minimum": 0,
                 "description": "(v13.3) Высота упаковки в **метрах**. Семантика частичного\nобновления.\n",
-                "x-parser-schema-id": "<anonymous-schema-376>"
+                "x-parser-schema-id": "<anonymous-schema-378>"
               },
               "depth": {
                 "type": [
@@ -5501,7 +5535,7 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "minimum": 0,
                 "description": "(v13.3) Глубина упаковки в **метрах**. Семантика частичного\nобновления.\n",
-                "x-parser-schema-id": "<anonymous-schema-377>"
+                "x-parser-schema-id": "<anonymous-schema-379>"
               },
               "hs_code": {
                 "type": [
@@ -5510,7 +5544,7 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "maxLength": 20,
                 "description": "(v13.3) Код ТН ВЭД. Семантика частичного обновления.\n",
-                "x-parser-schema-id": "<anonymous-schema-378>"
+                "x-parser-schema-id": "<anonymous-schema-380>"
               },
               "abc_xyz": {
                 "type": [
@@ -5519,7 +5553,7 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "maxLength": 5,
                 "description": "(v13.3) ABC/XYZ-классификация товара. Семантика частичного обновления.\n",
-                "x-parser-schema-id": "<anonymous-schema-379>"
+                "x-parser-schema-id": "<anonymous-schema-381>"
               },
               "turnover": {
                 "type": [
@@ -5528,7 +5562,25 @@ UUIDv4 сайта для корреляции.</p>
                 ],
                 "minimum": 0,
                 "description": "(v13.3) Коэффициент оборачиваемости товара. Семантика частичного\nобновления.\n",
-                "x-parser-schema-id": "<anonymous-schema-380>"
+                "x-parser-schema-id": "<anonymous-schema-382>"
+              },
+              "erp_created_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.",
+                "x-parser-schema-id": "<anonymous-schema-383>"
+              },
+              "erp_updated_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.",
+                "x-parser-schema-id": "<anonymous-schema-384>"
               },
               "attributes": {
                 "type": "array",
@@ -5542,38 +5594,38 @@ UUIDv4 сайта для корреляции.</p>
                       "format": "uuid",
                       "description": "UUID строка",
                       "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                      "x-parser-schema-id": "<anonymous-schema-383>"
+                      "x-parser-schema-id": "<anonymous-schema-387>"
                     },
                     "property_label": {
                       "type": "string",
                       "description": "Наименование свойства",
                       "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.property_label.examples",
-                      "x-parser-schema-id": "<anonymous-schema-384>"
+                      "x-parser-schema-id": "<anonymous-schema-388>"
                     },
                     "value_type": {
                       "type": "string",
                       "enum": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_type.enum",
                       "description": "Тип значения атрибута. Определяет ожидаемый формат в value_label. Строго одно из: string, number, boolean, reference, date-time.",
                       "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_type.examples",
-                      "x-parser-schema-id": "<anonymous-schema-385>"
+                      "x-parser-schema-id": "<anonymous-schema-389>"
                     },
                     "value_uuid": {
                       "oneOf": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_uuid.oneOf",
-                      "x-parser-schema-id": "<anonymous-schema-386>"
+                      "x-parser-schema-id": "<anonymous-schema-390>"
                     },
                     "value_label": {
                       "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_label.type",
                       "description": "Отображаемое значение. Для boolean использовать строго true/false (не 1/0 или 'Да'/'Нет'). Для number — число.",
                       "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_label.examples",
-                      "x-parser-schema-id": "<anonymous-schema-387>"
+                      "x-parser-schema-id": "<anonymous-schema-391>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-382>"
+                  "x-parser-schema-id": "<anonymous-schema-386>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-381>"
+                "x-parser-schema-id": "<anonymous-schema-385>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-355>"
+            "x-parser-schema-id": "<anonymous-schema-357>"
           },
           "x-parser-unique-object-id": "productUpdated"
         }
@@ -5606,10 +5658,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-389>"
+                "x-parser-schema-id": "<anonymous-schema-393>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-388>"
+            "x-parser-schema-id": "<anonymous-schema-392>"
           },
           "contentType": "application/json",
           "name": "promotion.created",
@@ -5630,19 +5682,19 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "promotion.created",
-                "x-parser-schema-id": "<anonymous-schema-391>"
+                "x-parser-schema-id": "<anonymous-schema-395>"
               },
               "message_id": {
                 "type": "string",
                 "description": "Уникальный ID сообщения для идемпотентности",
-                "x-parser-schema-id": "<anonymous-schema-392>"
+                "x-parser-schema-id": "<anonymous-schema-396>"
               },
               "uuid": {
                 "allOf": [
                   "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]"
                 ],
                 "description": "UUID промо-группы в 1С",
-                "x-parser-schema-id": "<anonymous-schema-393>"
+                "x-parser-schema-id": "<anonymous-schema-397>"
               },
               "type": {
                 "type": "string",
@@ -5652,7 +5704,7 @@ UUIDv4 сайта для корреляции.</p>
                   "liquidation"
                 ],
                 "description": "Тип промо-флага:\n- `new` — новинка (`products.is_new`)\n- `bestseller` — бестселлер (`products.is_bestseller`)\n- `liquidation` — ликвидация (`products.is_liquidation`)\n",
-                "x-parser-schema-id": "<anonymous-schema-394>"
+                "x-parser-schema-id": "<anonymous-schema-398>"
               },
               "items": {
                 "type": "array",
@@ -5668,12 +5720,12 @@ UUIDv4 сайта для корреляции.</p>
                         "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]"
                       ],
                       "description": "UUID товара в 1С (external_id на сайте)",
-                      "x-parser-schema-id": "<anonymous-schema-397>"
+                      "x-parser-schema-id": "<anonymous-schema-401>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-396>"
+                  "x-parser-schema-id": "<anonymous-schema-400>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-395>"
+                "x-parser-schema-id": "<anonymous-schema-399>"
               }
             },
             "examples": [
@@ -5692,7 +5744,7 @@ UUIDv4 сайта для корреляции.</p>
                 ]
               }
             ],
-            "x-parser-schema-id": "<anonymous-schema-390>"
+            "x-parser-schema-id": "<anonymous-schema-394>"
           },
           "x-parser-unique-object-id": "promotionCreated"
         },
@@ -5703,10 +5755,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-399>"
+                "x-parser-schema-id": "<anonymous-schema-403>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-398>"
+            "x-parser-schema-id": "<anonymous-schema-402>"
           },
           "contentType": "application/json",
           "name": "promotion.updated",
@@ -5727,24 +5779,24 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "promotion.updated",
-                "x-parser-schema-id": "<anonymous-schema-401>"
+                "x-parser-schema-id": "<anonymous-schema-405>"
               },
               "message_id": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-402>"
+                "x-parser-schema-id": "<anonymous-schema-406>"
               },
               "uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-403>"
+                "x-parser-schema-id": "<anonymous-schema-407>"
               },
               "type": {
                 "type": "string",
                 "enum": "$ref:$.channels.erpInPromotions.messages.promotionCreated.payload.properties.type.enum",
                 "description": "Тип промо-флага:\n- `new` — новинка (`products.is_new`)\n- `bestseller` — бестселлер (`products.is_bestseller`)\n- `liquidation` — ликвидация (`products.is_liquidation`)\n",
-                "x-parser-schema-id": "<anonymous-schema-404>"
+                "x-parser-schema-id": "<anonymous-schema-408>"
               },
               "items": {
                 "type": "array",
@@ -5756,12 +5808,12 @@ UUIDv4 сайта для корреляции.</p>
                     "uuid": {
                       "allOf": "$ref:$.channels.erpInPromotions.messages.promotionCreated.payload.properties.items.items.properties.uuid.allOf",
                       "description": "UUID товара в 1С (external_id на сайте)",
-                      "x-parser-schema-id": "<anonymous-schema-407>"
+                      "x-parser-schema-id": "<anonymous-schema-411>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-406>"
+                  "x-parser-schema-id": "<anonymous-schema-410>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-405>"
+                "x-parser-schema-id": "<anonymous-schema-409>"
               }
             },
             "examples": [
@@ -5777,7 +5829,7 @@ UUIDv4 сайта для корреляции.</p>
                 ]
               }
             ],
-            "x-parser-schema-id": "<anonymous-schema-400>"
+            "x-parser-schema-id": "<anonymous-schema-404>"
           },
           "x-parser-unique-object-id": "promotionUpdated"
         },
@@ -5788,10 +5840,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-409>"
+                "x-parser-schema-id": "<anonymous-schema-413>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-408>"
+            "x-parser-schema-id": "<anonymous-schema-412>"
           },
           "contentType": "application/json",
           "name": "promotion.deleted",
@@ -5810,18 +5862,18 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "promotion.deleted",
-                "x-parser-schema-id": "<anonymous-schema-411>"
+                "x-parser-schema-id": "<anonymous-schema-415>"
               },
               "message_id": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-412>"
+                "x-parser-schema-id": "<anonymous-schema-416>"
               },
               "uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-413>"
+                "x-parser-schema-id": "<anonymous-schema-417>"
               }
             },
             "examples": [
@@ -5831,7 +5883,7 @@ UUIDv4 сайта для корреляции.</p>
                 "uuid": "7f9e8a1b-1111-4aaa-bbbb-222233334444"
               }
             ],
-            "x-parser-schema-id": "<anonymous-schema-410>"
+            "x-parser-schema-id": "<anonymous-schema-414>"
           },
           "x-parser-unique-object-id": "promotionDeleted"
         }
@@ -5864,10 +5916,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-415>"
+                "x-parser-schema-id": "<anonymous-schema-419>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-414>"
+            "x-parser-schema-id": "<anonymous-schema-418>"
           },
           "contentType": "application/json",
           "name": "order.created",
@@ -5883,51 +5935,51 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "order.created",
-                "x-parser-schema-id": "<anonymous-schema-417>"
+                "x-parser-schema-id": "<anonymous-schema-421>"
               },
               "message_id": {
                 "type": "string",
                 "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.message_id.examples",
-                "x-parser-schema-id": "<anonymous-schema-418>"
+                "x-parser-schema-id": "<anonymous-schema-422>"
               },
               "uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-419>"
+                "x-parser-schema-id": "<anonymous-schema-423>"
               },
               "number": {
                 "type": "string",
                 "description": "Номер заказа",
                 "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.number.examples",
-                "x-parser-schema-id": "<anonymous-schema-420>"
+                "x-parser-schema-id": "<anonymous-schema-424>"
               },
               "date": {
                 "type": "string",
                 "format": "date-time",
                 "description": "Дата и время в формате ISO 8601",
                 "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.timestamp.examples",
-                "x-parser-schema-id": "<anonymous-schema-421>"
+                "x-parser-schema-id": "<anonymous-schema-425>"
               },
               "status": {
                 "type": "string",
                 "description": "Статус заказа",
                 "enum": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.status.enum",
                 "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.status.examples",
-                "x-parser-schema-id": "<anonymous-schema-422>"
+                "x-parser-schema-id": "<anonymous-schema-426>"
               },
               "type": {
                 "type": "string",
                 "description": "Тип заказа. Отправляется сайтом → 1С.\n1С НЕ передаёт это поле — сайт определяет тип самостоятельно.\nПри получении из 1С, если поле отсутствует, используется значение по умолчанию \"order\".\n",
-                "x-parser-schema-id": "<anonymous-schema-423>"
+                "x-parser-schema-id": "<anonymous-schema-427>"
               },
               "partner_uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-424>"
+                "x-parser-schema-id": "<anonymous-schema-428>"
               },
               "warehouse_uuids": {
                 "type": "array",
@@ -5937,28 +5989,28 @@ UUIDv4 сайта для корреляции.</p>
                   "format": "uuid",
                   "description": "UUID строка",
                   "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                  "x-parser-schema-id": "<anonymous-schema-426>"
+                  "x-parser-schema-id": "<anonymous-schema-430>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-425>"
+                "x-parser-schema-id": "<anonymous-schema-429>"
               },
               "timestamp": {
                 "type": "string",
                 "format": "date-time",
                 "description": "Дата и время в формате ISO 8601",
                 "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.timestamp.examples",
-                "x-parser-schema-id": "<anonymous-schema-427>"
+                "x-parser-schema-id": "<anonymous-schema-431>"
               },
               "erp_created_at": {
                 "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.erp_created_at.type",
                 "format": "date-time",
                 "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-                "x-parser-schema-id": "<anonymous-schema-428>"
+                "x-parser-schema-id": "<anonymous-schema-432>"
               },
               "erp_updated_at": {
                 "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.erp_updated_at.type",
                 "format": "date-time",
                 "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-                "x-parser-schema-id": "<anonymous-schema-429>"
+                "x-parser-schema-id": "<anonymous-schema-433>"
               },
               "contractor": {
                 "type": "object",
@@ -5968,7 +6020,7 @@ UUIDv4 сайта для корреляции.</p>
                     "type": "string",
                     "format": "uuid",
                     "description": "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге, fallback на tax_id+tax_code.",
-                    "x-parser-schema-id": "<anonymous-schema-431>"
+                    "x-parser-schema-id": "<anonymous-schema-435>"
                   },
                   "country": {
                     "type": "string",
@@ -5976,48 +6028,48 @@ UUIDv4 сайта для корреляции.</p>
                     "maxLength": 2,
                     "description": "ISO alpha-2 код страны",
                     "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.country.examples",
-                    "x-parser-schema-id": "<anonymous-schema-432>"
+                    "x-parser-schema-id": "<anonymous-schema-436>"
                   },
                   "name": {
                     "type": "string",
-                    "x-parser-schema-id": "<anonymous-schema-433>"
+                    "x-parser-schema-id": "<anonymous-schema-437>"
                   },
                   "legal_name": {
                     "type": "string",
-                    "x-parser-schema-id": "<anonymous-schema-434>"
+                    "x-parser-schema-id": "<anonymous-schema-438>"
                   },
                   "tax_id": {
                     "type": "string",
                     "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-                    "x-parser-schema-id": "<anonymous-schema-435>"
+                    "x-parser-schema-id": "<anonymous-schema-439>"
                   },
                   "registration_number": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.registration_number.type",
-                    "x-parser-schema-id": "<anonymous-schema-436>"
+                    "x-parser-schema-id": "<anonymous-schema-440>"
                   },
                   "tax_code": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.tax_code.type",
-                    "x-parser-schema-id": "<anonymous-schema-437>"
+                    "x-parser-schema-id": "<anonymous-schema-441>"
                   },
                   "okpo_code": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.okpo_code.type",
-                    "x-parser-schema-id": "<anonymous-schema-438>"
+                    "x-parser-schema-id": "<anonymous-schema-442>"
                   },
                   "legal_address": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.legal_address.type",
-                    "x-parser-schema-id": "<anonymous-schema-439>"
+                    "x-parser-schema-id": "<anonymous-schema-443>"
                   },
                   "actual_address": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.actual_address.type",
-                    "x-parser-schema-id": "<anonymous-schema-440>"
+                    "x-parser-schema-id": "<anonymous-schema-444>"
                   },
                   "phone": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.phone.type",
-                    "x-parser-schema-id": "<anonymous-schema-441>"
+                    "x-parser-schema-id": "<anonymous-schema-445>"
                   },
                   "email": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.email.type",
-                    "x-parser-schema-id": "<anonymous-schema-442>"
+                    "x-parser-schema-id": "<anonymous-schema-446>"
                   },
                   "bank_accounts": {
                     "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.bank_accounts.type",
@@ -6028,40 +6080,40 @@ UUIDv4 сайта для корреляции.</p>
                         "bank_name": {
                           "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_name.type",
                           "description": "Наименование банка",
-                          "x-parser-schema-id": "<anonymous-schema-445>"
+                          "x-parser-schema-id": "<anonymous-schema-449>"
                         },
                         "bank_bik": {
                           "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_bik.type",
                           "description": "БИК банка",
-                          "x-parser-schema-id": "<anonymous-schema-446>"
+                          "x-parser-schema-id": "<anonymous-schema-450>"
                         },
                         "correspondent_account": {
                           "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.correspondent_account.type",
                           "description": "Корреспондентский счёт",
-                          "x-parser-schema-id": "<anonymous-schema-447>"
+                          "x-parser-schema-id": "<anonymous-schema-451>"
                         },
                         "account_number": {
                           "type": "string",
                           "description": "Номер счёта",
-                          "x-parser-schema-id": "<anonymous-schema-448>"
+                          "x-parser-schema-id": "<anonymous-schema-452>"
                         },
                         "is_primary": {
                           "type": "boolean",
                           "description": "Основной счёт (первый = true, остальные = false)",
-                          "x-parser-schema-id": "<anonymous-schema-449>"
+                          "x-parser-schema-id": "<anonymous-schema-453>"
                         }
                       },
-                      "x-parser-schema-id": "<anonymous-schema-444>"
+                      "x-parser-schema-id": "<anonymous-schema-448>"
                     },
-                    "x-parser-schema-id": "<anonymous-schema-443>"
+                    "x-parser-schema-id": "<anonymous-schema-447>"
                   }
                 },
-                "x-parser-schema-id": "<anonymous-schema-430>"
+                "x-parser-schema-id": "<anonymous-schema-434>"
               },
               "delivery_address": {
                 "type": "string",
                 "description": "Адрес доставки",
-                "x-parser-schema-id": "<anonymous-schema-450>"
+                "x-parser-schema-id": "<anonymous-schema-454>"
               },
               "currency_code": {
                 "type": "string",
@@ -6069,22 +6121,22 @@ UUIDv4 сайта для корреляции.</p>
                 "maxLength": 3,
                 "description": "ISO 4217 буквенный код валюты",
                 "examples": "$ref:$.channels.erpInPrices.messages.exchangeRateUpdated.payload.properties.currency_code.examples",
-                "x-parser-schema-id": "<anonymous-schema-451>"
+                "x-parser-schema-id": "<anonymous-schema-455>"
               },
               "exchange_rate": {
                 "type": "number",
                 "description": "Курс конвертации",
-                "x-parser-schema-id": "<anonymous-schema-452>"
+                "x-parser-schema-id": "<anonymous-schema-456>"
               },
               "rate_coefficient": {
                 "type": "number",
                 "description": "Поправочный коэффициент",
-                "x-parser-schema-id": "<anonymous-schema-453>"
+                "x-parser-schema-id": "<anonymous-schema-457>"
               },
               "comment": {
                 "type": "string",
                 "description": "Комментарий покупателя",
-                "x-parser-schema-id": "<anonymous-schema-454>"
+                "x-parser-schema-id": "<anonymous-schema-458>"
               },
               "items": {
                 "type": "array",
@@ -6098,39 +6150,39 @@ UUIDv4 сайта для корреляции.</p>
                       "format": "uuid",
                       "description": "UUID строка",
                       "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                      "x-parser-schema-id": "<anonymous-schema-457>"
+                      "x-parser-schema-id": "<anonymous-schema-461>"
                     },
                     "quantity": {
                       "type": "number",
                       "minimum": 1,
                       "description": "Количество",
-                      "x-parser-schema-id": "<anonymous-schema-458>"
+                      "x-parser-schema-id": "<anonymous-schema-462>"
                     },
                     "base_price": {
                       "type": "number",
                       "minimum": 0,
                       "description": "Базовая цена за единицу (до скидки, v7)",
-                      "x-parser-schema-id": "<anonymous-schema-459>"
+                      "x-parser-schema-id": "<anonymous-schema-463>"
                     },
                     "discount_percent": {
                       "type": "number",
                       "maximum": 100,
                       "description": "Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1)",
-                      "x-parser-schema-id": "<anonymous-schema-460>"
+                      "x-parser-schema-id": "<anonymous-schema-464>"
                     },
                     "final_price": {
                       "type": "number",
                       "minimum": 0,
                       "description": "Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price",
-                      "x-parser-schema-id": "<anonymous-schema-461>"
+                      "x-parser-schema-id": "<anonymous-schema-465>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-456>"
+                  "x-parser-schema-id": "<anonymous-schema-460>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-455>"
+                "x-parser-schema-id": "<anonymous-schema-459>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-416>"
+            "x-parser-schema-id": "<anonymous-schema-420>"
           },
           "x-parser-unique-object-id": "orderCreatedFromSite"
         }
@@ -6163,10 +6215,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-463>"
+                "x-parser-schema-id": "<anonymous-schema-467>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-462>"
+            "x-parser-schema-id": "<anonymous-schema-466>"
           },
           "contentType": "application/json",
           "name": "return.created",
@@ -6189,32 +6241,32 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "return.created",
-                "x-parser-schema-id": "<anonymous-schema-465>"
+                "x-parser-schema-id": "<anonymous-schema-469>"
               },
               "message_id": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-466>"
+                "x-parser-schema-id": "<anonymous-schema-470>"
               },
               "uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-467>"
+                "x-parser-schema-id": "<anonymous-schema-471>"
               },
               "partner_uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-468>"
+                "x-parser-schema-id": "<anonymous-schema-472>"
               },
               "timestamp": {
                 "type": "string",
                 "format": "date-time",
                 "description": "Дата и время в формате ISO 8601",
                 "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.timestamp.examples",
-                "x-parser-schema-id": "<anonymous-schema-469>"
+                "x-parser-schema-id": "<anonymous-schema-473>"
               },
               "comment": {
                 "type": [
@@ -6222,7 +6274,7 @@ UUIDv4 сайта для корреляции.</p>
                   "null"
                 ],
                 "description": "Комментарий к возврату",
-                "x-parser-schema-id": "<anonymous-schema-470>"
+                "x-parser-schema-id": "<anonymous-schema-474>"
               },
               "items": {
                 "type": "array",
@@ -6243,58 +6295,58 @@ UUIDv4 сайта для корреляции.</p>
                       "format": "uuid",
                       "description": "UUID строка",
                       "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                      "x-parser-schema-id": "<anonymous-schema-473>"
+                      "x-parser-schema-id": "<anonymous-schema-477>"
                     },
                     "shipment_uuid": {
                       "type": "string",
                       "format": "uuid",
                       "description": "UUID строка",
                       "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                      "x-parser-schema-id": "<anonymous-schema-474>"
+                      "x-parser-schema-id": "<anonymous-schema-478>"
                     },
                     "shipment_number": {
                       "type": "string",
                       "minLength": 1,
                       "description": "Человекочитаемый номер реализации (shipments.number)",
-                      "x-parser-schema-id": "<anonymous-schema-475>"
+                      "x-parser-schema-id": "<anonymous-schema-479>"
                     },
                     "quantity": {
                       "type": "number",
                       "minimum": 1,
-                      "x-parser-schema-id": "<anonymous-schema-476>"
+                      "x-parser-schema-id": "<anonymous-schema-480>"
                     },
                     "price": {
                       "type": "number",
                       "minimum": 0,
                       "description": "Цена одной единицы из ShipmentItem.price на момент создания возврата (snapshot)",
-                      "x-parser-schema-id": "<anonymous-schema-477>"
+                      "x-parser-schema-id": "<anonymous-schema-481>"
                     },
                     "currency_code": {
                       "type": "string",
                       "minLength": 3,
                       "description": "Валюта реализации, из которой возвращается позиция (shipments.currency_code)",
-                      "x-parser-schema-id": "<anonymous-schema-478>"
+                      "x-parser-schema-id": "<anonymous-schema-482>"
                     },
                     "subtotal": {
                       "type": "number",
                       "minimum": 0,
                       "description": "Сумма позиции возврата — price × quantity, округлённая до 2 знаков",
-                      "x-parser-schema-id": "<anonymous-schema-479>"
+                      "x-parser-schema-id": "<anonymous-schema-483>"
                     },
                     "reason": {
                       "type": [
                         "string",
                         "null"
                       ],
-                      "x-parser-schema-id": "<anonymous-schema-480>"
+                      "x-parser-schema-id": "<anonymous-schema-484>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-472>"
+                  "x-parser-schema-id": "<anonymous-schema-476>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-471>"
+                "x-parser-schema-id": "<anonymous-schema-475>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-464>"
+            "x-parser-schema-id": "<anonymous-schema-468>"
           },
           "x-parser-unique-object-id": "returnCreatedFromSite"
         }
@@ -6327,10 +6379,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-482>"
+                "x-parser-schema-id": "<anonymous-schema-486>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-481>"
+            "x-parser-schema-id": "<anonymous-schema-485>"
           },
           "contentType": "application/json",
           "name": "partner.created",
@@ -6353,7 +6405,7 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "partner.created",
-                "x-parser-schema-id": "<anonymous-schema-484>"
+                "x-parser-schema-id": "<anonymous-schema-488>"
               },
               "message_id": {
                 "type": "string",
@@ -6361,31 +6413,31 @@ UUIDv4 сайта для корреляции.</p>
                 "examples": [
                   "msg-partner-created-550e8400"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-485>"
+                "x-parser-schema-id": "<anonymous-schema-489>"
               },
               "timestamp": {
                 "type": "string",
                 "format": "date-time",
                 "description": "Дата и время в формате ISO 8601",
                 "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.timestamp.examples",
-                "x-parser-schema-id": "<anonymous-schema-486>"
+                "x-parser-schema-id": "<anonymous-schema-490>"
               },
               "uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-487>"
+                "x-parser-schema-id": "<anonymous-schema-491>"
               },
               "login": {
                 "type": "string",
                 "description": "Логин (= email)",
-                "x-parser-schema-id": "<anonymous-schema-488>"
+                "x-parser-schema-id": "<anonymous-schema-492>"
               },
               "name": {
                 "type": "string",
                 "description": "ФИО",
-                "x-parser-schema-id": "<anonymous-schema-489>"
+                "x-parser-schema-id": "<anonymous-schema-493>"
               },
               "phone": {
                 "type": [
@@ -6393,13 +6445,13 @@ UUIDv4 сайта для корреляции.</p>
                   "null"
                 ],
                 "description": "Телефон",
-                "x-parser-schema-id": "<anonymous-schema-490>"
+                "x-parser-schema-id": "<anonymous-schema-494>"
               },
               "email": {
                 "type": "string",
                 "format": "email",
                 "description": "Email",
-                "x-parser-schema-id": "<anonymous-schema-491>"
+                "x-parser-schema-id": "<anonymous-schema-495>"
               },
               "is_active": {
                 "type": "boolean",
@@ -6407,7 +6459,7 @@ UUIDv4 сайта для корреляции.</p>
                 "examples": [
                   false
                 ],
-                "x-parser-schema-id": "<anonymous-schema-492>"
+                "x-parser-schema-id": "<anonymous-schema-496>"
               },
               "comment": {
                 "type": [
@@ -6418,10 +6470,10 @@ UUIDv4 сайта для корреляции.</p>
                 "examples": [
                   "https://example.com/preview/user/abc123def456"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-493>"
+                "x-parser-schema-id": "<anonymous-schema-497>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-483>"
+            "x-parser-schema-id": "<anonymous-schema-487>"
           },
           "x-parser-unique-object-id": "partnerCreatedFromSite"
         }
@@ -6454,10 +6506,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-495>"
+                "x-parser-schema-id": "<anonymous-schema-499>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-494>"
+            "x-parser-schema-id": "<anonymous-schema-498>"
           },
           "contentType": "application/json",
           "name": "contractor.created",
@@ -6481,71 +6533,71 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "contractor.created",
-                "x-parser-schema-id": "<anonymous-schema-497>"
+                "x-parser-schema-id": "<anonymous-schema-501>"
               },
               "message_id": {
                 "type": "string",
                 "examples": [
                   "msg-contractor-site-c1a2b3c4"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-498>"
+                "x-parser-schema-id": "<anonymous-schema-502>"
               },
               "timestamp": {
                 "type": "string",
                 "format": "date-time",
                 "description": "Дата и время в формате ISO 8601",
                 "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.timestamp.examples",
-                "x-parser-schema-id": "<anonymous-schema-499>"
+                "x-parser-schema-id": "<anonymous-schema-503>"
               },
               "uuid": {
                 "type": "string",
                 "minLength": 1,
                 "description": "Локальный UUID сайта для корреляции. 1С генерирует свой UUID независимо.",
-                "x-parser-schema-id": "<anonymous-schema-500>"
+                "x-parser-schema-id": "<anonymous-schema-504>"
               },
               "partner_uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-501>"
+                "x-parser-schema-id": "<anonymous-schema-505>"
               },
               "name": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-502>"
+                "x-parser-schema-id": "<anonymous-schema-506>"
               },
               "legal_name": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-503>"
+                "x-parser-schema-id": "<anonymous-schema-507>"
               },
               "tax_id": {
                 "type": "string",
                 "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-                "x-parser-schema-id": "<anonymous-schema-504>"
+                "x-parser-schema-id": "<anonymous-schema-508>"
               },
               "tax_code": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-505>"
+                "x-parser-schema-id": "<anonymous-schema-509>"
               },
               "registration_number": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-506>"
+                "x-parser-schema-id": "<anonymous-schema-510>"
               },
               "okpo_code": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-507>"
+                "x-parser-schema-id": "<anonymous-schema-511>"
               },
               "country": {
                 "type": "string",
@@ -6553,35 +6605,35 @@ UUIDv4 сайта для корреляции.</p>
                 "maxLength": 2,
                 "description": "ISO alpha-2 код страны",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.country.examples",
-                "x-parser-schema-id": "<anonymous-schema-508>"
+                "x-parser-schema-id": "<anonymous-schema-512>"
               },
               "legal_address": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-509>"
+                "x-parser-schema-id": "<anonymous-schema-513>"
               },
               "actual_address": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-510>"
+                "x-parser-schema-id": "<anonymous-schema-514>"
               },
               "phone": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-511>"
+                "x-parser-schema-id": "<anonymous-schema-515>"
               },
               "email": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-512>"
+                "x-parser-schema-id": "<anonymous-schema-516>"
               },
               "bank_accounts": {
                 "type": [
@@ -6595,35 +6647,35 @@ UUIDv4 сайта для корреляции.</p>
                     "bank_name": {
                       "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_name.type",
                       "description": "Наименование банка",
-                      "x-parser-schema-id": "<anonymous-schema-515>"
+                      "x-parser-schema-id": "<anonymous-schema-519>"
                     },
                     "bank_bik": {
                       "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_bik.type",
                       "description": "БИК банка",
-                      "x-parser-schema-id": "<anonymous-schema-516>"
+                      "x-parser-schema-id": "<anonymous-schema-520>"
                     },
                     "correspondent_account": {
                       "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.correspondent_account.type",
                       "description": "Корреспондентский счёт",
-                      "x-parser-schema-id": "<anonymous-schema-517>"
+                      "x-parser-schema-id": "<anonymous-schema-521>"
                     },
                     "account_number": {
                       "type": "string",
                       "description": "Номер счёта",
-                      "x-parser-schema-id": "<anonymous-schema-518>"
+                      "x-parser-schema-id": "<anonymous-schema-522>"
                     },
                     "is_primary": {
                       "type": "boolean",
                       "description": "Основной счёт (первый = true, остальные = false)",
-                      "x-parser-schema-id": "<anonymous-schema-519>"
+                      "x-parser-schema-id": "<anonymous-schema-523>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-514>"
+                  "x-parser-schema-id": "<anonymous-schema-518>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-513>"
+                "x-parser-schema-id": "<anonymous-schema-517>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-496>"
+            "x-parser-schema-id": "<anonymous-schema-500>"
           },
           "x-parser-unique-object-id": "contractorCreatedFromSite"
         },
@@ -6634,10 +6686,10 @@ UUIDv4 сайта для корреляции.</p>
               "contentType": {
                 "type": "string",
                 "const": "application/json",
-                "x-parser-schema-id": "<anonymous-schema-521>"
+                "x-parser-schema-id": "<anonymous-schema-525>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-520>"
+            "x-parser-schema-id": "<anonymous-schema-524>"
           },
           "contentType": "application/json",
           "name": "contractor.updated",
@@ -6661,72 +6713,72 @@ UUIDv4 сайта для корреляции.</p>
               "event": {
                 "type": "string",
                 "const": "contractor.updated",
-                "x-parser-schema-id": "<anonymous-schema-523>"
+                "x-parser-schema-id": "<anonymous-schema-527>"
               },
               "message_id": {
                 "type": "string",
                 "examples": [
                   "msg-contractor-upd-c1a2b3c4"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-524>"
+                "x-parser-schema-id": "<anonymous-schema-528>"
               },
               "timestamp": {
                 "type": "string",
                 "format": "date-time",
                 "description": "Дата и время в формате ISO 8601",
                 "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.timestamp.examples",
-                "x-parser-schema-id": "<anonymous-schema-525>"
+                "x-parser-schema-id": "<anonymous-schema-529>"
               },
               "uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-526>"
+                "x-parser-schema-id": "<anonymous-schema-530>"
               },
               "partner_uuid": {
                 "type": "string",
                 "format": "uuid",
                 "description": "UUID строка",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.uuid.examples",
-                "x-parser-schema-id": "<anonymous-schema-527>"
+                "x-parser-schema-id": "<anonymous-schema-531>"
               },
               "name": {
                 "type": "string",
-                "x-parser-schema-id": "<anonymous-schema-528>"
+                "x-parser-schema-id": "<anonymous-schema-532>"
               },
               "legal_name": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-529>"
+                "x-parser-schema-id": "<anonymous-schema-533>"
               },
               "tax_id": {
                 "type": "string",
                 "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-                "x-parser-schema-id": "<anonymous-schema-530>"
+                "x-parser-schema-id": "<anonymous-schema-534>"
               },
               "tax_code": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-531>"
+                "x-parser-schema-id": "<anonymous-schema-535>"
               },
               "registration_number": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-532>"
+                "x-parser-schema-id": "<anonymous-schema-536>"
               },
               "okpo_code": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-533>"
+                "x-parser-schema-id": "<anonymous-schema-537>"
               },
               "country": {
                 "type": "string",
@@ -6734,35 +6786,35 @@ UUIDv4 сайта для корреляции.</p>
                 "maxLength": 2,
                 "description": "ISO alpha-2 код страны",
                 "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.country.examples",
-                "x-parser-schema-id": "<anonymous-schema-534>"
+                "x-parser-schema-id": "<anonymous-schema-538>"
               },
               "legal_address": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-535>"
+                "x-parser-schema-id": "<anonymous-schema-539>"
               },
               "actual_address": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-536>"
+                "x-parser-schema-id": "<anonymous-schema-540>"
               },
               "phone": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-537>"
+                "x-parser-schema-id": "<anonymous-schema-541>"
               },
               "email": {
                 "type": [
                   "string",
                   "null"
                 ],
-                "x-parser-schema-id": "<anonymous-schema-538>"
+                "x-parser-schema-id": "<anonymous-schema-542>"
               },
               "bank_accounts": {
                 "type": [
@@ -6777,35 +6829,35 @@ UUIDv4 сайта для корреляции.</p>
                     "bank_name": {
                       "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_name.type",
                       "description": "Наименование банка",
-                      "x-parser-schema-id": "<anonymous-schema-541>"
+                      "x-parser-schema-id": "<anonymous-schema-545>"
                     },
                     "bank_bik": {
                       "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_bik.type",
                       "description": "БИК банка",
-                      "x-parser-schema-id": "<anonymous-schema-542>"
+                      "x-parser-schema-id": "<anonymous-schema-546>"
                     },
                     "correspondent_account": {
                       "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.correspondent_account.type",
                       "description": "Корреспондентский счёт",
-                      "x-parser-schema-id": "<anonymous-schema-543>"
+                      "x-parser-schema-id": "<anonymous-schema-547>"
                     },
                     "account_number": {
                       "type": "string",
                       "description": "Номер счёта",
-                      "x-parser-schema-id": "<anonymous-schema-544>"
+                      "x-parser-schema-id": "<anonymous-schema-548>"
                     },
                     "is_primary": {
                       "type": "boolean",
                       "description": "Основной счёт (первый = true, остальные = false)",
-                      "x-parser-schema-id": "<anonymous-schema-545>"
+                      "x-parser-schema-id": "<anonymous-schema-549>"
                     }
                   },
-                  "x-parser-schema-id": "<anonymous-schema-540>"
+                  "x-parser-schema-id": "<anonymous-schema-544>"
                 },
-                "x-parser-schema-id": "<anonymous-schema-539>"
+                "x-parser-schema-id": "<anonymous-schema-543>"
               }
             },
-            "x-parser-schema-id": "<anonymous-schema-522>"
+            "x-parser-schema-id": "<anonymous-schema-526>"
           },
           "x-parser-unique-object-id": "contractorUpdatedFromSite"
         }
@@ -7645,19 +7697,19 @@ UUIDv4 сайта для корреляции.</p>
             "type": "string",
             "const": "partner.deleted",
             "description": "Тип события",
-            "x-parser-schema-id": "<anonymous-schema-546>"
+            "x-parser-schema-id": "<anonymous-schema-550>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения для идемпотентности",
-            "x-parser-schema-id": "<anonymous-schema-547>"
+            "x-parser-schema-id": "<anonymous-schema-551>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "email": {
             "type": "string",
             "format": "email",
             "description": "Email партнёра — обязателен если uuid не передан",
-            "x-parser-schema-id": "<anonymous-schema-548>"
+            "x-parser-schema-id": "<anonymous-schema-552>"
           }
         },
         "examples": "$ref:$.channels.erpInPartners.messages.partnerDeleted.payload.examples",
@@ -7671,12 +7723,12 @@ UUIDv4 сайта для корреляции.</p>
             "type": "string",
             "const": "order.deleted",
             "description": "Тип события",
-            "x-parser-schema-id": "<anonymous-schema-549>"
+            "x-parser-schema-id": "<anonymous-schema-553>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения для идемпотентности",
-            "x-parser-schema-id": "<anonymous-schema-550>"
+            "x-parser-schema-id": "<anonymous-schema-554>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]"
         },
@@ -7691,12 +7743,12 @@ UUIDv4 сайта для корреляции.</p>
             "type": "string",
             "const": "return.deleted",
             "description": "Тип события",
-            "x-parser-schema-id": "<anonymous-schema-551>"
+            "x-parser-schema-id": "<anonymous-schema-555>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения для идемпотентности",
-            "x-parser-schema-id": "<anonymous-schema-552>"
+            "x-parser-schema-id": "<anonymous-schema-556>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]"
         },
@@ -7711,12 +7763,12 @@ UUIDv4 сайта для корреляции.</p>
             "type": "string",
             "const": "shipment.deleted",
             "description": "Тип события",
-            "x-parser-schema-id": "<anonymous-schema-553>"
+            "x-parser-schema-id": "<anonymous-schema-557>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения для идемпотентности",
-            "x-parser-schema-id": "<anonymous-schema-554>"
+            "x-parser-schema-id": "<anonymous-schema-558>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]"
         },
@@ -7730,58 +7782,58 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "partner.updated",
-            "x-parser-schema-id": "<anonymous-schema-555>"
+            "x-parser-schema-id": "<anonymous-schema-559>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-556>"
+            "x-parser-schema-id": "<anonymous-schema-560>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "login": {
             "type": "string",
             "description": "Логин (= email), используется для сопоставления по email",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.login.examples",
-            "x-parser-schema-id": "<anonymous-schema-557>"
+            "x-parser-schema-id": "<anonymous-schema-561>"
           },
           "name": {
             "type": "string",
             "description": "ФИО или название организации (НаименованиеПолное)",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.name.examples",
-            "x-parser-schema-id": "<anonymous-schema-558>"
+            "x-parser-schema-id": "<anonymous-schema-562>"
           },
           "phone": {
             "type": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.phone.type",
             "description": "Телефон",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.phone.examples",
-            "x-parser-schema-id": "<anonymous-schema-559>"
+            "x-parser-schema-id": "<anonymous-schema-563>"
           },
           "email": {
             "type": "string",
             "format": "email",
             "description": "Email",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.email.examples",
-            "x-parser-schema-id": "<anonymous-schema-560>"
+            "x-parser-schema-id": "<anonymous-schema-564>"
           },
           "city": {
             "type": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.city.type",
             "description": "Город из фактического адреса",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.city.examples",
-            "x-parser-schema-id": "<anonymous-schema-561>"
+            "x-parser-schema-id": "<anonymous-schema-565>"
           },
           "country": "$ref:$.components.schemas.CountryCode",
           "is_active": {
             "type": "boolean",
             "description": "Активность партнёра: true — активен, false — заблокирован",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.is_active.examples",
-            "x-parser-schema-id": "<anonymous-schema-562>"
+            "x-parser-schema-id": "<anonymous-schema-566>"
           },
           "client_status": {
             "type": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.client_status.type",
             "description": "Код статуса клиента (уровень лояльности).\nПроизвольная строка — соответствует external_id записи ClientStatus на сайте.\nПримеры: \"silver\", \"gold\", \"diamond\", \"individual\".\n",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerUpdatedFromErp.payload.properties.client_status.examples",
-            "x-parser-schema-id": "<anonymous-schema-563>"
+            "x-parser-schema-id": "<anonymous-schema-567>"
           }
         },
         "x-parser-schema-id": "PartnerUpdatedFromErpPayload"
@@ -7793,39 +7845,39 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "partner.created",
-            "x-parser-schema-id": "<anonymous-schema-564>"
+            "x-parser-schema-id": "<anonymous-schema-568>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-565>"
+            "x-parser-schema-id": "<anonymous-schema-569>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "login": {
             "type": "string",
             "description": "Логин (= email)",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.login.examples",
-            "x-parser-schema-id": "<anonymous-schema-566>"
+            "x-parser-schema-id": "<anonymous-schema-570>"
           },
           "name": {
             "type": "string",
             "description": "ФИО или название организации (НаименованиеПолное)",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.name.examples",
-            "x-parser-schema-id": "<anonymous-schema-567>"
+            "x-parser-schema-id": "<anonymous-schema-571>"
           },
           "phone": {
             "type": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.phone.type",
             "description": "Телефон",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.phone.examples",
-            "x-parser-schema-id": "<anonymous-schema-568>"
+            "x-parser-schema-id": "<anonymous-schema-572>"
           },
           "email": {
             "type": "string",
             "format": "email",
             "description": "Email",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.email.examples",
-            "x-parser-schema-id": "<anonymous-schema-569>"
+            "x-parser-schema-id": "<anonymous-schema-573>"
           },
           "password": {
             "type": "string",
@@ -7833,26 +7885,26 @@ UUIDv4 сайта для корреляции.</p>
             "maxLength": 32,
             "description": "Пароль пользователя (строка, до 32 символов). Типовое значение — десятичное представление CRC32 от email партнёра",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.password.examples",
-            "x-parser-schema-id": "<anonymous-schema-570>"
+            "x-parser-schema-id": "<anonymous-schema-574>"
           },
           "city": {
             "type": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.city.type",
             "description": "Город из фактического адреса",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.city.examples",
-            "x-parser-schema-id": "<anonymous-schema-571>"
+            "x-parser-schema-id": "<anonymous-schema-575>"
           },
           "country": "$ref:$.components.schemas.CountryCode",
           "is_active": {
             "type": "boolean",
             "description": "Активность партнёра: true — активен, false — закрылся (v10)",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.is_active.examples",
-            "x-parser-schema-id": "<anonymous-schema-572>"
+            "x-parser-schema-id": "<anonymous-schema-576>"
           },
           "client_status": {
             "type": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.client_status.type",
             "description": "Код статуса клиента (уровень лояльности, v11).\nПроизвольная строка — соответствует external_id записи ClientStatus на сайте.\nПримеры: \"silver\", \"gold\", \"diamond\", \"individual\".\n",
             "examples": "$ref:$.channels.erpInPartners.messages.partnerCreatedFromErp.payload.properties.client_status.examples",
-            "x-parser-schema-id": "<anonymous-schema-573>"
+            "x-parser-schema-id": "<anonymous-schema-577>"
           }
         },
         "x-parser-schema-id": "PartnerCreatedFromErpPayload"
@@ -7864,48 +7916,48 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "partner.created",
-            "x-parser-schema-id": "<anonymous-schema-574>"
+            "x-parser-schema-id": "<anonymous-schema-578>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения",
             "examples": "$ref:$.channels.erpOutPartners.messages.partnerCreatedFromSite.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-575>"
+            "x-parser-schema-id": "<anonymous-schema-579>"
           },
           "timestamp": "$ref:$.components.schemas.ISO8601DateTime",
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "login": {
             "type": "string",
             "description": "Логин (= email)",
-            "x-parser-schema-id": "<anonymous-schema-576>"
+            "x-parser-schema-id": "<anonymous-schema-580>"
           },
           "name": {
             "type": "string",
             "description": "ФИО",
-            "x-parser-schema-id": "<anonymous-schema-577>"
+            "x-parser-schema-id": "<anonymous-schema-581>"
           },
           "phone": {
             "type": "$ref:$.channels.erpOutPartners.messages.partnerCreatedFromSite.payload.properties.phone.type",
             "description": "Телефон",
-            "x-parser-schema-id": "<anonymous-schema-578>"
+            "x-parser-schema-id": "<anonymous-schema-582>"
           },
           "email": {
             "type": "string",
             "format": "email",
             "description": "Email",
-            "x-parser-schema-id": "<anonymous-schema-579>"
+            "x-parser-schema-id": "<anonymous-schema-583>"
           },
           "is_active": {
             "type": "boolean",
             "description": "Активность пользователя. При регистрации всегда `false` —\nпользователь находится в статусе PROCESSING до проверки менеджером.\n",
             "examples": "$ref:$.channels.erpOutPartners.messages.partnerCreatedFromSite.payload.properties.is_active.examples",
-            "x-parser-schema-id": "<anonymous-schema-580>"
+            "x-parser-schema-id": "<anonymous-schema-584>"
           },
           "comment": {
             "type": "$ref:$.channels.erpOutPartners.messages.partnerCreatedFromSite.payload.properties.comment.type",
             "description": "Секретная ссылка на превью-страницу пользователя для менеджеров.\nСодержит уникальный токен (`view_token`), доступ — только по ссылке.\n",
             "examples": "$ref:$.channels.erpOutPartners.messages.partnerCreatedFromSite.payload.properties.comment.examples",
-            "x-parser-schema-id": "<anonymous-schema-581>"
+            "x-parser-schema-id": "<anonymous-schema-585>"
           }
         },
         "x-parser-schema-id": "PartnerCreatedFromSitePayload"
@@ -7917,12 +7969,12 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "price.updated",
-            "x-parser-schema-id": "<anonymous-schema-582>"
+            "x-parser-schema-id": "<anonymous-schema-586>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInPrices.messages.priceUpdated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-583>"
+            "x-parser-schema-id": "<anonymous-schema-587>"
           },
           "product_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "price": {
@@ -7930,7 +7982,7 @@ UUIDv4 сайта для корреляции.</p>
             "minimum": 0,
             "description": "Базовая цена",
             "examples": "$ref:$.channels.erpInPrices.messages.priceUpdated.payload.properties.price.examples",
-            "x-parser-schema-id": "<anonymous-schema-584>"
+            "x-parser-schema-id": "<anonymous-schema-588>"
           }
         },
         "x-parser-schema-id": "PriceUpdatedPayload"
@@ -7942,37 +7994,37 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "exchange_rate.updated",
-            "x-parser-schema-id": "<anonymous-schema-585>"
+            "x-parser-schema-id": "<anonymous-schema-589>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInPrices.messages.exchangeRateUpdated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-586>"
+            "x-parser-schema-id": "<anonymous-schema-590>"
           },
           "currency_code": "$ref:$.components.schemas.CurrencyCode",
           "official_rate": {
             "type": "number",
             "description": "Курс нацбанка (с учётом кратности)",
             "examples": "$ref:$.channels.erpInPrices.messages.exchangeRateUpdated.payload.properties.official_rate.examples",
-            "x-parser-schema-id": "<anonymous-schema-587>"
+            "x-parser-schema-id": "<anonymous-schema-591>"
           },
           "rate_coefficient": {
             "type": "number",
             "description": "Поправочный коэффициент из настроек",
             "examples": "$ref:$.channels.erpInPrices.messages.exchangeRateUpdated.payload.properties.rate_coefficient.examples",
-            "x-parser-schema-id": "<anonymous-schema-588>"
+            "x-parser-schema-id": "<anonymous-schema-592>"
           },
           "rate": {
             "type": "number",
             "description": "Итоговый курс = official_rate × rate_coefficient",
             "examples": "$ref:$.channels.erpInPrices.messages.exchangeRateUpdated.payload.properties.rate.examples",
-            "x-parser-schema-id": "<anonymous-schema-589>"
+            "x-parser-schema-id": "<anonymous-schema-593>"
           },
           "base_currency_code": {
             "type": "string",
             "const": "RUB",
             "description": "Базовая валюта, всегда \"RUB\"",
-            "x-parser-schema-id": "<anonymous-schema-590>"
+            "x-parser-schema-id": "<anonymous-schema-594>"
           },
           "date": "$ref:$.components.schemas.ISO8601Date"
         },
@@ -7985,12 +8037,12 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "stock.updated",
-            "x-parser-schema-id": "<anonymous-schema-591>"
+            "x-parser-schema-id": "<anonymous-schema-595>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInStock.messages.stockUpdated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-592>"
+            "x-parser-schema-id": "<anonymous-schema-596>"
           },
           "product_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "warehouse_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
@@ -7999,7 +8051,7 @@ UUIDv4 сайта для корреляции.</p>
             "minimum": 0,
             "description": "Свободный остаток (≥ 0). quantity = ВНаличии − КОтгрузке",
             "examples": "$ref:$.channels.erpInStock.messages.stockUpdated.payload.properties.quantity.examples",
-            "x-parser-schema-id": "<anonymous-schema-593>"
+            "x-parser-schema-id": "<anonymous-schema-597>"
           }
         },
         "x-parser-schema-id": "StockUpdatedPayload"
@@ -8011,27 +8063,27 @@ UUIDv4 сайта для корреляции.</p>
           "bank_name": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_name.type",
             "description": "Наименование банка",
-            "x-parser-schema-id": "<anonymous-schema-594>"
+            "x-parser-schema-id": "<anonymous-schema-598>"
           },
           "bank_bik": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.bank_bik.type",
             "description": "БИК банка",
-            "x-parser-schema-id": "<anonymous-schema-595>"
+            "x-parser-schema-id": "<anonymous-schema-599>"
           },
           "correspondent_account": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.items.properties.correspondent_account.type",
             "description": "Корреспондентский счёт",
-            "x-parser-schema-id": "<anonymous-schema-596>"
+            "x-parser-schema-id": "<anonymous-schema-600>"
           },
           "account_number": {
             "type": "string",
             "description": "Номер счёта",
-            "x-parser-schema-id": "<anonymous-schema-597>"
+            "x-parser-schema-id": "<anonymous-schema-601>"
           },
           "is_primary": {
             "type": "boolean",
             "description": "Основной счёт (первый = true, остальные = false)",
-            "x-parser-schema-id": "<anonymous-schema-598>"
+            "x-parser-schema-id": "<anonymous-schema-602>"
           }
         },
         "x-parser-schema-id": "BankAccount"
@@ -8043,12 +8095,12 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "contractor.created",
-            "x-parser-schema-id": "<anonymous-schema-599>"
+            "x-parser-schema-id": "<anonymous-schema-603>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-600>"
+            "x-parser-schema-id": "<anonymous-schema-604>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
@@ -8056,60 +8108,60 @@ UUIDv4 сайта для корреляции.</p>
             "type": "string",
             "description": "Краткое наименование",
             "examples": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.name.examples",
-            "x-parser-schema-id": "<anonymous-schema-601>"
+            "x-parser-schema-id": "<anonymous-schema-605>"
           },
           "legal_name": {
             "type": "string",
             "description": "Полное юридическое наименование",
-            "x-parser-schema-id": "<anonymous-schema-602>"
+            "x-parser-schema-id": "<anonymous-schema-606>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
             "examples": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.tax_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-603>"
+            "x-parser-schema-id": "<anonymous-schema-607>"
           },
           "tax_code": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.tax_code.type",
             "description": "КПП",
-            "x-parser-schema-id": "<anonymous-schema-604>"
+            "x-parser-schema-id": "<anonymous-schema-608>"
           },
           "registration_number": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.registration_number.type",
             "description": "Регистрационный номер (ОГРН, БИН)",
-            "x-parser-schema-id": "<anonymous-schema-605>"
+            "x-parser-schema-id": "<anonymous-schema-609>"
           },
           "okpo_code": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.okpo_code.type",
             "description": "Код ОКПО",
-            "x-parser-schema-id": "<anonymous-schema-606>"
+            "x-parser-schema-id": "<anonymous-schema-610>"
           },
           "country": "$ref:$.components.schemas.CountryCode",
           "legal_address": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.legal_address.type",
             "description": "Юридический адрес",
-            "x-parser-schema-id": "<anonymous-schema-607>"
+            "x-parser-schema-id": "<anonymous-schema-611>"
           },
           "actual_address": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.actual_address.type",
             "description": "Фактический адрес",
-            "x-parser-schema-id": "<anonymous-schema-608>"
+            "x-parser-schema-id": "<anonymous-schema-612>"
           },
           "phone": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.phone.type",
             "description": "Телефон",
-            "x-parser-schema-id": "<anonymous-schema-609>"
+            "x-parser-schema-id": "<anonymous-schema-613>"
           },
           "email": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.email.type",
             "description": "Email",
-            "x-parser-schema-id": "<anonymous-schema-610>"
+            "x-parser-schema-id": "<anonymous-schema-614>"
           },
           "bank_accounts": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorCreated.payload.properties.bank_accounts.type",
             "description": "Массив банковских счетов",
             "items": "$ref:$.components.schemas.BankAccount",
-            "x-parser-schema-id": "<anonymous-schema-611>"
+            "x-parser-schema-id": "<anonymous-schema-615>"
           }
         },
         "x-parser-schema-id": "ContractorCreatedPayload"
@@ -8122,62 +8174,62 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "contractor.updated",
-            "x-parser-schema-id": "<anonymous-schema-612>"
+            "x-parser-schema-id": "<anonymous-schema-616>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-613>"
+            "x-parser-schema-id": "<anonymous-schema-617>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "name": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-614>"
+            "x-parser-schema-id": "<anonymous-schema-618>"
           },
           "legal_name": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.legal_name.type",
-            "x-parser-schema-id": "<anonymous-schema-615>"
+            "x-parser-schema-id": "<anonymous-schema-619>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-            "x-parser-schema-id": "<anonymous-schema-616>"
+            "x-parser-schema-id": "<anonymous-schema-620>"
           },
           "tax_code": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.tax_code.type",
-            "x-parser-schema-id": "<anonymous-schema-617>"
+            "x-parser-schema-id": "<anonymous-schema-621>"
           },
           "registration_number": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.registration_number.type",
-            "x-parser-schema-id": "<anonymous-schema-618>"
+            "x-parser-schema-id": "<anonymous-schema-622>"
           },
           "okpo_code": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.okpo_code.type",
-            "x-parser-schema-id": "<anonymous-schema-619>"
+            "x-parser-schema-id": "<anonymous-schema-623>"
           },
           "country": "$ref:$.components.schemas.CountryCode",
           "legal_address": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.legal_address.type",
-            "x-parser-schema-id": "<anonymous-schema-620>"
+            "x-parser-schema-id": "<anonymous-schema-624>"
           },
           "actual_address": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.actual_address.type",
-            "x-parser-schema-id": "<anonymous-schema-621>"
+            "x-parser-schema-id": "<anonymous-schema-625>"
           },
           "phone": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.phone.type",
-            "x-parser-schema-id": "<anonymous-schema-622>"
+            "x-parser-schema-id": "<anonymous-schema-626>"
           },
           "email": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.email.type",
-            "x-parser-schema-id": "<anonymous-schema-623>"
+            "x-parser-schema-id": "<anonymous-schema-627>"
           },
           "bank_accounts": {
             "type": "$ref:$.channels.erpInContractors.messages.contractorUpdated.payload.properties.bank_accounts.type",
             "description": "Массив банковских счетов. Если передан — полностью заменяет существующий. Если null или не передан — банковские счета не трогаются.",
             "items": "$ref:$.components.schemas.BankAccount",
-            "x-parser-schema-id": "<anonymous-schema-624>"
+            "x-parser-schema-id": "<anonymous-schema-628>"
           }
         },
         "x-parser-schema-id": "ContractorUpdatedPayload"
@@ -8190,19 +8242,19 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "contractor.deleted",
-            "x-parser-schema-id": "<anonymous-schema-625>"
+            "x-parser-schema-id": "<anonymous-schema-629>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInContractors.messages.contractorDeleted.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-626>"
+            "x-parser-schema-id": "<anonymous-schema-630>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-            "x-parser-schema-id": "<anonymous-schema-627>"
+            "x-parser-schema-id": "<anonymous-schema-631>"
           }
         },
         "oneOf": "$ref:$.channels.erpInContractors.messages.contractorDeleted.payload.oneOf",
@@ -8216,67 +8268,67 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "contractor.created",
-            "x-parser-schema-id": "<anonymous-schema-628>"
+            "x-parser-schema-id": "<anonymous-schema-632>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-629>"
+            "x-parser-schema-id": "<anonymous-schema-633>"
           },
           "timestamp": "$ref:$.components.schemas.ISO8601DateTime",
           "uuid": {
             "type": "string",
             "minLength": 1,
             "description": "Локальный UUID сайта для корреляции. 1С генерирует свой UUID независимо.",
-            "x-parser-schema-id": "<anonymous-schema-630>"
+            "x-parser-schema-id": "<anonymous-schema-634>"
           },
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "name": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-631>"
+            "x-parser-schema-id": "<anonymous-schema-635>"
           },
           "legal_name": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.legal_name.type",
-            "x-parser-schema-id": "<anonymous-schema-632>"
+            "x-parser-schema-id": "<anonymous-schema-636>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-            "x-parser-schema-id": "<anonymous-schema-633>"
+            "x-parser-schema-id": "<anonymous-schema-637>"
           },
           "tax_code": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.tax_code.type",
-            "x-parser-schema-id": "<anonymous-schema-634>"
+            "x-parser-schema-id": "<anonymous-schema-638>"
           },
           "registration_number": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.registration_number.type",
-            "x-parser-schema-id": "<anonymous-schema-635>"
+            "x-parser-schema-id": "<anonymous-schema-639>"
           },
           "okpo_code": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.okpo_code.type",
-            "x-parser-schema-id": "<anonymous-schema-636>"
+            "x-parser-schema-id": "<anonymous-schema-640>"
           },
           "country": "$ref:$.components.schemas.CountryCode",
           "legal_address": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.legal_address.type",
-            "x-parser-schema-id": "<anonymous-schema-637>"
+            "x-parser-schema-id": "<anonymous-schema-641>"
           },
           "actual_address": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.actual_address.type",
-            "x-parser-schema-id": "<anonymous-schema-638>"
+            "x-parser-schema-id": "<anonymous-schema-642>"
           },
           "phone": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.phone.type",
-            "x-parser-schema-id": "<anonymous-schema-639>"
+            "x-parser-schema-id": "<anonymous-schema-643>"
           },
           "email": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.email.type",
-            "x-parser-schema-id": "<anonymous-schema-640>"
+            "x-parser-schema-id": "<anonymous-schema-644>"
           },
           "bank_accounts": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorCreatedFromSite.payload.properties.bank_accounts.type",
             "items": "$ref:$.components.schemas.BankAccount",
-            "x-parser-schema-id": "<anonymous-schema-641>"
+            "x-parser-schema-id": "<anonymous-schema-645>"
           }
         },
         "x-parser-schema-id": "ContractorCreatedFromSitePayload"
@@ -8289,63 +8341,63 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "contractor.updated",
-            "x-parser-schema-id": "<anonymous-schema-642>"
+            "x-parser-schema-id": "<anonymous-schema-646>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-643>"
+            "x-parser-schema-id": "<anonymous-schema-647>"
           },
           "timestamp": "$ref:$.components.schemas.ISO8601DateTime",
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "name": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-644>"
+            "x-parser-schema-id": "<anonymous-schema-648>"
           },
           "legal_name": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.legal_name.type",
-            "x-parser-schema-id": "<anonymous-schema-645>"
+            "x-parser-schema-id": "<anonymous-schema-649>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-            "x-parser-schema-id": "<anonymous-schema-646>"
+            "x-parser-schema-id": "<anonymous-schema-650>"
           },
           "tax_code": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.tax_code.type",
-            "x-parser-schema-id": "<anonymous-schema-647>"
+            "x-parser-schema-id": "<anonymous-schema-651>"
           },
           "registration_number": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.registration_number.type",
-            "x-parser-schema-id": "<anonymous-schema-648>"
+            "x-parser-schema-id": "<anonymous-schema-652>"
           },
           "okpo_code": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.okpo_code.type",
-            "x-parser-schema-id": "<anonymous-schema-649>"
+            "x-parser-schema-id": "<anonymous-schema-653>"
           },
           "country": "$ref:$.components.schemas.CountryCode",
           "legal_address": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.legal_address.type",
-            "x-parser-schema-id": "<anonymous-schema-650>"
+            "x-parser-schema-id": "<anonymous-schema-654>"
           },
           "actual_address": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.actual_address.type",
-            "x-parser-schema-id": "<anonymous-schema-651>"
+            "x-parser-schema-id": "<anonymous-schema-655>"
           },
           "phone": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.phone.type",
-            "x-parser-schema-id": "<anonymous-schema-652>"
+            "x-parser-schema-id": "<anonymous-schema-656>"
           },
           "email": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.email.type",
-            "x-parser-schema-id": "<anonymous-schema-653>"
+            "x-parser-schema-id": "<anonymous-schema-657>"
           },
           "bank_accounts": {
             "type": "$ref:$.channels.erpOutContractors.messages.contractorUpdatedFromSite.payload.properties.bank_accounts.type",
             "description": "Полный актуальный набор банковских счетов контрагента.",
             "items": "$ref:$.components.schemas.BankAccount",
-            "x-parser-schema-id": "<anonymous-schema-654>"
+            "x-parser-schema-id": "<anonymous-schema-658>"
           }
         },
         "x-parser-schema-id": "ContractorUpdatedFromSitePayload"
@@ -8359,25 +8411,25 @@ UUIDv4 сайта для корреляции.</p>
             "type": "number",
             "minimum": 1,
             "description": "Количество",
-            "x-parser-schema-id": "<anonymous-schema-655>"
+            "x-parser-schema-id": "<anonymous-schema-659>"
           },
           "base_price": {
             "type": "number",
             "minimum": 0,
             "description": "Базовая цена за единицу (до скидки, v7)",
-            "x-parser-schema-id": "<anonymous-schema-656>"
+            "x-parser-schema-id": "<anonymous-schema-660>"
           },
           "discount_percent": {
             "type": "number",
             "maximum": 100,
             "description": "Процент корректировки цены: положительное значение означает скидку, отрицательное — наценку без ограничений, 0 — без корректировки (v12.7.1)",
-            "x-parser-schema-id": "<anonymous-schema-657>"
+            "x-parser-schema-id": "<anonymous-schema-661>"
           },
           "final_price": {
             "type": "number",
             "minimum": 0,
             "description": "Конечная цена за единицу после корректировки (v12.7.1). final_price = base_price × (1 - discount_percent / 100); при отрицательном discount_percent итоговая цена может быть выше base_price",
-            "x-parser-schema-id": "<anonymous-schema-658>"
+            "x-parser-schema-id": "<anonymous-schema-662>"
           }
         },
         "x-parser-schema-id": "OrderItem"
@@ -8390,54 +8442,54 @@ UUIDv4 сайта для корреляции.</p>
             "type": "string",
             "format": "uuid",
             "description": "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге, fallback на tax_id+tax_code.",
-            "x-parser-schema-id": "<anonymous-schema-659>"
+            "x-parser-schema-id": "<anonymous-schema-663>"
           },
           "country": "$ref:$.components.schemas.CountryCode",
           "name": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-660>"
+            "x-parser-schema-id": "<anonymous-schema-664>"
           },
           "legal_name": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-661>"
+            "x-parser-schema-id": "<anonymous-schema-665>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
-            "x-parser-schema-id": "<anonymous-schema-662>"
+            "x-parser-schema-id": "<anonymous-schema-666>"
           },
           "registration_number": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.registration_number.type",
-            "x-parser-schema-id": "<anonymous-schema-663>"
+            "x-parser-schema-id": "<anonymous-schema-667>"
           },
           "tax_code": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.tax_code.type",
-            "x-parser-schema-id": "<anonymous-schema-664>"
+            "x-parser-schema-id": "<anonymous-schema-668>"
           },
           "okpo_code": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.okpo_code.type",
-            "x-parser-schema-id": "<anonymous-schema-665>"
+            "x-parser-schema-id": "<anonymous-schema-669>"
           },
           "legal_address": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.legal_address.type",
-            "x-parser-schema-id": "<anonymous-schema-666>"
+            "x-parser-schema-id": "<anonymous-schema-670>"
           },
           "actual_address": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.actual_address.type",
-            "x-parser-schema-id": "<anonymous-schema-667>"
+            "x-parser-schema-id": "<anonymous-schema-671>"
           },
           "phone": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.phone.type",
-            "x-parser-schema-id": "<anonymous-schema-668>"
+            "x-parser-schema-id": "<anonymous-schema-672>"
           },
           "email": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.email.type",
-            "x-parser-schema-id": "<anonymous-schema-669>"
+            "x-parser-schema-id": "<anonymous-schema-673>"
           },
           "bank_accounts": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.contractor.properties.bank_accounts.type",
             "items": "$ref:$.components.schemas.BankAccount",
-            "x-parser-schema-id": "<anonymous-schema-670>"
+            "x-parser-schema-id": "<anonymous-schema-674>"
           }
         },
         "x-parser-schema-id": "OrderContractor"
@@ -8449,19 +8501,19 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "order.created",
-            "x-parser-schema-id": "<anonymous-schema-671>"
+            "x-parser-schema-id": "<anonymous-schema-675>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-672>"
+            "x-parser-schema-id": "<anonymous-schema-676>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "number": {
             "type": "string",
             "description": "Номер заказа",
             "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.number.examples",
-            "x-parser-schema-id": "<anonymous-schema-673>"
+            "x-parser-schema-id": "<anonymous-schema-677>"
           },
           "date": "$ref:$.components.schemas.ISO8601DateTime",
           "status": {
@@ -8469,60 +8521,60 @@ UUIDv4 сайта для корреляции.</p>
             "description": "Статус заказа",
             "enum": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.status.enum",
             "examples": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.status.examples",
-            "x-parser-schema-id": "<anonymous-schema-674>"
+            "x-parser-schema-id": "<anonymous-schema-678>"
           },
           "type": {
             "type": "string",
             "description": "Тип заказа. Отправляется сайтом → 1С.\n1С НЕ передаёт это поле — сайт определяет тип самостоятельно.\nПри получении из 1С, если поле отсутствует, используется значение по умолчанию \"order\".\n",
-            "x-parser-schema-id": "<anonymous-schema-675>"
+            "x-parser-schema-id": "<anonymous-schema-679>"
           },
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "warehouse_uuids": {
             "type": "array",
             "description": "UUID складов (1С выбирает первый найденный)",
             "items": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
-            "x-parser-schema-id": "<anonymous-schema-676>"
+            "x-parser-schema-id": "<anonymous-schema-680>"
           },
           "timestamp": "$ref:$.components.schemas.ISO8601DateTime",
           "erp_created_at": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.erp_created_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-677>"
+            "x-parser-schema-id": "<anonymous-schema-681>"
           },
           "erp_updated_at": {
             "type": "$ref:$.channels.erpInOrders.messages.orderCreatedFromErp.payload.properties.erp_updated_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-678>"
+            "x-parser-schema-id": "<anonymous-schema-682>"
           },
           "contractor": "$ref:$.components.schemas.OrderContractor",
           "delivery_address": {
             "type": "string",
             "description": "Адрес доставки",
-            "x-parser-schema-id": "<anonymous-schema-679>"
+            "x-parser-schema-id": "<anonymous-schema-683>"
           },
           "currency_code": "$ref:$.components.schemas.CurrencyCode",
           "exchange_rate": {
             "type": "number",
             "description": "Курс конвертации",
-            "x-parser-schema-id": "<anonymous-schema-680>"
+            "x-parser-schema-id": "<anonymous-schema-684>"
           },
           "rate_coefficient": {
             "type": "number",
             "description": "Поправочный коэффициент",
-            "x-parser-schema-id": "<anonymous-schema-681>"
+            "x-parser-schema-id": "<anonymous-schema-685>"
           },
           "comment": {
             "type": "string",
             "description": "Комментарий покупателя",
-            "x-parser-schema-id": "<anonymous-schema-682>"
+            "x-parser-schema-id": "<anonymous-schema-686>"
           },
           "items": {
             "type": "array",
             "minItems": 1,
             "items": "$ref:$.components.schemas.OrderItem",
-            "x-parser-schema-id": "<anonymous-schema-683>"
+            "x-parser-schema-id": "<anonymous-schema-687>"
           }
         },
         "x-parser-schema-id": "OrderCreatedPayload"
@@ -8534,42 +8586,42 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "order.updated",
-            "x-parser-schema-id": "<anonymous-schema-684>"
+            "x-parser-schema-id": "<anonymous-schema-688>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInOrders.messages.orderUpdated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-685>"
+            "x-parser-schema-id": "<anonymous-schema-689>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "number": {
             "type": "$ref:$.channels.erpInOrders.messages.orderUpdated.payload.properties.number.type",
             "description": "Номер заказа в 1С. Сохраняется как erp_number на сайте для коммуникации с менеджером.",
-            "x-parser-schema-id": "<anonymous-schema-686>"
+            "x-parser-schema-id": "<anonymous-schema-690>"
           },
           "status": {
             "type": "string",
             "description": "Маппинг статусов:\n- Не согласован → pending\n- К выполнению → confirmed\n- К отгрузке → ready_to_ship\n- Закрыт → closed\n- Удалён → deleted\n",
             "enum": "$ref:$.channels.erpInOrders.messages.orderUpdated.payload.properties.status.enum",
-            "x-parser-schema-id": "<anonymous-schema-687>"
+            "x-parser-schema-id": "<anonymous-schema-691>"
           },
           "erp_created_at": {
             "type": "$ref:$.channels.erpInOrders.messages.orderUpdated.payload.properties.erp_created_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-688>"
+            "x-parser-schema-id": "<anonymous-schema-692>"
           },
           "erp_updated_at": {
             "type": "$ref:$.channels.erpInOrders.messages.orderUpdated.payload.properties.erp_updated_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-689>"
+            "x-parser-schema-id": "<anonymous-schema-693>"
           },
           "items": {
             "type": "array",
             "description": "Полностью заменяет текущие позиции.\nНе передавайте items, если обновляете только статус.\n",
             "items": "$ref:$.components.schemas.OrderItem",
-            "x-parser-schema-id": "<anonymous-schema-690>"
+            "x-parser-schema-id": "<anonymous-schema-694>"
           }
         },
         "x-parser-schema-id": "OrderUpdatedPayload"
@@ -8581,22 +8633,22 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "return.updated",
-            "x-parser-schema-id": "<anonymous-schema-691>"
+            "x-parser-schema-id": "<anonymous-schema-695>"
           },
           "message_id": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-692>"
+            "x-parser-schema-id": "<anonymous-schema-696>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "number": {
             "type": "$ref:$.channels.erpInReturns.messages.returnUpdated.payload.properties.number.type",
             "description": "Номер возврата в 1С. Сохраняется как erp_number на сайте.",
-            "x-parser-schema-id": "<anonymous-schema-693>"
+            "x-parser-schema-id": "<anonymous-schema-697>"
           },
           "status": {
             "type": "string",
             "description": "Статус возврата",
-            "x-parser-schema-id": "<anonymous-schema-694>"
+            "x-parser-schema-id": "<anonymous-schema-698>"
           }
         },
         "x-parser-schema-id": "ReturnUpdatedPayload"
@@ -8609,11 +8661,11 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "return.created",
-            "x-parser-schema-id": "<anonymous-schema-695>"
+            "x-parser-schema-id": "<anonymous-schema-699>"
           },
           "message_id": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-696>"
+            "x-parser-schema-id": "<anonymous-schema-700>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
@@ -8621,7 +8673,7 @@ UUIDv4 сайта для корреляции.</p>
           "comment": {
             "type": "$ref:$.channels.erpOutReturns.messages.returnCreatedFromSite.payload.properties.comment.type",
             "description": "Комментарий к возврату",
-            "x-parser-schema-id": "<anonymous-schema-697>"
+            "x-parser-schema-id": "<anonymous-schema-701>"
           },
           "items": {
             "type": "array",
@@ -8636,39 +8688,39 @@ UUIDv4 сайта для корреляции.</p>
                   "type": "string",
                   "minLength": 1,
                   "description": "Человекочитаемый номер реализации (shipments.number)",
-                  "x-parser-schema-id": "<anonymous-schema-700>"
+                  "x-parser-schema-id": "<anonymous-schema-704>"
                 },
                 "quantity": {
                   "type": "number",
                   "minimum": 1,
-                  "x-parser-schema-id": "<anonymous-schema-701>"
+                  "x-parser-schema-id": "<anonymous-schema-705>"
                 },
                 "price": {
                   "type": "number",
                   "minimum": 0,
                   "description": "Цена одной единицы из ShipmentItem.price на момент создания возврата (snapshot)",
-                  "x-parser-schema-id": "<anonymous-schema-702>"
+                  "x-parser-schema-id": "<anonymous-schema-706>"
                 },
                 "currency_code": {
                   "type": "string",
                   "minLength": 3,
                   "description": "Валюта реализации, из которой возвращается позиция (shipments.currency_code)",
-                  "x-parser-schema-id": "<anonymous-schema-703>"
+                  "x-parser-schema-id": "<anonymous-schema-707>"
                 },
                 "subtotal": {
                   "type": "number",
                   "minimum": 0,
                   "description": "Сумма позиции возврата — price × quantity, округлённая до 2 знаков",
-                  "x-parser-schema-id": "<anonymous-schema-704>"
+                  "x-parser-schema-id": "<anonymous-schema-708>"
                 },
                 "reason": {
                   "type": "$ref:$.channels.erpOutReturns.messages.returnCreatedFromSite.payload.properties.items.items.properties.reason.type",
-                  "x-parser-schema-id": "<anonymous-schema-705>"
+                  "x-parser-schema-id": "<anonymous-schema-709>"
                 }
               },
-              "x-parser-schema-id": "<anonymous-schema-699>"
+              "x-parser-schema-id": "<anonymous-schema-703>"
             },
-            "x-parser-schema-id": "<anonymous-schema-698>"
+            "x-parser-schema-id": "<anonymous-schema-702>"
           }
         },
         "x-parser-schema-id": "ReturnCreatedPayload"
@@ -8681,41 +8733,41 @@ UUIDv4 сайта для корреляции.</p>
           "order_uuid": {
             "description": "UUID исходного заказа",
             "oneOf": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf",
-            "x-parser-schema-id": "<anonymous-schema-706>"
+            "x-parser-schema-id": "<anonymous-schema-710>"
           },
           "quantity": {
             "type": "number",
             "minimum": 0,
-            "x-parser-schema-id": "<anonymous-schema-707>"
+            "x-parser-schema-id": "<anonymous-schema-711>"
           },
           "price": {
             "type": "number",
             "minimum": 0,
             "description": "Базовая цена",
-            "x-parser-schema-id": "<anonymous-schema-708>"
+            "x-parser-schema-id": "<anonymous-schema-712>"
           },
           "auto_discount_percent": {
             "type": "number",
             "maximum": 100,
             "description": "Процент автоматической скидки (отрицательное значение — наценка без ограничений)",
-            "x-parser-schema-id": "<anonymous-schema-709>"
+            "x-parser-schema-id": "<anonymous-schema-713>"
           },
           "manual_discount_percent": {
             "type": "number",
             "maximum": 100,
             "description": "Процент ручной скидки (отрицательное значение — наценка без ограничений)",
-            "x-parser-schema-id": "<anonymous-schema-710>"
+            "x-parser-schema-id": "<anonymous-schema-714>"
           },
           "total": {
             "type": "number",
             "description": "Итоговая сумма строки",
-            "x-parser-schema-id": "<anonymous-schema-711>"
+            "x-parser-schema-id": "<anonymous-schema-715>"
           },
           "vat_rate": {
             "type": "number",
             "description": "Ставка НДС (%)",
             "examples": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.vat_rate.examples",
-            "x-parser-schema-id": "<anonymous-schema-712>"
+            "x-parser-schema-id": "<anonymous-schema-716>"
           }
         },
         "x-parser-schema-id": "ShipmentItem"
@@ -8727,64 +8779,64 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "shipment.created",
-            "x-parser-schema-id": "<anonymous-schema-713>"
+            "x-parser-schema-id": "<anonymous-schema-717>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-714>"
+            "x-parser-schema-id": "<anonymous-schema-718>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "contractor_uuid": {
             "type": "string",
             "format": "uuid",
             "description": "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге Company, fallback на tax_id.",
-            "x-parser-schema-id": "<anonymous-schema-715>"
+            "x-parser-schema-id": "<anonymous-schema-719>"
           },
           "partner_uuid": {
             "type": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.partner_uuid.type",
             "format": "uuid",
             "description": "UUID партнёра-владельца. Опциональное поле — отгрузка может быть технической (внутренние перемещения).",
-            "x-parser-schema-id": "<anonymous-schema-716>"
+            "x-parser-schema-id": "<anonymous-schema-720>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
             "examples": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.tax_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-717>"
+            "x-parser-schema-id": "<anonymous-schema-721>"
           },
           "number": {
             "type": "string",
             "minLength": 1,
             "description": "Номер реализации в 1С. Сохраняется как erp_number на сайте. Обязательное поле, используется клиентом и менеджером для коммуникации.",
             "examples": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.number.examples",
-            "x-parser-schema-id": "<anonymous-schema-718>"
+            "x-parser-schema-id": "<anonymous-schema-722>"
           },
           "date": "$ref:$.components.schemas.ISO8601Date",
           "erp_created_at": {
             "type": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.erp_created_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-719>"
+            "x-parser-schema-id": "<anonymous-schema-723>"
           },
           "erp_updated_at": {
             "type": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.erp_updated_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-720>"
+            "x-parser-schema-id": "<anonymous-schema-724>"
           },
           "status": {
             "type": "string",
             "const": "completed",
             "description": "Всегда \"completed\"",
-            "x-parser-schema-id": "<anonymous-schema-721>"
+            "x-parser-schema-id": "<anonymous-schema-725>"
           },
           "currency_code": "$ref:$.components.schemas.CurrencyCode",
           "items": {
             "type": "array",
             "minItems": 1,
             "items": "$ref:$.components.schemas.ShipmentItem",
-            "x-parser-schema-id": "<anonymous-schema-722>"
+            "x-parser-schema-id": "<anonymous-schema-726>"
           }
         },
         "x-parser-schema-id": "ShipmentCreatedPayload"
@@ -8797,64 +8849,64 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "shipment.updated",
-            "x-parser-schema-id": "<anonymous-schema-723>"
+            "x-parser-schema-id": "<anonymous-schema-727>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInDocuments.messages.shipmentUpdated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-724>"
+            "x-parser-schema-id": "<anonymous-schema-728>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "contractor_uuid": {
             "type": "string",
             "format": "uuid",
             "description": "UUID контрагента в 1С (Company.erp_id на сайте). Required с v13.3 — приоритет при матчинге Company, fallback на tax_id.",
-            "x-parser-schema-id": "<anonymous-schema-725>"
+            "x-parser-schema-id": "<anonymous-schema-729>"
           },
           "partner_uuid": {
             "type": "$ref:$.channels.erpInDocuments.messages.shipmentUpdated.payload.properties.partner_uuid.type",
             "format": "uuid",
             "description": "UUID партнёра-владельца. Опциональное поле — отгрузка может быть технической (внутренние перемещения).",
-            "x-parser-schema-id": "<anonymous-schema-726>"
+            "x-parser-schema-id": "<anonymous-schema-730>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)",
             "examples": "$ref:$.channels.erpInDocuments.messages.shipmentUpdated.payload.properties.tax_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-727>"
+            "x-parser-schema-id": "<anonymous-schema-731>"
           },
           "number": {
             "type": "string",
             "minLength": 1,
             "description": "Номер реализации в 1С. Сохраняется как erp_number на сайте. Обязательное поле, используется клиентом и менеджером для коммуникации.",
             "examples": "$ref:$.channels.erpInDocuments.messages.shipmentUpdated.payload.properties.number.examples",
-            "x-parser-schema-id": "<anonymous-schema-728>"
+            "x-parser-schema-id": "<anonymous-schema-732>"
           },
           "date": "$ref:$.components.schemas.ISO8601Date",
           "erp_created_at": {
             "type": "$ref:$.channels.erpInDocuments.messages.shipmentUpdated.payload.properties.erp_created_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-729>"
+            "x-parser-schema-id": "<anonymous-schema-733>"
           },
           "erp_updated_at": {
             "type": "$ref:$.channels.erpInDocuments.messages.shipmentUpdated.payload.properties.erp_updated_at.type",
             "format": "date-time",
             "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7.",
-            "x-parser-schema-id": "<anonymous-schema-730>"
+            "x-parser-schema-id": "<anonymous-schema-734>"
           },
           "status": {
             "type": "string",
             "const": "completed",
             "description": "Всегда \"completed\"",
-            "x-parser-schema-id": "<anonymous-schema-731>"
+            "x-parser-schema-id": "<anonymous-schema-735>"
           },
           "currency_code": "$ref:$.components.schemas.CurrencyCode",
           "items": {
             "type": "array",
             "minItems": 1,
             "items": "$ref:$.components.schemas.ShipmentItem",
-            "x-parser-schema-id": "<anonymous-schema-732>"
+            "x-parser-schema-id": "<anonymous-schema-736>"
           }
         },
         "x-parser-schema-id": "ShipmentUpdatedPayload"
@@ -8865,7 +8917,7 @@ UUIDv4 сайта для корреляции.</p>
           "shipment_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "amount": {
             "type": "number",
-            "x-parser-schema-id": "<anonymous-schema-733>"
+            "x-parser-schema-id": "<anonymous-schema-737>"
           },
           "due_date": "$ref:$.components.schemas.ISO8601Date"
         },
@@ -8879,28 +8931,28 @@ UUIDv4 сайта для корреляции.</p>
             "type": "$ref:$.channels.erpInBalance.messages.balanceUpdated.payload.properties.contractors.items.properties.uuid.type",
             "format": "uuid",
             "description": "UUID контрагента в 1С (Company.erp_id на сайте). Приоритет при матчинге Company и заполнении ContractorBalance.contractor_uuid (v13.2).",
-            "x-parser-schema-id": "<anonymous-schema-734>"
+            "x-parser-schema-id": "<anonymous-schema-738>"
           },
           "tax_id": {
             "type": "string",
             "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.). Fallback-идентификатор для матчинга, когда uuid ещё не выгружен.",
-            "x-parser-schema-id": "<anonymous-schema-735>"
+            "x-parser-schema-id": "<anonymous-schema-739>"
           },
           "current_balance": {
             "type": "number",
             "description": "Текущий баланс (отрицательное = задолженность)",
-            "x-parser-schema-id": "<anonymous-schema-736>"
+            "x-parser-schema-id": "<anonymous-schema-740>"
           },
           "overdue_debt": {
             "type": "number",
             "minimum": 0,
             "description": "Просроченная задолженность",
-            "x-parser-schema-id": "<anonymous-schema-737>"
+            "x-parser-schema-id": "<anonymous-schema-741>"
           },
           "overdue_details": {
             "type": "array",
             "items": "$ref:$.components.schemas.OverdueDetail",
-            "x-parser-schema-id": "<anonymous-schema-738>"
+            "x-parser-schema-id": "<anonymous-schema-742>"
           }
         },
         "x-parser-schema-id": "ContractorBalance"
@@ -8912,23 +8964,23 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "balance.updated",
-            "x-parser-schema-id": "<anonymous-schema-739>"
+            "x-parser-schema-id": "<anonymous-schema-743>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInBalance.messages.balanceUpdated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-740>"
+            "x-parser-schema-id": "<anonymous-schema-744>"
           },
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "updated_at": {
             "type": "string",
             "description": "Время обновления",
-            "x-parser-schema-id": "<anonymous-schema-741>"
+            "x-parser-schema-id": "<anonymous-schema-745>"
           },
           "contractors": {
             "type": "array",
             "items": "$ref:$.components.schemas.ContractorBalance",
-            "x-parser-schema-id": "<anonymous-schema-742>"
+            "x-parser-schema-id": "<anonymous-schema-746>"
           }
         },
         "x-parser-schema-id": "BalanceUpdatedPayload"
@@ -8940,18 +8992,18 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "individual_prices.ready",
-            "x-parser-schema-id": "<anonymous-schema-743>"
+            "x-parser-schema-id": "<anonymous-schema-747>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-744>"
+            "x-parser-schema-id": "<anonymous-schema-748>"
           },
           "upload_type": {
             "type": "string",
             "enum": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.upload_type.enum",
             "description": "- \"full\" — полное удаление + вставка (ночная выгрузка, 03:00)\n- \"delta\" — UPSERT, только затронутые товары (каждые 15–30 мин, v9)\n",
-            "x-parser-schema-id": "<anonymous-schema-745>"
+            "x-parser-schema-id": "<anonymous-schema-749>"
           },
           "partner_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "file_url": {
@@ -8959,14 +9011,14 @@ UUIDv4 сайта для корреляции.</p>
             "format": "uri",
             "description": "URL файла в MinIO (S3)",
             "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.file_url.examples",
-            "x-parser-schema-id": "<anonymous-schema-746>"
+            "x-parser-schema-id": "<anonymous-schema-750>"
           },
           "records_count": {
             "type": "integer",
             "minimum": 0,
             "description": "Количество записей в файле",
             "examples": "$ref:$.channels.erpInPrices.messages.individualPricesReady.payload.properties.records_count.examples",
-            "x-parser-schema-id": "<anonymous-schema-747>"
+            "x-parser-schema-id": "<anonymous-schema-751>"
           },
           "timestamp": "$ref:$.components.schemas.ISO8601DateTime"
         },
@@ -8979,29 +9031,29 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "enum": "$ref:$.channels.erpInCatalog.messages.categoryCreated.payload.properties.event.enum",
-            "x-parser-schema-id": "<anonymous-schema-748>"
+            "x-parser-schema-id": "<anonymous-schema-752>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInCatalog.messages.categoryCreated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-749>"
+            "x-parser-schema-id": "<anonymous-schema-753>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "parent_uuid": {
             "description": "UUID родительской категории",
             "oneOf": "$ref:$.channels.erpInCatalog.messages.categoryCreated.payload.properties.parent_uuid.oneOf",
-            "x-parser-schema-id": "<anonymous-schema-750>"
+            "x-parser-schema-id": "<anonymous-schema-754>"
           },
           "name": {
             "type": "string",
             "description": "Наименование категории",
             "examples": "$ref:$.channels.erpInCatalog.messages.categoryCreated.payload.properties.name.examples",
-            "x-parser-schema-id": "<anonymous-schema-751>"
+            "x-parser-schema-id": "<anonymous-schema-755>"
           },
           "is_active": {
             "type": "boolean",
             "description": "Активность категории: true — активна, false — скрыта на сайте (v12)",
-            "x-parser-schema-id": "<anonymous-schema-752>"
+            "x-parser-schema-id": "<anonymous-schema-756>"
           }
         },
         "x-parser-schema-id": "CategoryPayload"
@@ -9015,24 +9067,24 @@ UUIDv4 сайта для корреляции.</p>
             "type": "string",
             "description": "Наименование свойства",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.property_label.examples",
-            "x-parser-schema-id": "<anonymous-schema-753>"
+            "x-parser-schema-id": "<anonymous-schema-757>"
           },
           "value_type": {
             "type": "string",
             "enum": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_type.enum",
             "description": "Тип значения атрибута. Определяет ожидаемый формат в value_label. Строго одно из: string, number, boolean, reference, date-time.",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_type.examples",
-            "x-parser-schema-id": "<anonymous-schema-754>"
+            "x-parser-schema-id": "<anonymous-schema-758>"
           },
           "value_uuid": {
             "oneOf": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_uuid.oneOf",
-            "x-parser-schema-id": "<anonymous-schema-755>"
+            "x-parser-schema-id": "<anonymous-schema-759>"
           },
           "value_label": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_label.type",
             "description": "Отображаемое значение. Для boolean использовать строго true/false (не 1/0 или 'Да'/'Нет'). Для number — число.",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.attributes.items.properties.value_label.examples",
-            "x-parser-schema-id": "<anonymous-schema-756>"
+            "x-parser-schema-id": "<anonymous-schema-760>"
           }
         },
         "x-parser-schema-id": "ProductAttribute"
@@ -9046,131 +9098,143 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "product.created",
-            "x-parser-schema-id": "<anonymous-schema-757>"
+            "x-parser-schema-id": "<anonymous-schema-761>"
           },
           "message_id": {
             "type": "string",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.message_id.examples",
-            "x-parser-schema-id": "<anonymous-schema-758>"
+            "x-parser-schema-id": "<anonymous-schema-762>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "name": {
             "type": "string",
             "description": "Полное наименование",
-            "x-parser-schema-id": "<anonymous-schema-759>"
+            "x-parser-schema-id": "<anonymous-schema-763>"
           },
           "code": {
             "type": "string",
             "description": "Код номенклатуры",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.code.examples",
-            "x-parser-schema-id": "<anonymous-schema-760>"
+            "x-parser-schema-id": "<anonymous-schema-764>"
           },
           "sku": {
             "type": "string",
             "description": "Артикул",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.sku.examples",
-            "x-parser-schema-id": "<anonymous-schema-761>"
+            "x-parser-schema-id": "<anonymous-schema-765>"
           },
           "description": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.description.type",
             "description": "Описание товара (plain-text / краткое)",
-            "x-parser-schema-id": "<anonymous-schema-762>"
+            "x-parser-schema-id": "<anonymous-schema-766>"
           },
           "description_html": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.description_html.type",
             "description": "HTML-версия описания товара (rich-text). Полностью перезаписывает\n`products.description_html` на сайте. `null` или пустая строка —\nочищают поле. Используется на карточке товара и в выгрузках\nмаркетплейсов (приоритет `description_html > description`).\n",
-            "x-parser-schema-id": "<anonymous-schema-763>"
+            "x-parser-schema-id": "<anonymous-schema-767>"
           },
           "category_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "hidden": {
             "type": "boolean",
             "description": "Флаг «Скрыть в интернете» (v10). Если true — товар не отображается на сайте. Строго boolean true/false, строки вида \"Да\"/\"Нет\" будут отклонены интерпретатором JSON.",
-            "x-parser-schema-id": "<anonymous-schema-764>"
+            "x-parser-schema-id": "<anonymous-schema-768>"
           },
           "is_marked": {
             "type": "boolean",
             "description": "Признак маркированного товара (обязательная маркировка «Честный знак»). Строго boolean true/false, строки вида \"Да\"/\"Нет\" будут отклонены интерпретатором JSON.",
-            "x-parser-schema-id": "<anonymous-schema-765>"
+            "x-parser-schema-id": "<anonymous-schema-769>"
           },
           "brand": {
             "oneOf": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.brand.oneOf",
-            "x-parser-schema-id": "<anonymous-schema-766>"
+            "x-parser-schema-id": "<anonymous-schema-770>"
           },
           "barcodes": {
             "type": "array",
             "items": {
               "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.barcodes.items.type",
-              "x-parser-schema-id": "<anonymous-schema-768>"
+              "x-parser-schema-id": "<anonymous-schema-772>"
             },
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.barcodes.examples",
-            "x-parser-schema-id": "<anonymous-schema-767>"
+            "x-parser-schema-id": "<anonymous-schema-771>"
           },
           "model": {
             "description": "Модель (из доп. реквизита, nullable)",
             "oneOf": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.model.oneOf",
-            "x-parser-schema-id": "<anonymous-schema-769>"
+            "x-parser-schema-id": "<anonymous-schema-773>"
           },
           "weight_gross": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.weight_gross.type",
             "minimum": 0,
             "description": "(v13.3) Вес брутто упаковки в **килограммах**. Источник 1С —\n`Упаковки.Вес` (первая непомеченная упаковка). Десятичный\nразделитель — точка. Хранится в `products.weight_gross` (`decimal(10,3)`).\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.weight_gross.examples",
-            "x-parser-schema-id": "<anonymous-schema-770>"
+            "x-parser-schema-id": "<anonymous-schema-774>"
           },
           "weight_net": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.weight_net.type",
             "minimum": 0,
             "description": "(v13.3) Вес нетто товара в **килограммах**. Источник 1С —\n`Номенклатура.ЕдиницаИзмерения.Вес`. Хранится в\n`products.weight_net` (`decimal(10,3)`).\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.weight_net.examples",
-            "x-parser-schema-id": "<anonymous-schema-771>"
+            "x-parser-schema-id": "<anonymous-schema-775>"
           },
           "width": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.width.type",
             "minimum": 0,
             "description": "(v13.3) Ширина упаковки в **метрах**. Источник 1С —\n`Упаковки.Ширина`. Хранится в `products.width` (`decimal(10,2)`).\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.width.examples",
-            "x-parser-schema-id": "<anonymous-schema-772>"
+            "x-parser-schema-id": "<anonymous-schema-776>"
           },
           "height": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.height.type",
             "minimum": 0,
             "description": "(v13.3) Высота упаковки в **метрах**. Источник 1С —\n`Упаковки.Высота`. Хранится в `products.height` (`decimal(10,2)`).\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.height.examples",
-            "x-parser-schema-id": "<anonymous-schema-773>"
+            "x-parser-schema-id": "<anonymous-schema-777>"
           },
           "depth": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.depth.type",
             "minimum": 0,
             "description": "(v13.3) Глубина упаковки в **метрах**. Источник 1С —\n`Упаковки.Глубина`. Хранится в `products.depth` (`decimal(10,2)`).\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.depth.examples",
-            "x-parser-schema-id": "<anonymous-schema-774>"
+            "x-parser-schema-id": "<anonymous-schema-778>"
           },
           "hs_code": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.hs_code.type",
             "maxLength": 20,
             "description": "(v13.3) Код ТН ВЭД (Гармонизированная система). Источник 1С —\n`Номенклатура.КодТНВЭД.Код`. Хранится как строка в\n`products.hs_code` (`varchar(20)`). Поле `tnved` (legacy)\nпродолжает работать независимо.\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.hs_code.examples",
-            "x-parser-schema-id": "<anonymous-schema-775>"
+            "x-parser-schema-id": "<anonymous-schema-779>"
           },
           "abc_xyz": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.abc_xyz.type",
             "maxLength": 5,
             "description": "(v13.3) ABC/XYZ-классификация товара. Двухсимвольный код вида\n`AX`, `BY`, `CZ`. Хранится в `products.abc_xyz` (`varchar(5)`).\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.abc_xyz.examples",
-            "x-parser-schema-id": "<anonymous-schema-776>"
+            "x-parser-schema-id": "<anonymous-schema-780>"
           },
           "turnover": {
             "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.turnover.type",
             "minimum": 0,
             "description": "(v13.3) Коэффициент оборачиваемости товара. Хранится в\n`products.turnover` (`decimal(12,4)`).\n",
             "examples": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.turnover.examples",
-            "x-parser-schema-id": "<anonymous-schema-777>"
+            "x-parser-schema-id": "<anonymous-schema-781>"
+          },
+          "erp_created_at": {
+            "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.erp_created_at.type",
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.",
+            "x-parser-schema-id": "<anonymous-schema-782>"
+          },
+          "erp_updated_at": {
+            "type": "$ref:$.channels.erpInCatalog.messages.productCreated.payload.properties.erp_updated_at.type",
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.10.",
+            "x-parser-schema-id": "<anonymous-schema-783>"
           },
           "attributes": {
             "type": "array",
             "description": "Полный актуальный список атрибутов товара. Семантика **full-replace**:\nсайт синхронизирует состав атрибутов товара строго по этому массиву.\nАтрибуты, отсутствующие в массиве, **удаляются** у товара.\nПустой массив `[]` означает «удалить все атрибуты товара».\n1С обязана передавать полный набор атрибутов при создании товара.\n",
             "items": "$ref:$.components.schemas.ProductAttribute",
-            "x-parser-schema-id": "<anonymous-schema-778>"
+            "x-parser-schema-id": "<anonymous-schema-784>"
           }
         },
         "x-parser-schema-id": "ProductCreatedPayload"
@@ -9182,115 +9246,127 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "product.updated",
-            "x-parser-schema-id": "<anonymous-schema-779>"
+            "x-parser-schema-id": "<anonymous-schema-785>"
           },
           "message_id": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-780>"
+            "x-parser-schema-id": "<anonymous-schema-786>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "name": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-781>"
+            "x-parser-schema-id": "<anonymous-schema-787>"
           },
           "code": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-782>"
+            "x-parser-schema-id": "<anonymous-schema-788>"
           },
           "sku": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-783>"
+            "x-parser-schema-id": "<anonymous-schema-789>"
           },
           "description": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.description.type",
             "description": "Описание товара (plain-text / краткое)",
-            "x-parser-schema-id": "<anonymous-schema-784>"
+            "x-parser-schema-id": "<anonymous-schema-790>"
           },
           "description_html": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.description_html.type",
             "description": "HTML-версия описания (rich-text). Семантика частичного обновления:\n- поле отсутствует в payload → `description_html` не трогаем;\n- передано (включая `null` или пустую строку) → перезаписываем.\n",
-            "x-parser-schema-id": "<anonymous-schema-785>"
+            "x-parser-schema-id": "<anonymous-schema-791>"
           },
           "category_uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "hidden": {
             "type": "boolean",
             "description": "Флаг «Скрыть в интернете» (v10)",
-            "x-parser-schema-id": "<anonymous-schema-786>"
+            "x-parser-schema-id": "<anonymous-schema-792>"
           },
           "is_marked": {
             "type": "boolean",
             "description": "Признак маркированного товара (обязательная маркировка «Честный знак»). Строго boolean true/false.",
-            "x-parser-schema-id": "<anonymous-schema-787>"
+            "x-parser-schema-id": "<anonymous-schema-793>"
           },
           "brand": {
             "oneOf": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.brand.oneOf",
-            "x-parser-schema-id": "<anonymous-schema-788>"
+            "x-parser-schema-id": "<anonymous-schema-794>"
           },
           "barcodes": {
             "type": "array",
             "items": {
               "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.barcodes.items.type",
-              "x-parser-schema-id": "<anonymous-schema-790>"
+              "x-parser-schema-id": "<anonymous-schema-796>"
             },
-            "x-parser-schema-id": "<anonymous-schema-789>"
+            "x-parser-schema-id": "<anonymous-schema-795>"
           },
           "model": {
             "oneOf": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.model.oneOf",
-            "x-parser-schema-id": "<anonymous-schema-791>"
+            "x-parser-schema-id": "<anonymous-schema-797>"
           },
           "weight_gross": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.weight_gross.type",
             "minimum": 0,
             "description": "(v13.3) Вес брутто упаковки в **килограммах**. Семантика частичного\nобновления: поле отсутствует в payload — `products.weight_gross` не\nтрогаем; передано (включая `null`) — перезаписываем.\n",
-            "x-parser-schema-id": "<anonymous-schema-792>"
+            "x-parser-schema-id": "<anonymous-schema-798>"
           },
           "weight_net": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.weight_net.type",
             "minimum": 0,
             "description": "(v13.3) Вес нетто товара в **килограммах**. Семантика частичного\nобновления.\n",
-            "x-parser-schema-id": "<anonymous-schema-793>"
+            "x-parser-schema-id": "<anonymous-schema-799>"
           },
           "width": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.width.type",
             "minimum": 0,
             "description": "(v13.3) Ширина упаковки в **метрах**. Семантика частичного\nобновления.\n",
-            "x-parser-schema-id": "<anonymous-schema-794>"
+            "x-parser-schema-id": "<anonymous-schema-800>"
           },
           "height": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.height.type",
             "minimum": 0,
             "description": "(v13.3) Высота упаковки в **метрах**. Семантика частичного\nобновления.\n",
-            "x-parser-schema-id": "<anonymous-schema-795>"
+            "x-parser-schema-id": "<anonymous-schema-801>"
           },
           "depth": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.depth.type",
             "minimum": 0,
             "description": "(v13.3) Глубина упаковки в **метрах**. Семантика частичного\nобновления.\n",
-            "x-parser-schema-id": "<anonymous-schema-796>"
+            "x-parser-schema-id": "<anonymous-schema-802>"
           },
           "hs_code": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.hs_code.type",
             "maxLength": 20,
             "description": "(v13.3) Код ТН ВЭД. Семантика частичного обновления.\n",
-            "x-parser-schema-id": "<anonymous-schema-797>"
+            "x-parser-schema-id": "<anonymous-schema-803>"
           },
           "abc_xyz": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.abc_xyz.type",
             "maxLength": 5,
             "description": "(v13.3) ABC/XYZ-классификация товара. Семантика частичного обновления.\n",
-            "x-parser-schema-id": "<anonymous-schema-798>"
+            "x-parser-schema-id": "<anonymous-schema-804>"
           },
           "turnover": {
             "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.turnover.type",
             "minimum": 0,
             "description": "(v13.3) Коэффициент оборачиваемости товара. Семантика частичного\nобновления.\n",
-            "x-parser-schema-id": "<anonymous-schema-799>"
+            "x-parser-schema-id": "<anonymous-schema-805>"
+          },
+          "erp_created_at": {
+            "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.erp_created_at.type",
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.",
+            "x-parser-schema-id": "<anonymous-schema-806>"
+          },
+          "erp_updated_at": {
+            "type": "$ref:$.channels.erpInCatalog.messages.productUpdated.payload.properties.erp_updated_at.type",
+            "format": "date-time",
+            "description": "Аудит-метка: дата-время последнего изменения номенклатуры в 1С (ISO-8601 с TZ). Семантика частичного обновления. Опционально, добавлено в v13.10.",
+            "x-parser-schema-id": "<anonymous-schema-807>"
           },
           "attributes": {
             "type": "array",
             "description": "Полный актуальный список атрибутов товара. Семантика **full-replace**:\nсайт синхронизирует состав атрибутов товара строго по этому массиву.\nАтрибуты, отсутствующие в массиве, **удаляются** у товара.\nПустой массив `[]` означает «удалить все атрибуты товара».\nОтсутствие поля `attributes` в payload означает «не трогать атрибуты»\n(в отличие от пустого массива). Если обновление не затрагивает состав\nатрибутов — поле `attributes` не передаётся.\n",
             "items": "$ref:$.components.schemas.ProductAttribute",
-            "x-parser-schema-id": "<anonymous-schema-800>"
+            "x-parser-schema-id": "<anonymous-schema-808>"
           }
         },
         "x-parser-schema-id": "ProductUpdatedPayload"
@@ -9302,7 +9378,7 @@ UUIDv4 сайта для корреляции.</p>
           "uuid": {
             "allOf": "$ref:$.channels.erpInPromotions.messages.promotionCreated.payload.properties.items.items.properties.uuid.allOf",
             "description": "UUID товара в 1С (external_id на сайте)",
-            "x-parser-schema-id": "<anonymous-schema-801>"
+            "x-parser-schema-id": "<anonymous-schema-809>"
           }
         },
         "x-parser-schema-id": "PromotionItem"
@@ -9320,24 +9396,24 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "promotion.created",
-            "x-parser-schema-id": "<anonymous-schema-802>"
+            "x-parser-schema-id": "<anonymous-schema-810>"
           },
           "message_id": {
             "type": "string",
             "description": "Уникальный ID сообщения для идемпотентности",
-            "x-parser-schema-id": "<anonymous-schema-803>"
+            "x-parser-schema-id": "<anonymous-schema-811>"
           },
           "uuid": {
             "allOf": "$ref:$.channels.erpInPromotions.messages.promotionCreated.payload.properties.uuid.allOf",
             "description": "UUID промо-группы в 1С",
-            "x-parser-schema-id": "<anonymous-schema-804>"
+            "x-parser-schema-id": "<anonymous-schema-812>"
           },
           "type": "$ref:$.components.schemas.PromotionType",
           "items": {
             "type": "array",
             "description": "Полный состав товаров в группе",
             "items": "$ref:$.components.schemas.PromotionItem",
-            "x-parser-schema-id": "<anonymous-schema-805>"
+            "x-parser-schema-id": "<anonymous-schema-813>"
           }
         },
         "examples": "$ref:$.channels.erpInPromotions.messages.promotionCreated.payload.examples",
@@ -9350,11 +9426,11 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "promotion.updated",
-            "x-parser-schema-id": "<anonymous-schema-806>"
+            "x-parser-schema-id": "<anonymous-schema-814>"
           },
           "message_id": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-807>"
+            "x-parser-schema-id": "<anonymous-schema-815>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]",
           "type": "$ref:$.components.schemas.PromotionType",
@@ -9362,7 +9438,7 @@ UUIDv4 сайта для корреляции.</p>
             "type": "array",
             "description": "Актуальный снимок состава товаров — сайт заменяет привязки целиком",
             "items": "$ref:$.components.schemas.PromotionItem",
-            "x-parser-schema-id": "<anonymous-schema-808>"
+            "x-parser-schema-id": "<anonymous-schema-816>"
           }
         },
         "examples": "$ref:$.channels.erpInPromotions.messages.promotionUpdated.payload.examples",
@@ -9375,11 +9451,11 @@ UUIDv4 сайта для корреляции.</p>
           "event": {
             "type": "string",
             "const": "promotion.deleted",
-            "x-parser-schema-id": "<anonymous-schema-809>"
+            "x-parser-schema-id": "<anonymous-schema-817>"
           },
           "message_id": {
             "type": "string",
-            "x-parser-schema-id": "<anonymous-schema-810>"
+            "x-parser-schema-id": "<anonymous-schema-818>"
           },
           "uuid": "$ref:$.channels.erpInDocuments.messages.shipmentCreated.payload.properties.items.items.properties.order_uuid.oneOf[0]"
         },

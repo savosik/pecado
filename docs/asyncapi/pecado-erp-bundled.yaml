@@ -2243,6 +2243,22 @@ channels:
                 `products.turnover` (`decimal(12,4)`).
               examples:
                 - 14.75
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с
+                TZ). Опционально, добавлено в v13.10.
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения номенклатуры в 1С
+                (ISO-8601 с TZ). Опционально, добавлено в v13.10.
             attributes:
               type: array
               description: >
@@ -2492,6 +2508,24 @@ channels:
               description: |
                 (v13.3) Коэффициент оборачиваемости товара. Семантика частичного
                 обновления.
+            erp_created_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с
+                TZ). Семантика частичного обновления. Опционально, добавлено в
+                v13.10.
+            erp_updated_at:
+              type:
+                - string
+                - 'null'
+              format: date-time
+              description: >-
+                Аудит-метка: дата-время последнего изменения номенклатуры в 1С
+                (ISO-8601 с TZ). Семантика частичного обновления. Опционально,
+                добавлено в v13.10.
             attributes:
               type: array
               description: >
@@ -7067,6 +7101,22 @@ components:
               `products.turnover` (`decimal(12,4)`).
             examples:
               - 14.75
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с
+              TZ). Опционально, добавлено в v13.10.
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения номенклатуры в 1С
+              (ISO-8601 с TZ). Опционально, добавлено в v13.10.
           attributes:
             type: array
             description: >
@@ -7312,6 +7362,24 @@ components:
             description: |
               (v13.3) Коэффициент оборачиваемости товара. Семантика частичного
               обновления.
+          erp_created_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с
+              TZ). Семантика частичного обновления. Опционально, добавлено в
+              v13.10.
+          erp_updated_at:
+            type:
+              - string
+              - 'null'
+            format: date-time
+            description: >-
+              Аудит-метка: дата-время последнего изменения номенклатуры в 1С
+              (ISO-8601 с TZ). Семантика частичного обновления. Опционально,
+              добавлено в v13.10.
           attributes:
             type: array
             description: >
@@ -10034,6 +10102,22 @@ components:
             `products.turnover` (`decimal(12,4)`).
           examples:
             - 14.75
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ).
+            Опционально, добавлено в v13.10.
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время последнего изменения номенклатуры в 1С
+            (ISO-8601 с TZ). Опционально, добавлено в v13.10.
         attributes:
           type: array
           description: >
@@ -10255,6 +10339,23 @@ components:
           description: |
             (v13.3) Коэффициент оборачиваемости товара. Семантика частичного
             обновления.
+        erp_created_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время создания номенклатуры в 1С (ISO-8601 с TZ).
+            Семантика частичного обновления. Опционально, добавлено в v13.10.
+        erp_updated_at:
+          type:
+            - string
+            - 'null'
+          format: date-time
+          description: >-
+            Аудит-метка: дата-время последнего изменения номенклатуры в 1С
+            (ISO-8601 с TZ). Семантика частичного обновления. Опционально,
+            добавлено в v13.10.
         attributes:
           type: array
           description: >

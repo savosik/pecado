@@ -88,6 +88,7 @@ class HandleProductCreated
         // retry() перезапускает всю транзакцию целиком, что сохраняет идемпотентность
         // и позволяет безопасно пережить кратковременный deadlock при массовой выгрузке.
         $this->runInTransaction(function () use (
+            $payload,
             $uuid, $name, $code, $sku, $categoryUuid, $brandData,
             $description, $descriptionHtml, $barcodes, $modelData, $attributes, $attributesInPayload,
             $hidden, $isMarked, $weightGross, $weightNet, $width, $height, $depth,
@@ -125,30 +126,42 @@ class HandleProductCreated
             $existing = Product::withoutGlobalScopes()->where('external_id', $uuid)->first();
             $basePrice = $existing?->base_price ?? 0;
 
+            $fields = [
+                'name' => $name,
+                'code' => $code,
+                'sku' => $sku,
+                'description' => $description,
+                'description_html' => $descriptionHtml,
+                'category_id' => $categoryId,
+                'brand_id' => $brandId,
+                'model_id' => $modelId,
+                'hidden' => $hidden,
+                'is_marked' => $isMarked,
+                'weight_gross' => $weightGross,
+                'weight_net' => $weightNet,
+                'width' => $width,
+                'height' => $height,
+                'depth' => $depth,
+                'hs_code' => $hsCode,
+                'abc_xyz' => $abcXyz,
+                'turnover' => $turnover,
+                // Цена не перезаписывается здесь — она управляется через price.updated (US-02)
+                'base_price' => $basePrice,
+            ];
+
+            // v13.10: аудит-метки 1С (опционально). При отсутствии ключа в payload
+            // на upsert не перезаписываем — пишем только то, что прислали.
+            // TZ-нормализация — в App\Casts\ErpDatetime.
+            if (array_key_exists('erp_created_at', $payload)) {
+                $fields['erp_created_at'] = $payload['erp_created_at'];
+            }
+            if (array_key_exists('erp_updated_at', $payload)) {
+                $fields['erp_updated_at'] = $payload['erp_updated_at'];
+            }
+
             $product = Product::withoutGlobalScopes()->updateOrCreate(
                 ['external_id' => $uuid],
-                [
-                    'name' => $name,
-                    'code' => $code,
-                    'sku' => $sku,
-                    'description' => $description,
-                    'description_html' => $descriptionHtml,
-                    'category_id' => $categoryId,
-                    'brand_id' => $brandId,
-                    'model_id' => $modelId,
-                    'hidden' => $hidden,
-                    'is_marked' => $isMarked,
-                    'weight_gross' => $weightGross,
-                    'weight_net' => $weightNet,
-                    'width' => $width,
-                    'height' => $height,
-                    'depth' => $depth,
-                    'hs_code' => $hsCode,
-                    'abc_xyz' => $abcXyz,
-                    'turnover' => $turnover,
-                    // Цена не перезаписывается здесь — она управляется через price.updated (US-02)
-                    'base_price' => $basePrice,
-                ]
+                $fields
             );
 
             // --- Штрих-коды ---

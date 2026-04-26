@@ -912,4 +912,67 @@ class HandleProductUpdatedTest extends TestCase
         $this->assertNull($pav->datetime_value, 'Стаб 1С должен превратиться в NULL');
         $this->assertNull($pav->text_value);
     }
+
+    #[Test]
+    public function updates_erp_timestamps_when_present_v13_10(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-erp-upd-001',
+            'erp_created_at' => null,
+            'erp_updated_at' => null,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-prod-erp-upd-001',
+            'uuid' => 'prod-erp-upd-001',
+            'erp_created_at' => '2024-09-15T11:42:00+03:00',
+            'erp_updated_at' => '2026-04-26T15:03:21+03:00',
+        ]);
+
+        $product->refresh();
+        $this->assertEquals('2024-09-15 11:42:00', $product->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-26 15:03:21', $product->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function preserves_erp_timestamps_when_absent_from_payload_v13_10(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-erp-upd-002',
+            'erp_created_at' => '2024-09-15T11:42:00+03:00',
+            'erp_updated_at' => '2026-04-20T08:00:00+03:00',
+        ]);
+
+        // Апдейт без полей erp_* не должен затрагивать колонки.
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-prod-erp-upd-002',
+            'uuid' => 'prod-erp-upd-002',
+            'name' => 'Только название обновили',
+        ]);
+
+        $product->refresh();
+        $this->assertEquals('2024-09-15 11:42:00', $product->erp_created_at->format('Y-m-d H:i:s'));
+        $this->assertEquals('2026-04-20 08:00:00', $product->erp_updated_at->format('Y-m-d H:i:s'));
+    }
+
+    #[Test]
+    public function clears_erp_updated_at_when_payload_explicitly_null_v13_10(): void
+    {
+        $product = Product::factory()->create([
+            'external_id' => 'prod-erp-upd-003',
+            'erp_updated_at' => '2026-04-20T08:00:00+03:00',
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'message_id' => 'msg-prod-erp-upd-003',
+            'uuid' => 'prod-erp-upd-003',
+            'erp_updated_at' => null,
+        ]);
+
+        $product->refresh();
+        $this->assertNull($product->erp_updated_at);
+    }
 }

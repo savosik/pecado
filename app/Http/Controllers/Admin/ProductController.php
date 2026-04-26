@@ -265,6 +265,8 @@ class ProductController extends AdminController
                 'hs_code' => $product->hs_code,
                 'abc_xyz' => $product->abc_xyz,
                 'turnover' => $product->turnover,
+                'erp_created_at' => $product->erp_created_at?->format('d.m.Y H:i'),
+                'erp_updated_at' => $product->erp_updated_at?->format('d.m.Y H:i'),
                 'is_new' => $product->is_new,
                 'is_bestseller' => $product->is_bestseller,
                 'is_marked' => $product->is_marked,
