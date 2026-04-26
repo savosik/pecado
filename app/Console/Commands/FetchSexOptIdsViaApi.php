@@ -14,6 +14,7 @@ class FetchSexOptIdsViaApi extends Command
         {--token= : Bearer-токен sex-opt API (иначе SEX_OPT_API_TOKEN из env)}
         {--with-stock-warehouse= : Имя склада — берём только товары с остатком >0 на нём}
         {--limit=0 : Ограничение количества обрабатываемых товаров (0 = без ограничений)}
+        {--order=asc : Порядок обхода по id (asc|desc) — desc сначала новые товары}
         {--rate-ms=150 : Задержка между запросами, мс}
         {--dry-run : Показать что будет обновлено, без записи}';
 
@@ -47,6 +48,9 @@ class FetchSexOptIdsViaApi extends Command
             });
             $this->line("Фильтр: остаток > 0 на «{$whName}» (id={$warehouse->id})");
         }
+
+        $order = strtolower((string) $this->option('order')) === 'desc' ? 'desc' : 'asc';
+        $query->orderBy('id', $order);
 
         $limit = (int) $this->option('limit');
         if ($limit > 0) {
