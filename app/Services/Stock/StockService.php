@@ -4,7 +4,9 @@ namespace App\Services\Stock;
 
 use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Product;
+use App\Models\Region;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class StockService implements StockServiceInterface
 {
@@ -28,19 +30,7 @@ class StockService implements StockServiceInterface
      */
     public function getAvailableStock(Product $product, ?User $user = null): int
     {
-        if (! $user || ! $user->region) {
-            return 0;
-        }
-
-        $warehouseIds = $user->region->primaryWarehouses()->pluck('warehouses.id');
-
-        if ($warehouseIds->isEmpty()) {
-            return 0;
-        }
-
-        return (int) $product->warehouses()
-            ->whereIn('warehouses.id', $warehouseIds)
-            ->sum('product_warehouse.quantity');
+        return $this->sumByWarehouseType($product, $user, 'primary');
     }
 
     /**
@@ -49,11 +39,34 @@ class StockService implements StockServiceInterface
      */
     public function getPreorderStock(Product $product, ?User $user = null): int
     {
-        if (! $user || ! $user->region) {
+        return $this->sumByWarehouseType($product, $user, 'preorder');
+    }
+
+    /**
+     * Резолвит ID региона пользователя с fallback на регион по умолчанию.
+     * Если у пользователя не задан region_id (например, у админа), используется Region::defaultId() —
+     * та же логика, что в каталоге (CatalogApiController), чтобы наличие в карточке и в корзине совпадало.
+     */
+    private function resolveRegionId(?User $user): ?int
+    {
+        if ($user !== null && $user->region_id !== null) {
+            return (int) $user->region_id;
+        }
+
+        return Region::defaultId();
+    }
+
+    private function sumByWarehouseType(Product $product, ?User $user, string $type): int
+    {
+        $regionId = $this->resolveRegionId($user);
+        if (! $regionId) {
             return 0;
         }
 
-        $warehouseIds = $user->region->preorderWarehouses()->pluck('warehouses.id');
+        $warehouseIds = DB::table('region_warehouse')
+            ->where('region_id', $regionId)
+            ->where('type', $type)
+            ->pluck('warehouse_id');
 
         if ($warehouseIds->isEmpty()) {
             return 0;
