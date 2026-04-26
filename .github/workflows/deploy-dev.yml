@@ -12,10 +12,77 @@ concurrency:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
+  # JOB 0: Решение о fast-lane (пропуск тестов)
+  # ─────────────────────────────────────────────────────────────
+  # Тесты пропускаются если:
+  #   1) commit message содержит [fast] или [skip-tests]
+  #   2) изменения только в "безопасных" путях (md/css/docs/задачи)
+  # Любое касание PHP/JS/конфигов/миграций/composer/package/CI =>
+  # полный прогон.
+  changes:
+    name: "🔍 Decide fast-lane"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      skip_tests: ${{ steps.decide.outputs.skip_tests }}
+      reason: ${{ steps.decide.outputs.reason }}
+    steps:
+      - name: "📥 Checkout"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: "🗂️ Filter changed paths"
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - '**'
+              - '!**/*.md'
+              - '!**/*.css'
+              - '!**/*.scss'
+              - '!resources/css/**'
+              - '!docs-erp/**'
+              - '!docs-testing/**'
+              - '!docs/tasks/**'
+              - '!.editorconfig'
+              - '!.gitignore'
+              - '!.gitattributes'
+
+      - name: "🚦 Decide"
+        id: decide
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          CODE_CHANGED: ${{ steps.filter.outputs.code }}
+        run: |
+          set -euo pipefail
+          if printf '%s' "$COMMIT_MSG" | grep -qE '\[fast\]|\[skip-tests\]'; then
+            SKIP=true
+            REASON='commit message содержит [fast] / [skip-tests]'
+          elif [ "$CODE_CHANGED" = "false" ]; then
+            SKIP=true
+            REASON='изменения только в безопасных путях (md/css/docs)'
+          else
+            SKIP=false
+            REASON='обнаружены изменения в коде — гоняем полный test suite'
+          fi
+          echo "skip_tests=$SKIP" >> "$GITHUB_OUTPUT"
+          echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+          {
+            echo "## 🚦 Fast-lane decision"
+            echo ""
+            echo "- **Skip tests:** \`$SKIP\`"
+            echo "- **Reason:** $REASON"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ─────────────────────────────────────────────────────────────
   # JOB 1: Линтинг и тесты
   # ─────────────────────────────────────────────────────────────
   test:
     name: "🧪 Lint & Tests"
+    needs: changes
+    if: needs.changes.outputs.skip_tests != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -215,6 +282,10 @@ jobs:
     name: "🚀 Deploy to Dev"
     runs-on: [self-hosted, dev-server]
     needs: [test, build-frontend]
+    if: |
+      always() &&
+      needs.build-frontend.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped')
     timeout-minutes: 20
     environment: dev
 
