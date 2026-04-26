@@ -6,11 +6,12 @@ import {
 import { Head, Link, router } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import {
-    LuArrowLeft, LuTrash2, LuMinus, LuPlus,
+    LuArrowLeft, LuTrash2,
     LuPackage, LuShoppingCart, LuEraser,
     LuPencil, LuCheck, LuX, LuSearch,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
+import QuantityControl from '@/components/common/QuantityControl';
 import axios from 'axios';
 
 export default function Show({ cart, cartDetails }) {
@@ -383,31 +384,14 @@ export default function Show({ cart, cartDetails }) {
                                                 <PriceCell item={item} />
                                             </Table.Cell>
                                             <Table.Cell textAlign="center">
-                                                <HStack justify="center" gap="1">
-                                                    <IconButton
-                                                        size="xs" variant="outline"
-                                                        disabled={item.quantity <= 1 || updatingItem === item.id}
-                                                        onClick={() => handleUpdateQuantity(item, item.quantity - 1)}
-                                                    >
-                                                        <LuMinus />
-                                                    </IconButton>
-                                                    <Input
-                                                        size="sm" w="55px" textAlign="center"
-                                                        type="number" min="1"
+                                                <Flex justify="center">
+                                                    <QuantityControl
                                                         value={item.quantity}
-                                                        onChange={(e) => {
-                                                            const val = parseInt(e.target.value) || 1;
-                                                            handleUpdateQuantity(item, val);
-                                                        }}
+                                                        onChange={(v) => handleUpdateQuantity(item, v)}
+                                                        min={1}
+                                                        size="md"
                                                     />
-                                                    <IconButton
-                                                        size="xs" variant="outline"
-                                                        disabled={updatingItem === item.id}
-                                                        onClick={() => handleUpdateQuantity(item, item.quantity + 1)}
-                                                    >
-                                                        <LuPlus />
-                                                    </IconButton>
-                                                </HStack>
+                                                </Flex>
                                             </Table.Cell>
                                             <Table.Cell textAlign="right">
                                                 <TotalCell item={item} />
@@ -459,14 +443,13 @@ export default function Show({ cart, cartDetails }) {
                                                         <Text fontSize="sm" fontWeight="700" color="green.600">{formatPrice(item.total_amount_regular)}</Text>
                                                     )}
                                                 </Box>
-                                                <HStack gap="1">
-                                                    <IconButton size="xs" variant="outline" disabled={item.quantity <= 1} onClick={() => handleUpdateQuantity(item, item.quantity - 1)}>
-                                                        <LuMinus />
-                                                    </IconButton>
-                                                    <Text fontSize="sm" fontWeight="600" w="30px" textAlign="center">{item.quantity}</Text>
-                                                    <IconButton size="xs" variant="outline" onClick={() => handleUpdateQuantity(item, item.quantity + 1)}>
-                                                        <LuPlus />
-                                                    </IconButton>
+                                                <HStack gap="2">
+                                                    <QuantityControl
+                                                        value={item.quantity}
+                                                        onChange={(v) => handleUpdateQuantity(item, v)}
+                                                        min={1}
+                                                        size="sm"
+                                                    />
                                                     <IconButton size="xs" variant="ghost" colorPalette="red" onClick={() => setRemoveItem(item)}>
                                                         <LuTrash2 />
                                                     </IconButton>
