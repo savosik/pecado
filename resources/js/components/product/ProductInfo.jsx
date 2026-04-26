@@ -140,29 +140,9 @@ export default function ProductInfo({
                     )}
                 </Flex>
 
-                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" mb="3" lineHeight="1.2" css={{ wordBreak: 'break-word' }}>
-                    {name}
-                </Heading>
-
-                {/* Теги */}
-                {tags && tags.length > 0 && (
-                    <Box mb="3">
-                        <TagList tags={tags} maxVisible={5} />
-                    </Box>
-                )}
-
-                {/* SKU / Код / Штрихкоды */}
-                <Flex wrap="wrap" align="center" gap={{ base: '2', sm: '4' }} mb={hasStatusBadges ? '2' : '0'}>
-                    {sku && <CopyableField icon={LuHash} value={sku} fieldKey="sku" label="Артикул" />}
-                    {code && <CopyableField icon={LuCode} value={code} fieldKey="code" label="Код товара" />}
-                    {barcodes.map((b) => (
-                        <CopyableField key={b.id} icon={LuQrCode} value={b.barcode} fieldKey={`barcode-${b.id}`} label="Штрихкод" />
-                    ))}
-                </Flex>
-
                 {/* Бейджи статуса товара (Новинка / Хит) */}
                 {hasStatusBadges && (
-                    <Flex gap="2" wrap="wrap">
+                    <Flex gap="2" wrap="wrap" mb="2">
                         {isNew && (
                             <Badge colorPalette="green" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
                                 Новинка
@@ -175,34 +155,81 @@ export default function ProductInfo({
                         )}
                     </Flex>
                 )}
+
+                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" mb="3" lineHeight="1.2" css={{ wordBreak: 'break-word' }}>
+                    {name}
+                </Heading>
+
+                {/* Теги */}
+                {tags && tags.length > 0 && (
+                    <Box mb="3">
+                        <TagList tags={tags} maxVisible={5} />
+                    </Box>
+                )}
+
+                {/* SKU / Код / Штрихкоды */}
+                <Flex wrap="wrap" align="center" gap={{ base: '2', sm: '4' }}>
+                    {sku && <CopyableField icon={LuHash} value={sku} fieldKey="sku" label="Артикул" />}
+                    {code && <CopyableField icon={LuCode} value={code} fieldKey="code" label="Код товара" />}
+                    {barcodes.map((b) => (
+                        <CopyableField key={b.id} icon={LuQrCode} value={b.barcode} fieldKey={`barcode-${b.id}`} label="Штрихкод" />
+                    ))}
+                </Flex>
             </Box>
 
             {/* Цена, наличие и корзина — только для авторизованных */}
             {user && (
                 <Box data-sticky-anchor="true">
-                    {/* Цена + старая цена + бейдж скидки — одной строкой */}
-                    <Flex align="baseline" wrap="wrap" columnGap="3" rowGap="1" mb="1">
-                        <Text
-                            fontSize="2xl" fontWeight="600"
-                            color={hasSale ? 'red.600' : undefined}
-                            _dark={{ color: hasSale ? 'red.400' : undefined }}
-                        >
-                            {formatPrice(price)}
-                        </Text>
-                        {hasSale && (
-                            <Text fontSize="sm" color="gray.400" textDecoration="line-through">
-                                {formatPrice(originalPrice)}
+                    {/* Цена + кнопки (Корзина + Избранное) — одной строкой */}
+                    <Flex
+                        align={{ base: 'stretch', md: 'center' }}
+                        direction={{ base: 'column', md: 'row' }}
+                        justify="space-between"
+                        gap="3"
+                        mb="1"
+                    >
+                        <Flex align="baseline" wrap="wrap" columnGap="3" rowGap="1">
+                            <Text
+                                fontSize="2xl" fontWeight="600"
+                                color={hasSale ? 'red.600' : undefined}
+                                _dark={{ color: hasSale ? 'red.400' : undefined }}
+                            >
+                                {formatPrice(price)}
                             </Text>
-                        )}
-                        {hasSale && discountPct && (
-                            <Badge colorPalette="red" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
-                                −{Math.round(discountPct)}%
-                            </Badge>
-                        )}
+                            {hasSale && (
+                                <Text fontSize="sm" color="gray.400" textDecoration="line-through">
+                                    {formatPrice(originalPrice)}
+                                </Text>
+                            )}
+                            {hasSale && discountPct && (
+                                <Badge colorPalette="red" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
+                                    −{Math.round(discountPct)}%
+                                </Badge>
+                            )}
+                        </Flex>
+
+                        <Flex align="center" gap="3" flexShrink="0">
+                            {(inStock || isPreorder) && price > 0 && (
+                                <Box w="200px">
+                                    <CartQuantityControl productId={productId} size="lg" />
+                                </Box>
+                            )}
+                            <IconButton
+                                aria-label="В избранное"
+                                variant="ghost"
+                                size="md"
+                                rounded="sm"
+                                onClick={toggleFavorite}
+                                color={isFav ? 'red.500' : 'gray.400'}
+                                _hover={{ color: 'red.500' }}
+                            >
+                                <LuHeart size={20} fill={isFav ? 'currentColor' : 'none'} />
+                            </IconButton>
+                        </Flex>
                     </Flex>
 
                     {/* Статус наличия — компактно под ценой */}
-                    <Flex align="center" gap="1" fontSize="sm" fontWeight="500" mb="4">
+                    <Flex align="center" gap="1" fontSize="sm" fontWeight="500">
                         {inStock ? (
                             <>
                                 <LuCheck size={14} color="var(--chakra-colors-green-600)" />
@@ -219,26 +246,6 @@ export default function ProductInfo({
                                 <Text color="red.600">Нет в наличии</Text>
                             </>
                         )}
-                    </Flex>
-
-                    {/* Корзина + Избранное */}
-                    <Flex align="center" gap="3">
-                        {(inStock || isPreorder) && price > 0 && (
-                            <Box w="200px">
-                                <CartQuantityControl productId={productId} size="lg" />
-                            </Box>
-                        )}
-                        <IconButton
-                            aria-label="В избранное"
-                            variant="ghost"
-                            size="md"
-                            rounded="sm"
-                            onClick={toggleFavorite}
-                            color={isFav ? 'red.500' : 'gray.400'}
-                            _hover={{ color: 'red.500' }}
-                        >
-                            <LuHeart size={20} fill={isFav ? 'currentColor' : 'none'} />
-                        </IconButton>
                     </Flex>
 
                     {!inStock && !isPreorder && (
