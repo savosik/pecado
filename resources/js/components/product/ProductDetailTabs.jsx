@@ -4,6 +4,7 @@ import { Box, Flex, Text, Button, Table } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
 import { LuDownload, LuFileText } from 'react-icons/lu';
 import ContentRenderer from '@/components/content/ContentRenderer';
+import SimilarProductItem from '@/components/product/SimilarProductItem';
 
 const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -38,10 +39,11 @@ function isValidSpecValue(val) {
  *   description: string,
  *   media: Array<{url: string, type: string}>,
  *   certificates: Array<{id: number, name: string, url: string}>,
- *   sizeChart: {name: string, values: Array<Array<string>>} | null
+ *   sizeChart: {name: string, values: Array<Array<string>>} | null,
+ *   similarProducts: Array<Object>
  * }} props
  */
-export default function ProductDetailTabs({ specifications = {}, specificationGroups = [], description = '', media = [], certificates = [], sizeChart = null }) {
+export default function ProductDetailTabs({ specifications = {}, specificationGroups = [], description = '', media = [], certificates = [], sizeChart = null, similarProducts = [] }) {
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
 
     const validSpecifications = useMemo(() => {
@@ -130,6 +132,7 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
     }, [sizeChart]);
 
     const hasSizeChart = normalizedSizeChart && normalizedSizeChart.values.length > 1;
+    const hasSimilar = Array.isArray(similarProducts) && similarProducts.length > 0;
 
     // Собираем доступные табы
     const tabs = [];
@@ -138,6 +141,7 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
     if (hasSizeChart) tabs.push({ key: 'sizeChart', label: 'Размерная сетка' });
     if (hasCerts) tabs.push({ key: 'certificates', label: 'Сертификаты' });
     if (hasMedia) tabs.push({ key: 'media', label: 'Медиа' });
+    if (hasSimilar) tabs.push({ key: 'similar', label: 'Похожие' });
 
     if (tabs.length === 0) return null;
 
@@ -414,6 +418,23 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
                                 </Box>
                             </Box>
                         )}
+                    </Box>
+                </Tabs.Content>
+            )}
+
+            {/* Похожие */}
+            {hasSimilar && (
+                <Tabs.Content value="similar" pt="4">
+                    <Box
+                        borderWidth="1px"
+                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                        _dark={{ borderColor: 'gray.700' }}
+                        rounded="md"
+                        overflow="hidden"
+                    >
+                        {similarProducts.map((p) => (
+                            <SimilarProductItem key={p.id} product={p} />
+                        ))}
                     </Box>
                 </Tabs.Content>
             )}

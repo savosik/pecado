@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Services\Product\ProductQueryService;
+use App\Services\Product\SimilarProductsService;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -644,6 +645,10 @@ class ProductController extends Controller
             ];
         }
 
+        // Похожие товары — те же, что выдаёт поиск в шапке по названию
+        // текущего товара. Только в наличии или в предзаказе.
+        $similarProducts = app(SimilarProductsService::class)->forProduct($product);
+
         return [
             'product' => $productData,
             'media' => $media,
@@ -653,6 +658,7 @@ class ProductController extends Controller
             'specifications' => $specifications,
             'specificationGroups' => $specificationGroups,
             'sizeChart' => $sizeChart,
+            'similarProducts' => $similarProducts,
         ];
     }
 
