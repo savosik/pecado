@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Http;
 class FetchSexOptIdsViaApi extends Command
 {
     protected $signature = 'catalog:fetch-sex-opt-ids-via-api
-        {--token= : Bearer-токен sex-opt API (иначе SEX_OPT_API_TOKEN из env)}
+        {--token= : Bearer-токен sex-opt API (иначе из config services.sex_opt.api_token / env SEX_OPT_API_TOKEN)}
         {--with-stock-warehouse= : Имя склада — берём только товары с остатком >0 на нём}
         {--limit=0 : Ограничение количества обрабатываемых товаров (0 = без ограничений)}
         {--order=asc : Порядок обхода по id (asc|desc) — desc сначала новые товары}
@@ -24,9 +24,9 @@ class FetchSexOptIdsViaApi extends Command
 
     public function handle(): int
     {
-        $token = $this->option('token') ?: env('SEX_OPT_API_TOKEN');
+        $token = $this->option('token') ?: config('services.sex_opt.api_token');
         if (! $token) {
-            $this->error('Не задан токен (--token= или env SEX_OPT_API_TOKEN)');
+            $this->error('Не задан токен (--token= или SEX_OPT_API_TOKEN в .env / services.sex_opt.api_token)');
 
             return self::FAILURE;
         }
