@@ -9,15 +9,17 @@ use Illuminate\Support\Facades\Http;
 
 class SyncSexOptFlags extends Command
 {
+    private const DEFAULT_URL = 'https://customers.sex-opt.ru/api/public/export/685?auth_token=kqQKCZA73oORObUK3ApLy7xKJ7FYnYajFRekGsqp';
+
     protected $signature = 'products:sync-sex-opt-flags
-        {--url=https://customers.sex-opt.ru/api/public/export/685?auth_token=kqQKCZA73oORObUK3ApLy7xKJ7FYnYajFRekGsqp : URL экспорта sex-opt.ru}
+        {--url= : URL экспорта sex-opt.ru (по умолчанию — дефолтный эндпоинт)}
         {--dry-run : Не вносить изменения, только показать статистику}';
 
     protected $description = 'Сбросить флажки товаров и обновить created_at + флажки по экспорту sex-opt.ru';
 
     public function handle(): int
     {
-        $url = (string) $this->option('url');
+        $url = (string) ($this->option('url') ?: self::DEFAULT_URL);
         $dryRun = (bool) $this->option('dry-run');
 
         $this->info("Скачиваю экспорт: {$url}");
