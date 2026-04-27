@@ -174,6 +174,9 @@ class HandleOrderCreated
                     if ($existingOrder->trashed()) {
                         $existingOrder->restoreQuietly();
                     }
+                    // comment — пользовательское поле, оставляем то, что ввёл клиент при оформлении.
+                    // 1С может прислать его в payload, но при upsert мы его игнорируем.
+                    unset($fields['comment']);
                     $existingOrder->updateQuietly($fields);
 
                     return $existingOrder;

@@ -209,6 +209,72 @@ class HandleOrderCreatedTest extends TestCase
     }
 
     #[Test]
+    public function preserves_user_comment_on_upsert(): void
+    {
+        // v13.8: при upsert уже существующего заказа comment из payload игнорируется,
+        // чтобы не затереть то, что клиент написал на сайте при оформлении.
+        $user = User::factory()->create();
+
+        Order::withoutEvents(function () use ($user) {
+            Order::create([
+                'uuid' => 'order-with-user-comment',
+                'number' => 'ORD-WITH-COMMENT',
+                'user_id' => $user->id,
+                'status' => 'pending',
+                'total_amount' => 0,
+                'comment' => 'Доставка после 18:00, позвонить за час',
+            ]);
+        });
+
+        // 1С присылает order.created для уже существующего заказа с другим комментарием
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-comment-preserve',
+            'uuid' => 'order-with-user-comment',
+            'number' => 'ORD-WITH-COMMENT',
+            'status' => 'confirmed',
+            'comment' => 'Комментарий менеджера из 1С',
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-with-user-comment')->first();
+        $this->assertEquals('Доставка после 18:00, позвонить за час', $order->comment);
+        // Остальные поля, не относящиеся к comment, обновились
+        $this->assertEquals('confirmed', $order->status->value);
+    }
+
+    #[Test]
+    public function preserves_user_comment_on_upsert_when_payload_comment_is_null(): void
+    {
+        // Ещё одна грань: 1С может прислать null/отсутствие — клиентский комментарий всё равно остаётся.
+        $user = User::factory()->create();
+
+        Order::withoutEvents(function () use ($user) {
+            Order::create([
+                'uuid' => 'order-comment-null-payload',
+                'number' => 'ORD-NULL-CMT',
+                'user_id' => $user->id,
+                'status' => 'pending',
+                'total_amount' => 0,
+                'comment' => 'Хрупкий груз',
+            ]);
+        });
+
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-comment-null',
+            'uuid' => 'order-comment-null-payload',
+            'number' => 'ORD-NULL-CMT',
+            'status' => 'confirmed',
+            // comment в payload отсутствует
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-comment-null-payload')->first();
+        $this->assertEquals('Хрупкий груз', $order->comment);
+    }
+
+    #[Test]
     public function allows_different_uuid_with_same_number(): void
     {
         // 1С при retry может послать новый uuid для того же number

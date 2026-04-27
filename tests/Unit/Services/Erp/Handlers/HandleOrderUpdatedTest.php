@@ -533,4 +533,30 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertNotNull($log);
         $this->assertStringContainsString('корректировка цены: 0% → -15%', $log->summary);
     }
+
+    #[Test]
+    public function it_does_not_overwrite_user_comment_from_payload(): void
+    {
+        // v13.8: comment — пользовательское поле, шина 1С его не трогает,
+        // даже если payload содержит явное значение.
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-comment-protected',
+            'status' => 'pending',
+            'comment' => 'Доставить до 12:00, не звонить — оставить у консьержа',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid' => 'test-uuid-comment-protected',
+            'status' => 'confirmed',
+            'comment' => 'Менеджер 1С: попытка переписать клиентский комментарий',
+        ]);
+
+        $order->refresh();
+        $this->assertEquals('Доставить до 12:00, не звонить — оставить у консьержа', $order->comment);
+        // Статус всё-таки обновляется — проверяем, что обработчик отрабатывает остальные поля
+        $this->assertEquals('confirmed', $order->status->value);
+    }
 }

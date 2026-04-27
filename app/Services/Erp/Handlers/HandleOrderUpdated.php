@@ -74,6 +74,9 @@ class HandleOrderUpdated
             $order->delivery_address = $payload['delivery_address'];
         }
 
+        // v13.8: comment — пользовательское поле, не перезаписываем из шины 1С.
+        // То, что клиент ввёл при оформлении заказа на сайте, неприкосновенно.
+
         // v13.7: аудит-метки 1С. array_key_exists, чтобы передача null
         // тоже считалась явной операцией; отсутствие ключа — не трогаем БД.
         // TZ-нормализация — в App\Casts\ErpDatetime.
