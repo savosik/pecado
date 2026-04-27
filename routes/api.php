@@ -25,6 +25,11 @@ Route::get('/products/by-ids', [\App\Http\Controllers\User\ProductByIdsControlle
 // QuickView — JSON-карточка товара
 Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])->name('api.products.show');
 
+// Лениво генерируемое rich-описание товара (Editor.js JSON через OpenRouter)
+Route::get('/products/{product:slug}/rich-content', [\App\Http\Controllers\Api\ProductRichContentController::class, 'show'])
+    ->middleware('throttle:20,1')
+    ->name('api.products.rich-content');
+
 // ──────────────────────────────────────────────────────────────
 // Content API — для ИИ-агента контент-менеджера
 // ──────────────────────────────────────────────────────────────

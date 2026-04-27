@@ -78,6 +78,33 @@ export function ProductQuickViewProvider({ children }) {
         });
     }, [open, closeQuickView]);
 
+    const ensureRichContent = useCallback(async (slug, json, signal) => {
+        const blocks = json?.product?.rich_content?.blocks;
+        if (Array.isArray(blocks) && blocks.length > 0) return;
+
+        try {
+            const res = await fetch(`/api/products/${encodeURIComponent(slug)}/rich-content`, {
+                headers: { 'Accept': 'application/json' },
+                signal,
+            });
+            if (res.status !== 200) return;
+
+            const payload = await res.json();
+            if (!Array.isArray(payload?.blocks) || payload.blocks.length === 0) return;
+
+            const richContent = { blocks: payload.blocks };
+            const updatedProduct = { ...json.product, rich_content: richContent };
+            const updatedJson = { ...json, product: updatedProduct };
+
+            cacheRef.current.set(slug, { data: updatedJson, _ts: Date.now() });
+            setData((prev) => (prev?.product?.slug === slug ? updatedJson : prev));
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.warn('[QuickView] Не удалось загрузить rich-content:', e);
+            }
+        }
+    }, []);
+
     const openQuickView = useCallback(async (slug) => {
         try {
             if (!slug) return;
@@ -93,6 +120,9 @@ export function ProductQuickViewProvider({ children }) {
             const json = await loadData(slug, controller.signal);
             setData(json);
             setLoading(false);
+
+            // Лениво подтягиваем сгенерированный rich-content (если его ещё нет в БД).
+            ensureRichContent(slug, json, controller.signal);
         } catch (e) {
             if (e.name !== 'AbortError') {
                 console.error('[QuickView] Ошибка загрузки товара:', e);
@@ -101,7 +131,7 @@ export function ProductQuickViewProvider({ children }) {
                 window.location.href = `/products/${encodeURIComponent(slug)}`;
             }
         }
-    }, [loadData, closeQuickView]);
+    }, [loadData, closeQuickView, ensureRichContent]);
 
     const value = useMemo(() => ({
         open,

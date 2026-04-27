@@ -53,6 +53,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\OrderRepository::class
         );
 
+        $this->app->singleton(\App\Services\Product\RichContent\BlockSchemaProvider::class, function () {
+            return new \App\Services\Product\RichContent\BlockSchemaProvider(
+                (string) config('rich_content.schema_path', base_path('docs/content-blocks-schema.json'))
+            );
+        });
+
         Scramble::ignoreDefaultRoutes();
     }
 
