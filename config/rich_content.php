@@ -40,7 +40,6 @@ return [
         'delimiter',
         'table',
         'warning',
-        'alertBanner',
         'faq',
         'iconFeature',
         'stats',
