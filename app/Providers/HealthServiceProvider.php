@@ -18,8 +18,8 @@ class HealthServiceProvider extends ServiceProvider
             DatabaseCheck::new()->connectionName('prices')->name('Database: Prices'),
             RedisCheck::new(),
             UsedDiskSpaceCheck::new()
-                ->warnWhenUsedSpaceIsAbovePercentage(70)
-                ->failWhenUsedSpaceIsAbovePercentage(90),
+                ->warnWhenUsedSpaceIsAbovePercentage(75)
+                ->failWhenUsedSpaceIsAbovePercentage(85),
             HorizonCheck::new(),
         ]);
     }

@@ -12,3 +12,4 @@ Schedule::command('app:clean-price-dumps')->dailyAt('04:00');
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 Schedule::command('health:check')->everyMinute();
 Schedule::command('search:sync')->cron('0 3 */3 * *'); // каждые 3 дня в 03:00
+Schedule::command('media:clean-temp')->hourly();
