@@ -158,8 +158,8 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
 
             {/* Stats Grid */}
             <Grid
-                templateColumns={{ base: 'repeat(2, 1fr)', md: `repeat(${stats.length + (balance ? 1 : 0)}, 1fr)` }}
-                gap="4"
+                templateColumns={{ base: '1fr', md: `repeat(${stats.length + (balance ? 1 : 0)}, 1fr)` }}
+                gap={{ base: '3', md: '4' }}
                 mb="6"
             >
                 {stats.map((stat) => (
@@ -175,8 +175,12 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                 cursor="pointer"
                                 h="100%"
                             >
-                                <Card.Body p="5">
-                                    <HStack justify="space-between" mb="3">
+                                <Card.Body p={{ base: '4', md: '5' }}>
+                                    <Flex
+                                        direction={{ base: 'row', md: 'column' }}
+                                        align={{ base: 'center', md: 'stretch' }}
+                                        gap={{ base: '3', md: '0' }}
+                                    >
                                         <Flex
                                             align="center"
                                             justify="center"
@@ -189,16 +193,26 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                                 bg: 'pecado.900/20',
                                                 color: 'pecado.300',
                                             }}
+                                            flexShrink="0"
+                                            mb={{ base: '0', md: '3' }}
                                         >
                                             <stat.icon size={20} />
                                         </Flex>
-                                    </HStack>
-                                    <Text fontSize="2xl" fontWeight="800" lineHeight="1">
-                                        {stat.value}
-                                    </Text>
-                                    <Text fontSize="sm" color="gray.500" mt="1">
-                                        {stat.label}
-                                    </Text>
+                                        <Flex
+                                            direction={{ base: 'row', md: 'column' }}
+                                            align={{ base: 'baseline', md: 'stretch' }}
+                                            gap={{ base: '2', md: '1' }}
+                                            flex="1"
+                                            minW="0"
+                                        >
+                                            <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="800" lineHeight="1">
+                                                {stat.value}
+                                            </Text>
+                                            <Text fontSize="sm" color="gray.500">
+                                                {stat.label}
+                                            </Text>
+                                        </Flex>
+                                    </Flex>
                                 </Card.Body>
                             </Card.Root>
                         </Link>
@@ -215,8 +229,12 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                             _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
                             h="100%"
                         >
-                            <Card.Body p="5">
-                                <HStack justify="space-between" mb="3">
+                            <Card.Body p={{ base: '4', md: '5' }}>
+                                <Flex
+                                    direction={{ base: 'row', md: 'column' }}
+                                    align={{ base: 'center', md: 'stretch' }}
+                                    gap={{ base: '3', md: '0' }}
+                                >
                                     <Flex
                                         align="center"
                                         justify="center"
@@ -229,29 +247,34 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                             bg: 'pecado.900/20',
                                             color: 'pecado.300',
                                         }}
+                                        flexShrink="0"
+                                        mb={{ base: '0', md: '3' }}
                                     >
                                         <LuWallet size={20} />
                                     </Flex>
-                                </HStack>
-                                <Text
-                                    fontSize="2xl"
-                                    fontWeight="800"
-                                    lineHeight="1"
-                                    color={parseFloat(balance.current_balance) < 0 ? 'red.600' : 'green.600'}
-                                    _dark={{ color: parseFloat(balance.current_balance) < 0 ? 'red.400' : 'green.400' }}
-                                >
-                                    {parseFloat(balance.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
-                                </Text>
-                                <Text fontSize="sm" color="gray.500" mt="1">
-                                    {balance.contractors_count > 1
-                                        ? `Баланс по ${balance.contractors_count} контрагентам`
-                                        : 'Баланс'}
-                                </Text>
-                                {parseFloat(balance.overdue_debt) > 0 && (
-                                    <Text fontSize="xs" color="red.500" mt="1">
-                                        Просрочка: {parseFloat(balance.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })} ₽
-                                    </Text>
-                                )}
+                                    <Box flex="1" minW="0">
+                                        <Text
+                                            fontSize={{ base: 'xl', md: '2xl' }}
+                                            fontWeight="800"
+                                            lineHeight="1.1"
+                                            whiteSpace="nowrap"
+                                            color={parseFloat(balance.current_balance) < 0 ? 'red.600' : 'green.600'}
+                                            _dark={{ color: parseFloat(balance.current_balance) < 0 ? 'red.400' : 'green.400' }}
+                                        >
+                                            {parseFloat(balance.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                        </Text>
+                                        <Text fontSize="sm" color="gray.500" mt="1">
+                                            {balance.contractors_count > 1
+                                                ? `Баланс по ${balance.contractors_count} контрагентам`
+                                                : 'Баланс'}
+                                        </Text>
+                                        {parseFloat(balance.overdue_debt) > 0 && (
+                                            <Text fontSize="xs" color="red.500" mt="1" whiteSpace="nowrap">
+                                                Просрочка: {parseFloat(balance.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
+                                            </Text>
+                                        )}
+                                    </Box>
+                                </Flex>
                             </Card.Body>
                         </Card.Root>
                     </GridItem>
@@ -282,9 +305,7 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                         <VStack gap="2" align="stretch">
                             {recentOrders.map((order) => (
                                 <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
-                                    <Flex
-                                        align="center"
-                                        justify="space-between"
+                                    <Box
                                         p="3"
                                         borderRadius="lg"
                                         bg="gray.50"
@@ -293,41 +314,102 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                         transition="background 0.15s"
                                         cursor="pointer"
                                     >
-                                        <VStack align="start" gap="0.5" flex="1" minW="0">
-                                            <HStack gap="1.5">
-                                                <Text fontSize="sm" fontWeight="700" color="gray.800" _dark={{ color: 'gray.100' }}>
+                                        {/* Mobile: две строки */}
+                                        <Box display={{ base: 'block', md: 'none' }}>
+                                            <Flex align="center" justify="space-between" gap="2" mb="1.5" minW="0">
+                                                <Text
+                                                    fontSize="sm"
+                                                    fontWeight="700"
+                                                    color="gray.800"
+                                                    _dark={{ color: 'gray.100' }}
+                                                    whiteSpace="nowrap"
+                                                    overflow="hidden"
+                                                    textOverflow="ellipsis"
+                                                    minW="0"
+                                                >
                                                     №{order.order_number || order.id}
                                                 </Text>
-                                                <Badge
-                                                    colorPalette={order.type === 'preorder' ? 'orange' : 'gray'}
-                                                    variant="subtle"
-                                                    borderRadius="full"
-                                                    px="2"
-                                                    fontSize="2xs"
+                                                <HStack gap="1" flexShrink="0">
+                                                    <Badge
+                                                        colorPalette={order.type === 'preorder' ? 'orange' : 'teal'}
+                                                        variant="subtle"
+                                                        borderRadius="full"
+                                                        px="2"
+                                                        fontSize="2xs"
+                                                    >
+                                                        {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                    </Badge>
+                                                    <Badge
+                                                        colorPalette={statusColors[order.status] || 'gray'}
+                                                        variant="subtle"
+                                                        borderRadius="full"
+                                                        px="2"
+                                                        fontSize="2xs"
+                                                    >
+                                                        {statusLabels[order.status] || order.status}
+                                                    </Badge>
+                                                </HStack>
+                                            </Flex>
+                                            <Flex align="center" justify="space-between" gap="2">
+                                                <Text fontSize="xs" color="gray.400" minW="0" truncate>
+                                                    {order.created_at}
+                                                    {order.items_count > 0 && ` · ${order.items_count} ${order.items_count === 1 ? 'позиция' : order.items_count < 5 ? 'позиции' : 'позиций'}`}
+                                                </Text>
+                                                <Text
+                                                    fontSize="sm"
+                                                    fontWeight="700"
+                                                    flexShrink="0"
+                                                    color="gray.800"
+                                                    _dark={{ color: 'gray.100' }}
+                                                    whiteSpace="nowrap"
                                                 >
-                                                    {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
-                                                </Badge>
-                                            </HStack>
-                                            <Text fontSize="xs" color="gray.400">
-                                                {order.created_at}
-                                                {order.items_count > 0 && ` · ${order.items_count} ${order.items_count === 1 ? 'позиция' : order.items_count < 5 ? 'позиции' : 'позиций'}`}
-                                            </Text>
-                                        </VStack>
-                                        <Badge
-                                            colorPalette={statusColors[order.status] || 'gray'}
-                                            variant="subtle"
-                                            borderRadius="full"
-                                            px="2.5"
-                                            fontSize="xs"
-                                            flexShrink="0"
-                                            mx="3"
+                                                    {Number(order.total || 0).toLocaleString('ru-RU')}&nbsp;₽
+                                                </Text>
+                                            </Flex>
+                                        </Box>
+
+                                        {/* Desktop: одна строка */}
+                                        <Flex
+                                            display={{ base: 'none', md: 'flex' }}
+                                            align="center"
+                                            justify="space-between"
                                         >
-                                            {statusLabels[order.status] || order.status}
-                                        </Badge>
-                                        <Text fontSize="sm" fontWeight="700" flexShrink="0" color="gray.800" _dark={{ color: 'gray.100' }}>
-                                            {Number(order.total || 0).toLocaleString('ru-RU')} ₽
-                                        </Text>
-                                    </Flex>
+                                            <VStack align="start" gap="0.5" flex="1" minW="0">
+                                                <HStack gap="1.5">
+                                                    <Text fontSize="sm" fontWeight="700" color="gray.800" _dark={{ color: 'gray.100' }}>
+                                                        №{order.order_number || order.id}
+                                                    </Text>
+                                                    <Badge
+                                                        colorPalette={order.type === 'preorder' ? 'orange' : 'teal'}
+                                                        variant="subtle"
+                                                        borderRadius="full"
+                                                        px="2"
+                                                        fontSize="2xs"
+                                                    >
+                                                        {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                    </Badge>
+                                                </HStack>
+                                                <Text fontSize="xs" color="gray.400">
+                                                    {order.created_at}
+                                                    {order.items_count > 0 && ` · ${order.items_count} ${order.items_count === 1 ? 'позиция' : order.items_count < 5 ? 'позиции' : 'позиций'}`}
+                                                </Text>
+                                            </VStack>
+                                            <Badge
+                                                colorPalette={statusColors[order.status] || 'gray'}
+                                                variant="subtle"
+                                                borderRadius="full"
+                                                px="2.5"
+                                                fontSize="xs"
+                                                flexShrink="0"
+                                                mx="3"
+                                            >
+                                                {statusLabels[order.status] || order.status}
+                                            </Badge>
+                                            <Text fontSize="sm" fontWeight="700" flexShrink="0" color="gray.800" _dark={{ color: 'gray.100' }} whiteSpace="nowrap">
+                                                {Number(order.total || 0).toLocaleString('ru-RU')}&nbsp;₽
+                                            </Text>
+                                        </Flex>
+                                    </Box>
                                 </Link>
                             ))}
                         </VStack>

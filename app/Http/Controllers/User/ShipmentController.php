@@ -7,11 +7,14 @@ use App\Http\Controllers\Controller;
 use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\Currency;
 use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Shipment;
 use App\Services\CurrencyService;
+use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ShipmentController extends Controller
 {
@@ -158,6 +161,10 @@ class ShipmentController extends Controller
                 ->whereIn('uuid', $orderUuids)
                 ->with(['company'])
                 ->withCount(['items', 'shipments'])
+                ->addSelect([
+                    'original_total_amount' => OrderItem::selectRaw('COALESCE(SUM(base_price * quantity), 0)')
+                        ->whereColumn('order_id', 'orders.id'),
+                ])
                 ->get()
             : collect();
 
@@ -221,6 +228,8 @@ class ShipmentController extends Controller
                 }),
             ],
             'related_orders' => $relatedOrders->map(function ($order) use ($currency) {
+                $originalTotalAmount = (float) ($order->original_total_amount ?? 0);
+
                 return [
                     'id' => $order->id,
                     'number' => $order->erp_number ?? $order->number ?? ('#'.$order->id),
@@ -240,11 +249,11 @@ class ShipmentController extends Controller
                     'shipments_count' => $order->shipments_count,
                     'total_amount' => $order->total_amount,
                     'total_converted' => $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency),
+                    'original_total_amount' => $originalTotalAmount,
+                    'original_total_converted' => $this->convertAmount($originalTotalAmount, $order->currency_code, $currency),
                     'currency_code' => $order->currency_code,
-                    'created_at' => $order->created_at?->format('d.m.Y H:i'),
-                    'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
-                    'delivery_address' => $order->delivery_address,
-                    'comment' => $order->comment,
+                    'erp_created_at' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
+                    'erp_updated_at' => ($order->erp_updated_at ?? $order->updated_at)?->format('d.m.Y H:i'),
                 ];
             }),
             'overdue_detail' => $overdueDetail ? [
@@ -294,5 +303,63 @@ class ShipmentController extends Controller
 
         // Затем конвертировать из RUB в целевую валюту
         return $this->currencyService->convertFromBase($amountInRub, $targetCurrency);
+    }
+
+    /**
+     * Скачать состав отгрузки в Excel (XLSX).
+     * GET /cabinet/shipments/{shipment}/items/export
+     */
+    public function exportItems(Request $request, Shipment $shipment, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        $user = $request->user();
+        abort_unless($shipment->user_id === $user->id, 403);
+
+        $shipment->load(['items.product:id,name,sku', 'items.order:id,uuid,number,erp_number']);
+
+        $userCurrency = $this->getUserCurrency($request);
+
+        $headers = [
+            'Товар', 'Артикул', 'Заказ',
+            'Кол-во', 'Цена без скидки', 'Скидка %', 'Цена со скидкой', 'Сумма',
+            'Валюта',
+        ];
+
+        $rows = $shipment->items->map(function ($item) use ($shipment, $userCurrency) {
+            $price = (float) ($item->price ?? 0);
+            $total = (float) ($item->total ?? 0);
+            $qty = (int) $item->quantity;
+            $gross = $price * $qty;
+            $hasDiscount = $gross > $total + 0.01;
+            $effectivePrice = $qty > 0 ? $total / $qty : 0;
+
+            $combinedDiscount = (float) ($item->auto_discount_percent ?? 0)
+                + (float) ($item->manual_discount_percent ?? 0);
+            $discountPct = $combinedDiscount > 0
+                ? $combinedDiscount
+                : ($hasDiscount && $gross > 0 ? ($gross - $total) / $gross * 100 : 0);
+
+            $priceConverted = $this->convertAmount($price, $shipment->currency_code, $userCurrency);
+            $effectiveConverted = $this->convertAmount($effectivePrice, $shipment->currency_code, $userCurrency);
+            $totalConverted = $this->convertAmount($total, $shipment->currency_code, $userCurrency);
+
+            $orderNumber = $item->order?->erp_number ?? $item->order?->number ?? '';
+
+            return [
+                $item->product?->name ?? '—',
+                $item->product?->sku ?? '',
+                $orderNumber,
+                $qty,
+                round($priceConverted, 2),
+                round($discountPct, 2),
+                round($effectiveConverted, 2),
+                round($totalConverted, 2),
+                $userCurrency?->code ?? $shipment->currency_code ?? 'RUB',
+            ];
+        });
+
+        $shipmentNumber = $shipment->erp_number ?? $shipment->number ?? (string) $shipment->id;
+        $filename = "shipment-{$shipmentNumber}-items";
+
+        return $exporter->stream($filename, $headers, $rows, "Отгрузка {$shipmentNumber}");
     }
 }

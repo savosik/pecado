@@ -1,17 +1,19 @@
 import { useState } from 'react';
 import {
-    Box, Flex, HStack, VStack, Text, Badge, Button, Input,
+    Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
     Card, Stack, IconButton,
 } from '@chakra-ui/react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     LuFilter, LuX, LuArrowUpDown, LuArrowUp, LuArrowDown,
     LuChevronLeft, LuChevronRight, LuSearch, LuShoppingBag,
-    LuMapPin, LuMessageSquare,
+    LuPackage, LuTruck, LuClock,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
+import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const STATUS_COLORS = {
     pending: 'yellow',
@@ -21,7 +23,7 @@ const STATUS_COLORS = {
     deleted: 'red',
 };
 
-export default function OrdersIndex({ filters, statuses, types }) {
+export default function OrdersIndex({ filters, statuses, types, companies = [] }) {
     const { orders, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
@@ -29,6 +31,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
     const [localFilters, setLocalFilters] = useState({
         status: filters?.status || '',
         type: filters?.type || '',
+        company_id: filters?.company_id || '',
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
@@ -60,7 +63,7 @@ export default function OrdersIndex({ filters, statuses, types }) {
     };
 
     const handleResetFilters = () => {
-        const reset = { status: '', type: '', date_from: '', date_to: '', amount_from: '', amount_to: '' };
+        const reset = { status: '', type: '', company_id: '', date_from: '', date_to: '', amount_from: '', amount_to: '' };
         setLocalFilters(reset);
         navigateWithParams({ ...reset, search: '', page: 1 });
         setSearch('');
@@ -72,58 +75,97 @@ export default function OrdersIndex({ filters, statuses, types }) {
 
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const SortButton = ({ field, children }) => {
-        const active = filters?.sort_by === field;
-        const Icon = active
-            ? (filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown)
-            : LuArrowUpDown;
-        return (
-            <Button
-                variant={active ? 'subtle' : 'ghost'}
-                colorPalette={active ? 'pecado' : 'gray'}
-                size="xs"
-                onClick={() => handleSort(field)}
-                gap="1"
-            >
-                {children}
-                <Icon size={12} />
-            </Button>
-        );
-    };
+    const sortFields = [
+        { value: 'erp_created_at', label: 'Дата' },
+        { value: 'id', label: 'Номер' },
+        { value: 'status', label: 'Статус' },
+        { value: 'total_amount', label: 'Сумма' },
+    ];
+    const activeSort = sortFields.find((f) => f.value === filters?.sort_by);
+    const sortIsActive = !!activeSort;
+    const SortIcon = sortIsActive
+        ? (filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown)
+        : LuArrowUpDown;
+    const activeFiltersCount = ['status', 'type', 'company_id', 'date_from', 'date_to', 'amount_from', 'amount_to']
+        .filter((k) => !!filters?.[k]).length;
 
     return (
         <CabinetLayout title="Мои заказы">
             <Head title="Мои заказы — Pecado" />
 
-            {/* Поиск и кнопка фильтров */}
-            <Flex gap="3" mb="4" direction={{ base: 'column', sm: 'row' }}>
-                <Box as="form" onSubmit={handleSearch} flex="1">
-                    <Flex gap="2">
+            {/* Поиск + фильтры + сортировка — одной строкой */}
+            <Flex gap="2" mb="4" align="center">
+                <Box as="form" onSubmit={handleSearch} flex="1" minW="0">
+                    <InputGroup startElement={<LuSearch size={16} />} flex="1">
                         <Input
-                            placeholder="Поиск по номеру заказа..."
+                            placeholder="Поиск по номеру..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"
                         />
-                        <IconButton
-                            type="submit"
-                            variant="outline"
-                            size="sm"
-                            aria-label="Искать"
-                        >
-                            <LuSearch size={16} />
-                        </IconButton>
-                    </Flex>
+                    </InputGroup>
                 </Box>
+
+                {/* Фильтры */}
                 <Button
                     onClick={() => setShowFilters(!showFilters)}
-                    variant="outline"
+                    variant={showFilters || activeFiltersCount > 0 ? 'subtle' : 'outline'}
+                    colorPalette={showFilters || activeFiltersCount > 0 ? 'pecado' : 'gray'}
                     size="sm"
                     flexShrink="0"
+                    aria-label="Фильтры"
+                    aria-expanded={showFilters}
                 >
                     <LuFilter size={16} />
-                    {showFilters ? 'Скрыть фильтры' : 'Фильтры'}
+                    <Box as="span" display={{ base: 'none', md: 'inline' }}>
+                        {showFilters ? 'Скрыть фильтры' : 'Фильтры'}
+                    </Box>
+                    {activeFiltersCount > 0 && (
+                        <Badge colorPalette="pecado" variant="solid" borderRadius="full" fontSize="2xs" px="1.5" minW="4">
+                            {activeFiltersCount}
+                        </Badge>
+                    )}
                 </Button>
+
+                {/* Сортировка */}
+                <MenuRoot positioning={{ placement: 'bottom-end' }}>
+                    <MenuTrigger asChild>
+                        <Button
+                            variant={sortIsActive ? 'subtle' : 'outline'}
+                            colorPalette={sortIsActive ? 'pecado' : 'gray'}
+                            size="sm"
+                            flexShrink="0"
+                            aria-label="Сортировка"
+                        >
+                            <SortIcon size={16} />
+                            <Box as="span" display={{ base: 'none', md: 'inline' }}>
+                                {activeSort ? activeSort.label : 'Сортировка'}
+                            </Box>
+                        </Button>
+                    </MenuTrigger>
+                    <MenuContent>
+                        {sortFields.map((f) => {
+                            const isActive = filters?.sort_by === f.value;
+                            const ActiveIcon = filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown;
+                            return (
+                                <MenuItem
+                                    key={f.value}
+                                    value={f.value}
+                                    onClick={() => handleSort(f.value)}
+                                >
+                                    <Flex align="center" justify="space-between" w="100%" gap="3">
+                                        <Text fontWeight={isActive ? '600' : '400'}>{f.label}</Text>
+                                        {isActive && (
+                                            <Box color="pecado.500" _dark={{ color: 'pecado.300' }}>
+                                                <ActiveIcon size={14} />
+                                            </Box>
+                                        )}
+                                    </Flex>
+                                </MenuItem>
+                            );
+                        })}
+                    </MenuContent>
+                </MenuRoot>
             </Flex>
 
             {/* Расширенные фильтры */}
@@ -169,6 +211,27 @@ export default function OrdersIndex({ filters, statuses, types }) {
                                         </Select.Content>
                                     </Select.Root>
                                 </Field>
+
+                                {companies.length > 0 && (
+                                    <Field label="Контрагент" flex="1">
+                                        <Select.Root
+                                            value={localFilters.company_id ? [localFilters.company_id] : []}
+                                            onValueChange={(e) => setLocalFilters({ ...localFilters, company_id: e.value[0] || '' })}
+                                        >
+                                            <Select.Trigger>
+                                                <Select.ValueText placeholder="Все контрагенты" />
+                                            </Select.Trigger>
+                                            <Select.Content>
+                                                <Select.Item item="">Все контрагенты</Select.Item>
+                                                {companies.map((c) => (
+                                                    <Select.Item key={c.value} item={c.value}>
+                                                        {c.label}
+                                                    </Select.Item>
+                                                ))}
+                                            </Select.Content>
+                                        </Select.Root>
+                                    </Field>
+                                )}
 
                                 <Field label="Дата от" flex="1">
                                     <Input
@@ -245,108 +308,162 @@ export default function OrdersIndex({ filters, statuses, types }) {
                 </Card.Root>
             ) : (
                 <>
-                    {/* Сортировка */}
-                    <HStack gap="1" mb="3" px="1" flexWrap="wrap">
-                        <Text fontSize="xs" color="gray.400" mr="1">Сортировка:</Text>
-                        <SortButton field="id">Номер</SortButton>
-                        <SortButton field="created_at">Дата</SortButton>
-                        <SortButton field="status">Статус</SortButton>
-                        <SortButton field="total_amount">Сумма</SortButton>
-                    </HStack>
-
                     {/* Карточки-строки */}
                     <VStack gap="2" align="stretch">
-                        {orders.data.map((order) => (
-                            <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
-                                <Box
-                                    bg={{ base: 'white', _dark: 'gray.800' }}
-                                    borderRadius="xl"
-                                    border="1px solid"
-                                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                                    p="4"
-                                    _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
-                                    transition="all 0.15s"
-                                    cursor="pointer"
-                                >
-                                    <Flex gap="4" align="start" justify="space-between">
-                                        {/* Левая часть: номер, статус, мета */}
-                                        <Box flex="1" minW="0">
-                                            {/* Строка 1: номер + бейджи */}
-                                            <Flex gap="2" align="center" flexWrap="wrap" mb="1.5">
-                                                <Text fontWeight="700" fontSize="md" fontFamily="mono" whiteSpace="nowrap" flexShrink="0">
-                                                    {order.number}
-                                                </Text>
-                                                <Badge
-                                                    colorPalette={order.type === 'preorder' ? 'purple' : 'gray'}
-                                                    variant="subtle" fontSize="2xs" px="1.5"
-                                                >
-                                                    {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
-                                                </Badge>
-                                                <Flex align="center" gap="1.5">
+                        {orders.data.map((order) => {
+                            const itemsLabel = order.items_count === 1
+                                ? 'позиция'
+                                : order.items_count < 5 ? 'позиции' : 'позиций';
+                            const shipmentsLabel = order.shipments_count === 1
+                                ? 'отгрузка'
+                                : order.shipments_count < 5 ? 'отгрузки' : 'отгрузок';
+                            const hasDiscount = Number(order.original_total_converted || 0) > Number(order.total_converted || 0);
+                            const isForeignCurrency = order.currency_code && order.currency_code !== currency?.code;
+
+                            return (
+                                <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
+                                    <Box
+                                        bg={{ base: 'white', _dark: 'gray.800' }}
+                                        borderRadius="xl"
+                                        border="1px solid"
+                                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                        p="4"
+                                        _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
+                                        transition="all 0.15s"
+                                        cursor="pointer"
+                                    >
+                                        <Flex
+                                            direction={{ base: 'column', md: 'row' }}
+                                            gap={{ base: '3', md: '4' }}
+                                            align={{ md: 'start' }}
+                                            justify="space-between"
+                                        >
+                                            {/* Левая часть */}
+                                            <Box flex="1" minW="0">
+                                                {/* Строка 1: номер + бейджи + дата */}
+                                                <Flex gap="2" align="center" flexWrap="wrap" mb="2">
+                                                    <Text
+                                                        fontWeight="700"
+                                                        fontSize="md"
+                                                        fontFamily="mono"
+                                                        whiteSpace="nowrap"
+                                                        color="gray.800"
+                                                        _dark={{ color: 'gray.100' }}
+                                                    >
+                                                        {order.number}
+                                                    </Text>
+                                                    <Badge
+                                                        colorPalette={order.type === 'preorder' ? 'orange' : 'teal'}
+                                                        variant="subtle" fontSize="2xs" px="2" borderRadius="full"
+                                                    >
+                                                        {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                    </Badge>
                                                     <Badge
                                                         colorPalette={STATUS_COLORS[order.status] || 'gray'}
-                                                        variant="subtle" fontSize="xs" borderRadius="full" px="2.5"
+                                                        variant="subtle" fontSize="2xs" px="2" borderRadius="full"
                                                     >
                                                         {order.status_label}
                                                     </Badge>
-                                                    <Text fontSize="2xs" color="gray.400">{order.updated_at}</Text>
+                                                    <Tooltip
+                                                        content={`Обновлён: ${order.erp_updated_at || '—'}`}
+                                                        positioning={{ placement: 'top' }}
+                                                        openDelay={250}
+                                                    >
+                                                        <Flex
+                                                            align="center"
+                                                            gap="1"
+                                                            fontSize="sm"
+                                                            color="gray.600"
+                                                            _dark={{ color: 'gray.400' }}
+                                                            fontWeight="500"
+                                                        >
+                                                            <LuClock size={12} />
+                                                            <Text whiteSpace="nowrap">{order.erp_created_at}</Text>
+                                                        </Flex>
+                                                    </Tooltip>
                                                 </Flex>
-                                            </Flex>
 
-                                            {/* Строка 2: компания, позиции, отгрузки */}
-                                            <HStack gap="3" fontSize="xs" color="gray.500" flexWrap="wrap" mb={order.delivery_address || order.comment ? '1.5' : '0'}>
+                                                {/* Строка 2: контрагент */}
                                                 {order.company && (
-                                                    <Text fontWeight="500">{order.company.name}</Text>
+                                                    <Text
+                                                        fontSize="sm"
+                                                        color="gray.600"
+                                                        _dark={{ color: 'gray.400' }}
+                                                        mb="2"
+                                                        truncate
+                                                    >
+                                                        {order.company.name}
+                                                    </Text>
                                                 )}
-                                                <Text>{order.items_count} {order.items_count === 1 ? 'позиция' : order.items_count < 5 ? 'позиции' : 'позиций'}</Text>
-                                                {order.shipments_count > 0 && (
-                                                    <Text>{order.shipments_count} {order.shipments_count === 1 ? 'отгрузка' : order.shipments_count < 5 ? 'отгрузки' : 'отгрузок'}</Text>
+
+                                                {/* Строка 3: бейджи количеств */}
+                                                <Flex gap="2" align="center" flexWrap="wrap">
+                                                    <Badge
+                                                        variant="outline"
+                                                        colorPalette="gray"
+                                                        fontSize="2xs"
+                                                        px="2" py="0.5"
+                                                        borderRadius="full"
+                                                        gap="1"
+                                                    >
+                                                        <LuPackage size={11} />
+                                                        {order.items_count}&nbsp;{itemsLabel}
+                                                    </Badge>
+                                                    {order.shipments_count > 0 && (
+                                                        <Badge
+                                                            variant="outline"
+                                                            colorPalette="gray"
+                                                            fontSize="2xs"
+                                                            px="2" py="0.5"
+                                                            borderRadius="full"
+                                                            gap="1"
+                                                        >
+                                                            <LuTruck size={11} />
+                                                            {order.shipments_count}&nbsp;{shipmentsLabel}
+                                                        </Badge>
+                                                    )}
+                                                </Flex>
+                                            </Box>
+
+                                            {/* Правая часть: сумма */}
+                                            <VStack
+                                                gap="0"
+                                                align={{ base: 'start', md: 'end' }}
+                                                flexShrink="0"
+                                                w={{ base: '100%', md: 'auto' }}
+                                            >
+                                                {hasDiscount && (
+                                                    <Text
+                                                        fontSize="xs"
+                                                        color="gray.400"
+                                                        fontFamily="mono"
+                                                        textDecoration="line-through"
+                                                        whiteSpace="nowrap"
+                                                    >
+                                                        {fmt(order.original_total_converted)}&nbsp;{currencySymbol}
+                                                    </Text>
                                                 )}
-                                            </HStack>
-
-                                            {/* Строка 3: адрес */}
-                                            {order.delivery_address && (
-                                                <HStack gap="1" fontSize="xs" color="gray.500" mb="1" minW="0">
-                                                    <Box flexShrink="0" color="gray.400"><LuMapPin size={11} /></Box>
-                                                    <Text noOfLines={1}>{order.delivery_address}</Text>
-                                                </HStack>
-                                            )}
-
-                                            {/* Строка 4: комментарий */}
-                                            {order.comment && (
-                                                <HStack gap="1" fontSize="xs" color="gray.400" minW="0">
-                                                    <Box flexShrink="0"><LuMessageSquare size={11} /></Box>
-                                                    <Text noOfLines={1} fontStyle="italic">{order.comment}</Text>
-                                                </HStack>
-                                            )}
-                                        </Box>
-
-                                        {/* Правая часть: сумма */}
-                                        <VStack gap="0" align="end" flexShrink="0">
-                                            {Number(order.original_total_converted || 0) > Number(order.total_converted || 0) && (
                                                 <Text
-                                                    fontSize="xs"
-                                                    color="gray.400"
+                                                    fontWeight="700"
+                                                    fontSize="lg"
                                                     fontFamily="mono"
-                                                    textDecoration="line-through"
                                                     whiteSpace="nowrap"
+                                                    color={hasDiscount ? 'pecado.600' : 'gray.800'}
+                                                    _dark={{ color: hasDiscount ? 'pecado.300' : 'gray.100' }}
                                                 >
-                                                    {fmt(order.original_total_converted)} {currencySymbol}
+                                                    {fmt(order.total_converted)}&nbsp;{currencySymbol}
                                                 </Text>
-                                            )}
-                                            <Text fontWeight="700" fontSize="lg" fontFamily="mono" whiteSpace="nowrap">
-                                                {fmt(order.total_converted)} {currencySymbol}
-                                            </Text>
-                                            {order.currency_code && order.currency_code !== currency?.code && (
-                                                <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
-                                                    {fmt(order.total_amount)} {order.currency_code}
-                                                </Text>
-                                            )}
-                                        </VStack>
-                                    </Flex>
-                                </Box>
-                            </Link>
-                        ))}
+                                                {isForeignCurrency && (
+                                                    <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
+                                                        {fmt(order.total_amount)}&nbsp;{order.currency_code}
+                                                    </Text>
+                                                )}
+                                            </VStack>
+                                        </Flex>
+                                    </Box>
+                                </Link>
+                            );
+                        })}
                     </VStack>
 
                     {/* Пагинация */}

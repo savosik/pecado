@@ -139,6 +139,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
 
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/{order}/items/export', [OrderController::class, 'exportItems'])->name('orders.items.export');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Delivery Addresses
@@ -180,6 +181,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
 
     // Отгрузки (реализации из 1С)
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+    Route::get('/shipments/{shipment}/items/export', [ShipmentController::class, 'exportItems'])->name('shipments.items.export');
     Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
 
     // Медиатека

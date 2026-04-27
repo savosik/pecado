@@ -8,9 +8,11 @@ use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CurrencyService;
+use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class OrderController extends Controller
 {
@@ -55,6 +57,12 @@ class OrderController extends Controller
             $query->where('status', $status);
         }
 
+        // Фильтрация по контрагенту (только из компаний текущего пользователя)
+        if ($companyId = $request->input('company_id')) {
+            $query->where('company_id', $companyId)
+                ->whereHas('company', fn ($q) => $q->where('user_id', $user->id));
+        }
+
         // Фильтрация по дате создания
         if ($dateFrom = $request->input('date_from')) {
             $query->whereDate('created_at', '>=', $dateFrom);
@@ -71,13 +79,19 @@ class OrderController extends Controller
             $query->where('total_amount', '<=', $amountTo);
         }
 
-        // Сортировка
-        $sortBy = $request->input('sort_by', 'id');
+        // Сортировка (по умолчанию — по дате создания в ERP, свежие сверху)
+        $sortBy = $request->input('sort_by', 'erp_created_at');
         $sortOrder = $request->input('sort_order', 'desc');
 
-        $allowedSortFields = ['id', 'total_amount', 'status', 'created_at'];
+        $allowedSortFields = ['id', 'total_amount', 'status', 'erp_created_at'];
         if (in_array($sortBy, $allowedSortFields)) {
-            $query->orderBy($sortBy, $sortOrder);
+            // erp_created_at может быть NULL у заказов, ещё не дошедших до ERP — fallback на created_at
+            if ($sortBy === 'erp_created_at') {
+                $direction = $sortOrder === 'asc' ? 'asc' : 'desc';
+                $query->orderByRaw("COALESCE(erp_created_at, created_at) {$direction}");
+            } else {
+                $query->orderBy($sortBy, $sortOrder);
+            }
         }
 
         // Пагинация
@@ -107,18 +121,22 @@ class OrderController extends Controller
                 'original_total_amount' => $originalTotalAmount,
                 'original_total_converted' => $originalTotalConverted,
                 'currency_code' => $order->currency_code,
-                'created_at' => $order->created_at?->format('d.m.Y H:i'),
-                'updated_at' => $order->updated_at?->format('d.m.Y H:i'),
+                'erp_created_at' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
+                'erp_updated_at' => ($order->erp_updated_at ?? $order->updated_at)?->format('d.m.Y H:i'),
+                'is_synced_with_erp' => $order->erp_created_at !== null,
                 'company' => $order->company ? [
                     'id' => $order->company->id,
                     'name' => $order->company->name,
                 ] : null,
                 'items_count' => $order->items_count,
                 'shipments_count' => $order->shipments_count,
-                'delivery_address' => $order->delivery_address,
-                'comment' => $order->comment,
             ];
         });
+
+        $companies = $user->companies()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name]);
 
         return Inertia::render('User/Cabinet/Orders/Index', [
             'orders' => $orders,
@@ -126,6 +144,7 @@ class OrderController extends Controller
                 'search' => $search,
                 'status' => $status,
                 'type' => $request->input('type', ''),
+                'company_id' => $companyId ? (string) $companyId : '',
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
@@ -142,6 +161,7 @@ class OrderController extends Controller
                 ['value' => 'order',    'label' => 'Заказ со склада'],
                 ['value' => 'preorder', 'label' => 'Предзаказ'],
             ],
+            'companies' => $companies,
         ]);
     }
 
@@ -211,7 +231,14 @@ class OrderController extends Controller
                     ];
                 }),
 
-                'shipments' => $order->shipments->map(function ($shipment) {
+                'shipments' => $order->shipments->map(function ($shipment) use ($request) {
+                    $userCurrency = $this->getUserCurrency($request);
+                    $totalConverted = $this->convertAmount(
+                        (float) $shipment->total_amount,
+                        $shipment->currency_code,
+                        $userCurrency,
+                    );
+
                     return [
                         'id' => $shipment->id,
                         'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
@@ -226,8 +253,10 @@ class OrderController extends Controller
                             default => $shipment->status,
                         },
                         'total_amount' => $shipment->total_amount,
+                        'total_converted' => $totalConverted,
                         'currency_code' => $shipment->currency_code,
                         'items_count' => $shipment->items()->count(),
+                        'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
                     ];
                 }),
                 'status_histories' => $order->statusHistories->map(function ($history) {
@@ -314,5 +343,47 @@ class OrderController extends Controller
         }
 
         return $this->currencyService->convertFromBase($amountInRub, $targetCurrency);
+    }
+
+    /**
+     * Скачать позиции заказа в Excel (XLSX).
+     * GET /cabinet/orders/{order}/items/export
+     */
+    public function exportItems(Request $request, Order $order, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        abort_unless($order->user_id === $request->user()->id, 403);
+
+        $order->load(['items.product:id,name,sku']);
+
+        $headers = [
+            'Товар', 'Артикул',
+            'Кол-во', 'Цена без скидки', 'Скидка %', 'Цена со скидкой', 'Сумма',
+            'Валюта',
+        ];
+
+        $rows = $order->items->map(function ($item) use ($order) {
+            $finalPrice = (float) ($item->final_price ?? $item->price ?? 0);
+            $rawBase = (float) ($item->base_price ?? 0);
+            $rawDiscountPct = (float) ($item->discount_percent ?? 0);
+            $hasDiscount = $rawBase > 0 && $finalPrice > 0 && $rawBase > $finalPrice;
+            $basePrice = $hasDiscount ? $rawBase : $finalPrice;
+            $discountPct = $hasDiscount ? $rawDiscountPct : 0;
+
+            return [
+                $item->product?->name ?? $item->name,
+                $item->product?->sku ?? '',
+                (int) $item->quantity,
+                round($basePrice, 2),
+                round($discountPct, 2),
+                round($finalPrice, 2),
+                round((float) $item->subtotal, 2),
+                $order->currency_code ?? 'RUB',
+            ];
+        });
+
+        $orderNumber = $order->erp_number ?? $order->number ?? (string) $order->id;
+        $filename = "order-{$orderNumber}-items";
+
+        return $exporter->stream($filename, $headers, $rows, "Заказ {$orderNumber}");
     }
 }

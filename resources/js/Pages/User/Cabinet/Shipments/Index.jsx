@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-    Box, Flex, HStack, VStack, Text, Badge, Button, Input,
+    Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
     Card, Stack, IconButton,
 } from '@chakra-ui/react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
@@ -11,6 +11,7 @@ import {
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
+import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
 
 const STATUS_COLORS = {
     new: 'blue',
@@ -65,53 +66,97 @@ export default function ShipmentsIndex({ filters, statuses }) {
 
     const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('ru-RU') : null;
 
-    const SortButton = ({ field, children }) => {
-        const active = filters?.sort_by === field;
-        const Icon = active
-            ? (filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown)
-            : LuArrowUpDown;
-        return (
-            <Button
-                variant={active ? 'subtle' : 'ghost'}
-                colorPalette={active ? 'pecado' : 'gray'}
-                size="xs"
-                onClick={() => handleSort(field)}
-                gap="1"
-            >
-                {children}
-                <Icon size={12} />
-            </Button>
-        );
-    };
+    const sortFields = [
+        { value: 'date', label: 'Дата' },
+        { value: 'id', label: 'Номер' },
+        { value: 'status', label: 'Статус' },
+        { value: 'total_amount', label: 'Сумма' },
+    ];
+    const activeSort = sortFields.find((f) => f.value === filters?.sort_by);
+    const sortIsActive = !!activeSort;
+    const SortIcon = sortIsActive
+        ? (filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown)
+        : LuArrowUpDown;
+    const activeFiltersCount = ['status', 'date_from', 'date_to', 'amount_from', 'amount_to']
+        .filter((k) => !!filters?.[k]).length;
 
     return (
         <CabinetLayout title="Мои отгрузки">
             <Head title="Мои отгрузки — Pecado" />
 
-            {/* Поиск и кнопка фильтров */}
-            <Flex gap="3" mb="4" direction={{ base: 'column', sm: 'row' }}>
-                <Box as="form" onSubmit={handleSearch} flex="1">
-                    <Flex gap="2">
+            {/* Поиск + фильтры + сортировка — одной строкой */}
+            <Flex gap="2" mb="4" align="center">
+                <Box as="form" onSubmit={handleSearch} flex="1" minW="0">
+                    <InputGroup startElement={<LuSearch size={16} />} flex="1">
                         <Input
-                            placeholder="Поиск по номеру, ИНН, названию товара..."
+                            placeholder="Поиск по номеру, ИНН, товару..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"
                         />
-                        <IconButton type="submit" variant="outline" size="sm" aria-label="Искать">
-                            <LuSearch size={16} />
-                        </IconButton>
-                    </Flex>
+                    </InputGroup>
                 </Box>
+
+                {/* Фильтры */}
                 <Button
                     onClick={() => setShowFilters(!showFilters)}
-                    variant="outline"
+                    variant={showFilters || activeFiltersCount > 0 ? 'subtle' : 'outline'}
+                    colorPalette={showFilters || activeFiltersCount > 0 ? 'pecado' : 'gray'}
                     size="sm"
                     flexShrink="0"
+                    aria-label="Фильтры"
+                    aria-expanded={showFilters}
                 >
                     <LuFilter size={16} />
-                    {showFilters ? 'Скрыть фильтры' : 'Фильтры'}
+                    <Box as="span" display={{ base: 'none', md: 'inline' }}>
+                        {showFilters ? 'Скрыть фильтры' : 'Фильтры'}
+                    </Box>
+                    {activeFiltersCount > 0 && (
+                        <Badge colorPalette="pecado" variant="solid" borderRadius="full" fontSize="2xs" px="1.5" minW="4">
+                            {activeFiltersCount}
+                        </Badge>
+                    )}
                 </Button>
+
+                {/* Сортировка */}
+                <MenuRoot positioning={{ placement: 'bottom-end' }}>
+                    <MenuTrigger asChild>
+                        <Button
+                            variant={sortIsActive ? 'subtle' : 'outline'}
+                            colorPalette={sortIsActive ? 'pecado' : 'gray'}
+                            size="sm"
+                            flexShrink="0"
+                            aria-label="Сортировка"
+                        >
+                            <SortIcon size={16} />
+                            <Box as="span" display={{ base: 'none', md: 'inline' }}>
+                                {activeSort ? activeSort.label : 'Сортировка'}
+                            </Box>
+                        </Button>
+                    </MenuTrigger>
+                    <MenuContent>
+                        {sortFields.map((f) => {
+                            const isActive = filters?.sort_by === f.value;
+                            const ActiveIcon = filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown;
+                            return (
+                                <MenuItem
+                                    key={f.value}
+                                    value={f.value}
+                                    onClick={() => handleSort(f.value)}
+                                >
+                                    <Flex align="center" justify="space-between" w="100%" gap="3">
+                                        <Text fontWeight={isActive ? '600' : '400'}>{f.label}</Text>
+                                        {isActive && (
+                                            <Box color="pecado.500" _dark={{ color: 'pecado.300' }}>
+                                                <ActiveIcon size={14} />
+                                            </Box>
+                                        )}
+                                    </Flex>
+                                </MenuItem>
+                            );
+                        })}
+                    </MenuContent>
+                </MenuRoot>
             </Flex>
 
             {/* Расширенные фильтры */}
@@ -207,15 +252,6 @@ export default function ShipmentsIndex({ filters, statuses }) {
                 </Card.Root>
             ) : (
                 <>
-                    {/* Сортировка */}
-                    <HStack gap="1" mb="3" px="1" flexWrap="wrap">
-                        <Text fontSize="xs" color="gray.400" mr="1">Сортировка:</Text>
-                        <SortButton field="id">Номер</SortButton>
-                        <SortButton field="date">Дата</SortButton>
-                        <SortButton field="status">Статус</SortButton>
-                        <SortButton field="total_amount">Сумма</SortButton>
-                    </HStack>
-
                     {/* Карточки-строки */}
                     <VStack gap="2" align="stretch">
                         {shipments.data.map((shipment) => (

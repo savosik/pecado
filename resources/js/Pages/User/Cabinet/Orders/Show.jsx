@@ -8,9 +8,10 @@ import {
     LuArrowLeft, LuPackage, LuWarehouse,
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
-    LuPlus, LuMinus, LuTrendingDown, LuTrendingUp,
+    LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
+import { Tooltip } from '@/components/ui/tooltip';
 
 const STATUS_LABELS = {
     pending: 'Ожидает',
@@ -26,6 +27,13 @@ const STATUS_COLORS = {
     ready_to_ship: 'purple',
     closed: 'green',
     deleted: 'red',
+};
+
+const SHIPMENT_STATUS_COLORS = {
+    new: 'blue',
+    in_progress: 'orange',
+    completed: 'green',
+    cancelled: 'red',
 };
 
 const TYPE_LABELS = {
@@ -162,40 +170,75 @@ export default function OrderShow({ order }) {
                 </SimpleGrid>
 
                 {/* ═══ Позиции заказа ═══ */}
-                {order.items?.length > 0 && (
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-                        <Card.Header p="4" pb="2">
-                            <Flex align="center" gap="2" flexWrap="wrap">
-                                {typeIcon}
-                                <Text fontWeight="700" fontSize="md">Позиции ({order.items.length})</Text>
-                                <Badge colorPalette={typeColor} variant="subtle" ml="1">
-                                    {order.items.reduce((s, it) => s + Number(it.quantity || 0), 0)} шт.
-                                </Badge>
-                            </Flex>
-                        </Card.Header>
-                        <Card.Body p="0">
-                            <Box overflowX="auto">
-                                <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
-                                    <Table.Header>
-                                        <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
-                                            <Table.ColumnHeader>Товар</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="80px" textAlign="center">Кол-во</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Цена без скидки</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="80px" textAlign="right">Скидка</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Цена со скидкой</Table.ColumnHeader>
-                                            <Table.ColumnHeader w="130px" textAlign="right">Сумма</Table.ColumnHeader>
-                                        </Table.Row>
-                                    </Table.Header>
-                                    <Table.Body>
-                                        {order.items.map((item) => {
-                                            const finalPrice = parseFloat(item.final_price || item.price || 0);
-                                            const rawBasePrice = parseFloat(item.base_price || 0);
-                                            const rawDiscountPct = parseFloat(item.discount_percent || 0);
-                                            const hasDiscount = rawBasePrice > 0 && finalPrice > 0 && rawBasePrice > finalPrice;
-                                            const basePrice = hasDiscount ? rawBasePrice : finalPrice;
-                                            const discountPct = hasDiscount ? rawDiscountPct : 0;
-                                            return (
-                                            <Table.Row key={item.id}>
+                {order.items?.length > 0 && (() => {
+                    const totalSavings = (order.items || []).reduce((acc, item) => {
+                        const bp = parseFloat(item.base_price || 0);
+                        const fp = parseFloat(item.final_price || item.price || 0);
+                        if (bp > fp) acc += (bp - fp) * item.quantity;
+                        return acc;
+                    }, 0);
+
+                    return (
+                    <Box>
+                        <Flex align="center" gap="2" flexWrap="wrap" mb="3">
+                            {typeIcon}
+                            <Text fontWeight="700" fontSize="md">Позиции ({order.items.length})</Text>
+                            <Badge colorPalette={typeColor} variant="subtle" ml="1">
+                                {order.items.reduce((s, it) => s + Number(it.quantity || 0), 0)} шт.
+                            </Badge>
+                            <Box ml="auto">
+                                <Tooltip content="Скачать в Excel (XLSX)" positioning={{ placement: 'top' }} openDelay={250}>
+                                    <Flex
+                                        as="a"
+                                        href={`/cabinet/orders/${order.id}/items/export`}
+                                        align="center"
+                                        gap="1.5"
+                                        h="8"
+                                        px="3"
+                                        borderRadius="md"
+                                        fontSize="sm"
+                                        fontWeight="500"
+                                        color="green.600"
+                                        _dark={{ color: 'green.400' }}
+                                        _hover={{ bg: 'green.50', _dark: { bg: 'green.900/30' } }}
+                                        transition="background 0.15s"
+                                        aria-label="Скачать состав заказа в Excel"
+                                    >
+                                        <LuFileSpreadsheet size={16} />
+                                        <Text>Скачать</Text>
+                                    </Flex>
+                                </Tooltip>
+                            </Box>
+                        </Flex>
+                        <Box
+                            overflowX="auto"
+                            bg={{ base: 'white', _dark: 'gray.800' }}
+                            borderRadius="xl"
+                            border="1px solid"
+                            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                            _dark={{ borderColor: 'gray.700' }}
+                        >
+                            <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
+                                <Table.Header>
+                                    <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
+                                        <Table.ColumnHeader>Товар</Table.ColumnHeader>
+                                        <Table.ColumnHeader w="80px" textAlign="center">Кол-во</Table.ColumnHeader>
+                                        <Table.ColumnHeader w="130px" textAlign="right">Цена без скидки</Table.ColumnHeader>
+                                        <Table.ColumnHeader w="80px" textAlign="right">Скидка</Table.ColumnHeader>
+                                        <Table.ColumnHeader w="130px" textAlign="right">Цена со скидкой</Table.ColumnHeader>
+                                        <Table.ColumnHeader w="130px" textAlign="right">Сумма</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {order.items.map((item) => {
+                                        const finalPrice = parseFloat(item.final_price || item.price || 0);
+                                        const rawBasePrice = parseFloat(item.base_price || 0);
+                                        const rawDiscountPct = parseFloat(item.discount_percent || 0);
+                                        const hasDiscount = rawBasePrice > 0 && finalPrice > 0 && rawBasePrice > finalPrice;
+                                        const basePrice = hasDiscount ? rawBasePrice : finalPrice;
+                                        const discountPct = hasDiscount ? rawDiscountPct : 0;
+                                        return (
+                                            <Table.Row key={item.id} bg={{ base: 'white', _dark: 'gray.800' }}>
                                                 <Table.Cell>
                                                     <HStack gap="3">
                                                         {item.product?.image_url && (
@@ -237,51 +280,39 @@ export default function OrderShow({ order }) {
                                                 <Table.Cell textAlign="right">{fmt(finalPrice)}</Table.Cell>
                                                 <Table.Cell textAlign="right" fontWeight="600">{fmt(item.subtotal)}</Table.Cell>
                                             </Table.Row>
-                                            );
-                                        })}
-                                    </Table.Body>
-                                </Table.Root>
-                            </Box>
-                        </Card.Body>
-                    </Card.Root>
-                )}
-
-                {/* ═══ Итого ═══ */}
-                {(() => {
-                    const totalSavings = (order.items || []).reduce((acc, item) => {
-                        const bp = parseFloat(item.base_price || 0);
-                        const fp = parseFloat(item.final_price || item.price || 0);
-                        if (bp > fp) acc += (bp - fp) * item.quantity;
-                        return acc;
-                    }, 0);
-                    return (
-                        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-                            <Card.Body p="4">
-                                <Flex justify="space-between" align="center">
-                                    <Flex align="center" gap="2">
-                                        <LuShoppingBag size={20} />
-                                        <Text fontWeight="700" fontSize="lg">Итого</Text>
-                                    </Flex>
-                                    <VStack gap="0" align="end">
-                                        <Text fontSize="xl" fontWeight="800">
-                                            {fmt(order.total_converted)} {currencySymbol}
-                                        </Text>
-                                        {order.currency_code && order.currency_code !== currency?.code && (
-                                            <Text fontSize="xs" color="gray.400">
-                                                {fmt(order.total_amount)} {order.currency_code}
-                                            </Text>
-                                        )}
-                                        {totalSavings > 0 && (
-                                            <HStack gap="1" mt="1">
-                                                <Badge colorPalette="green" variant="subtle" size="sm">
-                                                    Сумма скидки: {fmt(totalSavings)} {currencySymbol}
-                                                </Badge>
-                                            </HStack>
-                                        )}
-                                    </VStack>
-                                </Flex>
-                            </Card.Body>
-                        </Card.Root>
+                                        );
+                                    })}
+                                </Table.Body>
+                                <Table.Footer>
+                                    <Table.Row bg={{ base: 'gray.50', _dark: 'gray.900' }}>
+                                        <Table.Cell colSpan={6} p="4">
+                                            <Flex justify="space-between" align="center" gap="3" flexWrap="wrap">
+                                                <Flex align="center" gap="2">
+                                                    <LuShoppingBag size={20} />
+                                                    <Text fontWeight="700" fontSize="lg">Итого</Text>
+                                                </Flex>
+                                                <VStack gap="0" align="end">
+                                                    <Text fontSize="xl" fontWeight="800" whiteSpace="nowrap">
+                                                        {fmt(order.total_converted)}&nbsp;{currencySymbol}
+                                                    </Text>
+                                                    {order.currency_code && order.currency_code !== currency?.code && (
+                                                        <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
+                                                            {fmt(order.total_amount)}&nbsp;{order.currency_code}
+                                                        </Text>
+                                                    )}
+                                                    {totalSavings > 0 && (
+                                                        <Badge colorPalette="green" variant="subtle" size="sm" mt="1">
+                                                            Сумма скидки: {fmt(totalSavings)}&nbsp;{currencySymbol}
+                                                        </Badge>
+                                                    )}
+                                                </VStack>
+                                            </Flex>
+                                        </Table.Cell>
+                                    </Table.Row>
+                                </Table.Footer>
+                            </Table.Root>
+                        </Box>
+                    </Box>
                     );
                 })()}
 
@@ -292,77 +323,102 @@ export default function OrderShow({ order }) {
 
                 {/* ═══ Отгрузки по заказу ═══ */}
                 {order.shipments && order.shipments.length > 0 && (
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
-                        <Card.Header p="4" pb="2">
-                            <HStack gap="2">
-                                <LuTruck size={20} />
-                                <Text fontWeight="700" fontSize="md">
-                                    Отгрузки по заказу ({order.shipments.length})
-                                </Text>
-                            </HStack>
-                        </Card.Header>
-                        <Card.Body p={0}>
-                            <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
-                                <Table.Header>
-                                    <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
-                                        <Table.ColumnHeader>№</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Дата</Table.ColumnHeader>
-                                        <Table.ColumnHeader>Статус</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="center">Позиций</Table.ColumnHeader>
-                                        <Table.ColumnHeader textAlign="right">Сумма</Table.ColumnHeader>
-                                        <Table.ColumnHeader w="60px" />
-                                    </Table.Row>
-                                </Table.Header>
-                                <Table.Body>
-                                    {order.shipments.map((shipment) => (
-                                        <Table.Row
-                                            key={shipment.id}
-                                            _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.800/50' } }}
+                    <Box>
+                        <HStack gap="2" mb="3">
+                            <LuTruck size={20} />
+                            <Text fontWeight="700" fontSize="md">
+                                Отгрузки по заказу ({order.shipments.length})
+                            </Text>
+                        </HStack>
+                        <VStack gap="2" align="stretch">
+                            {order.shipments.map((shipment) => {
+                                const itemsLabel = shipment.items_count === 1
+                                    ? 'позиция'
+                                    : shipment.items_count < 5 ? 'позиции' : 'позиций';
+                                const totalConverted = shipment.total_converted ?? shipment.total_amount;
+                                const isForeignCurrency = shipment.currency_code && shipment.currency_code !== currency?.code;
+                                const formatDate = (iso) => iso ? new Date(iso).toLocaleDateString('ru-RU') : null;
+
+                                return (
+                                    <Link key={shipment.id} href={`/cabinet/shipments/${shipment.id}`}>
+                                        <Box
+                                            bg={{ base: 'white', _dark: 'gray.800' }}
+                                            borderRadius="xl"
+                                            border="1px solid"
+                                            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                            p="4"
+                                            _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
+                                            transition="all 0.15s"
+                                            cursor="pointer"
                                         >
-                                            <Table.Cell>
-                                                <Link href={`/cabinet/shipments/${shipment.id}`}>
-                                                    <Text fontFamily="mono" fontWeight="600" fontSize="sm" color="pecado.600" _hover={{ textDecoration: 'underline' }}>
-                                                        {shipment.number}
+                                            <Flex gap="4" align="start" justify="space-between">
+                                                <Box flex="1" minW="0">
+                                                    {/* Строка 1: номер + бейджи + updated_at */}
+                                                    <Flex gap="2" align="center" flexWrap="wrap" mb="1.5">
+                                                        <Text
+                                                            fontWeight="700"
+                                                            fontSize="md"
+                                                            fontFamily="mono"
+                                                            whiteSpace="nowrap"
+                                                            flexShrink="0"
+                                                            color="gray.800"
+                                                            _dark={{ color: 'gray.100' }}
+                                                        >
+                                                            {shipment.number}
+                                                        </Text>
+                                                        <Badge
+                                                            colorPalette="cyan"
+                                                            variant="subtle" fontSize="2xs" px="2" borderRadius="full"
+                                                        >
+                                                            Отгрузка
+                                                        </Badge>
+                                                        <Badge
+                                                            colorPalette={SHIPMENT_STATUS_COLORS[shipment.status] || 'gray'}
+                                                            variant="subtle" fontSize="2xs" px="2" borderRadius="full"
+                                                        >
+                                                            {shipment.status_label}
+                                                        </Badge>
+                                                        {shipment.updated_at && (
+                                                            <Text fontSize="2xs" color="gray.400" whiteSpace="nowrap">
+                                                                {shipment.updated_at}
+                                                            </Text>
+                                                        )}
+                                                    </Flex>
+
+                                                    {/* Строка 2: позиции */}
+                                                    <HStack gap="3" fontSize="xs" color="gray.500" flexWrap="wrap" mb={shipment.date ? '1.5' : '0'}>
+                                                        <Text>
+                                                            {shipment.items_count}&nbsp;{itemsLabel}
+                                                        </Text>
+                                                    </HStack>
+
+                                                    {/* Строка 3: дата отгрузки */}
+                                                    {shipment.date && (
+                                                        <HStack gap="1" fontSize="xs" color="gray.500" minW="0">
+                                                            <Box flexShrink="0" color="gray.400"><LuCalendar size={11} /></Box>
+                                                            <Text noOfLines={1}>Дата отгрузки: {formatDate(shipment.date)}</Text>
+                                                        </HStack>
+                                                    )}
+                                                </Box>
+
+                                                {/* Правая часть: сумма */}
+                                                <VStack gap="0" align="end" flexShrink="0">
+                                                    <Text fontWeight="700" fontSize="lg" fontFamily="mono" whiteSpace="nowrap">
+                                                        {fmt(totalConverted)}&nbsp;{currencySymbol}
                                                     </Text>
-                                                </Link>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Text fontSize="sm">
-                                                    {shipment.date
-                                                        ? new Date(shipment.date).toLocaleDateString('ru-RU')
-                                                        : '—'}
-                                                </Text>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Badge variant="subtle" fontSize="xs">
-                                                    {shipment.status_label}
-                                                </Badge>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="center">
-                                                <Text fontSize="sm">{shipment.items_count}</Text>
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="right">
-                                                <Text fontFamily="mono" fontWeight="600" fontSize="sm">
-                                                    {fmt(shipment.total_amount)} {shipment.currency_code}
-                                                </Text>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                <Link href={`/cabinet/shipments/${shipment.id}`}>
-                                                    <Text
-                                                        color="pecado.600"
-                                                        fontSize="xs"
-                                                        _hover={{ textDecoration: 'underline' }}
-                                                    >
-                                                        Открыть
-                                                    </Text>
-                                                </Link>
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    ))}
-                                </Table.Body>
-                            </Table.Root>
-                        </Card.Body>
-                    </Card.Root>
+                                                    {isForeignCurrency && (
+                                                        <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
+                                                            {fmt(shipment.total_amount)}&nbsp;{shipment.currency_code}
+                                                        </Text>
+                                                    )}
+                                                </VStack>
+                                            </Flex>
+                                        </Box>
+                                    </Link>
+                                );
+                            })}
+                        </VStack>
+                    </Box>
                 )}
             </Stack>
         </CabinetLayout>
