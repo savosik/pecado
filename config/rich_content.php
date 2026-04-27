@@ -13,7 +13,7 @@ return [
 
     'enabled' => env('RICH_CONTENT_AI_ENABLED', true),
 
-    'model' => env('RICH_CONTENT_AI_MODEL', 'anthropic/claude-sonnet-4-6'),
+    'model' => env('RICH_CONTENT_AI_MODEL', 'google/gemini-2.5-pro'),
 
     'temperature' => (float) env('RICH_CONTENT_AI_TEMPERATURE', 0.6),
 
