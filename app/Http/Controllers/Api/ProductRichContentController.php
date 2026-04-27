@@ -79,6 +79,9 @@ class ProductRichContentController extends Controller
                 'blocks' => $payload['blocks'],
                 'cached' => false,
             ]);
+        } catch (InsufficientSourceTextException) {
+            // Описание слишком короткое — повторять бессмысленно, cooldown не нужен.
+            return response()->noContent();
         } catch (RichContentGenerationException $e) {
             $this->generator->recordFailure($product);
             Log::warning('RichContent: генерация не удалась', [
@@ -87,9 +90,12 @@ class ProductRichContentController extends Controller
                 'error' => $e->getMessage(),
             ]);
 
-            return response()->json([
-                'message' => 'Не удалось сгенерировать описание.',
-            ], SymfonyResponse::HTTP_INTERNAL_SERVER_ERROR);
+            $body = ['message' => 'Не удалось сгенерировать описание.'];
+            if (config('app.debug')) {
+                $body['reason'] = $e->getMessage();
+            }
+
+            return response()->json($body, SymfonyResponse::HTTP_INTERNAL_SERVER_ERROR);
         } finally {
             $lock->release();
         }
