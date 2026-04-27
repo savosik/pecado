@@ -134,6 +134,7 @@ class HandleCategoryCreated
      */
     private function assertTreeIntegrity(string $uuid): void
     {
+        // @phpstan-ignore-next-line staticMethod.notFound (kalnoy/nestedset NodeTrait)
         $errors = Category::countErrors();
         $hasErrors = ($errors['oddness'] ?? 0)
             + ($errors['duplicates'] ?? 0)
