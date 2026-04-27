@@ -2,10 +2,12 @@
 
 namespace Tests\Unit\Services\Erp\Handlers;
 
+use App\Enums\ReturnStatus;
 use App\Models\ProductReturn;
 use App\Services\Erp\Handlers\HandleReturnUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -21,22 +23,55 @@ class HandleReturnUpdatedTest extends TestCase
         $this->handler = new HandleReturnUpdated;
     }
 
+    public static function statusFromErpProvider(): array
+    {
+        return [
+            'pending' => ['pending', ReturnStatus::PENDING],
+            'confirmed' => ['confirmed', ReturnStatus::CONFIRMED],
+            'ready_to_ship' => ['ready_to_ship', ReturnStatus::READY_TO_SHIP],
+            'closed' => ['closed', ReturnStatus::CLOSED],
+            'cancelled' => ['cancelled', ReturnStatus::CANCELLED],
+        ];
+    }
+
     #[Test]
-    public function it_updates_status(): void
+    #[DataProvider('statusFromErpProvider')]
+    public function it_applies_each_status_from_erp(string $rawStatus, ReturnStatus $expected): void
     {
         $return = ProductReturn::factory()->create([
-            'uuid' => 'ret-uuid-001',
-            'status' => 'pending',
+            'uuid' => 'ret-uuid-'.$rawStatus,
+            'status' => ReturnStatus::PENDING,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid' => 'ret-uuid-001',
-            'status' => 'approved',
+            'uuid' => 'ret-uuid-'.$rawStatus,
+            'status' => $rawStatus,
         ]);
 
-        $this->assertEquals('approved', $return->fresh()->status->value);
+        $this->assertSame($expected, $return->fresh()->status);
+    }
+
+    #[Test]
+    public function it_ignores_unknown_status_and_logs_warning(): void
+    {
+        $return = ProductReturn::factory()->create([
+            'uuid' => 'ret-uuid-unknown',
+            'status' => ReturnStatus::PENDING,
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')
+            ->once()
+            ->withArgs(fn ($msg, $ctx) => str_contains($msg, 'неизвестный статус') && $ctx['status'] === 'unknown_status');
+
+        $this->handler->handle([
+            'uuid' => 'ret-uuid-unknown',
+            'status' => 'unknown_status',
+        ]);
+
+        $this->assertSame(ReturnStatus::PENDING, $return->fresh()->status);
     }
 
     #[Test]
@@ -84,7 +119,7 @@ class HandleReturnUpdatedTest extends TestCase
     {
         $return = ProductReturn::factory()->create([
             'uuid' => 'ret-uuid-combo',
-            'status' => 'pending',
+            'status' => ReturnStatus::PENDING,
             'erp_number' => null,
         ]);
 
@@ -93,11 +128,11 @@ class HandleReturnUpdatedTest extends TestCase
         $this->handler->handle([
             'uuid' => 'ret-uuid-combo',
             'number' => 'ВЗВ-000789',
-            'status' => 'approved',
+            'status' => 'confirmed',
         ]);
 
         $fresh = $return->fresh();
         $this->assertEquals('ВЗВ-000789', $fresh->erp_number);
-        $this->assertEquals('approved', $fresh->status->value);
+        $this->assertSame(ReturnStatus::CONFIRMED, $fresh->status);
     }
 }

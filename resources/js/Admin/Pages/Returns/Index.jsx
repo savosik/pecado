@@ -17,9 +17,10 @@ import { DeleteAllButton, TrashedFilter } from '@/Admin/Components';
 const getStatusColor = (status) => {
     const colors = {
         pending: "yellow",
-        approved: "green",
-        rejected: "red",
-        completed: "blue",
+        confirmed: "green",
+        ready_to_ship: "purple",
+        closed: "blue",
+        cancelled: "red",
     };
     return colors[status] || "gray";
 };

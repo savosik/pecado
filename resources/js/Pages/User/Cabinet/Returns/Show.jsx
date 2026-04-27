@@ -10,9 +10,10 @@ import CabinetLayout from '../CabinetLayout';
 
 const STATUS_COLORS = {
     pending: 'yellow',
-    approved: 'green',
-    rejected: 'red',
-    completed: 'blue',
+    confirmed: 'green',
+    ready_to_ship: 'purple',
+    closed: 'blue',
+    cancelled: 'red',
 };
 
 const REASON_LABELS = {

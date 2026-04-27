@@ -1249,7 +1249,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'return.updated',
             'uuid' => '00000000-0000-4000-a000-000000000043',
-            'status' => 'approved',
+            'status' => 'confirmed',
             'message_id' => 'msg-return-upd-001',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1258,7 +1258,7 @@ class ErpIncomingJobTest extends TestCase
 
         $return->refresh();
 
-        $this->assertEquals('approved', $return->status->value);
+        $this->assertEquals('confirmed', $return->status->value);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-return-upd-001',
             'event' => 'return.updated',
@@ -1282,7 +1282,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'return.updated',
             'uuid' => '00000000-0000-4000-a000-000000000044',
-            'status' => 'approved',
+            'status' => 'confirmed',
             'message_id' => 'msg-return-dup',
         ]);
 
@@ -1298,7 +1298,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'return.updated',
             'uuid' => '00000000-0000-4000-a000-000000000021',
-            'status' => 'approved',
+            'status' => 'confirmed',
             'message_id' => 'msg-return-unknown',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1569,18 +1569,18 @@ class ErpIncomingJobTest extends TestCase
             'status' => 'pending',
         ]);
 
-        // 1. return.updated — смена статуса на approved
+        // 1. return.updated — смена статуса на confirmed
         $updJob = $this->makeJob([
             'event' => 'return.updated',
             'uuid' => '00000000-0000-4000-a000-000000000014',
-            'status' => 'approved',
+            'status' => 'confirmed',
             'message_id' => 'msg-ret-life-upd',
             'timestamp' => now()->toIso8601String(),
         ]);
         $updJob->fire();
 
         $return->refresh();
-        $this->assertEquals('approved', $return->status->value);
+        $this->assertEquals('confirmed', $return->status->value);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-ret-life-upd',
             'event' => 'return.updated',
@@ -1605,14 +1605,14 @@ class ErpIncomingJobTest extends TestCase
         $dupJob = $this->makeJob([
             'event' => 'return.updated',
             'uuid' => '00000000-0000-4000-a000-000000000014',
-            'status' => 'completed',
+            'status' => 'closed',
             'message_id' => 'msg-ret-life-upd',
         ]);
         $dupJob->fire();
 
-        // Статус остался approved (soft-deleted, но данные в БД)
+        // Статус остался confirmed (soft-deleted, но данные в БД)
         $return = ProductReturn::withTrashed()->where('uuid', '00000000-0000-4000-a000-000000000014')->first();
-        $this->assertEquals('approved', $return->status->value);
+        $this->assertEquals('confirmed', $return->status->value);
         $this->assertNotNull($return->deleted_at);
     }
 

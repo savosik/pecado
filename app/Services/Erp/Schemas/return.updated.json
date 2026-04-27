@@ -20,7 +20,15 @@
             "description": "Номер возврата в 1С. Сохраняется как erp_number на сайте."
         },
         "status": {
-            "type": "string"
+            "type": "string",
+            "enum": [
+                "pending",
+                "confirmed",
+                "ready_to_ship",
+                "closed",
+                "cancelled"
+            ],
+            "description": "Статус возврата. Соответствие со справочником 1С: НеСогласована=pending, КОбеспечению/КВозврату=confirmed, КОтгрузке=ready_to_ship, Выполнена=closed, Отклонена=cancelled."
         }
     },
     "additionalProperties": true,

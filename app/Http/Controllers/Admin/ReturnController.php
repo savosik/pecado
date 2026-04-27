@@ -547,13 +547,7 @@ class ReturnController extends AdminController
 
     protected function getStatusLabel(?ReturnStatus $status): string
     {
-        return match ($status) {
-            ReturnStatus::PENDING => 'Ожидает',
-            ReturnStatus::APPROVED => 'Одобрен',
-            ReturnStatus::REJECTED => 'Отклонён',
-            ReturnStatus::COMPLETED => 'Завершён',
-            default => 'Неизвестно',
-        };
+        return $status?->label() ?? 'Неизвестно';
     }
 
     protected function getReasonLabel(?ReturnReason $reason): string

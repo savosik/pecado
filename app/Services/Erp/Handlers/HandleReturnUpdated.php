@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Enums\ReturnStatus;
 use App\Models\ProductReturn;
 use Illuminate\Support\Facades\Log;
 
@@ -38,20 +39,17 @@ class HandleReturnUpdated
 
         if (isset($payload['status'])) {
             $rawStatus = $payload['status'];
+            $status = ReturnStatus::tryFrom($rawStatus);
 
-            // Маппинг статусов возврата из 1С
-            $statusMap = [
-                'ожидает' => 'pending',
-                'одобрен' => 'approved',
-                'отклонён' => 'rejected',
-                'завершён' => 'completed',
-            ];
-
-            $normalizedStatus = mb_strtolower(trim($rawStatus));
-            $finalStatus = $statusMap[$normalizedStatus] ?? $rawStatus;
-
-            $return->status = $finalStatus;
-            $changed = true;
+            if ($status === null) {
+                Log::warning('HandleReturnUpdated: неизвестный статус из 1С, статус не изменён', [
+                    'uuid' => $uuid,
+                    'status' => $rawStatus,
+                ]);
+            } else {
+                $return->status = $status;
+                $changed = true;
+            }
         }
 
         if ($changed) {

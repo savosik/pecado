@@ -14,9 +14,10 @@ import { Select } from '@/components/ui/select';
 
 const STATUS_COLORS = {
     pending: 'yellow',
-    approved: 'green',
-    rejected: 'red',
-    completed: 'blue',
+    confirmed: 'green',
+    ready_to_ship: 'purple',
+    closed: 'blue',
+    cancelled: 'red',
 };
 
 export default function ReturnsIndex({ filters, statuses, reasons }) {
