@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\Pricing\IndividualPriceProxy;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -15,6 +16,7 @@ class UserPreviewController extends Controller
             ->firstOrFail();
 
         return Inertia::render('UserPreview', [
+            'hasIndividualPrices' => IndividualPriceProxy::hasAnyForPartner($user->id),
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,

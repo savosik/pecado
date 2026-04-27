@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { Box, Card, Heading, Stack, SimpleGrid, Text, Badge, Separator, HStack } from '@chakra-ui/react';
+import { FiAlertTriangle } from 'react-icons/fi';
 
 const BUSINESS_TYPE_LABELS = {
     sex_shop: 'Секс-шоп',
@@ -61,13 +62,39 @@ const STATUS_COLORS = {
     blocked: 'red',
 };
 
-export default function UserPreview({ user, questionnaire }) {
+export default function UserPreview({ user, questionnaire, hasIndividualPrices }) {
     return (
         <>
             <Head title={`Профиль — ${user.name || user.email}`} />
 
             <Box maxW="700px" mx="auto" px="4" py="10">
                 <Heading size="lg" mb="6">Профиль пользователя</Heading>
+
+                {!hasIndividualPrices && (
+                    <Box
+                        mb="6"
+                        p="5"
+                        borderWidth="2px"
+                        borderColor="red.400"
+                        bg="red.50"
+                        borderRadius="md"
+                        role="alert"
+                    >
+                        <HStack align="flex-start" gap="3">
+                            <Box color="red.500" fontSize="2xl" lineHeight="1" mt="0.5">
+                                <FiAlertTriangle />
+                            </Box>
+                            <Stack gap="1">
+                                <Heading size="sm" color="red.700">
+                                    Внимание!
+                                </Heading>
+                                <Text color="red.800" fontWeight="medium">
+                                    Индивидуальных цен по партнёру не обнаружено — установите партнёру соглашение, прежде чем активировать запись.
+                                </Text>
+                            </Stack>
+                        </HStack>
+                    </Box>
+                )}
 
                 <Card.Root mb="6">
                     <Card.Header pb="2">

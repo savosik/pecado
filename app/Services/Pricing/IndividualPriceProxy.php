@@ -39,6 +39,24 @@ class IndividualPriceProxy
     }
 
     /**
+     * Проверить наличие хотя бы одной индивидуальной цены у партнёра.
+     * При недоступности prices DB — возвращает true, чтобы не показывать
+     * ложное предупреждение об отсутствии цен из-за временного сбоя.
+     */
+    public static function hasAnyForPartner(int $partnerId): bool
+    {
+        try {
+            return IndividualPrice::where('partner_id', $partnerId)->exists();
+        } catch (\Illuminate\Database\QueryException $e) {
+            Log::warning('IndividualPriceProxy: prices DB недоступна при проверке наличия цен', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return true;
+        }
+    }
+
+    /**
      * Загрузить карту индивидуальных цен [product_id => price] для партнёра.
      * При недоступности prices DB — возвращает пустую коллекцию (базовые цены).
      *
