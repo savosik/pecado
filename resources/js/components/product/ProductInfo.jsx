@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Heading } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { LuHash, LuCode, LuQrCode, LuCopy, LuHeart, LuCheck, LuClock3, LuCircleX } from 'react-icons/lu';
+import { LuHash, LuCode, LuBarcode, LuCopy, LuHeart, LuCheck, LuClock3, LuCircleX, LuChevronDown, LuChevronUp } from 'react-icons/lu';
 import { Link, usePage } from '@inertiajs/react';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
@@ -33,6 +33,7 @@ export default function ProductInfo({
     const user = auth?.user && (auth.user.status === 'active' || auth.user.is_admin) ? auth.user : null;
     const [isFav, setIsFav] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
+    const [barcodesExpanded, setBarcodesExpanded] = useState(false);
 
     // Подписка на избранное
     useEffect(() => {
@@ -171,8 +172,55 @@ export default function ProductInfo({
                 <Flex wrap="wrap" align="center" gap={{ base: '2', sm: '4' }}>
                     {sku && <CopyableField icon={LuHash} value={sku} fieldKey="sku" label="Артикул" />}
                     {code && <CopyableField icon={LuCode} value={code} fieldKey="code" label="Код товара" />}
+
+                    {/* Кнопка-спойлер штрихкодов: только на мобильном */}
+                    {barcodes.length > 0 && (
+                        <Tooltip
+                            content={barcodesExpanded ? 'Скрыть штрихкоды' : 'Показать штрихкоды'}
+                            positioning={{ placement: 'top' }}
+                            openDelay={200}
+                            closeDelay={0}
+                        >
+                            <Flex
+                                as="button"
+                                type="button"
+                                display={{ base: 'inline-flex', md: 'none' }}
+                                align="center" gap="1"
+                                fontSize="xs"
+                                color="gray.500"
+                                bg="gray.50"
+                                borderColor="gray.200"
+                                _dark={{ color: 'gray.400', bg: 'gray.800', borderColor: 'gray.600' }}
+                                _hover={{ color: 'gray.700', bg: 'gray.100', _dark: { color: 'gray.200', bg: 'gray.700' } }}
+                                transition="all 0.15s"
+                                cursor="pointer"
+                                px="2" py="1" rounded="md"
+                                borderWidth="1px"
+                                onClick={() => setBarcodesExpanded((v) => !v)}
+                                aria-expanded={barcodesExpanded}
+                                aria-label={barcodesExpanded ? 'Скрыть штрихкоды' : `Показать штрихкоды (${barcodes.length})`}
+                            >
+                                <LuBarcode size={12} style={{ flexShrink: 0 }} />
+                                <Text fontWeight="500">{barcodes.length}</Text>
+                                {barcodesExpanded
+                                    ? <LuChevronUp size={12} style={{ flexShrink: 0, opacity: 0.6 }} />
+                                    : <LuChevronDown size={12} style={{ flexShrink: 0, opacity: 0.6 }} />}
+                            </Flex>
+                        </Tooltip>
+                    )}
+
+                    {/* Сами штрихкоды: на mobile видны только если развёрнуто, на md+ всегда */}
                     {barcodes.map((b) => (
-                        <CopyableField key={b.id} icon={LuQrCode} value={b.barcode} fieldKey={`barcode-${b.id}`} label="Штрихкод" />
+                        <Box
+                            key={b.id}
+                            as="span"
+                            display={{
+                                base: barcodesExpanded ? 'contents' : 'none',
+                                md: 'contents',
+                            }}
+                        >
+                            <CopyableField icon={LuBarcode} value={b.barcode} fieldKey={`barcode-${b.id}`} label="Штрихкод" />
+                        </Box>
                     ))}
                 </Flex>
             </Box>

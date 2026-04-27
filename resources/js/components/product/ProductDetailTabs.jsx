@@ -160,21 +160,43 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
 
     return (
         <Tabs.Root defaultValue={tabs[0].key} variant="line" colorPalette="pecado">
-            <Box overflowX="auto" css={{ scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
-                <Tabs.List>
-                    {tabs.map(tab => (
-                        <Tabs.Trigger
-                            key={tab.key}
-                            value={tab.key}
-                            fontSize="sm"
-                            fontWeight="500"
-                            px="4" py="3"
-                            whiteSpace="nowrap"
-                        >
-                            {tab.label}
-                        </Tabs.Trigger>
-                    ))}
-                </Tabs.List>
+            <Box position="relative" mx={{ base: '-4', md: '0' }}>
+                <Box
+                    overflowX="auto"
+                    css={{
+                        scrollbarWidth: 'none',
+                        '&::-webkit-scrollbar': { display: 'none' },
+                        WebkitOverflowScrolling: 'touch',
+                    }}
+                    px={{ base: '4', md: '0' }}
+                >
+                    <Tabs.List minW="max-content">
+                        {tabs.map(tab => (
+                            <Tabs.Trigger
+                                key={tab.key}
+                                value={tab.key}
+                                fontSize={{ base: 'xs', md: 'sm' }}
+                                fontWeight="500"
+                                px={{ base: '3', md: '4' }}
+                                py="3"
+                                whiteSpace="nowrap"
+                                flexShrink={0}
+                            >
+                                {tab.label}
+                            </Tabs.Trigger>
+                        ))}
+                    </Tabs.List>
+                </Box>
+                <Box
+                    position="absolute"
+                    top="0"
+                    right="0"
+                    bottom="0"
+                    w="40px"
+                    pointerEvents="none"
+                    bg="linear-gradient(to left, var(--chakra-colors-white) 20%, transparent 100%)"
+                    _dark={{ bg: 'linear-gradient(to left, var(--chakra-colors-gray-800) 20%, transparent 100%)' }}
+                />
             </Box>
 
             {/* Характеристики */}
