@@ -13,6 +13,7 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
+import MatchBadge from '@/components/cabinet/MatchBadge';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
@@ -370,6 +371,12 @@ export default function ShipmentsIndex({ filters, statuses }) {
                                                     )}
                                                 </Flex>
                                             </Flex>
+
+                                            <MatchBadge
+                                                source={shipment.match_source}
+                                                snippet={shipment.match_snippet}
+                                                search={filters.search || ''}
+                                            />
 
                                             {/* Строка 2: компания, позиции */}
                                             <HStack gap="3" fontSize="xs" color="gray.500" flexWrap="wrap" mb={shipment.date ? '1.5' : '0'}>

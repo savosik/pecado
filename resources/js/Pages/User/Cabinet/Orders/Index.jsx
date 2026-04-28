@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/select';
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
+import MatchBadge from '@/components/cabinet/MatchBadge';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
@@ -496,6 +497,12 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
                                                         </Flex>
                                                     </Tooltip>
                                                 </Flex>
+
+                                                <MatchBadge
+                                                    source={order.match_source}
+                                                    snippet={order.match_snippet}
+                                                    search={filters.search || ''}
+                                                />
 
                                                 {/* Строка 2: контрагент */}
                                                 {order.company && (

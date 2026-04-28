@@ -11,6 +11,7 @@ use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Services\Returns\ReturnService;
 use App\Support\Search\FuzzyDocumentMatcher;
+use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -145,7 +146,21 @@ class ReturnController extends Controller
 
         $returns = $query->paginate($perPage)->withQueryString();
 
-        $returns->getCollection()->transform(function ($return) {
+        $returns->getCollection()->transform(function ($return) use ($search) {
+            $match = MatchSourceResolver::resolve(
+                $return,
+                $search,
+                directFields: [
+                    ['field' => 'erp_number', 'source' => 'number'],
+                    ['field' => 'uuid', 'source' => 'number'],
+                ],
+                itemFields: [
+                    ['relation' => 'items', 'field' => 'product_name_snapshot', 'source' => 'composition'],
+                    ['relation' => 'items', 'field' => 'brand_name_snapshot', 'source' => 'composition'],
+                    ['relation' => 'items', 'field' => 'reason_comment', 'source' => 'comment'],
+                ],
+            );
+
             return [
                 'id' => $return->id,
                 'number' => $return->erp_number ?? ('#'.$return->id),
@@ -157,6 +172,8 @@ class ReturnController extends Controller
                 'items_count' => $return->items->count(),
                 'primary_reason' => $return->items->first()?->reason?->value,
                 'primary_reason_label' => $this->getReasonLabel($return->items->first()?->reason),
+                'match_source' => $match['source'],
+                'match_snippet' => $match['snippet'],
             ];
         });
 

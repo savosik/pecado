@@ -13,6 +13,7 @@ use App\Models\ShipmentItem;
 use App\Services\CurrencyService;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Search\FuzzyDocumentMatcher;
+use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -152,8 +153,26 @@ class ShipmentController extends Controller
         $currency = $this->getUserCurrency($request);
 
         // Трансформация данных
-        $shipments->getCollection()->transform(function ($shipment) use ($currency) {
+        $shipments->getCollection()->transform(function ($shipment) use ($currency, $search) {
             $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
+
+            $match = MatchSourceResolver::resolve(
+                $shipment,
+                $search,
+                directFields: [
+                    ['field' => 'number', 'source' => 'number'],
+                    ['field' => 'erp_number', 'source' => 'number'],
+                    ['field' => 'uuid', 'source' => 'number'],
+                    ['field' => 'tax_id', 'source' => 'company'],
+                ],
+                relationFields: [
+                    ['relation' => 'company', 'field' => 'name', 'source' => 'company'],
+                ],
+                itemFields: [
+                    ['relation' => 'items', 'field' => 'product_name_snapshot', 'source' => 'composition'],
+                    ['relation' => 'items', 'field' => 'brand_name_snapshot', 'source' => 'composition'],
+                ],
+            );
 
             return [
                 'id' => $shipment->id,
@@ -171,6 +190,8 @@ class ShipmentController extends Controller
                     'id' => $shipment->company->id,
                     'name' => $shipment->company->name,
                 ] : null,
+                'match_source' => $match['source'],
+                'match_snippet' => $match['snippet'],
             ];
         });
 

@@ -12,6 +12,7 @@ import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
+import MatchBadge from '@/components/cabinet/MatchBadge';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
@@ -394,6 +395,11 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                                                 <Text fontWeight="600" noOfLines={1} maxW="150px" title={ret.number}>
                                                     {ret.number}
                                                 </Text>
+                                                <MatchBadge
+                                                    source={ret.match_source}
+                                                    snippet={ret.match_snippet}
+                                                    search={filters.search || ''}
+                                                />
                                             </Table.Cell>
                                             <Table.Cell>
                                                 <Badge
@@ -465,6 +471,12 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                                                 {ret.status_label}
                                             </Badge>
                                         </Flex>
+                                        <MatchBadge
+                                            source={ret.match_source}
+                                            snippet={ret.match_snippet}
+                                            search={filters.search || ''}
+                                        />
+
                                         <Flex justify="space-between" align="center">
                                             <VStack gap="0" align="start">
                                                 {ret.primary_reason_label && (

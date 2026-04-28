@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Services\CurrencyService;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Search\FuzzyDocumentMatcher;
+use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -30,9 +31,14 @@ class OrderController extends Controller
     {
         $user = $request->user();
 
+        $search = trim((string) $request->input('search', ''));
+
         $query = Order::query()
             ->where('user_id', $user->id)
             ->with(['company'])
+            ->when($search !== '', fn ($q) => $q->with([
+                'items:id,order_id,name,brand_name_snapshot',
+            ]))
             ->withCount(['items', 'shipments'])
             ->addSelect([
                 'original_total_amount' => OrderItem::selectRaw('COALESCE(SUM(base_price * quantity), 0)')
@@ -40,7 +46,6 @@ class OrderController extends Controller
             ]);
 
         // Расширенный поиск (см. docs/cabinet-search-scenarios.md §1, C-1.1 … C-1.10).
-        $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $normalized = preg_replace('/[\s\-]+/u', '', $search);
             $queryType = QueryRouter::classify($search);
@@ -205,10 +210,31 @@ class OrderController extends Controller
         $currency = $this->getUserCurrency($request);
 
         // Трансформация данных
-        $orders->getCollection()->transform(function ($order) use ($currency) {
+        $orders->getCollection()->transform(function ($order) use ($currency, $search) {
             $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
             $originalTotalAmount = (float) ($order->original_total_amount ?? 0);
             $originalTotalConverted = $this->convertAmount($originalTotalAmount, $order->currency_code, $currency);
+
+            $match = MatchSourceResolver::resolve(
+                $order,
+                $search,
+                directFields: [
+                    ['field' => 'number', 'source' => 'number'],
+                    ['field' => 'erp_number', 'source' => 'number'],
+                    ['field' => 'uuid', 'source' => 'number'],
+                    ['field' => 'comment', 'source' => 'comment'],
+                ],
+                relationFields: [
+                    ['relation' => 'company', 'field' => 'name', 'source' => 'company'],
+                    ['relation' => 'company', 'field' => 'tax_id', 'source' => 'company'],
+                ],
+                itemFields: [
+                    // У OrderItem snapshot имени товара хранится в legacy-колонке `name`,
+                    // а не `product_name_snapshot` (как у Return/Shipment items, PR 4.1).
+                    ['relation' => 'items', 'field' => 'name', 'source' => 'composition'],
+                    ['relation' => 'items', 'field' => 'brand_name_snapshot', 'source' => 'composition'],
+                ],
+            );
 
             return [
                 'id' => $order->id,
@@ -231,6 +257,8 @@ class OrderController extends Controller
                 ] : null,
                 'items_count' => $order->items_count,
                 'shipments_count' => $order->shipments_count,
+                'match_source' => $match['source'],
+                'match_snippet' => $match['snippet'],
             ];
         });
 
