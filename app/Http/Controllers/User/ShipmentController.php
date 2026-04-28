@@ -11,6 +11,7 @@ use App\Models\OrderItem;
 use App\Models\Shipment;
 use App\Services\CurrencyService;
 use App\Services\SimpleXlsxExporter;
+use App\Support\Search\QueryRouter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -41,23 +42,64 @@ class ShipmentController extends Controller
             ->where('user_id', $user->id)
             ->with(['company', 'items.product']);
 
-        // Поиск по UUID, ИНН или названию товара
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
+        // Расширенный поиск (см. docs/cabinet-search-scenarios.md §4, C-4.1 … C-4.5).
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $normalized = preg_replace('/[\s\-]+/u', '', $search);
+            $queryType = QueryRouter::classify($search);
+
+            $query->where(function ($q) use ($search, $normalized, $queryType) {
                 $q->where('uuid', 'like', "%{$search}%")
                     ->orWhere('number', 'like', "%{$search}%")
                     ->orWhere('erp_number', 'like', "%{$search}%")
-                    ->orWhere('tax_id', 'like', "%{$search}%")
-                    ->orWhereHas('items.product', function ($pq) use ($search) {
-                        $pq->where('name', 'like', "%{$search}%")
-                            ->orWhere('sku', 'like', "%{$search}%");
-                    });
+                    ->orWhere('tax_id', 'like', "%{$search}%");
+
+                // Нормализованная форма номера: 29УТ-003413 ≡ 29УТ003413 (C-4.1).
+                if ($normalized !== '') {
+                    $q->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                    $q->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                }
+
+                // Состав: name/sku/code товара (расширение текущего поиска).
+                $q->orWhereHas('items.product', function ($p) use ($search) {
+                    $p->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%");
+                });
+
+                // Бренд в составе (C-4.2).
+                $q->orWhereHas('items.product.brand', fn ($b) => $b->where('name', 'like', "%{$search}%"));
+
+                // Штрихкод (C-4.3, точное совпадение).
+                if ($queryType === QueryRouter::TYPE_BARCODE) {
+                    $q->orWhereHas('items.product.barcodes', fn ($b) => $b->where('barcode', $search));
+                }
             });
         }
 
-        // Фильтр по статусу
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
+        // Статус — поддерживаем скаляр (старое поведение) и массив (multi-select).
+        $statusInput = $request->input('status');
+        if (is_array($statusInput)) {
+            $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
+            if (count($statuses) > 0) {
+                $query->whereIn('status', $statuses);
+            }
+        } elseif ($statusInput) {
+            $query->where('status', $statusInput);
+        }
+
+        // Фильтр по UUID связанного заказа (C-4.6): «Все отгрузки по заказу».
+        if ($orderUuid = $request->input('order_uuid')) {
+            $query->whereHas('items', fn ($q) => $q->where('order_uuid', $orderUuid));
+        }
+
+        // Фильтр по бренду в составе (C-4.2 как фасет): brand_ids[].
+        $brandIds = array_values(array_filter(
+            array_map('intval', (array) $request->input('brand_ids', [])),
+            fn ($id) => $id > 0,
+        ));
+        if (count($brandIds) > 0) {
+            $query->whereHas('items.product', fn ($p) => $p->whereIn('brand_id', $brandIds));
         }
 
         // Фильтр по дате
@@ -115,11 +157,18 @@ class ShipmentController extends Controller
             ];
         });
 
+        // Возвращаем выбранные статусы как массив — единый формат для UI multi-select.
+        $selectedStatuses = is_array($statusInput)
+            ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
+            : ($statusInput ? [(string) $statusInput] : []);
+
         return Inertia::render('User/Cabinet/Shipments/Index', [
             'shipments' => $shipments,
             'filters' => [
                 'search' => $search,
-                'status' => $status,
+                'status' => $selectedStatuses,
+                'order_uuid' => $orderUuid ?: null,
+                'brand_ids' => $brandIds,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
