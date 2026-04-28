@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Favorite;
 use App\Models\Product;
+use App\Support\Search\FuzzyProductMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -278,13 +279,21 @@ class CabinetCartController extends Controller
                 ->first();
         }
 
+        $fuzzyIds = FuzzyProductMatcher::isApplicable($query, $type)
+            ? FuzzyProductMatcher::findProductIds($query)
+            : [];
+
         $base = Product::query()
-            ->where(function ($q) use ($query) {
+            ->where(function ($q) use ($query, $fuzzyIds) {
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('sku', 'like', "%{$query}%")
                     ->orWhere('code', 'like', "%{$query}%")
                     ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$query}%"))
                     ->orWhereHas('barcodes', fn ($bq) => $bq->where('barcode', 'like', "%{$query}%"));
+
+                if (! empty($fuzzyIds)) {
+                    $q->orWhereIn('id', $fuzzyIds);
+                }
             })
             ->with(['brand', 'media'])
             ->withCount(['orderItems as purchased_count' => $purchasedCountQuery]);

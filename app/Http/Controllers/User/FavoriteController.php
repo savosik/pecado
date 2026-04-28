@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Services\Product\ProductQueryService;
+use App\Support\Search\FuzzyProductMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -121,7 +122,11 @@ class FavoriteController extends Controller
         $type = QueryRouter::classify($search);
         $like = '%'.$search.'%';
 
-        $query->where(function (Builder $q) use ($search, $type, $like) {
+        $fuzzyIds = FuzzyProductMatcher::isApplicable($search, $type)
+            ? FuzzyProductMatcher::findProductIds($search)
+            : [];
+
+        $query->where(function (Builder $q) use ($search, $type, $like, $fuzzyIds) {
             $q->where('products.name', 'like', $like)
                 ->orWhere('products.sku', 'like', $like)
                 ->orWhere('products.code', 'like', $like)
@@ -131,6 +136,10 @@ class FavoriteController extends Controller
                 $q->orWhereHas('barcodes', fn (Builder $bq) => $bq->where('barcode', $search));
             } else {
                 $q->orWhereHas('barcodes', fn (Builder $bq) => $bq->where('barcode', 'like', $like));
+            }
+
+            if (! empty($fuzzyIds)) {
+                $q->orWhereIn('products.id', $fuzzyIds);
             }
         });
     }

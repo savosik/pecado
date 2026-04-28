@@ -36,4 +36,15 @@ return [
     */
     'fuzzy_documents_limit' => (int) env('CABINET_SEARCH_FUZZY_DOCUMENTS_LIMIT', 500),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Лимит товаров из Meilisearch на один запрос
+    |--------------------------------------------------------------------------
+    |
+    | Сколько товаров возвращать из Scout-источника для поиска в favorites /
+    | searchProducts. Дальше идёт DB-фильтрация (favorites.user_id, фасеты).
+    |
+    */
+    'fuzzy_products_limit' => (int) env('CABINET_SEARCH_FUZZY_PRODUCTS_LIMIT', 500),
+
 ];
