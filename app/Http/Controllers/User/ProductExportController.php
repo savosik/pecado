@@ -19,6 +19,15 @@ class ProductExportController extends Controller
 {
     protected ProductExportService $exportService;
 
+    private const SORT_OPTIONS = [
+        'created_desc' => 'Сначала новые',
+        'created_asc' => 'Сначала старые',
+        'name_asc' => 'По названию (А → Я)',
+        'name_desc' => 'По названию (Я → А)',
+        'last_downloaded_desc' => 'Сначала недавно скачанные',
+        'last_downloaded_asc' => 'Сначала давно скачанные',
+    ];
+
     public function __construct(ProductExportService $exportService)
     {
         $this->exportService = $exportService;
@@ -26,21 +35,78 @@ class ProductExportController extends Controller
 
     public function index(Request $request)
     {
-        $query = ProductExport::query()
-            ->where('user_id', Auth::id())
-            ->whereNull('preset') // Пресеты отображаются отдельно в карточках
-            ->latest();
-
-        if ($search = $request->input('search')) {
-            $query->where('name', 'like', "%{$search}%");
+        $search = trim((string) $request->input('search', ''));
+        $sort = (string) $request->input('sort', 'created_desc');
+        if (! array_key_exists($sort, self::SORT_OPTIONS)) {
+            $sort = 'created_desc';
         }
 
-        $perPage = $request->input('per_page', 15);
+        $createdFrom = $request->filled('created_from') ? $request->input('created_from') : null;
+        $createdTo = $request->filled('created_to') ? $request->input('created_to') : null;
+        $lastDownloadedFrom = $request->filled('last_downloaded_from') ? $request->input('last_downloaded_from') : null;
+        $lastDownloadedTo = $request->filled('last_downloaded_to') ? $request->input('last_downloaded_to') : null;
+
+        $isActive = $request->input('is_active');
+        if (! in_array($isActive, ['1', '0', 1, 0, true, false], true)) {
+            $isActive = null;
+        }
+
+        $query = ProductExport::query()
+            ->where('user_id', Auth::id())
+            ->whereNull('preset'); // Пресеты отображаются отдельно в карточках
+
+        if ($search !== '') {
+            $like = '%'.$search.'%';
+            $query->where(function ($q) use ($like) {
+                $q->where('name', 'like', $like)
+                    ->orWhere('filters_text', 'like', $like);
+            });
+        }
+
+        if ($createdFrom !== null) {
+            $query->whereDate('created_at', '>=', $createdFrom);
+        }
+        if ($createdTo !== null) {
+            $query->whereDate('created_at', '<=', $createdTo);
+        }
+        if ($lastDownloadedFrom !== null) {
+            $query->whereDate('last_downloaded_at', '>=', $lastDownloadedFrom);
+        }
+        if ($lastDownloadedTo !== null) {
+            $query->whereDate('last_downloaded_at', '<=', $lastDownloadedTo);
+        }
+        if ($isActive !== null) {
+            $query->where('is_active', (bool) $isActive);
+        }
+
+        match ($sort) {
+            'created_asc' => $query->orderBy('created_at')->orderBy('id'),
+            'name_asc' => $query->orderBy('name')->orderBy('id'),
+            'name_desc' => $query->orderByDesc('name')->orderBy('id'),
+            'last_downloaded_desc' => $query->orderByRaw('last_downloaded_at IS NULL')->orderByDesc('last_downloaded_at')->orderBy('id'),
+            'last_downloaded_asc' => $query->orderByRaw('last_downloaded_at IS NULL')->orderBy('last_downloaded_at')->orderBy('id'),
+            default => $query->orderByDesc('created_at')->orderBy('id'),
+        };
+
+        $perPage = (int) $request->input('per_page', 15);
+        if ($perPage <= 0 || $perPage > 100) {
+            $perPage = 15;
+        }
         $exports = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('User/Cabinet/ProductExports/Index', [
             'exports' => $exports,
-            'filters' => $request->only(['search', 'per_page']),
+            'filters' => [
+                'search' => $search,
+                'sort' => $sort,
+                'created_from' => $createdFrom,
+                'created_to' => $createdTo,
+                'last_downloaded_from' => $lastDownloadedFrom,
+                'last_downloaded_to' => $lastDownloadedTo,
+                'is_active' => $isActive === null ? null : (bool) $isActive,
+                'per_page' => $perPage,
+            ],
+            'sortOptions' => self::SORT_OPTIONS,
         ]);
     }
 

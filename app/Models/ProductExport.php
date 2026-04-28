@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ExportFormat;
+use App\Services\ProductExport\FiltersTextRenderer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,6 +21,7 @@ class ProductExport extends Model
         'format',
         'preset',
         'filters',
+        'filters_text',
         'fields',
         'is_active',
         'last_downloaded_at',
@@ -81,6 +83,12 @@ class ProductExport extends Model
         static::creating(function (ProductExport $model) {
             if (empty($model->hash)) {
                 $model->hash = hash('sha256', $model->user_id.microtime(true).Str::random(32));
+            }
+        });
+
+        static::saving(function (ProductExport $model) {
+            if ($model->isDirty('filters') || ! $model->exists) {
+                $model->filters_text = app(FiltersTextRenderer::class)->render($model->filters ?? []);
             }
         });
     }
