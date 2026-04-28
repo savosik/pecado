@@ -203,19 +203,18 @@
 | Карточка | Что делается |
 |---|---|
 | [cabinet-search-carts-list](tasks/backlog/2026-04-28_cabinet-search-carts-list.md) | Поиск/фильтры/сортировка списка корзин (C-5.1 … C-5.5) |
-| [cabinet-search-media](tasks/backlog/2026-04-28_cabinet-search-media.md) | Дата/размер/разрешение, fuzzy. **Перед стартом:** обсуждение owner-scope (C-8.4 — security-issue) |
+| [cabinet-search-media](tasks/backlog/2026-04-28_cabinet-search-media.md) | Дата/размер/разрешение, fuzzy. Owner-scope **снят** (C-8.4 — медиатека остаётся глобальной по решению продакта 2026-04-29) |
 | [cabinet-search-product-exports](tasks/backlog/2026-04-28_cabinet-search-product-exports.md) | Фильтры по дате/статусу, поиск по содержимому правил (C-9.1 … C-9.5) |
 
 ### PR-план
 
 - **PR 6.1** — carts-list. Без флага.
-- **PR 6.2** — media. **Сначала issue-обсуждение owner-scope с владельцем продукта.** После решения — PR с фильтрами + (опционально) ограничение видимости медиа за флагом `CABINET_MEDIA_OWNER_SCOPE`.
+- **PR 6.2** — media. Фильтры по дате/размеру/разрешению + fuzzy для `Product`/`Brand` через Meilisearch. Без owner-scope и без флага `CABINET_MEDIA_OWNER_SCOPE` (см. решение по C-8.4).
 - **PR 6.3** — product-exports. Без флага. Поиск по JSON-правилам — отдельный sub-PR при необходимости.
 
 ### Стратегия доставки и откат
 
-- carts-list / product-exports: аддитивно, revert по PR.
-- media: owner-scope меняет видимость — обязательно за флагом, с поэтапным включением и наблюдением жалоб пользователей.
+- carts-list / product-exports / media: аддитивно (фильтры + fuzzy), revert по PR.
 
 ---
 
