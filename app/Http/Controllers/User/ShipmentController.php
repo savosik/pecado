@@ -9,8 +9,10 @@ use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Shipment;
+use App\Models\ShipmentItem;
 use App\Services\CurrencyService;
 use App\Services\SimpleXlsxExporter;
+use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -48,7 +50,17 @@ class ShipmentController extends Controller
             $normalized = preg_replace('/[\s\-]+/u', '', $search);
             $queryType = QueryRouter::classify($search);
 
-            $query->where(function ($q) use ($search, $normalized, $queryType) {
+            $fuzzyShipmentIds = FuzzyDocumentMatcher::isApplicable($search, $queryType)
+                ? FuzzyDocumentMatcher::findDocumentIds(
+                    $search,
+                    ShipmentItem::class,
+                    'shipment_id',
+                    'shipment',
+                    $user->id,
+                )
+                : [];
+
+            $query->where(function ($q) use ($search, $normalized, $queryType, $fuzzyShipmentIds) {
                 $q->where('uuid', 'like', "%{$search}%")
                     ->orWhere('number', 'like', "%{$search}%")
                     ->orWhere('erp_number', 'like', "%{$search}%")
@@ -73,6 +85,11 @@ class ShipmentController extends Controller
                 // Штрихкод (C-4.3, точное совпадение).
                 if ($queryType === QueryRouter::TYPE_BARCODE) {
                     $q->orWhereHas('items.product.barcodes', fn ($b) => $b->where('barcode', $search));
+                }
+
+                // Fuzzy через Meilisearch (PR 4.2, флаг CABINET_SEARCH_FUZZY_DOCUMENTS).
+                if (! empty($fuzzyShipmentIds)) {
+                    $q->orWhereIn('id', $fuzzyShipmentIds);
                 }
             });
         }

@@ -10,6 +10,7 @@ use App\Models\ReturnItem;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Services\Returns\ReturnService;
+use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -38,7 +39,17 @@ class ReturnController extends Controller
             $normalized = preg_replace('/[\s\-]+/u', '', $search);
             $queryType = QueryRouter::classify($search);
 
-            $query->where(function ($q) use ($search, $normalized, $queryType) {
+            $fuzzyReturnIds = FuzzyDocumentMatcher::isApplicable($search, $queryType)
+                ? FuzzyDocumentMatcher::findDocumentIds(
+                    $search,
+                    ReturnItem::class,
+                    'return_id',
+                    'return',
+                    $user->id,
+                )
+                : [];
+
+            $query->where(function ($q) use ($search, $normalized, $queryType, $fuzzyReturnIds) {
                 // Базовое: UUID / ERP-номер / числовой ID.
                 $q->where('uuid', 'like', "%{$search}%")
                     ->orWhere('erp_number', 'like', "%{$search}%");
@@ -80,6 +91,11 @@ class ReturnController extends Controller
 
                 // Текст комментария причины (C-2.4).
                 $q->orWhereHas('items', fn ($i) => $i->where('reason_comment', 'like', "%{$search}%"));
+
+                // Fuzzy через Meilisearch (PR 4.2, флаг CABINET_SEARCH_FUZZY_DOCUMENTS).
+                if (! empty($fuzzyReturnIds)) {
+                    $q->orWhereIn('id', $fuzzyReturnIds);
+                }
             });
         }
 

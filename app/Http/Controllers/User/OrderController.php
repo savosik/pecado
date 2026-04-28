@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CurrencyService;
 use App\Services\SimpleXlsxExporter;
+use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,7 +45,17 @@ class OrderController extends Controller
             $normalized = preg_replace('/[\s\-]+/u', '', $search);
             $queryType = QueryRouter::classify($search);
 
-            $query->where(function ($q) use ($search, $normalized, $queryType, $user) {
+            $fuzzyOrderIds = FuzzyDocumentMatcher::isApplicable($search, $queryType)
+                ? FuzzyDocumentMatcher::findDocumentIds(
+                    $search,
+                    OrderItem::class,
+                    'order_id',
+                    'order',
+                    $user->id,
+                )
+                : [];
+
+            $query->where(function ($q) use ($search, $normalized, $queryType, $user, $fuzzyOrderIds) {
                 // Базовое: UUID, номер, ERP-номер, числовой ID (C-1.2 + текущее поведение).
                 $q->where('uuid', 'like', "%{$search}%")
                     ->orWhere('number', 'like', "%{$search}%")
@@ -90,6 +101,11 @@ class OrderController extends Controller
                 } elseif (ctype_digit($search) && strlen($search) >= 4) {
                     $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
                         ->where('tax_id', 'like', "{$search}%"));
+                }
+
+                // Fuzzy через Meilisearch (PR 4.2, флаг CABINET_SEARCH_FUZZY_DOCUMENTS).
+                if (! empty($fuzzyOrderIds)) {
+                    $q->orWhereIn('id', $fuzzyOrderIds);
                 }
             });
         }
