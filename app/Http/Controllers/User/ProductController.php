@@ -12,6 +12,7 @@ use App\Services\Product\ProductQueryService;
 use App\Services\Product\SimilarProductsService;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class ProductController extends Controller
 {
@@ -470,14 +471,17 @@ class ProductController extends Controller
             $variants = $variantArrays;
         }
 
-        // Медиа — основное изображение + дополнительные + видео
+        // Медиа — основное изображение + дополнительные + видео.
+        // Для image-элементов отдаём отдельные URL: оригинал, large (для галереи)
+        // и thumb (для миниатюр). Если conversion ещё не сгенерирована — fallback
+        // на оригинал, чтобы галерея не сломалась во время прогрева.
         $media = [];
-        $mainUrl = $product->getFirstMediaUrl('main');
-        if ($mainUrl) {
-            $media[] = ['url' => $mainUrl, 'type' => 'image'];
+        $mainImage = $product->getFirstMedia('main');
+        if ($mainImage) {
+            $media[] = $this->imageMediaItem($mainImage);
         }
         foreach ($product->getMedia('additional') as $m) {
-            $media[] = ['url' => $m->getUrl(), 'type' => 'image'];
+            $media[] = $this->imageMediaItem($m);
         }
         $videoUrl = $product->getFirstMediaUrl('video');
         if ($videoUrl) {
@@ -794,5 +798,23 @@ class ProductController extends Controller
         }
 
         return $result;
+    }
+
+    /**
+     * Сборка элемента media[] для image-коллекций. Отдаём оригинал, large и thumb;
+     * если conversion ещё не сгенерирована — деградируем к оригиналу.
+     *
+     * @return array{url: string, large: string, thumb: string, type: string}
+     */
+    private function imageMediaItem(Media $m): array
+    {
+        $original = $m->getUrl();
+
+        return [
+            'url' => $original,
+            'large' => $m->hasGeneratedConversion('large') ? $m->getUrl('large') : $original,
+            'thumb' => $m->hasGeneratedConversion('thumb') ? $m->getUrl('thumb') : $original,
+            'type' => 'image',
+        ];
     }
 }

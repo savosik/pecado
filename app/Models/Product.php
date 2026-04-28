@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
+use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -162,6 +163,12 @@ class Product extends Model implements HasMedia
         $this->addMediaConversion('thumb')
             ->width(300)
             ->height(450)
+            ->performOnCollections('main', 'additional');
+
+        $this->addMediaConversion('large')
+            ->fit(Fit::Max, 1200, 1600)
+            ->format('jpg')
+            ->quality(80)
             ->performOnCollections('main', 'additional');
     }
 

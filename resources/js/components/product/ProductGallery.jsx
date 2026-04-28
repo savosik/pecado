@@ -286,12 +286,14 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                     ) : (
                                         <Box
                                             as="img"
-                                            src={item.url}
+                                            src={item.large || item.url}
                                             alt={`${productName} ${i + 1}`}
                                             w="100%" h="100%"
                                             objectFit="cover"
                                             draggable="false"
                                             loading={i === currentIndex ? 'eager' : 'lazy'}
+                                            decoding="async"
+                                            fetchpriority={i === currentIndex ? 'high' : 'auto'}
                                         />
                                     )}
                                 </Box>
@@ -313,10 +315,12 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                 ) : (
                                     <Box
                                         as="img"
-                                        src={item.url}
+                                        src={item.large || item.url}
                                         alt={productName}
                                         w="100%" h="100%"
                                         objectFit="cover"
+                                        decoding="async"
+                                        fetchpriority="high"
                                     />
                                 )}
                             </Box>
@@ -426,7 +430,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                             </Flex>
                                         </Box>
                                     ) : (
-                                        <Box as="img" src={item.url} alt={`${productName} ${index + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
+                                        <Box as="img" src={item.thumb || item.url} alt={`${productName} ${index + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
                                     )}
                                 </Box>
                             ))}
@@ -499,7 +503,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                             {media[currentIndex]?.type === 'video' ? (
                                 <Box as="video" src={media[currentIndex].url} maxW="95vw" maxH="80vh" objectFit="contain" controls autoPlay />
                             ) : (
-                                <Box as="img" src={media[currentIndex]?.url} alt={productName} maxW="95vw" maxH="80vh" objectFit="contain" />
+                                <Box as="img" src={media[currentIndex]?.large || media[currentIndex]?.url} alt={productName} maxW="95vw" maxH="80vh" objectFit="contain" decoding="async" />
                             )}
                         </Box>
 
@@ -559,7 +563,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                                 </Flex>
                                             </Box>
                                         ) : (
-                                            <Box as="img" src={item.url} alt={`${productName} ${index + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
+                                            <Box as="img" src={item.thumb || item.url} alt={`${productName} ${index + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
                                         )}
                                     </Box>
                                 ))}
