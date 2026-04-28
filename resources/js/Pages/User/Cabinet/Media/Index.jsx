@@ -52,6 +52,10 @@ function readInitialFilters() {
             modelType: '',
             sort: DEFAULT_SORT,
             page: 1,
+            dateFrom: '',
+            dateTo: '',
+            sizeFromMb: '',
+            sizeToMb: '',
         };
     }
     const params = new URLSearchParams(window.location.search);
@@ -63,6 +67,10 @@ function readInitialFilters() {
         modelType: params.get('model_type') ?? '',
         sort: params.get('sort') ?? DEFAULT_SORT,
         page: Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1,
+        dateFrom: params.get('date_from') ?? '',
+        dateTo: params.get('date_to') ?? '',
+        sizeFromMb: params.get('size_from_mb') ?? '',
+        sizeToMb: params.get('size_to_mb') ?? '',
     };
 }
 
@@ -83,6 +91,10 @@ export default function Index({ collections, modelTypes }) {
     const [modelType, setModelType] = useState(initialFilters.modelType);
     const [sort, setSort] = useState(initialFilters.sort);
     const [page, setPage] = useState(initialFilters.page);
+    const [dateFrom, setDateFrom] = useState(initialFilters.dateFrom);
+    const [dateTo, setDateTo] = useState(initialFilters.dateTo);
+    const [sizeFromMb, setSizeFromMb] = useState(initialFilters.sizeFromMb);
+    const [sizeToMb, setSizeToMb] = useState(initialFilters.sizeToMb);
     const perPage = 24;
 
     // Lightbox
@@ -116,6 +128,10 @@ export default function Index({ collections, modelTypes }) {
         if (modelType) params.set('model_type', modelType);
         if (sort && sort !== DEFAULT_SORT) params.set('sort', sort);
         if (page > 1) params.set('page', String(page));
+        if (dateFrom) params.set('date_from', dateFrom);
+        if (dateTo) params.set('date_to', dateTo);
+        if (sizeFromMb) params.set('size_from_mb', sizeFromMb);
+        if (sizeToMb) params.set('size_to_mb', sizeToMb);
 
         const query = params.toString();
         const nextUrl = window.location.pathname + (query ? `?${query}` : '') + window.location.hash;
@@ -123,7 +139,7 @@ export default function Index({ collections, modelTypes }) {
         if (nextUrl !== currentUrl) {
             window.history.replaceState(window.history.state, '', nextUrl);
         }
-    }, [debouncedSearch, type, collection, modelType, sort, page]);
+    }, [debouncedSearch, type, collection, modelType, sort, page, dateFrom, dateTo, sizeFromMb, sizeToMb]);
 
     // Fetch media when filters change
     const fetchMedia = useCallback(async () => {
@@ -135,6 +151,10 @@ export default function Index({ collections, modelTypes }) {
             if (collection) params.set('collection', collection);
             if (modelType) params.set('model_type', modelType);
             if (sort) params.set('sort', sort);
+            if (dateFrom) params.set('date_from', dateFrom);
+            if (dateTo) params.set('date_to', dateTo);
+            if (sizeFromMb) params.set('size_from_mb', sizeFromMb);
+            if (sizeToMb) params.set('size_to_mb', sizeToMb);
             params.set('per_page', perPage.toString());
             params.set('page', page.toString());
 
@@ -158,7 +178,7 @@ export default function Index({ collections, modelTypes }) {
         } finally {
             setLoading(false);
         }
-    }, [debouncedSearch, type, collection, modelType, sort, page]);
+    }, [debouncedSearch, type, collection, modelType, sort, page, dateFrom, dateTo, sizeFromMb, sizeToMb]);
 
     useEffect(() => {
         fetchMedia();
@@ -226,7 +246,8 @@ export default function Index({ collections, modelTypes }) {
     }, []);
 
     // Active filters count
-    const activeFiltersCount = [type, collection, modelType].filter(Boolean).length;
+    const activeFiltersCount = [type, collection, modelType, dateFrom, dateTo, sizeFromMb, sizeToMb]
+        .filter(Boolean).length;
 
     const resetFilters = () => {
         setSearch('');
@@ -235,6 +256,10 @@ export default function Index({ collections, modelTypes }) {
         setModelType('');
         setSort('newest');
         setPage(1);
+        setDateFrom('');
+        setDateTo('');
+        setSizeFromMb('');
+        setSizeToMb('');
     };
 
     const hasSelection = selectedMedia.size > 0;
@@ -369,6 +394,59 @@ export default function Index({ collections, modelTypes }) {
                             </NativeSelectRoot>
                         </Box>
                     </SimpleGrid>
+
+                    <SimpleGrid columns={{ base: 1, sm: 2, md: 4 }} gap="3" mt="3">
+                        <Box>
+                            <Text fontSize="xs" fontWeight="600" mb="1" color="gray.500" textTransform="uppercase">
+                                Загружено с
+                            </Text>
+                            <Input
+                                size="sm"
+                                type="date"
+                                value={dateFrom}
+                                onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+                            />
+                        </Box>
+                        <Box>
+                            <Text fontSize="xs" fontWeight="600" mb="1" color="gray.500" textTransform="uppercase">
+                                Загружено по
+                            </Text>
+                            <Input
+                                size="sm"
+                                type="date"
+                                value={dateTo}
+                                onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+                            />
+                        </Box>
+                        <Box>
+                            <Text fontSize="xs" fontWeight="600" mb="1" color="gray.500" textTransform="uppercase">
+                                Размер от, МБ
+                            </Text>
+                            <Input
+                                size="sm"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                placeholder="0"
+                                value={sizeFromMb}
+                                onChange={(e) => { setSizeFromMb(e.target.value); setPage(1); }}
+                            />
+                        </Box>
+                        <Box>
+                            <Text fontSize="xs" fontWeight="600" mb="1" color="gray.500" textTransform="uppercase">
+                                Размер до, МБ
+                            </Text>
+                            <Input
+                                size="sm"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                placeholder="∞"
+                                value={sizeToMb}
+                                onChange={(e) => { setSizeToMb(e.target.value); setPage(1); }}
+                            />
+                        </Box>
+                    </SimpleGrid>
                 </Box>
 
                 {/* Active filters chips */}
@@ -389,6 +467,26 @@ export default function Index({ collections, modelTypes }) {
                             <Badge size="sm" colorPalette="green" cursor="pointer" onClick={() => setModelType('')}>
                                 {MODEL_TYPE_LABELS[modelType] || modelType.split('\\').pop()}
                                 <Box as="span" ml="1" fontWeight="bold">×</Box>
+                            </Badge>
+                        )}
+                        {dateFrom && (
+                            <Badge size="sm" colorPalette="orange" cursor="pointer" onClick={() => setDateFrom('')}>
+                                с {dateFrom} <Box as="span" ml="1" fontWeight="bold">×</Box>
+                            </Badge>
+                        )}
+                        {dateTo && (
+                            <Badge size="sm" colorPalette="orange" cursor="pointer" onClick={() => setDateTo('')}>
+                                по {dateTo} <Box as="span" ml="1" fontWeight="bold">×</Box>
+                            </Badge>
+                        )}
+                        {sizeFromMb && (
+                            <Badge size="sm" colorPalette="teal" cursor="pointer" onClick={() => setSizeFromMb('')}>
+                                от {sizeFromMb} МБ <Box as="span" ml="1" fontWeight="bold">×</Box>
+                            </Badge>
+                        )}
+                        {sizeToMb && (
+                            <Badge size="sm" colorPalette="teal" cursor="pointer" onClick={() => setSizeToMb('')}>
+                                до {sizeToMb} МБ <Box as="span" ml="1" fontWeight="bold">×</Box>
                             </Badge>
                         )}
                         <Button size="xs" variant="ghost" onClick={resetFilters}>

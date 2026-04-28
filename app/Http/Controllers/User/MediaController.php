@@ -11,6 +11,8 @@ use App\Models\Product;
 use App\Models\Promotion;
 use App\Models\Story;
 use App\Models\StorySlide;
+use App\Support\Search\FuzzyProductMatcher;
+use App\Support\Search\QueryRouter;
 use Illuminate\Contracts\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,6 +81,9 @@ class MediaController extends Controller
         if ($modelType) {
             $query->where('model_type', $modelType);
         }
+
+        $this->applyDateRange($query, $request);
+        $this->applySizeRange($query, $request);
 
         if ($search) {
             // Подстрочный поиск: предсказуемое поведение — "550001" не тянет
@@ -227,13 +232,18 @@ class MediaController extends Controller
             $morphMap = [$modelType => $morphMap[$modelType]];
         }
 
-        $query->where(function ($q) use ($needle, $search, $morphMap) {
+        $queryType = QueryRouter::classify($search);
+        $fuzzyProductIds = FuzzyProductMatcher::isApplicable($search, $queryType)
+            ? FuzzyProductMatcher::findProductIds($search)
+            : [];
+
+        $query->where(function ($q) use ($needle, $search, $morphMap, $fuzzyProductIds) {
             $q->where('name', 'like', $needle)
                 ->orWhere('file_name', 'like', $needle);
 
             foreach ($morphMap as $class => $fields) {
-                $q->orWhereHasMorph('model', [$class], function (Builder $b) use ($fields, $needle, $search) {
-                    $b->where(function (Builder $b) use ($fields, $needle, $search) {
+                $q->orWhereHasMorph('model', [$class], function (Builder $b) use ($fields, $needle, $search, $class, $fuzzyProductIds) {
+                    $b->where(function (Builder $b) use ($fields, $needle, $search, $class, $fuzzyProductIds) {
                         foreach ($fields['exact'] as $column) {
                             $b->orWhere($column, '=', $search);
                         }
@@ -245,10 +255,46 @@ class MediaController extends Controller
                                 ? $r->where($rel['field'], '=', $search)
                                 : $r->where($rel['field'], 'like', $needle));
                         }
+                        if ($class === Product::class && ! empty($fuzzyProductIds)) {
+                            $b->orWhereIn('id', $fuzzyProductIds);
+                        }
                     });
                 });
             }
         });
+    }
+
+    /**
+     * Фильтр по диапазону даты загрузки (C-8.2). `date_from`/`date_to` — `Y-m-d`.
+     */
+    private function applyDateRange($query, Request $request): void
+    {
+        $from = trim((string) $request->input('date_from', ''));
+        $to = trim((string) $request->input('date_to', ''));
+
+        if ($from !== '') {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to !== '') {
+            $query->whereDate('created_at', '<=', $to);
+        }
+    }
+
+    /**
+     * Фильтр по размеру файла в мегабайтах (C-8.3). На клиенте поля в МБ
+     * для UX-удобства, в БД хранится `size` в байтах — конвертация здесь.
+     */
+    private function applySizeRange($query, Request $request): void
+    {
+        $from = $request->input('size_from_mb');
+        $to = $request->input('size_to_mb');
+
+        if (is_numeric($from)) {
+            $query->where('size', '>=', (int) round(((float) $from) * 1048576));
+        }
+        if (is_numeric($to)) {
+            $query->where('size', '<=', (int) round(((float) $to) * 1048576));
+        }
     }
 
     /**
