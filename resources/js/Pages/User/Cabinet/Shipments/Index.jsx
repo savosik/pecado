@@ -257,7 +257,7 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                                     >
                                         <Select.Trigger>
                                             <Select.ValueText placeholder="Все статусы">
-                                                {(items) => items.length === 0 ? 'Все статусы' : `Выбрано: ${items.length}`}
+                                                {localFilters.status.length === 0 ? 'Все статусы' : `Выбрано: ${localFilters.status.length}`}
                                             </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>

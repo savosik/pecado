@@ -251,7 +251,7 @@ export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled
                                     >
                                         <Select.Trigger>
                                             <Select.ValueText placeholder="Все статусы">
-                                                {(items) => items.length === 0 ? 'Все статусы' : `Выбрано: ${items.length}`}
+                                                {localFilters.status.length === 0 ? 'Все статусы' : `Выбрано: ${localFilters.status.length}`}
                                             </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>
@@ -273,7 +273,7 @@ export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled
                                     >
                                         <Select.Trigger>
                                             <Select.ValueText placeholder="Все причины">
-                                                {(items) => items.length === 0 ? 'Все причины' : `Выбрано: ${items.length}`}
+                                                {localFilters.reason.length === 0 ? 'Все причины' : `Выбрано: ${localFilters.reason.length}`}
                                             </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>

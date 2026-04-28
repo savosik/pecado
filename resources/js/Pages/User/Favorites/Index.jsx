@@ -306,7 +306,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                         >
                                             <Select.Trigger>
                                                 <Select.ValueText placeholder="Все бренды">
-                                                    {(values) => values.length === 0 ? 'Все бренды' : `Выбрано: ${values.length}`}
+                                                    {localFilters.brand_ids.length === 0 ? 'Все бренды' : `Выбрано: ${localFilters.brand_ids.length}`}
                                                 </Select.ValueText>
                                             </Select.Trigger>
                                             <Select.Content>
@@ -329,7 +329,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                         >
                                             <Select.Trigger>
                                                 <Select.ValueText placeholder="Все категории">
-                                                    {(values) => values.length === 0 ? 'Все категории' : `Выбрано: ${values.length}`}
+                                                    {localFilters.category_ids.length === 0 ? 'Все категории' : `Выбрано: ${localFilters.category_ids.length}`}
                                                 </Select.ValueText>
                                             </Select.Trigger>
                                             <Select.Content>

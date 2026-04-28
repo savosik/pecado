@@ -298,12 +298,10 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value })}
                                     >
                                         <Select.Trigger>
-                                            <Select.ValueText
-                                                placeholder="Все статусы"
-                                            >
-                                                {(items) => items.length === 0
+                                            <Select.ValueText placeholder="Все статусы">
+                                                {localFilters.status.length === 0
                                                     ? 'Все статусы'
-                                                    : `Выбрано: ${items.length}`}
+                                                    : `Выбрано: ${localFilters.status.length}`}
                                             </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>
