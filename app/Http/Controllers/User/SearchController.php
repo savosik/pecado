@@ -263,13 +263,30 @@ class SearchController extends Controller
                 if ($exactMatch !== null && ! $exactWasInScout) {
                     $total += 1;
                 }
+
+                $from = $paginated->firstItem();
+                $to = $paginated->lastItem();
+
+                // Meilisearch отдаёт estimatedTotalHits (оценку), которая может быть
+                // меньше фактически возвращённых хитов. В таком случае гарантируем
+                // total >= to и last_page, согласованный с total, чтобы не было
+                // «Показано 1–92 из 89».
+                if ($to !== null && $to > $total) {
+                    $total = $to;
+                }
+
+                $paginatorPerPage = $paginated->perPage();
+                $lastPage = $paginatorPerPage > 0
+                    ? max(1, (int) ceil($total / $paginatorPerPage))
+                    : $paginated->lastPage();
+
                 $results['_products_meta'] = [
                     'current_page' => $paginated->currentPage(),
-                    'last_page' => $paginated->lastPage(),
-                    'per_page' => $paginated->perPage(),
+                    'last_page' => $lastPage,
+                    'per_page' => $paginatorPerPage,
                     'total' => $total,
-                    'from' => $paginated->firstItem(),
-                    'to' => $paginated->lastItem(),
+                    'from' => $from,
+                    'to' => $to,
                     'no_exact_match' => $total > 0 && ! $hasExact,
                 ];
             } catch (\Throwable $e) {
