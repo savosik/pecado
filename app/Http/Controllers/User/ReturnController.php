@@ -288,7 +288,12 @@ class ReturnController extends Controller
     }
 
     /**
-     * Автокомплит реализаций текущего пользователя по номеру/дате.
+     * Автокомплит реализаций текущего пользователя.
+     *
+     * Расширенный поиск (см. docs/cabinet-search-scenarios.md §3, C-3.1 … C-3.4):
+     * - C-3.1: номер/erp_number, в т.ч. без дефиса (нормализация);
+     * - C-3.2: товар в составе по name/sku/code + бренду + штрихкоду (точный матч для 8/12/13/14 цифр);
+     * - C-3.4: open_returns_count — кол-во возвратов по реализации в незакрытых статусах.
      */
     public function searchShipments(Request $request): JsonResponse
     {
@@ -296,30 +301,122 @@ class ReturnController extends Controller
         $q = trim((string) $request->input('query'));
 
         $query = Shipment::query()
+            ->select('shipments.*')
             ->where('user_id', $user->id)
+            ->with(['items.product.brand'])
             ->withCount('items')
+            ->selectSub(function ($sub) {
+                $sub->from('return_items')
+                    ->join('returns', 'returns.id', '=', 'return_items.return_id')
+                    ->whereColumn('return_items.shipment_id', 'shipments.id')
+                    ->whereNotIn('returns.status', [
+                        ReturnStatus::CLOSED->value,
+                        ReturnStatus::CANCELLED->value,
+                    ])
+                    ->selectRaw('COUNT(DISTINCT return_items.return_id)');
+            }, 'open_returns_count')
             ->orderByDesc('date')
             ->orderByDesc('id');
 
         if ($q !== '') {
-            $query->where(function ($sub) use ($q) {
+            $normalized = preg_replace('/[\s\-]+/u', '', $q);
+            $queryType = QueryRouter::classify($q);
+
+            $query->where(function ($sub) use ($q, $normalized, $queryType) {
                 $sub->where('number', 'like', "%{$q}%")
                     ->orWhere('erp_number', 'like', "%{$q}%");
+
+                $sub->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                $sub->orWhereRaw("REPLACE(REPLACE(COALESCE(erp_number, ''), '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+
+                $sub->orWhereHas('items.product', function ($p) use ($q, $queryType) {
+                    $p->where(function ($pp) use ($q, $queryType) {
+                        $pp->where('name', 'like', "%{$q}%")
+                            ->orWhere('sku', 'like', "%{$q}%")
+                            ->orWhere('code', 'like', "%{$q}%")
+                            ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$q}%"));
+
+                        if ($queryType === QueryRouter::TYPE_BARCODE) {
+                            $pp->orWhereHas('barcodes', fn ($bc) => $bc->where('barcode', $q));
+                        }
+                    });
+                });
             });
         }
 
-        $shipments = $query->limit(20)->get()->map(fn (Shipment $s) => [
-            'id' => $s->id,
-            'uuid' => $s->uuid,
-            'number' => $s->number,
-            'date' => $s->date?->format('d.m.Y'),
-            'total_amount' => $s->total_amount,
-            'currency_code' => $s->currency_code,
-            'items_count' => $s->items_count,
-            'label' => 'Реализация '.$s->number.($s->date ? ' от '.$s->date->format('d.m.Y') : ''),
-        ]);
+        $shipments = $query->limit(20)->get()->map(function (Shipment $s) use ($q) {
+            $matchSource = 'number';
+            $matchProduct = null;
+
+            if ($q !== '') {
+                $normalized = preg_replace('/[\s\-]+/u', '', $q);
+                $shipmentNumberNormalized = preg_replace('/[\s\-]+/u', '', (string) $s->number);
+                $erpNumberNormalized = preg_replace('/[\s\-]+/u', '', (string) ($s->erp_number ?? ''));
+                $needle = mb_strtolower($q);
+                $needleNormalized = mb_strtolower((string) $normalized);
+
+                $hitsNumber = str_contains(mb_strtolower((string) $s->number), $needle)
+                    || str_contains(mb_strtolower((string) $shipmentNumberNormalized), $needleNormalized);
+                $hitsErp = $s->erp_number !== null && (
+                    str_contains(mb_strtolower((string) $s->erp_number), $needle)
+                    || str_contains(mb_strtolower((string) $erpNumberNormalized), $needleNormalized)
+                );
+
+                if (! $hitsNumber && ! $hitsErp) {
+                    $matchSource = 'composition';
+                    $matchProduct = $this->pickMatchedProduct($s, $q);
+                } elseif ($hitsErp && ! $hitsNumber) {
+                    $matchSource = 'erp_number';
+                }
+            }
+
+            return [
+                'id' => $s->id,
+                'uuid' => $s->uuid,
+                'number' => $s->number,
+                'erp_number' => $s->erp_number,
+                'date' => $s->date?->format('d.m.Y'),
+                'total_amount' => $s->total_amount,
+                'currency_code' => $s->currency_code,
+                'items_count' => $s->items_count,
+                'open_returns_count' => (int) ($s->open_returns_count ?? 0),
+                'match_source' => $matchSource,
+                'match_product' => $matchProduct,
+                'label' => 'Реализация '.$s->number.($s->date ? ' от '.$s->date->format('d.m.Y') : ''),
+            ];
+        });
 
         return response()->json($shipments);
+    }
+
+    /**
+     * Найти первый товар в составе реализации, который дал совпадение с запросом.
+     */
+    private function pickMatchedProduct(Shipment $shipment, string $q): ?array
+    {
+        $needle = mb_strtolower($q);
+
+        foreach ($shipment->items as $item) {
+            $product = $item->product;
+            if (! $product) {
+                continue;
+            }
+
+            $hit = str_contains(mb_strtolower((string) $product->name), $needle)
+                || str_contains(mb_strtolower((string) $product->sku), $needle)
+                || str_contains(mb_strtolower((string) $product->code), $needle)
+                || ($product->brand && str_contains(mb_strtolower((string) $product->brand->name), $needle));
+
+            if ($hit) {
+                return [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'sku' => $product->sku,
+                ];
+            }
+        }
+
+        return null;
     }
 
     /**

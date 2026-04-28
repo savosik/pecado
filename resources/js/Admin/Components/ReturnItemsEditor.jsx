@@ -341,6 +341,12 @@ const AddFromShipmentForm = ({
 
     const selectedCount = shipmentItems.filter((i) => i.selected).length;
 
+    // C-3.2: точные совпадения по номеру/erp_number — сверху, fuzzy по составу — ниже.
+    const sortedShipments = useMemo(() => {
+        const rank = (s) => (s.match_source === "composition" ? 1 : 0);
+        return [...shipments].sort((a, b) => rank(a) - rank(b));
+    }, [shipments]);
+
     const handleSave = () => {
         const picked = shipmentItems.filter((i) => i.selected);
         if (picked.length === 0) return;
@@ -384,7 +390,7 @@ const AddFromShipmentForm = ({
             <Card.Body p={6}>
                 {step === 1 && (
                     <VStack align="stretch" gap={4}>
-                        <Field label="Поиск по номеру реализации">
+                        <Field label="Поиск по номеру, товару или артикулу">
                             <HStack>
                                 <Box flex={1} position="relative">
                                     <Box position="absolute" left="3" top="50%" transform="translateY(-50%)" color="gray.400">
@@ -393,7 +399,7 @@ const AddFromShipmentForm = ({
                                     <Input
                                         value={query}
                                         onChange={(e) => setQuery(e.target.value)}
-                                        placeholder="Например, 29УТ-003413"
+                                        placeholder="Номер реализации, товар, артикул, штрихкод…"
                                         pl="10"
                                     />
                                 </Box>
@@ -405,9 +411,9 @@ const AddFromShipmentForm = ({
                                 <Spinner size="md" color={`${accentColor}.500`} />
                                 <Text fontSize="sm" color="gray.500" mt={3}>Загрузка...</Text>
                             </Box>
-                        ) : shipments.length > 0 ? (
+                        ) : sortedShipments.length > 0 ? (
                             <VStack align="stretch" gap={3}>
-                                {shipments.map((s) => (
+                                {sortedShipments.map((s) => (
                                     <Box
                                         key={s.id}
                                         p={4}
@@ -421,13 +427,25 @@ const AddFromShipmentForm = ({
                                     >
                                         <HStack justify="space-between">
                                             <VStack align="start" gap={1}>
-                                                <HStack>
+                                                <HStack flexWrap="wrap">
                                                     <Badge colorPalette="blue" variant="solid">{s.number}</Badge>
                                                     {s.date && <Text fontSize="sm" color="gray.500">от {s.date}</Text>}
+                                                    {s.open_returns_count > 0 && (
+                                                        <Badge colorPalette="orange" variant="subtle">
+                                                            ⚠ {s.open_returns_count}{" "}
+                                                            {pluralizeOpenReturns(s.open_returns_count)}
+                                                        </Badge>
+                                                    )}
                                                 </HStack>
                                                 <Text fontSize="sm" color="gray.600">
                                                     Позиций: <b>{s.items_count}</b>, сумма: <b>{parseFloat(s.total_amount).toFixed(2)} {s.currency_code || "₽"}</b>
                                                 </Text>
+                                                {s.match_source === "composition" && s.match_product?.name && (
+                                                    <Text fontSize="xs" color={`${accentColor}.700`}>
+                                                        …содержит: {s.match_product.name}
+                                                        {s.match_product.sku ? ` (${s.match_product.sku})` : ""}
+                                                    </Text>
+                                                )}
                                                 {s.user && (
                                                     <Text fontSize="xs" color="gray.500">{s.user.name} ({s.user.email})</Text>
                                                 )}
@@ -589,5 +607,13 @@ const AddFromShipmentForm = ({
         </Card.Root>
     );
 };
+
+function pluralizeOpenReturns(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return "открытый возврат";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "открытых возврата";
+    return "открытых возвратов";
+}
 
 export default ReturnItemsEditor;
