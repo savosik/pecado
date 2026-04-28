@@ -226,10 +226,12 @@ class SearchController extends Controller
 
                 $products = $paginated->getCollection();
 
-                // Фильтрация по наличию (если не include_unavailable)
+                // Фильтрация по наличию (если не include_unavailable).
+                // Предзаказы (preorder_stock > 0) считаются доступными и НЕ скрываются.
                 if (! $includeUnavailable) {
                     $products = $products->filter(function (Product $product) {
-                        return ($product->primary_stock ?? 0) > 0;
+                        return ($product->primary_stock ?? 0) > 0
+                            || ($product->preorder_stock ?? 0) > 0;
                     })->values();
                 }
 

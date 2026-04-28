@@ -23,7 +23,7 @@ import { router } from '@inertiajs/react';
 
 const DEBOUNCE_MS = 250;
 const MIN_QUERY_LENGTH = 2;
-const SEARCH_LIMIT = 5;
+const SEARCH_LIMIT = 10;
 
 const EMPTY_RESULTS = Object.freeze({
     products: [],

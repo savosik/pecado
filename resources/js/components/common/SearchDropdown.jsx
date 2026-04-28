@@ -309,13 +309,16 @@ export default function SearchDropdown({
     setOpen,
     submitSearch,
 }) {
-    // Фильтрация товаров по наличию (клиентская)
+    // Фильтрация товаров по наличию (клиентская).
+    // Предзаказы НЕ скрываются под чекбоксом — их учёт идёт по preorder_quantity,
+    // которое отдаёт ProductQueryService (поля is_preorder в payload нет).
     const filteredProducts = useMemo(() => {
         const products = results?.products ?? [];
         if (includeUnavailable) return products;
         return products.filter((p) => {
             const qty = p.available_quantity ?? p.stock_quantity ?? 0;
-            return qty > 0 || p.is_preorder;
+            const preorderQty = p.preorder_quantity ?? 0;
+            return qty > 0 || preorderQty > 0;
         });
     }, [results?.products, includeUnavailable]);
 
