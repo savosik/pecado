@@ -9,6 +9,7 @@ use App\Models\Cart;
 use App\Models\Favorite;
 use App\Models\Product;
 use App\Support\Search\QueryRouter;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -20,41 +21,151 @@ class CabinetCartController extends Controller
         protected CartServiceInterface $cartService,
     ) {}
 
+    private const SORT_FIELDS = ['updated_at', 'created_at', 'name', 'total_amount', 'items_count'];
+
+    private const TOTAL_AMOUNT_SUBQUERY = '(SELECT CAST(COALESCE(SUM(quantity * COALESCE(price, 0)), 0) AS REAL) FROM cart_items WHERE cart_items.cart_id = carts.id)';
+
+    private const ITEMS_COUNT_SUBQUERY = '(SELECT COUNT(*) FROM cart_items WHERE cart_items.cart_id = carts.id)';
+
     /**
      * List all user's carts for cabinet management.
      */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
 
-        $carts = $user->carts()
+        $search = trim((string) $request->input('search', ''));
+        $sortBy = (string) $request->input('sort_by', 'updated_at');
+        if (! in_array($sortBy, self::SORT_FIELDS, true)) {
+            $sortBy = 'updated_at';
+        }
+        $sortOrder = strtolower((string) $request->input('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
+
+        $amountFrom = $request->filled('amount_from') ? (float) $request->input('amount_from') : null;
+        $amountTo = $request->filled('amount_to') ? (float) $request->input('amount_to') : null;
+        $itemsFrom = $request->filled('items_count_from') ? (int) $request->input('items_count_from') : null;
+        $itemsTo = $request->filled('items_count_to') ? (int) $request->input('items_count_to') : null;
+        $onlyEmpty = $request->boolean('only_empty');
+        $onlyActive = $request->boolean('only_active');
+
+        $cartsCount = $user->carts()->count();
+
+        $query = Cart::query()
+            ->where('carts.user_id', $user->id)
             ->withCount('items')
-            ->with(['items.product'])
-            ->orderBy('id')
-            ->get();
+            ->with(['items.product']);
 
-        $cartsCount = $carts->count();
+        $this->applyCartSearch($query, $search);
 
-        $cartsData = $carts->map(function ($cart) use ($user, $cartsCount) {
+        if ($onlyEmpty) {
+            $query->doesntHave('items');
+        }
+        if ($onlyActive) {
+            $query->where('carts.is_active', true);
+        }
+        if ($amountFrom !== null) {
+            $query->whereRaw(self::TOTAL_AMOUNT_SUBQUERY.' >= ?', [$amountFrom]);
+        }
+        if ($amountTo !== null) {
+            $query->whereRaw(self::TOTAL_AMOUNT_SUBQUERY.' <= ?', [$amountTo]);
+        }
+        if ($itemsFrom !== null) {
+            $query->whereRaw(self::ITEMS_COUNT_SUBQUERY.' >= ?', [$itemsFrom]);
+        }
+        if ($itemsTo !== null) {
+            $query->whereRaw(self::ITEMS_COUNT_SUBQUERY.' <= ?', [$itemsTo]);
+        }
+
+        $direction = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
+        match ($sortBy) {
+            'name' => $query->orderBy('carts.name', $sortOrder)->orderBy('carts.id'),
+            'created_at' => $query->orderBy('carts.created_at', $sortOrder)->orderBy('carts.id'),
+            'total_amount' => $query->orderByRaw(self::TOTAL_AMOUNT_SUBQUERY.' '.$direction)->orderBy('carts.id'),
+            'items_count' => $query->orderByRaw(self::ITEMS_COUNT_SUBQUERY.' '.$direction)->orderBy('carts.id'),
+            default => $query->orderBy('carts.updated_at', $sortOrder)->orderBy('carts.id'),
+        };
+
+        $paginated = $query->paginate(20)->withQueryString();
+
+        $cartsData = collect($paginated->items())->map(function (Cart $cart) use ($user, $cartsCount, $search) {
             $summary = $this->cartService->getCartSummary($cart, $user);
 
             return [
                 'id' => $cart->id,
                 'name' => $cart->name,
                 'is_active' => $cart->is_active,
-                'items_count' => $cart->items_count,
+                'items_count' => (int) $cart->items_count,
                 'total_quantity' => $cart->items->sum('quantity'),
                 'total_amount' => round($summary['total_price'] ?? 0, 2),
                 'created_at' => $cart->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $cart->updated_at?->format('d.m.Y H:i'),
                 'can_delete' => $cartsCount > 1,
+                'match_source' => $this->detectMatchSource($cart, $search),
             ];
         });
 
         return Inertia::render('User/Cabinet/Carts/Index', [
-            'carts' => $cartsData,
+            'carts' => [
+                'data' => $cartsData,
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
             'cartsCount' => $cartsCount,
+            'filters' => [
+                'search' => $search,
+                'sort_by' => $sortBy,
+                'sort_order' => $sortOrder,
+                'amount_from' => $request->input('amount_from', ''),
+                'amount_to' => $request->input('amount_to', ''),
+                'items_count_from' => $request->input('items_count_from', ''),
+                'items_count_to' => $request->input('items_count_to', ''),
+                'only_empty' => $onlyEmpty,
+                'only_active' => $onlyActive,
+            ],
+            'sortFields' => self::SORT_FIELDS,
         ]);
+    }
+
+    private function applyCartSearch(Builder $query, string $search): void
+    {
+        if ($search === '') {
+            return;
+        }
+
+        $type = QueryRouter::classify($search);
+        $like = '%'.$search.'%';
+
+        $query->where(function (Builder $q) use ($search, $type, $like) {
+            $q->where('carts.name', 'like', $like)
+                ->orWhereHas('items.product', function (Builder $p) use ($search, $type, $like) {
+                    $p->where(function (Builder $pp) use ($search, $type, $like) {
+                        $pp->where('name', 'like', $like)
+                            ->orWhere('sku', 'like', $like)
+                            ->orWhere('code', 'like', $like)
+                            ->orWhereHas('brand', fn (Builder $b) => $b->where('name', 'like', $like));
+
+                        if ($type === QueryRouter::TYPE_BARCODE) {
+                            $pp->orWhereHas('barcodes', fn (Builder $bq) => $bq->where('barcode', $search));
+                        } else {
+                            $pp->orWhereHas('barcodes', fn (Builder $bq) => $bq->where('barcode', 'like', $like));
+                        }
+                    });
+                });
+        });
+    }
+
+    private function detectMatchSource(Cart $cart, string $search): ?string
+    {
+        if ($search === '') {
+            return null;
+        }
+        if (mb_stripos((string) $cart->name, $search) !== false) {
+            return 'name';
+        }
+
+        return 'composition';
     }
 
     /**
