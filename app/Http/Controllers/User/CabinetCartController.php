@@ -3,9 +3,12 @@
 namespace App\Http\Controllers\User;
 
 use App\Contracts\Cart\CartServiceInterface;
+use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
+use App\Models\Favorite;
 use App\Models\Product;
+use App\Support\Search\QueryRouter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -134,34 +137,87 @@ class CabinetCartController extends Controller
      */
     public function searchProducts(Request $request): JsonResponse
     {
-        $query = $request->input('query', '');
+        $query = trim((string) $request->input('query', ''));
 
-        if (strlen($query) < 2) {
+        if (mb_strlen($query) < 2) {
             return response()->json([]);
         }
 
-        $products = Product::query()
+        $userId = Auth::id();
+        $type = QueryRouter::classify($query);
+        $limit = 15;
+
+        $purchasedStatuses = [
+            OrderStatus::CONFIRMED->value,
+            OrderStatus::READY_TO_SHIP->value,
+            OrderStatus::CLOSED->value,
+        ];
+
+        $purchasedCountQuery = function ($q) use ($userId, $purchasedStatuses) {
+            $q->whereHas('order', fn ($o) => $o->where('user_id', $userId)
+                ->whereIn('status', $purchasedStatuses));
+        };
+
+        $exactBarcodeProduct = null;
+        if ($type === QueryRouter::TYPE_BARCODE) {
+            $exactBarcodeProduct = Product::query()
+                ->whereHas('barcodes', fn ($q) => $q->where('barcode', $query))
+                ->with(['brand', 'media'])
+                ->withCount(['orderItems as purchased_count' => $purchasedCountQuery])
+                ->first();
+        }
+
+        $base = Product::query()
             ->where(function ($q) use ($query) {
                 $q->where('name', 'like', "%{$query}%")
                     ->orWhere('sku', 'like', "%{$query}%")
                     ->orWhere('code', 'like', "%{$query}%")
-                    ->orWhereHas('barcodes', function ($bq) use ($query) {
-                        $bq->where('barcode', 'like', "%{$query}%");
-                    });
+                    ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$query}%"))
+                    ->orWhereHas('barcodes', fn ($bq) => $bq->where('barcode', 'like', "%{$query}%"));
             })
             ->with(['brand', 'media'])
-            ->limit(15)
-            ->get()
-            ->map(function ($product) {
-                return [
-                    'id' => $product->id,
-                    'name' => $product->name,
-                    'sku' => $product->sku,
-                    'base_price' => $product->base_price,
-                    'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
-                    'brand_name' => $product->brand?->name,
-                ];
-            });
+            ->withCount(['orderItems as purchased_count' => $purchasedCountQuery]);
+
+        if ($exactBarcodeProduct !== null) {
+            $base->where('id', '!=', $exactBarcodeProduct->id);
+        }
+
+        $base->orderByRaw('CASE
+                WHEN sku = ? THEN 1
+                WHEN code = ? THEN 1
+                WHEN sku LIKE ? THEN 2
+                WHEN code LIKE ? THEN 2
+                ELSE 3
+            END', [$query, $query, $query.'%', $query.'%'])
+            ->orderBy('id');
+
+        $rest = $base->limit($exactBarcodeProduct ? $limit - 1 : $limit)->get();
+
+        $collection = $exactBarcodeProduct
+            ? collect([$exactBarcodeProduct])->concat($rest)
+            : $rest;
+
+        $favorites = Favorite::query()
+            ->where('user_id', $userId)
+            ->whereIn('product_id', $collection->pluck('id'))
+            ->pluck('product_id')
+            ->all();
+
+        $products = $collection->map(function ($product) use ($exactBarcodeProduct, $favorites) {
+            $isExactBarcode = $exactBarcodeProduct && $product->id === $exactBarcodeProduct->id;
+
+            return [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'base_price' => $product->base_price,
+                'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
+                'brand_name' => $product->brand?->name,
+                'purchased_count' => (int) ($product->purchased_count ?? 0),
+                'in_favorites' => in_array($product->id, $favorites, true),
+                'match_source' => $isExactBarcode ? 'barcode_exact' : null,
+            ];
+        })->values();
 
         return response()->json($products);
     }

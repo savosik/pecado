@@ -103,13 +103,16 @@ export default function Show({ cart, cartDetails }) {
 
     // === Product search ===
     const doSearch = useCallback(async (q) => {
-        if (q.length < 2) { setSearchResults([]); setShowResults(false); return; }
+        if (q.length < 2) { setSearchResults([]); setShowResults(false); return null; }
         setIsSearching(true);
         try {
             const { data } = await axios.get('/cabinet/carts/search-products', { params: { query: q } });
             setSearchResults(data);
             setShowResults(true);
-        } catch { /* ignore */ } finally {
+            return data;
+        } catch { /* ignore */
+            return null;
+        } finally {
             setIsSearching(false);
         }
     }, []);
@@ -118,7 +121,18 @@ export default function Show({ cart, cartDetails }) {
         const q = e.target.value;
         setSearchQuery(q);
         if (debounceRef.current) clearTimeout(debounceRef.current);
-        debounceRef.current = setTimeout(() => doSearch(q), 300);
+        debounceRef.current = setTimeout(async () => {
+            const data = await doSearch(q);
+            // Авто-вставка по штрихкоду: ровно 13/12/8 цифр и точное совпадение
+            if (
+                data
+                && data.length === 1
+                && data[0].match_source === 'barcode_exact'
+                && /^\d{8}$|^\d{12}$|^\d{13}$|^\d{14}$/.test(q.trim())
+            ) {
+                handleAddProduct(data[0]);
+            }
+        }, 300);
     };
 
     const handleAddProduct = async (product) => {
@@ -230,7 +244,7 @@ export default function Show({ cart, cartDetails }) {
                         <HStack>
                             <Box position="relative" flex="1">
                                 <Input
-                                    placeholder="Название, артикул или штрихкод..."
+                                    placeholder="Название, бренд, артикул или штрихкод…"
                                     value={searchQuery}
                                     onChange={handleSearchChange}
                                     onFocus={() => searchResults.length > 0 && setShowResults(true)}
@@ -268,9 +282,24 @@ export default function Show({ cart, cartDetails }) {
                                         )}
                                         <Box flex="1" minW="0">
                                             <Text fontSize="sm" fontWeight="500" noOfLines={1}>{p.name}</Text>
-                                            <HStack gap="2">
+                                            <HStack gap="2" wrap="wrap">
                                                 {p.sku && <Text fontSize="xs" color="gray.400">Арт: {p.sku}</Text>}
                                                 {p.brand_name && <Badge size="sm" colorPalette="purple" variant="subtle">{p.brand_name}</Badge>}
+                                                {p.purchased_count > 0 && (
+                                                    <Badge size="sm" colorPalette="green" variant="subtle">
+                                                        ✓ покупали {p.purchased_count}×
+                                                    </Badge>
+                                                )}
+                                                {p.in_favorites && (
+                                                    <Badge size="sm" colorPalette="orange" variant="subtle">
+                                                        ★ в избранном
+                                                    </Badge>
+                                                )}
+                                                {p.match_source === 'barcode_exact' && (
+                                                    <Badge size="sm" colorPalette="blue" variant="subtle">
+                                                        Штрихкод
+                                                    </Badge>
+                                                )}
                                             </HStack>
                                         </Box>
                                         <Text fontSize="sm" fontWeight="600" flexShrink="0">{formatPrice(p.base_price)}</Text>
