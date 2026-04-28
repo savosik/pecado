@@ -300,6 +300,7 @@ class OrderController extends Controller
                 ['value' => 'preorder', 'label' => 'Предзаказ'],
             ],
             'companies' => $companies,
+            'presetsEnabled' => (bool) config('search-cabinet.presets'),
         ]);
     }
 

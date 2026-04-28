@@ -16,6 +16,7 @@ import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/me
 import { Tooltip } from '@/components/ui/tooltip';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import MatchBadge from '@/components/cabinet/MatchBadge';
+import SavedSearches from '@/components/cabinet/SavedSearches';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
@@ -26,7 +27,7 @@ const STATUS_COLORS = {
     deleted: 'red',
 };
 
-export default function OrdersIndex({ filters, statuses, types, companies = [] }) {
+export default function OrdersIndex({ filters, statuses, types, companies = [], presetsEnabled = false }) {
     const { orders, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
@@ -206,6 +207,14 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
                         </Badge>
                     )}
                 </Button>
+
+                {presetsEnabled && (
+                    <SavedSearches
+                        section="orders"
+                        current={{ ...filters, search }}
+                        basePath="/cabinet/orders"
+                    />
+                )}
 
                 {/* Сортировка */}
                 <MenuRoot positioning={{ placement: 'bottom-end' }}>

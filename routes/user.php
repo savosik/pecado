@@ -189,4 +189,11 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/media/api', [MediaController::class, 'api'])->name('media.api');
     Route::get('/media/{media}/download', [MediaController::class, 'download'])->name('media.download');
     Route::post('/media/download-batch', [MediaController::class, 'downloadBatch'])->name('media.download-batch');
+
+    // Сохранённые поиски (PR 5.1, за флагом `search-cabinet.presets`).
+    // Внутри контроллера выключенный флаг даёт 404 — маршруты остаются
+    // зарегистрированными постоянно для предсказуемого роутинга.
+    Route::get('/search-presets/{section}', [\App\Http\Controllers\User\SearchPresetController::class, 'index'])->name('search-presets.index');
+    Route::post('/search-presets', [\App\Http\Controllers\User\SearchPresetController::class, 'store'])->name('search-presets.store');
+    Route::delete('/search-presets/{preset}', [\App\Http\Controllers\User\SearchPresetController::class, 'destroy'])->name('search-presets.destroy');
 });
