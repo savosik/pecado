@@ -214,7 +214,15 @@ export default function SearchIndex({ query, results, productsMeta }) {
                             </Box>
                         </Flex>
                     )}
-                    <ProductGrid products={products} />
+                    <ProductGrid
+                        products={products}
+                        templateColumns={{
+                            base: 'repeat(2, minmax(0, 1fr))',
+                            md: 'repeat(3, minmax(0, 1fr))',
+                            lg: 'repeat(4, minmax(0, 1fr))',
+                            xl: 'repeat(5, minmax(0, 1fr))',
+                        }}
+                    />
 
                     {/* Пагинация товаров */}
                     {meta && (

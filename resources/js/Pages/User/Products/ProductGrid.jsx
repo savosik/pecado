@@ -3,6 +3,12 @@ import { LuSearchX, LuTriangleAlert } from 'react-icons/lu';
 import ProductGridItem from './ProductGridItem';
 import ProductListItem from './ProductListItem';
 
+const DEFAULT_GRID_COLUMNS = {
+    base: 'repeat(2, minmax(0, 1fr))',
+    md: 'repeat(3, minmax(0, 1fr))',
+    xl: 'repeat(4, minmax(0, 1fr))',
+};
+
 /**
  * ProductGrid — компонент-обёртка отображения товаров в каталоге.
  *
@@ -15,6 +21,7 @@ import ProductListItem from './ProductListItem';
  *   loading: boolean,
  *   error: string | null,
  *   skeletonCount?: number,
+ *   templateColumns?: object | string,
  * }} props
  */
 export default function ProductGrid({
@@ -23,6 +30,7 @@ export default function ProductGrid({
     loading = false,
     error = null,
     skeletonCount = 12,
+    templateColumns = DEFAULT_GRID_COLUMNS,
 }) {
     // ─── Skeleton ───
     if (loading) {
@@ -40,11 +48,7 @@ export default function ProductGrid({
 
         return (
             <Grid
-                templateColumns={{
-                    base: 'repeat(2, minmax(0, 1fr))',
-                    md: 'repeat(3, minmax(0, 1fr))',
-                    xl: 'repeat(4, minmax(0, 1fr))',
-                }}
+                templateColumns={templateColumns}
                 gap={{ base: '3', md: '4' }}
             >
                 {Array.from({ length: count }).map((_, i) => (
@@ -112,11 +116,7 @@ export default function ProductGrid({
     // ─── Grid view (default) ───
     return (
         <Grid
-            templateColumns={{
-                base: 'repeat(2, minmax(0, 1fr))',
-                md: 'repeat(3, minmax(0, 1fr))',
-                xl: 'repeat(4, minmax(0, 1fr))',
-            }}
+            templateColumns={templateColumns}
             gap={{ base: '3', md: '4' }}
         >
             {products.map((product) => (
