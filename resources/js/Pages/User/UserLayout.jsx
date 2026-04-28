@@ -1,5 +1,6 @@
 import { Box } from '@chakra-ui/react';
 import UserHeader from './UserHeader';
+import UserStatusBanner from './UserStatusBanner';
 import UserFooter from './UserFooter';
 import MobileNav from './MobileNav';
 import ScrollToTop from '@/components/common/ScrollToTop';
@@ -15,6 +16,7 @@ export default function UserLayout({ children }) {
         <ProductQuickViewProvider>
             <Box minH="100vh" bg="#f4f4f4" _dark={{ bg: 'gray.900' }} display="flex" flexDirection="column">
                 <UserHeader />
+                <UserStatusBanner />
                 <Box
                     as="main"
                     flex="1"
