@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, Table,
     Card, Stack, IconButton,
@@ -11,6 +11,8 @@ import {
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
+import SelectedFilters from '@/components/cabinet/SelectedFilters';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
     pending: 'yellow',
@@ -49,12 +51,15 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
         });
     };
 
+    const { history: searchHistory, push: pushSearchHistory } = useSearchHistory('returns');
+
     // Debounce 400 мс на поле поиска (§ «Сквозные принципы» п.3, A-7).
     const lastSubmittedSearch = useRef(filters?.search || '');
     useEffect(() => {
         if (search === lastSubmittedSearch.current) return;
         const handle = setTimeout(() => {
             lastSubmittedSearch.current = search;
+            pushSearchHistory(search);
             navigateWithParams({ search, page: 1 });
         }, 400);
         return () => clearTimeout(handle);
@@ -64,6 +69,7 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
     const handleSearch = (e) => {
         e.preventDefault();
         lastSubmittedSearch.current = search;
+        pushSearchHistory(search);
         navigateWithParams({ search, page: 1 });
     };
 
@@ -102,6 +108,35 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
         }
         return count;
     })();
+
+    const filterFields = useMemo(() => [
+        { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
+        { key: 'status', label: 'Статус', formatter: (v) => statuses?.find((s) => s.value === v)?.label || v },
+        { key: 'reason', label: 'Причина', formatter: (v) => reasons?.find((r) => r.value === v)?.label || v },
+        { key: 'date_from', label: 'Дата от' },
+        { key: 'date_to', label: 'Дата до' },
+        { key: 'amount_from', label: 'Сумма от' },
+        { key: 'amount_to', label: 'Сумма до' },
+    ], [statuses, reasons]);
+
+    const handleRemoveFilter = (key, value) => {
+        const current = filters?.[key];
+        let nextValue;
+        if (Array.isArray(current)) {
+            nextValue = current.filter((v) => String(v) !== String(value));
+        } else {
+            nextValue = '';
+        }
+        if (key === 'status' || key === 'reason') {
+            setLocalFilters({ ...localFilters, [key]: Array.isArray(nextValue) ? nextValue : [] });
+        } else if (key === 'search') {
+            setSearch('');
+            lastSubmittedSearch.current = '';
+        } else if (Object.prototype.hasOwnProperty.call(localFilters, key)) {
+            setLocalFilters({ ...localFilters, [key]: nextValue });
+        }
+        navigateWithParams({ [key]: nextValue, page: 1 });
+    };
 
     const SortIcon = ({ field }) => {
         if (filters?.sort_by !== field) return <LuArrowUpDown size={14} />;
@@ -147,6 +182,7 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"
+                            list="returns-search-history"
                         />
                         <IconButton
                             type="submit"
@@ -157,6 +193,13 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                             <LuSearch size={16} />
                         </IconButton>
                     </Flex>
+                    {searchHistory.length > 0 && (
+                        <datalist id="returns-search-history">
+                            {searchHistory.map((item) => (
+                                <option key={item} value={item} />
+                            ))}
+                        </datalist>
+                    )}
                 </Box>
                 <Button
                     onClick={() => setShowFilters(!showFilters)}
@@ -279,6 +322,13 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                     </Card.Body>
                 </Card.Root>
             )}
+
+            <SelectedFilters
+                filters={{ ...filters, search }}
+                fields={filterFields}
+                onRemove={handleRemoveFilter}
+                onResetAll={activeFiltersCount > 0 || search ? handleResetFilters : undefined}
+            />
 
             {/* Таблица возвратов */}
             {returns.data.length === 0 ? (

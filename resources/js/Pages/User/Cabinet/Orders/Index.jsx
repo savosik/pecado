@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
     Card, Stack, IconButton,
@@ -14,6 +14,8 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
+import SelectedFilters from '@/components/cabinet/SelectedFilters';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
     pending: 'yellow',
@@ -53,12 +55,15 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
         });
     };
 
+    const { history: searchHistory, push: pushSearchHistory } = useSearchHistory('orders');
+
     // Debounce 400 мс для поля поиска (§ «Сквозные принципы» п.3, A-7).
     const lastSubmittedSearch = useRef(filters?.search || '');
     useEffect(() => {
         if (search === lastSubmittedSearch.current) return;
         const handle = setTimeout(() => {
             lastSubmittedSearch.current = search;
+            pushSearchHistory(search);
             navigateWithParams({ search, page: 1 });
         }, 400);
         return () => clearTimeout(handle);
@@ -68,6 +73,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
     const handleSearch = (e) => {
         e.preventDefault();
         lastSubmittedSearch.current = search;
+        pushSearchHistory(search);
         navigateWithParams({ search, page: 1 });
     };
 
@@ -120,6 +126,40 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
         return count;
     })();
 
+    const filterFields = useMemo(() => [
+        { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
+        { key: 'status', label: 'Статус', formatter: (v) => statuses?.find((s) => s.value === v)?.label || v },
+        { key: 'type', label: 'Тип', formatter: (v) => types?.find((t) => t.value === v)?.label || v },
+        { key: 'company_id', label: 'Контрагент', formatter: (v) => companies?.find((c) => String(c.value) === String(v))?.label || `#${v}` },
+        { key: 'date_from', label: 'Дата от' },
+        { key: 'date_to', label: 'Дата до' },
+        { key: 'amount_from', label: 'Сумма от' },
+        { key: 'amount_to', label: 'Сумма до' },
+        { key: 'items_count_from', label: 'Позиций от' },
+        { key: 'items_count_to', label: 'Позиций до' },
+        { key: 'brand_ids', label: 'Бренд', formatter: (v) => `#${v}` },
+        { key: 'product_id', label: 'Товар', formatter: (v) => `#${v}` },
+    ], [statuses, types, companies]);
+
+    const handleRemoveFilter = (key, value) => {
+        const current = filters?.[key];
+        let nextValue;
+        if (Array.isArray(current)) {
+            nextValue = current.filter((v) => String(v) !== String(value));
+        } else {
+            nextValue = '';
+        }
+        if (key === 'status') {
+            setLocalFilters({ ...localFilters, status: Array.isArray(nextValue) ? nextValue : [] });
+        } else if (key === 'search') {
+            setSearch('');
+            lastSubmittedSearch.current = '';
+        } else if (Object.prototype.hasOwnProperty.call(localFilters, key)) {
+            setLocalFilters({ ...localFilters, [key]: nextValue });
+        }
+        navigateWithParams({ [key]: nextValue, page: 1 });
+    };
+
     return (
         <CabinetLayout title="Мои заказы">
             <Head title="Мои заказы — Pecado" />
@@ -133,8 +173,16 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"
+                            list="orders-search-history"
                         />
                     </InputGroup>
+                    {searchHistory.length > 0 && (
+                        <datalist id="orders-search-history">
+                            {searchHistory.map((item) => (
+                                <option key={item} value={item} />
+                            ))}
+                        </datalist>
+                    )}
                 </Box>
 
                 {/* Фильтры */}
@@ -347,6 +395,13 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
                     </Card.Body>
                 </Card.Root>
             )}
+
+            <SelectedFilters
+                filters={{ ...filters, search }}
+                fields={filterFields}
+                onRemove={handleRemoveFilter}
+                onResetAll={activeFiltersCount > 0 || search ? handleResetFilters : undefined}
+            />
 
             {/* Список заказов */}
             {orders.data.length === 0 ? (

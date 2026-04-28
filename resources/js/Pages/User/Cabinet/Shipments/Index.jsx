@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
     Card, Stack, IconButton,
@@ -12,6 +12,8 @@ import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
+import SelectedFilters from '@/components/cabinet/SelectedFilters';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
     new: 'blue',
@@ -44,12 +46,15 @@ export default function ShipmentsIndex({ filters, statuses }) {
         });
     };
 
+    const { history: searchHistory, push: pushSearchHistory } = useSearchHistory('shipments');
+
     // Debounce 400 мс на поле поиска (§ «Сквозные принципы» п.3, A-7).
     const lastSubmittedSearch = useRef(filters?.search || '');
     useEffect(() => {
         if (search === lastSubmittedSearch.current) return;
         const handle = setTimeout(() => {
             lastSubmittedSearch.current = search;
+            pushSearchHistory(search);
             navigateWithParams({ search, page: 1 });
         }, 400);
         return () => clearTimeout(handle);
@@ -59,6 +64,7 @@ export default function ShipmentsIndex({ filters, statuses }) {
     const handleSearch = (e) => {
         e.preventDefault();
         lastSubmittedSearch.current = search;
+        pushSearchHistory(search);
         navigateWithParams({ search, page: 1 });
     };
 
@@ -105,6 +111,36 @@ export default function ShipmentsIndex({ filters, statuses }) {
         return count;
     })();
 
+    const filterFields = useMemo(() => [
+        { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
+        { key: 'status', label: 'Статус', formatter: (v) => statuses?.find((s) => s.value === v)?.label || v },
+        { key: 'date_from', label: 'Дата от' },
+        { key: 'date_to', label: 'Дата до' },
+        { key: 'amount_from', label: 'Сумма от' },
+        { key: 'amount_to', label: 'Сумма до' },
+        { key: 'order_uuid', label: 'Заказ', formatter: (v) => `#${String(v).slice(0, 8)}` },
+        { key: 'brand_ids', label: 'Бренд', formatter: (v) => `#${v}` },
+    ], [statuses]);
+
+    const handleRemoveFilter = (key, value) => {
+        const current = filters?.[key];
+        let nextValue;
+        if (Array.isArray(current)) {
+            nextValue = current.filter((v) => String(v) !== String(value));
+        } else {
+            nextValue = '';
+        }
+        if (key === 'status') {
+            setLocalFilters({ ...localFilters, status: Array.isArray(nextValue) ? nextValue : [] });
+        } else if (key === 'search') {
+            setSearch('');
+            lastSubmittedSearch.current = '';
+        } else if (Object.prototype.hasOwnProperty.call(localFilters, key)) {
+            setLocalFilters({ ...localFilters, [key]: nextValue });
+        }
+        navigateWithParams({ [key]: nextValue, page: 1 });
+    };
+
     return (
         <CabinetLayout title="Мои отгрузки">
             <Head title="Мои отгрузки — Pecado" />
@@ -118,8 +154,16 @@ export default function ShipmentsIndex({ filters, statuses }) {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"
+                            list="shipments-search-history"
                         />
                     </InputGroup>
+                    {searchHistory.length > 0 && (
+                        <datalist id="shipments-search-history">
+                            {searchHistory.map((item) => (
+                                <option key={item} value={item} />
+                            ))}
+                        </datalist>
+                    )}
                 </Box>
 
                 {/* Фильтры */}
@@ -258,6 +302,13 @@ export default function ShipmentsIndex({ filters, statuses }) {
                     </Card.Body>
                 </Card.Root>
             )}
+
+            <SelectedFilters
+                filters={{ ...filters, search }}
+                fields={filterFields}
+                onRemove={handleRemoveFilter}
+                onResetAll={activeFiltersCount > 0 || search ? handleResetFilters : undefined}
+            />
 
             {/* Список отгрузок */}
             {shipments.data.length === 0 ? (
