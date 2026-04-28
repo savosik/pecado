@@ -14,6 +14,7 @@ import { Select } from '@/components/ui/select';
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import MatchBadge from '@/components/cabinet/MatchBadge';
+import ExportMenu from '@/components/cabinet/ExportMenu';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
@@ -23,7 +24,7 @@ const STATUS_COLORS = {
     cancelled: 'red',
 };
 
-export default function ShipmentsIndex({ filters, statuses }) {
+export default function ShipmentsIndex({ filters, statuses, exportEnabled = false }) {
     const { shipments, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -187,6 +188,13 @@ export default function ShipmentsIndex({ filters, statuses }) {
                         </Badge>
                     )}
                 </Button>
+
+                {exportEnabled && (
+                    <ExportMenu
+                        basePath="/cabinet/shipments/export"
+                        filters={{ ...filters, search }}
+                    />
+                )}
 
                 {/* Сортировка */}
                 <MenuRoot positioning={{ placement: 'bottom-end' }}>

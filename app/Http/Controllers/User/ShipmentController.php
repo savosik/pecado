@@ -10,7 +10,9 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
+use App\Models\User;
 use App\Services\CurrencyService;
+use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
@@ -40,13 +42,130 @@ class ShipmentController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $user = $request->user();
+        [$query, $context] = $this->buildIndexQuery($request, $user);
+        $search = $context['search'];
+        $perPage = $context['per_page'];
+
+        $shipments = $query->paginate($perPage)->withQueryString();
+        $currency = $this->getUserCurrency($request);
+
+        $shipments->getCollection()->transform(function ($shipment) use ($currency, $search) {
+            $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
+
+            $match = MatchSourceResolver::resolve(
+                $shipment,
+                $search,
+                directFields: [
+                    ['field' => 'number', 'source' => 'number'],
+                    ['field' => 'erp_number', 'source' => 'number'],
+                    ['field' => 'uuid', 'source' => 'number'],
+                    ['field' => 'tax_id', 'source' => 'company'],
+                ],
+                relationFields: [
+                    ['relation' => 'company', 'field' => 'name', 'source' => 'company'],
+                ],
+                itemFields: [
+                    ['relation' => 'items', 'field' => 'product_name_snapshot', 'source' => 'composition'],
+                    ['relation' => 'items', 'field' => 'brand_name_snapshot', 'source' => 'composition'],
+                ],
+            );
+
+            return [
+                'id' => $shipment->id,
+                'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
+                'tax_id' => $shipment->tax_id,
+                'date' => $shipment->date?->format('Y-m-d'),
+                'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
+                'status' => $shipment->status,
+                'status_label' => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
+                'currency_code' => $shipment->currency_code,
+                'total_amount' => $shipment->total_amount,
+                'total_converted' => $totalConverted,
+                'items_count' => $shipment->items->count(),
+                'company' => $shipment->company ? [
+                    'id' => $shipment->company->id,
+                    'name' => $shipment->company->name,
+                ] : null,
+                'match_source' => $match['source'],
+                'match_snippet' => $match['snippet'],
+            ];
+        });
+
+        return Inertia::render('User/Cabinet/Shipments/Index', [
+            'shipments' => $shipments,
+            'filters' => [
+                'search' => $search,
+                'status' => $context['selected_statuses'],
+                'order_uuid' => $context['order_uuid'] ?: null,
+                'brand_ids' => $context['brand_ids'],
+                'date_from' => $context['date_from'],
+                'date_to' => $context['date_to'],
+                'amount_from' => $context['amount_from'],
+                'amount_to' => $context['amount_to'],
+                'sort_by' => $context['sort_by'],
+                'sort_order' => $context['sort_order'],
+                'per_page' => $perPage,
+            ],
+            'statuses' => array_map(
+                fn ($k, $v) => ['value' => $k, 'label' => $v],
+                array_keys(self::STATUS_LABELS),
+                self::STATUS_LABELS
+            ),
+            'exportEnabled' => (bool) config('search-cabinet.export'),
+        ]);
+    }
+
+    /**
+     * Экспорт текущей выдачи в CSV/XLSX. PR 5.2.
+     * GET /cabinet/shipments/export?format=csv|xlsx
+     */
+    public function export(Request $request, SimpleCsvExporter $csv, SimpleXlsxExporter $xlsx): StreamedResponse
+    {
+        abort_unless((bool) config('search-cabinet.export'), 404);
+
+        $format = strtolower((string) $request->input('format', ''));
+        abort_unless(in_array($format, ['csv', 'xlsx'], true), 422, 'Допустимые форматы: csv, xlsx.');
+
+        $user = $request->user();
+        [$query] = $this->buildIndexQuery($request, $user);
+        $currency = $this->getUserCurrency($request);
+
+        $headers = [
+            'Номер', 'Статус', 'Дата отгрузки', 'Контрагент',
+            'Позиций', 'Сумма', 'Валюта', 'Сумма в валюте кабинета',
+        ];
+
+        $rows = (function () use ($query, $currency) {
+            foreach ($query->cursor() as $shipment) {
+                $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
+                yield [
+                    $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
+                    self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
+                    $shipment->date?->format('Y-m-d'),
+                    $shipment->company?->name ?? '',
+                    $shipment->items->count(),
+                    round((float) $shipment->total_amount, 2),
+                    $shipment->currency_code ?? 'RUB',
+                    round((float) $totalConverted, 2),
+                ];
+            }
+        })();
+
+        $filename = 'shipments-'.now()->format('Y-m-d-His');
+
+        return $format === 'csv'
+            ? $csv->stream($filename, $headers, $rows)
+            : $xlsx->stream($filename, $headers, $rows, 'Отгрузки');
+    }
+
+    private function buildIndexQuery(Request $request, User $user): array
+    {
+        $search = trim((string) $request->input('search', ''));
 
         $query = Shipment::query()
             ->where('user_id', $user->id)
             ->with(['company', 'items.product']);
 
-        // Расширенный поиск (см. docs/cabinet-search-scenarios.md §4, C-4.1 … C-4.5).
-        $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $normalized = preg_replace('/[\s\-]+/u', '', $search);
             $queryType = QueryRouter::classify($search);
@@ -136,7 +255,6 @@ class ShipmentController extends Controller
             $query->where('total_amount', '<=', $amountTo);
         }
 
-        // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
 
@@ -145,82 +263,25 @@ class ShipmentController extends Controller
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        // Пагинация
         $perPage = min(max((int) $request->input('per_page', 15), 5), 100);
-        $shipments = $query->paginate($perPage)->withQueryString();
 
-        // Получить текущую валюту пользователя
-        $currency = $this->getUserCurrency($request);
-
-        // Трансформация данных
-        $shipments->getCollection()->transform(function ($shipment) use ($currency, $search) {
-            $totalConverted = $this->convertAmount((float) $shipment->total_amount, $shipment->currency_code, $currency);
-
-            $match = MatchSourceResolver::resolve(
-                $shipment,
-                $search,
-                directFields: [
-                    ['field' => 'number', 'source' => 'number'],
-                    ['field' => 'erp_number', 'source' => 'number'],
-                    ['field' => 'uuid', 'source' => 'number'],
-                    ['field' => 'tax_id', 'source' => 'company'],
-                ],
-                relationFields: [
-                    ['relation' => 'company', 'field' => 'name', 'source' => 'company'],
-                ],
-                itemFields: [
-                    ['relation' => 'items', 'field' => 'product_name_snapshot', 'source' => 'composition'],
-                    ['relation' => 'items', 'field' => 'brand_name_snapshot', 'source' => 'composition'],
-                ],
-            );
-
-            return [
-                'id' => $shipment->id,
-                'number' => $shipment->erp_number ?? $shipment->number ?? ('#'.$shipment->id),
-                'tax_id' => $shipment->tax_id,
-                'date' => $shipment->date?->format('Y-m-d'),
-                'updated_at' => $shipment->updated_at?->format('d.m.Y H:i'),
-                'status' => $shipment->status,
-                'status_label' => self::STATUS_LABELS[$shipment->status] ?? $shipment->status,
-                'currency_code' => $shipment->currency_code,
-                'total_amount' => $shipment->total_amount,
-                'total_converted' => $totalConverted,
-                'items_count' => $shipment->items->count(),
-                'company' => $shipment->company ? [
-                    'id' => $shipment->company->id,
-                    'name' => $shipment->company->name,
-                ] : null,
-                'match_source' => $match['source'],
-                'match_snippet' => $match['snippet'],
-            ];
-        });
-
-        // Возвращаем выбранные статусы как массив — единый формат для UI multi-select.
         $selectedStatuses = is_array($statusInput)
             ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
             : ($statusInput ? [(string) $statusInput] : []);
 
-        return Inertia::render('User/Cabinet/Shipments/Index', [
-            'shipments' => $shipments,
-            'filters' => [
-                'search' => $search,
-                'status' => $selectedStatuses,
-                'order_uuid' => $orderUuid ?: null,
-                'brand_ids' => $brandIds,
-                'date_from' => $dateFrom,
-                'date_to' => $dateTo,
-                'amount_from' => $amountFrom,
-                'amount_to' => $amountTo,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-                'per_page' => $perPage,
-            ],
-            'statuses' => array_map(
-                fn ($k, $v) => ['value' => $k, 'label' => $v],
-                array_keys(self::STATUS_LABELS),
-                self::STATUS_LABELS
-            ),
-        ]);
+        return [$query, [
+            'search' => $search,
+            'selected_statuses' => $selectedStatuses,
+            'order_uuid' => $orderUuid,
+            'brand_ids' => $brandIds,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'amount_from' => $amountFrom,
+            'amount_to' => $amountTo,
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+            'per_page' => $perPage,
+        ]];
     }
 
     /**

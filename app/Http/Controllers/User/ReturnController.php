@@ -9,7 +9,10 @@ use App\Models\ProductReturn;
 use App\Models\ReturnItem;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
+use App\Models\User;
 use App\Services\Returns\ReturnService;
+use App\Services\SimpleCsvExporter;
+use App\Services\SimpleXlsxExporter;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
@@ -18,6 +21,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReturnController extends Controller
 {
@@ -29,13 +33,112 @@ class ReturnController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $user = $request->user();
+        [$query, $context] = $this->buildIndexQuery($request, $user);
+        $search = $context['search'];
+        $perPage = $context['per_page'];
+
+        // Заглушка прежней структуры для дальнейшего pagination + transform.
+        $returns = $query->paginate($perPage)->withQueryString();
+        $returns->getCollection()->transform(function ($return) use ($search) {
+            $match = MatchSourceResolver::resolve(
+                $return,
+                $search,
+                directFields: [
+                    ['field' => 'erp_number', 'source' => 'number'],
+                    ['field' => 'uuid', 'source' => 'number'],
+                ],
+                itemFields: [
+                    ['relation' => 'items', 'field' => 'product_name_snapshot', 'source' => 'composition'],
+                    ['relation' => 'items', 'field' => 'brand_name_snapshot', 'source' => 'composition'],
+                    ['relation' => 'items', 'field' => 'reason_comment', 'source' => 'comment'],
+                ],
+            );
+
+            return [
+                'id' => $return->id,
+                'number' => $return->erp_number ?? ('#'.$return->id),
+                'uuid' => $return->uuid,
+                'status' => $return->status?->value,
+                'status_label' => $this->getStatusLabel($return->status),
+                'total_amount' => $return->total_amount,
+                'created_at' => $return->created_at?->format('d.m.Y H:i'),
+                'items_count' => $return->items->count(),
+                'primary_reason' => $return->items->first()?->reason?->value,
+                'primary_reason_label' => $this->getReasonLabel($return->items->first()?->reason),
+                'match_source' => $match['source'],
+                'match_snippet' => $match['snippet'],
+            ];
+        });
+
+        return Inertia::render('User/Cabinet/Returns/Index', [
+            'returns' => $returns,
+            'filters' => [
+                'search' => $search,
+                'status' => $context['selected_statuses'],
+                'reason' => $context['reasons'],
+                'date_from' => $context['date_from'],
+                'date_to' => $context['date_to'],
+                'amount_from' => $context['amount_from'],
+                'amount_to' => $context['amount_to'],
+                'sort_by' => $context['sort_by'],
+                'sort_order' => $context['sort_order'],
+                'per_page' => $perPage,
+            ],
+            'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
+                'value' => $case->value,
+                'label' => $this->getStatusLabel($case),
+            ]),
+            'reasons' => collect(ReturnReason::cases())->map(fn ($case) => [
+                'value' => $case->value,
+                'label' => $this->getReasonLabel($case),
+            ]),
+            'exportEnabled' => (bool) config('search-cabinet.export'),
+        ]);
+    }
+
+    /**
+     * Экспорт текущей выдачи в CSV/XLSX. PR 5.2.
+     * GET /cabinet/returns/export?format=csv|xlsx
+     */
+    public function export(Request $request, SimpleCsvExporter $csv, SimpleXlsxExporter $xlsx): StreamedResponse
+    {
+        abort_unless((bool) config('search-cabinet.export'), 404);
+
+        $format = strtolower((string) $request->input('format', ''));
+        abort_unless(in_array($format, ['csv', 'xlsx'], true), 422, 'Допустимые форматы: csv, xlsx.');
+
+        [$query] = $this->buildIndexQuery($request, $request->user());
+
+        $headers = ['Номер', 'Статус', 'Причина', 'Позиций', 'Сумма', 'Дата'];
+
+        $rows = (function () use ($query) {
+            foreach ($query->cursor() as $return) {
+                yield [
+                    $return->erp_number ?? ('#'.$return->id),
+                    $this->getStatusLabel($return->status),
+                    $this->getReasonLabel($return->items->first()?->reason),
+                    $return->items->count(),
+                    round((float) $return->total_amount, 2),
+                    $return->created_at?->format('d.m.Y H:i'),
+                ];
+            }
+        })();
+
+        $filename = 'returns-'.now()->format('Y-m-d-His');
+
+        return $format === 'csv'
+            ? $csv->stream($filename, $headers, $rows)
+            : $xlsx->stream($filename, $headers, $rows, 'Возвраты');
+    }
+
+    private function buildIndexQuery(Request $request, User $user): array
+    {
+        $search = trim((string) $request->input('search', ''));
 
         $query = ProductReturn::query()
             ->where('user_id', $user->id)
             ->with(['items']);
 
-        // Расширенный поиск (см. docs/cabinet-search-scenarios.md §2, C-2.1 … C-2.4).
-        $search = trim((string) $request->input('search', ''));
         if ($search !== '') {
             $normalized = preg_replace('/[\s\-]+/u', '', $search);
             $queryType = QueryRouter::classify($search);
@@ -144,67 +247,22 @@ class ReturnController extends Controller
         $perPage = (int) $request->input('per_page', 15);
         $perPage = min(max($perPage, 5), 100);
 
-        $returns = $query->paginate($perPage)->withQueryString();
-
-        $returns->getCollection()->transform(function ($return) use ($search) {
-            $match = MatchSourceResolver::resolve(
-                $return,
-                $search,
-                directFields: [
-                    ['field' => 'erp_number', 'source' => 'number'],
-                    ['field' => 'uuid', 'source' => 'number'],
-                ],
-                itemFields: [
-                    ['relation' => 'items', 'field' => 'product_name_snapshot', 'source' => 'composition'],
-                    ['relation' => 'items', 'field' => 'brand_name_snapshot', 'source' => 'composition'],
-                    ['relation' => 'items', 'field' => 'reason_comment', 'source' => 'comment'],
-                ],
-            );
-
-            return [
-                'id' => $return->id,
-                'number' => $return->erp_number ?? ('#'.$return->id),
-                'uuid' => $return->uuid,
-                'status' => $return->status?->value,
-                'status_label' => $this->getStatusLabel($return->status),
-                'total_amount' => $return->total_amount,
-                'created_at' => $return->created_at?->format('d.m.Y H:i'),
-                'items_count' => $return->items->count(),
-                'primary_reason' => $return->items->first()?->reason?->value,
-                'primary_reason_label' => $this->getReasonLabel($return->items->first()?->reason),
-                'match_source' => $match['source'],
-                'match_snippet' => $match['snippet'],
-            ];
-        });
-
-        // Возвращаем выбранные значения как массивы — единый формат для UI multi-select.
         $selectedStatuses = is_array($statusInput)
             ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
             : ($statusInput ? [(string) $statusInput] : []);
 
-        return Inertia::render('User/Cabinet/Returns/Index', [
-            'returns' => $returns,
-            'filters' => [
-                'search' => $search,
-                'status' => $selectedStatuses,
-                'reason' => $reasons,
-                'date_from' => $dateFrom,
-                'date_to' => $dateTo,
-                'amount_from' => $amountFrom,
-                'amount_to' => $amountTo,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-                'per_page' => $perPage,
-            ],
-            'statuses' => collect(ReturnStatus::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getStatusLabel($case),
-            ]),
-            'reasons' => collect(ReturnReason::cases())->map(fn ($case) => [
-                'value' => $case->value,
-                'label' => $this->getReasonLabel($case),
-            ]),
-        ]);
+        return [$query, [
+            'search' => $search,
+            'selected_statuses' => $selectedStatuses,
+            'reasons' => $reasons,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'amount_from' => $amountFrom,
+            'amount_to' => $amountTo,
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+            'per_page' => $perPage,
+        ]];
     }
 
     /**

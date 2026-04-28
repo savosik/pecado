@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\User;
 use App\Services\CurrencyService;
+use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
@@ -30,179 +32,9 @@ class OrderController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $user = $request->user();
-
-        $search = trim((string) $request->input('search', ''));
-
-        $query = Order::query()
-            ->where('user_id', $user->id)
-            ->with(['company'])
-            ->when($search !== '', fn ($q) => $q->with([
-                'items:id,order_id,name,brand_name_snapshot',
-            ]))
-            ->withCount(['items', 'shipments'])
-            ->addSelect([
-                'original_total_amount' => OrderItem::selectRaw('COALESCE(SUM(base_price * quantity), 0)')
-                    ->whereColumn('order_id', 'orders.id'),
-            ]);
-
-        // Расширенный поиск (см. docs/cabinet-search-scenarios.md §1, C-1.1 … C-1.10).
-        if ($search !== '') {
-            $normalized = preg_replace('/[\s\-]+/u', '', $search);
-            $queryType = QueryRouter::classify($search);
-
-            $fuzzyOrderIds = FuzzyDocumentMatcher::isApplicable($search, $queryType)
-                ? FuzzyDocumentMatcher::findDocumentIds(
-                    $search,
-                    OrderItem::class,
-                    'order_id',
-                    'order',
-                    $user->id,
-                )
-                : [];
-
-            $query->where(function ($q) use ($search, $normalized, $queryType, $user, $fuzzyOrderIds) {
-                // Базовое: UUID, номер, ERP-номер, числовой ID (C-1.2 + текущее поведение).
-                $q->where('uuid', 'like', "%{$search}%")
-                    ->orWhere('number', 'like', "%{$search}%")
-                    ->orWhere('erp_number', 'like', "%{$search}%");
-
-                if (ctype_digit($search)) {
-                    $q->orWhere('id', (int) $search);
-                }
-
-                // Нормализованная форма: 29УТ-003413 ≡ 29УТ003413 (C-1.1). Применяется
-                // всегда — пользователь может ввести запрос как с дефисом, так и без.
-                if ($normalized !== '') {
-                    $q->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-                    $q->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
-                }
-
-                // Комментарий (C-1.10).
-                $q->orWhere('comment', 'like', "%{$search}%");
-
-                // Состав заказа: название/SKU/код 1С товара (C-1.3, C-1.5, C-1.7).
-                $q->orWhereHas('items.product', function ($p) use ($search) {
-                    $p->where('name', 'like', "%{$search}%")
-                        ->orWhere('sku', 'like', "%{$search}%")
-                        ->orWhere('code', 'like', "%{$search}%");
-                });
-
-                // Бренд в составе (C-1.4).
-                $q->orWhereHas('items.product.brand', fn ($b) => $b->where('name', 'like', "%{$search}%"));
-
-                // Штрихкод в составе — только для строки, похожей на штрихкод (C-1.6, точное).
-                if ($queryType === QueryRouter::TYPE_BARCODE) {
-                    $q->orWhereHas('items.product.barcodes', fn ($b) => $b->where('barcode', $search));
-                }
-
-                // Контрагент по имени — только в рамках компаний пользователя (C-1.8).
-                $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
-                    ->where('name', 'like', "%{$search}%"));
-
-                // ИНН: точное для 10/12 цифр, префиксное для коротких числовых запросов (C-1.9).
-                if ($queryType === QueryRouter::TYPE_TAX_ID) {
-                    $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
-                        ->where('tax_id', $search));
-                } elseif (ctype_digit($search) && strlen($search) >= 4) {
-                    $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
-                        ->where('tax_id', 'like', "{$search}%"));
-                }
-
-                // Fuzzy через Meilisearch (PR 4.2, флаг CABINET_SEARCH_FUZZY_DOCUMENTS).
-                if (! empty($fuzzyOrderIds)) {
-                    $q->orWhereIn('id', $fuzzyOrderIds);
-                }
-            });
-        }
-
-        // Фильтрация по типу
-        if ($type = $request->input('type')) {
-            $query->where('type', $type);
-        }
-
-        // Фильтрация по статусу — поддерживает скаляр (старое поведение) и массив (multi-select).
-        $statusInput = $request->input('status');
-        if (is_array($statusInput)) {
-            $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
-            if (count($statuses) > 0) {
-                $query->whereIn('status', $statuses);
-            }
-        } elseif ($statusInput) {
-            $query->where('status', $statusInput);
-        }
-
-        // Фильтрация по контрагенту (только из компаний текущего пользователя)
-        if ($companyId = $request->input('company_id')) {
-            $query->where('company_id', $companyId)
-                ->whereHas('company', fn ($q) => $q->where('user_id', $user->id));
-        }
-
-        // Фильтр по бренду в составе заказа — массив brand_ids[] (C-1.4 / roadmap PR 2.1).
-        $brandIds = array_values(array_filter(
-            array_map('intval', (array) $request->input('brand_ids', [])),
-            fn ($id) => $id > 0,
-        ));
-        if (count($brandIds) > 0) {
-            $query->whereHas('items.product', fn ($p) => $p->whereIn('brand_id', $brandIds));
-        }
-
-        // Фильтр «когда я это покупал?» — заказы, содержащие конкретный товар (C-1.13).
-        if ($productId = (int) $request->input('product_id', 0)) {
-            $query->whereHas('items', fn ($q) => $q->where('product_id', $productId));
-        }
-
-        // Фильтрация по дате создания
-        if ($dateFrom = $request->input('date_from')) {
-            $query->whereDate('created_at', '>=', $dateFrom);
-        }
-        if ($dateTo = $request->input('date_to')) {
-            $query->whereDate('created_at', '<=', $dateTo);
-        }
-
-        // Фильтрация по сумме
-        if ($amountFrom = $request->input('amount_from')) {
-            $query->where('total_amount', '>=', $amountFrom);
-        }
-        if ($amountTo = $request->input('amount_to')) {
-            $query->where('total_amount', '<=', $amountTo);
-        }
-
-        // Фильтр по диапазону количества позиций (C-1.12).
-        // Используем подзапрос вместо HAVING — он работает и в MySQL, и в SQLite (тесты),
-        // не требует GROUP BY и совместим с пагинацией.
-        $itemsCountFrom = $request->input('items_count_from');
-        $itemsCountTo = $request->input('items_count_to');
-        if ($itemsCountFrom !== null && $itemsCountFrom !== '') {
-            $query->whereRaw(
-                '(SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) >= ?',
-                [(int) $itemsCountFrom],
-            );
-        }
-        if ($itemsCountTo !== null && $itemsCountTo !== '') {
-            $query->whereRaw(
-                '(SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) <= ?',
-                [(int) $itemsCountTo],
-            );
-        }
-
-        // Сортировка (по умолчанию — по дате создания в ERP, свежие сверху)
-        $sortBy = $request->input('sort_by', 'erp_created_at');
-        $sortOrder = $request->input('sort_order', 'desc');
-
-        $allowedSortFields = ['id', 'total_amount', 'status', 'erp_created_at'];
-        if (in_array($sortBy, $allowedSortFields)) {
-            // erp_created_at может быть NULL у заказов, ещё не дошедших до ERP — fallback на created_at
-            if ($sortBy === 'erp_created_at') {
-                $direction = $sortOrder === 'asc' ? 'asc' : 'desc';
-                $query->orderByRaw("COALESCE(erp_created_at, created_at) {$direction}");
-            } else {
-                $query->orderBy($sortBy, $sortOrder);
-            }
-        }
-
-        // Пагинация
-        $perPage = (int) $request->input('per_page', 15);
-        $perPage = min(max($perPage, 5), 100);
+        [$query, $context] = $this->buildIndexQuery($request, $user);
+        $search = $context['search'];
+        $perPage = $context['per_page'];
 
         $orders = $query->paginate($perPage)->withQueryString();
 
@@ -267,28 +99,23 @@ class OrderController extends Controller
             ->get(['id', 'name'])
             ->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name]);
 
-        // Возвращаем выбранные статусы как массив строк — единый формат для UI multi-select.
-        $selectedStatuses = is_array($statusInput)
-            ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
-            : ($statusInput ? [(string) $statusInput] : []);
-
         return Inertia::render('User/Cabinet/Orders/Index', [
             'orders' => $orders,
             'filters' => [
-                'search' => $search,
-                'status' => $selectedStatuses,
-                'type' => $request->input('type', ''),
-                'company_id' => $companyId ? (string) $companyId : '',
-                'brand_ids' => $brandIds,
-                'product_id' => $productId ?: null,
-                'date_from' => $dateFrom,
-                'date_to' => $dateTo,
-                'amount_from' => $amountFrom,
-                'amount_to' => $amountTo,
-                'items_count_from' => $itemsCountFrom !== null && $itemsCountFrom !== '' ? (int) $itemsCountFrom : null,
-                'items_count_to' => $itemsCountTo !== null && $itemsCountTo !== '' ? (int) $itemsCountTo : null,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
+                'search' => $context['search'],
+                'status' => $context['selected_statuses'],
+                'type' => $context['type'] ?? '',
+                'company_id' => $context['company_id'] ? (string) $context['company_id'] : '',
+                'brand_ids' => $context['brand_ids'],
+                'product_id' => $context['product_id'] ?: null,
+                'date_from' => $context['date_from'],
+                'date_to' => $context['date_to'],
+                'amount_from' => $context['amount_from'],
+                'amount_to' => $context['amount_to'],
+                'items_count_from' => $context['items_count_from'] !== null && $context['items_count_from'] !== '' ? (int) $context['items_count_from'] : null,
+                'items_count_to' => $context['items_count_to'] !== null && $context['items_count_to'] !== '' ? (int) $context['items_count_to'] : null,
+                'sort_by' => $context['sort_by'],
+                'sort_order' => $context['sort_order'],
                 'per_page' => $perPage,
             ],
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
@@ -301,7 +128,240 @@ class OrderController extends Controller
             ],
             'companies' => $companies,
             'presetsEnabled' => (bool) config('search-cabinet.presets'),
+            'exportEnabled' => (bool) config('search-cabinet.export'),
         ]);
+    }
+
+    /**
+     * Экспорт текущей выдачи (тех же фильтров, что и `index`) в CSV/XLSX.
+     * GET /cabinet/orders/export?format=csv|xlsx
+     * За флагом `search-cabinet.export` (PR 5.2).
+     */
+    public function export(Request $request, SimpleCsvExporter $csv, SimpleXlsxExporter $xlsx): StreamedResponse
+    {
+        abort_unless((bool) config('search-cabinet.export'), 404);
+
+        $format = strtolower((string) $request->input('format', ''));
+        abort_unless(in_array($format, ['csv', 'xlsx'], true), 422, 'Допустимые форматы: csv, xlsx.');
+
+        $user = $request->user();
+        [$query] = $this->buildIndexQuery($request, $user);
+        $currency = $this->getUserCurrency($request);
+
+        $headers = [
+            'Номер', 'Тип', 'Статус', 'Дата (ERP)',
+            'Контрагент', 'Позиций', 'Отгрузок',
+            'Сумма', 'Валюта', 'Сумма в валюте кабинета',
+        ];
+
+        $rows = (function () use ($query, $currency) {
+            foreach ($query->cursor() as $order) {
+                $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
+                yield [
+                    $order->erp_number ?? $order->number ?? ('#'.$order->id),
+                    $order->type?->value === 'preorder' ? 'Предзаказ' : 'Заказ',
+                    $this->getStatusLabel($order->status),
+                    ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
+                    $order->company?->name ?? '',
+                    (int) $order->items_count,
+                    (int) $order->shipments_count,
+                    round((float) $order->total_amount, 2),
+                    $order->currency_code ?? 'RUB',
+                    round((float) $totalConverted, 2),
+                ];
+            }
+        })();
+
+        $filename = 'orders-'.now()->format('Y-m-d-His');
+
+        return $format === 'csv'
+            ? $csv->stream($filename, $headers, $rows)
+            : $xlsx->stream($filename, $headers, $rows, 'Заказы');
+    }
+
+    /**
+     * Конструктор query для списка заказов: поиск + фильтры + сортировка.
+     * Используется и в `index` (с пагинацией + transform), и в `export`
+     * (через cursor без пагинации). Контракт сохраняется идентичным.
+     */
+    private function buildIndexQuery(Request $request, User $user): array
+    {
+        $search = trim((string) $request->input('search', ''));
+
+        $query = Order::query()
+            ->where('user_id', $user->id)
+            ->with(['company'])
+            ->when($search !== '', fn ($q) => $q->with([
+                'items:id,order_id,name,brand_name_snapshot',
+            ]))
+            ->withCount(['items', 'shipments'])
+            ->addSelect([
+                'original_total_amount' => OrderItem::selectRaw('COALESCE(SUM(base_price * quantity), 0)')
+                    ->whereColumn('order_id', 'orders.id'),
+            ]);
+
+        if ($search !== '') {
+            $normalized = preg_replace('/[\s\-]+/u', '', $search);
+            $queryType = QueryRouter::classify($search);
+
+            $fuzzyOrderIds = FuzzyDocumentMatcher::isApplicable($search, $queryType)
+                ? FuzzyDocumentMatcher::findDocumentIds(
+                    $search,
+                    OrderItem::class,
+                    'order_id',
+                    'order',
+                    $user->id,
+                )
+                : [];
+
+            $query->where(function ($q) use ($search, $normalized, $queryType, $user, $fuzzyOrderIds) {
+                $q->where('uuid', 'like', "%{$search}%")
+                    ->orWhere('number', 'like', "%{$search}%")
+                    ->orWhere('erp_number', 'like', "%{$search}%");
+
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                if ($normalized !== '') {
+                    $q->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                    $q->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                }
+
+                $q->orWhere('comment', 'like', "%{$search}%");
+
+                $q->orWhereHas('items.product', function ($p) use ($search) {
+                    $p->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%");
+                });
+
+                $q->orWhereHas('items.product.brand', fn ($b) => $b->where('name', 'like', "%{$search}%"));
+
+                if ($queryType === QueryRouter::TYPE_BARCODE) {
+                    $q->orWhereHas('items.product.barcodes', fn ($b) => $b->where('barcode', $search));
+                }
+
+                $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
+                    ->where('name', 'like', "%{$search}%"));
+
+                if ($queryType === QueryRouter::TYPE_TAX_ID) {
+                    $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
+                        ->where('tax_id', $search));
+                } elseif (ctype_digit($search) && strlen($search) >= 4) {
+                    $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
+                        ->where('tax_id', 'like', "{$search}%"));
+                }
+
+                if (! empty($fuzzyOrderIds)) {
+                    $q->orWhereIn('id', $fuzzyOrderIds);
+                }
+            });
+        }
+
+        $type = $request->input('type');
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        $statusInput = $request->input('status');
+        if (is_array($statusInput)) {
+            $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
+            if (count($statuses) > 0) {
+                $query->whereIn('status', $statuses);
+            }
+        } elseif ($statusInput) {
+            $query->where('status', $statusInput);
+        }
+
+        $companyId = $request->input('company_id');
+        if ($companyId) {
+            $query->where('company_id', $companyId)
+                ->whereHas('company', fn ($q) => $q->where('user_id', $user->id));
+        }
+
+        $brandIds = array_values(array_filter(
+            array_map('intval', (array) $request->input('brand_ids', [])),
+            fn ($id) => $id > 0,
+        ));
+        if (count($brandIds) > 0) {
+            $query->whereHas('items.product', fn ($p) => $p->whereIn('brand_id', $brandIds));
+        }
+
+        $productId = (int) $request->input('product_id', 0);
+        if ($productId) {
+            $query->whereHas('items', fn ($q) => $q->where('product_id', $productId));
+        }
+
+        $dateFrom = $request->input('date_from');
+        $dateTo = $request->input('date_to');
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        $amountFrom = $request->input('amount_from');
+        $amountTo = $request->input('amount_to');
+        if ($amountFrom) {
+            $query->where('total_amount', '>=', $amountFrom);
+        }
+        if ($amountTo) {
+            $query->where('total_amount', '<=', $amountTo);
+        }
+
+        $itemsCountFrom = $request->input('items_count_from');
+        $itemsCountTo = $request->input('items_count_to');
+        if ($itemsCountFrom !== null && $itemsCountFrom !== '') {
+            $query->whereRaw(
+                '(SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) >= ?',
+                [(int) $itemsCountFrom],
+            );
+        }
+        if ($itemsCountTo !== null && $itemsCountTo !== '') {
+            $query->whereRaw(
+                '(SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) <= ?',
+                [(int) $itemsCountTo],
+            );
+        }
+
+        $sortBy = $request->input('sort_by', 'erp_created_at');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $allowedSortFields = ['id', 'total_amount', 'status', 'erp_created_at'];
+        if (in_array($sortBy, $allowedSortFields)) {
+            if ($sortBy === 'erp_created_at') {
+                $direction = $sortOrder === 'asc' ? 'asc' : 'desc';
+                $query->orderByRaw("COALESCE(erp_created_at, created_at) {$direction}");
+            } else {
+                $query->orderBy($sortBy, $sortOrder);
+            }
+        }
+
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = min(max($perPage, 5), 100);
+
+        $selectedStatuses = is_array($statusInput)
+            ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
+            : ($statusInput ? [(string) $statusInput] : []);
+
+        return [$query, [
+            'search' => $search,
+            'type' => $type ?: '',
+            'selected_statuses' => $selectedStatuses,
+            'company_id' => $companyId,
+            'brand_ids' => $brandIds,
+            'product_id' => $productId,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'amount_from' => $amountFrom,
+            'amount_to' => $amountTo,
+            'items_count_from' => $itemsCountFrom,
+            'items_count_to' => $itemsCountTo,
+            'sort_by' => $sortBy,
+            'sort_order' => $sortOrder,
+            'per_page' => $perPage,
+        ]];
     }
 
     /**

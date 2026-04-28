@@ -13,6 +13,7 @@ import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import MatchBadge from '@/components/cabinet/MatchBadge';
+import ExportMenu from '@/components/cabinet/ExportMenu';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 
 const STATUS_COLORS = {
@@ -23,7 +24,7 @@ const STATUS_COLORS = {
     cancelled: 'red',
 };
 
-export default function ReturnsIndex({ filters, statuses, reasons }) {
+export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled = false }) {
     const { returns } = usePage().props;
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
@@ -218,6 +219,12 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                         </Badge>
                     )}
                 </Button>
+                {exportEnabled && (
+                    <ExportMenu
+                        basePath="/cabinet/returns/export"
+                        filters={{ ...filters, search }}
+                    />
+                )}
             </Flex>
 
             {/* Расширенные фильтры */}

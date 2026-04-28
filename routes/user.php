@@ -139,6 +139,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
 
     // Orders
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/export', [OrderController::class, 'export'])->name('orders.export');
     Route::get('/orders/{order}/items/export', [OrderController::class, 'exportItems'])->name('orders.items.export');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
@@ -174,6 +175,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     // Возвраты
     Route::get('/returns/search-shipments', [ReturnController::class, 'searchShipments'])->name('returns.search-shipments');
     Route::get('/returns/shipment-items', [ReturnController::class, 'getShipmentItems'])->name('returns.shipment-items');
+    Route::get('/returns/export', [ReturnController::class, 'export'])->name('returns.export');
     Route::get('/returns', [ReturnController::class, 'index'])->name('returns.index');
     Route::get('/returns/create', [ReturnController::class, 'create'])->name('returns.create');
     Route::post('/returns', [ReturnController::class, 'store'])->name('returns.store');
@@ -181,6 +183,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
 
     // Отгрузки (реализации из 1С)
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
+    Route::get('/shipments/export', [ShipmentController::class, 'export'])->name('shipments.export');
     Route::get('/shipments/{shipment}/items/export', [ShipmentController::class, 'exportItems'])->name('shipments.items.export');
     Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
 
