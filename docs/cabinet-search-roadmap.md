@@ -232,3 +232,85 @@
 - Полная инициатива — порядка **15–20 PR**. Не пытаться объединять волны в один PR.
 - Для каждого PR — карточка backlog движется по канбану. После закрытия этапа → перемещение в `done/` (или промежуточная пометка «Этап 1 закрыт» в карточке).
 - Если в процессе обнаруживаются новые требования (опечатки в карточках, пропуск сценария) — обновлять [docs/cabinet-search-scenarios.md](cabinet-search-scenarios.md), а не код в обход документа.
+
+---
+
+## Раскатка на dev и проверка
+
+### Фича-флаги
+
+В кабинете все «новые» механики (волны 4-5) спрятаны за ENV-флагами,
+default `false` в [config/search-cabinet.php](../config/search-cabinet.php). Полный список в `.env.example`:
+
+| ENV | Что включает | PR |
+|---|---|---|
+| `CABINET_SEARCH_FUZZY_DOCUMENTS` | Fuzzy через Meilisearch в Orders/Returns/Shipments (по составу документов) | 4.2 |
+| `CABINET_SEARCH_FUZZY_PRODUCTS` | Fuzzy в `searchProducts`, Favorites, морфе `Product` медиатеки | 4.3, 6.2 |
+| `CABINET_SEARCH_PRESETS` | CRUD сохранённых поисков и UI `<SavedSearches />` (smoke в Orders) | 5.1 |
+| `CABINET_SEARCH_EXPORT` | Эндпоинты `/cabinet/{section}/export?format=csv\|xlsx` и кнопка «Экспорт» | 5.2 |
+| `CABINET_SEARCH_SUGGESTIONS` | Серверное поле `suggestion` для пустой выдачи + рендер в EmptyState | 5.3 |
+
+Кроме того:
+- `CABINET_SEARCH_FUZZY_DOCUMENTS_LIMIT` (default 500) — сколько строк-позиций брать из Scout перед редукцией к ID документов.
+- `CABINET_SEARCH_FUZZY_PRODUCTS_LIMIT` (default 500) — то же для Product.
+
+### Состояние dev (2026-04-29)
+
+Все 5 флагов **включены**. На сервере (`/srv/pecado/.env`):
+
+```ini
+CABINET_SEARCH_FUZZY_DOCUMENTS=true
+CABINET_SEARCH_FUZZY_PRODUCTS=true
+CABINET_SEARCH_PRESETS=true
+CABINET_SEARCH_EXPORT=true
+CABINET_SEARCH_SUGGESTIONS=true
+```
+
+Бэкфилл snapshot-полей выполнен: 9040 OrderItem, 3 ReturnItem, 8813 ShipmentItem
+обновлены (~150 пропущены из-за уже удалённых `product_id`). Индексы Meilisearch
+наполнены: проверено `OrderItem::search('Satisfayer')` (опечатка) — fuzzy находит
+позиции с брендом `Satisfyer`.
+
+### Чек-лист раскатки на новом окружении
+
+```bash
+# 1. Дописать флаги в .env (выборочно — что хотим включить):
+echo "CABINET_SEARCH_FUZZY_DOCUMENTS=true" >> .env
+# … остальные по вкусу
+
+# 2. Сбросить кэш конфига:
+docker exec pecado-app php artisan config:clear
+
+# 3. Накатить миграции (PR 4.1 добавляет snapshot-поля, PR 5.1 — таблицу пресетов):
+docker exec pecado-app php artisan migrate
+
+# 4. Бэкфилл snapshot-полей для уже существующих позиций (только при первом
+#    включении fuzzy документов; --dry-run покажет масштаб):
+docker exec pecado-app php artisan cabinet-search:backfill-item-snapshots --dry-run
+docker exec pecado-app php artisan cabinet-search:backfill-item-snapshots
+
+# 5. Залить позиции в Meilisearch (после бэкфилла, иначе snapshot будут пустые):
+docker exec pecado-app php artisan scout:import "App\Models\OrderItem"
+docker exec pecado-app php artisan scout:import "App\Models\ReturnItem"
+docker exec pecado-app php artisan scout:import "App\Models\ShipmentItem"
+```
+
+### Что и где смотреть после раскатки
+
+| Страница | Что появляется | За каким флагом |
+|---|---|---|
+| `/cabinet/orders`, `/cabinet/returns`, `/cabinet/shipments` | `<MatchBadge>` под номером с подсветкой совпадения | (всегда — PR 4.4 без флага) |
+| `/cabinet/orders` | Кнопки «Сохранить поиск» + «Мои поиски (N)» | `CABINET_SEARCH_PRESETS` |
+| Все три | Кнопка «Экспорт» (CSV/XLSX) | `CABINET_SEARCH_EXPORT` |
+| Все три | Подсказка под «Ничего не найдено» | `CABINET_SEARCH_SUGGESTIONS` |
+| Все три, поиск по составу | Выдача fuzzy через snapshot-поля позиций | `CABINET_SEARCH_FUZZY_DOCUMENTS` |
+| `/cabinet/carts/{id}` (автокомплит товара), `/favorites` | Опечатки/транслит находят товар (`nayk` → Найк) | `CABINET_SEARCH_FUZZY_PRODUCTS` |
+| `/cabinet/media` | Фильтры «Загружено с / по», «Размер от / до МБ» + чипы | (всегда — PR 6.2 без флага) |
+| `/cabinet/media`, морф Product | Fuzzy по бренду/имени товара через Meilisearch | `CABINET_SEARCH_FUZZY_PRODUCTS` |
+
+### Откат
+
+Каждый флаг можно выключить независимо: `=false` в `.env` → `php artisan config:clear`.
+Эффект мгновенный, без revert PR. Миграции (snapshot-поля, `user_search_presets`)
+безопасно остаются в БД при откате — они аддитивны.
+
