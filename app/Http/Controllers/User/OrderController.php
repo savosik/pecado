@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\CurrencyService;
 use App\Services\SimpleXlsxExporter;
+use App\Support\Search\QueryRouter;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -37,13 +38,59 @@ class OrderController extends Controller
                     ->whereColumn('order_id', 'orders.id'),
             ]);
 
-        // Поиск по UUID или ID
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
+        // Расширенный поиск (см. docs/cabinet-search-scenarios.md §1, C-1.1 … C-1.10).
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $normalized = preg_replace('/[\s\-]+/u', '', $search);
+            $queryType = QueryRouter::classify($search);
+
+            $query->where(function ($q) use ($search, $normalized, $queryType, $user) {
+                // Базовое: UUID, номер, ERP-номер, числовой ID (C-1.2 + текущее поведение).
                 $q->where('uuid', 'like', "%{$search}%")
                     ->orWhere('number', 'like', "%{$search}%")
-                    ->orWhere('erp_number', 'like', "%{$search}%")
-                    ->orWhere('id', $search);
+                    ->orWhere('erp_number', 'like', "%{$search}%");
+
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                // Нормализованная форма: 29УТ-003413 ≡ 29УТ003413 (C-1.1). Применяется
+                // всегда — пользователь может ввести запрос как с дефисом, так и без.
+                if ($normalized !== '') {
+                    $q->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                    $q->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                }
+
+                // Комментарий (C-1.10).
+                $q->orWhere('comment', 'like', "%{$search}%");
+
+                // Состав заказа: название/SKU/код 1С товара (C-1.3, C-1.5, C-1.7).
+                $q->orWhereHas('items.product', function ($p) use ($search) {
+                    $p->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%");
+                });
+
+                // Бренд в составе (C-1.4).
+                $q->orWhereHas('items.product.brand', fn ($b) => $b->where('name', 'like', "%{$search}%"));
+
+                // Штрихкод в составе — только для строки, похожей на штрихкод (C-1.6, точное).
+                if ($queryType === QueryRouter::TYPE_BARCODE) {
+                    $q->orWhereHas('items.product.barcodes', fn ($b) => $b->where('barcode', $search));
+                }
+
+                // Контрагент по имени — только в рамках компаний пользователя (C-1.8).
+                $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
+                    ->where('name', 'like', "%{$search}%"));
+
+                // ИНН: точное для 10/12 цифр, префиксное для коротких числовых запросов (C-1.9).
+                if ($queryType === QueryRouter::TYPE_TAX_ID) {
+                    $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
+                        ->where('tax_id', $search));
+                } elseif (ctype_digit($search) && strlen($search) >= 4) {
+                    $q->orWhereHas('company', fn ($c) => $c->where('user_id', $user->id)
+                        ->where('tax_id', 'like', "{$search}%"));
+                }
             });
         }
 
@@ -52,15 +99,35 @@ class OrderController extends Controller
             $query->where('type', $type);
         }
 
-        // Фильтрация по статусу
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
+        // Фильтрация по статусу — поддерживает скаляр (старое поведение) и массив (multi-select).
+        $statusInput = $request->input('status');
+        if (is_array($statusInput)) {
+            $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
+            if (count($statuses) > 0) {
+                $query->whereIn('status', $statuses);
+            }
+        } elseif ($statusInput) {
+            $query->where('status', $statusInput);
         }
 
         // Фильтрация по контрагенту (только из компаний текущего пользователя)
         if ($companyId = $request->input('company_id')) {
             $query->where('company_id', $companyId)
                 ->whereHas('company', fn ($q) => $q->where('user_id', $user->id));
+        }
+
+        // Фильтр по бренду в составе заказа — массив brand_ids[] (C-1.4 / roadmap PR 2.1).
+        $brandIds = array_values(array_filter(
+            array_map('intval', (array) $request->input('brand_ids', [])),
+            fn ($id) => $id > 0,
+        ));
+        if (count($brandIds) > 0) {
+            $query->whereHas('items.product', fn ($p) => $p->whereIn('brand_id', $brandIds));
+        }
+
+        // Фильтр «когда я это покупал?» — заказы, содержащие конкретный товар (C-1.13).
+        if ($productId = (int) $request->input('product_id', 0)) {
+            $query->whereHas('items', fn ($q) => $q->where('product_id', $productId));
         }
 
         // Фильтрация по дате создания
@@ -77,6 +144,24 @@ class OrderController extends Controller
         }
         if ($amountTo = $request->input('amount_to')) {
             $query->where('total_amount', '<=', $amountTo);
+        }
+
+        // Фильтр по диапазону количества позиций (C-1.12).
+        // Используем подзапрос вместо HAVING — он работает и в MySQL, и в SQLite (тесты),
+        // не требует GROUP BY и совместим с пагинацией.
+        $itemsCountFrom = $request->input('items_count_from');
+        $itemsCountTo = $request->input('items_count_to');
+        if ($itemsCountFrom !== null && $itemsCountFrom !== '') {
+            $query->whereRaw(
+                '(SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) >= ?',
+                [(int) $itemsCountFrom],
+            );
+        }
+        if ($itemsCountTo !== null && $itemsCountTo !== '') {
+            $query->whereRaw(
+                '(SELECT COUNT(*) FROM order_items WHERE order_items.order_id = orders.id) <= ?',
+                [(int) $itemsCountTo],
+            );
         }
 
         // Сортировка (по умолчанию — по дате создания в ERP, свежие сверху)
@@ -138,17 +223,26 @@ class OrderController extends Controller
             ->get(['id', 'name'])
             ->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name]);
 
+        // Возвращаем выбранные статусы как массив строк — единый формат для UI multi-select.
+        $selectedStatuses = is_array($statusInput)
+            ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
+            : ($statusInput ? [(string) $statusInput] : []);
+
         return Inertia::render('User/Cabinet/Orders/Index', [
             'orders' => $orders,
             'filters' => [
                 'search' => $search,
-                'status' => $status,
+                'status' => $selectedStatuses,
                 'type' => $request->input('type', ''),
                 'company_id' => $companyId ? (string) $companyId : '',
+                'brand_ids' => $brandIds,
+                'product_id' => $productId ?: null,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'amount_from' => $amountFrom,
                 'amount_to' => $amountTo,
+                'items_count_from' => $itemsCountFrom !== null && $itemsCountFrom !== '' ? (int) $itemsCountFrom : null,
+                'items_count_to' => $itemsCountTo !== null && $itemsCountTo !== '' ? (int) $itemsCountTo : null,
                 'sort_by' => $sortBy,
                 'sort_order' => $sortOrder,
                 'per_page' => $perPage,

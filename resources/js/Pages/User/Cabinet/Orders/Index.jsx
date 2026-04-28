@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
     Card, Stack, IconButton,
@@ -28,14 +28,19 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
     const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
+    const initialStatus = Array.isArray(filters?.status)
+        ? filters.status
+        : (filters?.status ? [filters.status] : []);
     const [localFilters, setLocalFilters] = useState({
-        status: filters?.status || '',
+        status: initialStatus,
         type: filters?.type || '',
         company_id: filters?.company_id || '',
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
         amount_to: filters?.amount_to || '',
+        items_count_from: filters?.items_count_from ?? '',
+        items_count_to: filters?.items_count_to ?? '',
     });
 
     const navigateWithParams = (params) => {
@@ -48,8 +53,21 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
         });
     };
 
+    // Debounce 400 мс для поля поиска (§ «Сквозные принципы» п.3, A-7).
+    const lastSubmittedSearch = useRef(filters?.search || '');
+    useEffect(() => {
+        if (search === lastSubmittedSearch.current) return;
+        const handle = setTimeout(() => {
+            lastSubmittedSearch.current = search;
+            navigateWithParams({ search, page: 1 });
+        }, 400);
+        return () => clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
+
     const handleSearch = (e) => {
         e.preventDefault();
+        lastSubmittedSearch.current = search;
         navigateWithParams({ search, page: 1 });
     };
 
@@ -63,10 +81,15 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
     };
 
     const handleResetFilters = () => {
-        const reset = { status: '', type: '', company_id: '', date_from: '', date_to: '', amount_from: '', amount_to: '' };
+        const reset = {
+            status: [], type: '', company_id: '',
+            date_from: '', date_to: '', amount_from: '', amount_to: '',
+            items_count_from: '', items_count_to: '',
+        };
         setLocalFilters(reset);
-        navigateWithParams({ ...reset, search: '', page: 1 });
+        navigateWithParams({ ...reset, search: '', brand_ids: [], product_id: null, page: 1 });
         setSearch('');
+        lastSubmittedSearch.current = '';
     };
 
     const handlePageChange = (page) => {
@@ -86,8 +109,16 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
     const SortIcon = sortIsActive
         ? (filters?.sort_order === 'asc' ? LuArrowUp : LuArrowDown)
         : LuArrowUpDown;
-    const activeFiltersCount = ['status', 'type', 'company_id', 'date_from', 'date_to', 'amount_from', 'amount_to']
-        .filter((k) => !!filters?.[k]).length;
+    const activeFiltersCount = (() => {
+        let count = 0;
+        const status = filters?.status;
+        if (Array.isArray(status) ? status.length > 0 : !!status) count++;
+        for (const k of ['type', 'company_id', 'date_from', 'date_to', 'amount_from', 'amount_to', 'items_count_from', 'items_count_to', 'product_id']) {
+            if (filters?.[k] !== null && filters?.[k] !== undefined && filters?.[k] !== '') count++;
+        }
+        if (Array.isArray(filters?.brand_ids) && filters.brand_ids.length > 0) count++;
+        return count;
+    })();
 
     return (
         <CabinetLayout title="Мои заказы">
@@ -98,7 +129,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
                 <Box as="form" onSubmit={handleSearch} flex="1" minW="0">
                     <InputGroup startElement={<LuSearch size={16} />} flex="1">
                         <Input
-                            placeholder="Поиск по номеру..."
+                            placeholder="Поиск по номеру, товару, бренду, артикулу, ИНН, контрагенту…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"
@@ -174,16 +205,22 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
                     <Card.Body p="4">
                         <Stack gap="4">
                             <Flex gap="4" direction={{ base: 'column', md: 'row' }}>
-                                <Field label="Статус" flex="1">
+                                <Field label="Статусы" flex="1">
                                     <Select.Root
-                                        value={localFilters.status ? [localFilters.status] : []}
-                                        onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value[0] || '' })}
+                                        multiple
+                                        value={localFilters.status}
+                                        onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value })}
                                     >
                                         <Select.Trigger>
-                                            <Select.ValueText placeholder="Все статусы" />
+                                            <Select.ValueText
+                                                placeholder="Все статусы"
+                                            >
+                                                {(items) => items.length === 0
+                                                    ? 'Все статусы'
+                                                    : `Выбрано: ${items.length}`}
+                                            </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все статусы</Select.Item>
                                             {statuses?.map((s) => (
                                                 <Select.Item key={s.value} item={s.value}>
                                                     {s.label}
@@ -272,6 +309,28 @@ export default function OrdersIndex({ filters, statuses, types, companies = [] }
                                         value={localFilters.amount_to}
                                         onChange={(e) => setLocalFilters({ ...localFilters, amount_to: e.target.value })}
                                         placeholder="0.00"
+                                    />
+                                </Field>
+
+                                <Field label="Позиций от" flex="1">
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        size="sm"
+                                        value={localFilters.items_count_from}
+                                        onChange={(e) => setLocalFilters({ ...localFilters, items_count_from: e.target.value })}
+                                        placeholder="0"
+                                    />
+                                </Field>
+
+                                <Field label="Позиций до" flex="1">
+                                    <Input
+                                        type="number"
+                                        min="0"
+                                        size="sm"
+                                        value={localFilters.items_count_to}
+                                        onChange={(e) => setLocalFilters({ ...localFilters, items_count_to: e.target.value })}
+                                        placeholder="0"
                                     />
                                 </Field>
 
