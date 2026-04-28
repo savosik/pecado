@@ -27,7 +27,6 @@ class ReturnItemFactory extends Factory
 
         return [
             'return_id' => ProductReturn::factory(),
-            'order_id' => null,
             'product_id' => Product::factory(),
             'quantity' => $quantity,
             'reason' => $this->faker->randomElement(ReturnReason::cases()),

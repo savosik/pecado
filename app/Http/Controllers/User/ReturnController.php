@@ -10,6 +10,7 @@ use App\Models\ReturnItem;
 use App\Models\Shipment;
 use App\Models\ShipmentItem;
 use App\Services\Returns\ReturnService;
+use App\Support\Search\QueryRouter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,22 +32,75 @@ class ReturnController extends Controller
             ->where('user_id', $user->id)
             ->with(['items']);
 
-        if ($search = $request->input('search')) {
-            $query->where(function ($q) use ($search) {
+        // Расширенный поиск (см. docs/cabinet-search-scenarios.md §2, C-2.1 … C-2.4).
+        $search = trim((string) $request->input('search', ''));
+        if ($search !== '') {
+            $normalized = preg_replace('/[\s\-]+/u', '', $search);
+            $queryType = QueryRouter::classify($search);
+
+            $query->where(function ($q) use ($search, $normalized, $queryType) {
+                // Базовое: UUID / ERP-номер / числовой ID.
                 $q->where('uuid', 'like', "%{$search}%")
-                    ->orWhere('erp_number', 'like', "%{$search}%")
-                    ->orWhere('id', $search);
+                    ->orWhere('erp_number', 'like', "%{$search}%");
+
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+
+                // Нормализованная форма ERP-номера (C-2.1): дефис/пробелы съедаются с обеих сторон.
+                if ($normalized !== '') {
+                    $q->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                }
+
+                // Поиск по номеру исходной реализации (C-2.2).
+                $q->orWhereHas('items.shipmentItem.shipment', function ($s) use ($search, $normalized) {
+                    $s->where('number', 'like', "%{$search}%")
+                        ->orWhere('erp_number', 'like', "%{$search}%")
+                        ->orWhere('uuid', 'like', "%{$search}%");
+                    if ($normalized !== '') {
+                        $s->orWhereRaw("REPLACE(REPLACE(number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                        $s->orWhereRaw("REPLACE(REPLACE(erp_number, '-', ''), ' ', '') LIKE ?", ["%{$normalized}%"]);
+                    }
+                });
+
+                // Состав возврата: name/sku/code товара (C-2.3).
+                $q->orWhereHas('items.shipmentItem.product', function ($p) use ($search) {
+                    $p->where('name', 'like', "%{$search}%")
+                        ->orWhere('sku', 'like', "%{$search}%")
+                        ->orWhere('code', 'like', "%{$search}%");
+                });
+
+                // Бренд в составе (C-2.3).
+                $q->orWhereHas('items.shipmentItem.product.brand', fn ($b) => $b->where('name', 'like', "%{$search}%"));
+
+                // Штрихкод (C-2.3, точное совпадение).
+                if ($queryType === QueryRouter::TYPE_BARCODE) {
+                    $q->orWhereHas('items.shipmentItem.product.barcodes', fn ($b) => $b->where('barcode', $search));
+                }
+
+                // Текст комментария причины (C-2.4).
+                $q->orWhereHas('items', fn ($i) => $i->where('reason_comment', 'like', "%{$search}%"));
             });
         }
 
-        if ($status = $request->input('status')) {
-            $query->where('status', $status);
+        // Статус — поддерживаем скаляр (старое поведение) и массив (multi-select).
+        $statusInput = $request->input('status');
+        if (is_array($statusInput)) {
+            $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
+            if (count($statuses) > 0) {
+                $query->whereIn('status', $statuses);
+            }
+        } elseif ($statusInput) {
+            $query->where('status', $statusInput);
         }
 
-        if ($reason = $request->input('reason')) {
-            $query->whereHas('items', function ($q) use ($reason) {
-                $q->where('reason', $reason);
-            });
+        // Причина — multi-select (C-2.5) с обратной совместимостью со скалярным значением.
+        $reasonInput = $request->input('reason');
+        $reasons = is_array($reasonInput)
+            ? array_values(array_filter($reasonInput, fn ($v) => $v !== null && $v !== ''))
+            : ($reasonInput ? [$reasonInput] : []);
+        if (count($reasons) > 0) {
+            $query->whereHas('items', fn ($q) => $q->whereIn('reason', $reasons));
         }
 
         if ($dateFrom = $request->input('date_from')) {
@@ -90,12 +144,17 @@ class ReturnController extends Controller
             ];
         });
 
+        // Возвращаем выбранные значения как массивы — единый формат для UI multi-select.
+        $selectedStatuses = is_array($statusInput)
+            ? array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''))
+            : ($statusInput ? [(string) $statusInput] : []);
+
         return Inertia::render('User/Cabinet/Returns/Index', [
             'returns' => $returns,
             'filters' => [
                 'search' => $search,
-                'status' => $status,
-                'reason' => $reason,
+                'status' => $selectedStatuses,
+                'reason' => $reasons,
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
                 'amount_from' => $amountFrom,

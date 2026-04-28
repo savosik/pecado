@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, Table,
     Card, Stack, IconButton,
@@ -24,9 +24,15 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
     const { returns } = usePage().props;
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
+    const initialStatus = Array.isArray(filters?.status)
+        ? filters.status
+        : (filters?.status ? [filters.status] : []);
+    const initialReason = Array.isArray(filters?.reason)
+        ? filters.reason
+        : (filters?.reason ? [filters.reason] : []);
     const [localFilters, setLocalFilters] = useState({
-        status: filters?.status || '',
-        reason: filters?.reason || '',
+        status: initialStatus,
+        reason: initialReason,
         date_from: filters?.date_from || '',
         date_to: filters?.date_to || '',
         amount_from: filters?.amount_from || '',
@@ -43,8 +49,21 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
         });
     };
 
+    // Debounce 400 мс на поле поиска (§ «Сквозные принципы» п.3, A-7).
+    const lastSubmittedSearch = useRef(filters?.search || '');
+    useEffect(() => {
+        if (search === lastSubmittedSearch.current) return;
+        const handle = setTimeout(() => {
+            lastSubmittedSearch.current = search;
+            navigateWithParams({ search, page: 1 });
+        }, 400);
+        return () => clearTimeout(handle);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
+
     const handleSearch = (e) => {
         e.preventDefault();
+        lastSubmittedSearch.current = search;
         navigateWithParams({ search, page: 1 });
     };
 
@@ -58,15 +77,31 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
     };
 
     const handleResetFilters = () => {
-        const reset = { status: '', reason: '', date_from: '', date_to: '', amount_from: '', amount_to: '' };
+        const reset = {
+            status: [], reason: [],
+            date_from: '', date_to: '', amount_from: '', amount_to: '',
+        };
         setLocalFilters(reset);
         navigateWithParams({ ...reset, search: '', page: 1 });
         setSearch('');
+        lastSubmittedSearch.current = '';
     };
 
     const handlePageChange = (page) => {
         navigateWithParams({ page });
     };
+
+    const activeFiltersCount = (() => {
+        let count = 0;
+        for (const k of ['status', 'reason']) {
+            const v = filters?.[k];
+            if (Array.isArray(v) ? v.length > 0 : !!v) count++;
+        }
+        for (const k of ['date_from', 'date_to', 'amount_from', 'amount_to']) {
+            if (filters?.[k] !== null && filters?.[k] !== undefined && filters?.[k] !== '') count++;
+        }
+        return count;
+    })();
 
     const SortIcon = ({ field }) => {
         if (filters?.sort_by !== field) return <LuArrowUpDown size={14} />;
@@ -108,7 +143,7 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                 <Box as="form" onSubmit={handleSearch} flex="1">
                     <Flex gap="2">
                         <Input
-                            placeholder="Поиск по номеру возврата..."
+                            placeholder="Поиск по номеру возврата, реализации, товару, бренду…"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             size="sm"
@@ -125,12 +160,19 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                 </Box>
                 <Button
                     onClick={() => setShowFilters(!showFilters)}
-                    variant="outline"
+                    variant={showFilters || activeFiltersCount > 0 ? 'subtle' : 'outline'}
+                    colorPalette={showFilters || activeFiltersCount > 0 ? 'pecado' : 'gray'}
                     size="sm"
                     flexShrink="0"
+                    aria-expanded={showFilters}
                 >
                     <LuFilter size={16} />
                     {showFilters ? 'Скрыть фильтры' : 'Фильтры'}
+                    {activeFiltersCount > 0 && (
+                        <Badge colorPalette="pecado" variant="solid" borderRadius="full" fontSize="2xs" px="1.5" minW="4">
+                            {activeFiltersCount}
+                        </Badge>
+                    )}
                 </Button>
             </Flex>
 
@@ -140,16 +182,18 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                     <Card.Body p="4">
                         <Stack gap="4">
                             <Flex gap="4" direction={{ base: 'column', md: 'row' }}>
-                                <Field label="Статус" flex="1">
+                                <Field label="Статусы" flex="1">
                                     <Select.Root
-                                        value={localFilters.status ? [localFilters.status] : []}
-                                        onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value[0] || '' })}
+                                        multiple
+                                        value={localFilters.status}
+                                        onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value })}
                                     >
                                         <Select.Trigger>
-                                            <Select.ValueText placeholder="Все статусы" />
+                                            <Select.ValueText placeholder="Все статусы">
+                                                {(items) => items.length === 0 ? 'Все статусы' : `Выбрано: ${items.length}`}
+                                            </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все статусы</Select.Item>
                                             {statuses?.map((s) => (
                                                 <Select.Item key={s.value} item={s.value}>
                                                     {s.label}
@@ -159,16 +203,18 @@ export default function ReturnsIndex({ filters, statuses, reasons }) {
                                     </Select.Root>
                                 </Field>
 
-                                <Field label="Причина" flex="1">
+                                <Field label="Причины" flex="1">
                                     <Select.Root
-                                        value={localFilters.reason ? [localFilters.reason] : []}
-                                        onValueChange={(e) => setLocalFilters({ ...localFilters, reason: e.value[0] || '' })}
+                                        multiple
+                                        value={localFilters.reason}
+                                        onValueChange={(e) => setLocalFilters({ ...localFilters, reason: e.value })}
                                     >
                                         <Select.Trigger>
-                                            <Select.ValueText placeholder="Все причины" />
+                                            <Select.ValueText placeholder="Все причины">
+                                                {(items) => items.length === 0 ? 'Все причины' : `Выбрано: ${items.length}`}
+                                            </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все причины</Select.Item>
                                             {reasons?.map((r) => (
                                                 <Select.Item key={r.value} item={r.value}>
                                                     {r.label}
