@@ -71,6 +71,7 @@ class ImportProductDescriptions extends Command
 
             if (! $uid) {
                 $bar->advance();
+
                 continue;
             }
 
@@ -80,6 +81,7 @@ class ImportProductDescriptions extends Command
                 if (! $product) {
                     $skippedNoProduct++;
                     $bar->advance();
+
                     continue;
                 }
 
@@ -107,6 +109,7 @@ class ImportProductDescriptions extends Command
                 if (empty($changes)) {
                     $skippedNoChanges++;
                     $bar->advance();
+
                     continue;
                 }
 
