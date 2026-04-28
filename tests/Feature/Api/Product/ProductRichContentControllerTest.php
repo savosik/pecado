@@ -2,36 +2,26 @@
 
 namespace Tests\Feature\Api\Product;
 
+use App\Jobs\GenerateRichContentJob;
 use App\Models\Product;
-use App\Services\Product\RichContent\RichContentGenerationException;
-use App\Services\Product\RichContent\RichContentGenerator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Mockery;
+use Illuminate\Support\Facades\Bus;
 use Tests\TestCase;
 
 class ProductRichContentControllerTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function tearDown(): void
+    public function test_returns_existing_rich_content_without_dispatching_job(): void
     {
-        Mockery::close();
-        parent::tearDown();
-    }
+        Bus::fake();
 
-    public function test_returns_existing_rich_content_without_calling_generator(): void
-    {
         $blocks = [['type' => 'paragraph', 'data' => ['text' => 'Готовое описание.']]];
         $product = Product::factory()->create([
             'description' => str_repeat('Описание товара. ', 20),
             'rich_content' => ['blocks' => $blocks],
             'rich_content_generated_at' => now(),
         ]);
-
-        $generator = Mockery::mock(RichContentGenerator::class);
-        $generator->shouldNotReceive('generate');
-        $generator->shouldNotReceive('recordFailure');
-        $this->app->instance(RichContentGenerator::class, $generator);
 
         $response = $this->getJson("/api/products/{$product->slug}/rich-content");
 
@@ -40,37 +30,32 @@ class ProductRichContentControllerTest extends TestCase
                 'cached' => true,
                 'blocks' => $blocks,
             ]);
+
+        Bus::assertNotDispatched(GenerateRichContentJob::class);
     }
 
-    public function test_generates_and_returns_rich_content_when_missing(): void
+    public function test_dispatches_job_and_returns_202_when_missing(): void
     {
+        Bus::fake();
+
         $product = Product::factory()->create([
             'description' => str_repeat('Описание товара для генерации. ', 10),
             'rich_content' => null,
         ]);
 
-        $generated = ['blocks' => [
-            ['type' => 'paragraph', 'data' => ['text' => 'Сгенерированный текст.']],
-        ]];
-
-        $generator = Mockery::mock(RichContentGenerator::class);
-        $generator->shouldReceive('generate')
-            ->once()
-            ->with(Mockery::on(fn ($p) => $p instanceof Product && $p->id === $product->id))
-            ->andReturn($generated);
-        $this->app->instance(RichContentGenerator::class, $generator);
-
         $response = $this->getJson("/api/products/{$product->slug}/rich-content");
 
-        $response->assertOk()
-            ->assertJson([
-                'cached' => false,
-                'blocks' => $generated['blocks'],
-            ]);
+        $response->assertStatus(202);
+
+        Bus::assertDispatched(
+            GenerateRichContentJob::class,
+            fn (GenerateRichContentJob $job) => $job->productId === $product->id
+        );
     }
 
     public function test_returns_204_when_disabled(): void
     {
+        Bus::fake();
         config(['rich_content.enabled' => false]);
 
         $product = Product::factory()->create([
@@ -78,17 +63,16 @@ class ProductRichContentControllerTest extends TestCase
             'rich_content' => null,
         ]);
 
-        $generator = Mockery::mock(RichContentGenerator::class);
-        $generator->shouldNotReceive('generate');
-        $this->app->instance(RichContentGenerator::class, $generator);
-
         $response = $this->getJson("/api/products/{$product->slug}/rich-content");
 
         $response->assertNoContent();
+        Bus::assertNotDispatched(GenerateRichContentJob::class);
     }
 
     public function test_returns_204_during_failure_cooldown(): void
     {
+        Bus::fake();
+
         $product = Product::factory()->create([
             'description' => str_repeat('Описание товара. ', 10),
             'rich_content' => null,
@@ -96,17 +80,15 @@ class ProductRichContentControllerTest extends TestCase
             'rich_content_generation_attempts' => 1,
         ]);
 
-        $generator = Mockery::mock(RichContentGenerator::class);
-        $generator->shouldNotReceive('generate');
-        $this->app->instance(RichContentGenerator::class, $generator);
-
         $response = $this->getJson("/api/products/{$product->slug}/rich-content");
 
         $response->assertNoContent();
+        Bus::assertNotDispatched(GenerateRichContentJob::class);
     }
 
     public function test_returns_204_after_max_attempts(): void
     {
+        Bus::fake();
         config(['rich_content.max_attempts' => 3]);
 
         $product = Product::factory()->create([
@@ -115,32 +97,10 @@ class ProductRichContentControllerTest extends TestCase
             'rich_content_generation_attempts' => 3,
         ]);
 
-        $generator = Mockery::mock(RichContentGenerator::class);
-        $generator->shouldNotReceive('generate');
-        $this->app->instance(RichContentGenerator::class, $generator);
-
         $response = $this->getJson("/api/products/{$product->slug}/rich-content");
 
         $response->assertNoContent();
-    }
-
-    public function test_returns_500_and_records_failure_when_generator_throws(): void
-    {
-        $product = Product::factory()->create([
-            'description' => str_repeat('Описание товара. ', 10),
-            'rich_content' => null,
-        ]);
-
-        $generator = Mockery::mock(RichContentGenerator::class);
-        $generator->shouldReceive('generate')
-            ->once()
-            ->andThrow(new RichContentGenerationException('LLM не отвечает'));
-        $generator->shouldReceive('recordFailure')->once();
-        $this->app->instance(RichContentGenerator::class, $generator);
-
-        $response = $this->getJson("/api/products/{$product->slug}/rich-content");
-
-        $response->assertStatus(500);
+        Bus::assertNotDispatched(GenerateRichContentJob::class);
     }
 
     public function test_returns_404_for_unknown_slug(): void

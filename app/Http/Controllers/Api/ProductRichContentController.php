@@ -3,33 +3,27 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\GenerateRichContentJob;
 use App\Models\Product;
-use App\Services\Product\RichContent\RichContentGenerationException;
-use App\Services\Product\RichContent\RichContentGenerator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 /**
  * GET /api/products/{product:slug}/rich-content
  *
  * Возвращает Editor.js JSON-блоки описания товара. Если поле rich_content
- * пустое — генерирует через OpenRouter и сохраняет результат.
+ * пустое — ставит фоновую задачу GenerateRichContentJob и возвращает 202.
+ * Фронт перезапрашивает endpoint до 200 (готово) или 204 (генерация недоступна).
  *
  * Ответы:
- *   200 { blocks: [...] }   — готовый или только что сгенерированный контент
- *   204                     — генерация недоступна (cooldown, короткое описание, фича отключена)
- *   500                     — ошибка генерации (фронт оставит fallback на description_html)
+ *   200 { blocks: [...] }   — готовый rich_content
+ *   202                     — генерация запущена/идёт, повторите запрос позже
+ *   204                     — генерация недоступна (cooldown, фича отключена, исчерпаны попытки)
  */
 class ProductRichContentController extends Controller
 {
-    public function __construct(
-        private readonly RichContentGenerator $generator,
-    ) {}
-
     public function show(Product $product): JsonResponse|Response
     {
         $blocks = $this->extractBlocks($product);
@@ -53,52 +47,11 @@ class ProductRichContentController extends Controller
             return response()->noContent();
         }
 
-        $lock = Cache::lock(
-            "rich-content-gen:{$product->id}",
-            (int) config('rich_content.lock_seconds', 60),
-        );
+        // Job-уровень ShouldBeUnique гарантирует, что параллельные диспатчи
+        // не создадут дублей в очереди.
+        GenerateRichContentJob::dispatch($product->id);
 
-        if (! $lock->get()) {
-            // Параллельный процесс уже генерирует — фронт перезапросит позже.
-            return response()->noContent(SymfonyResponse::HTTP_ACCEPTED);
-        }
-
-        try {
-            $product->refresh();
-            $blocks = $this->extractBlocks($product);
-            if ($blocks !== null) {
-                return response()->json([
-                    'blocks' => $blocks,
-                    'cached' => true,
-                ]);
-            }
-
-            $payload = $this->generator->generate($product);
-
-            return response()->json([
-                'blocks' => $payload['blocks'],
-                'cached' => false,
-            ]);
-        } catch (InsufficientSourceTextException) {
-            // Описание слишком короткое — повторять бессмысленно, cooldown не нужен.
-            return response()->noContent();
-        } catch (RichContentGenerationException $e) {
-            $this->generator->recordFailure($product);
-            Log::warning('RichContent: генерация не удалась', [
-                'product_id' => $product->id,
-                'product_slug' => $product->slug,
-                'error' => $e->getMessage(),
-            ]);
-
-            $body = ['message' => 'Не удалось сгенерировать описание.'];
-            if (config('app.debug')) {
-                $body['reason'] = $e->getMessage();
-            }
-
-            return response()->json($body, SymfonyResponse::HTTP_INTERNAL_SERVER_ERROR);
-        } finally {
-            $lock->release();
-        }
+        return response()->noContent(SymfonyResponse::HTTP_ACCEPTED);
     }
 
     /**

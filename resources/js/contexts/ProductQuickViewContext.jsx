@@ -82,22 +82,46 @@ export function ProductQuickViewProvider({ children }) {
         const blocks = json?.product?.rich_content?.blocks;
         if (Array.isArray(blocks) && blocks.length > 0) return;
 
+        // Polling с экспоненциальным бэкоффом: 2s, 3s, 4s, 6s, 9s (cap 10s),
+        // итого ~5 попыток / ~30 секунд на ответ от LLM-генератора.
+        const delays = [2000, 3000, 4000, 6000, 9000];
+        const sleep = (ms) => new Promise((resolve, reject) => {
+            const t = setTimeout(resolve, ms);
+            signal?.addEventListener('abort', () => {
+                clearTimeout(t);
+                reject(new DOMException('Aborted', 'AbortError'));
+            }, { once: true });
+        });
+
         try {
-            const res = await fetch(`/api/products/${encodeURIComponent(slug)}/rich-content`, {
-                headers: { 'Accept': 'application/json' },
-                signal,
-            });
-            if (res.status !== 200) return;
+            for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+                if (signal?.aborted) return;
 
-            const payload = await res.json();
-            if (!Array.isArray(payload?.blocks) || payload.blocks.length === 0) return;
+                const res = await fetch(`/api/products/${encodeURIComponent(slug)}/rich-content`, {
+                    headers: { 'Accept': 'application/json' },
+                    signal,
+                });
 
-            const richContent = { blocks: payload.blocks };
-            const updatedProduct = { ...json.product, rich_content: richContent };
-            const updatedJson = { ...json, product: updatedProduct };
+                if (res.status === 200) {
+                    const payload = await res.json();
+                    if (!Array.isArray(payload?.blocks) || payload.blocks.length === 0) return;
 
-            cacheRef.current.set(slug, { data: updatedJson, _ts: Date.now() });
-            setData((prev) => (prev?.product?.slug === slug ? updatedJson : prev));
+                    const richContent = { blocks: payload.blocks };
+                    const cachedEntry = cacheRef.current.get(slug);
+                    const baseJson = cachedEntry?.data ?? json;
+                    const updatedProduct = { ...baseJson.product, rich_content: richContent };
+                    const updatedJson = { ...baseJson, product: updatedProduct };
+
+                    cacheRef.current.set(slug, { data: updatedJson, _ts: Date.now() });
+                    setData((prev) => (prev?.product?.slug === slug ? updatedJson : prev));
+                    return;
+                }
+
+                if (res.status !== 202) return;
+
+                if (attempt === delays.length) return;
+                await sleep(delays[attempt]);
+            }
         } catch (e) {
             if (e.name !== 'AbortError') {
                 console.warn('[QuickView] Не удалось загрузить rich-content:', e);
