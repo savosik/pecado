@@ -35,10 +35,13 @@ class RegenerateProductLargeConversions extends Command
             ->whereIn('collection_name', ['main', 'additional']);
 
         if ($onlyMissing) {
-            $query->where(function ($q) {
-                $q->whereNull('generated_conversions')
-                    ->orWhereJsonDoesntContain('generated_conversions->large', true);
-            });
+            // whereJsonDoesntContain здесь не подходит: для отсутствующего ключа
+            // JSON_CONTAINS возвращает NULL, NOT NULL остаётся falsy — такие
+            // строки выпадают из выборки. Используем COALESCE, чтобы трактовать
+            // отсутствие пути как «не сгенерировано» (значение 0).
+            $query->whereRaw(
+                "COALESCE(JSON_CONTAINS(generated_conversions, 'true', '$.large'), 0) = 0"
+            );
         }
 
         $total = (clone $query)->count();
