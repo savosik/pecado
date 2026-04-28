@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
-    Card, Stack, IconButton,
+    Card, Stack, IconButton, createListCollection,
 } from '@chakra-ui/react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
@@ -112,6 +112,11 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
         if (Array.isArray(filters?.brand_ids) && filters.brand_ids.length > 0) count++;
         return count;
     })();
+
+    const statusCollection = useMemo(
+        () => createListCollection({ items: statuses?.map((s) => ({ label: s.label, value: s.value })) ?? [] }),
+        [statuses]
+    );
 
     const filterFields = useMemo(() => [
         { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
@@ -246,6 +251,7 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                                 <Field label="Статусы" flex="1">
                                     <Select.Root
                                         multiple
+                                        collection={statusCollection}
                                         value={localFilters.status}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value })}
                                     >
@@ -255,8 +261,8 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                                             </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>
-                                            {statuses?.map((s) => (
-                                                <Select.Item key={s.value} item={s.value}>{s.label}</Select.Item>
+                                            {statusCollection.items.map((s) => (
+                                                <Select.Item key={s.value} item={s}>{s.label}</Select.Item>
                                             ))}
                                         </Select.Content>
                                     </Select.Root>

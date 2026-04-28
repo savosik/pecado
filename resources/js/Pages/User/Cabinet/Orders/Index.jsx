@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
-    Card, Stack, IconButton,
+    Card, Stack, IconButton, createListCollection,
 } from '@chakra-ui/react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
@@ -128,6 +128,25 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
         if (Array.isArray(filters?.brand_ids) && filters.brand_ids.length > 0) count++;
         return count;
     })();
+
+    // Chakra UI v3 Select требует collection — без неё клики по опциям
+    // не регистрируются. Собираем коллекции из props сервера.
+    const statusCollection = useMemo(
+        () => createListCollection({ items: statuses?.map((s) => ({ label: s.label, value: s.value })) ?? [] }),
+        [statuses]
+    );
+    const typeCollection = useMemo(
+        () => createListCollection({
+            items: [{ label: 'Все типы', value: '' }, ...(types?.map((t) => ({ label: t.label, value: t.value })) ?? [])],
+        }),
+        [types]
+    );
+    const companyCollection = useMemo(
+        () => createListCollection({
+            items: [{ label: 'Все контрагенты', value: '' }, ...(companies?.map((c) => ({ label: c.label, value: String(c.value) })) ?? [])],
+        }),
+        [companies]
+    );
 
     const filterFields = useMemo(() => [
         { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
@@ -274,6 +293,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                 <Field label="Статусы" flex="1">
                                     <Select.Root
                                         multiple
+                                        collection={statusCollection}
                                         value={localFilters.status}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, status: e.value })}
                                     >
@@ -287,8 +307,8 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                             </Select.ValueText>
                                         </Select.Trigger>
                                         <Select.Content>
-                                            {statuses?.map((s) => (
-                                                <Select.Item key={s.value} item={s.value}>
+                                            {statusCollection.items.map((s) => (
+                                                <Select.Item key={s.value} item={s}>
                                                     {s.label}
                                                 </Select.Item>
                                             ))}
@@ -298,6 +318,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
 
                                 <Field label="Тип" flex="1">
                                     <Select.Root
+                                        collection={typeCollection}
                                         value={localFilters.type ? [localFilters.type] : []}
                                         onValueChange={(e) => setLocalFilters({ ...localFilters, type: e.value[0] || '' })}
                                     >
@@ -305,9 +326,8 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                             <Select.ValueText placeholder="Все типы" />
                                         </Select.Trigger>
                                         <Select.Content>
-                                            <Select.Item item="">Все типы</Select.Item>
-                                            {types?.map((t) => (
-                                                <Select.Item key={t.value} item={t.value}>
+                                            {typeCollection.items.map((t) => (
+                                                <Select.Item key={t.value} item={t}>
                                                     {t.label}
                                                 </Select.Item>
                                             ))}
@@ -318,6 +338,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                 {companies.length > 0 && (
                                     <Field label="Контрагент" flex="1">
                                         <Select.Root
+                                            collection={companyCollection}
                                             value={localFilters.company_id ? [localFilters.company_id] : []}
                                             onValueChange={(e) => setLocalFilters({ ...localFilters, company_id: e.value[0] || '' })}
                                         >
@@ -325,9 +346,8 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                 <Select.ValueText placeholder="Все контрагенты" />
                                             </Select.Trigger>
                                             <Select.Content>
-                                                <Select.Item item="">Все контрагенты</Select.Item>
-                                                {companies.map((c) => (
-                                                    <Select.Item key={c.value} item={c.value}>
+                                                {companyCollection.items.map((c) => (
+                                                    <Select.Item key={c.value} item={c}>
                                                         {c.label}
                                                     </Select.Item>
                                                 ))}

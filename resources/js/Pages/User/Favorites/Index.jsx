@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
     Box, Grid, GridItem, Heading, Text, Flex, HStack, Stack, Button, Card, Input, InputGroup, Badge,
+    createListCollection,
 } from '@chakra-ui/react';
 import { LuFilter, LuHeart, LuLayoutGrid, LuListTree, LuSearch, LuX } from 'react-icons/lu';
 import UserLayout from '../UserLayout';
@@ -92,6 +93,30 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
 
     const sortEntries = useMemo(() => Object.entries(sortOptions), [sortOptions]);
     const availabilityEntries = useMemo(() => Object.entries(availabilityOptions), [availabilityOptions]);
+
+    // Chakra v3 Select требует collection — без неё опции не выбираются.
+    const sortCollection = useMemo(
+        () => createListCollection({ items: sortEntries.map(([value, label]) => ({ label, value })) }),
+        [sortEntries]
+    );
+    const availabilityCollection = useMemo(
+        () => createListCollection({
+            items: [{ label: 'Любое', value: '' }, ...availabilityEntries.map(([value, label]) => ({ label, value }))],
+        }),
+        [availabilityEntries]
+    );
+    const brandCollection = useMemo(
+        () => createListCollection({
+            items: (facets?.brands || []).map((b) => ({ label: b.name, value: String(b.id) })),
+        }),
+        [facets?.brands]
+    );
+    const categoryCollection = useMemo(
+        () => createListCollection({
+            items: (facets?.categories || []).map((c) => ({ label: c.name, value: String(c.id) })),
+        }),
+        [facets?.categories]
+    );
 
     const activeFiltersCount = useMemo(() => {
         let count = 0;
@@ -213,6 +238,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
 
                     <Box minW={{ base: '100%', md: '220px' }}>
                         <Select.Root
+                            collection={sortCollection}
                             value={[currentSort]}
                             onValueChange={(e) => handleSortChange(e.value[0] || 'added_desc')}
                             size="sm"
@@ -221,9 +247,9 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                 <Select.ValueText placeholder="Сортировка" />
                             </Select.Trigger>
                             <Select.Content>
-                                {sortEntries.map(([value, label]) => (
-                                    <Select.Item key={value} item={value}>
-                                        {label}
+                                {sortCollection.items.map((s) => (
+                                    <Select.Item key={s.value} item={s}>
+                                        {s.label}
                                     </Select.Item>
                                 ))}
                             </Select.Content>
@@ -252,6 +278,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                 <Flex gap="4" direction={{ base: 'column', md: 'row' }}>
                                     <Field label="Наличие" flex="1">
                                         <Select.Root
+                                            collection={availabilityCollection}
                                             value={localFilters.availability ? [localFilters.availability] : []}
                                             onValueChange={(e) => setLocalFilters({ ...localFilters, availability: e.value[0] || '' })}
                                             size="sm"
@@ -260,10 +287,9 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                                 <Select.ValueText placeholder="Любое" />
                                             </Select.Trigger>
                                             <Select.Content>
-                                                <Select.Item item="">Любое</Select.Item>
-                                                {availabilityEntries.map(([value, label]) => (
-                                                    <Select.Item key={value} item={value}>
-                                                        {label}
+                                                {availabilityCollection.items.map((a) => (
+                                                    <Select.Item key={a.value} item={a}>
+                                                        {a.label}
                                                     </Select.Item>
                                                 ))}
                                             </Select.Content>
@@ -273,6 +299,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                     <Field label="Бренд" flex="1">
                                         <Select.Root
                                             multiple
+                                            collection={brandCollection}
                                             value={localFilters.brand_ids}
                                             onValueChange={(e) => setLocalFilters({ ...localFilters, brand_ids: e.value })}
                                             size="sm"
@@ -283,9 +310,9 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                                 </Select.ValueText>
                                             </Select.Trigger>
                                             <Select.Content>
-                                                {(facets?.brands || []).map((b) => (
-                                                    <Select.Item key={b.id} item={String(b.id)}>
-                                                        {b.name}
+                                                {brandCollection.items.map((b) => (
+                                                    <Select.Item key={b.value} item={b}>
+                                                        {b.label}
                                                     </Select.Item>
                                                 ))}
                                             </Select.Content>
@@ -295,6 +322,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                     <Field label="Категория" flex="1">
                                         <Select.Root
                                             multiple
+                                            collection={categoryCollection}
                                             value={localFilters.category_ids}
                                             onValueChange={(e) => setLocalFilters({ ...localFilters, category_ids: e.value })}
                                             size="sm"
@@ -305,9 +333,9 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                                 </Select.ValueText>
                                             </Select.Trigger>
                                             <Select.Content>
-                                                {(facets?.categories || []).map((c) => (
-                                                    <Select.Item key={c.id} item={String(c.id)}>
-                                                        {c.name}
+                                                {categoryCollection.items.map((c) => (
+                                                    <Select.Item key={c.value} item={c}>
+                                                        {c.label}
                                                     </Select.Item>
                                                 ))}
                                             </Select.Content>
