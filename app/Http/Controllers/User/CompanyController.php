@@ -20,7 +20,8 @@ class CompanyController extends Controller
             ->with(['contractorBalance.overdueDetails'])
             ->where('user_id', Auth::id())
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('User/Cabinet/Companies/Index', [
             'companies' => $companies,
