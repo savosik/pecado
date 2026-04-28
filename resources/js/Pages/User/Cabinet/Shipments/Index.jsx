@@ -24,7 +24,7 @@ const STATUS_COLORS = {
     cancelled: 'red',
 };
 
-export default function ShipmentsIndex({ filters, statuses, exportEnabled = false }) {
+export default function ShipmentsIndex({ filters, statuses, exportEnabled = false, suggestion = null }) {
     const { shipments, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -334,6 +334,11 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                             <Text color="gray.500" fontSize="sm">
                                 Когда 1С создаст реализацию по вашему контрагенту, она появится здесь
                             </Text>
+                            {suggestion && (
+                                <Text color="gray.500" fontSize="sm" whiteSpace="pre-line" mt="2">
+                                    {suggestion}
+                                </Text>
+                            )}
                         </VStack>
                     </Card.Body>
                 </Card.Root>

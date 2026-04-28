@@ -28,7 +28,7 @@ const STATUS_COLORS = {
     deleted: 'red',
 };
 
-export default function OrdersIndex({ filters, statuses, types, companies = [], presetsEnabled = false, exportEnabled = false }) {
+export default function OrdersIndex({ filters, statuses, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
     const { orders, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
@@ -435,6 +435,11 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                             </Flex>
                             <Text fontWeight="600" fontSize="lg">Заказов пока нет</Text>
                             <Text color="gray.500" fontSize="sm">Когда вы оформите заказ, он появится здесь</Text>
+                            {suggestion && (
+                                <Text color="gray.500" fontSize="sm" whiteSpace="pre-line" mt="2">
+                                    {suggestion}
+                                </Text>
+                            )}
                         </VStack>
                     </Card.Body>
                 </Card.Root>

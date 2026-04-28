@@ -24,7 +24,7 @@ const STATUS_COLORS = {
     cancelled: 'red',
 };
 
-export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled = false }) {
+export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled = false, suggestion = null }) {
     const { returns } = usePage().props;
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
@@ -359,6 +359,11 @@ export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled
                             <Text color="gray.500" fontSize="sm">
                                 Когда вы оформите возврат, он появится здесь
                             </Text>
+                            {suggestion && (
+                                <Text color="gray.500" fontSize="sm" whiteSpace="pre-line" mt="2">
+                                    {suggestion}
+                                </Text>
+                            )}
                             <Button asChild bg="#9e1b32" color="white" _hover={{ bg: '#7a1527' }} size="sm" mt="2">
                                 <Link href="/cabinet/returns/create">
                                     <LuPlus size={16} /> Создать возврат

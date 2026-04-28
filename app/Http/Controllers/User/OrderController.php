@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Services\CurrencyService;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
+use App\Support\Search\EmptyResultSuggestion;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
@@ -99,6 +100,10 @@ class OrderController extends Controller
             ->get(['id', 'name'])
             ->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name]);
 
+        $suggestion = $orders->total() === 0
+            ? EmptyResultSuggestion::build($search, $this->activeFiltersForSuggestion($context, $companies))
+            : null;
+
         return Inertia::render('User/Cabinet/Orders/Index', [
             'orders' => $orders,
             'filters' => [
@@ -129,7 +134,51 @@ class OrderController extends Controller
             'companies' => $companies,
             'presetsEnabled' => (bool) config('search-cabinet.presets'),
             'exportEnabled' => (bool) config('search-cabinet.export'),
+            'suggestion' => $suggestion,
         ]);
+    }
+
+    /**
+     * Человеческие лейблы активных фильтров для EmptyResultSuggestion.
+     * Возвращает пустой массив, когда фильтр не задан, чтобы не подсказывать
+     * сбросить то, что и так не активно.
+     *
+     * @param  array<string, mixed>  $context
+     * @param  \Illuminate\Support\Collection  $companies
+     * @return array<string, string>
+     */
+    private function activeFiltersForSuggestion(array $context, $companies): array
+    {
+        $labels = [];
+        if (! empty($context['selected_statuses'])) {
+            $labels['Статус'] = implode(', ', $context['selected_statuses']);
+        }
+        if (! empty($context['type'])) {
+            $labels['Тип'] = (string) $context['type'];
+        }
+        if (! empty($context['company_id'])) {
+            $companyName = $companies
+                ->firstWhere('value', (string) $context['company_id'])['label'] ?? null;
+            $labels['Контрагент'] = $companyName ?? '#'.$context['company_id'];
+        }
+        if (! empty($context['brand_ids'])) {
+            $labels['Бренд'] = implode(', ', $context['brand_ids']);
+        }
+        if (! empty($context['date_from']) || ! empty($context['date_to'])) {
+            $labels['Дата'] = trim(($context['date_from'] ?? '').'…'.($context['date_to'] ?? ''));
+        }
+        if (! empty($context['amount_from']) || ! empty($context['amount_to'])) {
+            $labels['Сумма'] = trim(($context['amount_from'] ?? '').'…'.($context['amount_to'] ?? ''));
+        }
+        if ($context['items_count_from'] !== null && $context['items_count_from'] !== ''
+            || $context['items_count_to'] !== null && $context['items_count_to'] !== '') {
+            $labels['Кол-во позиций'] = trim(($context['items_count_from'] ?? '').'…'.($context['items_count_to'] ?? ''));
+        }
+        if (! empty($context['product_id'])) {
+            $labels['Конкретный товар'] = '#'.$context['product_id'];
+        }
+
+        return $labels;
     }
 
     /**

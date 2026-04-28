@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\CurrencyService;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
+use App\Support\Search\EmptyResultSuggestion;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
@@ -91,6 +92,10 @@ class ShipmentController extends Controller
             ];
         });
 
+        $suggestion = $shipments->total() === 0
+            ? EmptyResultSuggestion::build($search, $this->activeFiltersForSuggestion($context))
+            : null;
+
         return Inertia::render('User/Cabinet/Shipments/Index', [
             'shipments' => $shipments,
             'filters' => [
@@ -112,7 +117,34 @@ class ShipmentController extends Controller
                 self::STATUS_LABELS
             ),
             'exportEnabled' => (bool) config('search-cabinet.export'),
+            'suggestion' => $suggestion,
         ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     * @return array<string, string>
+     */
+    private function activeFiltersForSuggestion(array $context): array
+    {
+        $labels = [];
+        if (! empty($context['selected_statuses'])) {
+            $labels['Статус'] = implode(', ', $context['selected_statuses']);
+        }
+        if (! empty($context['order_uuid'])) {
+            $labels['UUID заказа'] = (string) $context['order_uuid'];
+        }
+        if (! empty($context['brand_ids'])) {
+            $labels['Бренд'] = implode(', ', $context['brand_ids']);
+        }
+        if (! empty($context['date_from']) || ! empty($context['date_to'])) {
+            $labels['Дата'] = trim(($context['date_from'] ?? '').'…'.($context['date_to'] ?? ''));
+        }
+        if (! empty($context['amount_from']) || ! empty($context['amount_to'])) {
+            $labels['Сумма'] = trim(($context['amount_from'] ?? '').'…'.($context['amount_to'] ?? ''));
+        }
+
+        return $labels;
     }
 
     /**
