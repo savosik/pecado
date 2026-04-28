@@ -80,15 +80,34 @@ export default function SavedSearches({ section, current, basePath }) {
     };
 
     return (
-        <HStack gap="2" align="center">
-            <Button size="sm" variant="outline" onClick={save} disabled={saving}>
+        <HStack gap="2" align="center" flexShrink="0">
+            <Button
+                size="sm"
+                variant="outline"
+                onClick={save}
+                disabled={saving}
+                aria-label="Сохранить поиск"
+                flexShrink="0"
+            >
                 <LuBookmark size={14} />
-                <Text ml="2">Сохранить поиск</Text>
+                <Box as="span" ml="2" display={{ base: 'none', md: 'inline' }}>
+                    Сохранить поиск
+                </Box>
             </Button>
             <MenuRoot>
                 <MenuTrigger asChild>
-                    <Button size="sm" variant="ghost" disabled={loading}>
-                        <Text>Мои поиски ({presets.length})</Text>
+                    <Button
+                        size="sm"
+                        variant="ghost"
+                        disabled={loading}
+                        aria-label={`Мои поиски (${presets.length})`}
+                        flexShrink="0"
+                    >
+                        <LuBookmark size={14} />
+                        <Box as="span" ml="2" display={{ base: 'none', md: 'inline' }}>
+                            Мои поиски
+                        </Box>
+                        <Text ml="1">({presets.length})</Text>
                         <Box ml="1.5"><LuChevronDown size={14} /></Box>
                     </Button>
                 </MenuTrigger>

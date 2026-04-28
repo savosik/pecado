@@ -41,9 +41,16 @@ export default function ExportMenu({ basePath, filters }) {
     return (
         <MenuRoot positioning={{ placement: 'bottom-end' }}>
             <MenuTrigger asChild>
-                <Button size="sm" variant="outline">
+                <Button
+                    size="sm"
+                    variant="outline"
+                    aria-label="Экспорт"
+                    flexShrink="0"
+                >
                     <LuDownload size={14} />
-                    <Text ml="2">Экспорт</Text>
+                    <Box as="span" ml="2" display={{ base: 'none', md: 'inline' }}>
+                        Экспорт
+                    </Box>
                 </Button>
             </MenuTrigger>
             <MenuContent>
