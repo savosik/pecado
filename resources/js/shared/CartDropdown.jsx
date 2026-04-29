@@ -24,6 +24,7 @@ export default function CartDropdown() {
     const totals = useCartStore((s) => s.cartTotals);
     const badge = cartBadgeProps(totals.instock, totals.preorder);
 
+    const [menuOpen, setMenuOpen] = useState(false);
     const [carts, setCarts] = useState([]);
     const [loading, setLoading] = useState(false);
     const [loaded, setLoaded] = useState(false);
@@ -56,6 +57,7 @@ export default function CartDropdown() {
     }, []);
 
     const handleOpenChange = useCallback(({ open }) => {
+        setMenuOpen(open);
         if (open) {
             fetchCarts();
         } else {
@@ -168,7 +170,7 @@ export default function CartDropdown() {
 
     return (
         <>
-            <Menu.Root onOpenChange={handleOpenChange} positioning={{ placement: 'bottom-end' }}>
+            <Menu.Root open={menuOpen} onOpenChange={handleOpenChange} positioning={{ placement: 'bottom-end' }}>
                 <Menu.Trigger asChild>
                     <HeaderIconButton
                         icon={LuShoppingCart}
@@ -267,7 +269,7 @@ export default function CartDropdown() {
                                                                     size="2xs"
                                                                     variant="ghost"
                                                                     colorPalette="red"
-                                                                    onClick={(e) => { e.stopPropagation(); setDeleteCartId(cart.id); }}
+                                                                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); setDeleteCartId(cart.id); }}
                                                                     disabled={processing}
                                                                     aria-label="Удалить"
                                                                 >
