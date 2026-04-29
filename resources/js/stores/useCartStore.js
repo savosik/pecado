@@ -428,8 +428,15 @@ if (typeof window !== 'undefined') {
             return;
         }
 
+        // Quantities обновляем мгновенно из localStorage (другая вкладка).
         useCartStore.setState({ quantities });
         window.dispatchEvent(new CustomEvent('cart:changed'));
+
+        // А productSplits и cartTotals localStorage не несёт — догоняем
+        // фоновым server-sync, чтобы цветная рамка counter и бейдж шапки
+        // тоже отражали изменения из другой вкладки.
+        const state = useCartStore.getState();
+        if (state.loaded) state._serverSync();
     });
 
     // Server re-sync на Inertia navigate

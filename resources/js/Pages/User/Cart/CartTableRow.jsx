@@ -105,7 +105,9 @@ function CartTableRow({
     return (
         <Table.Row
             opacity={isUnavailable ? 0.5 : 1}
-            {...cartRowTint(instockQty, preorderQty)}
+            {...(selected
+                ? { bg: 'pecado.50', _hover: { bg: 'pecado.100' }, _dark: { bg: 'pecado.900/30', _hover: { bg: 'pecado.900/50' } } }
+                : cartRowTint(instockQty, preorderQty))}
             boxShadow={flashing ? 'inset 0 0 0 2px var(--chakra-colors-green-500)' : undefined}
             transition="background-color 220ms ease-out, box-shadow 600ms ease-out"
         >

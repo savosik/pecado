@@ -71,9 +71,12 @@ function CartMobileCard({
         instock:  { _hover: { bg: 'green.50' },  _dark: { _hover: { bg: 'green.900/20' } } },
         preorder: { _hover: { bg: 'orange.50' }, _dark: { _hover: { bg: 'orange.900/20' } } },
     };
-    const tintProps = tintState === 'mixed'
+    const baseTint = tintState === 'mixed'
         ? { bg: 'bg', className: 'cart-card-mixed' }
         : { bg: 'bg', ...(TINT_HOVER[tintState] || { _hover: { bg: 'gray.50' } }) };
+    const tintProps = selected
+        ? { bg: 'pecado.50', _dark: { bg: 'pecado.900/30' } }
+        : baseTint;
 
     const sumRegular = priceRegular * totalQty;
     const sumDiscounted = priceDiscounted * totalQty;

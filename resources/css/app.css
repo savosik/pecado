@@ -20,6 +20,30 @@
     45%, 85% { transform: translateX(-3px); }
 }
 
+/* Кастомный скроллбар таблицы корзины — фирменный pecado-цвет, виднее обычного. */
+.cart-scroll {
+    scrollbar-color: var(--chakra-colors-pecado-500) transparent;
+    scrollbar-width: thin;
+}
+.cart-scroll::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+.cart-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+.cart-scroll::-webkit-scrollbar-thumb {
+    background: var(--chakra-colors-pecado-500);
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+}
+.cart-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--chakra-colors-pecado-600);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+}
+
 /* Tint-строка корзины для mixed-состояния (часть со склада, часть в предзаказ).
    По умолчанию прозрачно — градиент проявляется только при hover. */
 .cart-row-mixed:hover {

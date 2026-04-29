@@ -1,5 +1,5 @@
-import { useMemo, useCallback } from 'react';
-import { Box, Flex, Text, Table, Stack } from '@chakra-ui/react';
+import { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { Box, Table } from '@chakra-ui/react';
 import { usePage } from '@inertiajs/react';
 import { LuChevronUp, LuChevronDown } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -187,20 +187,42 @@ export default function CartTable({
 
     const handleToggleAll = useCallback((checked) => onToggleAll(checked), [onToggleAll]);
 
+    // Тени у sticky header / footer когда таблица проскроллена.
+    const scrollRef = useRef(null);
+    const [topShadow, setTopShadow] = useState(false);
+    const [bottomShadow, setBottomShadow] = useState(false);
+
+    const handleScroll = useCallback(() => {
+        const el = scrollRef.current;
+        if (!el) return;
+        setTopShadow(el.scrollTop > 0);
+        setBottomShadow(el.scrollTop + el.clientHeight < el.scrollHeight - 1);
+    }, []);
+
+    // Пересчёт теней после ре-рендера (при добавлении/удалении строк).
+    useEffect(() => {
+        handleScroll();
+    }, [sortedRows.length, handleScroll]);
+
     return (
         <Box>
             {/* ═══ Desktop table ═══ */}
             <Box
+                ref={scrollRef}
+                onScroll={handleScroll}
+                className="cart-scroll"
                 display={{ base: 'none', lg: 'block' }}
                 overflowX="auto"
                 overflowY="auto"
-                maxH="calc(100vh - 240px)"
+                maxH="calc(100vh - 200px)"
             >
                 <Table.Root size="sm">
                     <Table.Header
                         position="sticky"
                         top="0"
                         zIndex="5"
+                        boxShadow={topShadow ? '0 4px 6px -2px rgba(0,0,0,0.1)' : 'none'}
+                        transition="box-shadow 200ms ease-out"
                     >
                         <Table.Row bg="gray.100" _dark={{ bg: 'gray.800' }}>
                             <Table.ColumnHeader w="40px" textAlign="center">
@@ -229,7 +251,7 @@ export default function CartTable({
                                 <SortableHeader label="Цена со скидкой" columnKey="price" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader w="110px" textAlign="right">
-                                <SortableHeader label={`Сумма (${currencySymbol})`} columnKey="sum" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
+                                <SortableHeader label="Сумма" columnKey="sum" sortKey={sortKey} sortDir={sortDir} onSort={onSort} />
                             </Table.ColumnHeader>
                             <Table.ColumnHeader w="50px" />
                         </Table.Row>
@@ -253,7 +275,14 @@ export default function CartTable({
                                 onToggle={onToggleOne}
                             />
                         ))}
-
+                    </Table.Body>
+                    <Table.Footer
+                        position="sticky"
+                        bottom="0"
+                        zIndex="5"
+                        boxShadow={bottomShadow ? '0 -4px 6px -2px rgba(0,0,0,0.1)' : 'none'}
+                        transition="box-shadow 200ms ease-out"
+                    >
                         <Table.Row fontWeight="semibold" bg="gray.50" _dark={{ bg: 'gray.800' }} fontSize="xs">
                             <Table.Cell />
                             <Table.Cell>Итого</Table.Cell>
@@ -276,7 +305,7 @@ export default function CartTable({
                             </Table.Cell>
                             <Table.Cell />
                         </Table.Row>
-                    </Table.Body>
+                    </Table.Footer>
                 </Table.Root>
             </Box>
 
