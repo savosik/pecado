@@ -208,9 +208,6 @@ export default function SearchIndex({ query, results, productsMeta }) {
                                 <Text fontWeight="semibold" color="fg">
                                     Точного совпадения по запросу «{q}» не найдено
                                 </Text>
-                                <Text fontSize="sm" color="fg.muted" mt="1">
-                                    Показаны похожие товары. Проверьте артикул или штрихкод — возможно, в нём опечатка.
-                                </Text>
                             </Box>
                         </Flex>
                     )}
