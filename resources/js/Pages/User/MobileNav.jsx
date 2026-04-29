@@ -5,20 +5,20 @@ import { LuHouse, LuGrid2X2, LuShoppingCart, LuHeart, LuUser, LuLogIn } from 're
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
 import { useCartStore } from '@/stores/useCartStore';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
+import { cartBadgeProps } from '@/utils/cartFrame';
 
 /**
- * Бейдж-счётчик (красный кружок с числом).
+ * Бейдж-счётчик. По умолчанию красный, можно переопределить через badgeProps.
  */
-function NavBadge({ count }) {
+function NavBadge({ count, badgeProps }) {
     if (!count || count <= 0) return null;
+    const overrides = badgeProps ?? { bg: 'red.500', color: 'white' };
     return (
         <Box
             as="span"
             position="absolute"
             top="-6px"
             right="-4px"
-            bg="red.500"
-            color="white"
             fontSize="10px"
             fontWeight="600"
             borderRadius="full"
@@ -29,6 +29,7 @@ function NavBadge({ count }) {
             px="4px"
             boxShadow="sm"
             pointerEvents="none"
+            {...overrides}
         >
             {count > 99 ? '99+' : count}
         </Box>
@@ -38,7 +39,7 @@ function NavBadge({ count }) {
 /**
  * Один пункт нижней навигации.
  */
-function NavItem({ href, onClick, icon: Icon, label, badge, isActive }) {
+function NavItem({ href, onClick, icon: Icon, label, badge, badgeProps, isActive }) {
     const content = (
         <Flex
             direction="column"
@@ -52,7 +53,7 @@ function NavItem({ href, onClick, icon: Icon, label, badge, isActive }) {
         >
             <Box as="span" position="relative" display="inline-flex">
                 <Icon size={22} />
-                <NavBadge count={badge} />
+                <NavBadge count={badge} badgeProps={badgeProps} />
             </Box>
             <Text fontSize="10px" lineHeight="1.2" fontWeight="500">
                 {label}
@@ -93,6 +94,8 @@ export default function MobileNav() {
 
     const favCount = useFavoritesStore((s) => s.ids.size);
     const cartTotalQty = useCartStore((s) => s.getTotalQuantity());
+    const cartTotals = useCartStore((s) => s.cartTotals);
+    const cartBadge = cartBadgeProps(cartTotals.instock, cartTotals.preorder);
 
     // Инициализация сторов при наличии пользователя
     useEffect(() => {
@@ -115,7 +118,7 @@ export default function MobileNav() {
 
     if (user) {
         items.push(
-            { key: 'cart', href: '/cart', icon: LuShoppingCart, label: 'Корзина', badge: cartTotalQty, active: currentPath.startsWith('/cart') },
+            { key: 'cart', href: '/cart', icon: LuShoppingCart, label: 'Корзина', badge: cartTotalQty, badgeProps: cartBadge, active: currentPath.startsWith('/cart') },
             { key: 'favorites', href: '/favorites', icon: LuHeart, label: 'Избранное', badge: favCount, active: currentPath.startsWith('/favorites') },
             { key: 'cabinet', href: '/cabinet/dashboard', icon: LuUser, label: 'Кабинет', active: currentPath.startsWith('/cabinet') },
         );
@@ -159,6 +162,7 @@ export default function MobileNav() {
                         icon={item.icon}
                         label={item.label}
                         badge={item.badge}
+                        badgeProps={item.badgeProps}
                         isActive={item.active}
                     />
                 ))}

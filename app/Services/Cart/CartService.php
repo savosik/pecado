@@ -286,6 +286,21 @@ class CartService implements CartServiceInterface
     }
 
     /**
+     * Active cart snapshot: quantities map + agregat totals (для бейджей корзины).
+     *
+     * @return array{quantities: array<int,int>, totals: array}
+     */
+    public function getActiveCartSnapshot(User $user): array
+    {
+        $cart = $this->getOrCreateActiveCart($user);
+
+        return [
+            'quantities' => $this->getActiveQuantities($user),
+            'totals' => $this->buildCartTotals($cart, $user),
+        ];
+    }
+
+    /**
      * Get cart items summary for API.
      */
     public function getCartItemsSummary(Cart $cart): array
@@ -415,6 +430,8 @@ class CartService implements CartServiceInterface
 
         return [
             'total_quantity' => $agg['total_quantity'],
+            'instock_quantity' => $agg['available_count'],
+            'preorder_quantity' => $agg['preorder_count'],
             'total_amount_regular' => $agg['total_amount_regular'],
             'total_amount_discounted' => $agg['total_amount_discounted'],
         ];

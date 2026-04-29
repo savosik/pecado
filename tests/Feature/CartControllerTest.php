@@ -108,8 +108,11 @@ class CartControllerTest extends TestCase
         $response->assertOk();
 
         $data = $response->json();
-        $this->assertEquals(5, $data[$product1->id]);
-        $this->assertEquals(7, $data[$product2->id]);
+        $this->assertEquals(5, $data['quantities'][$product1->id]);
+        $this->assertEquals(7, $data['quantities'][$product2->id]);
+        $this->assertEquals(12, $data['totals']['total_quantity']);
+        $this->assertEquals(10, $data['totals']['instock_quantity']);
+        $this->assertEquals(2, $data['totals']['preorder_quantity']);
     }
 
     // ─── API: Set Product Quantity (Spillover) ─────────────

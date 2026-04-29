@@ -155,14 +155,14 @@ class CartController extends Controller
     }
 
     /**
-     * Get active cart quantities map.
+     * Get active cart snapshot: quantities map + totals.
      * GET /api/cart/active-quantities
      */
     public function activeQuantities(Request $request): JsonResponse
     {
-        $quantities = $this->cartService->getActiveQuantities($request->user());
-
-        return response()->json($quantities);
+        return response()->json(
+            $this->cartService->getActiveCartSnapshot($request->user())
+        );
     }
 
     /**

@@ -8,14 +8,16 @@ import { Box } from '@chakra-ui/react';
  *   icon: React.ElementType,
  *   count?: number,
  *   badgeColor?: string,
+ *   badgeProps?: object,  // объект пропсов для Box бейджа (bg/style/color/...)
  *   'aria-label': string,
  *   [key: string]: any,
  * }} props
  */
 const HeaderIconButton = forwardRef(function HeaderIconButton(
-    { icon: Icon, count = 0, badgeColor = 'red.500', 'aria-label': ariaLabel, ...rest },
+    { icon: Icon, count = 0, badgeColor = 'red.500', badgeProps, 'aria-label': ariaLabel, ...rest },
     ref,
 ) {
+    const finalBadgeProps = badgeProps ?? { bg: badgeColor, color: 'white' };
     return (
         <Box
             ref={ref}
@@ -37,8 +39,6 @@ const HeaderIconButton = forwardRef(function HeaderIconButton(
                     position="absolute"
                     top="0"
                     right="0"
-                    bg={badgeColor}
-                    color="white"
                     fontSize="10px"
                     fontWeight="600"
                     borderRadius="full"
@@ -49,6 +49,7 @@ const HeaderIconButton = forwardRef(function HeaderIconButton(
                     px="4px"
                     boxShadow="sm"
                     pointerEvents="none"
+                    {...finalBadgeProps}
                 >
                     {count > 99 ? '99+' : count}
                 </Box>

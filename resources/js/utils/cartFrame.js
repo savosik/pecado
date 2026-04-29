@@ -73,6 +73,35 @@ export function cartRowTint(instockQty, preorderQty) {
     }
 }
 
+/**
+ * Pропсы для кругло-бейджа счётчика корзины (в шапке/мобильном меню).
+ * Цвет фона — по тому же правилу, что у рамки counter:
+ *   только склад → зелёный; только предзаказ → оранжевый; смешанно → градиент.
+ *
+ * Возвращает объект с `bg` (или `style.background` для градиента) и `color`,
+ * пригодный для распыления на Box-обёртку бейджа через {...props}.
+ */
+export function cartBadgeProps(instockQty, preorderQty) {
+    const state = cartFrameState(instockQty, preorderQty);
+    switch (state) {
+        case 'instock':
+            return { bg: 'green.500', color: 'white' };
+        case 'preorder':
+            return { bg: 'orange.400', color: 'white' };
+        case 'mixed':
+            return {
+                color: 'white',
+                style: {
+                    background:
+                        'linear-gradient(135deg, var(--chakra-colors-green-500) 0%, var(--chakra-colors-orange-400) 100%)',
+                },
+            };
+        case 'idle':
+        default:
+            return { bg: 'gray.500', color: 'white' };
+    }
+}
+
 export function cartFrameTooltip(instockQty, preorderQty) {
     const inS = Math.max(0, Number(instockQty || 0));
     const pre = Math.max(0, Number(preorderQty || 0));

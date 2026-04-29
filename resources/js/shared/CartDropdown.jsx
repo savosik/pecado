@@ -14,12 +14,15 @@ import ConfirmDialog from '@/components/common/ConfirmDialog';
 import HeaderIconButton from '@/components/common/HeaderIconButton';
 import { pluralize } from '@/utils/pluralize';
 import { toastSuccess, toastError } from '@/utils/toast';
+import { cartBadgeProps } from '@/utils/cartFrame';
 
 /**
  * Мини-корзина в шапке — dropdown с управлением корзинами.
  */
 export default function CartDropdown() {
     const totalQty = useCartStore((s) => s.getTotalQuantity());
+    const totals = useCartStore((s) => s.cartTotals);
+    const badge = cartBadgeProps(totals.instock, totals.preorder);
 
     const [carts, setCarts] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -170,7 +173,7 @@ export default function CartDropdown() {
                     <HeaderIconButton
                         icon={LuShoppingCart}
                         count={totalQty}
-                        badgeColor="pecado.solid"
+                        badgeProps={badge}
                         aria-label="Корзина"
                     />
                 </Menu.Trigger>

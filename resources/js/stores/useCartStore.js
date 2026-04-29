@@ -68,6 +68,30 @@ function parseQuantitiesMap(data) {
     return result;
 }
 
+/**
+ * Парсит ответ /api/cart/active-quantities. Поддерживает обе формы:
+ *   - старая: {pid: qty, ...}
+ *   - новая:  {quantities: {pid: qty}, totals: {total_quantity, instock_quantity, preorder_quantity}}
+ */
+function parseSnapshot(data) {
+    if (data && typeof data === 'object' && data.quantities && typeof data.quantities === 'object') {
+        return {
+            quantities: parseQuantitiesMap(data.quantities),
+            totals: parseTotals(data.totals),
+        };
+    }
+    return { quantities: parseQuantitiesMap(data), totals: { total: 0, instock: 0, preorder: 0 } };
+}
+
+function parseTotals(data) {
+    if (!data || typeof data !== 'object') return { total: 0, instock: 0, preorder: 0 };
+    return {
+        total: Number(data.total_quantity ?? data.total ?? 0),
+        instock: Number(data.instock_quantity ?? data.instock ?? 0),
+        preorder: Number(data.preorder_quantity ?? data.preorder ?? 0),
+    };
+}
+
 // ────────────────────────────────────────────
 // Store
 // ────────────────────────────────────────────
@@ -78,6 +102,13 @@ export const useCartStore = create((set, get) => ({
      * @type {Object<number, number>}
      */
     quantities: {},
+
+    /**
+     * Агрегаты корзины (для бейджей в шапке/мобильном меню).
+     * Обновляются при init/sync с сервера и в ответе на set-product-quantity.
+     * @type {{ total: number, instock: number, preorder: number }}
+     */
+    cartTotals: { total: 0, instock: 0, preorder: 0 },
 
     /** Флаг, что данные загружены с сервера */
     loaded: false,
@@ -115,9 +146,9 @@ export const useCartStore = create((set, get) => ({
 
         try {
             const { data } = await window.axios.get('/api/cart/active-quantities');
-            const quantities = parseQuantitiesMap(data);
+            const { quantities, totals } = parseSnapshot(data);
 
-            set({ quantities, loaded: true, loading: false });
+            set({ quantities, cartTotals: totals, loaded: true, loading: false });
             saveToCache(quantities);
         } catch {
             // При ошибке оставляем кешированные данные
@@ -243,6 +274,11 @@ export const useCartStore = create((set, get) => ({
                     }
                 }
 
+                // Сервер прислал свежие totals — обновляем агрегаты для бейджей.
+                if (data && data.cart_totals) {
+                    set({ cartTotals: parseTotals(data.cart_totals) });
+                }
+
                 // Dispatch cart:changed и cart:server-synced
                 window.dispatchEvent(new CustomEvent('cart:changed'));
                 window.dispatchEvent(new CustomEvent('cart:server-synced'));
@@ -298,7 +334,13 @@ export const useCartStore = create((set, get) => ({
             clearTimeout(debounceTimers[key]);
             delete debounceTimers[key];
         });
-        set({ quantities: {}, loaded: false, loading: false, syncing: new Set() });
+        set({
+            quantities: {},
+            cartTotals: { total: 0, instock: 0, preorder: 0 },
+            loaded: false,
+            loading: false,
+            syncing: new Set(),
+        });
         try {
             localStorage.removeItem(STORAGE_KEY);
         } catch {
@@ -313,9 +355,9 @@ export const useCartStore = create((set, get) => ({
     _serverSync: async () => {
         try {
             const { data } = await window.axios.get('/api/cart/active-quantities');
-            const quantities = parseQuantitiesMap(data);
+            const { quantities, totals } = parseSnapshot(data);
 
-            set({ quantities, loaded: true });
+            set({ quantities, cartTotals: totals, loaded: true });
             saveToCache(quantities);
             window.dispatchEvent(new CustomEvent('cart:changed'));
         } catch {
