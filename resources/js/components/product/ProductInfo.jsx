@@ -26,6 +26,8 @@ export default function ProductInfo({
     isBestseller = false,
     inStock = true,
     isPreorder = false,
+    stockQuantity = 0,
+    preorderQuantity = 0,
     tags = [],
     discountPct = null,
 }) {
@@ -259,7 +261,13 @@ export default function ProductInfo({
                         <Flex align="center" gap="2" flexShrink="0">
                             {(inStock || isPreorder) && price > 0 && (
                                 <Box w="200px">
-                                    <CartQuantityControl productId={productId} size="lg" />
+                                    <CartQuantityControl
+                                        productId={productId}
+                                        stockQuantity={stockQuantity}
+                                        preorderQuantity={preorderQuantity}
+                                        size="lg"
+                                        fullWidth
+                                    />
                                 </Box>
                             )}
                             <IconButton

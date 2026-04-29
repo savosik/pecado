@@ -12,6 +12,46 @@
         'Segoe UI Symbol', 'Noto Color Emoji';
 }
 
+/* Shake-анимация рамки счётчика корзины при попытке заказать больше доступного */
+@keyframes cart-shake {
+    0%, 100% { transform: translateX(0); }
+    15%, 55% { transform: translateX(-5px); }
+    30%, 70% { transform: translateX(5px); }
+    45%, 85% { transform: translateX(-3px); }
+}
+
+/* Tint-строка корзины для mixed-состояния (часть со склада, часть в предзаказ).
+   По умолчанию прозрачно — градиент проявляется только при hover. */
+.cart-row-mixed:hover {
+    background: linear-gradient(90deg,
+        var(--chakra-colors-green-50) 0%,
+        var(--chakra-colors-orange-50) 100%);
+}
+.cart-row-mixed:hover > td {
+    background-color: transparent !important;
+}
+html.dark .cart-row-mixed:hover,
+[data-theme="dark"] .cart-row-mixed:hover {
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--chakra-colors-green-900) 25%, transparent) 0%,
+        color-mix(in srgb, var(--chakra-colors-orange-900) 25%, transparent) 100%);
+}
+
+/* Тот же градиент-tint на mobile-карточке. На тач-устройствах :hover не
+   срабатывает в обычном смысле — это намеренно, чтобы карточка всегда оставалась
+   нейтральной и не отвлекала. */
+.cart-card-mixed:hover {
+    background: linear-gradient(90deg,
+        var(--chakra-colors-green-50) 0%,
+        var(--chakra-colors-orange-50) 100%);
+}
+html.dark .cart-card-mixed:hover,
+[data-theme="dark"] .cart-card-mixed:hover {
+    background: linear-gradient(90deg,
+        color-mix(in srgb, var(--chakra-colors-green-900) 25%, transparent) 0%,
+        color-mix(in srgb, var(--chakra-colors-orange-900) 25%, transparent) 100%);
+}
+
 /* Fix for native select options in dark mode */
 html.dark select option,
 html[data-theme="dark"] select option,

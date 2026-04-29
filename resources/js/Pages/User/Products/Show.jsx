@@ -19,7 +19,7 @@ export default function Show() {
     const user = auth?.user || null;
 
     const productInfoProps = buildProductInfoProps(product, currencySymbol);
-    const { price, isPreorder, inStock: isInStock } = productInfoProps;
+    const { price, isPreorder, inStock: isInStock, stockQuantity, preorderQuantity } = productInfoProps;
 
     // Флаг для глобального перехватчика QuickView в bootstrap.js:
     // на детальной странице товара клики по ссылкам /products/{slug} идут обычной навигацией.
@@ -105,6 +105,8 @@ export default function Show() {
                     price={price}
                     isPreorder={isPreorder}
                     inStock={isInStock}
+                    stockQuantity={stockQuantity}
+                    preorderQuantity={preorderQuantity}
                 />
             )}
         </UserLayout>

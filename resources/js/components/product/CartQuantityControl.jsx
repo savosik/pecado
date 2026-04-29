@@ -1,48 +1,45 @@
 import { memo, useEffect, useState, useRef, useCallback } from 'react';
-import { Box, Button, IconButton, Spinner } from '@chakra-ui/react';
-import { LuShoppingCart } from 'react-icons/lu';
+import { Box, Spinner } from '@chakra-ui/react';
 import { usePage } from '@inertiajs/react';
 import { useCartStore } from '@/stores/useCartStore';
 import QuantityControl from '@/components/common/QuantityControl';
-import { LOGIN_URL } from '@/constants/user';
-import { toastInfo } from '@/utils/toast';
-
-const SIZE_MAP = {
-    xs: { btn: 'xs', icon: 12 },
-    sm: { btn: 'sm', icon: 14 },
-    md: { btn: 'md', icon: 16 },
-    lg: { btn: 'lg', icon: 18 },
-    xl: { btn: 'xl', icon: 20 },
-};
+import { Tooltip } from '@/components/ui/tooltip';
+import { cartFrameProps, cartFrameState, cartFrameTooltip, splitQty } from '@/utils/cartFrame';
 
 /**
  * Контрол количества товара, привязанный к Zustand-стору корзины.
- * Показывает кнопку «В корзину» (qty=0) или pill [−][×][+].
- * Поддерживает spillover toast и индикатор синхронизации.
+ * Всегда показывает счётчик [−][N][+]. Вокруг — цветная рамка-индикатор:
+ *   серая (qty=0) → зелёная (всё со склада) → градиент → оранжевая (всё в предзаказ).
+ *
+ * Локально clamp-ит значение до stockQuantity + preorderQuantity, поэтому
+ * сервер не присылает spillover/clamped — тосты отключены. Превышение
+ * запускает shake-анимацию рамки. Гостям возвращает null.
  *
  * @param {{
  *   productId: number,
+ *   stockQuantity?: number,
+ *   preorderQuantity?: number,
  *   disabled?: boolean,
  *   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl',
  *   fullWidth?: boolean,
  *   variant?: 'full' | 'compact',
  * }} props
  */
-function CartQuantityControl({ productId, disabled = false, size = 'md', fullWidth = false, variant = 'full' }) {
+function CartQuantityControl({
+    productId,
+    stockQuantity = 0,
+    preorderQuantity = 0,
+    disabled = false,
+    size = 'md',
+    fullWidth = false,
+    variant = 'full',
+}) {
     const { auth } = usePage().props;
     const user = auth?.user && (auth.user.status === 'active' || auth.user.is_admin) ? auth.user : null;
 
     const [qty, setQty] = useState(0);
     const [syncing, setSyncing] = useState(false);
     const initRef = useRef(false);
-    const pidRef = useRef(Number(productId));
-
-    const s = SIZE_MAP[size] || SIZE_MAP.md;
-
-    // Обновляем pid ref при смене productId
-    useEffect(() => {
-        pidRef.current = Number(productId);
-    }, [productId]);
 
     useEffect(() => {
         if (!user) return;
@@ -53,7 +50,6 @@ function CartQuantityControl({ productId, disabled = false, size = 'md', fullWid
             initRef.current = true;
         }
 
-        // Инициализировать из текущего состояния стора
         setQty(store.getQuantity(productId));
         setSyncing(store.isSyncing(productId));
 
@@ -66,124 +62,102 @@ function CartQuantityControl({ productId, disabled = false, size = 'md', fullWid
         return unsub;
     }, [productId, user]);
 
-    // Слушаем cart:clamped и cart:spillover для информативных тостов
+    // Pulse-glow при первом добавлении товара пользователем (qty 0 → ≥1).
+    const [glowing, setGlowing] = useState(false);
     useEffect(() => {
-        const onClamped = (e) => {
-            const { productId: clampedPid, requested, clamped, instock, preorder } = e.detail;
-            if (clampedPid !== pidRef.current) return;
+        if (!glowing) return;
+        const t = setTimeout(() => setGlowing(false), 600);
+        return () => clearTimeout(t);
+    }, [glowing]);
 
-            const excess = requested - clamped;
-            const parts = [];
-            if (instock > 0) parts.push(`${instock} со склада`);
-            if (preorder > 0) parts.push(`${preorder} по предзаказу`);
-            if (excess > 0) parts.push(`${excess} недоступно`);
-
-            toastInfo(
-                'Количество скорректировано',
-                `Запрошено ${requested}. Установлено ${clamped}: ${parts.join(', ')}.`,
-            );
-        };
-
-        const onSpillover = (e) => {
-            const { productId: spillPid, instock, preorder } = e.detail;
-            if (spillPid !== pidRef.current) return;
-
-            const parts = [];
-            if (instock > 0) parts.push(`${instock} со склада`);
-            parts.push(`${preorder} по предзаказу`);
-
-            toastInfo(
-                'Распределение товара',
-                `Будет ${parts.join(' и ')}.`,
-            );
-        };
-
-        window.addEventListener('cart:clamped', onClamped);
-        window.addEventListener('cart:spillover', onSpillover);
-        return () => {
-            window.removeEventListener('cart:clamped', onClamped);
-            window.removeEventListener('cart:spillover', onSpillover);
-        };
+    // Shake-анимация рамки при попытке заказать больше, чем доступно.
+    const [shakeKey, setShakeKey] = useState(0);
+    const triggerShake = useCallback(() => {
+        setShakeKey((k) => k + 1);
     }, []);
 
-    const handleChange = useCallback((value) => {
-        useCartStore.getState().setQuantity(productId, value);
-    }, [productId]);
+    const maxTotal = Math.max(0, Number(stockQuantity || 0)) + Math.max(0, Number(preorderQuantity || 0));
 
-    const handleAdd = useCallback((e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (!user) {
-            window.location.href = LOGIN_URL;
-            return;
+    const handleChange = useCallback((value) => {
+        if (qty === 0 && value > 0) {
+            setGlowing(true);
         }
-        useCartStore.getState().setQuantity(productId, 1);
-    }, [user, productId]);
+        useCartStore.getState().setQuantity(productId, value);
+    }, [productId, qty]);
+
+    const handleLimitReached = useCallback((which) => {
+        if (which === 'max') triggerShake();
+    }, [triggerShake]);
+
+    if (!user) return null;
 
     const isCompact = variant === 'compact';
+    const { instock, preorder } = splitQty(qty, stockQuantity);
+    const frame = cartFrameProps(instock, preorder);
+    const state = cartFrameState(instock, preorder);
+    const glowColor = state === 'preorder' ? 'rgba(251, 146, 60, 0.45)' : 'rgba(34, 197, 94, 0.45)';
+    const outerGlow = glowing ? `0 0 0 6px ${glowColor}` : null;
+    const frameBoxShadow = outerGlow || frame.boxShadow;
+    const tooltipText = cartFrameTooltip(instock, preorder);
 
-    // Для гостей или если qty = 0 — кнопка «В корзину»
-    if (!user || qty <= 0) {
-        if (isCompact) {
-            return (
-                <IconButton
-                    aria-label="В корзину"
-                    size={s.btn}
-                    bg="#9e1b32"
-                    color="white"
-                    _hover={{ bg: '#7a1527' }}
-                    variant="solid"
-                    borderRadius="md"
-                    onClick={handleAdd}
-                    disabled={disabled}
-                >
-                    <LuShoppingCart size={s.icon} />
-                </IconButton>
-            );
-        }
-
-        return (
-            <Button
-                size={s.btn}
-                bg="#9e1b32"
-                color="white"
-                _hover={{ bg: '#7a1527' }}
-                variant="solid"
-                w="100%"
-                borderRadius="md"
-                fontWeight="600"
-                onClick={handleAdd}
-                disabled={disabled}
-            >
-                <LuShoppingCart size={s.icon} />
-                В корзину
-            </Button>
-        );
-    }
-
-    // Pill-контрол с индикатором синхронизации
-    return (
+    const frameBox = (
         <Box
-            w={isCompact ? undefined : '100%'}
+            key={shakeKey}
+            borderWidth="2px"
+            rounded="md"
+            overflow="hidden"
             display={isCompact ? 'inline-block' : 'block'}
-            position="relative"
+            transition="border-color 220ms ease-out, box-shadow 360ms ease-out, background 220ms ease-out"
+            animation={shakeKey ? 'cart-shake 360ms ease-in-out' : undefined}
+            {...frame}
+            boxShadow={frameBoxShadow}
         >
             <QuantityControl
                 value={qty}
                 onChange={handleChange}
+                onLimitReached={handleLimitReached}
                 min={0}
+                max={maxTotal > 0 ? maxTotal : undefined}
                 size={size}
                 fullWidth={isCompact ? false : fullWidth}
+                outerBorder={false}
             />
+        </Box>
+    );
+
+    return (
+        <Box
+            w={isCompact ? undefined : (fullWidth ? '100%' : undefined)}
+            display={isCompact ? 'inline-block' : 'block'}
+            position="relative"
+        >
+            {tooltipText ? (
+                <Tooltip content={tooltipText} positioning={{ placement: 'top' }} openDelay={250} closeDelay={0}>
+                    {frameBox}
+                </Tooltip>
+            ) : (
+                frameBox
+            )}
             {syncing && (
                 <Box
                     position="absolute"
                     top="50%"
                     right="-6"
                     transform="translateY(-50%)"
+                    pointerEvents="none"
+                    aria-hidden="true"
                 >
                     <Spinner size="xs" color="pecado.500" />
                 </Box>
+            )}
+            {disabled && (
+                <Box
+                    position="absolute"
+                    inset="0"
+                    bg="whiteAlpha.600"
+                    _dark={{ bg: 'blackAlpha.600' }}
+                    rounded="md"
+                />
             )}
         </Box>
     );

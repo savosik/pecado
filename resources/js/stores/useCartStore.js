@@ -8,6 +8,7 @@
  *   - Clamping: при ответе `clamped < requested` → коррекция
  *   - Server re-sync на Inertia navigate и кастомном событии cart:server-synced
  *   - Custom events: cart:changed, cart:clamped, cart:server-synced
+ *     (раньше был ещё cart:spillover — убран, фронт сам clamp-ит)
  *
  * Использование:
  *   import { useCartStore } from '@/stores/useCartStore';
@@ -22,7 +23,10 @@ import { router } from '@inertiajs/react';
 import { toastError } from '@/utils/toast';
 
 const STORAGE_KEY = 'cart:qty:v1';
-const DEBOUNCE_MS = 500;
+// Длиннее debounce комфортнее переживает long-press на +/-: накапливаем
+// финальное значение и шлём один POST. Фронт уже clamp-ит до stock+preorder,
+// так что spillover-коррекций сервера ждать не нужно.
+const DEBOUNCE_MS = 800;
 
 /** Таймеры debounce для каждого product_id */
 const debounceTimers = {};
@@ -221,7 +225,10 @@ export const useCartStore = create((set, get) => ({
                         return { quantities: next };
                     });
 
-                    // Если clamped < requested — уведомить UI о коррекции
+                    // Если clamped < requested — уведомить UI о коррекции.
+                    // Распределение по preorder больше не диспатчится: фронт
+                    // и так локально clamp-ит до stock+preorder, и шум событий
+                    // на каждое нажатие "+" замедлял UX.
                     if (clamped < quantity) {
                         window.dispatchEvent(new CustomEvent('cart:clamped', {
                             detail: {
@@ -229,17 +236,6 @@ export const useCartStore = create((set, get) => ({
                                 requested: quantity,
                                 clamped,
                                 maxTotal: data.max_total,
-                                instock: data.instock,
-                                preorder: data.preorder,
-                            },
-                        }));
-                    }
-                    // Если всё поместилось, но часть товаров ушла в предзаказ — уведомить
-                    else if (data.preorder > 0) {
-                        window.dispatchEvent(new CustomEvent('cart:spillover', {
-                            detail: {
-                                productId: pid,
-                                requested: quantity,
                                 instock: data.instock,
                                 preorder: data.preorder,
                             },

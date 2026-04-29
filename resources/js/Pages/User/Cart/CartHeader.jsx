@@ -2,17 +2,19 @@ import { useState } from 'react';
 import { Box, Flex, Heading, Text, Button } from '@chakra-ui/react';
 import { LuSettings2 } from 'react-icons/lu';
 import { pluralize } from '@/utils/pluralize';
+import { useCartStore } from '@/stores/useCartStore';
 import CartManagerDialog from './CartManagerDialog';
 
 /**
  * Заголовок страницы корзины — компактная одна строка.
+ * Счётчик «N товаров» считается оптимистично от стора, без серверного reload.
  */
-export default function CartHeader({ cart, cartDetails, userCarts = [] }) {
+export default function CartHeader({ cart, userCarts = [] }) {
     const [managerOpen, setManagerOpen] = useState(false);
 
     const name = cart?.name;
     const showName = name && name !== 'Корзина';
-    const totalQty = cartDetails?.total_quantity ?? 0;
+    const totalQty = useCartStore((s) => Object.values(s.quantities).reduce((a, b) => a + b, 0));
 
     return (
         <Box mb="2">

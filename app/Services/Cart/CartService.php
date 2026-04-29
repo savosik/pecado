@@ -342,6 +342,8 @@ class CartService implements CartServiceInterface
                 'item_type' => $item->item_type,
                 'is_unavailable' => ($stock['available'] + $stock['preorder']) <= 0,
                 'available_quantity' => $stock['available'],
+                'preorder_quantity' => $stock['preorder'],
+                'max_total' => $stock['available'] + $stock['preorder'],
                 'total_amount' => round($item->quantity * ($item->price ?? 0), 2),
                 'total_amount_regular' => round($item->quantity * $basePrice, 2),
                 'total_amount_discounted' => round($item->quantity * $userPrice, 2),

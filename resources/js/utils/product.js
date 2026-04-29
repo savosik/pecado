@@ -9,8 +9,9 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
         : null;
 
     const stockQty = product.stock_quantity || 0;
+    const preorderQty = product.preorder_quantity || 0;
     const isInStock = stockQty > 0;
-    const isPreorder = !isInStock && (product.preorder_quantity || 0) > 0;
+    const isPreorder = !isInStock && preorderQty > 0;
 
     return {
         productId: product.id,
@@ -27,6 +28,8 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
         isBestseller: product.is_bestseller,
         inStock: isInStock,
         isPreorder,
+        stockQuantity: stockQty,
+        preorderQuantity: preorderQty,
         tags: product.tags || [],
         discountPct: product.discount_percentage,
     };

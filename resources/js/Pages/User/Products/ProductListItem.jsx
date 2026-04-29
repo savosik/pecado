@@ -230,7 +230,13 @@ export default function ProductListItem({ product, loading = false }) {
                                 flexShrink="0"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             >
-                                <CartQuantityControl productId={product.id} size="sm" />
+                                <CartQuantityControl
+                                    productId={product.id}
+                                    stockQuantity={product.stock_quantity ?? 0}
+                                    preorderQuantity={product.preorder_quantity ?? 0}
+                                    size="sm"
+                                    fullWidth
+                                />
                             </Box>
                         )}
                     </Flex>

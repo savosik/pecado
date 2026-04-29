@@ -207,7 +207,13 @@ export default function SimilarProductItem({ product }) {
                             )}
                             {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
                                 <Box onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                                    <CartQuantityControl productId={product.id} size="xs" variant="compact" />
+                                    <CartQuantityControl
+                                        productId={product.id}
+                                        stockQuantity={product.stock_quantity ?? 0}
+                                        preorderQuantity={product.preorder_quantity ?? 0}
+                                        size="xs"
+                                        variant="compact"
+                                    />
                                 </Box>
                             )}
                         </Flex>

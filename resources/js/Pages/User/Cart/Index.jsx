@@ -10,6 +10,7 @@ import CartHeader from './CartHeader';
 import CartToolbar from './CartToolbar';
 import CartTable from './CartTable';
 import CartSummary from './CartSummary';
+import CartFlash from './CartFlash';
 import { useCartStore } from '@/stores/useCartStore';
 import { toastSuccess, toastInfo, toastError } from '@/utils/toast';
 
@@ -87,17 +88,31 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
         store.init(auth.user);
     }, [auth?.user]);
 
-    // Refresh page data when server syncs
+    // Reload cartDetails при кросс-таб добавлении товара, которого нет в items.
+    // Цены и итоги обновляются оптимистично от стора, поэтому регулярный
+    // reload-по-каждому-sync убран — это и был источник «ступенчатого лага».
     useEffect(() => {
-        const refresh = () =>
-            router.reload({ only: ['cartDetails'], preserveScroll: true });
-        window.addEventListener('cart:server-synced', refresh);
-        return () => window.removeEventListener('cart:server-synced', refresh);
+        const onChanged = () => {
+            const known = new Set((cartDetails?.items ?? []).map((it) => Number(it.product?.id)));
+            const stored = Object.keys(useCartStore.getState().quantities).map(Number);
+            const hasUnknown = stored.some((pid) => pid > 0 && !known.has(pid));
+            if (hasUnknown) {
+                router.reload({ only: ['cartDetails'], preserveScroll: true });
+            }
+        };
+        window.addEventListener('cart:changed', onChanged);
+        return () => window.removeEventListener('cart:changed', onChanged);
+    }, [cartDetails?.items]);
+
+    // ── Inline-flash для нечастых уведомлений (вместо мобильных тостов) ──
+    const [flash, setFlash] = useState(null);
+    const dismissFlash = useCallback(() => setFlash(null), []);
+    const showFlash = useCallback((next) => {
+        setFlash({ id: Date.now() + Math.random(), ...next });
     }, []);
 
-    // ── Spillover / clamping toasts ──
+    // ── Clamping fallback (редко, при рассинхроне между вкладками или с 1С) ──
     useEffect(() => {
-        // Количество скорректировано (запрошено больше, чем доступно)
         const onClamped = (e) => {
             const { requested, clamped, instock, preorder } = e.detail;
             const excess = requested - clamped;
@@ -107,45 +122,47 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
             if (preorder > 0) parts.push(`${preorder} по предзаказу`);
             if (excess > 0) parts.push(`${excess} недоступно`);
 
-            toastInfo(
-                'Количество скорректировано',
-                `Запрошено ${requested}. Установлено ${clamped}: ${parts.join(', ')}.`,
-            );
-        };
-
-        // Часть товаров ушла в предзаказ (без коррекции)
-        const onSpillover = (e) => {
-            const { instock, preorder } = e.detail;
-            const parts = [];
-
-            if (instock > 0) parts.push(`${instock} со склада`);
-            parts.push(`${preorder} по предзаказу`);
-
-            toastInfo(
-                'Распределение товара',
-                `Будет ${parts.join(' и ')}.`,
-            );
+            showFlash({
+                type: 'warning',
+                title: 'Количество скорректировано',
+                description: `Запрошено ${requested}. Установлено ${clamped}: ${parts.join(', ')}.`,
+            });
+            // Сервер срезал — подтянуть свежий cartDetails (цены, max_total).
+            router.reload({ only: ['cartDetails'], preserveScroll: true });
         };
 
         window.addEventListener('cart:clamped', onClamped);
-        window.addEventListener('cart:spillover', onSpillover);
-        return () => {
-            window.removeEventListener('cart:clamped', onClamped);
-            window.removeEventListener('cart:spillover', onSpillover);
-        };
-    }, []);
+        return () => window.removeEventListener('cart:clamped', onClamped);
+    }, [showFlash]);
 
     // ── Handlers ──
     const clampDesired = (n) =>
         Math.max(0, Math.min(999, Math.floor(Number(n) || 0)));
 
-    const handleSetProductQuantity = useCallback((productId, newQuantity) => {
-        useCartStore.getState().setQuantity(productId, clampDesired(newQuantity));
-    }, []);
-
     const handleRemoveItem = useCallback((productId) => {
-        handleSetProductQuantity(productId, 0);
-    }, [handleSetProductQuantity]);
+        const prevQty = useCartStore.getState().getQuantity(productId);
+        if (prevQty <= 0) return;
+        useCartStore.getState().setQuantity(productId, 0);
+        showFlash({
+            type: 'success',
+            title: 'Товар удалён',
+            description: `Можно вернуть ${prevQty} шт. в корзину.`,
+            action: {
+                label: 'Отменить',
+                onClick: () => useCartStore.getState().setQuantity(productId, prevQty),
+            },
+        });
+    }, [showFlash]);
+
+    const handleSetProductQuantity = useCallback((productId, newQuantity) => {
+        const next = clampDesired(newQuantity);
+        // qty=0 — это удаление, показываем flash с undo
+        if (next === 0) {
+            handleRemoveItem(productId);
+            return;
+        }
+        useCartStore.getState().setQuantity(productId, next);
+    }, [handleRemoveItem]);
 
     // FIX #1: use store.clear() instead of N×setQuantity
     const handleClearCart = useCallback(() => {
@@ -165,12 +182,28 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
     );
 
     const handleBulkDelete = useCallback(() => {
-        const count = selected.size;
-        const { setQuantity } = useCartStore.getState();
-        selected.forEach((pid) => setQuantity(pid, 0));
+        const { getQuantity, setQuantity } = useCartStore.getState();
+        const snapshot = Array.from(selected)
+            .map((pid) => [pid, getQuantity(pid)])
+            .filter(([, qty]) => qty > 0);
+        const count = snapshot.length;
+        if (count === 0) return;
+
+        snapshot.forEach(([pid]) => setQuantity(pid, 0));
         setSelected(new Set());
-        toastSuccess('Товары удалены', `Удалено ${count} позиций из корзины.`);
-    }, [selected]);
+        showFlash({
+            type: 'success',
+            title: 'Товары удалены',
+            description: `Удалено ${count} позиций из корзины.`,
+            action: {
+                label: 'Отменить',
+                onClick: () => {
+                    const { setQuantity: restore } = useCartStore.getState();
+                    snapshot.forEach(([pid, qty]) => restore(pid, qty));
+                },
+            },
+        });
+    }, [selected, showFlash]);
 
     const handleBulkExport = useCallback(async () => {
         try {
@@ -258,7 +291,9 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
             <Breadcrumbs items={breadcrumbs} />
 
             <Box spaceY="3">
-                <CartHeader cart={cart} cartDetails={cartDetails} userCarts={userCarts} />
+                <CartHeader cart={cart} userCarts={userCarts} />
+
+                <CartFlash flash={flash} onDismiss={dismissFlash} />
 
                 {items.length > 0 ? (
                     <>

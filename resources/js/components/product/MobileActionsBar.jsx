@@ -7,7 +7,7 @@ import CartQuantityControl from './CartQuantityControl';
  * MobileActionsBar — sticky-панель внизу экрана для мобильных.
  * Появляется когда основная секция (data-sticky-anchor) уходит из видимости.
  */
-export default function MobileActionsBar({ productId, name, price, isPreorder = false, inStock = true }) {
+export default function MobileActionsBar({ productId, name, price, isPreorder = false, inStock = true, stockQuantity = 0, preorderQuantity = 0 }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
     const [visible, setVisible] = useState(false);
@@ -49,7 +49,11 @@ export default function MobileActionsBar({ productId, name, price, isPreorder = 
                 </Box>
                 {(inStock || isPreorder) && price > 0 && (
                     <Box flexShrink={0}>
-                        <CartQuantityControl productId={productId} />
+                        <CartQuantityControl
+                            productId={productId}
+                            stockQuantity={stockQuantity}
+                            preorderQuantity={preorderQuantity}
+                        />
                     </Box>
                 )}
             </Flex>

@@ -244,7 +244,13 @@ function ProductCard({ product, loading = false }) {
                         {/* Корзина — скрываем, если нет в наличии и не предзаказ, или цена 0 */}
                         {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
                             <Box onClick={preventAndStop}>
-                                <CartQuantityControl productId={product.id} size="sm" fullWidth />
+                                <CartQuantityControl
+                                    productId={product.id}
+                                    stockQuantity={product.stock_quantity ?? 0}
+                                    preorderQuantity={product.preorder_quantity ?? 0}
+                                    size="sm"
+                                    fullWidth
+                                />
                             </Box>
                         )}
                     </Box>
