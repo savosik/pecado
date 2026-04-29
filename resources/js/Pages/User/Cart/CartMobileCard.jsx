@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cartFrameProps, cartFrameTooltip, cartFrameState, splitQty } from '@/utils/cartFrame';
 import { useLocalQuantity } from '@/hooks/useLocalQuantity';
+import { useCartStore } from '@/stores/useCartStore';
 
 /**
  * Mobile-карточка строки корзины. Селективная подписка на стор по pid.
@@ -27,6 +28,9 @@ function CartMobileCard({
     onToggle,
 }) {
     const [totalQty, handleChange] = useLocalQuantity(pid, onSetQty);
+
+    // Серверный split per-pid (синхронизирован между корзиной/страницей товара)
+    const serverSplit = useCartStore((s) => s.productSplits[pid]);
 
     const [shakeKey, setShakeKey] = useState(0);
     const triggerShake = useCallback(() => setShakeKey((k) => k + 1), []);
@@ -55,7 +59,10 @@ function CartMobileCard({
     if (totalQty <= 0) return null;
 
     const stockOnly = Math.max(0, maxTotal - preorderShareFromServer);
-    const { instock: instockQty, preorder: preorderQty } = splitQty(totalQty, stockOnly);
+    const { instock: instockQty, preorder: preorderQty } =
+        serverSplit && (serverSplit.instock + serverSplit.preorder) === totalQty
+            ? serverSplit
+            : splitQty(totalQty, stockOnly);
     const tip = cartFrameTooltip(instockQty, preorderQty);
     const tintState = cartFrameState(instockQty, preorderQty);
 

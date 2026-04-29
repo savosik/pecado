@@ -71,16 +71,36 @@ function parseQuantitiesMap(data) {
 /**
  * Парсит ответ /api/cart/active-quantities. Поддерживает обе формы:
  *   - старая: {pid: qty, ...}
- *   - новая:  {quantities: {pid: qty}, totals: {total_quantity, instock_quantity, preorder_quantity}}
+ *   - новая:  {quantities: {pid: qty}, splits: {pid: {instock,preorder}}, totals: {...}}
  */
 function parseSnapshot(data) {
     if (data && typeof data === 'object' && data.quantities && typeof data.quantities === 'object') {
         return {
             quantities: parseQuantitiesMap(data.quantities),
+            splits: parseSplits(data.splits),
             totals: parseTotals(data.totals),
         };
     }
-    return { quantities: parseQuantitiesMap(data), totals: { total: 0, instock: 0, preorder: 0 } };
+    return {
+        quantities: parseQuantitiesMap(data),
+        splits: {},
+        totals: { total: 0, instock: 0, preorder: 0 },
+    };
+}
+
+function parseSplits(data) {
+    const result = {};
+    if (data && typeof data === 'object') {
+        for (const [k, v] of Object.entries(data)) {
+            if (!v || typeof v !== 'object') continue;
+            const instock = Math.max(0, Number(v.instock || 0));
+            const preorder = Math.max(0, Number(v.preorder || 0));
+            if (instock + preorder > 0) {
+                result[Number(k)] = { instock, preorder };
+            }
+        }
+    }
+    return result;
 }
 
 function parseTotals(data) {
@@ -109,6 +129,16 @@ export const useCartStore = create((set, get) => ({
      * @type {{ total: number, instock: number, preorder: number }}
      */
     cartTotals: { total: 0, instock: 0, preorder: 0 },
+
+    /**
+     * Per-product split на текущий момент по серверным данным:
+     * { [pid]: { instock, preorder } }. Используется для цветной рамки
+     * counter везде в проекте — данные согласованы между корзиной и
+     * карточкой товара. Обновляется при init/sync и после ответа на
+     * set-product-quantity.
+     * @type {Object<number, { instock: number, preorder: number }>}
+     */
+    productSplits: {},
 
     /** Флаг, что данные загружены с сервера */
     loaded: false,
@@ -146,9 +176,9 @@ export const useCartStore = create((set, get) => ({
 
         try {
             const { data } = await window.axios.get('/api/cart/active-quantities');
-            const { quantities, totals } = parseSnapshot(data);
+            const { quantities, splits, totals } = parseSnapshot(data);
 
-            set({ quantities, cartTotals: totals, loaded: true, loading: false });
+            set({ quantities, productSplits: splits, cartTotals: totals, loaded: true, loading: false });
             saveToCache(quantities);
         } catch {
             // При ошибке оставляем кешированные данные
@@ -279,6 +309,22 @@ export const useCartStore = create((set, get) => ({
                     set({ cartTotals: parseTotals(data.cart_totals) });
                 }
 
+                // Per-pid split (актуальное распределение склад/предзаказ для
+                // этого товара в корзине). Используется для цветной рамки counter.
+                if (data && (typeof data.instock === 'number' || typeof data.preorder === 'number')) {
+                    const inS = Math.max(0, Number(data.instock || 0));
+                    const pre = Math.max(0, Number(data.preorder || 0));
+                    set((state) => {
+                        const splits = { ...state.productSplits };
+                        if (inS + pre > 0) {
+                            splits[pid] = { instock: inS, preorder: pre };
+                        } else {
+                            delete splits[pid];
+                        }
+                        return { productSplits: splits };
+                    });
+                }
+
                 // Dispatch cart:changed и cart:server-synced
                 window.dispatchEvent(new CustomEvent('cart:changed'));
                 window.dispatchEvent(new CustomEvent('cart:server-synced'));
@@ -336,6 +382,7 @@ export const useCartStore = create((set, get) => ({
         });
         set({
             quantities: {},
+            productSplits: {},
             cartTotals: { total: 0, instock: 0, preorder: 0 },
             loaded: false,
             loading: false,
@@ -355,9 +402,9 @@ export const useCartStore = create((set, get) => ({
     _serverSync: async () => {
         try {
             const { data } = await window.axios.get('/api/cart/active-quantities');
-            const { quantities, totals } = parseSnapshot(data);
+            const { quantities, splits, totals } = parseSnapshot(data);
 
-            set({ quantities, cartTotals: totals, loaded: true });
+            set({ quantities, productSplits: splits, cartTotals: totals, loaded: true });
             saveToCache(quantities);
             window.dispatchEvent(new CustomEvent('cart:changed'));
         } catch {

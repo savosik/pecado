@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cartFrameProps, cartFrameTooltip, cartRowTint, splitQty } from '@/utils/cartFrame';
 import { useLocalQuantity } from '@/hooks/useLocalQuantity';
+import { useCartStore } from '@/stores/useCartStore';
 
 /**
  * Desktop-строка таблицы корзины. Селективная подписка на стор по pid —
@@ -30,6 +31,10 @@ function CartTableRow({
     // Локальный qty с debounced пушем в store (220 мс) — счётчик летает,
     // итоги/футер обновляются только в конце серии.
     const [totalQty, handleChange] = useLocalQuantity(pid, onSetQty);
+
+    // Серверный split per-pid (для согласованной цветной рамки между корзиной
+    // и страницей товара/каталогом). Fallback — локальная оценка ниже.
+    const serverSplit = useCartStore((s) => s.productSplits[pid]);
 
     // Локальный shake при превышении max_total
     const [shakeKey, setShakeKey] = useState(0);
@@ -59,10 +64,14 @@ function CartTableRow({
 
     if (totalQty <= 0) return null;
 
-    // Распределение между складом и предзаказом — оптимистично из stock_quantity:
-    // первое (max_total - preorder_share) идёт со склада, остальное в предзаказ.
+    // Распределение между складом и предзаказом. Приоритет — серверный
+    // split (точное состояние корзины), fallback — оценка от max_total
+    // и preorder-доли из cartDetails.
     const stockOnly = Math.max(0, maxTotal - preorderShareFromServer);
-    const { instock: instockQty, preorder: preorderQty } = splitQty(totalQty, stockOnly);
+    const { instock: instockQty, preorder: preorderQty } =
+        serverSplit && (serverSplit.instock + serverSplit.preorder) === totalQty
+            ? serverSplit
+            : splitQty(totalQty, stockOnly);
     const tip = cartFrameTooltip(instockQty, preorderQty);
 
     const sumDiscounted = priceDiscounted * totalQty;

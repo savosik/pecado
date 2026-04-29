@@ -89,10 +89,17 @@ function CartQuantityControl({
         if (which === 'max') triggerShake();
     }, [triggerShake]);
 
+    const split = useCartStore((s) => s.productSplits[Number(productId)]);
+
     if (!user) return null;
 
     const isCompact = variant === 'compact';
-    const { instock, preorder } = splitQty(qty, stockQuantity);
+    // Приоритет — серверный split (синхронный с корзиной); fallback —
+    // локальный split от текущего stock_quantity товара (для optimistic
+    // обновления, когда сервер ещё не ответил).
+    const { instock, preorder } = split && (split.instock + split.preorder) === qty
+        ? split
+        : splitQty(qty, stockQuantity);
     const frame = cartFrameProps(instock, preorder);
     const state = cartFrameState(instock, preorder);
     const glowColor = state === 'preorder' ? 'rgba(251, 146, 60, 0.45)' : 'rgba(34, 197, 94, 0.45)';

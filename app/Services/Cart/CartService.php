@@ -286,16 +286,32 @@ class CartService implements CartServiceInterface
     }
 
     /**
-     * Active cart snapshot: quantities map + agregat totals (для бейджей корзины).
+     * Active cart snapshot: quantities map + per-product split (instock/preorder)
+     * + agregat totals (для бейджей корзины и цветной рамки counter).
      *
-     * @return array{quantities: array<int,int>, totals: array}
+     * @return array{quantities: array<int,int>, splits: array<int, array{instock:int, preorder:int}>, totals: array}
      */
     public function getActiveCartSnapshot(User $user): array
     {
         $cart = $this->getOrCreateActiveCart($user);
 
+        $quantities = [];
+        $splits = [];
+        foreach ($cart->items()->select('product_id', 'item_type', 'quantity')->get() as $item) {
+            $pid = (int) $item->product_id;
+            $qty = (int) $item->quantity;
+            $quantities[$pid] = ($quantities[$pid] ?? 0) + $qty;
+            $splits[$pid] = $splits[$pid] ?? ['instock' => 0, 'preorder' => 0];
+            if ($item->item_type === 'instock') {
+                $splits[$pid]['instock'] += $qty;
+            } elseif ($item->item_type === 'preorder') {
+                $splits[$pid]['preorder'] += $qty;
+            }
+        }
+
         return [
-            'quantities' => $this->getActiveQuantities($user),
+            'quantities' => $quantities,
+            'splits' => $splits,
             'totals' => $this->buildCartTotals($cart, $user),
         ];
     }

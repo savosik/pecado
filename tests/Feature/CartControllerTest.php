@@ -113,6 +113,9 @@ class CartControllerTest extends TestCase
         $this->assertEquals(12, $data['totals']['total_quantity']);
         $this->assertEquals(10, $data['totals']['instock_quantity']);
         $this->assertEquals(2, $data['totals']['preorder_quantity']);
+        // Per-pid splits для цветной рамки counter
+        $this->assertEquals(['instock' => 3, 'preorder' => 2], $data['splits'][$product1->id]);
+        $this->assertEquals(['instock' => 7, 'preorder' => 0], $data['splits'][$product2->id]);
     }
 
     // ─── API: Set Product Quantity (Spillover) ─────────────
