@@ -24,7 +24,6 @@ export default function LoginForm() {
                 toaster.create({
                     title: 'С возвращением!',
                     description: getRandomLoginQuote(),
-                    type: 'success',
                     duration: 6000,
                 });
             },
