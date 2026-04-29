@@ -71,10 +71,15 @@ export function ProductQuickViewProvider({ children }) {
         };
     }, []);
 
-    // Закрывать QuickView при Inertia-навигации (клик по ссылке внутри модалки)
+    // Закрывать QuickView при Inertia-навигации (клик по ссылке внутри модалки).
+    // НЕ закрываем при partial reload (router.reload({ only: [...] })) — это
+    // фоновая подгрузка пропсов, например cartDetails после добавления нового
+    // товара через QuickView на странице корзины.
     useEffect(() => {
-        return router.on('before', () => {
-            if (open) closeQuickView();
+        return router.on('before', (event) => {
+            const visit = event.detail?.visit;
+            const isPartial = Array.isArray(visit?.only) && visit.only.length > 0;
+            if (open && !isPartial) closeQuickView();
         });
     }, [open, closeQuickView]);
 
