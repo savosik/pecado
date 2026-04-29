@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\User\PasswordResetController;
 use App\Http\Controllers\User\SocialAuthController;
 use Illuminate\Support\Facades\Route;
@@ -48,8 +47,11 @@ Route::middleware('auth')->group(function () {
 // ──────────────────────────────────────────────
 require __DIR__.'/user.php';
 
-// Каталог товаров с поиском (API)
-Route::get('/catalog', [CatalogController::class, 'index'])->name('catalog');
+// Старый путь /catalog → постоянный редирект на /products. Сохраняется,
+// чтобы битые ссылки в AI-генерируемом контенте и старые SEO-ссылки
+// уводили на актуальный каталог, а не на 404.
+Route::permanentRedirect('/catalog', '/products');
+Route::get('/catalog/{any}', fn () => redirect('/products', 301))->where('any', '.*');
 
 // Просмотр профиля пользователя по секретному токену (для менеджеров без доступа в админку)
 Route::get('/preview/user/{token}', [\App\Http\Controllers\UserPreviewController::class, 'show'])->name('user.preview');

@@ -258,7 +258,7 @@ PROMPT;
             'callToAction' => [
                 'description' => 'CTA-блок с заголовком, текстом и кнопкой',
                 'data_schema' => ['title' => 'string', 'text' => 'string', 'buttonText' => 'string', 'buttonUrl' => 'string', 'style' => 'primary|secondary|gradient'],
-                'example' => ['type' => 'callToAction', 'data' => ['title' => 'Заголовок', 'text' => 'Описание', 'buttonText' => 'Кнопка', 'buttonUrl' => '/catalog', 'style' => 'primary']],
+                'example' => ['type' => 'callToAction', 'data' => ['title' => 'Заголовок', 'text' => 'Описание', 'buttonText' => 'Кнопка', 'buttonUrl' => '/products', 'style' => 'primary']],
             ],
             'alertBanner' => [
                 'description' => 'Баннер-уведомление',

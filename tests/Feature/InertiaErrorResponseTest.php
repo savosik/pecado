@@ -50,4 +50,11 @@ class InertiaErrorResponseTest extends TestCase
         $response->assertStatus(404);
         $response->assertJson(['message' => 'Не найдено']);
     }
+
+    public function test_legacy_catalog_url_redirects_to_products(): void
+    {
+        $this->get('/catalog')->assertRedirect('/products')->assertStatus(301);
+        $this->get('/catalog/some-slug')->assertRedirect('/products')->assertStatus(301);
+        $this->get('/catalog/category/foo/bar')->assertRedirect('/products')->assertStatus(301);
+    }
 }
