@@ -1,7 +1,17 @@
 import axios from 'axios';
+import { router } from '@inertiajs/react';
 import { toastError } from '@/utils/toast';
 
 window.axios = axios;
+
+// Подавляем встроенный Inertia error-iframe — если сервер всё-таки вернёт
+// не-Inertia ответ (nginx 502, прокси-сбой), показываем тост вместо
+// модалки с сырым HTML/JSON. Нормальные 404/500/503 рендерятся как
+// Inertia ErrorPage через bootstrap/app.php.
+router.on('invalid', (event) => {
+    event.preventDefault();
+    toastError('Не удалось открыть страницу', 'Попробуйте ещё раз через минуту.');
+});
 
 window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 

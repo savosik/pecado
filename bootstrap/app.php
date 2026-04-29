@@ -41,8 +41,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->respond(function (Response $response, Throwable $exception, Request $request) {
             if (in_array($response->getStatusCode(), [500, 503, 404, 403])) {
-                // API-маршруты — возвращаем JSON, а не Inertia-страницу
-                if ($request->is('api/*') || $request->expectsJson()) {
+                // API-маршруты и AJAX-запросы — возвращаем JSON, а не Inertia-страницу.
+                // Inertia-запросы тоже шлют Accept: application/json, поэтому отличаем
+                // их по заголовку X-Inertia — иначе пользователю бы показывался iframe
+                // с сырым JSON-ответом вместо нашей страницы ошибки.
+                if ($request->is('api/*') || ($request->expectsJson() && ! $request->header('X-Inertia'))) {
                     return response()->json([
                         'message' => match ($response->getStatusCode()) {
                             404 => 'Не найдено',
