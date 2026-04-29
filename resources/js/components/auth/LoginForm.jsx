@@ -4,10 +4,12 @@ import { Field } from '@/components/ui/field';
 import { Checkbox } from '@/components/ui/checkbox';
 import PasswordInput from '@/components/ui/password-input';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
+import { toaster } from '@/components/ui/toaster';
+import { getRandomLoginQuote } from '@/data/loginQuotes';
 // import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
 
 export default function LoginForm() {
-    const { openRegister, openForgotPassword } = useAuthDialog();
+    const { openRegister, openForgotPassword, close } = useAuthDialog();
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -16,7 +18,17 @@ export default function LoginForm() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/login');
+        post('/login', {
+            onSuccess: () => {
+                close();
+                toaster.create({
+                    title: 'С возвращением!',
+                    description: getRandomLoginQuote(),
+                    type: 'success',
+                    duration: 6000,
+                });
+            },
+        });
     };
 
     const inputStyles = {

@@ -6,7 +6,7 @@ import PasswordInput from '@/components/ui/password-input';
 // import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
 
 export default function RegisterForm() {
-    const { openLogin } = useAuthDialog();
+    const { openLogin, close } = useAuthDialog();
     const { data, setData, post, processing, errors } = useForm({
         email: '',
         password: '',
@@ -15,7 +15,9 @@ export default function RegisterForm() {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/register');
+        post('/register', {
+            onSuccess: () => close(),
+        });
     };
 
     const inputStyles = {
