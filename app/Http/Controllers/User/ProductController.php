@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Enums\CatalogSort;
+use App\Enums\UserStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Category;
@@ -467,6 +468,24 @@ class ProductController extends Controller
 
                 return ($va['stock_quantity'] ?? 0) > 0 || ($va['preorder_quantity'] ?? 0) > 0;
             }));
+
+            // Гость и неактивные пользователи не должны видеть цены — даже в Inertia props.
+            // Фронт уже скрывает их через user-проверку, но цена всё равно «утекает» в HTML.
+            $user = auth()->user();
+            $canViewPrices = $user && ($user->is_admin || $user->status === UserStatus::ACTIVE);
+            if (! $canViewPrices) {
+                foreach ($variantArrays as &$va) {
+                    unset(
+                        $va['base_price'],
+                        $va['sale_price'],
+                        $va['original_price'],
+                        $va['discount_percentage'],
+                        $va['price_converted'],
+                        $va['original_price_converted'],
+                    );
+                }
+                unset($va);
+            }
 
             $variants = $variantArrays;
         }
