@@ -12,7 +12,7 @@ export default function AuthLayout({ children, title, subtitle, image = '/images
                     flex="1"
                     direction="column"
                     justify="center"
-                    bg="white"
+                    bg="bg"
                     px={{ base: 6, sm: 10, lg: 16 }}
                     py={10}
                     overflowY="auto"
@@ -35,14 +35,14 @@ export default function AuthLayout({ children, title, subtitle, image = '/images
                         <VStack gap={1} align="start" mb={8}>
                             <Heading
                                 size="2xl"
-                                color="gray.900"
+                                color="fg"
                                 fontWeight="bold"
                                 letterSpacing="-0.02em"
                             >
                                 {title}
                             </Heading>
                             {subtitle && (
-                                <Text color="gray.500" fontSize="md" mt={1}>
+                                <Text color="fg.muted" fontSize="md" mt={1}>
                                     {subtitle}
                                 </Text>
                             )}

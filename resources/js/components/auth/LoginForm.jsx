@@ -50,7 +50,7 @@ export default function LoginForm() {
             <form onSubmit={handleSubmit}>
                 <Stack gap={4}>
                     <Field
-                        label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Email</Text>}
+                        label={<Text color="fg" fontSize="sm" fontWeight="medium">Email</Text>}
                         invalid={!!errors.email}
                         errorText={errors.email}
                     >
@@ -65,7 +65,7 @@ export default function LoginForm() {
                     </Field>
 
                     <Field
-                        label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Пароль</Text>}
+                        label={<Text color="fg" fontSize="sm" fontWeight="medium">Пароль</Text>}
                         invalid={!!errors.password}
                         errorText={errors.password}
                     >
@@ -84,7 +84,7 @@ export default function LoginForm() {
                             colorPalette="red"
                             size="sm"
                         >
-                            <Text color="gray.600" fontSize="sm">Запомнить меня</Text>
+                            <Text color="fg.muted" fontSize="sm">Запомнить меня</Text>
                         </Checkbox>
 
                         <Text
@@ -121,7 +121,7 @@ export default function LoginForm() {
             {/* <SocialAuthButtons label="Или войдите через" /> */}
 
             <Box mt={5} textAlign="center">
-                <Text color="gray.500" fontSize="sm">
+                <Text color="fg.muted" fontSize="sm">
                     Нет аккаунта?{' '}
                     <Text
                         as="span"

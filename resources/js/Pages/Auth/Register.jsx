@@ -33,7 +33,7 @@ export default function Register({ errors }) {
     };
 
     const labelEl = (text) => (
-        <Text color="gray.700" fontSize="sm" fontWeight="medium">{text}</Text>
+        <Text color="fg" fontSize="sm" fontWeight="medium">{text}</Text>
     );
 
     return (
@@ -95,7 +95,7 @@ export default function Register({ errors }) {
                 {/* <SocialAuthButtons label="Или зарегистрируйтесь через" /> */}
 
                 <Box mt={6} textAlign="center">
-                    <Text color="gray.500" fontSize="sm">
+                    <Text color="fg.muted" fontSize="sm">
                         Уже есть аккаунт?{' '}
                         <Link href="/login">
                             <Text

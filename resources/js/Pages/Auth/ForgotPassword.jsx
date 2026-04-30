@@ -56,7 +56,7 @@ export default function ForgotPassword({ errors }) {
                 <form onSubmit={handleSubmit}>
                     <Stack gap={5}>
                         <Field
-                            label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Email</Text>}
+                            label={<Text color="fg" fontSize="sm" fontWeight="medium">Email</Text>}
                             invalid={!!errors.email}
                             errorText={errors.email}
                         >
@@ -91,7 +91,7 @@ export default function ForgotPassword({ errors }) {
                 </form>
 
                 <Box mt={6} textAlign="center">
-                    <Text color="gray.500" fontSize="sm">
+                    <Text color="fg.muted" fontSize="sm">
                         Вспомнили пароль?{' '}
                         <Link href="/login">
                             <Text

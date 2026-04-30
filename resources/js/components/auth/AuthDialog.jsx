@@ -63,7 +63,7 @@ export default function AuthDialog() {
                             <Box>
                                 <Heading
                                     size="lg"
-                                    color="gray.900"
+                                    color="fg"
                                     fontWeight="bold"
                                     letterSpacing="-0.01em"
                                 >

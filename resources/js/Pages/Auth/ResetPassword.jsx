@@ -44,7 +44,7 @@ export default function ResetPassword({ token, email, errors }) {
                 <form onSubmit={handleSubmit}>
                     <Stack gap={5}>
                         <Field
-                            label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Email</Text>}
+                            label={<Text color="fg" fontSize="sm" fontWeight="medium">Email</Text>}
                             invalid={!!errors.email}
                             errorText={errors.email}
                         >
@@ -59,7 +59,7 @@ export default function ResetPassword({ token, email, errors }) {
                         </Field>
 
                         <Field
-                            label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Новый пароль</Text>}
+                            label={<Text color="fg" fontSize="sm" fontWeight="medium">Новый пароль</Text>}
                             invalid={!!errors.password}
                             errorText={errors.password}
                         >
@@ -73,7 +73,7 @@ export default function ResetPassword({ token, email, errors }) {
                         </Field>
 
                         <Field
-                            label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Подтвердите пароль</Text>}
+                            label={<Text color="fg" fontSize="sm" fontWeight="medium">Подтвердите пароль</Text>}
                             invalid={!!errors.password_confirmation}
                             errorText={errors.password_confirmation}
                         >

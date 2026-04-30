@@ -47,14 +47,14 @@ export default function ForgotPasswordForm() {
                 </Box>
             )}
 
-            <Text color="gray.500" fontSize="sm" mb={4}>
+            <Text color="fg.muted" fontSize="sm" mb={4}>
                 Введите email и мы отправим ссылку для сброса пароля
             </Text>
 
             <form onSubmit={handleSubmit}>
                 <Stack gap={4}>
                     <Field
-                        label={<Text color="gray.700" fontSize="sm" fontWeight="medium">Email</Text>}
+                        label={<Text color="fg" fontSize="sm" fontWeight="medium">Email</Text>}
                         invalid={!!errors.email}
                         errorText={errors.email}
                     >
@@ -87,7 +87,7 @@ export default function ForgotPasswordForm() {
             </form>
 
             <Box mt={5} textAlign="center">
-                <Text color="gray.500" fontSize="sm">
+                <Text color="fg.muted" fontSize="sm">
                     Вспомнили пароль?{' '}
                     <Text
                         as="span"

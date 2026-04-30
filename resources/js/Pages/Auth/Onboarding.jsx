@@ -108,14 +108,14 @@ function ProgressBar({ step, total }) {
     return (
         <Box w="full" mb={8}>
             <Flex justify="space-between" mb={2}>
-                <Text fontSize="xs" color="gray.500" fontWeight="medium">
+                <Text fontSize="xs" color="fg.muted" fontWeight="medium">
                     Шаг {step} из {total}
                 </Text>
-                <Text fontSize="xs" color="gray.500">
+                <Text fontSize="xs" color="fg.muted">
                     {Math.round(pct)}%
                 </Text>
             </Flex>
-            <Box w="full" h="2" bg="gray.100" borderRadius="full" overflow="hidden">
+            <Box w="full" h="2" bg="bg.muted" borderRadius="full" overflow="hidden">
                 <Box
                     h="full"
                     bg="#9e1b32"
@@ -260,7 +260,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                 <Flex
                     flex="1"
                     direction="column"
-                    bg="white"
+                    bg="bg"
                     px={{ base: 6, sm: 10, lg: 16 }}
                     py={8}
                     overflowY="auto"
@@ -281,7 +281,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    color="gray.400"
+                                    color="fg.subtle"
                                     fontWeight="normal"
                                     _hover={{ color: 'gray.600' }}
                                     onClick={handleSkip}
@@ -298,13 +298,13 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                         <VStack gap={1} align="start" mb={6}>
                             <Heading
                                 size="xl"
-                                color="gray.900"
+                                color="fg"
                                 fontWeight="bold"
                                 letterSpacing="-0.02em"
                             >
                                 {stepMeta[currentStep]?.title}
                             </Heading>
-                            <Text color="gray.500" fontSize="md">
+                            <Text color="fg.muted" fontSize="md">
                                 {stepMeta[currentStep]?.subtitle}
                             </Text>
                         </VStack>
@@ -314,7 +314,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                             {currentStep === 'personal' && (
                                 <VStack gap={4} align="stretch">
                                     <Field
-                                        label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Ваше ФИО или Название компании</Text>}
+                                        label={<Text fontSize="sm" fontWeight="medium" color="fg">Ваше ФИО или Название компании</Text>}
                                         invalid={!!personalErrors.name}
                                         errorText={personalErrors.name}
                                         required
@@ -329,7 +329,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
 
                                     <SimpleGrid columns={2} gap={3}>
                                         <Field
-                                            label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Страна</Text>}
+                                            label={<Text fontSize="sm" fontWeight="medium" color="fg">Страна</Text>}
                                             invalid={!!personalErrors.country}
                                             errorText={personalErrors.country}
                                             required
@@ -338,13 +338,13 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                                 as="select"
                                                 value={data.country}
                                                 onChange={(e) => setData('country', e.target.value)}
-                                                bg="white"
-                                                color="gray.900"
+                                                bg="bg"
+                                                color="fg"
                                                 borderRadius="lg"
                                                 h="11"
                                                 fontSize="sm"
                                                 border="1px solid"
-                                                borderColor="gray.300"
+                                                borderColor="border"
                                                 _hover={{ borderColor: "gray.400" }}
                                                 _focus={{
                                                     borderColor: "#9e1b32",
@@ -362,7 +362,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                         </Field>
 
                                         <Field
-                                            label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Город</Text>}
+                                            label={<Text fontSize="sm" fontWeight="medium" color="fg">Город</Text>}
                                             invalid={!!personalErrors.city}
                                             errorText={personalErrors.city}
                                             required
@@ -377,7 +377,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                     </SimpleGrid>
 
                                     <Field
-                                        label={<Text fontSize="sm" fontWeight="medium" color="gray.700">Телефон</Text>}
+                                        label={<Text fontSize="sm" fontWeight="medium" color="fg">Телефон</Text>}
                                         invalid={!!personalErrors.phone}
                                         errorText={personalErrors.phone}
                                         required
@@ -395,7 +395,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                             {currentStep === 'business' && (
                                 <VStack gap={5} align="stretch">
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={3}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={3}>
                                             Тип бизнеса (можно выбрать несколько)
                                         </Text>
                                         <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
@@ -414,7 +414,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                     </Box>
 
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={2}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={2}>
                                             Название компании
                                         </Text>
                                         <Input
@@ -426,7 +426,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                     </Box>
 
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={2}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={2}>
                                             Сайт или соц. сети
                                         </Text>
                                         <Input
@@ -443,7 +443,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                             {currentStep === 'experience' && (
                                 <VStack gap={5} align="stretch">
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={3}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={3}>
                                             Опыт работы в отрасли
                                         </Text>
                                         <SimpleGrid columns={2} gap={3}>
@@ -460,7 +460,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                     </Box>
 
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={3}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={3}>
                                             Ожидаемый объём закупок в месяц
                                         </Text>
                                         <SimpleGrid columns={1} gap={2}>
@@ -483,7 +483,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                             colorPalette="red"
                                             size="sm"
                                         >
-                                            <Text fontSize="sm" color="gray.700">
+                                            <Text fontSize="sm" color="fg">
                                                 Есть физическая точка продаж
                                             </Text>
                                         </Checkbox>
@@ -491,7 +491,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
 
                                     {data.has_physical_store && (
                                         <Box>
-                                            <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={3}>
+                                            <Text fontSize="sm" fontWeight="medium" color="fg" mb={3}>
                                                 Сколько торговых точек?
                                             </Text>
                                             <SimpleGrid columns={4} gap={2}>
@@ -514,7 +514,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                             {currentStep === 'categories' && (
                                 <VStack gap={5} align="stretch">
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={3}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={3}>
                                             Интересующие категории товаров
                                         </Text>
                                         <SimpleGrid columns={{ base: 2, md: 3 }} gap={3}>
@@ -536,7 +536,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                             {currentStep === 'final' && (
                                 <VStack gap={5} align="stretch">
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={3}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={3}>
                                             Как вы узнали о Pecado?
                                         </Text>
                                         <SimpleGrid columns={2} gap={3}>
@@ -553,7 +553,7 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                     </Box>
 
                                     <Box>
-                                        <Text fontSize="sm" fontWeight="medium" color="gray.700" mb={2}>
+                                        <Text fontSize="sm" fontWeight="medium" color="fg" mb={2}>
                                             Дополнительная информация
                                         </Text>
                                         <Textarea
@@ -561,9 +561,9 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                             onChange={(e) => setData('additional_info', e.target.value)}
                                             placeholder="Расскажите подробнее о ваших потребностях, пожеланиях или задайте вопрос..."
                                             rows={4}
-                                            bg="white"
-                                            borderColor="gray.300"
-                                            color="gray.900"
+                                            bg="bg"
+                                            borderColor="border"
+                                            color="fg"
                                             borderRadius="lg"
                                             fontSize="sm"
                                             _placeholder={{ color: "gray.400" }}
@@ -584,8 +584,8 @@ export default function Onboarding({ questionnaire, rootCategories = [], user = 
                                         type="button"
                                         variant="outline"
                                         onClick={prev}
-                                        borderColor="gray.300"
-                                        color="gray.600"
+                                        borderColor="border"
+                                        color="fg.muted"
                                         borderRadius="lg"
                                         _hover={{ bg: 'gray.50' }}
                                         size="lg"
