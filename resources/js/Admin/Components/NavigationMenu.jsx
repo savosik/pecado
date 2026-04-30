@@ -33,7 +33,7 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
                         <HStack flex="1" gap={3}>
                             <Icon as={group.icon} boxSize={5} color="fg.muted" />
                             {!isCollapsed && (
-                                <Text fontSize="sm" fontWeight="medium" color="fg.default">
+                                <Text fontSize="sm" fontWeight="medium" color="fg">
                                     {group.title}
                                 </Text>
                             )}
@@ -55,9 +55,9 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
                                             py={2}
                                             gap={3}
                                             bg={isActive(item.path) ? "bg.emphasized" : "transparent"}
-                                            color={isActive(item.path) ? "fg.default" : "fg.muted"}
+                                            color={isActive(item.path) ? "fg" : "fg.muted"}
                                             borderRadius="md"
-                                            _hover={{ bg: "bg.muted", color: "fg.default" }}
+                                            _hover={{ bg: "bg.muted", color: "fg" }}
                                             transition="all 0.2s"
                                         >
                                             <Icon as={item.icon} boxSize={4} />

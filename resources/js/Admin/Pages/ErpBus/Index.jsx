@@ -138,7 +138,7 @@ const Pagination = ({ data, paramName = 'page' }) => {
                         fontSize="sm"
                         borderRadius="md"
                         bg={link.active ? 'blue.500' : 'transparent'}
-                        color={link.active ? 'white' : 'fg.default'}
+                        color={link.active ? 'white' : 'fg'}
                         _hover={{ bg: link.active ? 'blue.600' : 'bg.muted' }}
                         onClick={() => router.visit(link.url, { preserveScroll: true })}
                     >

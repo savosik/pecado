@@ -46,7 +46,7 @@ export default function AttachmentSection({ task }) {
     };
 
     return (
-        <Box mt={6} pt={6} borderTopWidth="1px" borderColor="border.default">
+        <Box mt={6} pt={6} borderTopWidth="1px" borderColor="border">
             <Text fontWeight="bold" mb={4}>Вложения ({attachments.length})</Text>
 
             {attachments.length > 0 && (

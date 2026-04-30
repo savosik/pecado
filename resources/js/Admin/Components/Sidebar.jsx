@@ -21,7 +21,7 @@ export const Sidebar = ({ isCollapsed = false }) => {
             {/* Logo */}
             <Box px={4} mb={6} h="12" display="flex" alignItems="center">
                 {isCollapsed ? (
-                    <Text fontSize="xl" fontWeight="bold" color="fg.default">P</Text>
+                    <Text fontSize="xl" fontWeight="bold" color="fg">P</Text>
                 ) : (
                     <Box as="img" src="/images/logo.png" alt="Pecado Admin" h="full" objectFit="contain" />
                 )}

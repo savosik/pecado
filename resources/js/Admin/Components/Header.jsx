@@ -95,7 +95,7 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                                         <Breadcrumb.Link
                                             href={crumb.href}
                                             fontSize="sm"
-                                            color={index === finalBreadcrumbs.length - 1 ? "fg.default" : "fg.muted"}
+                                            color={index === finalBreadcrumbs.length - 1 ? "fg" : "fg.muted"}
                                             fontWeight={index === finalBreadcrumbs.length - 1 ? "medium" : "normal"}
                                         >
                                             {crumb.label}

@@ -185,7 +185,7 @@ export default function BugReportWidget() {
                         display="flex" flexDirection="column"
                         onClick={e => e.stopPropagation()}
                     >
-                        <HStack p={4} borderBottomWidth="1px" borderColor="border.default" justify="space-between">
+                        <HStack p={4} borderBottomWidth="1px" borderColor="border" justify="space-between">
                             <Text fontWeight="bold" fontSize="lg">Сообщить об ошибке</Text>
                             <IconButton variant="ghost" size="sm" onClick={handleClose}><LuX /></IconButton>
                         </HStack>
@@ -296,7 +296,7 @@ export default function BugReportWidget() {
                             </form>
                         </Box>
 
-                        <HStack p={4} borderTopWidth="1px" borderColor="border.default" justify="flex-end">
+                        <HStack p={4} borderTopWidth="1px" borderColor="border" justify="flex-end">
                             <Button variant="outline" type="button" onClick={handleClose}>Отмена</Button>
                             <Button
                                 type="submit"

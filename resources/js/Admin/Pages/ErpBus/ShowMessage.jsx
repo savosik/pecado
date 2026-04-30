@@ -62,7 +62,7 @@ const JsonValue = ({ value, depth = 0 }) => {
         if (collapsed) {
             return (
                 <Text as="span" color="fg.muted" cursor="pointer" onClick={() => setCollapsed(false)}
-                    _hover={{ color: 'fg.default' }}>
+                    _hover={{ color: 'fg' }}>
                     [{value.length} элементов ▸]
                 </Text>
             );
@@ -71,7 +71,7 @@ const JsonValue = ({ value, depth = 0 }) => {
         return (
             <Box>
                 <Text as="span" color="fg.muted" cursor="pointer" onClick={() => setCollapsed(true)}
-                    _hover={{ color: 'fg.default' }}>
+                    _hover={{ color: 'fg' }}>
                     [▾
                 </Text>
                 <Box pl={5} borderLeftWidth="1px" borderColor="whiteAlpha.200" ml={1}>
@@ -96,7 +96,7 @@ const JsonValue = ({ value, depth = 0 }) => {
         if (collapsed) {
             return (
                 <Text as="span" color="fg.muted" cursor="pointer" onClick={() => setCollapsed(false)}
-                    _hover={{ color: 'fg.default' }}>
+                    _hover={{ color: 'fg' }}>
                     {'{'}{keys.length} полей ▸{'}'}
                 </Text>
             );
@@ -105,7 +105,7 @@ const JsonValue = ({ value, depth = 0 }) => {
         return (
             <Box>
                 <Text as="span" color="fg.muted" cursor="pointer" onClick={() => setCollapsed(true)}
-                    _hover={{ color: 'fg.default' }}>
+                    _hover={{ color: 'fg' }}>
                     {'{'} ▾
                 </Text>
                 <Box pl={5} borderLeftWidth="1px" borderColor="whiteAlpha.200" ml={1}>

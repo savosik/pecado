@@ -47,7 +47,7 @@ export default function TaskCard({ task, onDragStart, onTaskClick }) {
             shadow="sm"
             rounded="md"
             borderWidth="1px"
-            borderColor="border.default"
+            borderColor="border"
             cursor="grab"
             draggable
             onDragStart={(e) => onDragStart(e, task)}

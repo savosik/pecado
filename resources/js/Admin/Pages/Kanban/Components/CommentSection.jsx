@@ -90,7 +90,7 @@ export default function CommentSection({ task }) {
     );
 
     return (
-        <Box mt={6} pt={6} borderTopWidth="1px" borderColor="border.default">
+        <Box mt={6} pt={6} borderTopWidth="1px" borderColor="border">
             <Text fontWeight="bold" mb={4}>Комментарии ({comments.length})</Text>
 
             <VStack align="stretch" gap={0} mb={6}>

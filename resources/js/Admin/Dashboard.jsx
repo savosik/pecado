@@ -79,7 +79,7 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                                 bg="bg.panel"
                                 borderRadius="lg"
                                 borderWidth="1px"
-                                borderColor="border.default"
+                                borderColor="border"
                                 p={6}
                                 boxShadow="sm"
                                 _hover={{ boxShadow: "md" }}
@@ -90,7 +90,7 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                                         <Text fontSize="sm" color="fg.muted" fontWeight="medium">
                                             {stat.title}
                                         </Text>
-                                        <Heading size="xl" color="fg.default">
+                                        <Heading size="xl" color="fg">
                                             {typeof stat.value === 'number' ? stat.value.toLocaleString('ru-RU') : stat.value}
                                         </Heading>
                                     </VStack>
@@ -112,10 +112,10 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                     bg="bg.panel"
                     borderRadius="lg"
                     borderWidth="1px"
-                    borderColor="border.default"
+                    borderColor="border"
                     boxShadow="sm"
                 >
-                    <Box p={6} borderBottomWidth="1px" borderColor="border.default">
+                    <Box p={6} borderBottomWidth="1px" borderColor="border">
                         <Heading size="md" mb={1}>Продажи за последние 30 дней</Heading>
                         <Text fontSize="sm" color="fg.muted">Количество заказов и выручка по дням</Text>
                     </Box>
@@ -173,10 +173,10 @@ export default function Dashboard({ stats = {}, salesChartData = [], recentOrder
                     bg="bg.panel"
                     borderRadius="lg"
                     borderWidth="1px"
-                    borderColor="border.default"
+                    borderColor="border"
                     boxShadow="sm"
                 >
-                    <Box p={6} borderBottomWidth="1px" borderColor="border.default">
+                    <Box p={6} borderBottomWidth="1px" borderColor="border">
                         <Heading size="md" mb={1}>Последние заказы</Heading>
                         <Text fontSize="sm" color="fg.muted">10 последних оформленных заказов</Text>
                     </Box>

@@ -91,7 +91,7 @@ export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
                 display="flex" flexDirection="column"
                 onClick={(e) => e.stopPropagation()}
             >
-                <HStack p={4} borderBottomWidth="1px" borderColor="border.default" justify="space-between">
+                <HStack p={4} borderBottomWidth="1px" borderColor="border" justify="space-between">
                     <Heading size="md">{isEdit ? 'Редактировать задачу' : 'Новая задача'}</Heading>
                     <IconButton variant="ghost" onClick={onClose}><LuX /></IconButton>
                 </HStack>
@@ -169,7 +169,7 @@ export default function TaskModal({ isOpen, onClose, task, defaultStatus }) {
                     {isEdit && <CommentSection task={task} />}
                 </Box>
 
-                <HStack p={4} borderTopWidth="1px" borderColor="border.default" justify="flex-end">
+                <HStack p={4} borderTopWidth="1px" borderColor="border" justify="flex-end">
                     <Button variant="outline" onClick={onClose}>Отмена</Button>
                     <Button type="submit" form="task-form" colorPalette="blue">Сохранить</Button>
                 </HStack>
