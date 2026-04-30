@@ -5,7 +5,20 @@ import ru from 'react-phone-number-input/locale/ru.json';
 import 'react-phone-number-input/style.css';
 
 const CustomInput = forwardRef((props, ref) => (
-    <Input ref={ref} {...props} />
+    <Input
+        ref={ref}
+        color="gray.900"
+        bg="white"
+        borderColor="gray.300"
+        _placeholder={{ color: 'gray.400' }}
+        _dark={{
+            color: 'gray.100',
+            bg: 'gray.800',
+            borderColor: 'gray.600',
+            _placeholder: { color: 'gray.500' },
+        }}
+        {...props}
+    />
 ));
 CustomInput.displayName = 'CustomInput';
 
