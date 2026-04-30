@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
-    Box, HStack, Stack, Text, Button, IconButton, Input, Badge,
+    Box, HStack, Stack, Text, Button, IconButton, Input, Badge, NativeSelect,
 } from '@chakra-ui/react';
 import { LuPlus, LuTrash2, LuFolderPlus, LuGripVertical, LuChevronDown } from 'react-icons/lu';
 import axios from 'axios';
@@ -191,38 +191,22 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
     );
 }
 
-// ─── Styled native select wrapper ──────────────────────────────────────────────
+// ─── Styled native select wrapper (Chakra NativeSelect) ───────────────────────
 function StyledSelect({ value, onChange, children, minW = '140px', ...rest }) {
     return (
-        <Box position="relative" minW={minW} {...rest}>
-            <select
+        <NativeSelect.Root size="xs" minW={minW} {...rest}>
+            <NativeSelect.Field
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                style={{
-                    width: '100%',
-                    padding: '7px 28px 7px 10px',
-                    borderRadius: '8px',
-                    border: '1px solid var(--chakra-colors-border)',
-                    fontSize: '13px',
-                    background: 'var(--chakra-colors-bg)',
-                    color: 'var(--chakra-colors-fg)',
-                    appearance: 'none',
-                    cursor: 'pointer',
-                }}
+                bg="bg.default"
+                color="fg"
+                borderColor="border.muted"
+                fontSize="13px"
             >
                 {children}
-            </select>
-            <Box
-                position="absolute"
-                right="8px"
-                top="50%"
-                transform="translateY(-50%)"
-                pointerEvents="none"
-                color="fg.subtle"
-            >
-                <LuChevronDown size={14} />
-            </Box>
-        </Box>
+            </NativeSelect.Field>
+            <NativeSelect.Indicator color="fg.subtle" />
+        </NativeSelect.Root>
     );
 }
 

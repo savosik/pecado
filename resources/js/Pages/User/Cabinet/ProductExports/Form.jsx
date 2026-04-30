@@ -151,8 +151,8 @@ export default function Form({ export: exportData, availableFilters, availableFi
             <Head title={`${pageTitle} — Pecado`} />
 
             <form onSubmit={handleSubmit} noValidate>
-                <Card.Root bg="bg.default" borderRadius="xl" border="1px solid" borderColor="border.muted">
-                    <Card.Body p={0}>
+                <Card.Root bg="bg.default" borderRadius="xl" border="1px solid" borderColor="border.muted" overflow="visible">
+                    <Card.Body p={0} overflow="visible">
                         <Accordion.Root
                             multiple
                             collapsible
@@ -165,8 +165,8 @@ export default function Form({ export: exportData, availableFilters, availableFi
                                     {sectionTrigger(<LuSettings size={18} />, 'Основные настройки')}
                                     <Accordion.ItemIndicator />
                                 </Accordion.ItemTrigger>
-                                <Accordion.ItemContent>
-                                    <Accordion.ItemBody px={6} pb={6}>
+                                <Accordion.ItemContent css={{ overflow: 'visible' }}>
+                                    <Accordion.ItemBody px={6} pb={6} overflow="visible">
                                         <Stack gap={6}>
                                             <Box>
                                                 <Text fontSize="sm" fontWeight="600" mb={1}>
@@ -242,8 +242,8 @@ export default function Form({ export: exportData, availableFilters, availableFi
                                     )}
                                     <Accordion.ItemIndicator />
                                 </Accordion.ItemTrigger>
-                                <Accordion.ItemContent>
-                                    <Accordion.ItemBody px={6} pb={6}>
+                                <Accordion.ItemContent css={{ overflow: 'visible' }}>
+                                    <Accordion.ItemBody px={6} pb={6} overflow="visible">
                                         <Stack gap={3}>
                                             {errors.fields && (
                                                 <Text color="red.500" fontSize="sm">{errors.fields}</Text>
@@ -276,8 +276,8 @@ export default function Form({ export: exportData, availableFilters, availableFi
                                     </Span>
                                     <Accordion.ItemIndicator />
                                 </Accordion.ItemTrigger>
-                                <Accordion.ItemContent>
-                                    <Accordion.ItemBody px={6} pb={6}>
+                                <Accordion.ItemContent css={{ overflow: 'visible' }}>
+                                    <Accordion.ItemBody px={6} pb={6} overflow="visible">
                                         <FilterBuilder
                                             filters={data.filters}
                                             availableFilters={availableFilters}
@@ -301,8 +301,8 @@ export default function Form({ export: exportData, availableFilters, availableFi
                                     )}
                                     <Accordion.ItemIndicator />
                                 </Accordion.ItemTrigger>
-                                <Accordion.ItemContent>
-                                    <Accordion.ItemBody px={6} pb={6}>
+                                <Accordion.ItemContent css={{ overflow: 'visible' }}>
+                                    <Accordion.ItemBody px={6} pb={6} overflow="visible">
                                         <Stack gap={3}>
                                             <HStack justify="space-between">
                                                 <Text fontSize="sm" color="fg.muted">
@@ -382,8 +382,8 @@ export default function Form({ export: exportData, availableFilters, availableFi
                                         {sectionTrigger(<LuLink size={18} />, 'Ссылка для скачивания')}
                                         <Accordion.ItemIndicator />
                                     </Accordion.ItemTrigger>
-                                    <Accordion.ItemContent>
-                                        <Accordion.ItemBody px={6} pb={6}>
+                                    <Accordion.ItemContent css={{ overflow: 'visible' }}>
+                                        <Accordion.ItemBody px={6} pb={6} overflow="visible">
                                             <Box
                                                 p={4}
                                                 bg="pecado.subtle"

@@ -76,13 +76,19 @@ html.dark .cart-card-mixed:hover,
         color-mix(in srgb, var(--chakra-colors-orange-900) 25%, transparent) 100%);
 }
 
+/* Подсказываем браузеру системную тему — для нативных option, scrollbar,
+   date pickers и автозаполнения. Без этого <option> и встроенные виджеты
+   рендерятся в светлой системной теме. */
+html.light { color-scheme: light; }
+html.dark { color-scheme: dark; }
+
 /* Fix for native select options in dark mode */
 html.dark select option,
 html[data-theme="dark"] select option,
 .chakra-theme.dark select option,
 [data-theme="dark"] select option {
-    background-color: var(--chakra-colors-gray-800, #1a202c);
-    color: var(--chakra-colors-gray-100, #edf2f7);
+    background-color: var(--chakra-colors-bg, #130c0e);
+    color: var(--chakra-colors-fg, #faf9f8);
 }
 
 /*
