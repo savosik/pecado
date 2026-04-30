@@ -427,6 +427,8 @@ export default function Form({ export: exportData, availableFilters, availableFi
                         borderTop="1px solid"
                         borderColor="border.muted"
                         zIndex={1}
+                        py={4}
+                        borderBottomRadius="xl"
                     >
                         <HStack justify="space-between" w="100%">
                             <Button
