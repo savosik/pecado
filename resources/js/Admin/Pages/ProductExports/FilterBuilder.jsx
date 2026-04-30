@@ -103,8 +103,10 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
     return (
         <Box position="relative" flex="1" minW="180px" ref={ref}>
             <Box
-                border="1px solid"
-                borderColor={open ? '#7c3aed' : '#e2e8f0'}
+                borderWidth="1px"
+                borderColor={open
+                    ? '#7c3aed'
+                    : { base: 'gray.200', _dark: 'gray.700' }}
                 borderRadius="md"
                 px={2} py={1}
                 cursor="pointer"
@@ -146,7 +148,8 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                     right={0}
                     mt={1}
                     bg={{ base: 'white', _dark: 'gray.800' }}
-                    border="1px solid #e2e8f0"
+                    borderWidth="1px"
+                    borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                     borderRadius="md"
                     zIndex={20}
                     boxShadow="lg"
@@ -170,13 +173,19 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                                     key={item.id}
                                     px={3} py={1.5}
                                     cursor="pointer"
-                                    bg={checked ? 'purple.50' : 'white'}
-                                    _hover={{ bg: checked ? 'purple.100' : 'gray.50' }}
+                                    bg={checked
+                                        ? { base: 'purple.50', _dark: 'purple.900' }
+                                        : { base: 'white', _dark: 'gray.800' }}
+                                    _hover={{
+                                        bg: checked
+                                            ? { base: 'purple.100', _dark: 'purple.800' }
+                                            : { base: 'gray.50', _dark: 'gray.700' },
+                                    }}
                                     onClick={() => toggleItem(item)}
                                     gap={2}
                                 >
                                     <input type="checkbox" checked={checked} readOnly style={{ accentColor: '#7c3aed' }} />
-                                    <Text fontSize="13px">{displayName(item)}</Text>
+                                    <Text fontSize="13px" color={{ base: 'gray.900', _dark: 'gray.100' }}>{displayName(item)}</Text>
                                 </HStack>
                             );
                         })}
@@ -201,9 +210,10 @@ function StyledSelect({ value, onChange, children, minW = '140px', ...rest }) {
                     width: '100%',
                     padding: '7px 28px 7px 10px',
                     borderRadius: '8px',
-                    border: '1px solid #e2e8f0',
+                    border: '1px solid var(--chakra-colors-border)',
                     fontSize: '13px',
-                    background: '#fff',
+                    background: 'var(--chakra-colors-bg)',
+                    color: 'var(--chakra-colors-fg)',
                     appearance: 'none',
                     cursor: 'pointer',
                 }}
@@ -290,7 +300,8 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
             return (
                 <Box position="relative" flex="1" minW="180px">
                     <Box
-                        border="1px solid #e2e8f0"
+                        borderWidth="1px"
+                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                         borderRadius="8px"
                         px={2} py={1}
                         cursor="pointer"
@@ -345,8 +356,14 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                         key={opt.value}
                                         px={3} py={1.5}
                                         cursor="pointer"
-                                        bg={checked ? 'purple.50' : 'white'}
-                                        _hover={{ bg: checked ? 'purple.100' : 'gray.50' }}
+                                        bg={checked
+                                            ? { base: 'purple.50', _dark: 'purple.900' }
+                                            : { base: 'white', _dark: 'gray.800' }}
+                                        _hover={{
+                                            bg: checked
+                                                ? { base: 'purple.100', _dark: 'purple.800' }
+                                                : { base: 'gray.50', _dark: 'gray.700' },
+                                        }}
                                         onClick={() => {
                                             if (checked) {
                                                 handleValueChange(selectedIds.filter(x => x !== opt.value));
@@ -356,7 +373,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                         }}
                                     >
                                         <input type="checkbox" checked={checked} readOnly style={{ accentColor: '#7c3aed' }} />
-                                        <Text fontSize="13px">{opt.label}</Text>
+                                        <Text fontSize="13px" color={{ base: 'gray.900', _dark: 'gray.100' }}>{opt.label}</Text>
                                     </HStack>
                                 );
                             })}
@@ -447,8 +464,10 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
             {/* Field selector */}
             <Box position="relative" minW="170px" flex="1">
                 <Box
-                    border="1px solid"
-                    borderColor={dropdownOpen ? '#7c3aed' : '#e2e8f0'}
+                    borderWidth="1px"
+                    borderColor={dropdownOpen
+                        ? '#7c3aed'
+                        : { base: 'gray.200', _dark: 'gray.700' }}
                     borderRadius="8px"
                     bg={{ base: 'white', _dark: 'gray.800' }}
                     position="relative"
@@ -483,7 +502,8 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         right={0}
                         mt={1}
                         bg={{ base: 'white', _dark: 'gray.800' }}
-                        border="1px solid #e2e8f0"
+                        borderWidth="1px"
+                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                         borderRadius="8px"
                         zIndex={20}
                         maxH="300px"
@@ -493,8 +513,10 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                     >
                         {filteredGroups.map(group => (
                             <Box key={group.group}>
-                                <Text px={3} py={1.5} fontSize="11px" fontWeight="bold" color="gray.500"
-                                    bg="gray.50" textTransform="uppercase" letterSpacing="0.05em">
+                                <Text px={3} py={1.5} fontSize="11px" fontWeight="bold"
+                                    color={{ base: 'gray.500', _dark: 'gray.300' }}
+                                    bg={{ base: 'gray.50', _dark: 'gray.700' }}
+                                    textTransform="uppercase" letterSpacing="0.05em">
                                     {group.group}
                                 </Text>
                                 {group.fields.map(f => (
@@ -502,8 +524,10 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                         key={f.key}
                                         px={3} py={2}
                                         cursor="pointer"
-                                        _hover={{ bg: 'purple.50' }}
-                                        bg={condition.field === f.key ? 'purple.50' : undefined}
+                                        _hover={{ bg: { base: 'purple.50', _dark: 'purple.900' } }}
+                                        bg={condition.field === f.key
+                                            ? { base: 'purple.50', _dark: 'purple.900' }
+                                            : undefined}
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             handleFieldChange(f.key);
@@ -511,7 +535,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                             setSearch('');
                                         }}
                                     >
-                                        <Text fontSize="13px">{f.label}</Text>
+                                        <Text fontSize="13px" color={{ base: 'gray.900', _dark: 'gray.100' }}>{f.label}</Text>
                                     </Box>
                                 ))}
                             </Box>
