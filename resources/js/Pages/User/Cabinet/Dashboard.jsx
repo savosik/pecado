@@ -309,8 +309,8 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                         p="3"
                                         borderRadius="lg"
                                         bg="gray.50"
-                                        _dark={{ bg: 'gray.750' }}
-                                        _hover={{ bg: 'pecado.50', _dark: { bg: 'gray.700' } }}
+                                        _dark={{ bg: 'gray.700' }}
+                                        _hover={{ bg: 'pecado.50', _dark: { bg: 'gray.600' } }}
                                         transition="background 0.15s"
                                         cursor="pointer"
                                     >

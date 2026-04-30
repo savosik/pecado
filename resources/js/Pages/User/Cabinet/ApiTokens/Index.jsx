@@ -410,7 +410,7 @@ export default function Index({ tokens: initialTokens }) {
                             {/* Gradient accent */}
                             <Box h="3px" style={{ background: `linear-gradient(90deg, var(--chakra-colors-${m.color}-400), var(--chakra-colors-${m.color}-600))` }} />
 
-                            <Accordion.ItemTrigger px="5" py="3.5" cursor="pointer" _hover={{ bg: { base: 'gray.50', _dark: 'gray.750' } }}>
+                            <Accordion.ItemTrigger px="5" py="3.5" cursor="pointer" _hover={{ bg: { base: 'gray.50', _dark: 'gray.700' } }}>
                                 <HStack flex="1" gap="3">
                                     <Flex
                                         align="center" justify="center" w="9" h="9" borderRadius="lg"

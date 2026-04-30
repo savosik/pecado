@@ -247,7 +247,7 @@ export default function CatalogControls({
                                     _dark={{
                                         bg: isActive ? 'gray.700' : 'transparent',
                                         _hover: {
-                                            bg: isActive ? 'gray.700' : 'gray.750',
+                                            bg: isActive ? 'gray.700' : 'gray.600',
                                         },
                                     }}
                                 >

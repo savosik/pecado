@@ -181,7 +181,7 @@ export default function CabinetLayout({ title, children, actions }) {
                         borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
                         bg={{ base: 'white', _dark: 'gray.800' }}
                         _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
-                        _hover={{ bg: 'gray.50', _dark: { bg: 'gray.750' } }}
+                        _hover={{ bg: 'gray.50', _dark: { bg: 'gray.700' } }}
                         onClick={() => setDrawerOpen(true)}
                         justifyContent="flex-start"
                         px="4"
