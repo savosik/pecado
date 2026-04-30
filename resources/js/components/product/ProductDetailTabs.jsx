@@ -391,18 +391,18 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
                                 </Text>
                                 <Box
                                     display="grid"
-                                    gridTemplateColumns={{ base: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)', md: 'repeat(4, 1fr)', lg: 'repeat(5, 1fr)' }}
-                                    gap="4"
+                                    gridTemplateColumns={{ base: 'repeat(3, 1fr)', sm: 'repeat(4, 1fr)', md: 'repeat(5, 1fr)', lg: 'repeat(6, 1fr)' }}
+                                    gap="3"
                                 >
                                     {additionalImages.map((item, idx) => (
                                         <Box
                                             key={idx}
-                                            rounded="sm" p="2"
+                                            rounded="sm" p="1.5"
                                             borderWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}
                                             _hover={{ shadow: 'sm' }}
                                             transition="box-shadow 0.15s"
                                         >
-                                            <Box css={{ aspectRatio: '1' }} rounded="sm" overflow="hidden" bg={{ base: 'white', _dark: 'gray.800' }} mb="2">
+                                            <Box css={{ aspectRatio: '2 / 3' }} rounded="sm" overflow="hidden" bg={{ base: 'white', _dark: 'gray.800' }} mb="2">
                                                 <Box as="img" src={item.url} alt={`Изображение ${idx + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
                                             </Box>
                                             <Button
