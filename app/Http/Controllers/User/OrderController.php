@@ -243,7 +243,8 @@ class OrderController extends Controller
             ->when($search !== '', fn ($q) => $q->with([
                 'items:id,order_id,name,brand_name_snapshot',
             ]))
-            ->withCount(['items', 'shipments'])
+            ->withCount(['items'])
+            ->withShipmentsCount()
             ->addSelect([
                 'original_total_amount' => OrderItem::selectRaw('COALESCE(SUM(base_price * quantity), 0)')
                     ->whereColumn('order_id', 'orders.id'),

@@ -135,7 +135,8 @@ class ShipmentController extends Controller
             ? Order::withoutGlobalScopes()
                 ->whereIn('uuid', $orderUuids)
                 ->with(['company:id,name', 'user:id,name,email'])
-                ->withCount(['items', 'shipments'])
+                ->withCount(['items'])
+                ->withShipmentsCount()
                 ->orderByDesc('created_at')
                 ->get()
             : collect();

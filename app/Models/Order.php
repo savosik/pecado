@@ -160,4 +160,19 @@ class Order extends Model
             'id'
         )->distinct();
     }
+
+    /**
+     * Количество уникальных отгрузок (документов) для заказа.
+     * Заменяет withCount('shipments'), который через pivot shipment_items
+     * считает строки позиций, а не отдельные отгрузки.
+     */
+    public function scopeWithShipmentsCount($query)
+    {
+        return $query->addSelect([
+            'shipments_count' => Shipment::query()
+                ->selectRaw('COUNT(DISTINCT shipments.id)')
+                ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
+                ->whereColumn('shipment_items.order_uuid', 'orders.uuid'),
+        ]);
+    }
 }
