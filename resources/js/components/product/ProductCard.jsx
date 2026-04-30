@@ -1,11 +1,12 @@
 import { memo, useCallback, useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
 import { useProductHelpers } from '@/hooks/useProductHelpers';
+import { toaster } from '@/components/ui/toaster';
 
 /**
  * ProductCard — карточка товара для каталога и подборок (по дизайну референса).
@@ -27,6 +28,17 @@ function ProductCard({ product, loading = false }) {
         e.preventDefault();
         e.stopPropagation();
     }, []);
+    const copySku = useCallback(async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!product.sku) return;
+        try {
+            await navigator.clipboard.writeText(product.sku);
+            toaster.create({ title: `Артикул ${product.sku} скопирован`, type: 'success', duration: 2000 });
+        } catch {
+            toaster.create({ title: 'Не удалось скопировать', type: 'error' });
+        }
+    }, [product.sku]);
 
     // Скелетон
     if (loading) {
@@ -115,9 +127,23 @@ function ProductCard({ product, loading = false }) {
                     <Flex align="start" justify="space-between">
                         <Box flex="1">
                             {product.sku && (
-                                <Text fontSize="xs" fontWeight="700" color="gray.400">
-                                    {product.sku}
-                                </Text>
+                                <Flex
+                                    as="button"
+                                    type="button"
+                                    align="center"
+                                    gap="1"
+                                    fontSize="xs"
+                                    fontWeight="700"
+                                    color="gray.400"
+                                    cursor="pointer"
+                                    onClick={copySku}
+                                    aria-label={`Копировать артикул ${product.sku}`}
+                                    _hover={{ color: 'gray.600', _dark: { color: 'gray.200' } }}
+                                    transition="color 0.15s"
+                                >
+                                    <Text as="span">{product.sku}</Text>
+                                    <Box as="span" opacity="0.6"><LuCopy size={11} /></Box>
+                                </Flex>
                             )}
                             {brandName && product.brand_slug ? (
                                 <Text
