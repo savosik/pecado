@@ -46,11 +46,11 @@ function TokenCard({ token, onRegenerate, onDelete }) {
 
     return (
         <Card.Root
-            bg={{ base: 'white', _dark: 'gray.800' }}
+            bg="bg"
             borderRadius="xl"
             border="1px solid"
-            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-            _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
+            borderColor="border.muted"
+
             overflow="hidden"
         >
             <Card.Body p="5">
@@ -82,9 +82,9 @@ function TokenCard({ token, onRegenerate, onDelete }) {
 
                     {/* Base URL */}
                     <HStack
-                        bg="gray.50" _dark={{ bg: 'gray.900' }}
+                        bg="bg.subtle"
                         borderRadius="lg" px="3" py="2.5"
-                        border="1px solid" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                        border="1px solid" borderColor="border"
                     >
                         <LuGlobe size={14} style={{ flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
                         <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.300' }} flex="1" truncate fontFamily="mono">
@@ -304,9 +304,9 @@ export default function Index({ tokens: initialTokens }) {
 
                 {tokens.length === 0 ? (
                     <Card.Root
-                        bg={{ base: 'gray.50', _dark: 'gray.900' }} borderRadius="xl"
-                        border="1px dashed" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
-                        _dark={{ bg: 'gray.900', borderColor: 'gray.700' }}
+                        bg="bg.subtle" borderRadius="xl"
+                        border="1px dashed" borderColor="border"
+
                     >
                         <Card.Body p="8" textAlign="center">
                             <VStack gap="3">
@@ -340,7 +340,7 @@ export default function Index({ tokens: initialTokens }) {
                 )}
             </Box>
 
-            <Separator mb="10" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} />
+            <Separator mb="10" borderColor="border" />
 
             {/* ── Section 2: API Documentation ── */}
             <Box>
@@ -403,8 +403,8 @@ export default function Index({ tokens: initialTokens }) {
                     {apiMethods.map((m, i) => (
                         <Accordion.Item key={i} value={`method-${i}`}
                             borderRadius="xl" mb="3"
-                            border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                            bg={{ base: 'white', _dark: 'gray.800' }}
+                            border="1px solid" borderColor="border.muted"
+                            bg="bg"
                             overflow="hidden"
                         >
                             {/* Gradient accent */}
@@ -523,11 +523,11 @@ export default function Index({ tokens: initialTokens }) {
 
                 {/* Rate Limiting Note */}
                 <Card.Root mt="3"
-                    bg={{ base: 'gray.50', _dark: 'gray.900' }}
+                    bg="bg.subtle"
                     borderRadius="xl"
                     border="1px solid"
-                    borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
-                    _dark={{ bg: 'gray.900', borderColor: 'gray.700' }}
+                    borderColor="border"
+
                 >
                     <Card.Body p="4">
                         <HStack align="start" gap="3">

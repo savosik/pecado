@@ -30,7 +30,7 @@ function ProductItem({ product, onClick }) {
             px="3"
             py="1.5"
             borderBottom="1px solid"
-            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+            borderColor="border.muted"
             _hover={{ bg: 'gray.50' }}
             _dark={{ _hover: { bg: 'gray.700' } }}
             transition="background 0.15s"
@@ -489,7 +489,7 @@ export default function SearchDropdown({
 
                     {/* Кнопка «Все результаты» */}
                     {trimmed.length >= 2 && (
-                        <Box px="3" py="2" borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                        <Box px="3" py="2" borderTop="1px solid" borderColor="border.muted">
                             <Flex
                                 as={Link}
                                 href={`/search?q=${encodeURIComponent(trimmed)}`}
@@ -537,14 +537,14 @@ export default function SearchDropdown({
                 left="0"
                 right="0"
                 bottom="0"
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg"
                 _dark={{ bg: 'gray.900' }}
                 zIndex="60"
                 display="flex"
                 flexDirection="column"
             >
                 {/* Шапка с инпутом */}
-                <Flex align="center" gap="2" px="3" py="2" borderBottom="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                <Flex align="center" gap="2" px="3" py="2" borderBottom="1px solid" borderColor="border.muted">
                     <Box flex="1" as="form" onSubmit={handleSubmit}>
                         <Input
                             autoFocus
@@ -587,10 +587,10 @@ export default function SearchDropdown({
             left="0"
             right="0"
             mt="1"
-            bg={{ base: 'white', _dark: 'gray.800' }}
-            _dark={{ bg: 'gray.800', borderColor: 'gray.600' }}
+            bg="bg"
+
             border="1px solid"
-            borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+            borderColor="border"
             borderRadius="lg"
             shadow="lg"
             maxH="min(640px, calc(100vh - 120px))"

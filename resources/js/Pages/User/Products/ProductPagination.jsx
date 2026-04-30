@@ -65,8 +65,8 @@ export default function ProductPagination({
                 mt="4"
                 pt="4"
                 borderTop="1px solid"
-                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                _dark={{ borderColor: 'gray.700' }}
+                borderColor="border.muted"
+
             >
                 <Switch.Root
                     checked={infiniteScroll}

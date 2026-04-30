@@ -152,7 +152,7 @@ const ContractorBalancesCreate = () => {
                                 <Box overflowX="auto">
                                     <Table.Root size="sm">
                                         <Table.Header>
-                                            <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                            <Table.Row bg="bg.subtle">
                                                 <Table.ColumnHeader>UUID реализации *</Table.ColumnHeader>
                                                 <Table.ColumnHeader>Сумма просрочки (₽) *</Table.ColumnHeader>
                                                 <Table.ColumnHeader>Дата оплаты *</Table.ColumnHeader>

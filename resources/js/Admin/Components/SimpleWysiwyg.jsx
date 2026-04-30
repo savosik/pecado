@@ -123,8 +123,8 @@ export default function SimpleWysiwyg({ value, onChange, placeholder = 'Введ
         <Box
             w="100%"
             borderWidth="1px"
-            borderColor={{ base: 'gray.200', _dark: 'gray.600' }}
-            _dark={{ borderColor: 'gray.600' }}
+            borderColor="border"
+
             borderRadius="md"
             overflow="hidden"
         >
@@ -134,11 +134,11 @@ export default function SimpleWysiwyg({ value, onChange, placeholder = 'Введ
                 gap="0.5"
                 px="2"
                 py="1"
-                bg={{ base: 'gray.50', _dark: 'gray.800' }}
+                bg="bg.subtle"
                 _dark={{ bg: 'gray.800' }}
                 borderBottomWidth="1px"
-                borderColor={{ base: 'gray.200', _dark: 'gray.600' }}
-                _dark={{ borderColor: 'gray.600' }}
+                borderColor="border"
+
                 alignItems="center"
             >
                 {/* Текст */}

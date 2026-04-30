@@ -107,7 +107,7 @@ export default function AttributeFilters({ attributes = [], selectedValueIds = [
 
                 return (
                     <Box key={attr.id}>
-                        <Box h="1px" bg="gray.100" _dark={{ bg: 'gray.700' }} my="1" />
+                        <Box h="1px" bg="bg.muted" my="1" />
                         <FilterBlock
                             title={attr.name}
                             showClear={selectedForAttr.length > 0}

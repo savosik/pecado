@@ -118,7 +118,7 @@ export default function Show({ balance }) {
                             <Box overflowX="auto">
                                 <Table.Root size="sm">
                                     <Table.Header>
-                                        <Table.Row bg="gray.50" _dark={{ bg: 'gray.800' }}>
+                                        <Table.Row bg="bg.subtle">
                                             <Table.ColumnHeader>UUID реализации</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Сумма просрочки (₽)</Table.ColumnHeader>
                                             <Table.ColumnHeader textAlign="right">Дата оплаты</Table.ColumnHeader>

@@ -122,7 +122,7 @@ function MobileMenuDrawer({ open, onClose, currentPath }) {
                 <Drawer.Backdrop />
                 <Drawer.Positioner>
                     <Drawer.Content>
-                        <Drawer.Header borderBottom="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                        <Drawer.Header borderBottom="1px solid" borderColor="border.muted">
                             <Drawer.Title fontSize="lg" fontWeight="700">Личный кабинет</Drawer.Title>
                             <Drawer.CloseTrigger asChild position="absolute" top="3" right="3">
                                 <CloseButton size="sm" />
@@ -160,12 +160,12 @@ export default function CabinetLayout({ title, children, actions }) {
                     <Box
                         position="sticky"
                         top="80px"
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg"
                         borderRadius="xl"
                         border="1px solid"
-                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                        borderColor="border.muted"
                         p="4"
-                        _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
+
                     >
                         <SidebarContent currentPath={currentPath} />
                     </Box>
@@ -178,9 +178,9 @@ export default function CabinetLayout({ title, children, actions }) {
                         variant="outline"
                         size="lg"
                         borderRadius="xl"
-                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
-                        bg={{ base: 'white', _dark: 'gray.800' }}
-                        _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
+                        borderColor="border"
+                        bg="bg"
+
                         _hover={{ bg: 'gray.50', _dark: { bg: 'gray.700' } }}
                         onClick={() => setDrawerOpen(true)}
                         justifyContent="flex-start"

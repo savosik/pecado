@@ -376,7 +376,7 @@ const AddFromShipmentForm = ({
 
     return (
         <Card.Root variant="elevated" shadow="md" borderRadius="lg" overflow="hidden">
-            <Box bg="gray.50" px={6} py={4} borderBottomWidth="1px" borderColor={{ base: "gray.100", _dark: "gray.700" }}>
+            <Box bg="gray.50" px={6} py={4} borderBottomWidth="1px" borderColor="border.muted">
                 <HStack justify="space-between" mb={4}>
                     <Heading size="sm" color="gray.700">
                         {step === 1 ? "Выбор реализации" : `Позиции реализации ${selectedShipment?.number || ""}`}
@@ -420,7 +420,7 @@ const AddFromShipmentForm = ({
                                         borderWidth="1px"
                                         borderRadius="lg"
                                         cursor="pointer"
-                                        bg={{ base: "white", _dark: "gray.800" }}
+                                        bg="bg"
                                         transition="all 0.2s"
                                         _hover={{ borderColor: `${accentColor}.400`, shadow: "sm" }}
                                         onClick={() => handleSelectShipment(s)}
@@ -584,7 +584,7 @@ const AddFromShipmentForm = ({
                 )}
             </Card.Body>
 
-            <Card.Footer bg="gray.50" borderTopWidth="1px" borderColor={{ base: "gray.100", _dark: "gray.700" }} py={4}>
+            <Card.Footer bg="gray.50" borderTopWidth="1px" borderColor="border.muted" py={4}>
                 <HStack justify="space-between" w="full" gap={3}>
                     <Text fontSize="sm" color="fg.muted">
                         {step === 2 && selectedCount > 0 ? `Выбрано позиций: ${selectedCount}` : ""}

@@ -36,7 +36,7 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
     };
 
     return (
-        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }}
+        <Card.Root bg="bg"
             overflow="hidden"
             borderWidth={selected ? '2px' : '1px'}
             borderColor={selected ? 'blue.500' : 'gray.200'}
@@ -86,7 +86,7 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
                     top="2"
                     left="2"
                     onClick={(e) => e.stopPropagation()}
-                    bg={{ base: 'white', _dark: 'gray.800' }}
+                    bg="bg"
                     borderRadius="sm"
                     shadow="sm"
                     p="0.5"
@@ -112,7 +112,7 @@ export default function MediaCard({ item, selected, onToggleSelection, onOpenLig
                         aria-label="Скачать"
                         size="sm"
                         variant="solid"
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg"
                         color="gray.700"
                         shadow="md"
                         _hover={{ bg: 'gray.100' }}

@@ -89,8 +89,8 @@ export default function ProductFiltersSheet({
                         {/* Header */}
                         <Drawer.Header
                             borderBottom="1px solid"
-                            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                            _dark={{ borderColor: 'gray.700' }}
+                            borderColor="border.muted"
+
                         >
                             <Drawer.Title fontSize="lg" fontWeight="700">
                                 <Flex align="center" gap="2">
@@ -112,8 +112,8 @@ export default function ProductFiltersSheet({
                         {/* Footer — кнопки Сбросить / Показать */}
                         <Drawer.Footer
                             borderTop="1px solid"
-                            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                            _dark={{ borderColor: 'gray.700' }}
+                            borderColor="border.muted"
+
                             p="3"
                             gap="2"
                         >

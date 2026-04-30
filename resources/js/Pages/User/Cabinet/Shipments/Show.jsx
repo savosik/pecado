@@ -58,7 +58,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
             </Box>
 
             {/* Основная информация */}
-            <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb={6} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+            <Card.Root bg="bg" mb={6} borderRadius="xl" border="1px solid" borderColor="border.muted">
                 <Card.Body>
                     <SimpleGrid columns={{ base: 2, sm: 3, md: 4 }} gap={5}>
                         <InfoBlock
@@ -106,7 +106,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
 
             {/* Просрочка по этой реализации */}
             {overdue_detail && (
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb={6} borderRadius="xl" border="2px solid" borderColor="red.200" _dark={{ borderColor: 'red.800' }}>
+                <Card.Root bg="bg" mb={6} borderRadius="xl" border="2px solid" borderColor="red.200" _dark={{ borderColor: 'red.800' }}>
                     <Card.Body p={4}>
                         <HStack gap="3" align="start">
                             <Box color="red.500" flexShrink={0} pt={0.5}>
@@ -159,10 +159,10 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                             return (
                                 <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
                                     <Box
-                                        bg={{ base: 'white', _dark: 'gray.800' }}
+                                        bg="bg"
                                         borderRadius="xl"
                                         border="1px solid"
-                                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                        borderColor="border.muted"
                                         p="4"
                                         _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
                                         transition="all 0.15s"
@@ -345,15 +345,15 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                     </Flex>
                     <Box
                         overflowX="auto"
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg"
                         borderRadius="xl"
                         border="1px solid"
-                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                        _dark={{ borderColor: 'gray.700' }}
+                        borderColor="border.muted"
+
                     >
-                        <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
+                        <Table.Root bg="bg" size="sm">
                             <Table.Header>
-                                <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
+                                <Table.Row bg="bg" _dark={{ bg: 'gray.800' }}>
                                     <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                     <Table.ColumnHeader w="120px">Заказ</Table.ColumnHeader>
                                     <Table.ColumnHeader w="80px" textAlign="center">Кол-во</Table.ColumnHeader>
@@ -373,7 +373,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                     const savingsConverted = hasDiscount ? grossConverted - totalConverted : 0;
                                     const combinedDiscount = parseFloat(item.auto_discount_percent || 0) + parseFloat(item.manual_discount_percent || 0);
                                     return (
-                                        <Table.Row key={item.id || idx} bg={{ base: 'white', _dark: 'gray.800' }}>
+                                        <Table.Row key={item.id || idx} bg="bg">
                                             <Table.Cell>
                                                 <HStack gap="3">
                                                     {item.product?.image_url && (
@@ -478,7 +478,7 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                 })}
                             </Table.Body>
                             <Table.Footer>
-                                <Table.Row bg={{ base: 'gray.50', _dark: 'gray.900' }}>
+                                <Table.Row bg="bg.subtle">
                                     <Table.Cell colSpan={7} p="4">
                                         <Flex justify="space-between" align="center" gap="3" flexWrap="wrap">
                                             <Flex align="center" gap="2">

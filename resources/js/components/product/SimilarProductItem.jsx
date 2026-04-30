@@ -29,7 +29,7 @@ export default function SimilarProductItem({ product }) {
             px="3"
             py="1.5"
             borderBottom="1px solid"
-            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+            borderColor="border.muted"
             _hover={{ bg: 'gray.50' }}
             _dark={{ _hover: { bg: 'gray.700' } }}
             transition="background 0.15s"

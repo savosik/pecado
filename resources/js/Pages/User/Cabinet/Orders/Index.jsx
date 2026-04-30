@@ -286,7 +286,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
 
             {/* Расширенные фильтры */}
             {showFilters && (
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb="4" borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                <Card.Root bg="bg" mb="4" borderRadius="xl" border="1px solid" borderColor="border.muted">
                     <Card.Body p="4">
                         <Stack gap="4">
                             <Flex gap="4" direction={{ base: 'column', md: 'row' }}>
@@ -441,13 +441,13 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
 
             {/* Список заказов */}
             {orders.data.length === 0 ? (
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                     <Card.Body p="10" textAlign="center">
                         <VStack gap="3">
                             <Flex
                                 align="center" justify="center"
                                 w="16" h="16" borderRadius="full"
-                                bg="gray.100" _dark={{ bg: 'gray.700' }} mx="auto"
+                                bg="bg.muted" mx="auto"
                             >
                                 <LuShoppingBag size={28} color="var(--chakra-colors-gray-400)" />
                             </Flex>
@@ -478,10 +478,10 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                             return (
                                 <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
                                     <Box
-                                        bg={{ base: 'white', _dark: 'gray.800' }}
+                                        bg="bg"
                                         borderRadius="xl"
                                         border="1px solid"
-                                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                        borderColor="border.muted"
                                         p="4"
                                         _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
                                         transition="all 0.15s"

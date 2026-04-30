@@ -132,7 +132,7 @@ export default function SlideCard({ slide, story, onUpdate, onDelete }) {
                     {/* Expandable форма редактирования */}
                     <Collapsible.Root open={expanded}>
                         <Collapsible.Content>
-                            <Box pt={4} borderTop="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                            <Box pt={4} borderTop="1px" borderColor="border">
                                 <SlideForm
                                     slide={slide}
                                     story={story}

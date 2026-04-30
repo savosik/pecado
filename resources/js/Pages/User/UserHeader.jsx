@@ -72,7 +72,7 @@ export default function UserHeader() {
             {/* Main Header */}
             <Box
                 as="header"
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg"
                 shadow="sm"
                 position="sticky"
                 top="0"
@@ -290,7 +290,7 @@ export default function UserHeader() {
                     <Drawer.Backdrop />
                     <Drawer.Positioner>
                         <Drawer.Content>
-                            <Drawer.Header borderBottom="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                            <Drawer.Header borderBottom="1px solid" borderColor="border.muted">
                                 <Drawer.Title fontSize="lg" fontWeight="700">Меню</Drawer.Title>
                                 <Drawer.CloseTrigger asChild>
                                     <CloseButton size="sm" />

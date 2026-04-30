@@ -194,14 +194,14 @@ export const TagSelector = ({
                     left={0}
                     right={0}
                     zIndex={1000}
-                    bg={{ base: 'white', _dark: 'gray.800' }}
+                    bg="bg"
                     boxShadow="lg"
                     borderRadius="md"
                     mt={1}
                     maxHeight="200px"
                     overflowY="auto"
                     borderWidth="1px"
-                    borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                    borderColor="border"
                 >
                     {loading ? (
                         <Box p={2} textAlign="center">
@@ -227,7 +227,7 @@ export const TagSelector = ({
                                     _hover={{ bg: "blue.50" }}
                                     onClick={() => addTag(inputValue)}
                                     borderTopWidth="1px"
-                                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                    borderColor="border.muted"
                                 >
                                     <Text fontSize="sm" color="blue.600">
                                         Создать "{inputValue}"

@@ -224,7 +224,7 @@ export default function CartTable({
                         boxShadow={topShadow ? '0 4px 6px -2px rgba(0,0,0,0.1)' : 'none'}
                         transition="box-shadow 200ms ease-out"
                     >
-                        <Table.Row bg="gray.100" _dark={{ bg: 'gray.800' }}>
+                        <Table.Row bg="bg.muted">
                             <Table.ColumnHeader w="40px" textAlign="center">
                                 <Checkbox
                                     checked={allSelected}
@@ -283,7 +283,7 @@ export default function CartTable({
                         boxShadow={bottomShadow ? '0 -4px 6px -2px rgba(0,0,0,0.1)' : 'none'}
                         transition="box-shadow 200ms ease-out"
                     >
-                        <Table.Row fontWeight="semibold" bg="gray.50" _dark={{ bg: 'gray.800' }} fontSize="xs">
+                        <Table.Row fontWeight="semibold" bg="bg.subtle" fontSize="xs">
                             <Table.Cell />
                             <Table.Cell>Итого</Table.Cell>
                             <Table.Cell textAlign="center">{totals.totalInstock + totals.totalPreorder}</Table.Cell>

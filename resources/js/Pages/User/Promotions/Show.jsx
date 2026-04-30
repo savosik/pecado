@@ -20,10 +20,10 @@ export default function PromotionShow({ promotion, seo, breadcrumbs }) {
             <PageHeader title={promotion.name} />
 
             <Box
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg"
                 _dark={{ bg: 'gray.800' }}
                 border="1px solid"
-                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                borderColor="border.muted"
                 borderRadius="sm"
                 overflow="hidden"
             >
@@ -90,8 +90,8 @@ export default function PromotionShow({ promotion, seo, breadcrumbs }) {
                                 borderRadius="sm"
                                 overflow="hidden"
                                 border="1px solid"
-                                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                                _dark={{ borderColor: 'gray.700' }}
+                                borderColor="border.muted"
+
                             >
                                 <Box
                                     css={{ aspectRatio: '4 / 3' }}

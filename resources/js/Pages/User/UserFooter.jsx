@@ -48,9 +48,9 @@ export default function UserFooter() {
     return (
         <Box as="footer" mt="auto">
             <Box
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg"
                 borderTop="1px solid"
-                borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                borderColor="border"
                 color="gray.700"
                 _dark={{ bg: 'gray.900', borderColor: 'gray.800', color: 'gray.300' }}
             >
@@ -116,8 +116,8 @@ export default function UserFooter() {
                     <Flex
                         pt="6"
                         borderTop="1px solid"
-                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
-                        _dark={{ borderColor: 'gray.800' }}
+                        borderColor="border"
+
                         align="center"
                         justify={{ base: 'center', sm: 'space-between' }}
                         direction={{ base: 'column-reverse', sm: 'row' }}

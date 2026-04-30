@@ -16,10 +16,10 @@ export default function PageShow({ page, seo }) {
             <PageHeader title={page.title} />
 
             <Box
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg"
                 _dark={{ bg: 'gray.800' }}
                 border="1px solid"
-                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                borderColor="border.muted"
                 borderRadius="sm"
                 p={{ base: '5', md: '8' }}
             >

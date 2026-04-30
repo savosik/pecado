@@ -54,7 +54,7 @@ export default function ChangePassword() {
         <CabinetLayout title="Смена пароля">
             <Head title="Смена пароля — Pecado" />
 
-            <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+            <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                 <Card.Header p="5" pb="3">
                     <Text fontSize="md" fontWeight="700">Изменить пароль</Text>
                 </Card.Header>

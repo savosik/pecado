@@ -34,9 +34,9 @@ export default function ProductSelectionTabs({ selections = [] }) {
             mb="10"
             borderRadius="xl"
             border="1px solid"
-            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+            borderColor="border.muted"
             _dark={{ borderColor: 'gray.700', bg: 'gray.800/50' }}
-            bg={{ base: 'white', _dark: 'gray.800' }}
+            bg="bg"
             overflow="hidden"
         >
             {/* Заголовок */}

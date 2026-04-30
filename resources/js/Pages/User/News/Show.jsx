@@ -19,10 +19,10 @@ export default function NewsShow({ newsItem, seo, breadcrumbs }) {
             <PageHeader title={newsItem.title} />
 
             <Box
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg"
                 _dark={{ bg: 'gray.800' }}
                 border="1px solid"
-                borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                borderColor="border.muted"
                 borderRadius="sm"
                 overflow="hidden"
             >

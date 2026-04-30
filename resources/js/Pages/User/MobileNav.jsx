@@ -139,10 +139,10 @@ export default function MobileNav() {
             right="0"
             zIndex="45"
             display={{ base: 'block', lg: 'none' }}
-            bg={{ base: 'white', _dark: 'gray.800' }}
+            bg="bg"
             _dark={{ bg: 'gray.900' }}
             borderTop="1px solid"
-            borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+            borderColor="border"
             _darkBorderColor="gray.700"
             boxShadow="0 -1px 6px rgba(0,0,0,0.06)"
         >

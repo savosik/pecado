@@ -272,7 +272,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
 
                 {/* Расширенные фильтры */}
                 {showFilters && (
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                         <Card.Body p="4">
                             <Stack gap="4">
                                 <Flex gap="4" direction={{ base: 'column', md: 'row' }}>

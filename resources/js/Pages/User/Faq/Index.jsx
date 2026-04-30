@@ -70,9 +70,9 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                         value={q}
                         onChange={(e) => setQ(e.target.value)}
                         size="lg"
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg"
                         _dark={{ bg: 'gray.800' }}
-                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                        borderColor="border"
                         borderRadius="sm"
                         pl="12"
                     />
@@ -91,10 +91,10 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                 {/* Контент */}
                 {isSearching ? (
                     <Box
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg"
                         _dark={{ bg: 'gray.800' }}
                         border="1px solid"
-                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                        borderColor="border.muted"
                         borderRadius="sm"
                         p="8"
                         textAlign="center"
@@ -119,10 +119,10 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                     />
                 ) : (
                     <Box
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg"
                         _dark={{ bg: 'gray.800' }}
                         border="1px solid"
-                        borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                        borderColor="border.muted"
                         borderRadius="sm"
                         overflow="hidden"
                     >
@@ -132,8 +132,8 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                                     key={faq.id}
                                     value={String(faq.id)}
                                     borderBottom="1px solid"
-                                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                                    _dark={{ borderColor: 'gray.700' }}
+                                    borderColor="border.muted"
+
                                     _last={{ borderBottom: 'none' }}
                                 >
                                     <Accordion.ItemTrigger

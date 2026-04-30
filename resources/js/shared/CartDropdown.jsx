@@ -183,7 +183,7 @@ export default function CartDropdown() {
                     <Menu.Positioner>
                         <Menu.Content minW={{ base: '280px', sm: '300px' }} maxW={{ base: '95vw', sm: '380px' }} zIndex="popover" p="0">
                             {/* Header */}
-                            <Box px="3" py="2" borderBottom="1px solid" borderColor="gray.100" _dark={{ borderColor: 'gray.700' }}>
+                            <Box px="3" py="2" borderBottom="1px solid" borderColor="gray.100">
                                 <Flex align="center" justify="space-between">
                                     <Text fontWeight="600" fontSize="sm">Мои корзины</Text>
                                     <Text fontSize="xs" color="fg.muted">

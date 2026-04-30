@@ -102,7 +102,7 @@ export function OrderHistoryTimeline({ statusHistories = [], changeLogs = [] }) 
                                         bg={index === 0 ? indicatorColor(entry.type) : 'gray.300'}
                                         border="3px solid"
                                         borderColor="white"
-                                        _dark={{ borderColor: 'gray.800' }}
+
                                         zIndex={1}
                                     />
                                     {entry.type === 'status_changed' && <StatusEntry entry={entry} />}

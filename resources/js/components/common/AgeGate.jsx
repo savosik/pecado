@@ -82,7 +82,7 @@ export default function AgeGate() {
             aria-labelledby="age-gate-title"
         >
             <Box
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg"
                 borderRadius="md"
                 shadow="xl"
                 maxW="480px"
@@ -94,15 +94,15 @@ export default function AgeGate() {
                     as="h2"
                     fontSize="xl"
                     mb="3"
-                    color={{ base: 'gray.800', _dark: 'gray.100' }}
+                    color="fg"
                 >
                     Внимание!
                 </Heading>
-                <Box borderTopWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} mb="4" />
-                <Text fontSize="sm" mb="2" color={{ base: 'gray.700', _dark: 'gray.200' }}>
+                <Box borderTopWidth="1px" borderColor="border" mb="4" />
+                <Text fontSize="sm" mb="2" color="fg">
                     Данный сайт содержит материалы для взрослых.
                 </Text>
-                <Text fontSize="sm" mb="6" color={{ base: 'gray.700', _dark: 'gray.200' }}>
+                <Text fontSize="sm" mb="6" color="fg">
                     Чтобы продолжить, вы должны подтвердить, что вам уже исполнилось 18 лет.
                 </Text>
                 <Flex gap="4" align="center">

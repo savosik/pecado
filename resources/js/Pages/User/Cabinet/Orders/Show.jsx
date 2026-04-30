@@ -107,7 +107,7 @@ export default function OrderShow({ order }) {
 
                 {/* ═══ Информация о заказе ═══ */}
                 <SimpleGrid columns={{ base: 1, lg: 2 }} gap="4">
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">Информация о заказе</Text>
                         </Card.Header>
@@ -133,7 +133,7 @@ export default function OrderShow({ order }) {
                         </Card.Body>
                     </Card.Root>
 
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                         <Card.Header p="4" pb="2">
                             <Text fontWeight="700" fontSize="md">Реквизиты</Text>
                         </Card.Header>
@@ -212,15 +212,15 @@ export default function OrderShow({ order }) {
                         </Flex>
                         <Box
                             overflowX="auto"
-                            bg={{ base: 'white', _dark: 'gray.800' }}
+                            bg="bg"
                             borderRadius="xl"
                             border="1px solid"
-                            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                            _dark={{ borderColor: 'gray.700' }}
+                            borderColor="border.muted"
+
                         >
-                            <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
+                            <Table.Root bg="bg" size="sm">
                                 <Table.Header>
-                                    <Table.Row bg={{ base: 'white', _dark: 'gray.800' }} _dark={{ bg: 'gray.800' }}>
+                                    <Table.Row bg="bg" _dark={{ bg: 'gray.800' }}>
                                         <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                         <Table.ColumnHeader w="80px" textAlign="center">Кол-во</Table.ColumnHeader>
                                         <Table.ColumnHeader w="130px" textAlign="right">Цена без скидки</Table.ColumnHeader>
@@ -238,7 +238,7 @@ export default function OrderShow({ order }) {
                                         const basePrice = hasDiscount ? rawBasePrice : finalPrice;
                                         const discountPct = hasDiscount ? rawDiscountPct : 0;
                                         return (
-                                            <Table.Row key={item.id} bg={{ base: 'white', _dark: 'gray.800' }}>
+                                            <Table.Row key={item.id} bg="bg">
                                                 <Table.Cell>
                                                     <HStack gap="3">
                                                         {item.product?.image_url && (
@@ -284,7 +284,7 @@ export default function OrderShow({ order }) {
                                     })}
                                 </Table.Body>
                                 <Table.Footer>
-                                    <Table.Row bg={{ base: 'gray.50', _dark: 'gray.900' }}>
+                                    <Table.Row bg="bg.subtle">
                                         <Table.Cell colSpan={6} p="4">
                                             <Flex justify="space-between" align="center" gap="3" flexWrap="wrap">
                                                 <Flex align="center" gap="2">
@@ -342,10 +342,10 @@ export default function OrderShow({ order }) {
                                 return (
                                     <Link key={shipment.id} href={`/cabinet/shipments/${shipment.id}`}>
                                         <Box
-                                            bg={{ base: 'white', _dark: 'gray.800' }}
+                                            bg="bg"
                                             borderRadius="xl"
                                             border="1px solid"
-                                            borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
+                                            borderColor="border.muted"
                                             p="4"
                                             _hover={{ borderColor: 'pecado.200', shadow: 'sm', _dark: { borderColor: 'pecado.700' } }}
                                             transition="all 0.15s"
@@ -481,7 +481,7 @@ function buildTimeline(statusHistories = [], changeLogs = []) {
  */
 function OrderTimeline({ entries = [] }) {
     return (
-        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+        <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
             <Card.Header p="4" pb="2">
                 <HStack gap="2">
                     <LuClock size={18} />
@@ -523,7 +523,7 @@ function OrderTimeline({ entries = [] }) {
                                     }
                                     border="3px solid"
                                     borderColor="white"
-                                    _dark={{ borderColor: 'gray.800' }}
+
                                     zIndex={1}
                                 />
 

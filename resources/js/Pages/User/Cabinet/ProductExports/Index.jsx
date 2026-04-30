@@ -253,7 +253,7 @@ export default function Index({
             </Flex>
 
             {showFilters && (
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} mb="4" borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                <Card.Root bg="bg" mb="4" borderRadius="xl" border="1px solid" borderColor="border.muted">
                     <Card.Body p="4">
                         <Stack gap="4">
                             <Flex gap="4" direction={{ base: 'column', md: 'row' }}>
@@ -281,8 +281,8 @@ export default function Index({
                                     onChange={(e) => setLocalFilters({ ...localFilters, is_active: e.target.value })}
                                     borderRadius="md"
                                     border="1px solid"
-                                    borderColor={{ base: 'gray.200', _dark: 'gray.600' }}
-                                    bg={{ base: 'white', _dark: 'gray.800' }}
+                                    borderColor="border"
+                                    bg="bg"
                                     px="3"
                                     py="1.5"
                                     fontSize="sm"
@@ -314,12 +314,12 @@ export default function Index({
             />
 
             {exportsList.length === 0 ? (
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}>
+                <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
                             <Flex
                                 align="center" justify="center" w="14" h="14" borderRadius="full"
-                                bg="gray.100" _dark={{ bg: 'gray.700' }}
+                                bg="bg.muted"
                             >
                                 <LuFileDown size={24} color="gray" />
                             </Flex>
@@ -353,10 +353,10 @@ export default function Index({
                     </Card.Body>
                 </Card.Root>
             ) : (
-                <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ bg: 'gray.800', borderColor: 'gray.700' }} overflow="hidden">
+                <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted" overflow="hidden">
                     {/* Desktop Table */}
                     <Box display={{ base: 'none', md: 'block' }}>
-                        <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm">
+                        <Table.Root bg="bg" size="sm">
                             <Table.Header>
                                 <Table.Row>
                                     <Table.ColumnHeader>Название</Table.ColumnHeader>
@@ -441,7 +441,7 @@ export default function Index({
 
                     {/* Mobile Cards */}
                     <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch"
-                        separator={<Box borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }} />}
+                        separator={<Box borderTop="1px solid" borderColor="border.muted" />}
                     >
                         {exportsList.map((exp) => (
                             <Flex key={exp.id} p="4" align="center" justify="space-between">
@@ -491,7 +491,7 @@ export default function Index({
 
                     {/* Pagination */}
                     {exports.last_page > 1 && (
-                        <Flex justify="center" p="3" borderTop="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }} _dark={{ borderColor: 'gray.700' }}>
+                        <Flex justify="center" p="3" borderTop="1px solid" borderColor="border.muted">
                             <HStack gap="1">
                                 {exports.links.map((link, i) => (
                                     <Button

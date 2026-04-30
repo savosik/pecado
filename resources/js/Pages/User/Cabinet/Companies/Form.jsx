@@ -16,7 +16,7 @@ function SectionHeading({ icon: Icon, children }) {
     return (
         <HStack gap="2" pt="2" pb="1">
             {Icon && <Icon size={18} style={{ color: '#9e1b32', flexShrink: 0 }} />}
-            <Text fontSize="md" fontWeight="700" color={{ base: 'gray.800', _dark: 'gray.100' }}>
+            <Text fontSize="md" fontWeight="700" color="fg">
                 {children}
             </Text>
         </HStack>
@@ -170,7 +170,7 @@ export default function Form({ company, countries = [] }) {
                 <VStack gap="6" align="stretch" maxW="720px">
 
                     {/* === Основная информация === */}
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                         <Card.Body p="5">
                             <SectionHeading icon={LuBuilding2}>Основная информация</SectionHeading>
                             <VStack gap="4" align="stretch" pt="3">
@@ -207,7 +207,7 @@ export default function Form({ company, countries = [] }) {
                     </Card.Root>
 
                     {/* === Юридические реквизиты === */}
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                         <Card.Body p="5">
                             <SectionHeading icon={LuFileText}>Юридические реквизиты</SectionHeading>
                             <VStack gap="4" align="stretch" pt="3">
@@ -248,7 +248,7 @@ export default function Form({ company, countries = [] }) {
                     </Card.Root>
 
                     {/* === Адреса === */}
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                         <Card.Body p="5">
                             <SectionHeading icon={LuMapPin}>Адреса</SectionHeading>
                             <VStack gap="4" align="stretch" pt="3">
@@ -268,7 +268,7 @@ export default function Form({ company, countries = [] }) {
                     </Card.Root>
 
                     {/* === Контакты === */}
-                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                    <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                         <Card.Body p="5">
                             <SectionHeading icon={LuPhone}>Контакты</SectionHeading>
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap="4" pt="3">
@@ -296,7 +296,7 @@ export default function Form({ company, countries = [] }) {
 
                     {/* === Банковские счета (только при редактировании) === */}
                     {isEditing && (
-                        <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} borderRadius="xl" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                        <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                             <Card.Body p="5">
                                 <Flex justify="space-between" align="center">
                                     <SectionHeading icon={LuLandmark}>Банковские счета</SectionHeading>
@@ -307,14 +307,14 @@ export default function Form({ company, countries = [] }) {
 
                                 <Box pt="3">
                                     {bankAccounts.length === 0 ? (
-                                        <Box p="8" textAlign="center" borderWidth="1px" borderRadius="md" borderStyle="dashed" borderColor={{ base: 'gray.200', _dark: 'gray.700' }}>
+                                        <Box p="8" textAlign="center" borderWidth="1px" borderRadius="md" borderStyle="dashed" borderColor="border">
                                             <Text color="gray.400">Банковские счета не добавлены</Text>
                                         </Box>
                                     ) : (
                                         <>
                                             {/* Desktop table */}
                                             <Box display={{ base: 'none', md: 'block' }}>
-                                                <Table.Root bg={{ base: 'white', _dark: 'gray.800' }} size="sm" variant="outline">
+                                                <Table.Root bg="bg" size="sm" variant="outline">
                                                     <Table.Header>
                                                         <Table.Row>
                                                             <Table.ColumnHeader>Банк</Table.ColumnHeader>
@@ -356,7 +356,7 @@ export default function Form({ company, countries = [] }) {
                                             {/* Mobile cards */}
                                             <VStack display={{ base: 'flex', md: 'none' }} gap="3" align="stretch">
                                                 {bankAccounts.map((acc) => (
-                                                    <Card.Root bg={{ base: 'white', _dark: 'gray.800' }} key={acc.id} size="sm" borderRadius="lg" border="1px solid" borderColor={{ base: 'gray.100', _dark: 'gray.700' }}>
+                                                    <Card.Root bg="bg" key={acc.id} size="sm" borderRadius="lg" border="1px solid" borderColor="border.muted">
                                                         <Card.Body p="3">
                                                             <Flex justify="space-between" align="start">
                                                                 <Box flex="1" minW="0">
