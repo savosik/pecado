@@ -40,6 +40,7 @@ CLAUDE.md
 AGENTS.md
 boost.json
 /.claude/skills/
+/.claude/scheduled_tasks.lock
 /reference/\n# Dev server credentials (local only)\ndocs/DEV_SERVER_CREDENTIALS.md
 /reference
 
