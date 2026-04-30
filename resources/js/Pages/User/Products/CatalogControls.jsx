@@ -1,5 +1,5 @@
 import { Box, Flex, HStack, Icon, Text } from '@chakra-ui/react';
-import { LuArrowDownUp, LuGrid2X2, LuLayoutList, LuList, LuChevronDown } from 'react-icons/lu';
+import { LuArrowDownUp, LuGrid2X2, LuLayoutList, LuList, LuChevronDown, LuPackage } from 'react-icons/lu';
 import { useRef } from 'react';
 
 const PER_PAGE_OPTIONS = [10, 20, 40, 60, 100];
@@ -14,6 +14,13 @@ const SORT_LABELS = {
     article_asc: 'Артикул А–Я',
     article_desc: 'Артикул Я–А',
 };
+
+const STOCK_OPTIONS = [
+    { value: '', label: 'Все' },
+    { value: 'instock', label: 'В наличии' },
+    { value: 'preorder', label: 'Предзаказ' },
+    { value: 'notavailable', label: 'Нет в наличии' },
+];
 
 
 
@@ -139,11 +146,18 @@ export default function CatalogControls({
     onSortChange,
     onViewChange,
     onPerPageChange,
+    inStockMode = '',
+    onStockChange,
+    showStockFilter = false,
 }) {
     const currentSortLabel =
         sortOptions.find((o) => o.value === sort)?.label
         ?? SORT_LABELS[sort]
         ?? sort;
+
+    const currentStockLabel =
+        STOCK_OPTIONS.find((o) => o.value === (inStockMode || ''))?.label
+        ?? STOCK_OPTIONS[0].label;
 
     return (
         <Flex
@@ -161,6 +175,29 @@ export default function CatalogControls({
                 }}
             >
                 <HStack gap="2" flexShrink="0" minW="max-content">
+                    {/* Наличие — только для авторизованных */}
+                    {showStockFilter && (
+                        <ControlButton
+                            icon={LuPackage}
+                            label="Наличие"
+                            value={currentStockLabel}
+                        >
+                            {(ref) => (
+                                <select
+                                    ref={ref}
+                                    value={inStockMode || ''}
+                                    onChange={(e) => onStockChange?.(e.target.value)}
+                                >
+                                    {STOCK_OPTIONS.map((opt) => (
+                                        <option key={opt.value || 'all'} value={opt.value}>
+                                            {opt.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            )}
+                        </ControlButton>
+                    )}
+
                     {/* Сортировка */}
                     <ControlButton
                         icon={LuArrowDownUp}

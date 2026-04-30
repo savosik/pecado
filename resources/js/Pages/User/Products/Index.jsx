@@ -23,7 +23,6 @@ import useCatalogFacets from './hooks/useCatalogFacets';
 import FilterBlock from './filters/FilterBlock';
 import SearchFilter from './filters/SearchFilter';
 import PriceFilter from './filters/PriceFilter';
-import StockFilter from './filters/StockFilter';
 import CategoryFilter from './filters/CategoryFilter';
 import BrandFilter from './filters/BrandFilter';
 import AttributeFilters from './filters/AttributeFilters';
@@ -266,20 +265,6 @@ export default function Index() {
                 </>
             )}
 
-            {/* Наличие — только для авторизованных */}
-            {isAuthenticated && (
-                <FilterBlock
-                    title="Наличие"
-                    showClear={!!filters.in_stock_mode}
-                    onClear={() => handleStockChange('')}
-                >
-                    <StockFilter
-                        value={filters.in_stock_mode || ''}
-                        onChange={handleStockChange}
-                    />
-                </FilterBlock>
-            )}
-
             {/* Атрибуты (динамические блоки) */}
             {facets?.attributes && facets.attributes.length > 0 && (
                 <AttributeFilters
@@ -291,7 +276,7 @@ export default function Index() {
                 />
             )}
         </Box>
-    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleStockChange, handleAttributeValuesChange, handleInlineAttributeChange]);
+    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleAttributeValuesChange, handleInlineAttributeChange]);
 
     // ─── Динамический SEO (поисковый запрос → title) ───
     const dynamicSeo = useMemo(() => {
@@ -346,6 +331,9 @@ export default function Index() {
                         onSortChange={(value) => updateFilter('sort', value)}
                         onViewChange={setView}
                         onPerPageChange={(value) => updateFilter('per_page', value)}
+                        inStockMode={filters.in_stock_mode || ''}
+                        onStockChange={handleStockChange}
+                        showStockFilter={isAuthenticated}
                     />
                 </Flex>
             </Flex>
