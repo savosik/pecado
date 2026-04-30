@@ -31,14 +31,15 @@ function ProductCard({ product, loading = false }) {
     const copySku = useCallback(async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!product.sku) return;
+        const sku = product?.sku;
+        if (!sku) return;
         try {
-            await navigator.clipboard.writeText(product.sku);
-            toaster.create({ title: `Артикул ${product.sku} скопирован`, type: 'success', duration: 2000 });
+            await navigator.clipboard.writeText(sku);
+            toaster.create({ title: `Артикул ${sku} скопирован`, type: 'success', duration: 2000 });
         } catch {
             toaster.create({ title: 'Не удалось скопировать', type: 'error' });
         }
-    }, [product.sku]);
+    }, [product?.sku]);
 
     // Скелетон
     if (loading) {
