@@ -48,12 +48,12 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
         const currencyId = modifiers?.currency_id || null;
         return (
             <HStack gap={1} flexWrap="wrap" mt={1}>
-                <Text fontSize="xs" color="gray.500" flexShrink={0}>Валюта:</Text>
+                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Валюта:</Text>
                 <Badge
                     size="sm"
                     cursor="pointer"
                     variant={!currencyId ? 'solid' : 'outline'}
-                    colorPalette={!currencyId ? 'purple' : 'gray'}
+                    colorPalette={!currencyId ? 'pecado' : 'gray'}
                     onClick={() => onModifiersChange({ ...modifiers, currency_id: null })}
                     _hover={{ opacity: 0.8 }}
                 >
@@ -65,7 +65,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                         size="sm"
                         cursor="pointer"
                         variant={currencyId === c.id ? 'solid' : 'outline'}
-                        colorPalette={currencyId === c.id ? 'purple' : 'gray'}
+                        colorPalette={currencyId === c.id ? 'pecado' : 'gray'}
                         onClick={() => onModifiersChange({ ...modifiers, currency_id: c.id })}
                         _hover={{ opacity: 0.8 }}
                     >
@@ -84,7 +84,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
         return (
             <Stack gap={1} mt={1}>
                 <HStack gap={1} flexWrap="wrap">
-                    <Text fontSize="xs" color="gray.500" flexShrink={0}>Формат:</Text>
+                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>Формат:</Text>
                     {BOOLEAN_PRESETS.map((preset, i) => {
                         const active = preset.true_value === trueVal && preset.false_value === falseVal;
                         return (
@@ -93,7 +93,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                                 size="sm"
                                 cursor="pointer"
                                 variant={active ? 'solid' : 'outline'}
-                                colorPalette={active ? 'purple' : 'gray'}
+                                colorPalette={active ? 'pecado' : 'gray'}
                                 onClick={() => onModifiersChange({
                                     ...modifiers,
                                     true_value: preset.true_value,
@@ -109,7 +109,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                         size="sm"
                         cursor="pointer"
                         variant={isCustom ? 'solid' : 'outline'}
-                        colorPalette={isCustom ? 'purple' : 'gray'}
+                        colorPalette={isCustom ? 'pecado' : 'gray'}
                         _hover={{ opacity: 0.8 }}
                     >
                         Свои
@@ -124,7 +124,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                             onChange={(e) => onModifiersChange({ ...modifiers, true_value: e.target.value })}
                             placeholder="Истина"
                         />
-                        <Text fontSize="xs" color="gray.400">/</Text>
+                        <Text fontSize="xs" color="fg.subtle">/</Text>
                         <Input
                             size="xs"
                             w="80px"
@@ -142,14 +142,14 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
         const separator = modifiers?.separator || ', ';
         return (
             <HStack gap={1} flexWrap="wrap" mt={1}>
-                <Text fontSize="xs" color="gray.500" flexShrink={0}>Разделитель:</Text>
+                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Разделитель:</Text>
                 {SEPARATOR_OPTIONS.map(opt => (
                     <Badge
                         key={opt.value}
                         size="sm"
                         cursor="pointer"
                         variant={separator === opt.value ? 'solid' : 'outline'}
-                        colorPalette={separator === opt.value ? 'purple' : 'gray'}
+                        colorPalette={separator === opt.value ? 'pecado' : 'gray'}
                         onClick={() => onModifiersChange({ ...modifiers, separator: opt.value })}
                         _hover={{ opacity: 0.8 }}
                     >
@@ -188,12 +188,12 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
         <Box
             ref={setNodeRef}
             style={style}
-            bg={isDragging ? 'purple.50' : 'white'}
+            bg={isDragging ? 'pecado.subtle' : 'bg.default'}
             py={2}
             px={2}
             borderRadius="md"
             borderWidth="1px"
-            borderColor={isDragging ? 'purple.200' : 'gray.200'}
+            borderColor={isDragging ? 'pecado.muted' : 'border.muted'}
             opacity={isDragging ? 0.5 : 1}
         >
             <HStack gap={2}>
@@ -202,8 +202,8 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
                     {...attributes}
                     {...listeners}
                     cursor="grab"
-                    color="gray.400"
-                    _hover={{ color: 'gray.600' }}
+                    color="fg.subtle"
+                    _hover={{ color: 'fg.muted' }}
                     px={1}
                     flexShrink={0}
                 >
@@ -234,8 +234,7 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
                     <IconButton
                         size="xs"
                         variant="ghost"
-                        color={showModifiers ? 'purple.500' : 'gray.400'}
-                        _hover={{ color: 'purple.600', bg: 'purple.50' }}
+                        colorPalette={showModifiers ? 'pecado' : 'gray'}
                         onClick={() => setShowModifiers(!showModifiers)}
                         aria-label="Настройки поля"
                         flexShrink={0}
@@ -306,9 +305,9 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
             left={0}
             right={0}
             mt={1}
-            bg={{ base: 'white', _dark: 'gray.800' }}
+            bg="bg.default"
             borderWidth="1px"
-            borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+            borderColor="border.muted"
             borderRadius="lg"
             boxShadow="lg"
             overflow="hidden"
@@ -318,8 +317,8 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
                 <Box
                     w="200px"
                     borderRightWidth="1px"
-                    borderColor={{ base: 'gray.100', _dark: 'gray.700' }}
-                    bg="gray.50"
+                    borderColor="border.muted"
+                    bg="bg.subtle"
                     overflowY="auto"
                     maxH="400px"
                     py={1}
@@ -331,14 +330,14 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
                             px={4}
                             py={2}
                             cursor="pointer"
-                            bg={activeGroup === group.group ? 'white' : 'transparent'}
-                            color={activeGroup === group.group ? 'blue.600' : 'fg'}
+                            bg={activeGroup === group.group ? 'bg.default' : 'transparent'}
+                            color={activeGroup === group.group ? 'pecado.fg' : 'fg'}
                             fontWeight={activeGroup === group.group ? 'bold' : 'normal'}
                             fontSize="sm"
-                            _hover={{ bg: activeGroup === group.group ? 'white' : 'gray.100' }}
+                            _hover={{ bg: activeGroup === group.group ? 'bg.default' : 'bg.muted' }}
                             onClick={() => setActiveGroup(group.group)}
                             borderRightWidth={activeGroup === group.group ? '2px' : '0'}
-                            borderRightColor="blue.500"
+                            borderRightColor="pecado.solid"
                         >
                             {group.group}
                         </Box>
@@ -356,7 +355,7 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
                                 py={2}
                                 cursor={isAlreadySelected ? 'default' : 'pointer'}
                                 opacity={isAlreadySelected ? 0.4 : 1}
-                                _hover={isAlreadySelected ? {} : { bg: 'gray.50' }}
+                                _hover={isAlreadySelected ? {} : { bg: 'pecado.subtle' }}
                                 onClick={() => {
                                     if (!isAlreadySelected) {
                                         onSelect(field);
@@ -368,7 +367,7 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
                                     {field.modifier_type && (
                                         <Badge size="xs" variant="subtle" colorPalette={
                                             field.modifier_type === 'price' ? 'green' :
-                                                field.modifier_type === 'boolean' ? 'blue' : 'orange'
+                                                field.modifier_type === 'boolean' ? 'pecado' : 'orange'
                                         }>
                                             {field.modifier_type === 'price' ? '₽' :
                                                 field.modifier_type === 'boolean' ? '✓/✗' : '⋯'}

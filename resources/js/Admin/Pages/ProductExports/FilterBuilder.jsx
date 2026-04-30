@@ -104,9 +104,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
         <Box position="relative" flex="1" minW="180px" ref={ref}>
             <Box
                 borderWidth="1px"
-                borderColor={open
-                    ? '#7c3aed'
-                    : { base: 'gray.200', _dark: 'gray.700' }}
+                borderColor={open ? 'pecado.solid' : 'border.muted'}
                 borderRadius="md"
                 px={2} py={1}
                 cursor="pointer"
@@ -116,18 +114,18 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                 flexWrap="wrap"
                 gap={1}
                 onClick={() => setOpen(!open)}
-                bg={{ base: 'white', _dark: 'gray.800' }}
+                bg="bg.default"
                 transition="border-color 0.15s"
             >
                 {selectedIds.length === 0
-                    ? <Text fontSize="13px" color="gray.400">{placeholder}</Text>
+                    ? <Text fontSize="13px" color="fg.subtle">{placeholder}</Text>
                     : selectedItems
                         .filter(i => selectedIds.includes(i.id))
                         .map(item => (
                             <Badge
                                 key={item.id}
                                 size="sm"
-                                colorPalette="purple"
+                                colorPalette="pecado"
                                 variant="subtle"
                                 cursor="pointer"
                                 onClick={(e) => { e.stopPropagation(); toggleItem(item); }}
@@ -136,7 +134,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                             </Badge>
                         ))
                 }
-                <Box ml="auto" color="gray.400" flexShrink={0}>
+                <Box ml="auto" color="fg.subtle" flexShrink={0}>
                     <LuChevronDown size={14} />
                 </Box>
             </Box>
@@ -147,15 +145,15 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                     left={0}
                     right={0}
                     mt={1}
-                    bg={{ base: 'white', _dark: 'gray.800' }}
+                    bg="bg.default"
                     borderWidth="1px"
-                    borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                    borderColor="border.muted"
                     borderRadius="md"
                     zIndex={20}
                     boxShadow="lg"
                     overflow="hidden"
                 >
-                    <Box p={2} borderBottom="1px solid #f1f5f9">
+                    <Box p={2} borderBottom="1px solid" borderColor="border.muted">
                         <Input
                             size="xs"
                             value={search}
@@ -165,7 +163,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                         />
                     </Box>
                     <Box maxH="200px" overflowY="auto">
-                        {loading && <Text px={3} py={2} fontSize="13px" color="gray.400">Загрузка...</Text>}
+                        {loading && <Text px={3} py={2} fontSize="13px" color="fg.subtle">Загрузка...</Text>}
                         {!loading && options.map(item => {
                             const checked = selectedIds.includes(item.id);
                             return (
@@ -173,24 +171,18 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                                     key={item.id}
                                     px={3} py={1.5}
                                     cursor="pointer"
-                                    bg={checked
-                                        ? { base: 'purple.50', _dark: 'purple.900' }
-                                        : { base: 'white', _dark: 'gray.800' }}
-                                    _hover={{
-                                        bg: checked
-                                            ? { base: 'purple.100', _dark: 'purple.800' }
-                                            : { base: 'gray.50', _dark: 'gray.700' },
-                                    }}
+                                    bg={checked ? 'pecado.subtle' : 'bg.default'}
+                                    _hover={{ bg: checked ? 'pecado.muted' : 'bg.subtle' }}
                                     onClick={() => toggleItem(item)}
                                     gap={2}
                                 >
-                                    <input type="checkbox" checked={checked} readOnly style={{ accentColor: '#7c3aed' }} />
-                                    <Text fontSize="13px" color={{ base: 'gray.900', _dark: 'gray.100' }}>{displayName(item)}</Text>
+                                    <input type="checkbox" checked={checked} readOnly style={{ accentColor: 'var(--chakra-colors-pecado-solid)' }} />
+                                    <Text fontSize="13px" color="fg">{displayName(item)}</Text>
                                 </HStack>
                             );
                         })}
                         {!loading && options.length === 0 && (
-                            <Text px={3} py={2} fontSize="13px" color="gray.400">Ничего не найдено</Text>
+                            <Text px={3} py={2} fontSize="13px" color="fg.subtle">Ничего не найдено</Text>
                         )}
                     </Box>
                 </Box>
@@ -226,7 +218,7 @@ function StyledSelect({ value, onChange, children, minW = '140px', ...rest }) {
                 top="50%"
                 transform="translateY(-50%)"
                 pointerEvents="none"
-                color="gray.400"
+                color="fg.subtle"
             >
                 <LuChevronDown size={14} />
             </Box>
@@ -301,7 +293,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                 <Box position="relative" flex="1" minW="180px">
                     <Box
                         borderWidth="1px"
-                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                        borderColor={selectDropdownOpen ? 'pecado.solid' : 'border.muted'}
                         borderRadius="8px"
                         px={2} py={1}
                         cursor="pointer"
@@ -311,14 +303,15 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         flexWrap="wrap"
                         gap={1}
                         onClick={() => setSelectDropdownOpen(!selectDropdownOpen)}
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg.default"
+                        transition="border-color 0.15s"
                     >
                         {selectedIds.length === 0
-                            ? <Text fontSize="13px" color="gray.400">Выберите...</Text>
+                            ? <Text fontSize="13px" color="fg.subtle">Выберите...</Text>
                             : selectedIds.map((id) => {
                                 const opt = options.find(o => o.value === id);
                                 return opt ? (
-                                    <Badge key={id} size="sm" colorPalette="purple" variant="subtle"
+                                    <Badge key={id} size="sm" colorPalette="pecado" variant="subtle"
                                         cursor="pointer"
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -330,7 +323,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                 ) : null;
                             })
                         }
-                        <Box ml="auto" color="gray.400" flexShrink={0}>
+                        <Box ml="auto" color="fg.subtle" flexShrink={0}>
                             <LuChevronDown size={14} />
                         </Box>
                     </Box>
@@ -341,8 +334,9 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                             left={0}
                             right={0}
                             mt={1}
-                            bg={{ base: 'white', _dark: 'gray.800' }}
-                            border="1px solid #e2e8f0"
+                            bg="bg.default"
+                            border="1px solid"
+                            borderColor="border.muted"
                             borderRadius="8px"
                             zIndex={10}
                             maxH="200px"
@@ -356,14 +350,8 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                         key={opt.value}
                                         px={3} py={1.5}
                                         cursor="pointer"
-                                        bg={checked
-                                            ? { base: 'purple.50', _dark: 'purple.900' }
-                                            : { base: 'white', _dark: 'gray.800' }}
-                                        _hover={{
-                                            bg: checked
-                                                ? { base: 'purple.100', _dark: 'purple.800' }
-                                                : { base: 'gray.50', _dark: 'gray.700' },
-                                        }}
+                                        bg={checked ? 'pecado.subtle' : 'bg.default'}
+                                        _hover={{ bg: checked ? 'pecado.muted' : 'bg.subtle' }}
                                         onClick={() => {
                                             if (checked) {
                                                 handleValueChange(selectedIds.filter(x => x !== opt.value));
@@ -372,13 +360,13 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                             }
                                         }}
                                     >
-                                        <input type="checkbox" checked={checked} readOnly style={{ accentColor: '#7c3aed' }} />
-                                        <Text fontSize="13px" color={{ base: 'gray.900', _dark: 'gray.100' }}>{opt.label}</Text>
+                                        <input type="checkbox" checked={checked} readOnly style={{ accentColor: 'var(--chakra-colors-pecado-solid)' }} />
+                                        <Text fontSize="13px" color="fg">{opt.label}</Text>
                                     </HStack>
                                 );
                             })}
                             {options.length === 0 && (
-                                <Text px={3} py={2} fontSize="13px" color="gray.400">Нет вариантов</Text>
+                                <Text px={3} py={2} fontSize="13px" color="fg.subtle">Нет вариантов</Text>
                             )}
                         </Box>
                     )}
@@ -445,19 +433,19 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
 
     return (
         <HStack
-            bg={{ base: 'white', _dark: 'gray.800' }}
+            bg="bg.default"
             border="1px solid"
-            borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+            borderColor="border.muted"
             borderRadius="lg"
             px={3}
             py={2.5}
             gap={2}
             align="center"
             flexWrap="wrap"
-            boxShadow="0 1px 3px rgba(0,0,0,0.04)"
+            boxShadow="sm"
         >
             {/* Drag handle */}
-            <Box color="gray.300" flexShrink={0} cursor="grab">
+            <Box color="fg.subtle" flexShrink={0} cursor="grab">
                 <LuGripVertical size={16} />
             </Box>
 
@@ -465,11 +453,9 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
             <Box position="relative" minW="170px" flex="1">
                 <Box
                     borderWidth="1px"
-                    borderColor={dropdownOpen
-                        ? '#7c3aed'
-                        : { base: 'gray.200', _dark: 'gray.700' }}
+                    borderColor={dropdownOpen ? 'pecado.solid' : 'border.muted'}
                     borderRadius="8px"
-                    bg={{ base: 'white', _dark: 'gray.800' }}
+                    bg="bg.default"
                     position="relative"
                     transition="border-color 0.15s"
                 >
@@ -488,7 +474,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         right="8px"
                         top="50%"
                         transform="translateY(-50%)"
-                        color="gray.400"
+                        color="fg.subtle"
                         pointerEvents="none"
                     >
                         <LuChevronDown size={14} />
@@ -501,9 +487,9 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         left={0}
                         right={0}
                         mt={1}
-                        bg={{ base: 'white', _dark: 'gray.800' }}
+                        bg="bg.default"
                         borderWidth="1px"
-                        borderColor={{ base: 'gray.200', _dark: 'gray.700' }}
+                        borderColor="border.muted"
                         borderRadius="8px"
                         zIndex={20}
                         maxH="300px"
@@ -514,8 +500,8 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         {filteredGroups.map(group => (
                             <Box key={group.group}>
                                 <Text px={3} py={1.5} fontSize="11px" fontWeight="bold"
-                                    color={{ base: 'gray.500', _dark: 'gray.300' }}
-                                    bg={{ base: 'gray.50', _dark: 'gray.700' }}
+                                    color="fg.muted"
+                                    bg="bg.subtle"
                                     textTransform="uppercase" letterSpacing="0.05em">
                                     {group.group}
                                 </Text>
@@ -524,10 +510,8 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                         key={f.key}
                                         px={3} py={2}
                                         cursor="pointer"
-                                        _hover={{ bg: { base: 'purple.50', _dark: 'purple.900' } }}
-                                        bg={condition.field === f.key
-                                            ? { base: 'purple.50', _dark: 'purple.900' }
-                                            : undefined}
+                                        _hover={{ bg: 'pecado.subtle' }}
+                                        bg={condition.field === f.key ? 'pecado.subtle' : undefined}
                                         onMouseDown={(e) => {
                                             e.preventDefault();
                                             handleFieldChange(f.key);
@@ -535,13 +519,13 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                             setSearch('');
                                         }}
                                     >
-                                        <Text fontSize="13px" color={{ base: 'gray.900', _dark: 'gray.100' }}>{f.label}</Text>
+                                        <Text fontSize="13px" color="fg">{f.label}</Text>
                                     </Box>
                                 ))}
                             </Box>
                         ))}
                         {filteredGroups.length === 0 && (
-                            <Text px={3} py={2} fontSize="13px" color="gray.400">Ничего не найдено</Text>
+                            <Text px={3} py={2} fontSize="13px" color="fg.subtle">Ничего не найдено</Text>
                         )}
                     </Box>
                 )}
@@ -566,8 +550,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
             <IconButton
                 size="xs"
                 variant="ghost"
-                color="gray.400"
-                _hover={{ color: 'red.500', bg: 'red.50' }}
+                colorPalette="red"
                 onClick={onRemove}
                 aria-label="Удалить"
                 flexShrink={0}
@@ -579,7 +562,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
 }
 
 // ─── Connector with logic badge ────────────────────────────────────────────────
-function LogicConnector({ logic, onClick }) {
+function LogicConnector({ logic }) {
     return (
         <Box position="relative" h="8px" ml="22px">
             {/* Vertical line segment */}
@@ -589,7 +572,9 @@ function LogicConnector({ logic, onClick }) {
                 top="0"
                 bottom="0"
                 w="2px"
-                bg={logic === 'and' ? '#c4b5fd' : '#fdba74'}
+                bg={logic === 'and'
+                    ? 'pecado.muted'
+                    : { base: 'orange.200', _dark: 'orange.700' }}
             />
         </Box>
     );
@@ -642,9 +627,17 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
         onChange({ ...group, logic: logic === 'and' ? 'or' : 'and' });
     };
 
-    const accentColor = logic === 'and' ? '#7c3aed' : '#f97316';
-    const accentBg = logic === 'and' ? '#ede9fe' : '#fff7ed';
-    const accentBorder = logic === 'and' ? '#c4b5fd' : '#fdba74';
+    const accent = logic === 'and'
+        ? {
+            color: 'pecado.fg',
+            bg: 'pecado.subtle',
+            border: 'pecado.muted',
+        }
+        : {
+            color: { base: 'orange.600', _dark: 'orange.300' },
+            bg: { base: 'orange.50', _dark: 'orange.950' },
+            border: { base: 'orange.200', _dark: 'orange.700' },
+        };
 
     return (
         <Box position="relative">
@@ -655,7 +648,7 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
                 top="20px"
                 bottom="52px"
                 w="2px"
-                bg={accentBorder}
+                bg={accent.border}
                 borderRadius="full"
             />
 
@@ -683,9 +676,9 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
                                     fontWeight="bold"
                                     cursor="pointer"
                                     border="1px solid"
-                                    bg={accentBg}
-                                    color={accentColor}
-                                    borderColor={accentBorder}
+                                    bg={accent.bg}
+                                    color={accent.color}
+                                    borderColor={accent.border}
                                     _hover={{ opacity: 0.8 }}
                                     transition="all 0.15s"
                                 >
@@ -704,7 +697,7 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
                                 top="50%"
                                 w="20px"
                                 h="2px"
-                                bg={accentBorder}
+                                bg={accent.border}
                                 transform="translateY(-50%)"
                             />
 
@@ -713,7 +706,7 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
                                     <HStack mb={1} gap={1}>
                                         <Badge
                                             size="sm"
-                                            colorPalette={cond.logic === 'and' ? 'purple' : 'orange'}
+                                            colorPalette={cond.logic === 'and' ? 'pecado' : 'orange'}
                                             variant="subtle"
                                             cursor="pointer"
                                             onClick={() => {
@@ -726,8 +719,7 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
                                         <IconButton
                                             size="2xs"
                                             variant="ghost"
-                                            color="gray.400"
-                                            _hover={{ color: 'red.500' }}
+                                            colorPalette="red"
                                             onClick={() => removeCondition(idx)}
                                             aria-label="Удалить группу"
                                         >
@@ -766,8 +758,7 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
                 <Button
                     size="xs"
                     variant="ghost"
-                    color="#7c3aed"
-                    _hover={{ bg: '#ede9fe' }}
+                    colorPalette="pecado"
                     onClick={addCondition}
                     fontWeight="medium"
                 >
@@ -777,8 +768,7 @@ function FilterGroup({ group, availableFilters, onChange, onRemove, depth = 0 })
                     <Button
                         size="xs"
                         variant="ghost"
-                        color="#7c3aed"
-                        _hover={{ bg: '#ede9fe' }}
+                        colorPalette="pecado"
                         onClick={addSubGroup}
                         fontWeight="medium"
                     >
@@ -808,19 +798,17 @@ export default function FilterBuilder({ filters, availableFilters, onChange }) {
                 py={8}
                 textAlign="center"
                 border="1px dashed"
-                borderColor="gray.300"
+                borderColor="border.muted"
                 borderRadius="lg"
                 color="fg.muted"
-                bg="gray.50"
+                bg="bg.subtle"
             >
-                <Text fontWeight="medium">Фильтры не заданы — будут выгружены все товары.</Text>
-                <Text fontSize="sm" mt={1} color="gray.500">Добавьте условия для фильтрации.</Text>
+                <Text fontWeight="medium" color="fg">Фильтры не заданы — будут выгружены все товары.</Text>
+                <Text fontSize="sm" mt={1} color="fg.muted">Добавьте условия для фильтрации.</Text>
                 <HStack mt={4} justify="center" gap={3}>
                     <Button
                         size="sm"
-                        bg="#7c3aed"
-                        color="white"
-                        _hover={{ bg: '#6d28d9' }}
+                        colorPalette="pecado"
                         onClick={() => onChange({
                             logic: 'and',
                             conditions: [
@@ -833,9 +821,7 @@ export default function FilterBuilder({ filters, availableFilters, onChange }) {
                     <Button
                         size="sm"
                         variant="outline"
-                        borderColor="#c4b5fd"
-                        color="#7c3aed"
-                        _hover={{ bg: '#ede9fe' }}
+                        colorPalette="pecado"
                         onClick={() => onChange({
                             logic: 'and',
                             conditions: [
