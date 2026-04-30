@@ -9,27 +9,28 @@ const EXIT_URL = 'https://www.google.com';
  * Возрастной гейт для публичной части сайта.
  *
  * Поведение:
- *  - Аутентифицированным активным пользователям (status=active или is_admin)
- *    модалка не показывается и блюр не применяется.
- *  - Гостю и неактивному юзеру:
- *      * если в localStorage нет флага подтверждения — показываем модалку
- *        и блюрим изображения (через класс html.nsfw-blur);
- *      * после «Да, мне есть 18» — модалка скрывается, флаг сохраняется,
- *        но блюр остаётся до регистрации/активации (так и хотел заказчик);
- *      * «Уйти» — редирект на google.com.
+ *  - Аутентифицированному с status=active или is_admin — модалка не
+ *    показывается, блюр не применяется.
+ *  - Гостю/неактивному:
+ *      * без флага в localStorage — модалка + блюр изображений (класс
+ *        nsfw-blur на <html>);
+ *      * нажатие «Да, мне есть 18» — пишем флаг, скрываем модалку,
+ *        снимаем блюр;
+ *      * «Уйти» — редирект на EXIT_URL.
  */
 export default function AgeGate() {
     const { auth } = usePage().props;
     const user = auth?.user || null;
     const isFullAccess = !!user && (user.is_admin || user.status === 'active');
 
-    const [showModal, setShowModal] = useState(false);
-    const [needsBlur, setNeedsBlur] = useState(false);
+    // gateActive = нужно ли показывать гейт (модалка + блюр).
+    // Начальное значение null — до прочтения localStorage не рендерим ничего,
+    // чтобы не моргать модалкой подтверждённому пользователю.
+    const [gateActive, setGateActive] = useState(null);
 
     useEffect(() => {
         if (isFullAccess) {
-            setShowModal(false);
-            setNeedsBlur(false);
+            setGateActive(false);
             return;
         }
         let confirmed = false;
@@ -38,34 +39,33 @@ export default function AgeGate() {
         } catch {
             confirmed = false;
         }
-        setShowModal(!confirmed);
-        setNeedsBlur(true);
+        setGateActive(!confirmed);
     }, [isFullAccess]);
 
     useEffect(() => {
         const root = document.documentElement;
-        if (needsBlur) {
+        if (gateActive) {
             root.classList.add('nsfw-blur');
         } else {
             root.classList.remove('nsfw-blur');
         }
         return () => root.classList.remove('nsfw-blur');
-    }, [needsBlur]);
+    }, [gateActive]);
 
     const handleConfirm = useCallback(() => {
         try {
             window.localStorage.setItem(STORAGE_KEY, '1');
         } catch {
-            /* localStorage недоступен — просто закрываем модалку на сессию */
+            /* localStorage недоступен — флаг просто не сохранится */
         }
-        setShowModal(false);
+        setGateActive(false);
     }, []);
 
     const handleExit = useCallback(() => {
         window.location.href = EXIT_URL;
     }, []);
 
-    if (!showModal) return null;
+    if (!gateActive) return null;
 
     return (
         <Box
@@ -82,27 +82,32 @@ export default function AgeGate() {
             aria-labelledby="age-gate-title"
         >
             <Box
-                bg="white"
-                _dark={{ bg: 'gray.800' }}
+                bg={{ base: 'white', _dark: 'gray.800' }}
                 borderRadius="md"
                 shadow="xl"
                 maxW="480px"
                 w="100%"
                 p="6"
             >
-                <Heading id="age-gate-title" as="h2" fontSize="xl" mb="3">
+                <Heading
+                    id="age-gate-title"
+                    as="h2"
+                    fontSize="xl"
+                    mb="3"
+                    color={{ base: 'gray.800', _dark: 'gray.100' }}
+                >
                     Внимание!
                 </Heading>
                 <Box borderTopWidth="1px" borderColor={{ base: 'gray.200', _dark: 'gray.700' }} mb="4" />
-                <Text fontSize="sm" mb="2">
+                <Text fontSize="sm" mb="2" color={{ base: 'gray.700', _dark: 'gray.200' }}>
                     Данный сайт содержит материалы для взрослых.
                 </Text>
-                <Text fontSize="sm" mb="6">
+                <Text fontSize="sm" mb="6" color={{ base: 'gray.700', _dark: 'gray.200' }}>
                     Чтобы продолжить, вы должны подтвердить, что вам уже исполнилось 18 лет.
                 </Text>
                 <Flex gap="4" align="center">
                     <Button
-                        colorPalette="red"
+                        colorPalette="pecado"
                         size="md"
                         onClick={handleConfirm}
                         autoFocus
@@ -113,6 +118,10 @@ export default function AgeGate() {
                         variant="ghost"
                         size="md"
                         color={{ base: 'pecado.600', _dark: 'pecado.300' }}
+                        _hover={{
+                            color: { base: 'pecado.700', _dark: 'pecado.200' },
+                            textDecoration: 'underline',
+                        }}
                         onClick={handleExit}
                     >
                         Уйти
