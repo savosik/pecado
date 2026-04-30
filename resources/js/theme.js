@@ -85,11 +85,13 @@ const config = defineConfig({
                 },
                 'pecado.focusRing': { value: '{colors.pecado.600}' },
 
-                // Насыщенные фоны (Premium Dark Mode)
+                // Фоны: в светлой теме — чистый белый, в тёмной — насыщенный
+                // тёплый тёмный (Premium Dark Mode). Sand-оттенки уходят на
+                // subtle/muted — для подложек блоков, не для основного фона.
                 bg: {
-                    DEFAULT: { value: { _light: '{colors.sand.50}', _dark: '#130c0e' } }, // Глубокий тёмный фон для dark mode
-                    subtle: { value: { _light: '{colors.sand.100}', _dark: '#1a1013' } },
-                    muted: { value: { _light: '{colors.sand.200}', _dark: '#24161a' } },
+                    DEFAULT: { value: { _light: 'white', _dark: '#130c0e' } },
+                    subtle: { value: { _light: '{colors.sand.50}', _dark: '#1a1013' } },
+                    muted: { value: { _light: '{colors.sand.100}', _dark: '#24161a' } },
                 },
 
                 fg: {
