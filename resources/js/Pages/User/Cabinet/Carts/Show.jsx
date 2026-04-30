@@ -265,46 +265,79 @@ export default function Show({ cart, cartDetails }) {
                                 borderRadius="md" shadow="lg" mt="1"
                                 maxH="350px" overflowY="auto"
                             >
-                                {searchResults.map((p) => (
-                                    <Flex
-                                        key={p.id}
-                                        p="2" gap="3" align="center"
-                                        cursor="pointer"
-                                        _hover={{ bg: 'gray.50/50', _dark: { bg: 'gray.700/50' } }}
-                                        onClick={() => handleAddProduct(p)}
-                                    >
-                                        {p.image_url ? (
-                                            <Image src={p.image_url} alt={p.name} boxSize="40px" objectFit="cover" borderRadius="md" flexShrink="0" />
-                                        ) : (
-                                            <Flex boxSize="40px" bg="gray.100" borderRadius="md" align="center" justify="center" flexShrink="0">
-                                                <LuPackage size={16} />
-                                            </Flex>
-                                        )}
-                                        <Box flex="1" minW="0">
-                                            <Text fontSize="sm" fontWeight="500" noOfLines={1}>{p.name}</Text>
-                                            <HStack gap="2" wrap="wrap">
-                                                {p.sku && <Text fontSize="xs" color="gray.400">Арт: {p.sku}</Text>}
-                                                {p.brand_name && <Badge size="sm" colorPalette="purple" variant="subtle">{p.brand_name}</Badge>}
-                                                {p.purchased_count > 0 && (
-                                                    <Badge size="sm" colorPalette="green" variant="subtle">
-                                                        ✓ покупали {p.purchased_count}×
-                                                    </Badge>
-                                                )}
-                                                {p.in_favorites && (
-                                                    <Badge size="sm" colorPalette="orange" variant="subtle">
-                                                        ★ в избранном
-                                                    </Badge>
-                                                )}
-                                                {p.match_source === 'barcode_exact' && (
-                                                    <Badge size="sm" colorPalette="blue" variant="subtle">
-                                                        Штрихкод
-                                                    </Badge>
-                                                )}
-                                            </HStack>
-                                        </Box>
-                                        <Text fontSize="sm" fontWeight="600" flexShrink="0">{formatPrice(p.base_price)}</Text>
-                                    </Flex>
-                                ))}
+                                {searchResults.map((p) => {
+                                    const available = Number(p.stock_available || 0);
+                                    const preorder = Number(p.stock_preorder || 0);
+                                    const outOfStock = available <= 0 && preorder <= 0;
+                                    let stockBadge;
+                                    if (available > 0) {
+                                        stockBadge = (
+                                            <Badge size="sm" colorPalette="green" variant="subtle">
+                                                В наличии: {available}
+                                            </Badge>
+                                        );
+                                    } else if (preorder > 0) {
+                                        stockBadge = (
+                                            <Badge size="sm" colorPalette="orange" variant="subtle">
+                                                Под заказ: {preorder}
+                                            </Badge>
+                                        );
+                                    } else {
+                                        stockBadge = (
+                                            <Badge size="sm" colorPalette="red" variant="subtle">
+                                                Нет в наличии
+                                            </Badge>
+                                        );
+                                    }
+                                    return (
+                                        <Flex
+                                            key={p.id}
+                                            p="2" gap="3" align="center"
+                                            cursor={outOfStock ? 'not-allowed' : 'pointer'}
+                                            opacity={outOfStock ? 0.55 : 1}
+                                            _hover={outOfStock ? undefined : { bg: 'gray.50/50', _dark: { bg: 'gray.700/50' } }}
+                                            onClick={() => {
+                                                if (outOfStock) {
+                                                    toaster.create({ title: `"${p.name}" — нет в наличии`, type: 'warning' });
+                                                    return;
+                                                }
+                                                handleAddProduct(p);
+                                            }}
+                                        >
+                                            {p.image_url ? (
+                                                <Image src={p.image_url} alt={p.name} boxSize="40px" objectFit="cover" borderRadius="md" flexShrink="0" />
+                                            ) : (
+                                                <Flex boxSize="40px" bg="gray.100" borderRadius="md" align="center" justify="center" flexShrink="0">
+                                                    <LuPackage size={16} />
+                                                </Flex>
+                                            )}
+                                            <Box flex="1" minW="0">
+                                                <Text fontSize="sm" fontWeight="500" noOfLines={1}>{p.name}</Text>
+                                                <HStack gap="2" wrap="wrap">
+                                                    {p.sku && <Text fontSize="xs" color="gray.400">Арт: {p.sku}</Text>}
+                                                    {p.brand_name && <Badge size="sm" colorPalette="purple" variant="subtle">{p.brand_name}</Badge>}
+                                                    {stockBadge}
+                                                    {p.purchased_count > 0 && (
+                                                        <Badge size="sm" colorPalette="green" variant="subtle">
+                                                            ✓ покупали {p.purchased_count}×
+                                                        </Badge>
+                                                    )}
+                                                    {p.in_favorites && (
+                                                        <Badge size="sm" colorPalette="orange" variant="subtle">
+                                                            ★ в избранном
+                                                        </Badge>
+                                                    )}
+                                                    {p.match_source === 'barcode_exact' && (
+                                                        <Badge size="sm" colorPalette="blue" variant="subtle">
+                                                            Штрихкод
+                                                        </Badge>
+                                                    )}
+                                                </HStack>
+                                            </Box>
+                                            <Text fontSize="sm" fontWeight="600" flexShrink="0">{formatPrice(p.base_price)}</Text>
+                                        </Flex>
+                                    );
+                                })}
                             </Box>
                         )}
                         {showResults && searchResults.length === 0 && searchQuery.length >= 2 && !isSearching && (

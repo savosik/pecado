@@ -8,12 +8,14 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Favorite;
 use App\Models\Product;
+use App\Models\Region;
 use App\Support\Search\FuzzyProductMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class CabinetCartController extends Controller
@@ -323,8 +325,12 @@ class CabinetCartController extends Controller
             ->pluck('product_id')
             ->all();
 
-        $products = $collection->map(function ($product) use ($exactBarcodeProduct, $favorites) {
+        $stock = $this->resolveStockMap(Auth::user(), $collection->pluck('id')->all());
+
+        $products = $collection->map(function ($product) use ($exactBarcodeProduct, $favorites, $stock) {
             $isExactBarcode = $exactBarcodeProduct && $product->id === $exactBarcodeProduct->id;
+            $available = (int) ($stock['available'][$product->id] ?? 0);
+            $preorder = (int) ($stock['preorder'][$product->id] ?? 0);
 
             return [
                 'id' => $product->id,
@@ -336,9 +342,60 @@ class CabinetCartController extends Controller
                 'purchased_count' => (int) ($product->purchased_count ?? 0),
                 'in_favorites' => in_array($product->id, $favorites, true),
                 'match_source' => $isExactBarcode ? 'barcode_exact' : null,
+                'stock_available' => $available,
+                'stock_preorder' => $preorder,
             ];
         })->values();
 
         return response()->json($products);
+    }
+
+    /**
+     * Считает остатки по складам региона пользователя одним SQL-запросом
+     * на каждый тип склада. Возвращает ['available' => [productId => qty], 'preorder' => [...]].
+     *
+     * @param  array<int, int>  $productIds
+     * @return array{available: array<int,int>, preorder: array<int,int>}
+     */
+    private function resolveStockMap(?\App\Models\User $user, array $productIds): array
+    {
+        $empty = ['available' => [], 'preorder' => []];
+
+        if (empty($productIds)) {
+            return $empty;
+        }
+
+        $regionId = $user?->region_id ?? Region::defaultId();
+        if (! $regionId) {
+            return $empty;
+        }
+
+        $warehouseTypes = DB::table('region_warehouse')
+            ->where('region_id', $regionId)
+            ->whereIn('type', ['primary', 'preorder'])
+            ->select('warehouse_id', 'type')
+            ->get()
+            ->groupBy('type')
+            ->map(fn ($rows) => $rows->pluck('warehouse_id')->all());
+
+        $sumStock = function (array $warehouseIds) use ($productIds): array {
+            if (empty($warehouseIds)) {
+                return [];
+            }
+
+            return DB::table('product_warehouse')
+                ->whereIn('product_id', $productIds)
+                ->whereIn('warehouse_id', $warehouseIds)
+                ->selectRaw('product_id, SUM(quantity) as total')
+                ->groupBy('product_id')
+                ->pluck('total', 'product_id')
+                ->map(fn ($v) => (int) $v)
+                ->all();
+        };
+
+        return [
+            'available' => $sumStock($warehouseTypes['primary'] ?? []),
+            'preorder' => $sumStock($warehouseTypes['preorder'] ?? []),
+        ];
     }
 }
