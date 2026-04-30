@@ -64,13 +64,25 @@ const config = defineConfig({
         },
         semanticTokens: {
             colors: {
-                // Семантика для основного цвета Pecado
-                'pecado.solid': { value: '{colors.pecado.600}' },
+                // Семантика для основного цвета Pecado.
+                // В тёмной теме светлые оттенки 50/100/200 дают почти белый
+                // фон → нужны тёмные варианты, чтобы текст и решётки были видны.
+                'pecado.solid': {
+                    value: { _light: '{colors.pecado.600}', _dark: '{colors.pecado.500}' },
+                },
                 'pecado.contrast': { value: 'white' },
-                'pecado.fg': { value: '{colors.pecado.600}' },
-                'pecado.muted': { value: '{colors.pecado.100}' },
-                'pecado.subtle': { value: '{colors.pecado.50}' },
-                'pecado.emphasized': { value: '{colors.pecado.200}' },
+                'pecado.fg': {
+                    value: { _light: '{colors.pecado.600}', _dark: '{colors.pecado.300}' },
+                },
+                'pecado.muted': {
+                    value: { _light: '{colors.pecado.100}', _dark: '{colors.pecado.900}' },
+                },
+                'pecado.subtle': {
+                    value: { _light: '{colors.pecado.50}', _dark: '{colors.pecado.950}' },
+                },
+                'pecado.emphasized': {
+                    value: { _light: '{colors.pecado.200}', _dark: '{colors.pecado.800}' },
+                },
                 'pecado.focusRing': { value: '{colors.pecado.600}' },
 
                 // Насыщенные фоны (Premium Dark Mode)

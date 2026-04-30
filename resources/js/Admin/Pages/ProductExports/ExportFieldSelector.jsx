@@ -188,7 +188,7 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
         <Box
             ref={setNodeRef}
             style={style}
-            bg={isDragging ? 'pecado.subtle' : 'bg.default'}
+            bg={isDragging ? 'pecado.subtle' : 'bg'}
             py={2}
             px={2}
             borderRadius="md"
@@ -305,7 +305,7 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
             left={0}
             right={0}
             mt={1}
-            bg="bg.default"
+            bg="bg"
             borderWidth="1px"
             borderColor="border.muted"
             borderRadius="lg"
@@ -330,11 +330,11 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
                             px={4}
                             py={2}
                             cursor="pointer"
-                            bg={activeGroup === group.group ? 'bg.default' : 'transparent'}
+                            bg={activeGroup === group.group ? 'bg' : 'transparent'}
                             color={activeGroup === group.group ? 'pecado.fg' : 'fg'}
                             fontWeight={activeGroup === group.group ? 'bold' : 'normal'}
                             fontSize="sm"
-                            _hover={{ bg: activeGroup === group.group ? 'bg.default' : 'bg.muted' }}
+                            _hover={{ bg: activeGroup === group.group ? 'bg' : 'bg.muted' }}
                             onClick={() => setActiveGroup(group.group)}
                             borderRightWidth={activeGroup === group.group ? '2px' : '0'}
                             borderRightColor="pecado.solid"

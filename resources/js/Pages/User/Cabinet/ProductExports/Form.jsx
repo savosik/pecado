@@ -151,7 +151,7 @@ export default function Form({ export: exportData, availableFilters, availableFi
             <Head title={`${pageTitle} — Pecado`} />
 
             <form onSubmit={handleSubmit} noValidate>
-                <Card.Root bg="bg.default" borderRadius="xl" border="1px solid" borderColor="border.muted" overflow="visible">
+                <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted" overflow="visible">
                     <Card.Body p={0} overflow="visible">
                         <Accordion.Root
                             multiple
@@ -194,10 +194,11 @@ export default function Form({ export: exportData, availableFilters, availableFi
                                                                 borderRadius="lg"
                                                                 border="2px solid"
                                                                 borderColor={active ? 'pecado.solid' : 'border.muted'}
-                                                                bg={active ? 'pecado.subtle' : 'bg.subtle'}
+                                                                bg={active ? 'pecado.solid' : 'bg.subtle'}
+                                                                color={active ? 'pecado.contrast' : 'fg'}
                                                                 cursor="pointer"
                                                                 onClick={() => setData('format', f.value)}
-                                                                _hover={{ borderColor: 'pecado.solid' }}
+                                                                _hover={active ? undefined : { borderColor: 'pecado.solid' }}
                                                                 transition="all 0.2s"
                                                             >
                                                                 <Text fontWeight="bold" fontSize="sm">{f.label}</Text>
@@ -340,7 +341,7 @@ export default function Form({ export: exportData, availableFilters, availableFi
                                                     </HStack>
                                                     {preview.data.length > 0 ? (
                                                         <Box overflowX="auto" maxH="400px" overflowY="auto">
-                                                            <Table.Root bg="bg.default" size="sm" variant="outline">
+                                                            <Table.Root bg="bg" size="sm" variant="outline">
                                                                 <Table.Header>
                                                                     <Table.Row>
                                                                         {Object.values(preview.labels).map((label, i) => (
@@ -422,7 +423,7 @@ export default function Form({ export: exportData, availableFilters, availableFi
                     <Card.Footer
                         position="sticky"
                         bottom={0}
-                        bg="bg.default"
+                        bg="bg"
                         borderTop="1px solid"
                         borderColor="border.muted"
                         zIndex={1}
@@ -438,6 +439,7 @@ export default function Form({ export: exportData, availableFilters, availableFi
                             <Button
                                 type="submit"
                                 colorPalette="pecado"
+                                variant="solid"
                                 loading={processing}
                                 size="sm"
                             >

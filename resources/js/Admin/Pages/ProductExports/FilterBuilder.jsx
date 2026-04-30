@@ -114,7 +114,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                 flexWrap="wrap"
                 gap={1}
                 onClick={() => setOpen(!open)}
-                bg="bg.default"
+                bg="bg"
                 transition="border-color 0.15s"
             >
                 {selectedIds.length === 0
@@ -145,7 +145,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                     left={0}
                     right={0}
                     mt={1}
-                    bg="bg.default"
+                    bg="bg"
                     borderWidth="1px"
                     borderColor="border.muted"
                     borderRadius="md"
@@ -171,7 +171,7 @@ function RelationSelect({ searchUrl, value, onChange, placeholder = 'Поиск.
                                     key={item.id}
                                     px={3} py={1.5}
                                     cursor="pointer"
-                                    bg={checked ? 'pecado.subtle' : 'bg.default'}
+                                    bg={checked ? 'pecado.subtle' : 'bg'}
                                     _hover={{ bg: checked ? 'pecado.muted' : 'bg.subtle' }}
                                     onClick={() => toggleItem(item)}
                                     gap={2}
@@ -198,7 +198,7 @@ function StyledSelect({ value, onChange, children, minW = '140px', ...rest }) {
             <NativeSelect.Field
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
-                bg="bg.default"
+                bg="bg"
                 color="fg"
                 borderColor="border.muted"
                 fontSize="13px"
@@ -287,7 +287,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         flexWrap="wrap"
                         gap={1}
                         onClick={() => setSelectDropdownOpen(!selectDropdownOpen)}
-                        bg="bg.default"
+                        bg="bg"
                         transition="border-color 0.15s"
                     >
                         {selectedIds.length === 0
@@ -318,7 +318,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                             left={0}
                             right={0}
                             mt={1}
-                            bg="bg.default"
+                            bg="bg"
                             border="1px solid"
                             borderColor="border.muted"
                             borderRadius="8px"
@@ -334,7 +334,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                                         key={opt.value}
                                         px={3} py={1.5}
                                         cursor="pointer"
-                                        bg={checked ? 'pecado.subtle' : 'bg.default'}
+                                        bg={checked ? 'pecado.subtle' : 'bg'}
                                         _hover={{ bg: checked ? 'pecado.muted' : 'bg.subtle' }}
                                         onClick={() => {
                                             if (checked) {
@@ -417,7 +417,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
 
     return (
         <HStack
-            bg="bg.default"
+            bg="bg"
             border="1px solid"
             borderColor="border.muted"
             borderRadius="lg"
@@ -439,7 +439,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                     borderWidth="1px"
                     borderColor={dropdownOpen ? 'pecado.solid' : 'border.muted'}
                     borderRadius="8px"
-                    bg="bg.default"
+                    bg="bg"
                     position="relative"
                     transition="border-color 0.15s"
                 >
@@ -471,7 +471,7 @@ function ConditionRow({ condition, availableFilters, onChange, onRemove }) {
                         left={0}
                         right={0}
                         mt={1}
-                        bg="bg.default"
+                        bg="bg"
                         borderWidth="1px"
                         borderColor="border.muted"
                         borderRadius="8px"
