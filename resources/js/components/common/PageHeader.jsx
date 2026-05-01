@@ -14,8 +14,8 @@ export default function PageHeader({ title, subtitle, actions }) {
             gap="3"
             mb="6"
         >
-            <Box>
-                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg">
+            <Box minW="0" maxW="100%">
+                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" css={{ wordBreak: 'break-word' }}>
                     {title}
                 </Heading>
                 {subtitle && (

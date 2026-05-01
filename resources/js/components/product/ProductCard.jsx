@@ -125,8 +125,8 @@ function ProductCard({ product, loading = false }) {
             <Box p="3" flex="1" display="flex" flexDirection="column">
                 <Box flex="1" spaceY="1">
                     {/* SKU + Избранное */}
-                    <Flex align="start" justify="space-between">
-                        <Box flex="1">
+                    <Flex align="start" justify="space-between" gap="2" minW="0">
+                        <Box flex="1" minW="0">
                             {product.sku && (
                                 <Flex
                                     as="button"
@@ -141,9 +141,11 @@ function ProductCard({ product, loading = false }) {
                                     aria-label={`Копировать артикул ${product.sku}`}
                                     _hover={{ color: 'gray.600', _dark: { color: 'gray.200' } }}
                                     transition="color 0.15s"
+                                    maxW="100%"
+                                    minW="0"
                                 >
-                                    <Text as="span">{product.sku}</Text>
-                                    <Box as="span" opacity="0.6"><LuCopy size={11} /></Box>
+                                    <Text as="span" truncate>{product.sku}</Text>
+                                    <Box as="span" opacity="0.6" flexShrink="0"><LuCopy size={11} /></Box>
                                 </Flex>
                             )}
                             {brandName && product.brand_slug ? (
@@ -212,7 +214,7 @@ function ProductCard({ product, loading = false }) {
                 {user && (
                     <Box mt="auto" spaceY="2" pt="2">
                         {/* Статус + Цена */}
-                        <Flex align="end" justify="space-between" gap="2">
+                        <Flex align="end" justify="space-between" gap="2" minW="0" flexWrap="wrap">
                             {/* Статус наличия */}
                             <Flex align="center" gap="1" fontSize="xs" fontWeight="500">
                                 {isInStock ? (
@@ -250,7 +252,7 @@ function ProductCard({ product, loading = false }) {
 
                             {/* Цена */}
                             {price != null && (
-                                <Flex direction="column" alignItems="flex-end" flexShrink="0">
+                                <Flex direction="column" alignItems="flex-end" minW="0">
                                     {hasSale && (
                                         <Text fontSize="xs" color="gray.400" textDecoration="line-through" lineHeight="1">
                                             {formatPrice(price)}

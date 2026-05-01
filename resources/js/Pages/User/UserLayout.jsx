@@ -15,7 +15,7 @@ export default function UserLayout({ children }) {
     return (
         <AuthDialogProvider>
         <ProductQuickViewProvider>
-            <Box minH="100vh" bg="bg.subtle" display="flex" flexDirection="column">
+            <Box minH="100vh" bg="bg.subtle" display="flex" flexDirection="column" overflowX="clip">
                 <UserHeader />
                 <UserStatusBanner />
                 <Box
