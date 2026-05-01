@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Box, IconButton, Input, Textarea, Text, VStack, HStack, Button, Spinner } from '@chakra-ui/react';
-import { LuBug, LuX, LuPaperclip } from 'react-icons/lu';
+import { Box, IconButton, Input, Textarea, Text, VStack, HStack, Button } from '@chakra-ui/react';
+import { LuBug, LuX, LuPaperclip, LuCamera } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import VoiceMicButton from '@/Admin/Pages/Kanban/Components/VoiceMicButton';
 
@@ -43,9 +43,18 @@ export default function BugReportWidget() {
     const [description, setDescription] = useState('');
     const [type, setType] = useState('bug');
     const [files, setFiles] = useState([]);
-    const [screenshotLoading, setScreenshotLoading] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
     const fileInputRef = useRef(null);
+    const cameraInputRef = useRef(null);
+
+    useEffect(() => {
+        const mq = window.matchMedia('(max-width: 768px)');
+        const handler = (e) => setIsMobile(e.matches);
+        setIsMobile(mq.matches);
+        mq.addEventListener('change', handler);
+        return () => mq.removeEventListener('change', handler);
+    }, []);
 
     const handlePaste = useCallback((e) => {
         if (!isOpen) return;
@@ -68,34 +77,7 @@ export default function BugReportWidget() {
 
     if (!bugReportMode) return null;
 
-    const handleOpen = async () => {
-        setIsOpen(true);
-        setScreenshotLoading(true);
-
-        try {
-            const html2canvas = (await import('html2canvas')).default;
-            const canvas = await html2canvas(document.body, {
-                scale: 0.5,
-                useCORS: true,
-                logging: false,
-                allowTaint: true,
-            });
-            await new Promise(resolve => {
-                canvas.toBlob(blob => {
-                    if (blob) {
-                        const ts = new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-');
-                        const file = new File([blob], `screenshot-${ts}.png`, { type: 'image/png' });
-                        setFiles(prev => [file, ...prev]);
-                    }
-                    resolve();
-                }, 'image/png', 0.8);
-            });
-        } catch (err) {
-            console.warn('Скриншот не удался:', err);
-        } finally {
-            setScreenshotLoading(false);
-        }
-    };
+    const handleOpen = () => setIsOpen(true);
 
     const handleClose = () => {
         setIsOpen(false);
@@ -103,7 +85,6 @@ export default function BugReportWidget() {
         setDescription('');
         setType('bug');
         setFiles([]);
-        setScreenshotLoading(false);
     };
 
     const handleFileChange = (e) => {
@@ -240,18 +221,44 @@ export default function BugReportWidget() {
                                     <Box>
                                         <HStack justify="space-between" mb={1}>
                                             <Text fontWeight="medium" fontSize="sm">Файлы и скриншоты</Text>
-                                            <Button
-                                                size="xs"
-                                                variant="outline"
-                                                onClick={() => fileInputRef.current?.click()}
-                                                type="button"
-                                            >
-                                                <LuPaperclip /> Добавить
-                                            </Button>
+                                            {!isMobile && (
+                                                <Button
+                                                    size="xs"
+                                                    variant="outline"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    type="button"
+                                                >
+                                                    <LuPaperclip /> Добавить
+                                                </Button>
+                                            )}
                                         </HStack>
                                         <Text fontSize="xs" color="fg.muted" mb={2}>
-                                            Вставьте скриншот через Ctrl+V или прикрепите файл
+                                            {isMobile
+                                                ? 'Прикрепите фото или файл с устройства'
+                                                : 'Вставьте скриншот через Ctrl+V или прикрепите файл'}
                                         </Text>
+                                        {isMobile && (
+                                            <HStack gap={2} mb={2}>
+                                                <Button
+                                                    flex={1}
+                                                    size="md"
+                                                    variant="outline"
+                                                    onClick={() => cameraInputRef.current?.click()}
+                                                    type="button"
+                                                >
+                                                    <LuCamera /> Камера
+                                                </Button>
+                                                <Button
+                                                    flex={1}
+                                                    size="md"
+                                                    variant="outline"
+                                                    onClick={() => fileInputRef.current?.click()}
+                                                    type="button"
+                                                >
+                                                    <LuPaperclip /> Файл
+                                                </Button>
+                                            </HStack>
+                                        )}
                                         <input
                                             ref={fileInputRef}
                                             type="file"
@@ -259,13 +266,15 @@ export default function BugReportWidget() {
                                             style={{ display: 'none' }}
                                             onChange={handleFileChange}
                                         />
+                                        <input
+                                            ref={cameraInputRef}
+                                            type="file"
+                                            accept="image/*"
+                                            capture="environment"
+                                            style={{ display: 'none' }}
+                                            onChange={handleFileChange}
+                                        />
                                         <VStack align="stretch" gap={1}>
-                                            {screenshotLoading && (
-                                                <HStack fontSize="xs" bg="bg.subtle" px={2} py={1} rounded="md" color="fg.muted">
-                                                    <Spinner size="xs" />
-                                                    <Text>Захватываю скриншот...</Text>
-                                                </HStack>
-                                            )}
                                             {files.map((f, i) => (
                                                 <HStack
                                                     key={i}
@@ -303,9 +312,8 @@ export default function BugReportWidget() {
                                 form="bug-report-form"
                                 colorPalette="red"
                                 loading={loading}
-                                disabled={screenshotLoading}
                             >
-                                {screenshotLoading ? 'Захватываю скриншот...' : 'Отправить'}
+                                Отправить
                             </Button>
                         </HStack>
                     </Box>
