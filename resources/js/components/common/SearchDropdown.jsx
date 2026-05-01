@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Box, Flex, Text, Input, IconButton, Spinner, Badge } from '@chakra-ui/react';
-import { Link } from '@inertiajs/react';
-import { LuX, LuClock3, LuSearch, LuArrowRight, LuHeart, LuCheck, LuCircleX, LuImageOff } from 'react-icons/lu';
+import { Link, router } from '@inertiajs/react';
+import {
+    LuX, LuClock3, LuSearch, LuArrowRight, LuHeart, LuCheck, LuCircleX,
+    LuImageOff, LuScanBarcode,
+} from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
 import CartQuantityControl from '@/components/product/CartQuantityControl';
 import { useProductHelpers } from '@/hooks/useProductHelpers';
 import SearchSection from './SearchSection';
+import BarcodeSearchScanner from './BarcodeSearchScanner';
 
 /**
  * Горизонтальная карточка товара для дропдауна поиска.
@@ -328,6 +332,8 @@ export default function SearchDropdown({
         });
     }, [results?.products, includeUnavailable]);
 
+    const [scannerOpen, setScannerOpen] = useState(false);
+
     const close = () => setOpen(false);
 
     const handleHistorySelect = (q) => {
@@ -337,6 +343,15 @@ export default function SearchDropdown({
     const handleSubmit = (e) => {
         e?.preventDefault?.();
         submitSearch();
+    };
+
+    const handleBarcodeScan = (text) => {
+        const code = String(text || '').trim();
+        if (!code) return;
+        setScannerOpen(false);
+        setQuery(code);
+        setOpen(false);
+        router.visit(`/search?q=${encodeURIComponent(code)}`);
     };
 
     // ─── Контент дропдауна ───────────────────────────────────
@@ -558,6 +573,15 @@ export default function SearchDropdown({
                         />
                     </Box>
                     <IconButton
+                        aria-label="Поиск по штрихкоду"
+                        size="sm"
+                        variant="ghost"
+                        colorPalette="gray"
+                        onClick={() => setScannerOpen(true)}
+                    >
+                        <LuScanBarcode size={20} />
+                    </IconButton>
+                    <IconButton
                         aria-label="Закрыть"
                         size="sm"
                         variant="ghost"
@@ -572,6 +596,12 @@ export default function SearchDropdown({
                 <Box flex="1" overflowY="auto" overflowX="hidden">
                     {renderContent()}
                 </Box>
+
+                <BarcodeSearchScanner
+                    open={scannerOpen}
+                    onScan={handleBarcodeScan}
+                    onClose={() => setScannerOpen(false)}
+                />
             </Box>
         );
     }

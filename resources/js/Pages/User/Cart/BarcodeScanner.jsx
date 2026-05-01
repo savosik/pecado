@@ -12,6 +12,7 @@ import {
 import { router } from '@inertiajs/react';
 import axios from 'axios';
 import { toastSuccess, toastError, toastInfo } from '@/utils/toast';
+import BarcodeCameraView from '@/components/common/BarcodeCameraView';
 
 /**
  * Компонент сканера штрихкодов.
@@ -30,12 +31,7 @@ export default function BarcodeScanner({ onClose, onSuccess }) {
     const [scanHistory, setScanHistory] = useState([]);
     const [keyboardBuffer, setKeyboardBuffer] = useState('');
     const [lastKeyTime, setLastKeyTime] = useState(0);
-    const [isScanning, setIsScanning] = useState(false);
 
-    const videoRef = useRef(null);
-    const canvasRef = useRef(null);
-    const streamRef = useRef(null);
-    const scanIntervalRef = useRef(null);
     const keyboardInputRef = useRef(null);
     const manualInputRef = useRef(null);
     const audioContextRef = useRef(null);
@@ -73,59 +69,6 @@ export default function BarcodeScanner({ onClose, onSuccess }) {
             console.warn('Не удалось воспроизвести звук:', err);
         }
     }, [soundEnabled]);
-
-    // ── Камера ──
-    const startCamera = async () => {
-        try {
-            setError('');
-            const stream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'environment',
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                },
-            });
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                streamRef.current = stream;
-                setIsScanning(true);
-                scanIntervalRef.current = setInterval(scanBarcode, 500);
-            }
-        } catch (err) {
-            console.error('Camera error:', err);
-            setError('Не удалось получить доступ к камере. Попробуйте ручной ввод.');
-            setScanMode('manual');
-        }
-    };
-
-    const stopCamera = () => {
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach((t) => t.stop());
-            streamRef.current = null;
-        }
-        if (scanIntervalRef.current) {
-            clearInterval(scanIntervalRef.current);
-            scanIntervalRef.current = null;
-        }
-        setIsScanning(false);
-    };
-
-    const scanBarcode = () => {
-        if (!videoRef.current || !canvasRef.current) return;
-
-        const video = videoRef.current;
-        const canvas = canvasRef.current;
-        const context = canvas.getContext('2d');
-
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0);
-            // Для распознавания штрихкодов требуется библиотека (QuaggaJS, ZXing-js).
-            // Камера готова для интеграции.
-        }
-    };
 
     // ── Обработка клавиатуры (физический сканер) ──
     const handleKeyboardInput = useCallback(
@@ -254,25 +197,19 @@ export default function BarcodeScanner({ onClose, onSuccess }) {
 
     // ── Переключение режима ──
     const setScanModeAndCleanup = (newMode) => {
-        if (scanMode === 'camera') stopCamera();
         setScanMode(newMode);
         setError('');
 
-        if (newMode === 'camera') {
-            startCamera();
-        } else if (newMode === 'keyboard') {
+        if (newMode === 'keyboard') {
             setTimeout(() => keyboardInputRef.current?.focus(), 100);
         }
     };
 
     // ── Effects ──
     useEffect(() => {
-        if (scanMode === 'camera') {
-            startCamera();
-        } else if (scanMode === 'keyboard') {
+        if (scanMode === 'keyboard') {
             setTimeout(() => keyboardInputRef.current?.focus(), 100);
         }
-        return () => stopCamera();
     }, []);
 
     useEffect(() => {
@@ -284,7 +221,6 @@ export default function BarcodeScanner({ onClose, onSuccess }) {
 
     useEffect(() => {
         return () => {
-            stopCamera();
             if (audioContextRef.current) {
                 audioContextRef.current.close();
             }
@@ -380,56 +316,13 @@ export default function BarcodeScanner({ onClose, onSuccess }) {
             {/* ─── Режим: камера ─── */}
             {scanMode === 'camera' && (
                 <Stack gap="2">
-                    <Box
-                        position="relative"
-                        bg="black"
-                        rounded="md"
-                        overflow="hidden"
-                        style={{ aspectRatio: '16/9' }}
-                    >
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    <Box rounded="md" overflow="hidden" style={{ aspectRatio: '16/9' }}>
+                        <BarcodeCameraView
+                            onScan={handleAddByBarcode}
+                            paused={loading}
+                            height="100%"
                         />
-                        <canvas ref={canvasRef} style={{ display: 'none' }} />
-                        {isScanning && (
-                            <Flex
-                                position="absolute"
-                                inset="0"
-                                align="center"
-                                justify="center"
-                            >
-                                <Box
-                                    borderWidth="2px"
-                                    borderColor="green.500"
-                                    rounded="md"
-                                    w="75%"
-                                    h="50%"
-                                    position="relative"
-                                >
-                                    <Box
-                                        position="absolute"
-                                        left="0"
-                                        right="0"
-                                        top="50%"
-                                        h="2px"
-                                        bg="green.500"
-                                        animation="pulse 1.5s infinite"
-                                    />
-                                </Box>
-                            </Flex>
-                        )}
                     </Box>
-                    {isScanning && (
-                        <Flex justify="center">
-                            <Badge variant="subtle" colorPalette="green" animation="pulse 1.5s infinite">
-                                Сканирование...
-                            </Badge>
-                        </Flex>
-                    )}
                     <Text fontSize="sm" color="fg.muted" textAlign="center">
                         Направьте камеру на штрихкод товара
                     </Text>
