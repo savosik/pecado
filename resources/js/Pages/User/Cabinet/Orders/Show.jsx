@@ -9,6 +9,7 @@ import {
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
+    LuSearch,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -261,7 +262,22 @@ export default function OrderShow({ order }) {
                                                                     </Text>
                                                                 </Link>
                                                             ) : (
-                                                                <Text fontWeight="500" fontSize="sm">{item.name}</Text>
+                                                                <Tooltip
+                                                                    content="Товар не привязан к каталогу. Открыть поиск по названию"
+                                                                    positioning={{ placement: 'top' }}
+                                                                    openDelay={300}
+                                                                >
+                                                                    <Link href={`/search?q=${encodeURIComponent(item.name || '')}`}>
+                                                                        <HStack gap="1" align="center">
+                                                                            <Text fontWeight="500" fontSize="sm" _hover={{ color: 'pecado.500' }} transition="color 0.15s">
+                                                                                {item.name}
+                                                                            </Text>
+                                                                            <Box color="fg.muted">
+                                                                                <LuSearch size={12} />
+                                                                            </Box>
+                                                                        </HStack>
+                                                                    </Link>
+                                                                </Tooltip>
                                                             )}
                                                             <Flex gap="1" mt="0.5">
                                                                 {item.product?.brand?.name && (
