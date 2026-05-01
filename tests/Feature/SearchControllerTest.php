@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\News;
 use App\Models\Product;
+use App\Models\Region;
 use App\Models\SearchHistory;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -488,5 +489,134 @@ class SearchControllerTest extends TestCase
         $occurrences = count(array_filter($ids, fn ($id) => $id === $exact->id));
 
         $this->assertSame(1, $occurrences, 'Точный матч не должен дублироваться в выдаче');
+    }
+
+    // ─── Сортировка по наличию (задача #67) ─────────────────
+
+    /**
+     * Создать регион с привязанными primary и preorder складами.
+     *
+     * @return array{region: Region, primary: Warehouse, preorder: Warehouse}
+     */
+    private function setupRegionWithStockTypes(): array
+    {
+        $region = Region::firstOrCreate(['name' => 'TestRegion']);
+        $primary = Warehouse::firstOrCreate(['name' => 'PrimaryWarehouse']);
+        $preorder = Warehouse::firstOrCreate(['name' => 'PreorderWarehouse']);
+
+        $region->primaryWarehouses()->syncWithoutDetaching([$primary->id => ['type' => 'primary']]);
+        $region->preorderWarehouses()->syncWithoutDetaching([$preorder->id => ['type' => 'preorder']]);
+
+        return ['region' => $region, 'primary' => $primary, 'preorder' => $preorder];
+    }
+
+    public function test_in_stock_products_ranked_above_preorder_only_on_fuzzy_search(): void
+    {
+        ['primary' => $primaryWh, 'preorder' => $preorderWh] = $this->setupRegionWithStockTypes();
+
+        // Создаём товар "только под предзаказ" первым — у него меньший id.
+        // CollectionEngine Scout сортирует по id desc, поэтому без фикса он бы оказался
+        // ниже товара с большим id; чтобы реально проверить пересортировку, делаем
+        // наоборот: товар в наличии создаём вторым (больший id → у CollectionEngine
+        // он первым по умолчанию). Тест не зависит от порядка id внутри группы —
+        // важно только то, что товар с primary_stock > 0 идёт выше товара только с preorder_stock.
+        $preorderOnly = Product::factory()->create(['name' => 'Glossy Karlie преордер']);
+        $preorderOnly->warehouses()->attach($preorderWh->id, ['quantity' => 5]);
+
+        $inStock = Product::factory()->create(['name' => 'Glossy Kelly наличие']);
+        $inStock->warehouses()->attach($primaryWh->id, ['quantity' => 3]);
+
+        $response = $this->getJson('/search?q=Glossy&type=products');
+
+        $response->assertOk();
+        $ids = collect($response->json('results.products'))->pluck('id')->all();
+
+        $this->assertContains($inStock->id, $ids);
+        $this->assertContains($preorderOnly->id, $ids);
+
+        $inStockPos = array_search($inStock->id, $ids, true);
+        $preorderPos = array_search($preorderOnly->id, $ids, true);
+
+        $this->assertLessThan(
+            $preorderPos,
+            $inStockPos,
+            'Товар в наличии должен идти раньше товара только под предзаказ при неточном совпадении'
+        );
+    }
+
+    public function test_exact_match_pinned_first_even_if_preorder_only(): void
+    {
+        ['primary' => $primaryWh, 'preorder' => $preorderWh] = $this->setupRegionWithStockTypes();
+
+        // Точный матч по SKU — но товар только под предзаказ.
+        $exactPreorder = Product::factory()->create([
+            'name' => 'Товар под заказ',
+            'sku' => 'PRE-ORDER-001',
+        ]);
+        $exactPreorder->warehouses()->attach($preorderWh->id, ['quantity' => 2]);
+
+        // Фаззи-кандидат в наличии — Scout его тоже найдёт по совпадению в имени.
+        $fuzzyInStock = Product::factory()->create([
+            'name' => 'Похожий товар PRE-ORDER в наличии',
+            'sku' => 'IN-STOCK-002',
+        ]);
+        $fuzzyInStock->warehouses()->attach($primaryWh->id, ['quantity' => 7]);
+
+        $response = $this->getJson('/search?q=PRE-ORDER-001&type=products');
+
+        $response->assertOk();
+        $first = $response->json('results.products.0');
+
+        $this->assertSame(
+            $exactPreorder->id,
+            $first['id'],
+            'Точный матч по SKU должен пиниться первым даже для товара под предзаказ'
+        );
+    }
+
+    public function test_in_stock_priority_preserves_relative_order_within_group(): void
+    {
+        ['primary' => $primaryWh, 'preorder' => $preorderWh] = $this->setupRegionWithStockTypes();
+
+        // Два товара под предзаказ и два в наличии. После сортировки оба в наличии
+        // должны быть выше обоих в предзаказе; внутри каждой группы — порядок Scout сохраняется.
+        $preorder1 = Product::factory()->create(['name' => 'Glossy preorder one']);
+        $preorder1->warehouses()->attach($preorderWh->id, ['quantity' => 1]);
+
+        $inStock1 = Product::factory()->create(['name' => 'Glossy stock one']);
+        $inStock1->warehouses()->attach($primaryWh->id, ['quantity' => 1]);
+
+        $preorder2 = Product::factory()->create(['name' => 'Glossy preorder two']);
+        $preorder2->warehouses()->attach($preorderWh->id, ['quantity' => 1]);
+
+        $inStock2 = Product::factory()->create(['name' => 'Glossy stock two']);
+        $inStock2->warehouses()->attach($primaryWh->id, ['quantity' => 1]);
+
+        $response = $this->getJson('/search?q=Glossy&type=products');
+
+        $response->assertOk();
+        $ids = collect($response->json('results.products'))->pluck('id')->all();
+
+        // Все 4 в выдаче.
+        $this->assertContains($inStock1->id, $ids);
+        $this->assertContains($inStock2->id, $ids);
+        $this->assertContains($preorder1->id, $ids);
+        $this->assertContains($preorder2->id, $ids);
+
+        // Любой товар в наличии — выше любого товара только под предзаказ.
+        $maxInStockPos = max(
+            array_search($inStock1->id, $ids, true),
+            array_search($inStock2->id, $ids, true)
+        );
+        $minPreorderPos = min(
+            array_search($preorder1->id, $ids, true),
+            array_search($preorder2->id, $ids, true)
+        );
+
+        $this->assertLessThan(
+            $minPreorderPos,
+            $maxInStockPos,
+            'Все товары в наличии должны идти выше всех товаров только под предзаказ'
+        );
     }
 }

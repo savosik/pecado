@@ -235,6 +235,14 @@ class SearchController extends Controller
                     })->values();
                 }
 
+                // Стабильная пересортировка: товары в наличии (primary_stock > 0) выше
+                // товаров только под предзаказ. Порядок Meilisearch внутри каждой группы
+                // сохраняется (partition стабилен), поэтому релевантность не ломается.
+                [$inStockProducts, $preorderProducts] = $products->partition(
+                    fn (Product $product) => ($product->primary_stock ?? 0) > 0
+                );
+                $products = $inStockProducts->concat($preorderProducts)->values();
+
                 // Пин точного матча первым; если Scout его не вернул — total +1.
                 $exactWasInScout = false;
                 if ($exactMatch !== null) {
