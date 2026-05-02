@@ -206,42 +206,41 @@ export default function ProductListItem({ product, loading = false }) {
                     ].filter(Boolean)}
                 />
 
-                {/* Нижняя секция: статус наличия + цена + корзина в одной строке */}
+                {/* Нижняя секция: статус + цена в одной строке, корзина — отдельной строкой */}
                 {user && (
                     <Flex
                         mt={{ base: '1', md: 'auto' }}
                         pt={{ base: '0', md: '2' }}
-                        align="center"
-                        gap={{ base: '2', md: '4' }}
-                        flexWrap="wrap"
+                        direction="column"
+                        gap="2"
                     >
-                        {/* Статус наличия */}
-                        {stockBlock}
+                        {/* Строка 1: статус наличия + цена */}
+                        <Flex align="center" gap="2">
+                            {stockBlock}
 
-                        {/* Цена */}
-                        {price != null && (
-                            <Flex align="baseline" gap="2" flexShrink="0" ml="auto">
-                                <Text
-                                    fontSize="lg"
-                                    fontWeight="600"
-                                    lineHeight="1"
-                                    color={hasSale ? 'red.600' : undefined}
-                                >
-                                    {formatPrice(hasSale ? salePrice : price)}
-                                </Text>
-                                {hasSale && (
-                                    <Text fontSize="xs" color="gray.400" textDecoration="line-through" lineHeight="1">
-                                        {formatPrice(price)}
+                            {price != null && (
+                                <Flex align="baseline" gap="2" flexShrink="0" ml="auto">
+                                    <Text
+                                        fontSize="lg"
+                                        fontWeight="600"
+                                        lineHeight="1"
+                                        color={hasSale ? 'red.600' : undefined}
+                                    >
+                                        {formatPrice(hasSale ? salePrice : price)}
                                     </Text>
-                                )}
-                            </Flex>
-                        )}
+                                    {hasSale && (
+                                        <Text fontSize="xs" color="gray.400" textDecoration="line-through" lineHeight="1">
+                                            {formatPrice(price)}
+                                        </Text>
+                                    )}
+                                </Flex>
+                            )}
+                        </Flex>
 
-                        {/* Корзина */}
+                        {/* Строка 2: контролы количества */}
                         {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
                             <Box
                                 w={{ base: '140px', md: '160px' }}
-                                flexShrink="0"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             >
                                 <CartQuantityControl

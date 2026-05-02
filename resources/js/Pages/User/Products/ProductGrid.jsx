@@ -38,7 +38,7 @@ export default function ProductGrid({
 
         if (view === 'list') {
             return (
-                <Flex direction="column" gap={{ base: '3', md: '4' }}>
+                <Flex direction="column" gap={{ base: '3', md: '4' }} w="100%">
                     {Array.from({ length: count }).map((_, i) => (
                         <ProductListItem key={`skeleton-list-${i}`} loading />
                     ))}
@@ -105,7 +105,7 @@ export default function ProductGrid({
     // ─── List view ───
     if (view === 'list') {
         return (
-            <Flex direction="column" gap={{ base: '3', md: '4' }}>
+            <Flex direction="column" gap={{ base: '3', md: '4' }} w="100%">
                 {products.map((product) => (
                     <ProductListItem key={product.id} product={product} />
                 ))}

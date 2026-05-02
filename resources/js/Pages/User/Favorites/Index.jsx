@@ -4,7 +4,7 @@ import {
     Box, Heading, Text, Flex, HStack, Stack, Button, Card, Input, InputGroup, Badge,
     createListCollection,
 } from '@chakra-ui/react';
-import { LuFilter, LuHeart, LuLayoutGrid, LuListTree, LuSearch, LuX } from 'react-icons/lu';
+import { LuFilter, LuGrid2X2, LuHeart, LuLayoutGrid, LuLayoutList, LuListTree, LuSearch, LuX } from 'react-icons/lu';
 import UserLayout from '../UserLayout';
 import ProductGrid from '@/Pages/User/Products/ProductGrid';
 import Pagination from '@/components/common/Pagination';
@@ -12,7 +12,6 @@ import { getResponsiveDefaultView } from '@/utils/compactFilters';
 import EmptyState from '@/components/common/EmptyState';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import usePagination from '@/hooks/usePagination';
@@ -27,8 +26,8 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
 
     const [showFilters, setShowFilters] = useState(false);
     const [groupByCategory, setGroupByCategory] = useState(false);
-    // На мобиле — list view по умолчанию, на md+ — grid
-    const view = useRef(getResponsiveDefaultView()).current;
+    // На мобиле — list view по умолчанию, на md+ — grid; пользователь может переключить.
+    const [view, setView] = useState(() => getResponsiveDefaultView());
     const [search, setSearch] = useState(filters?.search || '');
     const [localFilters, setLocalFilters] = useState({
         availability: filters?.availability || '',
@@ -182,10 +181,11 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
     const currentSort = filters?.sort || 'added_desc';
 
     return (
-        <UserLayout>
+        <UserLayout fluid>
             <Head title="Избранное" />
 
             <Box spaceY="6">
+                <Box px={{ base: '3', md: '0' }} spaceY="6">
                 <Box>
                     <Flex align="baseline" gap="2">
                         <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg">
@@ -199,10 +199,16 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                     </Flex>
                 </Box>
 
-                {/* Toolbar */}
+                {/* Toolbar — flex-wrap: поиск занимает всю первую строку на мобиле, на desktop всё в одну линию */}
                 <Flex gap="2" align="center" wrap="wrap">
-                    <Box as="form" onSubmit={handleSearchSubmit} flex="1" minW={{ base: '100%', md: '320px' }}>
-                        <InputGroup startElement={<LuSearch size={16} />} flex="1">
+                    {/* Поиск — занимает 100% на мобиле (basis), flex=1 на desktop */}
+                    <Box
+                        as="form"
+                        onSubmit={handleSearchSubmit}
+                        flex={{ base: '1 0 100%', md: '1 1 0' }}
+                        minW="0"
+                    >
+                        <InputGroup startElement={<LuSearch size={16} />}>
                             <Input
                                 placeholder="Поиск по товару, бренду, артикулу или штрихкоду…"
                                 value={search}
@@ -220,6 +226,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                         )}
                     </Box>
 
+                    {/* Фильтр */}
                     <Button
                         onClick={() => setShowFilters((s) => !s)}
                         variant={showFilters || activeFiltersCount > 0 ? 'subtle' : 'outline'}
@@ -227,9 +234,11 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                         size="sm"
                         flexShrink="0"
                         aria-expanded={showFilters}
+                        aria-label="Фильтры"
+                        title="Фильтры"
                     >
                         <LuFilter size={16} />
-                        <Box as="span" display={{ base: 'none', md: 'inline' }}>
+                        <Box as="span" display={{ base: 'none', lg: 'inline' }}>
                             {showFilters ? 'Скрыть фильтры' : 'Фильтры'}
                         </Box>
                         {activeFiltersCount > 0 && (
@@ -239,7 +248,8 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                         )}
                     </Button>
 
-                    <Box minW={{ base: '100%', md: '220px' }}>
+                    {/* Сортировка — на мобиле тянется (flex=1), на desktop фиксированные 240px */}
+                    <Box flex={{ base: '1 1 0', md: 'none' }} w={{ md: '240px' }} minW="0">
                         <Select.Root
                             collection={sortCollection}
                             value={[currentSort]}
@@ -259,18 +269,70 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                         </Select.Root>
                     </Box>
 
-                    <HStack gap="2" flexShrink="0">
-                        <Switch
-                            size="sm"
-                            checked={groupByCategory}
-                            onCheckedChange={(e) => setGroupByCategory(e.checked)}
-                        >
-                            <HStack gap="1">
-                                <LuListTree size={14} />
-                                <Text fontSize="sm" display={{ base: 'none', md: 'inline' }}>Группировать</Text>
-                            </HStack>
-                        </Switch>
-                    </HStack>
+                    {/* Правая группа — управление отображением (группировка + grid/list) */}
+                    <Flex
+                        align="center"
+                        flexShrink="0"
+                        border="1px solid"
+                        borderColor="border"
+                        borderRadius="md"
+                        overflow="hidden"
+                        _dark={{ borderColor: 'gray.600', bg: 'gray.800' }}
+                    >
+                        {[
+                            {
+                                key: 'group',
+                                icon: LuListTree,
+                                title: groupByCategory ? 'Не группировать' : 'Группировать по категории',
+                                isActive: groupByCategory,
+                                onClick: () => setGroupByCategory((v) => !v),
+                                separator: true,
+                            },
+                            {
+                                key: 'grid',
+                                icon: LuGrid2X2,
+                                title: 'Сетка',
+                                isActive: view === 'grid',
+                                onClick: () => setView('grid'),
+                            },
+                            {
+                                key: 'list',
+                                icon: LuLayoutList,
+                                title: 'Список',
+                                isActive: view === 'list',
+                                onClick: () => setView('list'),
+                            },
+                        ].map(({ key, icon: BtnIcon, title, isActive, onClick, separator }) => (
+                            <Flex
+                                key={key}
+                                as="button"
+                                type="button"
+                                title={title}
+                                aria-label={title}
+                                aria-pressed={isActive}
+                                onClick={onClick}
+                                align="center"
+                                justify="center"
+                                px="2.5"
+                                h="32px"
+                                cursor="pointer"
+                                bg={isActive ? 'gray.100' : 'transparent'}
+                                borderRight={separator ? '1px solid' : undefined}
+                                borderColor={separator ? 'border' : undefined}
+                                _hover={{ bg: isActive ? 'gray.100' : 'gray.50' }}
+                                _dark={{
+                                    bg: isActive ? 'gray.700' : 'transparent',
+                                    borderColor: separator ? 'gray.600' : undefined,
+                                    _hover: { bg: isActive ? 'gray.700' : 'gray.600' },
+                                }}
+                            >
+                                <BtnIcon
+                                    size={14}
+                                    color={isActive ? 'var(--chakra-colors-gray-800)' : 'var(--chakra-colors-gray-400)'}
+                                />
+                            </Flex>
+                        ))}
+                    </Flex>
                 </Flex>
 
                 {/* Расширенные фильтры */}
@@ -365,6 +427,8 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                     onRemove={handleRemoveFilter}
                     onResetAll={activeFiltersCount > 0 || search ? handleResetFilters : undefined}
                 />
+                </Box>
+                {/* /конец верхнего блока с боковыми отступами */}
 
                 {/* Товары или пустое состояние */}
                 {items.length > 0 ? (
@@ -372,18 +436,20 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                         {groupByCategory ? (
                             <Stack gap="6">
                                 {groupedItems.map(([category, products]) => (
-                                    <Box key={category}>
-                                        <Flex align="baseline" gap="2" mb="3">
-                                            <Heading as="h2" size="md" color="fg">
-                                                <HStack gap="1.5">
-                                                    <LuLayoutGrid size={16} />
-                                                    <Text>{category}</Text>
-                                                </HStack>
-                                            </Heading>
-                                            <Text fontSize="xs" color="gray.500">
-                                                {products.length} {pluralize(products.length, 'товар', 'товара', 'товаров')}
-                                            </Text>
-                                        </Flex>
+                                    <Box key={category} w="100%" minW="0">
+                                        <Box px={{ base: '3', md: '0' }}>
+                                            <Flex align="baseline" gap="2" mb="3">
+                                                <Heading as="h2" size="md" color="fg">
+                                                    <HStack gap="1.5">
+                                                        <LuLayoutGrid size={16} />
+                                                        <Text>{category}</Text>
+                                                    </HStack>
+                                                </Heading>
+                                                <Text fontSize="xs" color="gray.500">
+                                                    {products.length} {pluralize(products.length, 'товар', 'товара', 'товаров')}
+                                                </Text>
+                                            </Flex>
+                                        </Box>
                                         <ProductGrid
                                             products={products}
                                             view={view}
@@ -398,27 +464,32 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                 ))}
                             </Stack>
                         ) : (
-                            <ProductGrid
-                                products={items}
-                                view={view}
-                                templateColumns={{
-                                    base: 'repeat(2, minmax(0, 1fr))',
-                                    md: 'repeat(3, minmax(0, 1fr))',
-                                    lg: 'repeat(4, minmax(0, 1fr))',
-                                    xl: 'repeat(5, minmax(0, 1fr))',
-                                }}
-                            />
+                            <Box w="100%" minW="0">
+                                <ProductGrid
+                                    products={items}
+                                    view={view}
+                                    templateColumns={{
+                                        base: 'repeat(2, minmax(0, 1fr))',
+                                        md: 'repeat(3, minmax(0, 1fr))',
+                                        lg: 'repeat(4, minmax(0, 1fr))',
+                                        xl: 'repeat(5, minmax(0, 1fr))',
+                                    }}
+                                />
+                            </Box>
                         )}
 
-                        <Pagination
-                            currentPage={currentPage}
-                            lastPage={lastPage}
-                            pageNumbers={pageNumbers}
-                            onPageChange={onPageChange}
-                            total={total}
-                        />
+                        <Box px={{ base: '3', md: '0' }}>
+                            <Pagination
+                                currentPage={currentPage}
+                                lastPage={lastPage}
+                                pageNumbers={pageNumbers}
+                                onPageChange={onPageChange}
+                                total={total}
+                            />
+                        </Box>
                     </>
                 ) : (
+                    <Box px={{ base: '3', md: '0' }}>
                     <EmptyState
                         icon={LuHeart}
                         title={(filters?.search || activeFiltersCount > 0) ? 'Ничего не найдено' : 'Список избранного пуст'}
@@ -429,6 +500,7 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                             ? { label: 'Сбросить фильтры', onClick: handleResetFilters }
                             : { label: 'Перейти в каталог', href: '/' }}
                     />
+                    </Box>
                 )}
             </Box>
         </UserLayout>
