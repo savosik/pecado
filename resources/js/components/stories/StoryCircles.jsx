@@ -190,13 +190,13 @@ export default function StoryCircles({ stories = [] }) {
                                 transition="transform 0.15s"
                                 _hover={{ transform: 'scale(1.02)' }}
                                 _active={{ transform: 'scale(0.98)' }}
-                                w={{ base: 'calc(33.333% - 12px)', sm: '20%', md: '14.285%', lg: '11.111%' }}
-                                minW={{ base: '100px', md: '110px' }}
+                                w={{ base: 'calc(25% - 12px)', sm: '20%', md: '14.285%', lg: '11.111%' }}
+                                minW={{ base: '70px', md: '110px' }}
                             >
                                 {/* Rectangular card with gradient border */}
                                 <Box
                                     w="100%"
-                                    borderRadius="2xl"
+                                    borderRadius={{ base: 'lg', md: '2xl' }}
                                     p="3px"
                                     background={
                                         isViewed
@@ -212,7 +212,7 @@ export default function StoryCircles({ stories = [] }) {
                                     <Box
                                         w="100%"
                                         position="relative"
-                                        borderRadius="2xl"
+                                        borderRadius={{ base: 'md', md: '2xl' }}
                                         overflow="hidden"
                                         bg="bg"
                                         _dark={{ bg: 'gray.900' }}
@@ -242,9 +242,10 @@ export default function StoryCircles({ stories = [] }) {
                                             </Box>
                                         )}
 
-                                        {/* Name overlay at bottom */}
+                                        {/* Name overlay at bottom (скрыт на мобилке) */}
                                         {story.show_name !== false && (
                                             <Box
+                                                display={{ base: 'none', md: 'block' }}
                                                 position="absolute"
                                                 bottom="0"
                                                 left="0"
