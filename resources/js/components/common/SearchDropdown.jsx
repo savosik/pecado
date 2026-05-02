@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Box, Flex, Text, Input, IconButton, Spinner, Badge } from '@chakra-ui/react';
+import { Box, Flex, Text, Input, IconButton, Spinner, Badge, Portal } from '@chakra-ui/react';
 import { Link, router } from '@inertiajs/react';
 import {
     LuX, LuClock3, LuSearch, LuArrowRight, LuHeart, LuCheck, LuCircleX,
@@ -544,65 +544,69 @@ export default function SearchDropdown({
     };
 
     // ─── Мобильный режим: полноэкранный overlay ──────────────
+    // Portal вынимает overlay из родителя с `transform`/`will-change` (UserHeader),
+    // который иначе становится containing block для position: fixed и схлопывает оверлей.
     if (isSmall) {
         return (
-            <Box
-                position="fixed"
-                top="0"
-                left="0"
-                right="0"
-                bottom="0"
-                bg="bg"
-                _dark={{ bg: 'gray.900' }}
-                zIndex="60"
-                display="flex"
-                flexDirection="column"
-            >
-                {/* Шапка с инпутом */}
-                <Flex align="center" gap="2" px="3" py="2" borderBottom="1px solid" borderColor="border.muted">
-                    <Box flex="1" as="form" onSubmit={handleSubmit}>
-                        <Input
-                            autoFocus
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            placeholder="Поиск товаров, брендов, категорий…"
+            <Portal>
+                <Box
+                    position="fixed"
+                    top="0"
+                    left="0"
+                    right="0"
+                    bottom="0"
+                    bg="bg"
+                    _dark={{ bg: 'gray.900' }}
+                    zIndex="60"
+                    display="flex"
+                    flexDirection="column"
+                >
+                    {/* Шапка с инпутом */}
+                    <Flex align="center" gap="2" px="3" py="2" borderBottom="1px solid" borderColor="border.muted">
+                        <Box flex="1" as="form" onSubmit={handleSubmit}>
+                            <Input
+                                autoFocus
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                placeholder="Поиск товаров, брендов, категорий…"
+                                size="sm"
+                                borderRadius="lg"
+                                bg="gray.50"
+                                _dark={{ bg: 'gray.800' }}
+                            />
+                        </Box>
+                        <IconButton
+                            aria-label="Поиск по штрихкоду"
                             size="sm"
-                            borderRadius="lg"
-                            bg="gray.50"
-                            _dark={{ bg: 'gray.800' }}
-                        />
+                            variant="ghost"
+                            colorPalette="gray"
+                            onClick={() => setScannerOpen(true)}
+                        >
+                            <LuScanBarcode size={20} />
+                        </IconButton>
+                        <IconButton
+                            aria-label="Закрыть"
+                            size="sm"
+                            variant="ghost"
+                            colorPalette="gray"
+                            onClick={close}
+                        >
+                            <LuX size={20} />
+                        </IconButton>
+                    </Flex>
+
+                    {/* Контент */}
+                    <Box flex="1" overflowY="auto" overflowX="hidden">
+                        {renderContent()}
                     </Box>
-                    <IconButton
-                        aria-label="Поиск по штрихкоду"
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="gray"
-                        onClick={() => setScannerOpen(true)}
-                    >
-                        <LuScanBarcode size={20} />
-                    </IconButton>
-                    <IconButton
-                        aria-label="Закрыть"
-                        size="sm"
-                        variant="ghost"
-                        colorPalette="gray"
-                        onClick={close}
-                    >
-                        <LuX size={20} />
-                    </IconButton>
-                </Flex>
 
-                {/* Контент */}
-                <Box flex="1" overflowY="auto" overflowX="hidden">
-                    {renderContent()}
+                    <BarcodeSearchScanner
+                        open={scannerOpen}
+                        onScan={handleBarcodeScan}
+                        onClose={() => setScannerOpen(false)}
+                    />
                 </Box>
-
-                <BarcodeSearchScanner
-                    open={scannerOpen}
-                    onScan={handleBarcodeScan}
-                    onClose={() => setScannerOpen(false)}
-                />
-            </Box>
+            </Portal>
         );
     }
 
