@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { IconButton, Box } from '@chakra-ui/react';
 import { LuChevronUp } from 'react-icons/lu';
+import { usePage } from '@inertiajs/react';
 
 /**
  * Кнопка «Прокрутить вверх» — появляется при scrollY > 300px.
+ * Скрыта на странице корзины, чтобы не конфликтовать со sticky-футером.
  */
 export default function ScrollToTop() {
     const [isVisible, setIsVisible] = useState(false);
+    const { url = '' } = usePage();
+    const isCartPage = url.startsWith('/cart');
 
     useEffect(() => {
         const handleScroll = () => {
@@ -16,6 +20,8 @@ export default function ScrollToTop() {
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
+    if (isCartPage) return null;
 
     const scrollToTop = useCallback(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Flex, Heading, Text, Button } from '@chakra-ui/react';
+import { Box, Flex, Heading, Text, Button, IconButton } from '@chakra-ui/react';
 import { LuSettings2 } from 'react-icons/lu';
 import { pluralize } from '@/utils/pluralize';
 import { useCartStore } from '@/stores/useCartStore';
@@ -19,12 +19,12 @@ export default function CartHeader({ cart, userCarts = [] }) {
     return (
         <Box mb="2">
             <Flex
-                direction={{ base: 'column', md: 'row' }}
+                direction="row"
                 justify="space-between"
-                align={{ base: 'flex-start', md: 'center' }}
+                align="center"
                 gap="2"
             >
-                <Flex align="baseline" gap="3" wrap="wrap">
+                <Flex align="baseline" gap="2" wrap="wrap" minW="0">
                     <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg">
                         {showName ? `Корзина «${name}»` : 'Корзина'}
                     </Heading>
@@ -33,10 +33,23 @@ export default function CartHeader({ cart, userCarts = [] }) {
                     </Text>
                 </Flex>
 
+                {/* На base — иконка-кнопка справа от заголовка, на md+ — кнопка с текстом */}
+                <IconButton
+                    aria-label="Управление корзинами"
+                    title="Управление корзинами"
+                    size="sm"
+                    variant="ghost"
+                    colorPalette="gray"
+                    display={{ base: 'inline-flex', md: 'none' }}
+                    onClick={() => setManagerOpen(true)}
+                >
+                    <LuSettings2 />
+                </IconButton>
                 <Button
                     size="sm"
                     variant="ghost"
                     colorPalette="gray"
+                    display={{ base: 'none', md: 'inline-flex' }}
                     onClick={() => setManagerOpen(true)}
                     flexShrink={0}
                 >

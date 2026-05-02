@@ -54,7 +54,7 @@ export default function UserFooter() {
                 color="gray.700"
                 _dark={{ bg: 'gray.900', borderColor: 'gray.800', color: 'gray.300' }}
             >
-                <Box maxW="1360px" mx="auto" px={{ base: '4', md: '6' }} py={{ base: '8', md: '10' }}>
+                <Box maxW="1360px" mx="auto" px={{ base: '3', md: '6' }} py={{ base: '8', md: '10' }}>
                     {/* Four Columns */}
                     <Grid
                         templateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }}

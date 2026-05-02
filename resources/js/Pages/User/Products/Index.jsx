@@ -1,8 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import {
-    Box, Button, Flex, Icon,
-} from '@chakra-ui/react';
-import { LuSlidersHorizontal } from 'react-icons/lu';
+import { Box, Flex } from '@chakra-ui/react';
 import { usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
 import SeoHead from '@/components/common/SeoHead';
@@ -13,15 +10,14 @@ import CatalogControls from './CatalogControls';
 import SelectedFilters from './SelectedFilters';
 import ProductGrid from './ProductGrid';
 import ProductPagination from './ProductPagination';
-import ProductFiltersSheet, { countActiveFilters, FilterBadge } from './ProductFiltersSheet';
+import ProductFiltersSheet, { countActiveFilters } from './ProductFiltersSheet';
 import useCatalogFilters from './hooks/useCatalogFilters';
 import useCatalogProducts from './hooks/useCatalogProducts';
 import usePriceIntervals from './hooks/usePriceIntervals';
 import useCatalogFacets from './hooks/useCatalogFacets';
 
 // Фильтры
-import FilterBlock from './filters/FilterBlock';
-import SearchFilter from './filters/SearchFilter';
+import CollapsibleFilterCard from './filters/CollapsibleFilterCard';
 import PriceFilter from './filters/PriceFilter';
 import CategoryFilter from './filters/CategoryFilter';
 import BrandFilter from './filters/BrandFilter';
@@ -29,6 +25,7 @@ import AttributeFilters from './filters/AttributeFilters';
 
 const DEFAULT_PER_PAGE = 20;
 const LS_INFINITE_SCROLL_KEY = 'catalog_infinite_scroll';
+const LS_ATTRIBUTES_OPEN_KEY = 'catalog_attributes_open';
 
 /**
  * Index — единая Inertia-страница каталога товаров.
@@ -115,10 +112,6 @@ export default function Index() {
     }, []);
 
     // ─── Обработчики фильтров ───
-    const handleSearchChange = useCallback((q) => {
-        updateFilter('q', q || undefined);
-    }, [updateFilter]);
-
     const handlePriceChange = useCallback((min, max) => {
         updateFilters({ price_min: min || undefined, price_max: max || undefined });
     }, [updateFilters]);
@@ -183,100 +176,52 @@ export default function Index() {
 
     // ─── Sidebar content (мемоизация для предотвращения лишних ререндеров) ───
     const sidebarContent = useMemo(() => (
-        <Box
-            bg="bg"
-            borderRadius="xl"
-            border="1px solid"
-            borderColor="border.muted"
-
-            p="4"
-        >
-            {/* Поиск */}
-            <FilterBlock
-                title="Поиск"
-                showClear={!!filters.q}
-                onClear={() => handleSearchChange('')}
-            >
-                <SearchFilter
-                    value={filters.q || ''}
-                    onChange={handleSearchChange}
-                />
-            </FilterBlock>
-
-            {/* Разделитель после «Поиск» — только если далее есть видимый блок */}
-            {((!isCategoryPage && facets?.categories?.length > 0) || (!isBrandPage && facets?.brands?.length > 0) || isAuthenticated) && (
-                <Box h="1px" bg="bg.muted" my="1" />
-            )}
-
-            {/* Категории — скрываем на страницах конкретной категории */}
+        <Flex direction="column" gap="2">
             {!isCategoryPage && facets?.categories && facets.categories.length > 0 && (
-                <>
-                    <FilterBlock
-                        title="Категории"
-                        showClear={!!(filters.category_ids?.length)}
-                        onClear={() => handleCategoriesChange([])}
-                    >
-                        <CategoryFilter
-                            categories={facets.categories}
-                            selectedIds={filters.category_ids || []}
-                            onChange={handleCategoriesChange}
-                        />
-                    </FilterBlock>
-                    <Box h="1px" bg="bg.muted" my="1" />
-                </>
+                <CollapsibleFilterCard title="Категории" storageKey="catalog_filter_categories_open" defaultOpen>
+                    <CategoryFilter
+                        categories={facets.categories}
+                        selectedIds={filters.category_ids || []}
+                        onChange={handleCategoriesChange}
+                    />
+                </CollapsibleFilterCard>
             )}
 
-            {/* Бренды — скрываем на страницах конкретного бренда */}
             {!isBrandPage && facets?.brands && facets.brands.length > 0 && (
-                <>
-                    <FilterBlock
-                        title="Бренды"
-                        showClear={!!(filters.brand_ids?.length)}
-                        onClear={() => handleBrandsChange([])}
-                    >
-                        <BrandFilter
-                            brands={facets.brands}
-                            selectedIds={filters.brand_ids || []}
-                            onChange={handleBrandsChange}
-                        />
-                    </FilterBlock>
-                    <Box h="1px" bg="bg.muted" my="1" />
-                </>
+                <CollapsibleFilterCard title="Бренды" storageKey="catalog_filter_brands_open" defaultOpen>
+                    <BrandFilter
+                        brands={facets.brands}
+                        selectedIds={filters.brand_ids || []}
+                        onChange={handleBrandsChange}
+                    />
+                </CollapsibleFilterCard>
             )}
 
-            {/* Цена — только для авторизованных */}
             {isAuthenticated && (
-                <>
-                    <FilterBlock
-                        title="Цена"
-                        showClear={!!(filters.price_min || filters.price_max)}
-                        onClear={() => handlePriceChange('', '')}
-                    >
-                        <PriceFilter
-                            priceMin={filters.price_min || ''}
-                            priceMax={filters.price_max || ''}
-                            priceData={priceData}
-                            currencySymbol={currencySymbol}
-                            onPriceChange={handlePriceChange}
-                        />
-                    </FilterBlock>
-
-                    <Box h="1px" bg="bg.muted" my="1" />
-                </>
+                <CollapsibleFilterCard title="Цена" storageKey="catalog_filter_price_open" defaultOpen>
+                    <PriceFilter
+                        priceMin={filters.price_min || ''}
+                        priceMax={filters.price_max || ''}
+                        priceData={priceData}
+                        currencySymbol={currencySymbol}
+                        onPriceChange={handlePriceChange}
+                    />
+                </CollapsibleFilterCard>
             )}
 
-            {/* Атрибуты (динамические блоки) */}
             {facets?.attributes && facets.attributes.length > 0 && (
-                <AttributeFilters
-                    attributes={facets.attributes}
-                    selectedValueIds={filters.attribute_value_ids || []}
-                    selectedInlineFilters={filters.attribute_inline_filters || {}}
-                    onChange={handleAttributeValuesChange}
-                    onInlineChange={handleInlineAttributeChange}
-                />
+                <CollapsibleFilterCard title="Характеристики" storageKey={LS_ATTRIBUTES_OPEN_KEY}>
+                    <AttributeFilters
+                        attributes={facets.attributes}
+                        selectedValueIds={filters.attribute_value_ids || []}
+                        selectedInlineFilters={filters.attribute_inline_filters || {}}
+                        onChange={handleAttributeValuesChange}
+                        onInlineChange={handleInlineAttributeChange}
+                    />
+                </CollapsibleFilterCard>
             )}
-        </Box>
-    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleSearchChange, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleAttributeValuesChange, handleInlineAttributeChange]);
+        </Flex>
+    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleAttributeValuesChange, handleInlineAttributeChange]);
 
     // ─── Динамический SEO (поисковый запрос → title) ───
     const dynamicSeo = useMemo(() => {
@@ -288,40 +233,28 @@ export default function Index() {
     }, [seo, filters.q, appName]);
 
     return (
-        <UserLayout>
+        <UserLayout fluid>
             <SeoHead seo={dynamicSeo} />
 
-            {/* Хлебные крошки: на страницах категорий — с siblings dropdown */}
-            {categoryTrail && categoryTrail.length > 0 ? (
-                <ProductBreadcrumbs
-                    categoryTrail={categoryTrail}
-                    productName={seo.h1 || ''}
-                />
-            ) : breadcrumbs && breadcrumbs.length > 0 ? (
-                <Breadcrumbs items={breadcrumbs} />
-            ) : null}
+            {/* Верхний блок: breadcrumbs, заголовок, controls, чипы — с боковыми отступами на мобиле */}
+            <Box px={{ base: '3', md: '0' }}>
+                {/* Хлебные крошки: на страницах категорий — с siblings dropdown */}
+                {categoryTrail && categoryTrail.length > 0 ? (
+                    <ProductBreadcrumbs
+                        categoryTrail={categoryTrail}
+                        productName={seo.h1 || ''}
+                    />
+                ) : breadcrumbs && breadcrumbs.length > 0 ? (
+                    <Breadcrumbs items={breadcrumbs} />
+                ) : null}
 
-            {/* Заголовок + Контролы в одну строку */}
-            <Flex align="center" justify="space-between" gap="4" flexWrap="wrap" mb="4">
-                <CatalogHeader
-                    h1={seo.h1 || 'Каталог товаров'}
-                    total={meta?.total ?? null}
-                    description={pageDescription || (!breadcrumbs ? seo.description : undefined)}
-                />
-
-                <Flex gap="2" align="center" flexWrap="wrap">
-                    {/* Кнопка «Фильтры» — только мобильные */}
-                    <Button
-                        display={{ base: 'inline-flex', lg: 'none' }}
-                        variant="outline"
-                        size="sm"
-                        onClick={openMobileFilters}
-                        colorPalette="pecado"
-                    >
-                        <Icon as={LuSlidersHorizontal} boxSize="4" />
-                        Фильтры
-                        <FilterBadge count={activeFilterCount} ml="1" />
-                    </Button>
+                {/* Заголовок + Контролы в одну строку */}
+                <Flex align="center" justify="space-between" gap="4" flexWrap="wrap" mb="4">
+                    <CatalogHeader
+                        h1={seo.h1 || 'Каталог товаров'}
+                        total={meta?.total ?? null}
+                        description={pageDescription || (!breadcrumbs ? seo.description : undefined)}
+                    />
 
                     <CatalogControls
                         sort={filters.sort}
@@ -334,19 +267,21 @@ export default function Index() {
                         inStockMode={filters.in_stock_mode || ''}
                         onStockChange={handleStockChange}
                         showStockFilter={isAuthenticated}
+                        onOpenFilters={openMobileFilters}
+                        activeFilterCount={activeFilterCount}
                     />
                 </Flex>
-            </Flex>
 
-            {/* Выбранные фильтры (чипы) */}
-            <SelectedFilters
-                filters={filters}
-                facets={facets}
-                lockedFilters={initialFilters}
-                currencySymbol={currencySymbol}
-                onRemoveFilter={handleRemoveFilter}
-                onResetAll={handleResetAll}
-            />
+                {/* Выбранные фильтры (чипы) */}
+                <SelectedFilters
+                    filters={filters}
+                    facets={facets}
+                    lockedFilters={initialFilters}
+                    currencySymbol={currencySymbol}
+                    onRemoveFilter={handleRemoveFilter}
+                    onResetAll={handleResetAll}
+                />
+            </Box>
 
             {/* Контент */}
             <Flex gap="6">
@@ -371,14 +306,16 @@ export default function Index() {
 
                     {/* Пагинация */}
                     {!loading && !error && products.length > 0 && meta && (
-                        <ProductPagination
-                            meta={meta}
-                            onPageChange={goToPage}
-                            onLoadMore={loadMore}
-                            loadingMore={loadingMore}
-                            infiniteScroll={infiniteScroll}
-                            onInfiniteScrollToggle={handleInfiniteScrollToggle}
-                        />
+                        <Box px={{ base: '3', md: '0' }}>
+                            <ProductPagination
+                                meta={meta}
+                                onPageChange={goToPage}
+                                onLoadMore={loadMore}
+                                loadingMore={loadingMore}
+                                infiniteScroll={infiniteScroll}
+                                onInfiniteScrollToggle={handleInfiniteScrollToggle}
+                            />
+                        </Box>
                     )}
                 </Box>
             </Flex>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
+import { Box, Flex, Text, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuHeart, LuCheck, LuCircleX, LuClock3 } from 'react-icons/lu';
 import ProductMiniGallery from '@/components/product/ProductMiniGallery';
@@ -55,6 +55,27 @@ export default function ProductListItem({ product, loading = false }) {
         );
     }
 
+    const stockBlock = (
+        <Flex align="center" gap="1" fontSize="xs" fontWeight="500" flexShrink="0">
+            {isInStock ? (
+                <>
+                    <LuCheck size={14} color="var(--chakra-colors-green-600)" />
+                    <Text color="green.600" lineClamp="1">В наличии</Text>
+                </>
+            ) : isPreorder ? (
+                <>
+                    <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
+                    <Text color="orange.500" lineClamp="1">Предзаказ</Text>
+                </>
+            ) : (
+                <>
+                    <LuCircleX size={14} color="var(--chakra-colors-red-600)" />
+                    <Text color="red.600" lineClamp="1">Нет в наличии</Text>
+                </>
+            )}
+        </Flex>
+    );
+
     return (
         <Flex
             border="1px solid"
@@ -65,54 +86,57 @@ export default function ProductListItem({ product, loading = false }) {
             transition="all 0.2s"
             _hover={{ shadow: 'md' }}
             direction="row"
+            align={{ base: 'flex-start', md: 'stretch' }}
+            p={{ base: '2', md: '0' }}
+            gap={{ base: '3', md: '0' }}
         >
-            {/* Изображение */}
-            <Box
-                position="relative"
+            {/* Левая колонка: изображение + (на base) статус наличия под ним */}
+            <Flex
+                direction="column"
                 flexShrink="0"
-                w={{ base: '100px', md: '150px' }}
-                overflow="hidden"
-                onMouseEnter={() => setIsImageHovered(true)}
-                onMouseLeave={() => setIsImageHovered(false)}
+                gap="1.5"
+                w={{ base: '90px', md: '150px' }}
             >
-                <Link href={`/products/${product.slug}`}>
-                    <ProductMiniGallery
-                        product={product}
-                        maxImages={4}
-                        showMainImage
-                        isHovered={isImageHovered}
-                    />
-                </Link>
-
-                {/* Бейджи */}
-                <Box position="absolute" top="2" left="2" display="flex" flexDirection="column" gap="1" pointerEvents="none">
-                    {product.is_new && (
-                        <Badge colorPalette="green" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
-                            Новинка
-                        </Badge>
-                    )}
-                    {product.is_bestseller && (
-                        <Badge colorPalette="orange" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
-                            Хит
-                        </Badge>
-                    )}
-                    {hasSale && discountPct && (
-                        <Badge colorPalette="red" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
-                            −{Math.round(discountPct)}%
-                        </Badge>
-                    )}
+                <Box
+                    position="relative"
+                    w="100%"
+                    h={{ base: '135px', md: '225px' }}
+                    overflow="hidden"
+                    borderRadius={{ base: 'md', md: '0' }}
+                    onMouseEnter={() => setIsImageHovered(true)}
+                    onMouseLeave={() => setIsImageHovered(false)}
+                >
+                    <Link href={`/products/${product.slug}`}>
+                        <ProductMiniGallery
+                            product={product}
+                            maxImages={4}
+                            showMainImage
+                            isHovered={isImageHovered}
+                        />
+                    </Link>
                 </Box>
-            </Box>
+
+            </Flex>
 
             {/* Контент */}
-            <Flex flex="1" p={{ base: '2', md: '4' }} direction="column" gap="1" minW="0">
-                {/* Верхняя часть: SKU + Бренд + Избранное */}
-                <Flex align="start" justify="space-between">
-                    <Box flex="1" minW="0">
+            <Flex flex="1" p={{ base: '0', md: '4' }} direction="column" gap="1" minW="0">
+                {/* Верхняя часть: SKU / Бренд + Избранное */}
+                <Flex align="start" justify="space-between" gap="2">
+                    <Flex
+                        flex="1"
+                        minW="0"
+                        align="baseline"
+                        gap="1.5"
+                        flexWrap="wrap"
+                        rowGap="0"
+                    >
                         {product.sku && (
-                            <Text fontSize="xs" fontWeight="700" color="gray.400">
+                            <Text fontSize="xs" fontWeight="700" color="gray.500" lineHeight="1.3">
                                 {product.sku}
                             </Text>
+                        )}
+                        {brandName && product.sku && (
+                            <Text fontSize="xs" color="gray.300" lineHeight="1.3">/</Text>
                         )}
                         {brandName && product.brand_slug ? (
                             <Text
@@ -123,17 +147,17 @@ export default function ProductListItem({ product, loading = false }) {
                                 letterSpacing="wide"
                                 color="gray.400"
                                 _hover={{ textDecoration: 'underline' }}
-                                display="block"
+                                lineHeight="1.3"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {brandName}
                             </Text>
                         ) : brandName ? (
-                            <Text fontSize="2xs" textTransform="capitalize" letterSpacing="wide" color="gray.400">
+                            <Text fontSize="2xs" textTransform="capitalize" letterSpacing="wide" color="gray.400" lineHeight="1.3">
                                 {brandName}
                             </Text>
                         ) : null}
-                    </Box>
+                    </Flex>
                     {user && (
                         <IconButton
                             aria-label="В избранное"
@@ -145,8 +169,9 @@ export default function ProductListItem({ product, loading = false }) {
                             _hover={{ color: 'red.500' }}
                             minW="6"
                             h="6"
+                            mt="-1"
                         >
-                            <LuHeart size={14} fill={isFav ? 'currentColor' : 'none'} />
+                            <LuHeart size={16} fill={isFav ? 'currentColor' : 'none'} />
                         </IconButton>
                     )}
                 </Flex>
@@ -155,12 +180,13 @@ export default function ProductListItem({ product, loading = false }) {
                 <Text
                     as={Link}
                     href={`/products/${product.slug}`}
-                    fontSize="sm"
-                    fontWeight="500"
+                    fontSize="13px"
+                    fontWeight="400"
+                    lineHeight="1.3"
                     _hover={{ textDecoration: 'underline' }}
                     display="-webkit-box"
                     css={{
-                        WebkitLineClamp: 2,
+                        WebkitLineClamp: 3,
                         WebkitBoxOrient: 'vertical',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -169,44 +195,32 @@ export default function ProductListItem({ product, loading = false }) {
                     {product.name}
                 </Text>
 
-                {/* Теги */}
-                {product.tags && product.tags.length > 0 && (
-                    <TagList tags={product.tags} maxVisible={3} />
-                )}
+                {/* Теги (с подмиксованными бейджами Новинка / Хит / Скидка) */}
+                <TagList
+                    tags={product.tags}
+                    maxVisible={3}
+                    prependBadges={[
+                        product.is_new && { key: 'new', label: 'Новинка', colorPalette: 'green' },
+                        product.is_bestseller && { key: 'best', label: 'Хит', colorPalette: 'orange' },
+                        hasSale && discountPct && { key: 'sale', label: `−${Math.round(discountPct)}%`, colorPalette: 'red' },
+                    ].filter(Boolean)}
+                />
 
-                {/* Нижняя секция: наличие + цена + корзина */}
+                {/* Нижняя секция: статус наличия + цена + корзина в одной строке */}
                 {user && (
                     <Flex
-                        mt="auto"
-                        pt="2"
-                        align={{ base: 'stretch', md: 'center' }}
-                        direction={{ base: 'column', md: 'row' }}
+                        mt={{ base: '1', md: 'auto' }}
+                        pt={{ base: '0', md: '2' }}
+                        align="center"
                         gap={{ base: '2', md: '4' }}
                         flexWrap="wrap"
                     >
                         {/* Статус наличия */}
-                        <Flex align="center" gap="1" fontSize="xs" fontWeight="500" flexShrink="0">
-                            {isInStock ? (
-                                <>
-                                    <LuCheck size={14} color="var(--chakra-colors-green-600)" />
-                                    <Text color="green.600" lineClamp="1">В наличии</Text>
-                                </>
-                            ) : isPreorder ? (
-                                <>
-                                    <LuClock3 size={14} color="var(--chakra-colors-orange-500)" />
-                                    <Text color="orange.500" lineClamp="1">Предзаказ</Text>
-                                </>
-                            ) : (
-                                <>
-                                    <LuCircleX size={14} color="var(--chakra-colors-red-600)" />
-                                    <Text color="red.600" lineClamp="1">Нет в наличии</Text>
-                                </>
-                            )}
-                        </Flex>
+                        {stockBlock}
 
                         {/* Цена */}
                         {price != null && (
-                            <Flex align="baseline" gap="2" flexShrink="0">
+                            <Flex align="baseline" gap="2" flexShrink="0" ml="auto">
                                 <Text
                                     fontSize="lg"
                                     fontWeight="600"
@@ -226,7 +240,7 @@ export default function ProductListItem({ product, loading = false }) {
                         {/* Корзина */}
                         {(isInStock || isPreorder) && (hasSale ? salePrice : price) > 0 && (
                             <Box
-                                w={{ base: '100%', md: '160px' }}
+                                w={{ base: '140px', md: '160px' }}
                                 flexShrink="0"
                                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                             >

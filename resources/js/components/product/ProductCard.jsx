@@ -122,7 +122,7 @@ function ProductCard({ product, loading = false }) {
             </Box>
 
             {/* Информация */}
-            <Box p="3" flex="1" display="flex" flexDirection="column">
+            <Box p={{ base: '2', md: '3' }} flex="1" display="flex" flexDirection="column">
                 <Box flex="1" spaceY="1">
                     {/* SKU + Избранное */}
                     <Flex align="start" justify="space-between" gap="2" minW="0">
@@ -189,7 +189,9 @@ function ProductCard({ product, loading = false }) {
                     <Text
                         as={Link}
                         href={`/products/${product.slug}`}
-                        fontSize="sm"
+                        fontSize="13px"
+                        fontWeight="400"
+                        lineHeight="1.3"
                         _hover={{ textDecoration: 'underline' }}
                         display="-webkit-box"
                         css={{

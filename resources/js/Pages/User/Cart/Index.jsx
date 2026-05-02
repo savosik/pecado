@@ -286,64 +286,68 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
     ];
 
     return (
-        <UserLayout>
+        <UserLayout fluid>
             <Head title="Корзина" />
-            <Breadcrumbs items={breadcrumbs} />
 
-            <Box spaceY="3">
-                <CartHeader cart={cart} userCarts={userCarts} />
+            {/* Текстовые/управляющие блоки — с боковыми отступами на мобиле */}
+            <Box px={{ base: '3', md: '0' }}>
+                <Breadcrumbs items={breadcrumbs} />
+                <Box spaceY="3">
+                    <CartHeader cart={cart} userCarts={userCarts} />
+                    <CartFlash flash={flash} onDismiss={dismissFlash} />
+                </Box>
+            </Box>
 
-                <CartFlash flash={flash} onDismiss={dismissFlash} />
+            {items.length > 0 ? (
+                <Box spaceY="3" mt="3">
+                    {/* Единая карточка: тулбар + таблица. На base — full-bleed без рамки и скруглений */}
+                    <Box
+                        borderWidth={{ base: '0', lg: '1px' }}
+                        borderColor="border"
+                        rounded={{ base: 'none', lg: 'lg' }}
+                        bg={{ base: 'transparent', lg: 'bg' }}
+                        overflow={{ base: 'visible', lg: 'hidden' }}
+                    >
+                        <CartToolbar
+                            searchQuery={searchQuery}
+                            onSearchChange={setSearchQuery}
+                            bulkSelectedCount={selected.size}
+                            onBulkSetQty={handleBulkSetQty}
+                            onBulkDelete={handleBulkDelete}
+                            onBulkExport={handleBulkExport}
+                            onBulkMove={handleBulkMove}
+                            onClearCart={handleClearCart}
+                            onRefresh={handleRefresh}
+                            userCarts={userCarts}
+                            currentCartId={cart?.id}
+                        />
 
-                {items.length > 0 ? (
-                    <>
-                        {/* Единая карточка: тулбар + таблица */}
-                        <Box
-                            borderWidth={{ base: '0', lg: '1px' }}
-                            borderColor="border"
-                            rounded={{ base: 'none', lg: 'lg' }}
-                            bg={{ base: 'transparent', lg: 'bg' }}
-                            overflow={{ base: 'visible', lg: 'hidden' }}
-                        >
-                            <CartToolbar
-                                searchQuery={searchQuery}
-                                onSearchChange={setSearchQuery}
-                                bulkSelectedCount={selected.size}
-                                onBulkSetQty={handleBulkSetQty}
-                                onBulkDelete={handleBulkDelete}
-                                onBulkExport={handleBulkExport}
-                                onBulkMove={handleBulkMove}
-                                onClearCart={handleClearCart}
-                                onRefresh={handleRefresh}
-                                userCarts={userCarts}
-                                currentCartId={cart?.id}
-                            />
+                        <CartTable
+                            items={filteredItems}
+                            selected={selected}
+                            onToggleAll={toggleAll}
+                            onToggleOne={toggleOne}
+                            sortKey={sortKey}
+                            sortDir={sortDir}
+                            onSort={handleSort}
+                            onSetProductQuantity={handleSetProductQuantity}
+                            onRemove={handleRemoveItem}
+                            hasPreorderItems={hasPreorderItems}
+                        />
+                    </Box>
 
-                            <CartTable
-                                items={filteredItems}
-                                selected={selected}
-                                onToggleAll={toggleAll}
-                                onToggleOne={toggleOne}
-                                sortKey={sortKey}
-                                sortDir={sortDir}
-                                onSort={handleSort}
-                                onSetProductQuantity={handleSetProductQuantity}
-                                onRemove={handleRemoveItem}
-                                hasPreorderItems={hasPreorderItems}
-                            />
-                        </Box>
-
-                        <CartSummary cartDetails={cartDetails} hasItems={items.length > 0} />
-                    </>
-                ) : (
+                    <CartSummary cartDetails={cartDetails} hasItems={items.length > 0} />
+                </Box>
+            ) : (
+                <Box px={{ base: '3', md: '0' }}>
                     <EmptyState
                         icon={LuShoppingCart}
                         title="Корзина пуста"
                         description="Добавьте товары в корзину, чтобы оформить заказ"
                         action={{ label: 'Перейти в каталог', href: '/products' }}
                     />
-                )}
-            </Box>
+                </Box>
+            )}
         </UserLayout>
     );
 }

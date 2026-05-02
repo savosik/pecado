@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import DOMPurify from 'dompurify';
-import { Box, Flex, Text, Button, Table } from '@chakra-ui/react';
+import { Box, Flex, Stack, Text, Button, Table } from '@chakra-ui/react';
 import { Tabs } from '@chakra-ui/react';
 import { LuDownload, LuFileText } from 'react-icons/lu';
 import ContentRenderer from '@/components/content/ContentRenderer';
 import SimilarProductItem from '@/components/product/SimilarProductItem';
+import ProductListItem from '@/Pages/User/Products/ProductListItem';
 
 const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -448,10 +449,22 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
             {/* Похожие */}
             {hasSimilar && (
                 <Tabs.Content value="similar" pt="4">
+                    {/* base: list-карточки от края до края (компенсируем p=4 родителя через mx="-4") */}
+                    <Stack
+                        display={{ base: 'flex', md: 'none' }}
+                        mx={{ base: '-4', md: '0' }}
+                        gap="0"
+                    >
+                        {similarProducts.map((p) => (
+                            <ProductListItem key={p.id} product={p} />
+                        ))}
+                    </Stack>
+
+                    {/* md+: компактный вид как раньше */}
                     <Box
+                        display={{ base: 'none', md: 'block' }}
                         borderWidth="1px"
                         borderColor="border"
-
                         rounded="md"
                         overflow="hidden"
                     >

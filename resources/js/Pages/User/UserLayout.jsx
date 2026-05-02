@@ -11,7 +11,7 @@ import { AuthDialogProvider } from '@/contexts/AuthDialogContext';
 import BugReportWidget from '@/Components/BugReportWidget';
 import AgeGate from '@/components/common/AgeGate';
 
-export default function UserLayout({ children }) {
+export default function UserLayout({ children, fluid = false }) {
     return (
         <AuthDialogProvider>
         <ProductQuickViewProvider>
@@ -24,7 +24,7 @@ export default function UserLayout({ children }) {
                     maxW="1360px"
                     mx="auto"
                     w="100%"
-                    px={{ base: '3', md: '6' }}
+                    px={fluid ? { base: '0', md: '6' } : { base: '3', md: '6' }}
                     py="6"
                     pb={{ base: '70px', lg: '6' }}
                 >

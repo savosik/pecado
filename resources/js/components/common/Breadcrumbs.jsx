@@ -57,8 +57,6 @@ export default function Breadcrumbs({ items }) {
                                             href={item.url}
                                             _hover={{ color: 'gray.700', _dark: { color: 'gray.200' } }}
                                             transition="color 0.15s"
-                                            truncate
-                                            maxW={{ base: '80px', sm: '150px', md: '200px', lg: '250px' }}
                                             whiteSpace="nowrap"
                                             title={item.label}
                                         >
@@ -69,8 +67,6 @@ export default function Breadcrumbs({ items }) {
                                             color={isLast ? 'gray.700' : undefined}
                                             _dark={{ color: isLast ? 'gray.200' : undefined }}
                                             fontWeight={isLast ? 'medium' : undefined}
-                                            truncate
-                                            maxW={{ base: '100px', sm: '150px', md: '200px', lg: '300px' }}
                                             whiteSpace="nowrap"
                                             title={item.label}
                                         >

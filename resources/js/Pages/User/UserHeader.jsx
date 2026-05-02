@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
 import { useCartStore } from '@/stores/useCartStore';
 import CatalogPanel from './CatalogPanel';
@@ -27,6 +27,34 @@ const iconMap = {
     LuLayoutDashboard, LuShoppingBag,
 };
 
+// Скрывает элемент при скролле вниз и показывает при скролле вверх (мобильный UX-паттерн)
+function useHideOnScrollDown({ threshold = 5, topOffset = 50 } = {}) {
+    const [hidden, setHidden] = useState(false);
+    const lastY = useRef(0);
+
+    useEffect(() => {
+        lastY.current = window.scrollY;
+        const onScroll = () => {
+            const y = window.scrollY;
+            const delta = y - lastY.current;
+
+            if (y < topOffset) {
+                setHidden(false);
+                lastY.current = y;
+                return;
+            }
+            if (Math.abs(delta) < threshold) return;
+
+            setHidden(delta > 0);
+            lastY.current = y;
+        };
+        window.addEventListener('scroll', onScroll, { passive: true });
+        return () => window.removeEventListener('scroll', onScroll);
+    }, [threshold, topOffset]);
+
+    return hidden;
+}
+
 
 
 
@@ -47,6 +75,7 @@ export default function UserHeader() {
     const [catalogOpen, setCatalogOpen] = useState(false);
     const favCount = useFavoritesStore((s) => s.ids.size);
     const { openLogin, openRegister } = useAuthDialog();
+    const headerHidden = useHideOnScrollDown();
 
     // Загрузка избранного и корзины при наличии пользователя
     useEffect(() => {
@@ -78,6 +107,9 @@ export default function UserHeader() {
                 top="0"
                 zIndex="50"
                 _dark={{ bg: 'gray.900' }}
+                transform={{ base: headerHidden ? 'translateY(-100%)' : 'translateY(0)', md: 'none' }}
+                transition="transform 0.25s ease"
+                willChange="transform"
             >
                 <Box maxW="1360px" mx="auto" px={{ base: '3', md: '6' }} py="1">
                     <Flex align="center" gap="3">

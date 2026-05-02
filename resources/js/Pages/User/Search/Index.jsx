@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useRef, useState, useCallback } from 'react';
+import { getResponsiveDefaultView } from '@/utils/compactFilters';
 import { Head, Link, router } from '@inertiajs/react';
 import { Box, Flex, Text, Badge, SimpleGrid, Heading } from '@chakra-ui/react';
 import { LuSearch, LuInfo } from 'react-icons/lu';
@@ -33,6 +34,8 @@ export default function SearchIndex({ query, results, productsMeta }) {
     const [accumulatedProducts, setAccumulatedProducts] = useState(initialProducts);
     const [currentMeta, setCurrentMeta] = useState(productsMeta);
     const [loadingMore, setLoadingMore] = useState(false);
+    // На мобиле — list view по умолчанию, на md+ — grid
+    const view = useRef(getResponsiveDefaultView()).current;
 
     const [infiniteScroll, setInfiniteScroll] = useState(() => {
         try {
@@ -140,37 +143,40 @@ export default function SearchIndex({ query, results, productsMeta }) {
     const totalResults = totalProducts + categories.length + brands.length + articles.length + news.length;
 
     return (
-        <UserLayout>
+        <UserLayout fluid>
             <Head>
                 <title>{q ? `Поиск: ${q} — Pecado` : 'Поиск — Pecado'}</title>
                 <meta name="description" content={`Результаты поиска${q ? ` по запросу «${q}»` : ''} в интернет-магазине Pecado`} />
             </Head>
 
-            <Breadcrumbs items={breadcrumbs} />
+            {/* Текстовая шапка — с боковыми отступами на мобиле */}
+            <Box px={{ base: '3', md: '0' }}>
+                <Breadcrumbs items={breadcrumbs} />
 
-            <PageHeader
-                title={q ? (<>Результаты поиска: <Text as="span" color="pecado.500">«{q}»</Text></>) : 'Поиск'}
-                subtitle={q && hasAny ? formatTotal(totalResults) : undefined}
-            />
-
-            {/* Empty state */}
-            {!hasAny && q && (
-                <EmptyState
-                    icon={LuSearch}
-                    title="По вашему запросу ничего не найдено"
-                    description="Попробуйте изменить запрос или использовать другие ключевые слова"
-                    action={{ label: 'На главную', href: '/' }}
+                <PageHeader
+                    title={q ? (<>Результаты поиска: <Text as="span" color="pecado.500">«{q}»</Text></>) : 'Поиск'}
+                    subtitle={q && hasAny ? formatTotal(totalResults) : undefined}
                 />
-            )}
 
-            {/* Начальное состояние без запроса */}
-            {!q && (
-                <EmptyState
-                    icon={LuSearch}
-                    title="Введите поисковый запрос"
-                    description="Попробуйте найти товары, бренды, категории или статьи"
-                />
-            )}
+                {/* Empty state */}
+                {!hasAny && q && (
+                    <EmptyState
+                        icon={LuSearch}
+                        title="По вашему запросу ничего не найдено"
+                        description="Попробуйте изменить запрос или использовать другие ключевые слова"
+                        action={{ label: 'На главную', href: '/' }}
+                    />
+                )}
+
+                {/* Начальное состояние без запроса */}
+                {!q && (
+                    <EmptyState
+                        icon={LuSearch}
+                        title="Введите поисковый запрос"
+                        description="Попробуйте найти товары, бренды, категории или статьи"
+                    />
+                )}
+            </Box>
 
             {/* Категории — бейджи */}
             {categories.length > 0 && (
@@ -186,9 +192,9 @@ export default function SearchIndex({ query, results, productsMeta }) {
                 </SearchSection>
             )}
 
-            {/* Товары — ProductGrid (идентично каталогу) */}
+            {/* Товары — ProductGrid (идентично каталогу). На base — list view от края до края. */}
             {products.length > 0 && (
-                <SearchSection title="Товары">
+                <SearchSection title="Товары" fluid>
                     {meta?.no_exact_match && (
                         <Flex
                             align="flex-start"
@@ -213,6 +219,7 @@ export default function SearchIndex({ query, results, productsMeta }) {
                     )}
                     <ProductGrid
                         products={products}
+                        view={view}
                         templateColumns={{
                             base: 'repeat(2, minmax(0, 1fr))',
                             md: 'repeat(3, minmax(0, 1fr))',
@@ -275,14 +282,25 @@ export default function SearchIndex({ query, results, productsMeta }) {
 
 /**
  * Заголовок секции результатов.
+ *
+ * @param {{ title: string, children: React.ReactNode, fluid?: boolean }} props
+ *   fluid=true — заголовок имеет горизонтальный паддинг на base, а content идёт от края до края
+ *   (для секций с list-карточками).
  */
-function SearchSection({ title, children }) {
+function SearchSection({ title, children, fluid = false }) {
     return (
         <Box mb="8">
-            <Heading as="h2" size={{ base: 'md', md: 'lg' }} fontWeight="bold" mb="4" color="fg">
+            <Heading
+                as="h2"
+                size={{ base: 'md', md: 'lg' }}
+                fontWeight="bold"
+                mb="4"
+                color="fg"
+                px={fluid ? { base: '3', md: '0' } : undefined}
+            >
                 {title}
             </Heading>
-            {children}
+            {fluid ? children : <Box px={{ base: '3', md: '0' }}>{children}</Box>}
         </Box>
     );
 }

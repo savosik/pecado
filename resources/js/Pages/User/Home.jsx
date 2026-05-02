@@ -20,7 +20,7 @@ export default function Home({
     const showWelcome = flash?.onboarding_completed;
 
     return (
-        <UserLayout>
+        <UserLayout fluid>
             {showWelcome && <WelcomeDialog userName={auth?.user?.name} />}
             <SeoHead seo={seo} />
             <Head title={seo?.title || 'Pecado — Интернет-магазин для взрослых'} />

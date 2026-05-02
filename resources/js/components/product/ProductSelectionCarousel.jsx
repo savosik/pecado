@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
-import { Box, Flex, Text, Heading, Grid, GridItem, Button, Image } from '@chakra-ui/react';
+import { Box, Flex, Text, Heading, Grid, GridItem, Button, Image, Stack } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import ProductCard from './ProductCard';
+import ProductListItem from '@/Pages/User/Products/ProductListItem';
 
 /**
  * ProductSelectionTabs — блок подборок товаров с табами.
@@ -32,15 +33,19 @@ export default function ProductSelectionTabs({ selections = [] }) {
     return (
         <Box
             mb="10"
-            borderRadius="xl"
-            border="1px solid"
+            borderRadius={{ base: '0', md: 'xl' }}
+            borderTopWidth="1px"
+            borderBottomWidth="1px"
+            borderLeftWidth={{ base: '0', md: '1px' }}
+            borderRightWidth={{ base: '0', md: '1px' }}
+            borderStyle="solid"
             borderColor="border.muted"
             _dark={{ borderColor: 'gray.700', bg: 'gray.800/50' }}
             bg="bg"
             overflow="hidden"
         >
             {/* Заголовок */}
-            <Box px={{ base: '4', md: '6' }} pt={{ base: '4', md: '5' }}>
+            <Box px={{ base: '3', md: '6' }} pt={{ base: '4', md: '5' }}>
                 <Heading size={{ base: 'md', md: 'lg' }} fontWeight="bold" color="fg" mb="3">
                     Подборки
                 </Heading>
@@ -50,7 +55,7 @@ export default function ProductSelectionTabs({ selections = [] }) {
             <Flex
                 overflowX="auto"
                 gap="1"
-                px={{ base: '4', md: '6' }}
+                px={{ base: '3', md: '6' }}
                 pb="0"
                 css={{
                     '&::-webkit-scrollbar': { display: 'none' },
@@ -94,7 +99,7 @@ export default function ProductSelectionTabs({ selections = [] }) {
                 <Text
                     fontSize="sm"
                     color="gray.400"
-                    px={{ base: '4', md: '6' }}
+                    px={{ base: '3', md: '6' }}
                     pt="3"
                 >
                     {activeSelection.short_description}
@@ -103,7 +108,7 @@ export default function ProductSelectionTabs({ selections = [] }) {
 
             {/* Баннер подборки (десктоп/мобильный) — ссылка на каталог */}
             {hasBanner && (
-                <Box px={{ base: '4', md: '6' }} pt="4">
+                <Box px={{ base: '0', md: '6' }} pt="4">
                     <Box
                         as={catalogUrl ? Link : 'div'}
                         href={catalogUrl || undefined}
@@ -169,23 +174,31 @@ export default function ProductSelectionTabs({ selections = [] }) {
             )}
 
             {/* Сетка товаров */}
-            <Box px={{ base: '4', md: '6' }} py={{ base: '4', md: '5' }}>
+            <Box px={{ base: '0', md: '6' }} py={{ base: '4', md: '5' }}>
                 {activeSelection?.products?.length > 0 ? (
                     <>
+                        {/* List view (base) */}
+                        <Stack display={{ base: 'flex', md: 'none' }} gap="2">
+                            {activeSelection.products.map((product) => (
+                                <ProductListItem key={product.id} product={product} />
+                            ))}
+                        </Stack>
+
+                        {/* Grid view (md+) */}
                         <Grid
+                            display={{ base: 'none', md: 'grid' }}
                             templateColumns={{
-                                base: 'repeat(2, 1fr)',
                                 md: 'repeat(3, 1fr)',
                                 xl: 'repeat(5, 1fr)',
                             }}
-                            gap={{ base: '3', md: '4' }}
+                            gap={{ md: '4' }}
                         >
                             {activeSelection.products.map((product, index) => (
                                 <GridItem
                                     key={product.id}
                                     h="100%"
                                     display={index === activeSelection.products.length - 1 && activeSelection.products.length % 2 !== 0
-                                        ? { base: 'none', md: 'block' }
+                                        ? { md: 'block' }
                                         : undefined
                                     }
                                 >

@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { parseCompactQuery, buildCompactQuery, DEFAULTS } from '@/utils/compactFilters';
+import {
+    parseCompactQuery,
+    buildCompactQuery,
+    DEFAULTS,
+    ALIASES,
+    getResponsiveDefaultView,
+} from '@/utils/compactFilters';
 
 /**
  * useCatalogFilters — управление состоянием фильтров каталога + синхронизация с URL.
@@ -27,7 +33,14 @@ export default function useCatalogFilters({ initialFilters = {} } = {}) {
         ...urlParsed.filters,
     }));
 
-    const [view, setView] = useState(urlParsed.view);
+    // Если в URL явно задан view — используем его. Иначе берём адаптивный дефолт
+    // (на мобиле — 'list', на md+ — 'grid').
+    const initialView = useRef(
+        new URLSearchParams(window.location.search).get(ALIASES.view)
+            ? urlParsed.view
+            : getResponsiveDefaultView()
+    ).current;
+    const [view, setView] = useState(initialView);
 
     // ─── Синхронизация с URL ───
     // Важно: сохраняем history.state, чтобы не затереть кэш Inertia.

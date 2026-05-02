@@ -1,6 +1,7 @@
-import { Box, Flex, HStack, Icon, Text } from '@chakra-ui/react';
-import { LuArrowDownUp, LuGrid2X2, LuLayoutList, LuList, LuChevronDown, LuPackage } from 'react-icons/lu';
+import { Box, Flex, Icon, Text } from '@chakra-ui/react';
+import { LuArrowDownUp, LuGrid2X2, LuLayoutList, LuList, LuChevronDown, LuPackage, LuSlidersHorizontal } from 'react-icons/lu';
 import { useRef } from 'react';
+import { FilterBadge } from './ProductFiltersSheet';
 
 const PER_PAGE_OPTIONS = [10, 20, 40, 60, 100];
 
@@ -55,8 +56,8 @@ function ControlButton({ icon, label, value, children }) {
                 type="button"
                 onClick={handleClick}
                 align="center"
-                gap="2"
-                px="3"
+                gap={{ base: '1.5', md: '2' }}
+                px={{ base: '2.5', md: '3' }}
                 py="1.5"
                 bg="bg"
                 border="1px solid"
@@ -70,7 +71,8 @@ function ControlButton({ icon, label, value, children }) {
                     borderColor: 'gray.600',
                     _hover: { borderColor: 'gray.500', bg: 'gray.700' },
                 }}
-                minH="40px"
+                minH={{ base: '32px', md: '40px' }}
+                aria-label={label}
             >
                 {/* Иконка */}
                 <Icon
@@ -79,8 +81,12 @@ function ControlButton({ icon, label, value, children }) {
                     color="gray.400"
                     _dark={{ color: 'gray.500' }}
                 />
-                {/* Лейбл + значение */}
-                <Box textAlign="left" lineHeight="1.2">
+                {/* Лейбл + значение (md+) */}
+                <Box
+                    display={{ base: 'none', md: 'block' }}
+                    textAlign="left"
+                    lineHeight="1.2"
+                >
                     <Text
                         fontSize="10px"
                         color="gray.400"
@@ -99,13 +105,24 @@ function ControlButton({ icon, label, value, children }) {
                         {value}
                     </Text>
                 </Box>
+                {/* Только значение (base) */}
+                <Text
+                    display={{ base: 'block', md: 'none' }}
+                    fontSize="13px"
+                    color="gray.800"
+                    _dark={{ color: 'gray.100' }}
+                    fontWeight="medium"
+                    whiteSpace="nowrap"
+                    lineHeight="1"
+                >
+                    {value}
+                </Text>
                 {/* Шеврон */}
                 <Icon
                     as={LuChevronDown}
-                    boxSize="3.5"
+                    boxSize="3"
                     color="gray.400"
                     _dark={{ color: 'gray.500' }}
-                    ml="0.5"
                 />
             </Flex>
 
@@ -149,6 +166,8 @@ export default function CatalogControls({
     inStockMode = '',
     onStockChange,
     showStockFilter = false,
+    onOpenFilters,
+    activeFilterCount = 0,
 }) {
     const currentSortLabel =
         sortOptions.find((o) => o.value === sort)?.label
@@ -163,19 +182,50 @@ export default function CatalogControls({
         <Flex
             gap="2"
             align="center"
-            justify="flex-end"
             flexWrap="wrap"
         >
-            {/* Левая часть: все контролы */}
-            <Box
-                overflowX="auto"
-                css={{
-                    '&::-webkit-scrollbar': { display: 'none' },
-                    scrollbarWidth: 'none',
-                }}
-            >
-                <HStack gap="2" flexShrink="0" minW="max-content">
-                    {/* Наличие — только для авторизованных */}
+            {/* Кнопка «Фильтры» — только на мобиле/планшете, в общем wrap-ряду с остальными контролами */}
+            {onOpenFilters && (
+                <Flex
+                    as="button"
+                    type="button"
+                    onClick={onOpenFilters}
+                    display={{ base: 'inline-flex', lg: 'none' }}
+                    align="center"
+                    gap={{ base: '1.5', md: '2' }}
+                    px={{ base: '2.5', md: '3' }}
+                    py="1.5"
+                    bg="bg"
+                    border="1px solid"
+                    borderColor="border"
+                    borderRadius="lg"
+                    cursor="pointer"
+                    transition="all 0.15s"
+                    _hover={{ borderColor: 'gray.300', bg: 'gray.50' }}
+                    _dark={{
+                        bg: 'gray.800',
+                        borderColor: 'gray.600',
+                        _hover: { borderColor: 'gray.500', bg: 'gray.700' },
+                    }}
+                    minH={{ base: '32px', md: '40px' }}
+                    flexShrink="0"
+                >
+                    <Icon as={LuSlidersHorizontal} boxSize="3.5" color="gray.400" _dark={{ color: 'gray.500' }} />
+                    <Text
+                        fontSize="13px"
+                        color="gray.800"
+                        _dark={{ color: 'gray.100' }}
+                        fontWeight="medium"
+                        whiteSpace="nowrap"
+                        lineHeight="1"
+                    >
+                        Фильтры
+                    </Text>
+                    <FilterBadge count={activeFilterCount} />
+                </Flex>
+            )}
+
+            {/* Наличие — только для авторизованных */}
                     {showStockFilter && (
                         <ControlButton
                             icon={LuPackage}
@@ -250,7 +300,7 @@ export default function CatalogControls({
                         borderColor="border"
                         borderRadius="lg"
                         overflow="hidden"
-                        minH="40px"
+                        minH={{ base: '32px', md: '40px' }}
                         flexShrink="0"
                         _dark={{
                             bg: 'gray.800',
@@ -274,7 +324,7 @@ export default function CatalogControls({
                                     justify="center"
                                     px="2.5"
                                     h="100%"
-                                    minH="40px"
+                                    minH={{ base: '32px', md: '40px' }}
                                     cursor="pointer"
                                     transition="all 0.15s"
                                     bg={isActive ? 'gray.100' : 'transparent'}
@@ -290,7 +340,7 @@ export default function CatalogControls({
                                 >
                                     <Icon
                                         as={ViewIcon}
-                                        boxSize="4"
+                                        boxSize={{ base: '3.5', md: '4' }}
                                         color={isActive ? 'gray.800' : 'gray.400'}
                                         _dark={{
                                             color: isActive ? 'gray.100' : 'gray.500',
@@ -300,8 +350,6 @@ export default function CatalogControls({
                             );
                         })}
                     </Flex>
-                </HStack>
-            </Box>
         </Flex>
     );
 }

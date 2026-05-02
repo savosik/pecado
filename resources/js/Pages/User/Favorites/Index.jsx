@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import {
-    Box, Grid, GridItem, Heading, Text, Flex, HStack, Stack, Button, Card, Input, InputGroup, Badge,
+    Box, Heading, Text, Flex, HStack, Stack, Button, Card, Input, InputGroup, Badge,
     createListCollection,
 } from '@chakra-ui/react';
 import { LuFilter, LuHeart, LuLayoutGrid, LuListTree, LuSearch, LuX } from 'react-icons/lu';
 import UserLayout from '../UserLayout';
-import ProductCard from '@/components/product/ProductCard';
+import ProductGrid from '@/Pages/User/Products/ProductGrid';
 import Pagination from '@/components/common/Pagination';
+import { getResponsiveDefaultView } from '@/utils/compactFilters';
 import EmptyState from '@/components/common/EmptyState';
 import { Field } from '@/components/ui/field';
 import { Select } from '@/components/ui/select';
@@ -26,6 +27,8 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
 
     const [showFilters, setShowFilters] = useState(false);
     const [groupByCategory, setGroupByCategory] = useState(false);
+    // На мобиле — list view по умолчанию, на md+ — grid
+    const view = useRef(getResponsiveDefaultView()).current;
     const [search, setSearch] = useState(filters?.search || '');
     const [localFilters, setLocalFilters] = useState({
         availability: filters?.availability || '',
@@ -381,40 +384,30 @@ export default function FavoritesIndex({ favorites, filters = {}, facets = {}, s
                                                 {products.length} {pluralize(products.length, 'товар', 'товара', 'товаров')}
                                             </Text>
                                         </Flex>
-                                        <Grid
+                                        <ProductGrid
+                                            products={products}
+                                            view={view}
                                             templateColumns={{
                                                 base: 'repeat(2, minmax(0, 1fr))',
                                                 md: 'repeat(3, minmax(0, 1fr))',
                                                 lg: 'repeat(4, minmax(0, 1fr))',
                                                 xl: 'repeat(5, minmax(0, 1fr))',
                                             }}
-                                            gap={{ base: '3', md: '4' }}
-                                        >
-                                            {products.map((product) => (
-                                                <GridItem key={product.id} h="100%" overflow="hidden">
-                                                    <ProductCard product={product} />
-                                                </GridItem>
-                                            ))}
-                                        </Grid>
+                                        />
                                     </Box>
                                 ))}
                             </Stack>
                         ) : (
-                            <Grid
+                            <ProductGrid
+                                products={items}
+                                view={view}
                                 templateColumns={{
                                     base: 'repeat(2, minmax(0, 1fr))',
                                     md: 'repeat(3, minmax(0, 1fr))',
                                     lg: 'repeat(4, minmax(0, 1fr))',
                                     xl: 'repeat(5, minmax(0, 1fr))',
                                 }}
-                                gap={{ base: '3', md: '4' }}
-                            >
-                                {items.map((product) => (
-                                    <GridItem key={product.id} h="100%" overflow="hidden">
-                                        <ProductCard product={product} />
-                                    </GridItem>
-                                ))}
-                            </Grid>
+                            />
                         )}
 
                         <Pagination

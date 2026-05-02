@@ -6,7 +6,7 @@
  */
 
 /** Маппинг: полное имя → compact alias */
-const ALIASES = {
+export const ALIASES = {
     attribute_value_ids: 'fv',
     brand_ids: 'b',
     category_ids: 'c',
@@ -16,6 +16,16 @@ const ALIASES = {
     per_page: 'pp',
     page: 'p',
 };
+
+/**
+ * Возвращает дефолтный режим отображения товаров в зависимости от ширины экрана.
+ * На мобиле (<768px) — 'list', чтобы карточки занимали всю ширину;
+ * на md+ — 'grid'.
+ */
+export function getResponsiveDefaultView() {
+    if (typeof window === 'undefined' || !window.matchMedia) return 'grid';
+    return window.matchMedia('(max-width: 767px)').matches ? 'list' : 'grid';
+}
 
 
 

@@ -1,6 +1,7 @@
-import { Box, Button, Flex, Grid, GridItem, Heading } from '@chakra-ui/react';
+import { Box, Button, Flex, Grid, GridItem, Heading, Stack } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import ProductCard from './ProductCard';
+import ProductListItem from '@/Pages/User/Products/ProductListItem';
 
 /**
  * Блок товаров (горизонтальная сетка) — для новинок, бестселлеров и т.п.
@@ -22,15 +23,18 @@ export default function ProductGrid({
         <Box
             as="section"
             bg="bg"
-
             borderRadius={{ md: 'lg' }}
-            border="1px solid"
+            borderTopWidth="1px"
+            borderBottomWidth="1px"
+            borderLeftWidth={{ base: '0', md: '1px' }}
+            borderRightWidth={{ base: '0', md: '1px' }}
+            borderStyle="solid"
             borderColor="border.muted"
             overflow="hidden"
         >
             {/* Заголовок */}
             <Box
-                px={{ base: '4', md: '6' }}
+                px={{ base: '3', md: '6' }}
                 pt={{ base: '4', md: '5' }}
                 pb={{ base: '2', md: '3' }}
             >
@@ -39,15 +43,23 @@ export default function ProductGrid({
                 </Heading>
             </Box>
 
-            {/* Сетка товаров */}
-            <Box px={{ base: '4', md: '6' }} pb={{ base: '4', md: '5' }}>
+            {/* Сетка товаров: на base — стек list-items, на md+ — grid с карточками */}
+            <Box px={{ base: '0', md: '6' }} pb={{ base: '4', md: '5' }}>
+                {/* List view (base) */}
+                <Stack display={{ base: 'flex', md: 'none' }} gap="2">
+                    {visible.map((product) => (
+                        <ProductListItem key={product.id} product={product} />
+                    ))}
+                </Stack>
+
+                {/* Grid view (md+) */}
                 <Grid
+                    display={{ base: 'none', md: 'grid' }}
                     templateColumns={{
-                        base: 'repeat(2, minmax(0, 1fr))',
                         md: 'repeat(3, minmax(0, 1fr))',
                         xl: `repeat(${columns}, minmax(0, 1fr))`,
                     }}
-                    gap={{ base: '3', md: '4' }}
+                    gap={{ md: '4' }}
                 >
                     {visible.map((product, index) => (
                         <GridItem
@@ -56,7 +68,7 @@ export default function ProductGrid({
                             overflow="hidden"
                             display={
                                 isOdd && index === visible.length - 1
-                                    ? { base: 'none', md: 'block' }
+                                    ? { md: 'block' }
                                     : undefined
                             }
                         >

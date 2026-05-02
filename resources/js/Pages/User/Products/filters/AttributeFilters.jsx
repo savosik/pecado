@@ -25,6 +25,13 @@ const SEARCH_THRESHOLD = 10;
  * }} props
  */
 export default function AttributeFilters({ attributes = [], selectedValueIds = [], selectedInlineFilters = {}, onChange, onInlineChange }) {
+    const sortedAttributes = useMemo(
+        () => [...(attributes || [])].sort((a, b) =>
+            String(a.name).localeCompare(String(b.name), 'ru', { sensitivity: 'base' })
+        ),
+        [attributes],
+    );
+
     if (!attributes || attributes.length === 0) return null;
 
     const selectedSet = new Set(selectedValueIds.map(Number));
@@ -102,12 +109,12 @@ export default function AttributeFilters({ attributes = [], selectedValueIds = [
 
     return (
         <>
-            {attributes.map((attr) => {
+            {sortedAttributes.map((attr, idx) => {
                 const selectedForAttr = getSelectedForAttr(attr);
 
                 return (
                     <Box key={attr.id}>
-                        <Box h="1px" bg="bg.muted" my="1" />
+                        {idx > 0 && <Box h="1px" bg="bg.muted" my="1" mx="-2" />}
                         <FilterBlock
                             title={attr.name}
                             showClear={selectedForAttr.length > 0}
@@ -208,9 +215,9 @@ function AttributeValueList({ attr, values, isValueSelected, onToggle }) {
                                 as="button"
                                 type="button"
                                 align="center"
-                                gap="2.5"
-                                px="2"
-                                py="1.5"
+                                gap="2"
+                                px="1"
+                                py="1"
                                 borderRadius="md"
                                 cursor="pointer"
                                 transition="all 0.15s"
@@ -247,6 +254,7 @@ function AttributeValueList({ attr, values, isValueSelected, onToggle }) {
                                         _dark={{ color: isChecked ? 'pecado.300' : 'gray.300' }}
                                         fontWeight={isChecked ? '500' : '400'}
                                         textAlign="left"
+                                        lineHeight="1.3"
                                     >
                                         {val.value}
                                     </Text>

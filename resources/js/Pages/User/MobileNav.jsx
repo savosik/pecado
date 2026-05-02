@@ -45,7 +45,7 @@ function NavItem({ href, onClick, icon: Icon, label, badge, badgeProps, isActive
             direction="column"
             align="center"
             justify="center"
-            py="2"
+            h="100%"
             gap="0.5"
             color={isActive ? 'pecado.500' : 'gray.500'}
             _dark={{ color: isActive ? 'pecado.300' : 'gray.400' }}
@@ -149,6 +149,7 @@ export default function MobileNav() {
             <Flex
                 maxW="1360px"
                 mx="auto"
+                h="56px"
                 css={{
                     display: 'grid',
                     gridTemplateColumns: `repeat(${cols}, 1fr)`,

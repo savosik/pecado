@@ -52,46 +52,67 @@ export default function CartSummary({ cartDetails, hasItems }) {
 
     return (
         <Box
-            p={{ base: '4', md: '5' }}
+            px={{ base: '3', md: '5' }}
+            py={{ base: '3', md: '5' }}
             bg="bg"
-            borderWidth="1px"
-            borderColor="border"
-            rounded="lg"
-            shadow="sm"
+            borderTopWidth="1px"
+            borderBottomWidth={{ base: '1px', md: '1px' }}
+            borderLeftWidth={{ base: '0', md: '1px' }}
+            borderRightWidth={{ base: '0', md: '1px' }}
+            borderStyle="solid"
+            borderColor="border.muted"
+            rounded={{ base: 'none', md: 'lg' }}
+            shadow={{ base: 'none', md: 'sm' }}
+            position={{ base: 'sticky', md: 'static' }}
+            bottom={{ base: '56px', md: 'auto' }}
+            zIndex={{ base: '40', md: 'auto' }}
         >
             <Flex
-                direction={{ base: 'column', md: 'row' }}
+                direction="row"
                 justify="space-between"
-                align={{ base: 'stretch', md: 'center' }}
-                gap="4"
+                align="center"
+                gap="3"
             >
-                <Box>
-                    <Text fontSize="xs" color="fg.muted" mb="0.5">
-                        Итого ({currencySymbol})
-                    </Text>
-                    {hasDiscount && (
-                        <Text fontSize="xs" color="fg.muted" textDecoration="line-through" lineHeight="1">
-                            {totals.totalRegular.toLocaleString('ru-RU')}
+                {/* Итого + сумма */}
+                <Box minW="0" flex="1">
+                    <Flex align="baseline" gap="2" wrap="wrap" rowGap="0">
+                        <Text fontSize="xs" color="fg.muted" lineHeight="1">
+                            Итого
                         </Text>
-                    )}
-                    <Text fontSize="2xl" fontWeight="bold" lineHeight="1.2">
-                        {totals.totalDiscounted.toLocaleString('ru-RU')}
+                        {hasDiscount && (
+                            <Text fontSize="xs" color="fg.muted" textDecoration="line-through" lineHeight="1">
+                                {totals.totalRegular.toLocaleString('ru-RU')}
+                            </Text>
+                        )}
+                    </Flex>
+                    <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="bold" lineHeight="1.2" mt="0.5">
+                        {totals.totalDiscounted.toLocaleString('ru-RU')} {currencySymbol}
                     </Text>
                     {hasDiscount && (
-                        <Text fontSize="xs" color="green.600">
+                        <Text fontSize="2xs" color="green.600" lineHeight="1.2" mt="0.5">
                             Экономия {savings.toLocaleString('ru-RU')} {currencySymbol}
                         </Text>
                     )}
                 </Box>
 
-                <Flex gap="2" flexShrink={0} direction={{ base: 'column', sm: 'row' }}>
-                    <Button asChild variant="outline" size="md">
+                {/* Кнопки действий */}
+                <Flex gap="2" flexShrink={0} direction={{ base: 'row', md: 'row' }} align="center">
+                    <Button
+                        asChild
+                        variant="outline"
+                        size={{ base: 'sm', md: 'md' }}
+                        display={{ base: 'none', sm: 'inline-flex' }}
+                    >
                         <Link href="/products">
                             <LuShoppingBag size={16} />
                             Продолжить покупки
                         </Link>
                     </Button>
-                    <Button asChild colorPalette="pecado" size="md">
+                    <Button
+                        asChild
+                        colorPalette="pecado"
+                        size={{ base: 'md', md: 'md' }}
+                    >
                         <Link href="/checkout">
                             <LuCreditCard size={16} />
                             Оформить заказ

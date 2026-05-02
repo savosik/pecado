@@ -66,17 +66,18 @@ export default function CartToolbar({
     return (
         <Box>
             <Flex
-                p="3"
+                px={{ base: '3', md: '4' }}
+                py={{ base: '2.5', md: '3' }}
                 bg={{ base: 'bg', lg: 'transparent' }}
-                borderWidth={{ base: '1px', lg: '0' }}
-                borderBottomWidth={{ lg: '1px' }}
-                borderColor="border"
-                rounded={{ base: 'lg', lg: '0' }}
-                mb={{ base: '3', lg: '0' }}
+                _dark={{ bg: { base: 'gray.800', lg: 'transparent' } }}
+                borderTopWidth={{ base: '1px', lg: '0' }}
+                borderBottomWidth="1px"
+                borderColor="border.muted"
+                rounded="0"
                 direction={{ base: 'column', md: 'row' }}
                 align={{ base: 'stretch', md: 'center' }}
                 justify="space-between"
-                gap="3"
+                gap={{ base: '2', md: '3' }}
             >
                 {/* Поиск */}
                 <Box position="relative" w={{ base: '100%', md: '320px' }} flexShrink={0}>

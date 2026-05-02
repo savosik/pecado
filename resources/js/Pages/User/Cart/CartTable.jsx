@@ -310,7 +310,7 @@ export default function CartTable({
             </Box>
 
             {/* ═══ Mobile cards ═══ */}
-            <Box display={{ base: 'block', lg: 'none' }} spaceY="3">
+            <Box display={{ base: 'block', lg: 'none' }}>
                 {sortedRows.map((r) => (
                     <CartMobileCard
                         key={`m:${r.pid}`}

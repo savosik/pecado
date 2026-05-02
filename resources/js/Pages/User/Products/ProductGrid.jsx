@@ -49,7 +49,7 @@ export default function ProductGrid({
         return (
             <Grid
                 templateColumns={templateColumns}
-                gap={{ base: '3', md: '4' }}
+                gap={{ base: '2', md: '4' }}
             >
                 {Array.from({ length: count }).map((_, i) => (
                     <GridItem key={`skeleton-grid-${i}`} overflow="hidden">
@@ -117,7 +117,7 @@ export default function ProductGrid({
     return (
         <Grid
             templateColumns={templateColumns}
-            gap={{ base: '3', md: '4' }}
+            gap={{ base: '2', md: '4' }}
         >
             {products.map((product) => (
                 <GridItem key={product.id} overflow="hidden">

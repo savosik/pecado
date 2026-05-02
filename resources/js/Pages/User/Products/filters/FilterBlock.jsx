@@ -32,7 +32,8 @@ export default function FilterBlock({
                     align="center"
                     justify="space-between"
                     cursor="pointer"
-                    py="2"
+                    px="1"
+                    py="1.5"
                     userSelect="none"
                 >
                     <Text fontSize="sm" fontWeight="600">
