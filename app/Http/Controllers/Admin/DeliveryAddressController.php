@@ -54,6 +54,7 @@ class DeliveryAddressController extends Controller
             'user_id' => 'required|exists:users,id',
             'name' => 'required|string|max:255',
             'address' => 'required|string',
+            'address_data' => 'nullable|array',
         ]);
 
         $deliveryAddress = DeliveryAddress::create($validated);
@@ -76,6 +77,7 @@ class DeliveryAddressController extends Controller
             'user_id' => 'required|exists:users,id',
             'name' => 'required|string|max:255',
             'address' => 'required|string',
+            'address_data' => 'nullable|array',
         ]);
 
         $deliveryAddress->update($validated);

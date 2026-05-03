@@ -83,6 +83,8 @@ Route::middleware(['auth', 'throttle:60,1'])->prefix('api/dadata')->group(functi
         ->name('dadata.suggest.bank');
     Route::post('/findById/bank', [\App\Http\Controllers\Api\DaDataController::class, 'findBankByBik'])
         ->name('dadata.findById.bank');
+    Route::post('/suggest/address', [\App\Http\Controllers\Api\DaDataController::class, 'suggestAddress'])
+        ->name('dadata.suggest.address');
 });
 
 // Email-подсказки нужны на странице регистрации (без auth).

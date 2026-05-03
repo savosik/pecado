@@ -179,6 +179,44 @@ class DaDataClientTest extends TestCase
         $this->assertNull($bank);
     }
 
+    public function test_suggest_address_отправляет_запрос_с_locations(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'г Москва, ул Тверская, д 7', 'data' => ['fias_id' => 'abc']],
+                ],
+            ], 200),
+        ]);
+
+        $suggestions = (new DaDataClient)->suggestAddress('Москва Тверская 7', 5, [
+            ['country_iso_code' => 'RU'],
+        ]);
+
+        $this->assertCount(1, $suggestions);
+        $this->assertSame('abc', $suggestions[0]['data']['fias_id']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/address'
+                && $request['query'] === 'Москва Тверская 7'
+                && $request['count'] === 5
+                && $request['locations'] === [['country_iso_code' => 'RU']];
+        });
+    }
+
+    public function test_suggest_address_без_locations_не_отправляет_ключ(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response(['suggestions' => []], 200),
+        ]);
+
+        (new DaDataClient)->suggestAddress('Москва', 3);
+
+        Http::assertSent(function ($request) {
+            return ! array_key_exists('locations', $request->data());
+        });
+    }
+
     public function test_suggest_email_отправляет_запрос_и_возвращает_подсказки(): void
     {
         Http::fake([

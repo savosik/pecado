@@ -39,7 +39,9 @@ class Company extends Model
         'tax_code',
         'okpo_code',
         'legal_address',
+        'legal_address_data',
         'actual_address',
+        'actual_address_data',
         'phone',
         'email',
         'erp_id',
@@ -54,6 +56,8 @@ class Company extends Model
     {
         return [
             'country' => Country::class,
+            'legal_address_data' => 'array',
+            'actual_address_data' => 'array',
         ];
     }
 

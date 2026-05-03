@@ -81,6 +81,7 @@ class DeliveryAddressController extends Controller
         return $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string'],
+            'address_data' => ['nullable', 'array'],
         ], [
             'name.required' => 'Название обязательно.',
             'name.max' => 'Название не должно превышать 255 символов.',

@@ -10,6 +10,7 @@ import { validateTaxId } from '@/utils/taxId';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { BankSuggest } from '@/components/common/BankSuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
+import { AddressSuggest } from '@/components/common/AddressSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 
@@ -32,7 +33,9 @@ export default function Edit({ company, countries }) {
         tax_code: company.tax_code || '',
         okpo_code: company.okpo_code || '',
         legal_address: company.legal_address || '',
+        legal_address_data: company.legal_address_data || null,
         actual_address: company.actual_address || '',
+        actual_address_data: company.actual_address_data || null,
         phone: company.phone || '',
         email: company.email || '',
         erp_id: company.erp_id || '',
@@ -282,18 +285,20 @@ export default function Edit({ company, countries }) {
                                     </SimpleGrid>
 
                                     <FormField label="Юридический адрес" error={errors.legal_address}>
-                                        <Textarea
+                                        <AddressSuggest
                                             value={data.legal_address}
-                                            onChange={(e) => setData('legal_address', e.target.value)}
-                                            rows={2}
+                                            onChange={(val) => setData('legal_address', val)}
+                                            onAddressSelected={(s) => setData('legal_address_data', s?.data ?? null)}
+                                            invalid={!!errors.legal_address}
                                         />
                                     </FormField>
 
                                     <FormField label="Фактический адрес" error={errors.actual_address}>
-                                        <Textarea
+                                        <AddressSuggest
                                             value={data.actual_address}
-                                            onChange={(e) => setData('actual_address', e.target.value)}
-                                            rows={2}
+                                            onChange={(val) => setData('actual_address', val)}
+                                            onAddressSelected={(s) => setData('actual_address_data', s?.data ?? null)}
+                                            invalid={!!errors.actual_address}
                                         />
                                     </FormField>
                                 </Stack>

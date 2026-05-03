@@ -4,12 +4,14 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
+import { AddressSuggest } from '@/components/common/AddressSuggest';
 
 export default function Create() {
     const { data, setData, post, processing, errors, transform } = useForm({
         user_id: '',
         name: '',
         address: '',
+        address_data: null,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -66,11 +68,12 @@ export default function Create() {
                             </FormField>
 
                             <FormField label="Адрес" error={errors.address} required>
-                                <Textarea
+                                <AddressSuggest
                                     value={data.address}
-                                    onChange={(e) => setData('address', e.target.value)}
-                                    placeholder="Полный адрес доставки"
-                                    rows={4}
+                                    onChange={(val) => setData('address', val)}
+                                    onAddressSelected={(s) => setData('address_data', s?.data ?? null)}
+                                    invalid={!!errors.address}
+                                    placeholder="Введите город, улицу, дом"
                                 />
                             </FormField>
                         </Stack>

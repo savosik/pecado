@@ -9,6 +9,7 @@ import { toaster } from '@/components/ui/toaster';
 import { validateTaxId } from '@/utils/taxId';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
+import { AddressSuggest } from '@/components/common/AddressSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 export default function Create({ countries }) {
@@ -22,7 +23,9 @@ export default function Create({ countries }) {
         tax_code: '',
         okpo_code: '',
         legal_address: '',
+        legal_address_data: null,
         actual_address: '',
+        actual_address_data: null,
         phone: '',
         email: '',
         erp_id: '',
@@ -214,20 +217,22 @@ export default function Create({ countries }) {
                                     </SimpleGrid>
 
                                     <FormField label="Юридический адрес" error={errors.legal_address}>
-                                        <Textarea
+                                        <AddressSuggest
                                             value={data.legal_address}
-                                            onChange={(e) => setData('legal_address', e.target.value)}
+                                            onChange={(val) => setData('legal_address', val)}
+                                            onAddressSelected={(s) => setData('legal_address_data', s?.data ?? null)}
+                                            invalid={!!errors.legal_address}
                                             placeholder="Полный юридический адрес"
-                                            rows={2}
                                         />
                                     </FormField>
 
                                     <FormField label="Фактический адрес" error={errors.actual_address}>
-                                        <Textarea
+                                        <AddressSuggest
                                             value={data.actual_address}
-                                            onChange={(e) => setData('actual_address', e.target.value)}
+                                            onChange={(val) => setData('actual_address', val)}
+                                            onAddressSelected={(s) => setData('actual_address_data', s?.data ?? null)}
+                                            invalid={!!errors.actual_address}
                                             placeholder="Фактический адрес (если отличается)"
-                                            rows={2}
                                         />
                                     </FormField>
                                 </Stack>

@@ -108,7 +108,9 @@ class CompanyController extends Controller
             'tax_code' => ['nullable', 'string', 'max:255'],
             'okpo_code' => ['nullable', 'string', 'max:255'],
             'legal_address' => ['nullable', 'string'],
+            'legal_address_data' => ['nullable', 'array'],
             'actual_address' => ['nullable', 'string'],
+            'actual_address_data' => ['nullable', 'array'],
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email' => ['nullable', 'email', 'max:255'],
         ], [
@@ -163,7 +165,9 @@ class CompanyController extends Controller
             'tax_code' => ['nullable', 'string', 'max:255'],
             'okpo_code' => ['nullable', 'string', 'max:255'],
             'legal_address' => ['nullable', 'string'],
+            'legal_address_data' => ['nullable', 'array'],
             'actual_address' => ['nullable', 'string'],
+            'actual_address_data' => ['nullable', 'array'],
             'phone' => ['nullable', 'string', 'max:20', 'regex:/^\+[1-9]\d{6,14}$/'],
             'email' => ['nullable', 'email', 'max:255'],
         ], [

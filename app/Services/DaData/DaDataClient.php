@@ -67,6 +67,28 @@ class DaDataClient
     }
 
     /**
+     * Подсказки по адресам (с привязкой к ФИАС/КЛАДР, индексу, координатам).
+     *
+     * @param  array<string, string>|null  $locations  Ограничение по локации (например [['country_iso_code' => 'RU']])
+     * @return array<int, array<string, mixed>>
+     */
+    public function suggestAddress(string $query, int $count = 10, ?array $locations = null): array
+    {
+        $payload = [
+            'query' => $query,
+            'count' => max(1, min($count, 20)),
+        ];
+
+        if ($locations !== null && $locations !== []) {
+            $payload['locations'] = $locations;
+        }
+
+        $response = $this->post('/suggest/address', $payload);
+
+        return $response['suggestions'] ?? [];
+    }
+
+    /**
      * Подсказки по email-адресам (популярные домены, исправление опечаток).
      *
      * @return array<int, array<string, mixed>>

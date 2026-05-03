@@ -10,6 +10,7 @@ import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { BankSuggest } from '@/components/common/BankSuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
+import { AddressSuggest } from '@/components/common/AddressSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark, LuSearch } from 'react-icons/lu';
@@ -41,7 +42,9 @@ export default function Form({ company, countries = [] }) {
         tax_code: company?.tax_code || '',
         okpo_code: company?.okpo_code || '',
         legal_address: company?.legal_address || '',
+        legal_address_data: company?.legal_address_data || null,
         actual_address: company?.actual_address || '',
+        actual_address_data: company?.actual_address_data || null,
         phone: company?.phone || '',
         email: company?.email || '',
     });
@@ -288,13 +291,25 @@ export default function Form({ company, countries = [] }) {
                             <VStack gap="4" align="stretch" pt="3">
                                 <Field.Root invalid={!!errors.legal_address}>
                                     <Field.Label fontSize="sm" fontWeight="600">Юридический адрес</Field.Label>
-                                    <Textarea value={form.legal_address} onChange={(e) => handleChange('legal_address', e.target.value)} rows={2} placeholder="г. Москва, ул. Примерная, д. 1" />
+                                    <AddressSuggest
+                                        value={form.legal_address}
+                                        onChange={(val) => handleChange('legal_address', val)}
+                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, legal_address_data: s?.data ?? null }))}
+                                        invalid={!!errors.legal_address}
+                                        placeholder="г Москва, ул Примерная, д 1"
+                                    />
                                     {errors.legal_address && <Field.ErrorText>{errors.legal_address}</Field.ErrorText>}
                                 </Field.Root>
 
                                 <Field.Root invalid={!!errors.actual_address}>
                                     <Field.Label fontSize="sm" fontWeight="600">Фактический адрес</Field.Label>
-                                    <Textarea value={form.actual_address} onChange={(e) => handleChange('actual_address', e.target.value)} rows={2} placeholder="г. Москва, ул. Примерная, д. 1, оф. 100" />
+                                    <AddressSuggest
+                                        value={form.actual_address}
+                                        onChange={(val) => handleChange('actual_address', val)}
+                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, actual_address_data: s?.data ?? null }))}
+                                        invalid={!!errors.actual_address}
+                                        placeholder="г Москва, ул Примерная, д 1, оф 100"
+                                    />
                                     {errors.actual_address && <Field.ErrorText>{errors.actual_address}</Field.ErrorText>}
                                 </Field.Root>
                             </VStack>

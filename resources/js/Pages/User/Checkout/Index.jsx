@@ -13,6 +13,7 @@ import { Field } from '@/components/ui/field';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
+import { AddressSuggest } from '@/components/common/AddressSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 /**
@@ -294,11 +295,11 @@ export default function CheckoutIndex({
                                     invalid={!!errors.delivery_address}
                                     errorText={errors.delivery_address}
                                 >
-                                    <Textarea
-                                        placeholder="Город, улица, дом, квартира..."
+                                    <AddressSuggest
                                         value={data.delivery_address}
-                                        onChange={(e) => setData('delivery_address', e.target.value)}
-                                        rows={3}
+                                        onChange={(val) => setData('delivery_address', val)}
+                                        invalid={!!errors.delivery_address}
+                                        placeholder="Город, улица, дом, квартира"
                                     />
                                 </Field>
                             )}
@@ -383,7 +384,9 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
         tax_code: '',
         okpo_code: '',
         legal_address: '',
+        legal_address_data: null,
         actual_address: '',
+        actual_address_data: null,
         phone: '',
         email: '',
     };
@@ -582,11 +585,12 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
                                     invalid={!!errText('legal_address')}
                                     errorText={errText('legal_address')}
                                 >
-                                    <Textarea
-                                        rows={2}
+                                    <AddressSuggest
                                         value={form.legal_address}
-                                        onChange={(e) => handleChange('legal_address', e.target.value)}
-                                        placeholder="г. Москва, ул. Примерная, д. 1"
+                                        onChange={(val) => handleChange('legal_address', val)}
+                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, legal_address_data: s?.data ?? null }))}
+                                        invalid={!!errText('legal_address')}
+                                        placeholder="г Москва, ул Примерная, д 1"
                                     />
                                 </Field>
 
@@ -595,11 +599,12 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
                                     invalid={!!errText('actual_address')}
                                     errorText={errText('actual_address')}
                                 >
-                                    <Textarea
-                                        rows={2}
+                                    <AddressSuggest
                                         value={form.actual_address}
-                                        onChange={(e) => handleChange('actual_address', e.target.value)}
-                                        placeholder="г. Москва, ул. Примерная, д. 1, оф. 100"
+                                        onChange={(val) => handleChange('actual_address', val)}
+                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, actual_address_data: s?.data ?? null }))}
+                                        invalid={!!errText('actual_address')}
+                                        placeholder="г Москва, ул Примерная, д 1, оф 100"
                                     />
                                 </Field>
 

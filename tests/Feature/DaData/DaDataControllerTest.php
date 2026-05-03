@@ -198,6 +198,36 @@ class DaDataControllerTest extends TestCase
         $response->assertJsonPath('bank', null);
     }
 
+    public function test_suggest_address_возвращает_подсказки(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'г Москва, ул Тверская, д 7', 'data' => ['fias_id' => 'abc', 'postal_code' => '125009']],
+                ],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/dadata/suggest/address', ['query' => 'Москва Тверская 7']);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('suggestions.0.data.postal_code', '125009');
+    }
+
+    public function test_suggest_address_отклоняет_короткий_query(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/dadata/suggest/address', ['query' => 'м']);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('query');
+    }
+
     public function test_suggest_email_доступен_без_авторизации(): void
     {
         Http::fake([

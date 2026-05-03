@@ -6,6 +6,7 @@ import { Head, router, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import { LuSave, LuArrowLeft } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
+import { AddressSuggest } from '@/components/common/AddressSuggest';
 
 export default function Form({ address }) {
     const { errors: serverErrors } = usePage().props;
@@ -14,6 +15,7 @@ export default function Form({ address }) {
     const [form, setForm] = useState({
         name: address?.name || '',
         address: address?.address || '',
+        address_data: address?.address_data || null,
     });
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState(serverErrors || {});
@@ -83,12 +85,16 @@ export default function Form({ address }) {
 
                             <Field.Root invalid={!!errors.address}>
                                 <Field.Label fontSize="sm" fontWeight="600">Адрес *</Field.Label>
-                                <Textarea
+                                <AddressSuggest
                                     value={form.address}
-                                    onChange={(e) => handleChange('address', e.target.value)}
-                                    placeholder="Полный адрес доставки"
-                                    rows={3}
+                                    onChange={(val) => handleChange('address', val)}
+                                    onAddressSelected={(s) => setForm(prev => ({ ...prev, address_data: s?.data ?? null }))}
+                                    invalid={!!errors.address}
+                                    placeholder="Введите город, улицу, дом"
                                 />
+                                <Field.HelperText fontSize="xs">
+                                    Подсказки с привязкой к ФИАС, индексу и координатам.
+                                </Field.HelperText>
                                 {errors.address && <Field.ErrorText>{errors.address}</Field.ErrorText>}
                             </Field.Root>
 

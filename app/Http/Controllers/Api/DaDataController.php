@@ -75,6 +75,40 @@ class DaDataController extends Controller
     }
 
     /**
+     * Подсказки по адресам.
+     * POST /api/dadata/suggest/address
+     */
+    public function suggestAddress(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'query' => ['required', 'string', 'min:2', 'max:300'],
+            'count' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'locations' => ['nullable', 'array'],
+            'locations.*' => ['array'],
+        ], [
+            'query.required' => 'Поисковый запрос обязателен.',
+            'query.min' => 'Введите минимум 2 символа.',
+            'query.max' => 'Запрос слишком длинный.',
+        ]);
+
+        try {
+            $suggestions = $this->client->suggestAddress(
+                $validated['query'],
+                $validated['count'] ?? 10,
+                $validated['locations'] ?? null,
+            );
+        } catch (DaDataException $e) {
+            report($e);
+
+            return response()->json([
+                'message' => 'Сервис подсказок временно недоступен.',
+            ], 503);
+        }
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    /**
      * Подсказки по email (популярные домены, исправление опечаток).
      * POST /api/dadata/suggest/email
      *

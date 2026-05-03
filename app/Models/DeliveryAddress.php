@@ -20,7 +20,18 @@ class DeliveryAddress extends Model
         'user_id',
         'name',
         'address',
+        'address_data',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'address_data' => 'array',
+        ];
+    }
 
     /**
      * The "booted" method of the model.
