@@ -109,6 +109,40 @@ class DaDataController extends Controller
     }
 
     /**
+     * Обратное геокодирование: ближайшие адреса по координатам браузера.
+     * POST /api/dadata/geolocate/address
+     */
+    public function geolocateAddress(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'lat' => ['required', 'numeric', 'between:-90,90'],
+            'lon' => ['required', 'numeric', 'between:-180,180'],
+            'count' => ['nullable', 'integer', 'min:1', 'max:20'],
+            'radius_meters' => ['nullable', 'integer', 'min:1', 'max:1000'],
+        ], [
+            'lat.required' => 'Широта обязательна.',
+            'lon.required' => 'Долгота обязательна.',
+        ]);
+
+        try {
+            $suggestions = $this->client->geolocateAddress(
+                (float) $validated['lat'],
+                (float) $validated['lon'],
+                $validated['count'] ?? 5,
+                $validated['radius_meters'] ?? 100,
+            );
+        } catch (DaDataException $e) {
+            report($e);
+
+            return response()->json([
+                'message' => 'Сервис подсказок временно недоступен.',
+            ], 503);
+        }
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    /**
      * Подсказки по email (популярные домены, исправление опечаток).
      * POST /api/dadata/suggest/email
      *

@@ -85,6 +85,8 @@ Route::middleware(['auth', 'throttle:60,1'])->prefix('api/dadata')->group(functi
         ->name('dadata.findById.bank');
     Route::post('/suggest/address', [\App\Http\Controllers\Api\DaDataController::class, 'suggestAddress'])
         ->name('dadata.suggest.address');
+    Route::post('/geolocate/address', [\App\Http\Controllers\Api\DaDataController::class, 'geolocateAddress'])
+        ->name('dadata.geolocate.address');
 });
 
 // Email-подсказки нужны на странице регистрации (без auth).

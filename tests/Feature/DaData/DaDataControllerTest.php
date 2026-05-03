@@ -228,6 +228,36 @@ class DaDataControllerTest extends TestCase
         $response->assertJsonValidationErrors('query');
     }
 
+    public function test_geolocate_address_возвращает_подсказки_по_координатам(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'г Москва, ул Тверская, д 7', 'data' => ['postal_code' => '125009']],
+                ],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/dadata/geolocate/address', ['lat' => 55.7558, 'lon' => 37.6173]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('suggestions.0.data.postal_code', '125009');
+    }
+
+    public function test_geolocate_address_отклоняет_невалидные_координаты(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/dadata/geolocate/address', ['lat' => 200, 'lon' => 0]);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('lat');
+    }
+
     public function test_suggest_email_доступен_без_авторизации(): void
     {
         Http::fake([

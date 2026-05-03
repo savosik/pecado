@@ -300,6 +300,7 @@ export default function CheckoutIndex({
                                         onChange={(val) => setData('delivery_address', val)}
                                         invalid={!!errors.delivery_address}
                                         placeholder="Город, улица, дом, квартира"
+                                        enableGeolocation
                                     />
                                 </Field>
                             )}

@@ -89,6 +89,24 @@ class DaDataClient
     }
 
     /**
+     * Обратное геокодирование: ближайшие адреса по координатам.
+     *
+     * @param  int  $radius  Радиус поиска в метрах (1-1000)
+     * @return array<int, array<string, mixed>>
+     */
+    public function geolocateAddress(float $lat, float $lon, int $count = 5, int $radius = 100): array
+    {
+        $response = $this->post('/geolocate/address', [
+            'lat' => $lat,
+            'lon' => $lon,
+            'count' => max(1, min($count, 20)),
+            'radius_meters' => max(1, min($radius, 1000)),
+        ]);
+
+        return $response['suggestions'] ?? [];
+    }
+
+    /**
      * Подсказки по email-адресам (популярные домены, исправление опечаток).
      *
      * @return array<int, array<string, mixed>>

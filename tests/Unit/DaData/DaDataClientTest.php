@@ -217,6 +217,29 @@ class DaDataClientTest extends TestCase
         });
     }
 
+    public function test_geolocate_address_отправляет_корректный_запрос(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'г Москва, ул Тверская, д 7', 'data' => ['fias_id' => 'abc']],
+                ],
+            ], 200),
+        ]);
+
+        $suggestions = (new DaDataClient)->geolocateAddress(55.7558, 37.6173, 3, 200);
+
+        $this->assertCount(1, $suggestions);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/geolocate/address'
+                && $request['lat'] === 55.7558
+                && $request['lon'] === 37.6173
+                && $request['count'] === 3
+                && $request['radius_meters'] === 200;
+        });
+    }
+
     public function test_suggest_email_отправляет_запрос_и_возвращает_подсказки(): void
     {
         Http::fake([
