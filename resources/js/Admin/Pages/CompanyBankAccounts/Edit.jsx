@@ -2,9 +2,12 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector } from '@/Admin/Components';
-import { Box, Card, Input, Stack, SimpleGrid } from '@chakra-ui/react';
+import { Box, Card, Input, Stack, SimpleGrid, HStack, Button } from '@chakra-ui/react';
+import { LuSearch } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toaster } from '@/components/ui/toaster';
+import { BankSuggest } from '@/components/common/BankSuggest';
+import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 
 export default function Edit({ bankAccount }) {
     const { data, setData, put, processing, errors , transform } = useForm({
@@ -22,6 +25,10 @@ export default function Edit({ bankAccount }) {
         ...data,
         _close: closeAfterSaveRef.current ? 1 : 0,
     }));
+
+    const { applyBank, lookupByBik, lookingUp } = useDadataBankAutofill(
+        (fields) => Object.entries(fields).forEach(([k, v]) => setData(k, v)),
+    );
 
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
@@ -66,18 +73,33 @@ export default function Edit({ bankAccount }) {
                             </FormField>
 
                             <FormField label="Название банка" error={errors.bank_name} required>
-                                <Input
+                                <BankSuggest
                                     value={data.bank_name}
-                                    onChange={(e) => setData('bank_name', e.target.value)}
+                                    onChange={(val) => setData('bank_name', val)}
+                                    onBankSelected={applyBank}
+                                    invalid={!!errors.bank_name}
+                                    placeholder="Начните вводить название или БИК"
                                 />
                             </FormField>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                 <FormField label="БИК" error={errors.bank_bik}>
-                                    <Input
-                                        value={data.bank_bik}
-                                        onChange={(e) => setData('bank_bik', e.target.value)}
-                                    />
+                                    <HStack gap="2" align="stretch" w="full">
+                                        <Input
+                                            value={data.bank_bik}
+                                            onChange={(e) => setData('bank_bik', e.target.value)}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="md"
+                                            onClick={() => lookupByBik(data.bank_bik)}
+                                            loading={lookingUp}
+                                            title="Найти реквизиты по БИК"
+                                        >
+                                            <LuSearch />
+                                        </Button>
+                                    </HStack>
                                 </FormField>
 
                                 <FormField label="Корреспондентский счет" error={errors.correspondent_account}>

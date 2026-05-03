@@ -79,4 +79,8 @@ Route::middleware(['auth', 'throttle:60,1'])->prefix('api/dadata')->group(functi
         ->name('dadata.suggest.party');
     Route::post('/findById/party', [\App\Http\Controllers\Api\DaDataController::class, 'findPartyByInn'])
         ->name('dadata.findById.party');
+    Route::post('/suggest/bank', [\App\Http\Controllers\Api\DaDataController::class, 'suggestBank'])
+        ->name('dadata.suggest.bank');
+    Route::post('/findById/bank', [\App\Http\Controllers\Api\DaDataController::class, 'findBankByBik'])
+        ->name('dadata.findById.bank');
 });

@@ -110,4 +110,72 @@ class DaDataClientTest extends TestCase
 
         (new DaDataClient)->suggestParty('Сбер');
     }
+
+    public function test_suggest_bank_отправляет_запрос_и_возвращает_подсказки(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'ПАО СБЕРБАНК', 'data' => ['bic' => '044525225']],
+                ],
+            ], 200),
+        ]);
+
+        $suggestions = (new DaDataClient)->suggestBank('Сбер', 5);
+
+        $this->assertCount(1, $suggestions);
+        $this->assertSame('044525225', $suggestions[0]['data']['bic']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/bank'
+                && $request['query'] === 'Сбер'
+                && $request['count'] === 5;
+        });
+    }
+
+    public function test_find_bank_by_bik_возвращает_первую_подсказку(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [[
+                    'value' => 'ПАО СБЕРБАНК',
+                    'data' => [
+                        'bic' => '044525225',
+                        'correspondent_account' => '30101810400000000225',
+                    ],
+                ]],
+            ], 200),
+        ]);
+
+        $bank = (new DaDataClient)->findBankByBik('044525225');
+
+        $this->assertNotNull($bank);
+        $this->assertSame('30101810400000000225', $bank['data']['correspondent_account']);
+    }
+
+    public function test_find_bank_by_bik_кэширует_ответ(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [['value' => 'ПАО СБЕРБАНК', 'data' => ['bic' => '044525225']]],
+            ], 200),
+        ]);
+
+        $client = new DaDataClient;
+        $client->findBankByBik('044525225');
+        $client->findBankByBik('044525225');
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_find_bank_by_bik_возвращает_null_при_пустом_ответе(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response(['suggestions' => []], 200),
+        ]);
+
+        $bank = (new DaDataClient)->findBankByBik('999999999');
+
+        $this->assertNull($bank);
+    }
 }

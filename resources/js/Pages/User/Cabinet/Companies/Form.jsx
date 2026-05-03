@@ -8,7 +8,9 @@ import { Head, router, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
+import { BankSuggest } from '@/components/common/BankSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
+import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark, LuSearch } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
@@ -47,6 +49,10 @@ export default function Form({ company, countries = [] }) {
 
     const { applyParty, lookupByInn, lookingUp } = useDadataPartyAutofill(
         (fields) => setForm((prev) => ({ ...prev, ...fields })),
+    );
+
+    const bankAutofill = useDadataBankAutofill(
+        (fields) => setBankForm((prev) => ({ ...prev, ...fields })),
     );
 
     // Bank accounts state
@@ -429,10 +435,12 @@ export default function Form({ company, countries = [] }) {
                                 <VStack gap="4" align="stretch">
                                     <Field.Root invalid={!!bankErrors.bank_name}>
                                         <Field.Label fontSize="sm" fontWeight="600">Название банка *</Field.Label>
-                                        <Input
+                                        <BankSuggest
                                             value={bankForm.bank_name}
-                                            onChange={(e) => setBankForm(prev => ({ ...prev, bank_name: e.target.value }))}
-                                            placeholder="ПАО Сбербанк"
+                                            onChange={(val) => setBankForm(prev => ({ ...prev, bank_name: val }))}
+                                            onBankSelected={bankAutofill.applyBank}
+                                            invalid={!!bankErrors.bank_name}
+                                            placeholder="Начните вводить название или БИК"
                                         />
                                         {bankErrors.bank_name && <Field.ErrorText>{bankErrors.bank_name[0]}</Field.ErrorText>}
                                     </Field.Root>
@@ -440,11 +448,23 @@ export default function Form({ company, countries = [] }) {
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
                                         <Field.Root invalid={!!bankErrors.bank_bik}>
                                             <Field.Label fontSize="sm" fontWeight="600">БИК</Field.Label>
-                                            <Input
-                                                value={bankForm.bank_bik}
-                                                onChange={(e) => setBankForm(prev => ({ ...prev, bank_bik: e.target.value }))}
-                                                placeholder="044525225"
-                                            />
+                                            <HStack gap="2" align="stretch">
+                                                <Input
+                                                    value={bankForm.bank_bik}
+                                                    onChange={(e) => setBankForm(prev => ({ ...prev, bank_bik: e.target.value }))}
+                                                    placeholder="044525225"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="md"
+                                                    onClick={() => bankAutofill.lookupByBik(bankForm.bank_bik)}
+                                                    loading={bankAutofill.lookingUp}
+                                                    title="Найти реквизиты по БИК"
+                                                >
+                                                    <LuSearch />
+                                                </Button>
+                                            </HStack>
                                             {bankErrors.bank_bik && <Field.ErrorText>{bankErrors.bank_bik[0]}</Field.ErrorText>}
                                         </Field.Root>
 

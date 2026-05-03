@@ -8,7 +8,9 @@ import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
 import { validateTaxId } from '@/utils/taxId';
 import { PartySuggest } from '@/components/common/PartySuggest';
+import { BankSuggest } from '@/components/common/BankSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
+import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 
 const emptyBankAccount = {
     bank_name: '',
@@ -44,6 +46,10 @@ export default function Edit({ company, countries }) {
 
     const { applyParty, lookupByInn, lookingUp } = useDadataPartyAutofill(
         (fields) => Object.entries(fields).forEach(([k, v]) => setData(k, v)),
+    );
+
+    const bankAutofill = useDadataBankAutofill(
+        (fields) => setBankForm((prev) => ({ ...prev, ...fields })),
     );
 
     // Состояние диалога банковского счёта
@@ -402,20 +408,34 @@ export default function Edit({ company, countries }) {
                             <Dialog.Body>
                                 <Stack gap={4}>
                                     <FormField label="Название банка" error={bankErrors.bank_name?.[0]} required>
-                                        <Input
+                                        <BankSuggest
                                             value={bankForm.bank_name}
-                                            onChange={(e) => handleBankFormChange('bank_name', e.target.value)}
-                                            placeholder="ПАО Сбербанк"
+                                            onChange={(val) => handleBankFormChange('bank_name', val)}
+                                            onBankSelected={bankAutofill.applyBank}
+                                            invalid={!!bankErrors.bank_name}
+                                            placeholder="Начните вводить название или БИК"
                                         />
                                     </FormField>
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                         <FormField label="БИК" error={bankErrors.bank_bik?.[0]}>
-                                            <Input
-                                                value={bankForm.bank_bik}
-                                                onChange={(e) => handleBankFormChange('bank_bik', e.target.value)}
-                                                placeholder="044525225"
-                                            />
+                                            <HStack gap="2" align="stretch" w="full">
+                                                <Input
+                                                    value={bankForm.bank_bik}
+                                                    onChange={(e) => handleBankFormChange('bank_bik', e.target.value)}
+                                                    placeholder="044525225"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="md"
+                                                    onClick={() => bankAutofill.lookupByBik(bankForm.bank_bik)}
+                                                    loading={bankAutofill.lookingUp}
+                                                    title="Найти реквизиты по БИК"
+                                                >
+                                                    <LuSearch />
+                                                </Button>
+                                            </HStack>
                                         </FormField>
 
                                         <FormField label="Корр. счёт" error={bankErrors.correspondent_account?.[0]}>

@@ -125,4 +125,76 @@ class DaDataControllerTest extends TestCase
 
         $response->assertStatus(503);
     }
+
+    public function test_suggest_bank_возвращает_подсказки_dadata(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'ПАО СБЕРБАНК', 'data' => ['bic' => '044525225']],
+                ],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/dadata/suggest/bank', ['query' => 'Сбер']);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('suggestions.0.data.bic', '044525225');
+    }
+
+    public function test_find_bank_by_bik_возвращает_bank_и_кэширует(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [[
+                    'value' => 'ПАО СБЕРБАНК',
+                    'data' => [
+                        'bic' => '044525225',
+                        'correspondent_account' => '30101810400000000225',
+                    ],
+                ]],
+            ], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $first = $this->actingAs($user)
+            ->postJson('/api/dadata/findById/bank', ['bik' => '044525225']);
+        $second = $this->actingAs($user)
+            ->postJson('/api/dadata/findById/bank', ['bik' => '044525225']);
+
+        $first->assertStatus(200)->assertJsonPath('bank.data.correspondent_account', '30101810400000000225');
+        $second->assertStatus(200)->assertJsonPath('bank.data.correspondent_account', '30101810400000000225');
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_валидация_отклоняет_невалидный_бик(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/dadata/findById/bank', ['bik' => 'abc']);
+
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors('bik');
+    }
+
+    public function test_find_bank_by_bik_возвращает_null_когда_dadata_ничего_не_нашёл(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response(['suggestions' => []], 200),
+        ]);
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->postJson('/api/dadata/findById/bank', ['bik' => '999999999']);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('bank', null);
+    }
 }

@@ -73,4 +73,61 @@ class DaDataController extends Controller
 
         return response()->json(['party' => $party]);
     }
+
+    /**
+     * Подсказки по банкам (поиск по названию, БИК или SWIFT).
+     * POST /api/dadata/suggest/bank
+     */
+    public function suggestBank(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'query' => ['required', 'string', 'min:2', 'max:200'],
+            'count' => ['nullable', 'integer', 'min:1', 'max:20'],
+        ], [
+            'query.required' => 'Поисковый запрос обязателен.',
+            'query.min' => 'Введите минимум 2 символа.',
+            'query.max' => 'Запрос слишком длинный.',
+        ]);
+
+        try {
+            $suggestions = $this->client->suggestBank(
+                $validated['query'],
+                $validated['count'] ?? 10,
+            );
+        } catch (DaDataException $e) {
+            report($e);
+
+            return response()->json([
+                'message' => 'Сервис подсказок временно недоступен.',
+            ], 503);
+        }
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    /**
+     * Точное получение реквизитов банка по БИК.
+     * POST /api/dadata/findById/bank
+     */
+    public function findBankByBik(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'bik' => ['required', 'string', 'regex:/^\d{9}$/'],
+        ], [
+            'bik.required' => 'БИК обязателен.',
+            'bik.regex' => 'БИК должен содержать 9 цифр.',
+        ]);
+
+        try {
+            $bank = $this->client->findBankByBik($validated['bik']);
+        } catch (DaDataException $e) {
+            report($e);
+
+            return response()->json([
+                'message' => 'Сервис подсказок временно недоступен.',
+            ], 503);
+        }
+
+        return response()->json(['bank' => $bank]);
+    }
 }

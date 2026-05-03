@@ -67,6 +67,36 @@ class DaDataClient
     }
 
     /**
+     * Подсказки по банкам (по названию, БИК или SWIFT).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function suggestBank(string $query, int $count = 10): array
+    {
+        $response = $this->post('/suggest/bank', [
+            'query' => $query,
+            'count' => max(1, min($count, 20)),
+        ]);
+
+        return $response['suggestions'] ?? [];
+    }
+
+    /**
+     * Точное получение реквизитов банка по БИК. Кэшируется в Redis.
+     *
+     * @return array<string, mixed>|null suggestion-объект или null, если банк не найден
+     */
+    public function findBankByBik(string $bik): ?array
+    {
+        return Cache::remember("dadata:bank:{$bik}", $this->cacheTtl, function () use ($bik) {
+            $response = $this->post('/findById/bank', ['query' => $bik]);
+            $suggestions = $response['suggestions'] ?? [];
+
+            return $suggestions[0] ?? null;
+        });
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */
