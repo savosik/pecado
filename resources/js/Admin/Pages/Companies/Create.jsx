@@ -2,15 +2,18 @@ import { useRef } from 'react';
 import { useForm } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput } from '@/Admin/Components';
-import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs } from '@chakra-ui/react';
+import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs, HStack, Button } from '@chakra-ui/react';
+import { LuSearch } from 'react-icons/lu';
 
 import { toaster } from '@/components/ui/toaster';
 import { validateTaxId } from '@/utils/taxId';
+import { PartySuggest } from '@/components/common/PartySuggest';
+import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 export default function Create({ countries }) {
     const { data, setData, post, processing, errors, setError, clearErrors, transform } = useForm({
         user_id: '',
-        country: '',
+        country: 'RU',
         name: '',
         legal_name: '',
         tax_id: '',
@@ -30,6 +33,10 @@ export default function Create({ countries }) {
         ...data,
         _close: closeAfterSaveRef.current ? 1 : 0,
     }));
+
+    const { applyParty, lookupByInn, lookingUp } = useDadataPartyAutofill(
+        (fields) => Object.entries(fields).forEach(([k, v]) => setData(k, v)),
+    );
 
     const handleSubmit = (e, shouldClose = false) => {
         e.preventDefault();
@@ -84,10 +91,12 @@ export default function Create({ countries }) {
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                         <FormField label="Название" error={errors.name} required>
-                                            <Input
+                                            <PartySuggest
                                                 value={data.name}
-                                                onChange={(e) => setData('name', e.target.value)}
-                                                placeholder="ООО Компания"
+                                                onChange={(val) => setData('name', val)}
+                                                onCompanySelected={applyParty}
+                                                invalid={!!errors.name}
+                                                placeholder="Начните вводить название или ИНН"
                                             />
                                         </FormField>
 
@@ -146,17 +155,34 @@ export default function Create({ countries }) {
                                     </FormField>
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                        <FormField label="ИНН" error={errors.tax_id} required>
-                                            <Input
-                                                value={data.tax_id}
-                                                onChange={(e) => setData('tax_id', e.target.value)}
-                                                onBlur={() => {
-                                                    const err = validateTaxId(data.tax_id, data.country);
-                                                    if (err) setError('tax_id', err);
-                                                    else clearErrors('tax_id');
-                                                }}
-                                                placeholder="1234567890"
-                                            />
+                                        <FormField
+                                            label="ИНН"
+                                            error={errors.tax_id}
+                                            required
+                                            helpText="Введите ИНН и нажмите «Найти», чтобы автоматически заполнить реквизиты."
+                                        >
+                                            <HStack gap="2" align="stretch" w="full">
+                                                <Input
+                                                    value={data.tax_id}
+                                                    onChange={(e) => setData('tax_id', e.target.value)}
+                                                    onBlur={() => {
+                                                        const err = validateTaxId(data.tax_id, data.country);
+                                                        if (err) setError('tax_id', err);
+                                                        else clearErrors('tax_id');
+                                                    }}
+                                                    placeholder="1234567890"
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="md"
+                                                    onClick={() => lookupByInn(data.tax_id, data.tax_code || null)}
+                                                    loading={lookingUp}
+                                                    title="Найти реквизиты по ИНН"
+                                                >
+                                                    <LuSearch /> Найти
+                                                </Button>
+                                            </HStack>
                                         </FormField>
 
                                         <FormField label="ОГРН" error={errors.registration_number}>

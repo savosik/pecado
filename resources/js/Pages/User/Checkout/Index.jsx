@@ -2,15 +2,17 @@ import { useState, useEffect } from 'react';
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
-    Textarea, NativeSelect, Stack, Dialog, Portal, Input, SimpleGrid,
+    Textarea, NativeSelect, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch } from 'react-icons/lu';
 import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
 import { PhoneInput } from '@/components/common/PhoneInput';
+import { PartySuggest } from '@/components/common/PartySuggest';
+import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 /**
  * Страница оформления заказа.
@@ -372,7 +374,7 @@ export default function CheckoutIndex({
  */
 function AddCompanyDialog({ open, countries, onClose, onCreated }) {
     const emptyForm = {
-        country: '',
+        country: 'RU',
         name: '',
         legal_name: '',
         tax_id: '',
@@ -388,6 +390,10 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
     const [form, setForm] = useState(emptyForm);
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
+
+    const { applyParty, lookupByInn, lookingUp } = useDadataPartyAutofill(
+        (fields) => setForm((prev) => ({ ...prev, ...fields })),
+    );
 
     useEffect(() => {
         if (open) {
@@ -461,10 +467,12 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
                                         invalid={!!errText('name')}
                                         errorText={errText('name')}
                                     >
-                                        <Input
+                                        <PartySuggest
                                             value={form.name}
-                                            onChange={(e) => handleChange('name', e.target.value)}
-                                            placeholder="ООО Компания"
+                                            onChange={(val) => handleChange('name', val)}
+                                            onCompanySelected={applyParty}
+                                            invalid={!!errText('name')}
+                                            placeholder="Начните вводить название или ИНН"
                                         />
                                     </Field>
 
@@ -508,12 +516,25 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
                                         required
                                         invalid={!!errText('tax_id')}
                                         errorText={errText('tax_id')}
+                                        helperText="Введите ИНН и нажмите «Найти», чтобы автоматически заполнить реквизиты."
                                     >
-                                        <Input
-                                            value={form.tax_id}
-                                            onChange={(e) => handleChange('tax_id', e.target.value)}
-                                            placeholder="7707083893"
-                                        />
+                                        <HStack gap="2" align="stretch" w="full">
+                                            <Input
+                                                value={form.tax_id}
+                                                onChange={(e) => handleChange('tax_id', e.target.value)}
+                                                placeholder="7707083893"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="md"
+                                                onClick={() => lookupByInn(form.tax_id, form.tax_code || null)}
+                                                loading={lookingUp}
+                                                title="Найти реквизиты по ИНН"
+                                            >
+                                                <LuSearch /> Найти
+                                            </Button>
+                                        </HStack>
                                     </Field>
 
                                     <Field

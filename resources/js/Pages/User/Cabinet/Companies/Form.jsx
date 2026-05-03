@@ -7,7 +7,9 @@ import {
 import { Head, router, usePage } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import { PhoneInput } from '@/components/common/PhoneInput';
-import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark } from 'react-icons/lu';
+import { PartySuggest } from '@/components/common/PartySuggest';
+import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
+import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark, LuSearch } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
 import { validateTaxId } from '@/utils/taxId';
@@ -28,7 +30,7 @@ export default function Form({ company, countries = [] }) {
     const isEditing = !!company;
 
     const [form, setForm] = useState({
-        country: company?.country || '',
+        country: company?.country || 'RU',
         name: company?.name || '',
         legal_name: company?.legal_name || '',
         tax_id: company?.tax_id || '',
@@ -42,6 +44,10 @@ export default function Form({ company, countries = [] }) {
     });
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState(serverErrors || {});
+
+    const { applyParty, lookupByInn, lookingUp } = useDadataPartyAutofill(
+        (fields) => setForm((prev) => ({ ...prev, ...fields })),
+    );
 
     // Bank accounts state
     const [bankDialogOpen, setBankDialogOpen] = useState(false);
@@ -177,7 +183,13 @@ export default function Form({ company, countries = [] }) {
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
                                     <Field.Root invalid={!!errors.name} required>
                                         <Field.Label fontSize="sm" fontWeight="600">Название *</Field.Label>
-                                        <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} placeholder="ООО Компания" />
+                                        <PartySuggest
+                                            value={form.name}
+                                            onChange={(val) => handleChange('name', val)}
+                                            onCompanySelected={applyParty}
+                                            invalid={!!errors.name}
+                                            placeholder="Начните вводить название или ИНН"
+                                        />
                                         {errors.name && <Field.ErrorText>{errors.name}</Field.ErrorText>}
                                     </Field.Root>
 
@@ -214,12 +226,27 @@ export default function Form({ company, countries = [] }) {
                                 <SimpleGrid columns={{ base: 1, md: 2 }} gap="4">
                                     <Field.Root invalid={!!errors.tax_id} required>
                                         <Field.Label fontSize="sm" fontWeight="600">ИНН *</Field.Label>
-                                        <Input
-                                            value={form.tax_id}
-                                            onChange={(e) => handleChange('tax_id', e.target.value)}
-                                            onBlur={handleTaxIdBlur}
-                                            placeholder="7707083893"
-                                        />
+                                        <HStack gap="2" align="stretch">
+                                            <Input
+                                                value={form.tax_id}
+                                                onChange={(e) => handleChange('tax_id', e.target.value)}
+                                                onBlur={handleTaxIdBlur}
+                                                placeholder="7707083893"
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="md"
+                                                onClick={() => lookupByInn(form.tax_id, form.tax_code || null)}
+                                                loading={lookingUp}
+                                                title="Найти реквизиты по ИНН"
+                                            >
+                                                <LuSearch /> Найти
+                                            </Button>
+                                        </HStack>
+                                        <Field.HelperText fontSize="xs">
+                                            Введите ИНН и нажмите «Найти», чтобы автоматически заполнить реквизиты.
+                                        </Field.HelperText>
                                         {errors.tax_id && <Field.ErrorText>{errors.tax_id}</Field.ErrorText>}
                                     </Field.Root>
 

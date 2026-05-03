@@ -2,11 +2,13 @@ import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, EntitySelector, PhoneInput } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid, Tabs, Table, Badge, Button, IconButton, HStack, Text, Flex, Dialog, Portal, Switch } from '@chakra-ui/react';
-import { LuPlus, LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuPlus, LuPencil, LuTrash2, LuSearch } from 'react-icons/lu';
 import { useState, useRef } from 'react';
 import axios from 'axios';
 import { toaster } from '@/components/ui/toaster';
 import { validateTaxId } from '@/utils/taxId';
+import { PartySuggest } from '@/components/common/PartySuggest';
+import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 const emptyBankAccount = {
     bank_name: '',
@@ -39,6 +41,10 @@ export default function Edit({ company, countries }) {
         ...data,
         _close: closeAfterSaveRef.current ? 1 : 0,
     }));
+
+    const { applyParty, lookupByInn, lookingUp } = useDadataPartyAutofill(
+        (fields) => Object.entries(fields).forEach(([k, v]) => setData(k, v)),
+    );
 
     // Состояние диалога банковского счёта
     const [bankDialogOpen, setBankDialogOpen] = useState(false);
@@ -154,9 +160,12 @@ export default function Edit({ company, countries }) {
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
                                         <FormField label="Название" error={errors.name} required>
-                                            <Input
+                                            <PartySuggest
                                                 value={data.name}
-                                                onChange={(e) => setData('name', e.target.value)}
+                                                onChange={(val) => setData('name', val)}
+                                                onCompanySelected={applyParty}
+                                                invalid={!!errors.name}
+                                                placeholder="Начните вводить название или ИНН"
                                             />
                                         </FormField>
 
@@ -212,16 +221,33 @@ export default function Edit({ company, countries }) {
                                     </FormField>
 
                                     <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                        <FormField label="ИНН" error={errors.tax_id} required>
-                                            <Input
-                                                value={data.tax_id}
-                                                onChange={(e) => setData('tax_id', e.target.value)}
-                                                onBlur={() => {
-                                                    const err = validateTaxId(data.tax_id, data.country);
-                                                    if (err) setError('tax_id', err);
-                                                    else clearErrors('tax_id');
-                                                }}
-                                            />
+                                        <FormField
+                                            label="ИНН"
+                                            error={errors.tax_id}
+                                            required
+                                            helpText="Введите ИНН и нажмите «Найти», чтобы автоматически заполнить реквизиты."
+                                        >
+                                            <HStack gap="2" align="stretch" w="full">
+                                                <Input
+                                                    value={data.tax_id}
+                                                    onChange={(e) => setData('tax_id', e.target.value)}
+                                                    onBlur={() => {
+                                                        const err = validateTaxId(data.tax_id, data.country);
+                                                        if (err) setError('tax_id', err);
+                                                        else clearErrors('tax_id');
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="md"
+                                                    onClick={() => lookupByInn(data.tax_id, data.tax_code || null)}
+                                                    loading={lookingUp}
+                                                    title="Найти реквизиты по ИНН"
+                                                >
+                                                    <LuSearch /> Найти
+                                                </Button>
+                                            </HStack>
                                         </FormField>
 
                                         <FormField label="ОГРН" error={errors.registration_number}>

@@ -1,0 +1,113 @@
+<?php
+
+namespace Tests\Unit\DaData;
+
+use App\Services\DaData\DaDataClient;
+use App\Services\DaData\DaDataException;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
+class DaDataClientTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config([
+            'services.dadata.api_key' => 'test-api-key',
+            'services.dadata.secret_key' => 'test-secret-key',
+            'services.dadata.suggestions_url' => 'https://suggestions.dadata.ru/suggestions/api/4_1/rs',
+            'services.dadata.cache_ttl' => 60,
+            'services.dadata.request_timeout' => 5,
+        ]);
+
+        Cache::flush();
+    }
+
+    public function test_suggest_party_отправляет_корректный_запрос_и_возвращает_подсказки(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'ПАО Сбербанк', 'data' => ['inn' => '7707083893']],
+                ],
+            ], 200),
+        ]);
+
+        $suggestions = (new DaDataClient)->suggestParty('Сбер', 5);
+
+        $this->assertCount(1, $suggestions);
+        $this->assertSame('7707083893', $suggestions[0]['data']['inn']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/party'
+                && $request['query'] === 'Сбер'
+                && $request['count'] === 5
+                && $request->hasHeader('Authorization', 'Token test-api-key')
+                && $request->hasHeader('X-Secret', 'test-secret-key');
+        });
+    }
+
+    public function test_find_party_by_inn_возвращает_первую_подсказку(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'ПАО Сбербанк', 'data' => ['inn' => '7707083893', 'ogrn' => '1027700132195']],
+                ],
+            ], 200),
+        ]);
+
+        $party = (new DaDataClient)->findPartyByInn('7707083893');
+
+        $this->assertNotNull($party);
+        $this->assertSame('1027700132195', $party['data']['ogrn']);
+    }
+
+    public function test_find_party_by_inn_возвращает_null_при_пустом_ответе(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response(['suggestions' => []], 200),
+        ]);
+
+        $party = (new DaDataClient)->findPartyByInn('1234567890');
+
+        $this->assertNull($party);
+    }
+
+    public function test_find_party_by_inn_кэширует_ответ_и_не_дёргает_dadata_повторно(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [['value' => 'ПАО Сбербанк', 'data' => ['inn' => '7707083893']]],
+            ], 200),
+        ]);
+
+        $client = new DaDataClient;
+        $client->findPartyByInn('7707083893');
+        $client->findPartyByInn('7707083893');
+
+        Http::assertSentCount(1);
+    }
+
+    public function test_бросает_исключение_при_отсутствии_api_ключа(): void
+    {
+        config(['services.dadata.api_key' => '']);
+
+        $this->expectException(DaDataException::class);
+
+        (new DaDataClient)->suggestParty('Сбер');
+    }
+
+    public function test_бросает_исключение_при_5xx_от_dadata(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response('Internal Server Error', 500),
+        ]);
+
+        $this->expectException(DaDataException::class);
+
+        (new DaDataClient)->suggestParty('Сбер');
+    }
+}

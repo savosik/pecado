@@ -168,3 +168,17 @@ MOSCOW_ESB_SHOVEL_RECONNECT_DELAY=5
 | | |
 |---|---|
 | URL | http://93.94.150.16:8025 |
+
+## DaData (подсказки реквизитов компаний)
+
+Бесплатный «Лёгкий» тариф, лимит 10 000 запросов/день. Используется для автозаполнения формы компании по ИНН (см. `app/Services/DaData/DaDataClient.php` и прокси-роуты `/api/dadata/*` в `routes/web.php`).
+
+| | |
+|---|---|
+| Личный кабинет | https://dadata.ru/profile/#info |
+| API-ключ (env `DADATA_API_KEY`) | _записать сюда после регистрации_ |
+| Секретный ключ (env `DADATA_SECRET_KEY`) | _записать сюда после регистрации_ |
+| Suggestions URL | https://suggestions.dadata.ru/suggestions/api/4_1/rs |
+| Cache TTL (ИНН → реквизиты) | 86400 сек (24 часа) |
+
+> Ключи **не должны** попадать в Git. Для dev-сервера записать в `/srv/pecado/.env` через SSH (см. секцию «Сервер» выше). Для локальной разработки — в `.env` в корне проекта.

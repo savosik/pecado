@@ -70,3 +70,13 @@ Route::post('/api/products/{slug}/pros-cons/generate', [\App\Http\Controllers\Us
 Route::get('/health', \Spatie\Health\Http\Controllers\HealthCheckJsonResultsController::class)->name('health');
 
 Route::post('/bug-report', [\App\Http\Controllers\BugReportController::class, 'store'])->name('bug-report.store');
+
+// ──────────────────────────────────────────────
+// DaData proxy (бесплатный «Лёгкий» тариф)
+// ──────────────────────────────────────────────
+Route::middleware(['auth', 'throttle:60,1'])->prefix('api/dadata')->group(function () {
+    Route::post('/suggest/party', [\App\Http\Controllers\Api\DaDataController::class, 'suggestParty'])
+        ->name('dadata.suggest.party');
+    Route::post('/findById/party', [\App\Http\Controllers\Api\DaDataController::class, 'findPartyByInn'])
+        ->name('dadata.findById.party');
+});
