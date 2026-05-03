@@ -25,7 +25,7 @@ class DaDataClient
         $this->secretKey = (string) config('services.dadata.secret_key');
         $this->baseUrl = rtrim((string) config('services.dadata.suggestions_url'), '/');
         $this->cacheTtl = (int) config('services.dadata.cache_ttl', 86400);
-        $this->timeout = (int) config('services.dadata.request_timeout', 5);
+        $this->timeout = (int) config('services.dadata.request_timeout', 10);
     }
 
     /**

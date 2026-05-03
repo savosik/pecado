@@ -49,7 +49,7 @@ return [
         'secret_key' => env('DADATA_SECRET_KEY'),
         'suggestions_url' => env('DADATA_SUGGESTIONS_URL', 'https://suggestions.dadata.ru/suggestions/api/4_1/rs'),
         'cache_ttl' => (int) env('DADATA_CACHE_TTL', 86400),
-        'request_timeout' => (int) env('DADATA_REQUEST_TIMEOUT', 5),
+        'request_timeout' => (int) env('DADATA_REQUEST_TIMEOUT', 10),
     ],
 
     /*
