@@ -131,7 +131,14 @@ class CartService implements CartServiceInterface
         $cart = $item->cart;
         $product = $item->product;
 
-        return $this->setProductQuantity($user, $cart, $product, $qty);
+        // qty относится к данной строке корзины; чтобы соседние строки того же
+        // товара (instock vs preorder) не терялись, считаем общий итог по продукту.
+        $otherQty = (int) $cart->items()
+            ->where('product_id', $product->id)
+            ->where('id', '!=', $item->id)
+            ->sum('quantity');
+
+        return $this->setProductQuantity($user, $cart, $product, $otherQty + $qty);
     }
 
     /**

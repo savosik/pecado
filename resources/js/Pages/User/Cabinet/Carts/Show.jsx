@@ -169,6 +169,17 @@ export default function Show({ cart, cartDetails }) {
         if (cartDetails?.items) setItems(cartDetails.items);
     }, [cartDetails]);
 
+    // === Item type badge (instock/preorder) ===
+    const ItemTypeBadge = ({ type }) => {
+        if (type === 'instock') {
+            return <Badge colorPalette="green" size="sm" variant="subtle">В наличии</Badge>;
+        }
+        if (type === 'preorder') {
+            return <Badge colorPalette="orange" size="sm" variant="subtle">Под заказ</Badge>;
+        }
+        return null;
+    };
+
     // === Render item price cell ===
     const PriceCell = ({ item }) => {
         const hasItemDiscount = item.price_regular > item.price_discounted && item.price_discounted > 0;
@@ -429,14 +440,17 @@ export default function Show({ cart, cartDetails }) {
                                             </Table.Cell>
                                             <Table.Cell>
                                                 {item.product ? (
-                                                    <VStack align="start" gap="0">
+                                                    <VStack align="start" gap="1">
                                                         <Text fontWeight="600" fontSize="sm">{item.product.name}</Text>
                                                         {item.product.sku && (
                                                             <Text fontSize="xs" color="gray.400">Арт: {item.product.sku}</Text>
                                                         )}
-                                                        {item.product.brand?.name && (
-                                                            <Badge colorPalette="purple" size="sm" variant="subtle">{item.product.brand.name}</Badge>
-                                                        )}
+                                                        <HStack gap="1" wrap="wrap">
+                                                            <ItemTypeBadge type={item.item_type} />
+                                                            {item.product.brand?.name && (
+                                                                <Badge colorPalette="purple" size="sm" variant="subtle">{item.product.brand.name}</Badge>
+                                                            )}
+                                                        </HStack>
                                                     </VStack>
                                                 ) : (
                                                     <Text color="red.500">Товар удалён</Text>
@@ -491,9 +505,12 @@ export default function Show({ cart, cartDetails }) {
                                         )}
                                         <Box flex="1" minW="0">
                                             <Text fontWeight="600" fontSize="sm" noOfLines={2}>{item.product?.name || 'Товар удалён'}</Text>
-                                            {item.product?.brand?.name && (
-                                                <Badge colorPalette="purple" size="sm" variant="subtle" mt="1">{item.product.brand.name}</Badge>
-                                            )}
+                                            <HStack gap="1" wrap="wrap" mt="1">
+                                                <ItemTypeBadge type={item.item_type} />
+                                                {item.product?.brand?.name && (
+                                                    <Badge colorPalette="purple" size="sm" variant="subtle">{item.product.brand.name}</Badge>
+                                                )}
+                                            </HStack>
                                             <Flex justify="space-between" align="center" mt="2">
                                                 <Box>
                                                     {item.total_amount_regular > item.total_amount_discounted && item.total_amount_discounted > 0 ? (
