@@ -120,6 +120,11 @@ class CartService implements CartServiceInterface
     /**
      * Update cart item quantity with spillover logic.
      *
+     * Обновляет переданную строку in-place (не пересоздавая её), чтобы фронт
+     * мог продолжать использовать тот же $item->id для последующих PATCH-ов.
+     * Соседняя строка того же товара (instock vs preorder) тоже обновляется
+     * in-place; новая создаётся только если её действительно нет.
+     *
      * @return array{instock: int, preorder: int, clamped: int, max_total: int, cart_totals: array}
      */
     public function updateItemQuantity(User $user, CartItem $item, int $qty): array
@@ -131,14 +136,66 @@ class CartService implements CartServiceInterface
         $cart = $item->cart;
         $product = $item->product;
 
-        // qty относится к данной строке корзины; чтобы соседние строки того же
-        // товара (instock vs preorder) не терялись, считаем общий итог по продукту.
-        $otherQty = (int) $cart->items()
+        $stock = $this->stockService->getStock($product, $user);
+        $stockAvailable = (int) ($stock['available'] ?? 0);
+        $stockPreorder = (int) ($stock['preorder'] ?? 0);
+        $maxTotal = $stockAvailable + $stockPreorder;
+
+        $otherItem = $cart->items()
             ->where('product_id', $product->id)
             ->where('id', '!=', $item->id)
-            ->sum('quantity');
+            ->first();
+        $otherQty = (int) ($otherItem?->quantity ?? 0);
 
-        return $this->setProductQuantity($user, $cart, $product, $otherQty + $qty);
+        $totalQty = $otherQty + max(0, $qty);
+        $clamped = max(0, min($totalQty, $maxTotal));
+
+        $instockTotal = min($clamped, $stockAvailable);
+        $preorderTotal = $clamped - $instockTotal;
+
+        $itemType = $item->item_type === 'preorder' ? 'preorder' : 'instock';
+        $otherType = $itemType === 'instock' ? 'preorder' : 'instock';
+
+        $itemNewQty = $itemType === 'instock' ? $instockTotal : $preorderTotal;
+        $otherNewQty = $otherType === 'instock' ? $instockTotal : $preorderTotal;
+
+        $price = $this->priceService->getUserPrice($product, $user);
+
+        DB::transaction(function () use ($cart, $item, $otherItem, $product, $itemNewQty, $otherNewQty, $otherType, $price) {
+            $cart->items()->where('product_id', $product->id)->lockForUpdate()->get();
+
+            if ($itemNewQty > 0) {
+                $item->update(['quantity' => $itemNewQty, 'price' => $price]);
+            } else {
+                $item->delete();
+            }
+
+            if ($otherItem) {
+                if ($otherNewQty > 0) {
+                    $otherItem->update(['quantity' => $otherNewQty, 'price' => $price]);
+                } else {
+                    $otherItem->delete();
+                }
+            } elseif ($otherNewQty > 0) {
+                $cart->items()->create([
+                    'product_id' => $product->id,
+                    'quantity' => $otherNewQty,
+                    'price' => $price,
+                    'item_type' => $otherType,
+                    'warehouse_id' => null,
+                ]);
+            }
+        });
+
+        $cart->load('items.product');
+
+        return [
+            'instock' => $instockTotal,
+            'preorder' => $preorderTotal,
+            'clamped' => $clamped,
+            'max_total' => $maxTotal,
+            'cart_totals' => $this->buildCartTotals($cart, $user),
+        ];
     }
 
     /**

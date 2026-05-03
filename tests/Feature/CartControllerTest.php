@@ -295,6 +295,7 @@ class CartControllerTest extends TestCase
             'cart_id' => $cart->id,
             'product_id' => $product->id,
             'quantity' => 3,
+            'item_type' => 'instock',
         ]);
 
         $response = $this->actingAs($this->user)->patchJson("/api/cart/items/{$item->id}", [
@@ -303,6 +304,15 @@ class CartControllerTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('status', 'success');
+
+        // Регрессия kanban #87: id строки должен сохраняться, чтобы фронт мог
+        // отправлять последующие PATCH-ы по тому же эндпоинту без 404.
+        $this->assertDatabaseHas('cart_items', [
+            'id' => $item->id,
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 5,
+        ]);
     }
 
     public function test_update_item_forbidden_for_other_user(): void
@@ -320,9 +330,9 @@ class CartControllerTest extends TestCase
 
     public function test_update_preorder_item_keeps_instock_row_intact(): void
     {
-        // Регрессия kanban #63: при изменении количества в preorder-строке
-        // соседняя instock-строка не должна обнуляться. qty в запросе
-        // относится к конкретной cart_items.id, а не к товару целиком.
+        // Регрессия kanban #63 + #87: при изменении количества в preorder-строке
+        // соседняя instock-строка не должна обнуляться, а id обеих строк должны
+        // сохраняться (фронт продолжает использовать их в последующих PATCH-ах).
         $cart = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
         $product = Product::factory()->create();
         $instockItem = CartItem::factory()->create([
@@ -348,12 +358,14 @@ class CartControllerTest extends TestCase
             ->assertJsonPath('preorder', 3);
 
         $this->assertDatabaseHas('cart_items', [
+            'id' => $instockItem->id,
             'cart_id' => $cart->id,
             'product_id' => $product->id,
             'item_type' => 'instock',
             'quantity' => 10,
         ]);
         $this->assertDatabaseHas('cart_items', [
+            'id' => $preorderItem->id,
             'cart_id' => $cart->id,
             'product_id' => $product->id,
             'item_type' => 'preorder',
@@ -364,10 +376,6 @@ class CartControllerTest extends TestCase
             ->where('product_id', $product->id)
             ->sum('quantity');
         $this->assertEquals(13, $totalQty);
-
-        // Старые id могут не сохраниться (setProductQuantity пересоздаёт строки),
-        // важно лишь, что 10 шт со склада не потеряны.
-        $this->assertDatabaseMissing('cart_items', ['id' => $instockItem->id, 'quantity' => 0]);
     }
 
     // ─── API: Remove Item ──────────────────────────────────

@@ -24,6 +24,7 @@ const HOLD_ACCELERATE_AFTER = 1500;
  *   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl',
  *   fullWidth?: boolean,
  *   outerBorder?: boolean,
+ *   disabled?: boolean,
  * }} props
  */
 export default function QuantityControl({
@@ -35,6 +36,7 @@ export default function QuantityControl({
     size = 'md',
     fullWidth = false,
     outerBorder = true,
+    disabled = false,
 }) {
     const clamp = useCallback((v) => Math.max(min, Math.min(max, Math.floor(Number(v) || min))), [min, max]);
 
@@ -93,7 +95,11 @@ export default function QuantityControl({
 
     useEffect(() => stopHold, [stopHold]);
 
+    const disabledRef = useRef(disabled);
+    useEffect(() => { disabledRef.current = disabled; }, [disabled]);
+
     const handlePointerDown = useCallback((sign) => (e) => {
+        if (disabledRef.current) return;
         // Левая кнопка / основной палец — иначе не перехватываем
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         e.preventDefault();
@@ -187,8 +193,9 @@ export default function QuantityControl({
                 onPointerUp={stopHold}
                 onPointerLeave={stopHold}
                 onPointerCancel={stopHold}
-                aria-disabled={value <= min}
-                opacity={value <= min ? 0.5 : 1}
+                disabled={disabled}
+                aria-disabled={disabled || value <= min}
+                opacity={disabled || value <= min ? 0.5 : 1}
                 minW={s.h}
                 h={s.h}
                 style={{ touchAction: 'manipulation', userSelect: 'none' }}
@@ -201,6 +208,7 @@ export default function QuantityControl({
                 onFocus={handleInputFocus}
                 onBlur={handleInputBlur}
                 onKeyDown={handleInputKeyDown}
+                disabled={disabled}
                 textAlign="center"
                 w={fullWidth ? undefined : s.inputW}
                 flex={fullWidth ? '1' : undefined}
@@ -225,8 +233,9 @@ export default function QuantityControl({
                 onPointerUp={stopHold}
                 onPointerLeave={stopHold}
                 onPointerCancel={stopHold}
-                aria-disabled={value >= max}
-                opacity={value >= max ? 0.5 : 1}
+                disabled={disabled}
+                aria-disabled={disabled || value >= max}
+                opacity={disabled || value >= max ? 0.5 : 1}
                 minW={s.h}
                 h={s.h}
                 style={{ touchAction: 'manipulation', userSelect: 'none' }}

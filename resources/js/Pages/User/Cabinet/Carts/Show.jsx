@@ -55,19 +55,16 @@ export default function Show({ cart, cartDetails }) {
     };
 
     // === Quantity ===
+    const reloadCartDetails = () => new Promise((resolve) => {
+        router.reload({ only: ['cartDetails'], onFinish: () => resolve() });
+    });
+
     const handleUpdateQuantity = async (item, newQty) => {
         if (newQty < 1) return;
         setUpdatingItem(item.id);
         try {
             await axios.patch(`/api/cart/items/${item.id}`, { quantity: newQty });
-            // Reload page to get fresh discounted prices
-            router.reload({ only: ['cartDetails'] });
-            setItems(prev => prev.map(i => i.id === item.id ? {
-                ...i,
-                quantity: newQty,
-                total_amount_regular: (i.price_regular || 0) * newQty,
-                total_amount_discounted: (i.price_discounted || 0) * newQty,
-            } : i));
+            await reloadCartDetails();
         } catch {
             toaster.create({ title: 'Ошибка обновления', type: 'error' });
         } finally {
@@ -466,6 +463,7 @@ export default function Show({ cart, cartDetails }) {
                                                         onChange={(v) => handleUpdateQuantity(item, v)}
                                                         min={1}
                                                         size="md"
+                                                        disabled={updatingItem === item.id}
                                                     />
                                                 </Flex>
                                             </Table.Cell>
@@ -528,6 +526,7 @@ export default function Show({ cart, cartDetails }) {
                                                         onChange={(v) => handleUpdateQuantity(item, v)}
                                                         min={1}
                                                         size="sm"
+                                                        disabled={updatingItem === item.id}
                                                     />
                                                     <IconButton size="xs" variant="ghost" colorPalette="red" onClick={() => setRemoveItem(item)}>
                                                         <LuTrash2 />
