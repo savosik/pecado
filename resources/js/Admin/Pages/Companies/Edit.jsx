@@ -9,6 +9,7 @@ import { toaster } from '@/components/ui/toaster';
 import { validateTaxId } from '@/utils/taxId';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { BankSuggest } from '@/components/common/BankSuggest';
+import { EmailSuggest } from '@/components/common/EmailSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 
@@ -200,10 +201,10 @@ export default function Edit({ company, countries }) {
                                         </FormField>
 
                                         <FormField label="Email" error={errors.email}>
-                                            <Input
-                                                type="email"
+                                            <EmailSuggest
                                                 value={data.email}
-                                                onChange={(e) => setData('email', e.target.value)}
+                                                onChange={(val) => setData('email', val)}
+                                                invalid={!!errors.email}
                                             />
                                         </FormField>
                                     </SimpleGrid>

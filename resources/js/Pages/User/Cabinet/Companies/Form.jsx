@@ -9,6 +9,7 @@ import CabinetLayout from '../CabinetLayout';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { BankSuggest } from '@/components/common/BankSuggest';
+import { EmailSuggest } from '@/components/common/EmailSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark, LuSearch } from 'react-icons/lu';
@@ -313,7 +314,12 @@ export default function Form({ company, countries = [] }) {
 
                                 <Field.Root invalid={!!errors.email}>
                                     <Field.Label fontSize="sm" fontWeight="600">Email</Field.Label>
-                                    <Input type="email" value={form.email} onChange={(e) => handleChange('email', e.target.value)} placeholder="company@example.com" />
+                                    <EmailSuggest
+                                        value={form.email}
+                                        onChange={(val) => handleChange('email', val)}
+                                        invalid={!!errors.email}
+                                        placeholder="company@example.com"
+                                    />
                                     {errors.email && <Field.ErrorText>{errors.email}</Field.ErrorText>}
                                 </Field.Root>
                             </SimpleGrid>

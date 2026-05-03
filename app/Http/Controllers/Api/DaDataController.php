@@ -75,6 +75,39 @@ class DaDataController extends Controller
     }
 
     /**
+     * Подсказки по email (популярные домены, исправление опечаток).
+     * POST /api/dadata/suggest/email
+     *
+     * Доступен без авторизации — нужен на странице регистрации.
+     * Защищён throttle на IP в роутах.
+     */
+    public function suggestEmail(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'query' => ['required', 'string', 'min:1', 'max:200'],
+            'count' => ['nullable', 'integer', 'min:1', 'max:20'],
+        ], [
+            'query.required' => 'Поисковый запрос обязателен.',
+            'query.max' => 'Запрос слишком длинный.',
+        ]);
+
+        try {
+            $suggestions = $this->client->suggestEmail(
+                $validated['query'],
+                $validated['count'] ?? 5,
+            );
+        } catch (DaDataException $e) {
+            report($e);
+
+            return response()->json([
+                'message' => 'Сервис подсказок временно недоступен.',
+            ], 503);
+        }
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    /**
      * Подсказки по банкам (поиск по названию, БИК или SWIFT).
      * POST /api/dadata/suggest/bank
      */

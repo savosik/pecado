@@ -178,4 +178,27 @@ class DaDataClientTest extends TestCase
 
         $this->assertNull($bank);
     }
+
+    public function test_suggest_email_отправляет_запрос_и_возвращает_подсказки(): void
+    {
+        Http::fake([
+            'suggestions.dadata.ru/*' => Http::response([
+                'suggestions' => [
+                    ['value' => 'vasya@gmail.com'],
+                    ['value' => 'vasya@mail.ru'],
+                ],
+            ], 200),
+        ]);
+
+        $suggestions = (new DaDataClient)->suggestEmail('vasya@', 5);
+
+        $this->assertCount(2, $suggestions);
+        $this->assertSame('vasya@gmail.com', $suggestions[0]['value']);
+
+        Http::assertSent(function ($request) {
+            return $request->url() === 'https://suggestions.dadata.ru/suggestions/api/4_1/rs/suggest/email'
+                && $request['query'] === 'vasya@'
+                && $request['count'] === 5;
+        });
+    }
 }

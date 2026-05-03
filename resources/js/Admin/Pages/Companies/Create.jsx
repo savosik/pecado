@@ -8,6 +8,7 @@ import { LuSearch } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import { validateTaxId } from '@/utils/taxId';
 import { PartySuggest } from '@/components/common/PartySuggest';
+import { EmailSuggest } from '@/components/common/EmailSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 export default function Create({ countries }) {
@@ -125,10 +126,10 @@ export default function Create({ countries }) {
                                         </FormField>
 
                                         <FormField label="Email" error={errors.email}>
-                                            <Input
-                                                type="email"
+                                            <EmailSuggest
                                                 value={data.email}
-                                                onChange={(e) => setData('email', e.target.value)}
+                                                onChange={(val) => setData('email', val)}
+                                                invalid={!!errors.email}
                                                 placeholder="company@example.com"
                                             />
                                         </FormField>

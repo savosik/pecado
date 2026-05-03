@@ -2,6 +2,7 @@ import { Head, useForm, Link } from '@inertiajs/react';
 import { Box, Input, Button, Text, Stack, SimpleGrid } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
 import PasswordInput from '@/components/ui/password-input';
+import { EmailSuggest } from '@/components/common/EmailSuggest';
 import AuthLayout from './AuthLayout';
 // import SocialAuthButtons from './SocialAuthButtons';
 
@@ -44,11 +45,10 @@ export default function Register({ errors }) {
                 <form onSubmit={handleSubmit}>
                     <Stack gap={4}>
                         <Field label={labelEl('Email')} invalid={!!errors.email} errorText={errors.email} required>
-                            <Input
-                                type="email"
+                            <EmailSuggest
                                 value={data.email}
-                                onChange={(e) => setData('email', e.target.value)}
-                                placeholder="your@email.com"
+                                onChange={(val) => setData('email', val)}
+                                invalid={!!errors.email}
                                 autoFocus
                                 {...inputStyles}
                             />

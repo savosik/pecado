@@ -12,6 +12,7 @@ import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
+import { EmailSuggest } from '@/components/common/EmailSuggest';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 /**
@@ -619,10 +620,10 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
                                         invalid={!!errText('email')}
                                         errorText={errText('email')}
                                     >
-                                        <Input
-                                            type="email"
+                                        <EmailSuggest
                                             value={form.email}
-                                            onChange={(e) => handleChange('email', e.target.value)}
+                                            onChange={(val) => handleChange('email', val)}
+                                            invalid={!!errText('email')}
                                             placeholder="company@example.com"
                                         />
                                     </Field>

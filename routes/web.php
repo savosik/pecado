@@ -84,3 +84,10 @@ Route::middleware(['auth', 'throttle:60,1'])->prefix('api/dadata')->group(functi
     Route::post('/findById/bank', [\App\Http\Controllers\Api\DaDataController::class, 'findBankByBik'])
         ->name('dadata.findById.bank');
 });
+
+// Email-подсказки нужны на странице регистрации (без auth).
+// Защищаем строгим throttle на IP.
+Route::middleware('throttle:30,1')->prefix('api/dadata')->group(function () {
+    Route::post('/suggest/email', [\App\Http\Controllers\Api\DaDataController::class, 'suggestEmail'])
+        ->name('dadata.suggest.email');
+});

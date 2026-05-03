@@ -67,6 +67,21 @@ class DaDataClient
     }
 
     /**
+     * Подсказки по email-адресам (популярные домены, исправление опечаток).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function suggestEmail(string $query, int $count = 5): array
+    {
+        $response = $this->post('/suggest/email', [
+            'query' => $query,
+            'count' => max(1, min($count, 20)),
+        ]);
+
+        return $response['suggestions'] ?? [];
+    }
+
+    /**
      * Подсказки по банкам (по названию, БИК или SWIFT).
      *
      * @return array<int, array<string, mixed>>

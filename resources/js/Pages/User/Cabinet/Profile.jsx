@@ -6,6 +6,7 @@ import {
 import { Head, usePage, router } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
 import { PhoneInput } from '@/components/common/PhoneInput';
+import { EmailSuggest } from '@/components/common/EmailSuggest';
 import { LuSave } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 
@@ -99,12 +100,12 @@ export default function Profile() {
 
                             <Field.Root invalid={!!errors.email}>
                                 <Field.Label fontSize="sm" fontWeight="600">Email *</Field.Label>
-                                <Input
+                                <EmailSuggest
                                     value={form.email}
-                                    onChange={(e) => handleChange('email', e.target.value)}
+                                    onChange={(val) => handleChange('email', val)}
+                                    invalid={!!errors.email}
                                     placeholder="user@example.com"
                                     size="md"
-                                    type="email"
                                 />
                                 {errors.email && <Field.ErrorText>{errors.email}</Field.ErrorText>}
                             </Field.Root>
