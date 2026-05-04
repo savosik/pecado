@@ -9,6 +9,7 @@ import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuLayoutGrid, LuWrench, LuCode,
+    LuChartPie,
 } from 'react-icons/lu';
 
 const menuGroups = [
@@ -16,6 +17,7 @@ const menuGroups = [
         title: 'Обзор',
         items: [
             { href: '/cabinet/dashboard', label: 'Дашборд', icon: LuLayoutDashboard },
+            { href: '/cabinet/analytics', label: 'Аналитика', icon: LuChartPie },
         ],
     },
     {

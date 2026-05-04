@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\User\AnalyticsController;
 use App\Http\Controllers\User\ArticleController;
 use App\Http\Controllers\User\BankAccountController;
 use App\Http\Controllers\User\CabinetCartController;
@@ -180,6 +181,12 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/returns/create', [ReturnController::class, 'create'])->name('returns.create');
     Route::post('/returns', [ReturnController::class, 'store'])->name('returns.store');
     Route::get('/returns/{return}', [ReturnController::class, 'show'])->name('returns.show');
+
+    // Аналитика по реализациям
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+    Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
+    Route::get('/analytics/abc-xyz', [AnalyticsController::class, 'abcXyz'])->name('analytics.abc-xyz');
+    Route::get('/analytics/export', [AnalyticsController::class, 'export'])->name('analytics.export');
 
     // Отгрузки (реализации из 1С)
     Route::get('/shipments', [ShipmentController::class, 'index'])->name('shipments.index');
