@@ -56,6 +56,8 @@ function CartMobileCard({
         triggerShake();
     }, [triggerShake]);
 
+    const [imageError, setImageError] = useState(false);
+
     if (totalQty <= 0) return null;
 
     const stockOnly = Math.max(0, maxTotal - preorderShareFromServer);
@@ -106,7 +108,6 @@ function CartMobileCard({
 
     const brandName = product?.brand?.name;
     const imageSrc = product?.thumbnail_url || product?.main_image_url || product?.thumbnail || product?.main_image;
-    const [imageError, setImageError] = useState(false);
     const showImage = imageSrc && !imageError;
 
     return (
