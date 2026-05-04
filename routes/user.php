@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function () {
     // Оформление заказа
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
     Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+    Route::post('/checkout/normalize-stock', [CheckoutController::class, 'normalizeStock'])->name('checkout.normalize-stock');
 
     // Заказы пользователя
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');

@@ -60,7 +60,12 @@ class CheckoutService implements CheckoutServiceInterface
 
                 if ($item->quantity > $totalAvailable) {
                     $insufficientStockItems[] = [
+                        'cart_item_id' => $item->id,
+                        'product_id' => $item->product->id,
                         'product' => $item->product->name,
+                        'name' => $item->product->name,
+                        'sku' => $item->product->sku,
+                        'item_type' => $item->item_type,
                         'requested' => $item->quantity,
                         'available' => $totalAvailable,
                     ];

@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { useState, useEffect, useMemo } from 'react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
     Textarea, NativeSelect, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuTriangleAlert, LuWand } from 'react-icons/lu';
 import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -36,7 +36,7 @@ export default function CheckoutIndex({
     addresses = [],
     countries = [],
 }) {
-    const { currency, errors: serverErrors } = usePage().props;
+    const { currency, errors: serverErrors, flash } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
     const breadcrumbs = [
@@ -56,17 +56,58 @@ export default function CheckoutIndex({
 
     const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
     const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
+    const [normalizing, setNormalizing] = useState(false);
 
-    // Show server stock error
+    // Конфликты остатков: считаем по pre-flight stock_status в строках корзины.
+    // Если бэк не успел обновить stock_status (race), подмешиваем серверный список.
+    const stockConflictsFromFlash = flash?.stock_conflicts ?? [];
+
+    const conflictItems = useMemo(() => {
+        const fromItems = [...instockItems, ...preorderItems]
+            .filter((it) => it.stock_status && it.stock_status !== 'ok')
+            .map((it) => ({
+                cart_item_id: it.id,
+                product_id: it.product?.id,
+                name: it.product?.name ?? 'Товар',
+                sku: it.product?.sku,
+                requested: Number(it.quantity || 0),
+                available: Number(it.max_total ?? 0),
+                status: it.stock_status,
+            }));
+
+        if (fromItems.length > 0) return fromItems;
+
+        return (stockConflictsFromFlash || []).map((c) => ({
+            cart_item_id: c.cart_item_id,
+            product_id: c.product_id,
+            name: c.name ?? c.product ?? 'Товар',
+            sku: c.sku,
+            requested: Number(c.requested || 0),
+            available: Number(c.available || 0),
+            status: Number(c.available || 0) <= 0 ? 'unavailable' : 'partial',
+        }));
+    }, [instockItems, preorderItems, stockConflictsFromFlash]);
+
+    const hasConflicts = conflictItems.length > 0;
+
+    // Серверная ошибка stock — показываем тостер только при появлении/изменении.
     useEffect(() => {
         if (serverErrors?.stock) {
             toaster.create({
-                title: 'Ошибка',
+                title: 'Корзина изменилась',
                 description: serverErrors.stock,
-                type: 'error',
+                type: 'warning',
             });
         }
     }, [serverErrors?.stock]);
+
+    const handleNormalize = () => {
+        setNormalizing(true);
+        router.post('/checkout/normalize-stock', {}, {
+            preserveScroll: false,
+            onFinish: () => setNormalizing(false),
+        });
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -86,6 +127,14 @@ export default function CheckoutIndex({
                 <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" mb="6">
                     Оформление заказа
                 </Heading>
+
+                {hasConflicts && (
+                    <StockConflictsPanel
+                        items={conflictItems}
+                        onNormalize={handleNormalize}
+                        normalizing={normalizing}
+                    />
+                )}
 
                 <form onSubmit={handleSubmit}>
                     <Stack gap="4">
@@ -345,7 +394,8 @@ export default function CheckoutIndex({
                                 colorPalette="pecado"
                                 size="lg"
                                 loading={processing}
-                                disabled={processing || companies.length === 0}
+                                disabled={processing || companies.length === 0 || hasConflicts}
+                                title={hasConflicts ? 'Сначала уточните корзину — есть позиции с изменившимся остатком' : undefined}
                             >
                                 <LuSend size={16} />
                                 Оформить заказ
@@ -717,6 +767,7 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                                     )}
                                 </Flex>
                             )}
+                            <StockBadge it={it} mt="2" />
                             <Flex justify="space-between" align="flex-end" gap="3" mt="2">
                                 <Flex direction="column" fontSize="sm" color="fg.muted">
                                     {priceReg !== priceDisc && (
@@ -780,7 +831,10 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                                             )}
                                         </Flex>
                                     </Table.Cell>
-                                    <Table.Cell textAlign="center">{qty}</Table.Cell>
+                                    <Table.Cell textAlign="center">
+                                        {qty}
+                                        <StockBadge it={it} mt="1" justify="center" />
+                                    </Table.Cell>
                                     <Table.Cell textAlign="right">{fmt(priceReg)}</Table.Cell>
                                     <Table.Cell textAlign="right">
                                         {discountPct > 0 ? `${discountPct}%` : '—'}
@@ -833,6 +887,128 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                     )}
                 </Stack>
             </Flex>
+        </Box>
+    );
+}
+
+/**
+ * Маленький бейдж рядом с количеством, если остаток изменился.
+ * status: ok | partial | unavailable
+ */
+function StockBadge({ it, ...flexProps }) {
+    const status = it?.stock_status;
+    if (!status || status === 'ok') return null;
+
+    const requested = Number(it.quantity || 0);
+    const available = Number(it.max_total ?? 0);
+
+    return (
+        <Flex {...flexProps}>
+            {status === 'unavailable' ? (
+                <Badge colorPalette="red" variant="subtle">
+                    Нет в наличии
+                </Badge>
+            ) : (
+                <Badge colorPalette="orange" variant="subtle">
+                    Доступно {available} из {requested}
+                </Badge>
+            )}
+        </Flex>
+    );
+}
+
+/**
+ * Панель конфликтов остатков, рендерится сверху страницы Checkout
+ * при наличии хотя бы одной позиции со статусом partial/unavailable.
+ *
+ * Действия:
+ *   • «Привести к доступному» — POST /checkout/normalize-stock
+ *     (квантити уменьшаются до available, недоступные удаляются).
+ *   • «Изменить вручную» — переход на /cart.
+ */
+function StockConflictsPanel({ items, onNormalize, normalizing }) {
+    const partial = items.filter((c) => c.status === 'partial');
+    const unavailable = items.filter((c) => c.status === 'unavailable');
+
+    return (
+        <Box
+            bg="orange.subtle"
+            borderWidth="1px"
+            borderColor="orange.muted"
+            rounded="lg"
+            p={{ base: '4', md: '5' }}
+            mb="4"
+        >
+            <Flex align="center" gap="2" mb="2" color="orange.fg">
+                <LuTriangleAlert size={20} />
+                <Text fontWeight="600" fontSize="lg">
+                    Остатки на складе изменились
+                </Text>
+            </Flex>
+
+            <Text fontSize="sm" color="fg.muted" mb="3">
+                Пока вы оформляли заказ, по {items.length} {items.length === 1 ? 'позиции изменился' : 'позициям изменился'} остаток.
+                {' '}Чтобы продолжить — приведите корзину к доступному количеству или измените её вручную.
+            </Text>
+
+            <Stack gap="2" mb="4">
+                {items.slice(0, 8).map((c) => (
+                    <Flex
+                        key={c.cart_item_id}
+                        justify="space-between"
+                        gap="3"
+                        align="center"
+                        flexWrap="wrap"
+                        fontSize="sm"
+                    >
+                        <Box flex="1" minW="0">
+                            <Text fontWeight="medium" lineClamp={1}>{c.name}</Text>
+                            {c.sku && (
+                                <Text fontSize="xs" color="fg.muted">арт. {c.sku}</Text>
+                            )}
+                        </Box>
+                        {c.status === 'unavailable' ? (
+                            <Badge colorPalette="red" variant="subtle">
+                                Нет в наличии (было {c.requested})
+                            </Badge>
+                        ) : (
+                            <Badge colorPalette="orange" variant="subtle">
+                                Доступно {c.available} из {c.requested}
+                            </Badge>
+                        )}
+                    </Flex>
+                ))}
+                {items.length > 8 && (
+                    <Text fontSize="xs" color="fg.muted">
+                        …и ещё {items.length - 8} {items.length - 8 === 1 ? 'позиция' : 'позиций'}
+                    </Text>
+                )}
+            </Stack>
+
+            <Flex gap="3" flexWrap="wrap">
+                <Button
+                    type="button"
+                    colorPalette="orange"
+                    onClick={onNormalize}
+                    loading={normalizing}
+                    loadingText="Применяем…"
+                >
+                    <LuWand size={16} />
+                    Привести к доступному
+                </Button>
+                <Button asChild type="button" variant="outline">
+                    <Link href="/cart">
+                        <LuArrowLeft size={16} />
+                        Изменить вручную
+                    </Link>
+                </Button>
+            </Flex>
+
+            <Text fontSize="xs" color="fg.muted" mt="3">
+                {partial.length > 0 && `Будет уменьшено количество: ${partial.length}.`}
+                {partial.length > 0 && unavailable.length > 0 && ' '}
+                {unavailable.length > 0 && `Будет удалено из корзины: ${unavailable.length}.`}
+            </Text>
         </Box>
     );
 }

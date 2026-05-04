@@ -121,11 +121,79 @@ class CheckoutController extends Controller
                 ->route('cabinet.orders.show', $orders->first())
                 ->with('success', 'Заказ успешно оформлен!');
         } catch (\App\Exceptions\InsufficientStockException $e) {
-            return back()->withErrors([
-                'stock' => 'Недостаточно товара на складе: '.collect($e->getItems())
-                    ->pluck('product')
-                    ->join(', '),
-            ]);
+            return back()
+                ->withErrors([
+                    'stock' => 'Количество товаров на складе изменилось. Уточните корзину перед оформлением.',
+                ])
+                ->with('stock_conflicts', $e->getItems());
         }
+    }
+
+    /**
+     * Привести количество в корзине к доступному остатку.
+     * Для каждой позиции: если запрошено больше доступного — уменьшить до доступного;
+     * если доступно 0 — удалить позицию из корзины.
+     * После — редирект на /checkout, чтобы пользователь увидел актуальный состав.
+     *
+     * POST /checkout/normalize-stock
+     */
+    public function normalizeStock(Request $request): RedirectResponse
+    {
+        $user = $request->user();
+        $cart = $this->cartService->getOrCreateActiveCart($user);
+
+        $adjusted = 0;
+        $removed = 0;
+
+        $cart->loadMissing('items.product');
+
+        foreach ($cart->items as $item) {
+            if (! $item->product) {
+                continue;
+            }
+
+            $stock = $this->stockService->getStock($item->product, $user);
+            $totalAvailable = (int) ($stock['available'] + $stock['preorder']);
+
+            if ($item->quantity <= $totalAvailable) {
+                continue;
+            }
+
+            if ($totalAvailable <= 0) {
+                $item->delete();
+                $removed++;
+
+                continue;
+            }
+
+            $item->quantity = $totalAvailable;
+            $item->save();
+            $adjusted++;
+        }
+
+        if ($adjusted === 0 && $removed === 0) {
+            return redirect()
+                ->route('checkout.index')
+                ->with('info', 'Корзина уже соответствует доступным остаткам.');
+        }
+
+        $parts = [];
+        if ($adjusted > 0) {
+            $parts[] = 'скорректировано позиций: '.$adjusted;
+        }
+        if ($removed > 0) {
+            $parts[] = 'удалено: '.$removed;
+        }
+
+        // Если корзина опустела — увести в корзину
+        if ($cart->items()->count() === 0) {
+            return redirect()
+                ->route('cart.index')
+                ->with('warning', 'Корзина опустела после сверки с остатками ('.implode(', ', $parts).').');
+        }
+
+        return redirect()
+            ->route('checkout.index')
+            ->with('success', 'Корзина приведена к доступному ('.implode(', ', $parts).').');
     }
 }

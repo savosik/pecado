@@ -226,6 +226,185 @@ class CheckoutControllerTest extends TestCase
         $response->assertRedirect(route('cabinet.orders.show', $order));
     }
 
+    public function test_checkout_store_flashes_stock_conflicts_on_insufficient_stock(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 5,
+            'item_type' => 'instock',
+        ]);
+
+        $company = Company::factory()->create(['user_id' => $this->user->id]);
+
+        $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
+        $checkoutMock->method('checkout')->willThrowException(
+            new \App\Exceptions\InsufficientStockException(
+                'Insufficient stock',
+                [
+                    [
+                        'cart_item_id' => 42,
+                        'product_id' => 7,
+                        'product' => 'Тестовый товар',
+                        'name' => 'Тестовый товар',
+                        'sku' => 'TST-1',
+                        'item_type' => 'instock',
+                        'requested' => 5,
+                        'available' => 2,
+                    ],
+                ],
+            )
+        );
+        $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
+
+        $response = $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_address' => 'г. Москва, ул. Ленина, д. 1',
+        ]);
+
+        $response->assertRedirect();
+        $response->assertSessionHasErrors('stock');
+        $response->assertSessionHas('stock_conflicts', function ($items) {
+            return is_array($items)
+                && count($items) === 1
+                && $items[0]['cart_item_id'] === 42
+                && $items[0]['requested'] === 5
+                && $items[0]['available'] === 2;
+        });
+    }
+
+    public function test_normalize_stock_reduces_quantity_to_available(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+        $product = Product::factory()->create();
+        $item = CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 10,
+            'item_type' => 'instock',
+        ]);
+
+        // Доступно меньше, чем в корзине
+        $stockMock = $this->createMock(StockServiceInterface::class);
+        $stockMock->method('getStock')->willReturn(['available' => 3, 'preorder' => 0]);
+        $this->app->instance(StockServiceInterface::class, $stockMock);
+
+        $response = $this->actingAs($this->user)->post('/checkout/normalize-stock');
+
+        $response->assertRedirect(route('checkout.index'));
+        $response->assertSessionHas('success');
+        $this->assertSame(3, (int) $item->fresh()->quantity);
+    }
+
+    public function test_normalize_stock_removes_items_with_zero_stock(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+        $product = Product::factory()->create();
+        $item = CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 4,
+            'item_type' => 'instock',
+        ]);
+
+        $stockMock = $this->createMock(StockServiceInterface::class);
+        $stockMock->method('getStock')->willReturn(['available' => 0, 'preorder' => 0]);
+        $this->app->instance(StockServiceInterface::class, $stockMock);
+
+        $response = $this->actingAs($this->user)->post('/checkout/normalize-stock');
+
+        // Корзина опустеет — редирект на /cart
+        $response->assertRedirect(route('cart.index'));
+        $response->assertSessionHas('warning');
+        $this->assertNull(CartItem::find($item->id));
+    }
+
+    public function test_normalize_stock_is_noop_when_cart_already_matches(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+        $product = Product::factory()->create();
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'item_type' => 'instock',
+        ]);
+
+        // setUp уже мокает stock = available 10 / preorder 5 — корзине места хватает
+        $response = $this->actingAs($this->user)->post('/checkout/normalize-stock');
+
+        $response->assertRedirect(route('checkout.index'));
+        $response->assertSessionHas('info');
+    }
+
+    public function test_checkout_index_exposes_stock_status_for_items(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        $okProduct = Product::factory()->create();
+        $partialProduct = Product::factory()->create();
+        $unavailableProduct = Product::factory()->create();
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $okProduct->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $partialProduct->id,
+            'quantity' => 99,
+            'item_type' => 'instock',
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $unavailableProduct->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        // Подмешиваем разный сток на каждый товар
+        $stockMock = $this->createMock(StockServiceInterface::class);
+        $stockMock->method('getStock')->willReturnCallback(
+            fn ($product) => match ($product->id) {
+                $okProduct->id => ['available' => 50, 'preorder' => 0],
+                $partialProduct->id => ['available' => 5, 'preorder' => 0],
+                $unavailableProduct->id => ['available' => 0, 'preorder' => 0],
+                default => ['available' => 0, 'preorder' => 0],
+            }
+        );
+        $this->app->instance(StockServiceInterface::class, $stockMock);
+
+        $response = $this->actingAs($this->user)->get('/checkout');
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('User/Checkout/Index')
+            ->has('instockItems', 3)
+            ->where('instockItems.0.stock_status', 'ok')
+            ->where('instockItems.1.stock_status', 'partial')
+            ->where('instockItems.2.stock_status', 'unavailable')
+        );
+    }
+
     public function test_checkout_store_with_two_order_types_redirects_to_orders_index(): void
     {
         $cart = Cart::factory()->create([
