@@ -240,6 +240,7 @@ class ProductExportService
         return match ($modifierType) {
             'boolean' => $this->applyBooleanModifier($value, $modifiers),
             'price' => $this->applyPriceModifier($value, $modifiers),
+            'numeric' => $this->applyNumericModifier($value, $modifiers),
             'multi_value' => $this->applyMultiValueModifier($value, $modifiers),
             default => $value,
         };
@@ -259,19 +260,62 @@ class ProductExportService
             return '';
         }
 
+        $price = (float) $value;
+
         $currencyId = $modifiers['currency_id'] ?? null;
+        if (! empty($currencyId)) {
+            $currency = $this->resolveCurrency((int) $currencyId);
+            if ($currency && ! $currency->is_base) {
+                $price = $this->currencyService->convertFromBase($price, $currency);
+            }
+        }
 
-        if (empty($currencyId)) {
+        return round($this->applyArithmetic($price, $modifiers), 2);
+    }
+
+    /**
+     * Числовой модификатор: умножение и сложение для не-ценовых полей
+     * (остатки, габариты, проценты, числовые атрибуты).
+     *
+     * Why: округление зависит от типа исходного значения — int → int (остатки
+     * должны оставаться целыми), float → 2 знака. Так пользователь, накручивая
+     * × 0.95 на total_stock, получит понятное целое число, а на weight_gross —
+     * корректные граммы.
+     */
+    protected function applyNumericModifier(mixed $value, array $modifiers): mixed
+    {
+        if ($value === null || $value === '') {
             return $value;
         }
 
-        $currency = $this->resolveCurrency((int) $currencyId);
-
-        if (! $currency || $currency->is_base) {
+        if (! is_numeric($value)) {
             return $value;
         }
 
-        return round($this->currencyService->convertFromBase((float) $value, $currency), 2);
+        $isIntInput = is_int($value)
+            || (is_string($value) && ctype_digit(ltrim($value, '-')));
+
+        $result = $this->applyArithmetic((float) $value, $modifiers);
+
+        return $isIntInput ? (int) round($result) : round($result, 2);
+    }
+
+    /**
+     * Применить multiply/add к числовому значению. Порядок: × multiply, затем + add.
+     */
+    protected function applyArithmetic(float $value, array $modifiers): float
+    {
+        $multiply = $modifiers['multiply'] ?? null;
+        if ($multiply !== null && $multiply !== '') {
+            $value *= (float) $multiply;
+        }
+
+        $add = $modifiers['add'] ?? null;
+        if ($add !== null && $add !== '') {
+            $value += (float) $add;
+        }
+
+        return $value;
     }
 
     protected function resolveCurrency(int $id): ?Currency
@@ -283,15 +327,33 @@ class ProductExportService
         return $this->currencyCache[$id];
     }
 
+    /**
+     * Коды разделителей, которые принимаются с фронта.
+     *
+     * Why: Laravel middleware TrimStrings обрезает все строковые входящие значения
+     * (включая `\n`, `\r`, `\t` и пробелы по краям), поэтому отправлять с фронта
+     * сырые символы-разделители нельзя — `"\n"` превратится в `""`, `" | "` в `"|"`.
+     * Фронт шлёт код, бэкенд маппит его на реальный разделитель.
+     */
+    protected const SEPARATOR_MAP = [
+        'comma' => ', ',
+        'semicolon' => '; ',
+        'pipe' => ' | ',
+        'newline' => "\n",
+        'slash' => ' / ',
+    ];
+
     protected function applyMultiValueModifier(mixed $value, array $modifiers): mixed
     {
-        $separator = $modifiers['separator'] ?? ', ';
-
         if (! is_string($value)) {
             return $value;
         }
 
-        // Re-split by default separator and re-join with custom one
+        $raw = $modifiers['separator'] ?? 'comma';
+        // Mapped code → реальный разделитель; legacy raw-значение пропускаем как есть;
+        // пустую строку (после TrimStrings) ловим финальным fallback на запятую.
+        $separator = (self::SEPARATOR_MAP[$raw] ?? $raw) ?: ', ';
+
         $parts = preg_split('/\s*,\s*/', $value);
 
         return implode($separator, $parts);

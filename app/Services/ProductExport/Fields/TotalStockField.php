@@ -33,6 +33,11 @@ class TotalStockField extends ExportField
         return false;
     }
 
+    public function modifierType(): ?string
+    {
+        return 'numeric';
+    }
+
     public function eagerLoad(): array
     {
         return ['warehouses'];

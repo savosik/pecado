@@ -190,6 +190,8 @@ class ProductExportController extends Controller
             'fields.*.modifiers.true_value' => 'nullable|string|max:50',
             'fields.*.modifiers.false_value' => 'nullable|string|max:50',
             'fields.*.modifiers.separator' => 'nullable|string|max:20',
+            'fields.*.modifiers.multiply' => 'nullable|numeric',
+            'fields.*.modifiers.add' => 'nullable|numeric',
         ]);
 
         $result = $this->exportService->preview(
@@ -258,6 +260,8 @@ class ProductExportController extends Controller
             'fields.*.modifiers.true_value' => 'nullable|string|max:50',
             'fields.*.modifiers.false_value' => 'nullable|string|max:50',
             'fields.*.modifiers.separator' => 'nullable|string|max:20',
+            'fields.*.modifiers.multiply' => 'nullable|numeric',
+            'fields.*.modifiers.add' => 'nullable|numeric',
             'is_active' => 'boolean',
         ], [
             'name.required' => 'Название обязательно',

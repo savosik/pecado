@@ -36,6 +36,11 @@ class DiscountPercentageField extends ExportField
         return false;
     }
 
+    public function modifierType(): ?string
+    {
+        return 'numeric';
+    }
+
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
         if (! $clientUser) {

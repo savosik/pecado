@@ -32,47 +32,100 @@ const BOOLEAN_PRESETS = [
     { true_value: 'Есть', false_value: 'Нет', label: 'Есть / Нет' },
 ];
 
+// Шлём код, а не сырой символ: Laravel TrimStrings обрезает пробелы и `\n`
+// до того как значение дойдёт до контроллера, и разделители ломаются.
 const SEPARATOR_OPTIONS = [
-    { value: ', ', label: 'Запятая  ( , )' },
-    { value: '; ', label: 'Точка с запятой  ( ; )' },
-    { value: ' | ', label: 'Вертикальная черта  ( | )' },
-    { value: '\n', label: 'Новая строка  (↵)' },
-    { value: ' / ', label: 'Слеш  ( / )' },
+    { value: 'comma',     label: 'Запятая  ( , )' },
+    { value: 'semicolon', label: 'Точка с запятой  ( ; )' },
+    { value: 'pipe',      label: 'Вертикальная черта  ( | )' },
+    { value: 'newline',   label: 'Новая строка  (↵)' },
+    { value: 'slash',     label: 'Слеш  ( / )' },
 ];
+
+// Подблок для арифметических модификаторов: × multiply, + add.
+// Используется и в `price`, и в `numeric` модификаторах.
+function ArithmeticControls({ modifiers, onModifiersChange }) {
+    const multiply = modifiers?.multiply ?? '';
+    const add = modifiers?.add ?? '';
+    return (
+        <HStack gap={2} flexWrap="wrap" mt={1}>
+            <Text fontSize="xs" color="fg.muted" flexShrink={0}>Умножить на:</Text>
+            <Input
+                size="xs"
+                w="80px"
+                type="number"
+                step="any"
+                value={multiply}
+                placeholder="1"
+                onChange={(e) => onModifiersChange({
+                    ...modifiers,
+                    multiply: e.target.value === '' ? null : e.target.value,
+                })}
+            />
+            <Text fontSize="xs" color="fg.muted" flexShrink={0}>Прибавить:</Text>
+            <Input
+                size="xs"
+                w="80px"
+                type="number"
+                step="any"
+                value={add}
+                placeholder="0"
+                onChange={(e) => onModifiersChange({
+                    ...modifiers,
+                    add: e.target.value === '' ? null : e.target.value,
+                })}
+            />
+            <Text fontSize="xs" color="fg.subtle" flexShrink={0}>
+                итог = (значение × умножитель) + прибавка
+            </Text>
+        </HStack>
+    );
+}
 
 // ─── Inline modifier controls ─────────────────────────────────────────────────
 function ModifierControls({ modifierType, modifiers, onModifiersChange, currencies = [] }) {
     if (!modifierType) return null;
 
-    if (modifierType === 'price' && currencies.length > 0) {
+    if (modifierType === 'price') {
         const currencyId = modifiers?.currency_id || null;
         return (
-            <HStack gap={1} flexWrap="wrap" mt={1}>
-                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Валюта:</Text>
-                <Badge
-                    size="sm"
-                    cursor="pointer"
-                    variant={!currencyId ? 'solid' : 'outline'}
-                    colorPalette={!currencyId ? 'pecado' : 'gray'}
-                    onClick={() => onModifiersChange({ ...modifiers, currency_id: null })}
-                    _hover={{ opacity: 0.8 }}
-                >
-                    Базовая ({currencies.find(c => c.is_base)?.code || 'RUB'})
-                </Badge>
-                {currencies.filter(c => !c.is_base).map(c => (
-                    <Badge
-                        key={c.id}
-                        size="sm"
-                        cursor="pointer"
-                        variant={currencyId === c.id ? 'solid' : 'outline'}
-                        colorPalette={currencyId === c.id ? 'pecado' : 'gray'}
-                        onClick={() => onModifiersChange({ ...modifiers, currency_id: c.id })}
-                        _hover={{ opacity: 0.8 }}
-                    >
-                        {c.symbol} {c.name}
-                    </Badge>
-                ))}
-            </HStack>
+            <Stack gap={1} mt={1}>
+                {currencies.length > 0 && (
+                    <HStack gap={1} flexWrap="wrap">
+                        <Text fontSize="xs" color="fg.muted" flexShrink={0}>Валюта:</Text>
+                        <Badge
+                            size="sm"
+                            cursor="pointer"
+                            variant={!currencyId ? 'solid' : 'outline'}
+                            colorPalette={!currencyId ? 'pecado' : 'gray'}
+                            onClick={() => onModifiersChange({ ...modifiers, currency_id: null })}
+                            _hover={{ opacity: 0.8 }}
+                        >
+                            Базовая ({currencies.find(c => c.is_base)?.code || 'RUB'})
+                        </Badge>
+                        {currencies.filter(c => !c.is_base).map(c => (
+                            <Badge
+                                key={c.id}
+                                size="sm"
+                                cursor="pointer"
+                                variant={currencyId === c.id ? 'solid' : 'outline'}
+                                colorPalette={currencyId === c.id ? 'pecado' : 'gray'}
+                                onClick={() => onModifiersChange({ ...modifiers, currency_id: c.id })}
+                                _hover={{ opacity: 0.8 }}
+                            >
+                                {c.symbol} {c.name}
+                            </Badge>
+                        ))}
+                    </HStack>
+                )}
+                <ArithmeticControls modifiers={modifiers} onModifiersChange={onModifiersChange} />
+            </Stack>
+        );
+    }
+
+    if (modifierType === 'numeric') {
+        return (
+            <ArithmeticControls modifiers={modifiers} onModifiersChange={onModifiersChange} />
         );
     }
 
@@ -139,7 +192,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
     }
 
     if (modifierType === 'multi_value') {
-        const separator = modifiers?.separator || ', ';
+        const separator = modifiers?.separator || 'comma';
         return (
             <HStack gap={1} flexWrap="wrap" mt={1}>
                 <Text fontSize="xs" color="fg.muted" flexShrink={0}>Разделитель:</Text>
@@ -367,10 +420,12 @@ function FieldPicker({ availableFields, selectedKeys, onSelect, onClose }) {
                                     {field.modifier_type && (
                                         <Badge size="xs" variant="subtle" colorPalette={
                                             field.modifier_type === 'price' ? 'green' :
-                                                field.modifier_type === 'boolean' ? 'pecado' : 'orange'
+                                                field.modifier_type === 'boolean' ? 'pecado' :
+                                                    field.modifier_type === 'numeric' ? 'blue' : 'orange'
                                         }>
                                             {field.modifier_type === 'price' ? '₽' :
-                                                field.modifier_type === 'boolean' ? '✓/✗' : '⋯'}
+                                                field.modifier_type === 'boolean' ? '✓/✗' :
+                                                    field.modifier_type === 'numeric' ? '× +' : '⋯'}
                                         </Badge>
                                     )}
                                 </HStack>

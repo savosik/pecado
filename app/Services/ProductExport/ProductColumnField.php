@@ -42,6 +42,9 @@ abstract class ProductColumnField extends ExportField
         if ($this->isPriceField()) {
             return 'price';
         }
+        if ($this->columnType() === 'numeric') {
+            return 'numeric';
+        }
 
         return null;
     }
