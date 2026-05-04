@@ -66,6 +66,7 @@ if (typeof document !== 'undefined') {
             event.preventDefault();
             const slug = decodeURIComponent(match[1]);
             if (window.__openProductQuickView) {
+                window.__closeSearch?.();
                 window.__openProductQuickView(slug);
             } else {
                 window.location.href = href;

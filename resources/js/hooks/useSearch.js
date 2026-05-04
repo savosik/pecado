@@ -108,6 +108,25 @@ export default function useSearch(user = null) {
         };
     }, [open, isSmall]);
 
+    // Глобальная ссылка для внешних триггеров (например, перехватчик кликов
+    // в bootstrap.js перед открытием QuickView). Без этого scroll-lock на
+    // <html> остаётся висеть, если поиск был открыт, а юзер тапнул товар.
+    useEffect(() => {
+        window.__closeSearch = () => setOpen(false);
+        return () => {
+            window.__closeSearch = null;
+        };
+    }, []);
+
+    // Закрывать поиск при любой Inertia-навигации — иначе на мобильном
+    // <html style="overflow:hidden"> остаётся после ухода со страницы
+    // (Header — persistent layout, хук не размонтируется).
+    useEffect(() => {
+        return router.on('start', () => {
+            setOpen(false);
+        });
+    }, []);
+
     // ──────────────────────────────────────────────────────────
     // Debounced API-запрос к GET /search (JSON)
     // ──────────────────────────────────────────────────────────
