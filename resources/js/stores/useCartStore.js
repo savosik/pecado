@@ -269,8 +269,15 @@ export const useCartStore = create((set, get) => ({
                     quantity,
                 });
 
+                // Race condition guard: за время debounce + сетевого запроса
+                // пользователь мог наклацать новое значение (новый optimistic
+                // update в state.quantities). Если так — не перетираем qty
+                // и split серверным ответом, иначе цифра «откатится» назад.
+                // Свежее значение всё равно догонится следующим POST.
+                const stillCurrent = () => (useCartStore.getState().quantities[pid] || 0) === quantity;
+
                 // Clamping: сервер может вернуть меньше, чем запрошено
-                if (data && typeof data.clamped === 'number') {
+                if (data && typeof data.clamped === 'number' && stillCurrent()) {
                     const clamped = data.clamped;
 
                     set((state) => {
@@ -305,13 +312,16 @@ export const useCartStore = create((set, get) => ({
                 }
 
                 // Сервер прислал свежие totals — обновляем агрегаты для бейджей.
+                // Можно обновлять всегда: totals — агрегаты по корзине, не зависят
+                // от pending optimistic-обновлений по конкретному pid.
                 if (data && data.cart_totals) {
                     set({ cartTotals: parseTotals(data.cart_totals) });
                 }
 
-                // Per-pid split (актуальное распределение склад/предзаказ для
-                // этого товара в корзине). Используется для цветной рамки counter.
-                if (data && (typeof data.instock === 'number' || typeof data.preorder === 'number')) {
+                // Per-pid split — обновляем только если qty не успело уйти вперёд,
+                // иначе цветная рамка counter будет «прыгать» (split не соответствует
+                // текущему qty).
+                if (data && (typeof data.instock === 'number' || typeof data.preorder === 'number') && stillCurrent()) {
                     const inS = Math.max(0, Number(data.instock || 0));
                     const pre = Math.max(0, Number(data.preorder || 0));
                     set((state) => {
@@ -418,6 +428,17 @@ export const useCartStore = create((set, get) => ({
 // ────────────────────────────────────────────
 
 if (typeof window !== 'undefined') {
+    // Есть ли локальные изменения в полёте, которые ещё не отправлены на
+    // сервер (debounce-окно) или ждут ответа? Если да — пропускаем
+    // принудительный _serverSync, чтобы он не перетёр свежий optimistic
+    // update «старым» серверным значением. Догонится следующим POST из
+    // setQuantity.
+    const hasPendingLocalUpdates = () => {
+        if (Object.keys(debounceTimers).length > 0) return true;
+        const state = useCartStore.getState();
+        return state.syncing.size > 0;
+    };
+
     window.addEventListener('storage', (e) => {
         if (e.key !== STORAGE_KEY) return;
 
@@ -427,6 +448,10 @@ if (typeof window !== 'undefined') {
         } catch {
             return;
         }
+
+        // Если в этой вкладке есть pending updates — другая вкладка не должна
+        // перетирать наше qty. Sync разойдётся после ответа на наш POST.
+        if (hasPendingLocalUpdates()) return;
 
         // Quantities обновляем мгновенно из localStorage (другая вкладка).
         useCartStore.setState({ quantities });
@@ -442,8 +467,8 @@ if (typeof window !== 'undefined') {
     // Server re-sync на Inertia navigate
     router.on('navigate', () => {
         const state = useCartStore.getState();
-        if (state.loaded) {
-            state._serverSync();
-        }
+        if (!state.loaded) return;
+        if (hasPendingLocalUpdates()) return;
+        state._serverSync();
     });
 }

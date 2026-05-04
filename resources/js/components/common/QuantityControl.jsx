@@ -57,7 +57,14 @@ export default function QuantityControl({
     useEffect(() => { minRef.current = min; }, [min]);
     useEffect(() => { maxRef.current = max; }, [max]);
 
+    const disabledRef = useRef(disabled);
+    useEffect(() => { disabledRef.current = disabled; }, [disabled]);
+
     const stepBy = useCallback((delta) => {
+        // Long-press цикл вызывает stepBy из setTimeout, поэтому проверяем
+        // disabled именно здесь, а не только в pointerDown — иначе тики
+        // продолжали бы слать onChange, пока внешний код держит disabled=true.
+        if (disabledRef.current) return false;
         const cur = valueRef.current;
         const next = Math.max(minRef.current, Math.min(maxRef.current, Math.floor(cur) + delta));
         if (next === cur) {
@@ -94,9 +101,6 @@ export default function QuantityControl({
     }, [stepBy, stopHold]);
 
     useEffect(() => stopHold, [stopHold]);
-
-    const disabledRef = useRef(disabled);
-    useEffect(() => { disabledRef.current = disabled; }, [disabled]);
 
     const handlePointerDown = useCallback((sign) => (e) => {
         if (disabledRef.current) return;

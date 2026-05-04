@@ -216,6 +216,50 @@ class CartControllerTest extends TestCase
             ]);
     }
 
+    /**
+     * Регрессия: long-press / быстрые клики на каунтере количества дёргают
+     * /api/cart/set-product-quantity сериями. Каждый ответ должен корректно
+     * отражать своё запрошенное qty (clamped == quantity при отсутствии
+     * клампинга), и в БД должно остаться только последнее значение —
+     * предыдущие строки не должны «просачиваться» (operational idempotency).
+     *
+     * См. resources/js/stores/useCartStore.js: фронт-side guard полагается
+     * на то, что серверное clamped не приходит «случайно» меньше запрошенного.
+     */
+    public function test_set_product_quantity_rapid_updates_keep_last_value(): void
+    {
+        $cart = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $product = Product::factory()->create();
+
+        $sequence = [2, 3, 5, 4, 7, 6];
+        foreach ($sequence as $qty) {
+            $response = $this->actingAs($this->user)->postJson('/api/cart/set-product-quantity', [
+                'product_id' => $product->id,
+                'quantity' => $qty,
+            ]);
+
+            $response->assertOk()
+                ->assertJsonPath('clamped', $qty)
+                ->assertJsonPath('cart_totals.total_quantity', $qty);
+        }
+
+        $finalQty = end($sequence);
+
+        // Должна остаться ровно одна строка instock c финальным qty
+        // (stock=10, finalQty=6 → весь объём со склада, preorder-строки нет).
+        $this->assertSame(
+            1,
+            CartItem::where('cart_id', $cart->id)->where('product_id', $product->id)->count(),
+            'После серии быстрых обновлений в корзине должна остаться одна строка',
+        );
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'item_type' => 'instock',
+            'quantity' => $finalQty,
+        ]);
+    }
+
     // ─── API: Add Product ──────────────────────────────────
 
     public function test_add_product_creates_cart_items(): void

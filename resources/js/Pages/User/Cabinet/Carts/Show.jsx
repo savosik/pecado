@@ -59,18 +59,78 @@ export default function Show({ cart, cartDetails }) {
         router.reload({ only: ['cartDetails'], onFinish: () => resolve() });
     });
 
-    const handleUpdateQuantity = async (item, newQty) => {
+    // Debounced PATCH для каждой строки корзины: long-press / быстрые клики
+    // больше не плодят параллельные axios.patch + router.reload, а сворачиваются
+    // в один запрос с финальным qty. Предыдущий in-flight запрос отменяется
+    // через AbortController, чтобы reload отрабатывал только на самом свежем.
+    const UPDATE_DEBOUNCE_MS = 450;
+    const updateTimers = useRef({});
+    const updateAborters = useRef({});
+    const optimisticQty = useRef({});
+
+    useEffect(() => {
+        return () => {
+            Object.values(updateTimers.current).forEach(clearTimeout);
+            Object.values(updateAborters.current).forEach((c) => c.abort());
+            updateTimers.current = {};
+            updateAborters.current = {};
+            optimisticQty.current = {};
+        };
+    }, []);
+
+    const handleUpdateQuantity = useCallback((item, newQty) => {
         if (newQty < 1) return;
-        setUpdatingItem(item.id);
-        try {
-            await axios.patch(`/api/cart/items/${item.id}`, { quantity: newQty });
-            await reloadCartDetails();
-        } catch {
-            toaster.create({ title: 'Ошибка обновления', type: 'error' });
-        } finally {
-            setUpdatingItem(null);
+
+        // Optimistic update в локальном items — счётчик в инпуте не отстаёт
+        // от ввода, цветной бейдж/итоги пересчитываются мгновенно.
+        setItems((prev) => prev.map((i) => (i.id === item.id ? { ...i, quantity: newQty } : i)));
+        optimisticQty.current[item.id] = newQty;
+
+        if (updateTimers.current[item.id]) {
+            clearTimeout(updateTimers.current[item.id]);
         }
-    };
+
+        updateTimers.current[item.id] = setTimeout(async () => {
+            delete updateTimers.current[item.id];
+
+            if (updateAborters.current[item.id]) {
+                updateAborters.current[item.id].abort();
+            }
+            const ctrl = new AbortController();
+            updateAborters.current[item.id] = ctrl;
+            const sentQty = optimisticQty.current[item.id];
+
+            setUpdatingItem(item.id);
+            try {
+                await axios.patch(
+                    `/api/cart/items/${item.id}`,
+                    { quantity: sentQty },
+                    { signal: ctrl.signal },
+                );
+                if (updateAborters.current[item.id] === ctrl) {
+                    // Чистим optimistic-кеш только если за время запроса юзер
+                    // не наклацал ещё одно значение. Иначе reload-merge должен
+                    // оставить актуальное локальное qty до следующего POST.
+                    if (optimisticQty.current[item.id] === sentQty) {
+                        delete optimisticQty.current[item.id];
+                    }
+                    await reloadCartDetails();
+                }
+            } catch (e) {
+                if (axios.isCancel?.(e) || e.name === 'CanceledError' || e.code === 'ERR_CANCELED') return;
+                toaster.create({ title: 'Ошибка обновления', type: 'error' });
+                if (optimisticQty.current[item.id] === sentQty) {
+                    delete optimisticQty.current[item.id];
+                }
+                await reloadCartDetails();
+            } finally {
+                if (updateAborters.current[item.id] === ctrl) {
+                    delete updateAborters.current[item.id];
+                    setUpdatingItem(null);
+                }
+            }
+        }, UPDATE_DEBOUNCE_MS);
+    }, []);
 
     // === Remove item ===
     const confirmRemoveItem = async () => {
@@ -161,9 +221,16 @@ export default function Show({ cart, cartDetails }) {
         return () => document.removeEventListener('mousedown', handler);
     }, []);
 
-    // Sync with server data on reload
+    // Sync with server data on reload. Если для какого-то item у нас есть
+    // pending optimistic qty (юзер кликнул, debounce ещё не сработал или
+    // ответ ещё не пришёл) — сохраняем локальное значение, чтобы инпут не
+    // дёргался назад на старое серверное число.
     useEffect(() => {
-        if (cartDetails?.items) setItems(cartDetails.items);
+        if (!cartDetails?.items) return;
+        setItems(cartDetails.items.map((srv) => {
+            const pending = optimisticQty.current[srv.id];
+            return pending != null ? { ...srv, quantity: pending } : srv;
+        }));
     }, [cartDetails]);
 
     // === Item type badge (instock/preorder) ===
