@@ -5,6 +5,9 @@ import { useCartStore } from '@/stores/useCartStore';
 import QuantityControl from '@/components/common/QuantityControl';
 import { Tooltip } from '@/components/ui/tooltip';
 import { cartFrameProps, cartFrameState, cartFrameTooltip, splitQty } from '@/utils/cartFrame';
+import { flyToCart } from '@/utils/flyToCart';
+import { burstConfetti } from '@/utils/confetti';
+import { isEffectsEnabled } from '@/utils/effectsEnabled';
 
 /**
  * Контрол количества товара, привязанный к Zustand-стору корзины.
@@ -78,9 +81,28 @@ function CartQuantityControl({
 
     const maxTotal = Math.max(0, Number(stockQuantity || 0)) + Math.max(0, Number(preorderQuantity || 0));
 
+    const wrapperRef = useRef(null);
+
     const handleChange = useCallback((value) => {
         if (qty === 0 && value > 0) {
             setGlowing(true);
+            if (isEffectsEnabled()) {
+                const source = wrapperRef.current;
+                // Конфетти из центра счётчика — короткий радостный всплеск
+                if (source) {
+                    const r = source.getBoundingClientRect();
+                    burstConfetti(r.left + r.width / 2, r.top + r.height / 2);
+                }
+                // Идём вверх до первого предка, в котором есть <img>:
+                // в каталоге это корневой Box карточки, на странице товара —
+                // grid-обёртка, содержащая ProductGallery.
+                let img = null;
+                for (let el = source?.parentElement; el && el !== document.body; el = el.parentElement) {
+                    const candidate = el.querySelector('img');
+                    if (candidate) { img = candidate; break; }
+                }
+                flyToCart(source, img?.currentSrc || img?.src || null);
+            }
         }
         useCartStore.getState().setQuantity(productId, value);
     }, [productId, qty]);
@@ -134,6 +156,7 @@ function CartQuantityControl({
 
     return (
         <Box
+            ref={wrapperRef}
             w={isCompact ? undefined : (fullWidth ? '100%' : undefined)}
             display={isCompact ? 'inline-block' : 'block'}
             position="relative"

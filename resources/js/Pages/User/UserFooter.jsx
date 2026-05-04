@@ -3,6 +3,7 @@ import {
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import { ColorModeButton } from '@/components/ui/color-mode';
+import EffectsToggleButton from '@/components/common/EffectsToggleButton';
 
 export default function UserFooter() {
     const { footerCategories = [], footerMenuItems = [] } = usePage().props;
@@ -126,7 +127,10 @@ export default function UserFooter() {
                         <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }}>
                             © {year} Pecado. Все права защищены.
                         </Text>
-                        <ColorModeButton aria-label="Переключить тему" />
+                        <HStack gap="1">
+                            <EffectsToggleButton />
+                            <ColorModeButton aria-label="Переключить тему" />
+                        </HStack>
                     </Flex>
                 </Box>
             </Box>
