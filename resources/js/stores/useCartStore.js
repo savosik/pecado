@@ -354,6 +354,122 @@ export const useCartStore = create((set, get) => ({
     },
 
     /**
+     * Bulk-установка количеств для набора товаров. Один POST вместо N
+     * параллельных запросов — на бэке всё в одной транзакции, поэтому нет
+     * шанса упереться в дедлок InnoDB на cart_items одной корзины.
+     *
+     * Возвращает summary { updated, clamped: [{productId, requested, clamped, instock, preorder, maxTotal}] }.
+     *
+     * @param {Object<number, number>} quantitiesMap — карта productId → qty
+     * @returns {Promise<{updated: number, clamped: Array}>}
+     */
+    setQuantitiesBulk: async (quantitiesMap) => {
+        const entries = Object.entries(quantitiesMap || {})
+            .map(([pid, qty]) => [Number(pid), Math.max(0, Math.floor(Number(qty)))])
+            .filter(([pid]) => pid > 0);
+        if (entries.length === 0) {
+            return { updated: 0, clamped: [] };
+        }
+
+        // Снимаем pending debounce по этим pid — bulk их перекрывает.
+        for (const [pid] of entries) {
+            if (debounceTimers[pid]) {
+                clearTimeout(debounceTimers[pid]);
+                delete debounceTimers[pid];
+            }
+        }
+
+        // Optimistic update
+        set((state) => {
+            const next = { ...state.quantities };
+            for (const [pid, qty] of entries) {
+                if (qty <= 0) {
+                    delete next[pid];
+                } else {
+                    next[pid] = qty;
+                }
+            }
+            saveToCache(next);
+            return { quantities: next };
+        });
+        window.dispatchEvent(new CustomEvent('cart:changed'));
+
+        // Отметить syncing
+        set((state) => {
+            const next = new Set(state.syncing);
+            for (const [pid] of entries) next.add(pid);
+            return { syncing: next };
+        });
+
+        try {
+            const { data } = await window.axios.post('/api/cart/set-products-quantity', {
+                items: entries.map(([product_id, quantity]) => ({ product_id, quantity })),
+            });
+
+            const requestedMap = Object.fromEntries(entries);
+            const responseItems = (data && data.items && typeof data.items === 'object')
+                ? Object.values(data.items)
+                : [];
+            const clampedReport = [];
+
+            // Обновляем локальное qty и splits ровно тем, что подтвердил сервер.
+            set((state) => {
+                const nextQ = { ...state.quantities };
+                const nextSplits = { ...state.productSplits };
+                for (const it of responseItems) {
+                    const pid = Number(it.product_id);
+                    if (!pid) continue;
+                    const clamped = Number(it.clamped || 0);
+                    const inS = Math.max(0, Number(it.instock || 0));
+                    const pre = Math.max(0, Number(it.preorder || 0));
+                    if (clamped <= 0) {
+                        delete nextQ[pid];
+                    } else {
+                        nextQ[pid] = clamped;
+                    }
+                    if (inS + pre > 0) {
+                        nextSplits[pid] = { instock: inS, preorder: pre };
+                    } else {
+                        delete nextSplits[pid];
+                    }
+                    const requested = requestedMap[pid] ?? clamped;
+                    if (clamped < requested) {
+                        clampedReport.push({
+                            productId: pid,
+                            requested,
+                            clamped,
+                            instock: inS,
+                            preorder: pre,
+                            maxTotal: Number(it.max_total || (inS + pre)),
+                        });
+                    }
+                }
+                saveToCache(nextQ);
+                return { quantities: nextQ, productSplits: nextSplits };
+            });
+
+            if (data && data.cart_totals) {
+                set({ cartTotals: parseTotals(data.cart_totals) });
+            }
+
+            window.dispatchEvent(new CustomEvent('cart:changed'));
+            window.dispatchEvent(new CustomEvent('cart:server-synced'));
+
+            return { updated: responseItems.length, clamped: clampedReport };
+        } catch (err) {
+            toastError('Ошибка синхронизации', 'Не удалось сохранить изменения. Данные обновлены с сервера.');
+            await get()._serverSync();
+            throw err;
+        } finally {
+            set((state) => {
+                const next = new Set(state.syncing);
+                for (const [pid] of entries) next.delete(pid);
+                return { syncing: next };
+            });
+        }
+    },
+
+    /**
      * Очистка всей корзины.
      */
     clear: async () => {

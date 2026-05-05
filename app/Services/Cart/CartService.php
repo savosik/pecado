@@ -185,7 +185,7 @@ class CartService implements CartServiceInterface
                     'warehouse_id' => null,
                 ]);
             }
-        });
+        }, 3);
 
         $cart->load('items.product');
 
@@ -264,7 +264,7 @@ class CartService implements CartServiceInterface
                     'warehouse_id' => null,
                 ]);
             }
-        });
+        }, 3);
 
         // Refresh to get updated totals (eager-load product for buildCartTotals)
         $cart->load('items.product');
@@ -274,6 +274,123 @@ class CartService implements CartServiceInterface
             'preorder' => $preorderQty,
             'clamped' => $clamped,
             'max_total' => $maxTotal,
+            'cart_totals' => $this->buildCartTotals($cart, $user),
+        ];
+    }
+
+    /**
+     * Bulk-вариант setProductQuantity. Считает spillover для каждого товара,
+     * затем удаляет/создаёт строки cart_items в одной транзакции, чтобы
+     * параллельные запросы не дедлочились на одной корзине.
+     *
+     * @param  array<int,int>  $quantities  карта product_id → qty
+     */
+    public function setProductsQuantity(User $user, Cart $cart, array $quantities): array
+    {
+        if (empty($quantities)) {
+            return [
+                'items' => [],
+                'cart_totals' => $this->buildCartTotals($cart, $user),
+            ];
+        }
+
+        $productIds = array_map('intval', array_keys($quantities));
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
+        // Считаем spillover и цену для каждого товара заранее, до транзакции:
+        // priceService и stockService могут ходить во внешние ресурсы
+        // (отдельная БД individual_prices, кэш стоков), не нужно держать их
+        // под блокировкой строк cart_items.
+        $plans = [];
+        foreach ($quantities as $pid => $qty) {
+            $pid = (int) $pid;
+            $product = $products->get($pid);
+            if (! $product) {
+                continue;
+            }
+
+            $qty = max(0, (int) $qty);
+            $stock = $this->stockService->getStock($product, $user);
+            $maxTotal = (int) $stock['available'] + (int) $stock['preorder'];
+            $clamped = min($qty, $maxTotal);
+            $instockQty = min($clamped, (int) $stock['available']);
+            $preorderQty = $clamped - $instockQty;
+            $price = $this->priceService->getUserPrice($product, $user);
+
+            $plans[$pid] = [
+                'product' => $product,
+                'price' => $price,
+                'instock' => $instockQty,
+                'preorder' => $preorderQty,
+                'clamped' => $clamped,
+                'max_total' => $maxTotal,
+            ];
+        }
+
+        if (! empty($plans)) {
+            DB::transaction(function () use ($cart, $plans) {
+                $pids = array_keys($plans);
+                // Берём блокировки на все затрагиваемые строки одним запросом —
+                // в детерминированном порядке, чтобы конкурентные транзакции
+                // ждали друг друга, а не пересекались по разным product_id.
+                $cart->items()
+                    ->whereIn('product_id', $pids)
+                    ->orderBy('id')
+                    ->lockForUpdate()
+                    ->get();
+
+                $cart->items()->whereIn('product_id', $pids)->delete();
+
+                $rows = [];
+                $now = now();
+                foreach ($plans as $pid => $plan) {
+                    if ($plan['instock'] > 0) {
+                        $rows[] = [
+                            'cart_id' => $cart->id,
+                            'product_id' => $pid,
+                            'quantity' => $plan['instock'],
+                            'price' => $plan['price'],
+                            'item_type' => 'instock',
+                            'warehouse_id' => null,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                    }
+                    if ($plan['preorder'] > 0) {
+                        $rows[] = [
+                            'cart_id' => $cart->id,
+                            'product_id' => $pid,
+                            'quantity' => $plan['preorder'],
+                            'price' => $plan['price'],
+                            'item_type' => 'preorder',
+                            'warehouse_id' => null,
+                            'created_at' => $now,
+                            'updated_at' => $now,
+                        ];
+                    }
+                }
+
+                if (! empty($rows)) {
+                    CartItem::insert($rows);
+                }
+            }, 3);
+        }
+
+        $cart->load('items.product');
+
+        $items = [];
+        foreach ($plans as $pid => $plan) {
+            $items[$pid] = [
+                'product_id' => $pid,
+                'instock' => $plan['instock'],
+                'preorder' => $plan['preorder'],
+                'clamped' => $plan['clamped'],
+                'max_total' => $plan['max_total'],
+            ];
+        }
+
+        return [
+            'items' => $items,
             'cart_totals' => $this->buildCartTotals($cart, $user),
         ];
     }

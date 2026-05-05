@@ -196,6 +196,51 @@ class CartController extends Controller
     }
 
     /**
+     * Bulk set product quantity in active cart.
+     * POST /api/cart/set-products-quantity
+     *
+     * Принимает массив items: [{product_id, quantity}, ...] и обрабатывает
+     * всё в одной транзакции — в отличие от N параллельных вызовов
+     * /api/cart/set-product-quantity, которые приводят к дедлокам InnoDB
+     * на cart_items одной корзины.
+     */
+    public function setProductsQuantity(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'items' => 'required|array|min:1|max:500',
+            'items.*.product_id' => 'required|integer|exists:products,id',
+            'items.*.quantity' => 'required|integer|min:0',
+        ], [
+            'items.required' => 'Укажите список товаров.',
+            'items.array' => 'Список товаров должен быть массивом.',
+            'items.min' => 'Список товаров не может быть пустым.',
+            'items.max' => 'Слишком много товаров в одном запросе.',
+            'items.*.product_id.required' => 'Укажите товар.',
+            'items.*.product_id.exists' => 'Товар не найден.',
+            'items.*.quantity.required' => 'Укажите количество.',
+            'items.*.quantity.integer' => 'Количество должно быть целым числом.',
+            'items.*.quantity.min' => 'Количество не может быть отрицательным.',
+        ]);
+
+        // Сворачиваем дубли по product_id (последнее значение побеждает).
+        $quantities = [];
+        foreach ($validated['items'] as $row) {
+            $quantities[(int) $row['product_id']] = (int) $row['quantity'];
+        }
+
+        $user = $request->user();
+        $cart = $this->cartService->getOrCreateActiveCart($user);
+
+        $result = $this->cartService->setProductsQuantity($user, $cart, $quantities);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Количество обновлено.',
+            ...$result,
+        ]);
+    }
+
+    /**
      * Add product to cart.
      * POST /api/cart/add-product
      */

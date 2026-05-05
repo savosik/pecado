@@ -260,6 +260,134 @@ class CartControllerTest extends TestCase
         ]);
     }
 
+    // ─── API: Bulk Set Products Quantity ───────────────────
+
+    public function test_set_products_quantity_bulk_processes_all_items(): void
+    {
+        // Stock мок: available=10, preorder=5, max=15 для всех товаров.
+        $cart = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $p1 = Product::factory()->create();
+        $p2 = Product::factory()->create();
+        $p3 = Product::factory()->create();
+
+        $response = $this->actingAs($this->user)->postJson('/api/cart/set-products-quantity', [
+            'items' => [
+                ['product_id' => $p1->id, 'quantity' => 5],
+                ['product_id' => $p2->id, 'quantity' => 12],   // spillover: 10/2
+                ['product_id' => $p3->id, 'quantity' => 200],  // clamped до 15: 10/5
+            ],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('status', 'success')
+            ->assertJsonPath("items.{$p1->id}.clamped", 5)
+            ->assertJsonPath("items.{$p1->id}.instock", 5)
+            ->assertJsonPath("items.{$p1->id}.preorder", 0)
+            ->assertJsonPath("items.{$p2->id}.clamped", 12)
+            ->assertJsonPath("items.{$p2->id}.instock", 10)
+            ->assertJsonPath("items.{$p2->id}.preorder", 2)
+            ->assertJsonPath("items.{$p3->id}.clamped", 15)
+            ->assertJsonPath("items.{$p3->id}.max_total", 15)
+            ->assertJsonPath('cart_totals.total_quantity', 5 + 12 + 15);
+
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id, 'product_id' => $p1->id, 'item_type' => 'instock', 'quantity' => 5,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id, 'product_id' => $p2->id, 'item_type' => 'instock', 'quantity' => 10,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id, 'product_id' => $p2->id, 'item_type' => 'preorder', 'quantity' => 2,
+        ]);
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id, 'product_id' => $p3->id, 'item_type' => 'preorder', 'quantity' => 5,
+        ]);
+    }
+
+    public function test_set_products_quantity_bulk_replaces_existing_rows(): void
+    {
+        $cart = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $p1 = Product::factory()->create();
+        $p2 = Product::factory()->create();
+
+        // Готовим уже существующие позиции
+        CartItem::factory()->create([
+            'cart_id' => $cart->id, 'product_id' => $p1->id, 'quantity' => 3, 'item_type' => 'instock',
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $cart->id, 'product_id' => $p2->id, 'quantity' => 7, 'item_type' => 'instock',
+        ]);
+
+        $response = $this->actingAs($this->user)->postJson('/api/cart/set-products-quantity', [
+            'items' => [
+                ['product_id' => $p1->id, 'quantity' => 0],   // удаление
+                ['product_id' => $p2->id, 'quantity' => 4],   // понижение
+            ],
+        ]);
+
+        $response->assertOk();
+
+        $this->assertDatabaseMissing('cart_items', [
+            'cart_id' => $cart->id, 'product_id' => $p1->id,
+        ]);
+        $this->assertSame(
+            1,
+            CartItem::where('cart_id', $cart->id)->where('product_id', $p2->id)->count(),
+        );
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $cart->id, 'product_id' => $p2->id, 'item_type' => 'instock', 'quantity' => 4,
+        ]);
+    }
+
+    public function test_set_products_quantity_bulk_creates_active_cart_if_missing(): void
+    {
+        $product = Product::factory()->create();
+
+        $response = $this->actingAs($this->user)->postJson('/api/cart/set-products-quantity', [
+            'items' => [['product_id' => $product->id, 'quantity' => 2]],
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('cart_totals.total_quantity', 2);
+
+        $this->assertDatabaseHas('carts', ['user_id' => $this->user->id, 'is_active' => true]);
+    }
+
+    public function test_set_products_quantity_bulk_validation(): void
+    {
+        $this->actingAs($this->user)
+            ->postJson('/api/cart/set-products-quantity', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['items']);
+
+        $this->actingAs($this->user)
+            ->postJson('/api/cart/set-products-quantity', ['items' => []])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['items']);
+
+        $this->actingAs($this->user)
+            ->postJson('/api/cart/set-products-quantity', [
+                'items' => [['product_id' => 999999, 'quantity' => 1]],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['items.0.product_id']);
+
+        $product = Product::factory()->create();
+        $this->actingAs($this->user)
+            ->postJson('/api/cart/set-products-quantity', [
+                'items' => [['product_id' => $product->id, 'quantity' => -1]],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['items.0.quantity']);
+    }
+
+    public function test_set_products_quantity_bulk_requires_auth(): void
+    {
+        $this->postJson('/api/cart/set-products-quantity', [
+            'items' => [['product_id' => 1, 'quantity' => 1]],
+        ])->assertUnauthorized();
+    }
+
     // ─── API: Add Product ──────────────────────────────────
 
     public function test_add_product_creates_cart_items(): void

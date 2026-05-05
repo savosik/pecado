@@ -170,39 +170,65 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
         toastSuccess('Корзина очищена');
     }, []);
 
-    // FIX #2: removed router.reload — data refreshes via cart:server-synced event
+    // Bulk через единый POST /api/cart/set-products-quantity (один запрос
+    // вместо N параллельных — иначе InnoDB-дедлоки на cart_items одной
+    // корзины, см. bug "Ошибка сервера при массовых действиях").
     const handleBulkSetQty = useCallback(
-        (qty) => {
+        async (qty) => {
             const n = clampDesired(qty);
-            const { setQuantity } = useCartStore.getState();
-            selected.forEach((pid) => setQuantity(pid, n));
-            toastInfo('Количество обновлено', `Установлено ${n} для ${selected.size} товаров.`);
+            const ids = Array.from(selected);
+            if (ids.length === 0) return;
+
+            const map = {};
+            ids.forEach((pid) => { map[pid] = n; });
+
+            try {
+                const { clamped } = await useCartStore.getState().setQuantitiesBulk(map);
+                if (clamped.length > 0) {
+                    toastInfo(
+                        'Количество скорректировано',
+                        `Запрошено ${n} для ${ids.length} товаров. Для ${clamped.length} количество ограничено остатками.`,
+                    );
+                } else {
+                    toastInfo('Количество обновлено', `Установлено ${n} для ${ids.length} товаров.`);
+                }
+            } catch {
+                // toastError уже показан внутри стора, состояние подтянуто с сервера
+            }
         },
         [selected],
     );
 
-    const handleBulkDelete = useCallback(() => {
-        const { getQuantity, setQuantity } = useCartStore.getState();
+    const handleBulkDelete = useCallback(async () => {
+        const { getQuantity, setQuantitiesBulk } = useCartStore.getState();
         const snapshot = Array.from(selected)
             .map((pid) => [pid, getQuantity(pid)])
             .filter(([, qty]) => qty > 0);
         const count = snapshot.length;
         if (count === 0) return;
 
-        snapshot.forEach(([pid]) => setQuantity(pid, 0));
+        const map = {};
+        snapshot.forEach(([pid]) => { map[pid] = 0; });
+
         setSelected(new Set());
-        showFlash({
-            type: 'success',
-            title: 'Товары удалены',
-            description: `Удалено ${count} позиций из корзины.`,
-            action: {
-                label: 'Отменить',
-                onClick: () => {
-                    const { setQuantity: restore } = useCartStore.getState();
-                    snapshot.forEach(([pid, qty]) => restore(pid, qty));
+
+        try {
+            await setQuantitiesBulk(map);
+            showFlash({
+                type: 'success',
+                title: 'Товары удалены',
+                description: `Удалено ${count} позиций из корзины.`,
+                action: {
+                    label: 'Отменить',
+                    onClick: () => {
+                        const restoreMap = Object.fromEntries(snapshot);
+                        useCartStore.getState().setQuantitiesBulk(restoreMap);
+                    },
                 },
-            },
-        });
+            });
+        } catch {
+            // toastError + serverSync уже отработали внутри стора
+        }
     }, [selected, showFlash]);
 
     const handleBulkExport = useCallback(async () => {

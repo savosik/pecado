@@ -63,6 +63,21 @@ interface CartServiceInterface
     public function setProductQuantity(User $user, Cart $cart, Product $product, int $qty): array;
 
     /**
+     * Bulk-вариант setProductQuantity. Обрабатывает массив пар (product_id, qty)
+     * в одной транзакции и возвращает сводку по каждому товару + актуальные
+     * cart_totals. Используется для массовых действий («Задать количество»,
+     * «Удалить выбранные»), чтобы избежать N параллельных POST → дедлоков на
+     * cart_items одной корзины.
+     *
+     * @param  array<int,int>  $quantities  карта product_id → qty (qty<=0 удаляет товар)
+     * @return array{
+     *     items: array<int, array{product_id:int, instock:int, preorder:int, clamped:int, max_total:int}>,
+     *     cart_totals: array
+     * }
+     */
+    public function setProductsQuantity(User $user, Cart $cart, array $quantities): array;
+
+    /**
      * Create a new cart for a user (deactivates other carts).
      */
     public function createCart(User $user, ?string $name = null): Cart;
