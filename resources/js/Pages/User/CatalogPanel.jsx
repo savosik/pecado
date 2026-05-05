@@ -571,6 +571,38 @@ export default function CatalogPanel({ open, onClose }) {
                                     {/* Sidebar — root categories */}
                                     <Box w="72" flexShrink="0" borderRight="1px solid" borderColor="border.muted" pr="4">
                                         <VStack align="stretch" gap="1">
+                                            {/* «Все категории» — показывает все корневые подряд с длинным скроллом */}
+                                            <Flex
+                                                as="button"
+                                                align="center"
+                                                gap="3"
+                                                px="3" py="2"
+                                                borderRadius="lg"
+                                                fontSize="sm"
+                                                cursor="pointer"
+                                                textAlign="left"
+                                                bg={activeRootIndex === -1 ? 'pecado.600' : 'transparent'}
+                                                color={activeRootIndex === -1 ? 'white' : undefined}
+                                                _hover={activeRootIndex === -1 ? {} : { bg: 'gray.50' }}
+                                                _dark={activeRootIndex === -1
+                                                    ? { bg: 'pecado.600', color: 'white' }
+                                                    : { _hover: { bg: 'gray.800' } }
+                                                }
+                                                transition="all 0.15s"
+                                                onMouseEnter={() => setActiveRootIndex(-1)}
+                                                onClick={() => setActiveRootIndex(-1)}
+                                            >
+                                                <Flex
+                                                    w="6" h="6" align="center" justify="center"
+                                                    borderRadius="md" flexShrink="0"
+                                                    bg={activeRootIndex === -1 ? 'whiteAlpha.200' : 'gray.100'}
+                                                    _dark={{ bg: activeRootIndex === -1 ? 'whiteAlpha.200' : 'gray.700' }}
+                                                >
+                                                    <LuLayoutGrid size={14} />
+                                                </Flex>
+                                                <Text truncate fontWeight="600">Все категории</Text>
+                                            </Flex>
+
                                             {categories.map((root, idx) => (
                                                 <Flex
                                                     key={root.id}
@@ -612,7 +644,37 @@ export default function CatalogPanel({ open, onClose }) {
 
                                     {/* Subcategories panel */}
                                     <Box flex="1" minW="0">
-                                        {categories[activeRootIndex] && (
+                                        {activeRootIndex === -1 ? (
+                                            <VStack align="stretch" gap="8">
+                                                {categories.map((root) => (
+                                                    <Box key={root.id}>
+                                                        <Text
+                                                            as={Link}
+                                                            href={buildCategoryUrl(root.slug)}
+                                                            onClick={onClose}
+                                                            fontSize="md"
+                                                            fontWeight="600"
+                                                            mb="4"
+                                                            display="block"
+                                                            _hover={{ color: 'pecado.500' }}
+                                                        >
+                                                            {root.name}
+                                                        </Text>
+                                                        <Box
+                                                            display="grid"
+                                                            gridTemplateColumns={{ base: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }}
+                                                            gap="6"
+                                                        >
+                                                            {[...(root.children || [])]
+                                                                .sort((a, b) => (b.children?.length || 0) - (a.children?.length || 0))
+                                                                .map((second) => (
+                                                                <CategoryColumn key={second.id} category={second} onNavigate={onClose} />
+                                                            ))}
+                                                        </Box>
+                                                    </Box>
+                                                ))}
+                                            </VStack>
+                                        ) : categories[activeRootIndex] && (
                                             <>
                                                 <Text
                                                     as={Link}
