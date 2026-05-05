@@ -473,7 +473,7 @@ export default function Index({ carts = { data: [], current_page: 1, last_page: 
                                                         <LuStar style={c.is_active ? { fill: 'currentColor' } : {}} />
                                                     </IconButton>
                                                     <IconButton
-                                                        as={Link} href={`/cabinet/carts/${c.id}`}
+                                                        as={Link} href={`/cart/${c.id}`}
                                                         size="xs" variant="ghost" colorPalette="blue"
                                                         aria-label="Просмотр"
                                                     >
@@ -522,7 +522,7 @@ export default function Index({ carts = { data: [], current_page: 1, last_page: 
                                             >
                                                 <LuStar style={c.is_active ? { fill: 'currentColor' } : {}} />
                                             </IconButton>
-                                            <IconButton as={Link} href={`/cabinet/carts/${c.id}`} size="sm" variant="ghost" colorPalette="blue" aria-label="Просмотр">
+                                            <IconButton as={Link} href={`/cart/${c.id}`} size="sm" variant="ghost" colorPalette="blue" aria-label="Просмотр">
                                                 <LuEye />
                                             </IconButton>
                                             {c.can_delete && (

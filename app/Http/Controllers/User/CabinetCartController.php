@@ -13,6 +13,7 @@ use App\Support\Search\FuzzyProductMatcher;
 use App\Support\Search\QueryRouter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -172,28 +173,15 @@ class CabinetCartController extends Controller
     }
 
     /**
-     * Show a single cart with items for editing in cabinet.
+     * @deprecated Используйте маршрут `cart.show` (`/cart/{cart}`) — единая страница корзины.
+     * Оставлен только для редиректа со старого URL `/cabinet/carts/{cart}` на актуальную страницу.
      */
-    public function show(Cart $cart)
+    public function show(Cart $cart): RedirectResponse
     {
         $user = Auth::user();
         abort_if($cart->user_id !== $user->id, 403, 'Доступ запрещён.');
 
-        $details = $this->cartService->getCartDetails($cart, $user);
-
-        $cartsCount = $user->carts()->count();
-
-        return Inertia::render('User/Cabinet/Carts/Show', [
-            'cart' => [
-                'id' => $cart->id,
-                'name' => $cart->name,
-                'is_active' => $cart->is_active,
-                'created_at' => $cart->created_at?->format('d.m.Y H:i'),
-                'updated_at' => $cart->updated_at?->format('d.m.Y H:i'),
-                'can_delete' => $cartsCount > 1,
-            ],
-            'cartDetails' => $details,
-        ]);
+        return redirect()->route('cart.show', $cart);
     }
 
     /**

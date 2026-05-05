@@ -1,3 +1,8 @@
+/**
+ * @deprecated Используйте `Pages/User/Cart/Index.jsx` (маршрут `/cart/{cart}`).
+ * Этот компонент оставлен на случай отката; при нормальной работе сюда не попадаем —
+ * `CabinetCartController::show` редиректит на единую страницу корзины.
+ */
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
     Box, Flex, VStack, HStack, Text, Card, Badge, Button,
