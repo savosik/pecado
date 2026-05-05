@@ -176,42 +176,38 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                 h="100%"
                             >
                                 <Card.Body p={{ base: '4', md: '5' }}>
-                                    <Flex
-                                        direction={{ base: 'row', md: 'column' }}
-                                        align={{ base: 'center', md: 'stretch' }}
-                                        gap={{ base: '3', md: '0' }}
-                                    >
-                                        <Flex
-                                            align="center"
-                                            justify="center"
-                                            w="10"
-                                            h="10"
-                                            borderRadius="xl"
-                                            bg="pecado.50"
-                                            color="pecado.500"
-                                            _dark={{
-                                                bg: 'pecado.900/20',
-                                                color: 'pecado.300',
-                                            }}
-                                            flexShrink="0"
-                                            mb={{ base: '0', md: '3' }}
-                                        >
-                                            <stat.icon size={20} />
-                                        </Flex>
-                                        <Flex
-                                            direction={{ base: 'row', md: 'column' }}
-                                            align={{ base: 'baseline', md: 'stretch' }}
-                                            gap={{ base: '2', md: '1' }}
-                                            flex="1"
-                                            minW="0"
-                                        >
-                                            <Text fontSize={{ base: 'xl', md: '2xl' }} fontWeight="800" lineHeight="1">
-                                                {stat.value}
-                                            </Text>
-                                            <Text fontSize="sm" color="gray.500">
+                                    <Flex direction="column" gap="3" h="100%">
+                                        <Flex align="center" justify="space-between" gap="3">
+                                            <Text fontSize="sm" fontWeight="500" color="gray.500" lineHeight="1.2">
                                                 {stat.label}
                                             </Text>
+                                            <Flex
+                                                align="center"
+                                                justify="center"
+                                                w="9"
+                                                h="9"
+                                                borderRadius="lg"
+                                                bg="pecado.50"
+                                                color="pecado.500"
+                                                _dark={{
+                                                    bg: 'pecado.900/20',
+                                                    color: 'pecado.300',
+                                                }}
+                                                flexShrink="0"
+                                            >
+                                                <stat.icon size={18} />
+                                            </Flex>
                                         </Flex>
+                                        <Text
+                                            fontSize={{ base: '2xl', md: '3xl' }}
+                                            fontWeight="800"
+                                            lineHeight="1"
+                                            color="gray.900"
+                                            _dark={{ color: 'gray.50' }}
+                                            mt="auto"
+                                        >
+                                            {stat.value}
+                                        </Text>
                                     </Flex>
                                 </Card.Body>
                             </Card.Root>
@@ -230,46 +226,43 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                             h="100%"
                         >
                             <Card.Body p={{ base: '4', md: '5' }}>
-                                <Flex
-                                    direction={{ base: 'row', md: 'column' }}
-                                    align={{ base: 'center', md: 'stretch' }}
-                                    gap={{ base: '3', md: '0' }}
-                                >
-                                    <Flex
-                                        align="center"
-                                        justify="center"
-                                        w="10"
-                                        h="10"
-                                        borderRadius="xl"
-                                        bg="pecado.50"
-                                        color="pecado.500"
-                                        _dark={{
-                                            bg: 'pecado.900/20',
-                                            color: 'pecado.300',
-                                        }}
-                                        flexShrink="0"
-                                        mb={{ base: '0', md: '3' }}
-                                    >
-                                        <LuWallet size={20} />
+                                <Flex direction="column" gap="3" h="100%">
+                                    <Flex align="center" justify="space-between" gap="3">
+                                        <Text fontSize="sm" fontWeight="500" color="gray.500" lineHeight="1.2" truncate>
+                                            {balance.contractors_count > 1
+                                                ? `Баланс по ${balance.contractors_count} контрагентам`
+                                                : 'Баланс'}
+                                        </Text>
+                                        <Flex
+                                            align="center"
+                                            justify="center"
+                                            w="9"
+                                            h="9"
+                                            borderRadius="lg"
+                                            bg="pecado.50"
+                                            color="pecado.500"
+                                            _dark={{
+                                                bg: 'pecado.900/20',
+                                                color: 'pecado.300',
+                                            }}
+                                            flexShrink="0"
+                                        >
+                                            <LuWallet size={18} />
+                                        </Flex>
                                     </Flex>
-                                    <Box flex="1" minW="0">
+                                    <Box minW="0" mt="auto">
                                         <Text
-                                            fontSize={{ base: 'xl', md: '2xl' }}
+                                            fontSize={{ base: '2xl', md: '3xl' }}
                                             fontWeight="800"
-                                            lineHeight="1.1"
+                                            lineHeight="1"
                                             whiteSpace="nowrap"
                                             color={parseFloat(balance.current_balance) < 0 ? 'red.600' : 'green.600'}
                                             _dark={{ color: parseFloat(balance.current_balance) < 0 ? 'red.400' : 'green.400' }}
                                         >
                                             {parseFloat(balance.current_balance).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
                                         </Text>
-                                        <Text fontSize="sm" color="gray.500" mt="1">
-                                            {balance.contractors_count > 1
-                                                ? `Баланс по ${balance.contractors_count} контрагентам`
-                                                : 'Баланс'}
-                                        </Text>
                                         {parseFloat(balance.overdue_debt) > 0 && (
-                                            <Text fontSize="xs" color="red.500" mt="1" whiteSpace="nowrap">
+                                            <Text fontSize="xs" color="red.500" mt="1.5" whiteSpace="nowrap">
                                                 Просрочка: {parseFloat(balance.overdue_debt).toLocaleString('ru-RU', { minimumFractionDigits: 2 })}&nbsp;₽
                                             </Text>
                                         )}
