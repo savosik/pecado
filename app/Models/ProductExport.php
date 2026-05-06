@@ -75,8 +75,12 @@ class ProductExport extends Model
 
     /**
      * Check if a valid cache file exists.
+     *
+     * Дефолтный TTL — 5 минут. Партнёрские прайсы обновляются по расписанию
+     * `exports:warm` каждые 15 минут, а ERP-апдейты цен/остатков прилетают
+     * непрерывно — короткий TTL минимизирует окно «несвежих» данных в файле.
      */
-    public function hasFreshCache(int $maxAgeMinutes = 10): bool
+    public function hasFreshCache(int $maxAgeMinutes = 5): bool
     {
         if (! $this->cached_at) {
             return false;

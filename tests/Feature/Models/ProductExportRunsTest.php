@@ -106,6 +106,35 @@ class ProductExportRunsTest extends TestCase
         $this->assertSame(10, $export->lastRun->rows_count);
     }
 
+    public function test_default_cache_ttl_is_five_minutes(): void
+    {
+        $user = User::factory()->create();
+        $export = ProductExport::create([
+            'user_id' => $user->id,
+            'client_user_id' => $user->id,
+            'name' => 'ttl',
+            'format' => 'json',
+            'filters' => [],
+            'fields' => [],
+            'is_active' => true,
+        ]);
+
+        // Кэш-файл нужен, иначе hasFreshCache коротко замкнётся на проверке существования.
+        $cacheDir = dirname($export->getCacheFilePath());
+        if (! is_dir($cacheDir)) {
+            mkdir($cacheDir, 0755, true);
+        }
+        file_put_contents($export->getCacheFilePath(), '{}');
+
+        $export->update(['cached_at' => now()->subMinutes(4)]);
+        $this->assertTrue($export->hasFreshCache(), '4 мин назад должно считаться свежим при TTL=5');
+
+        $export->update(['cached_at' => now()->subMinutes(6)]);
+        $this->assertFalse($export->hasFreshCache(), '6 мин назад должно считаться устаревшим при TTL=5');
+
+        @unlink($export->getCacheFilePath());
+    }
+
     public function test_runs_are_deleted_with_export(): void
     {
         $user = User::factory()->create();
