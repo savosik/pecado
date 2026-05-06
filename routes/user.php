@@ -166,6 +166,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
 
     // Стандартные выгрузки (пресеты для CMS)
     Route::get('/export-presets', [\App\Http\Controllers\User\ExportPresetController::class, 'index'])->name('export-presets.index');
+    Route::get('/export-presets/{preset}/status', [\App\Http\Controllers\User\ExportPresetController::class, 'status'])->name('export-presets.status');
     Route::post('/export-presets/{preset}/generate', [\App\Http\Controllers\User\ExportPresetController::class, 'generate'])->name('export-presets.generate');
     Route::delete('/export-presets/{preset}', [\App\Http\Controllers\User\ExportPresetController::class, 'destroy'])->name('export-presets.destroy');
 

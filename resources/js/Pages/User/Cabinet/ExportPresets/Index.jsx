@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import {
-    Box, Flex, Text, Card, HStack, VStack, Badge, Button,
-    IconButton, SimpleGrid, Heading,
+    Box, Flex, Text, Card, HStack, VStack, Badge, Button, Spinner,
+    IconButton, SimpleGrid,
 } from '@chakra-ui/react';
 import { Head } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
@@ -9,9 +9,11 @@ import {
     LuFileCode, LuShoppingBag, LuGlobe, LuMessageCircle, LuSearch,
     LuPenTool, LuShoppingCart, LuStore, LuFileDown,
     LuCopy, LuCheck, LuLink, LuX, LuBraces, LuFileSpreadsheet,
+    LuRefreshCw, LuTriangleAlert,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
+import useExportStatus from '@/hooks/useExportStatus';
 
 const presetIcons = {
     LuFileCode, LuShoppingBag, LuGlobe, LuMessageCircle,
@@ -19,10 +21,21 @@ const presetIcons = {
     LuBraces, LuFileSpreadsheet,
 };
 
-function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
+const isInProgress = (status) => status === 'queued' || status === 'generating';
+
+function PresetCard({ preset, onGenerate, onDelete, onStatusUpdate, loadingKey }) {
     const IconComponent = presetIcons[preset.icon] || LuFileDown;
     const isLoading = loadingKey === preset.key;
-    const isGenerated = preset.generated && preset.download_url;
+    const inProgress = isInProgress(preset.status);
+    const failed = preset.status === 'failed';
+    const isReady = preset.generated && preset.download_url && preset.status === 'ready';
+
+    const handleStatusUpdate = useCallback(
+        (data) => onStatusUpdate(preset.key, data),
+        [preset.key, onStatusUpdate],
+    );
+
+    useExportStatus(preset.key, inProgress, handleStatusUpdate);
 
     return (
         <Card.Root
@@ -30,7 +43,6 @@ function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
             borderRadius="xl"
             border="1px solid"
             borderColor="border.muted"
-
             overflow="hidden"
             transition="all 0.2s"
             _hover={{ shadow: 'md', borderColor: '#9e1b32' }}
@@ -59,8 +71,42 @@ function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
                         {preset.description}
                     </Text>
 
-                    {/* Link & Actions */}
-                    {isGenerated ? (
+                    {/* Состояние: генерация */}
+                    {inProgress && (
+                        <HStack
+                            bg="blue.50" _dark={{ bg: 'blue.900' }}
+                            borderRadius="lg" px="3" py="2" gap="2"
+                        >
+                            <Spinner size="xs" color="blue.500" />
+                            <Text fontSize="xs" color="blue.700" _dark={{ color: 'blue.200' }}>
+                                Генерация в фоне…
+                            </Text>
+                        </HStack>
+                    )}
+
+                    {/* Состояние: ошибка */}
+                    {failed && (
+                        <VStack
+                            align="stretch" gap="2"
+                            bg="red.50" _dark={{ bg: 'red.900' }}
+                            borderRadius="lg" px="3" py="2"
+                        >
+                            <HStack gap="2">
+                                <LuTriangleAlert size={14} color="var(--chakra-colors-red-500)" />
+                                <Text fontSize="xs" color="red.700" _dark={{ color: 'red.200' }} fontWeight="600">
+                                    Не удалось сгенерировать
+                                </Text>
+                            </HStack>
+                            {preset.last_run?.error_message && (
+                                <Text fontSize="2xs" color="red.600" _dark={{ color: 'red.300' }} lineClamp={3}>
+                                    {preset.last_run.error_message}
+                                </Text>
+                            )}
+                        </VStack>
+                    )}
+
+                    {/* Состояние: готов */}
+                    {isReady && (
                         <VStack align="stretch" gap="2">
                             <HStack
                                 bg="green.50" _dark={{ bg: 'green.900' }}
@@ -89,6 +135,14 @@ function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
                                     <LuFileDown /> Скачать
                                 </Button>
                                 <IconButton
+                                    size="xs" variant="ghost" colorPalette="blue"
+                                    onClick={() => onGenerate(preset.key)}
+                                    aria-label="Пересобрать"
+                                    title="Пересобрать выгрузку"
+                                >
+                                    <LuRefreshCw />
+                                </IconButton>
+                                <IconButton
                                     size="xs" variant="ghost" colorPalette="red"
                                     onClick={() => onDelete(preset.key)}
                                     aria-label="Удалить выгрузку"
@@ -102,16 +156,19 @@ function PresetCard({ preset, onGenerate, onDelete, loadingKey }) {
                                 </Text>
                             )}
                         </VStack>
-                    ) : (
+                    )}
+
+                    {/* Состояние: idle (нет ссылки или ошибка) */}
+                    {!inProgress && !isReady && (
                         <Button
                             w="full" size="sm"
                             bg="#9e1b32" color="white"
                             _hover={{ bg: '#7a1527' }}
                             onClick={() => onGenerate(preset.key)}
                             loading={isLoading}
-                            loadingText="Генерация..."
+                            loadingText="Постановка в очередь…"
                         >
-                            <LuLink /> Получить ссылку
+                            <LuLink /> {failed ? 'Повторить' : 'Получить ссылку'}
                         </Button>
                     )}
                 </VStack>
@@ -128,15 +185,20 @@ export default function Index({ presets: initialPresets }) {
         try {
             setGeneratingKey(key);
             const res = await axios.post(`/cabinet/export-presets/${key}/generate`);
-            // Обновляем пресет в локальном состоянии
-            setPresets(prev => prev.map(p =>
+            setPresets((prev) => prev.map((p) =>
                 p.key === key
-                    ? { ...p, generated: true, download_url: res.data.download_url, export_id: res.data.export_id }
+                    ? {
+                        ...p,
+                        generated: true,
+                        download_url: res.data.download_url,
+                        export_id: res.data.export_id,
+                        status: res.data.status || 'queued',
+                    }
                     : p
             ));
-            toaster.create({ title: 'Ссылка на выгрузку создана!', type: 'success' });
-        } catch (err) {
-            toaster.create({ title: 'Ошибка генерации', type: 'error' });
+            toaster.create({ title: 'Выгрузка поставлена в очередь', type: 'success' });
+        } catch {
+            toaster.create({ title: 'Ошибка постановки в очередь', type: 'error' });
         } finally {
             setGeneratingKey(null);
         }
@@ -145,16 +207,39 @@ export default function Index({ presets: initialPresets }) {
     const handleDeletePreset = async (key) => {
         try {
             await axios.delete(`/cabinet/export-presets/${key}`);
-            setPresets(prev => prev.map(p =>
+            setPresets((prev) => prev.map((p) =>
                 p.key === key
-                    ? { ...p, generated: false, download_url: null, export_id: null, cached_at: null }
+                    ? {
+                        ...p,
+                        generated: false,
+                        download_url: null,
+                        export_id: null,
+                        cached_at: null,
+                        status: 'idle',
+                        last_run: null,
+                    }
                     : p
             ));
             toaster.create({ title: 'Выгрузка удалена', type: 'success' });
-        } catch (err) {
+        } catch {
             toaster.create({ title: 'Ошибка удаления', type: 'error' });
         }
     };
+
+    const handleStatusUpdate = useCallback((key, data) => {
+        setPresets((prev) => prev.map((p) =>
+            p.key === key
+                ? {
+                    ...p,
+                    status: data.status,
+                    cached_at: data.cached_at,
+                    last_downloaded_at: data.last_downloaded_at,
+                    download_url: data.download_url || p.download_url,
+                    last_run: data.last_run,
+                }
+                : p
+        ));
+    }, []);
 
     return (
         <CabinetLayout title="Стандартные выгрузки">
@@ -173,6 +258,7 @@ export default function Index({ presets: initialPresets }) {
                         preset={preset}
                         onGenerate={handleGeneratePreset}
                         onDelete={handleDeletePreset}
+                        onStatusUpdate={handleStatusUpdate}
                         loadingKey={generatingKey}
                     />
                 ))}

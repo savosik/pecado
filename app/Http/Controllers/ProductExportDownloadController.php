@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\GenerateProductExportJob;
 use App\Models\ProductExport;
 use App\Services\ProductExport\Presets\PresetInterface;
 use App\Services\ProductExport\Presets\PresetRegistry;
 use App\Services\ProductExportService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Facades\Cache;
 
 class ProductExportDownloadController extends Controller
 {
@@ -28,22 +29,23 @@ class ProductExportDownloadController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        // Пресетная выгрузка — используем соответствующий генератор
+        // Пресетная выгрузка — асинхронный пайплайн.
         if ($export->isPreset()) {
             return $this->handlePresetDownload($export);
         }
 
-        // Кастомная выгрузка — оригинальная логика
+        // Кастомная выгрузка — оригинальная синхронная логика.
         return $this->exportService->generate($export);
     }
 
     /**
-     * Стратегия ленивой синхронной генерации с TTL кэша 10 минут.
+     * Стратегия отдачи пресетной выгрузки:
      *
-     * 1) Свежий кэш (< 10 минут) → отдаём мгновенно.
-     * 2) Иначе → синхронно генерируем файл и отдаём. Cache::lock сериализует параллельные
-     *    запросы к одной выгрузке: только один процесс реально пишет файл, остальные ждут
-     *    и получают готовый результат.
+     *  1) Свежий кэш (< 10 минут) → отдаём моментально.
+     *  2) Иначе диспатчим GenerateProductExportJob (ShouldBeUnique гасит дубликаты).
+     *     На sync-очереди job выполнится прямо в dispatch → файл готов после refresh().
+     *     На async-очереди файл может быть ещё не готов → отдаём stale-копию (если есть)
+     *     с заголовком X-Export-Stale, либо 202 со статусом, чтобы клиент ждал.
      */
     protected function handlePresetDownload(ProductExport $export)
     {
@@ -54,20 +56,19 @@ class ProductExportDownloadController extends Controller
             return $this->streamCachedFile($export, $preset);
         }
 
-        // До 5 минут на синхронную генерацию. Учти fastcgi_read_timeout nginx —
-        // при превышении клиент получит 504, поэтому пресеты должны укладываться в бюджет.
-        set_time_limit(300);
+        GenerateProductExportJob::dispatch($export->id);
 
-        Cache::lock("product-export-generate:{$export->id}", 300)
-            ->block(60, function () use ($export, $preset) {
-                // Перечитываем cached_at — пока ждали лок, другой процесс мог сгенерировать.
-                $export->refresh();
-                if (! $this->hasFreshCacheFile($export)) {
-                    $this->generateCacheFile($export, $preset);
-                }
-            });
+        $export->refresh();
 
-        return $this->streamCachedFile($export, $preset);
+        if ($this->hasFreshCacheFile($export)) {
+            return $this->streamCachedFile($export, $preset);
+        }
+
+        if ($this->hasAnyCacheFile($export)) {
+            return $this->streamCachedFile($export, $preset, stale: true);
+        }
+
+        return $this->pendingResponse($export);
     }
 
     protected function hasFreshCacheFile(ProductExport $export): bool
@@ -81,45 +82,40 @@ class ProductExportDownloadController extends Controller
         return file_exists($filePath) && filesize($filePath) > 0;
     }
 
-    protected function generateCacheFile(ProductExport $export, PresetInterface $preset): void
+    protected function hasAnyCacheFile(ProductExport $export): bool
     {
         $filePath = $export->getCacheFilePath();
-        $cacheDir = dirname($filePath);
 
-        if (! is_dir($cacheDir)) {
-            mkdir($cacheDir, 0755, true);
-        }
-
-        // Пишем во временный файл, затем атомарно заменяем — чтобы
-        // параллельные читатели не получили наполовину записанный файл.
-        $tmpPath = $filePath.'.tmp.'.getmypid();
-
-        try {
-            $stream = fopen($tmpPath, 'w');
-            $preset->writeToStream($stream, $export);
-            if (is_resource($stream)) {
-                fclose($stream);
-            }
-
-            rename($tmpPath, $filePath);
-            $export->update(['cached_at' => now()]);
-        } catch (\Throwable $e) {
-            if (file_exists($tmpPath)) {
-                @unlink($tmpPath);
-            }
-            throw $e;
-        }
+        return file_exists($filePath) && filesize($filePath) > 0;
     }
 
-    protected function streamCachedFile(ProductExport $export, PresetInterface $preset)
+    protected function streamCachedFile(ProductExport $export, PresetInterface $preset, bool $stale = false)
     {
         $filePath = $export->getCacheFilePath();
         $filename = "export_{$preset->key()}_".now()->format('Y-m-d').".{$preset->fileExtension()}";
 
         $export->update(['last_downloaded_at' => now()]);
 
-        return response()->download($filePath, $filename, [
-            'Content-Type' => $preset->mimeType(),
-        ]);
+        $headers = ['Content-Type' => $preset->mimeType()];
+        if ($stale) {
+            $headers['X-Export-Stale'] = '1';
+        }
+
+        return response()->download($filePath, $filename, $headers);
+    }
+
+    protected function pendingResponse(ProductExport $export): JsonResponse
+    {
+        $lastRun = $export->lastRun;
+
+        return response()->json([
+            'status' => $export->status,
+            'message' => 'Выгрузка ставится в очередь, обновите страницу через несколько секунд.',
+            'run' => $lastRun ? [
+                'id' => $lastRun->id,
+                'status' => $lastRun->status,
+                'started_at' => $lastRun->started_at?->toISOString(),
+            ] : null,
+        ], 202);
     }
 }
