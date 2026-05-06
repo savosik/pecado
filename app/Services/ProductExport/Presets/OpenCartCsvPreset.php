@@ -11,6 +11,11 @@ use App\Models\ProductExport;
  */
 class OpenCartCsvPreset extends AbstractPreset
 {
+    protected function eagerLoad(): array
+    {
+        return [...parent::eagerLoad(), 'model'];
+    }
+
     public function key(): string
     {
         return 'opencart';

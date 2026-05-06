@@ -30,6 +30,15 @@ interface PriceServiceInterface
     public function getPriceResult(Product $product, ?User $user = null, ?int $warehouseId = null): PriceResult;
 
     /**
+     * Получить карту PriceResult для коллекции товаров одним батч-запросом.
+     * Ключ массива — product_id, значение — PriceResult с учётом индивидуальной цены пользователя.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, PriceResult>
+     */
+    public function getPriceMapForProducts(iterable $products, ?User $user = null, ?int $warehouseId = null): array;
+
+    /**
      * Get the price of the product in a specific currency.
      */
     public function getCurrencyPrice(Product $product, Currency $currency): float;

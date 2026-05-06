@@ -16,6 +16,11 @@ use App\Models\ProductExport;
  */
 class YmlPreset extends AbstractPreset
 {
+    protected function eagerLoad(): array
+    {
+        return [...parent::eagerLoad(), 'barcodes', 'model'];
+    }
+
     public function key(): string
     {
         return 'yml';

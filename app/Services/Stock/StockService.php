@@ -43,6 +43,56 @@ class StockService implements StockServiceInterface
     }
 
     /**
+     * Получить карту доступных остатков для коллекции товаров одним SQL.
+     * Делает 2 запроса независимо от размера коллекции:
+     *   1) region_warehouse → warehouse_id для primary-складов региона;
+     *   2) product_warehouse → SUM(quantity) GROUP BY product_id.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, int>
+     */
+    public function getAvailableStockMap(iterable $products, ?User $user = null): array
+    {
+        $result = [];
+        $productIds = [];
+        foreach ($products as $product) {
+            $result[$product->id] = 0;
+            $productIds[] = (int) $product->id;
+        }
+
+        if ($productIds === []) {
+            return $result;
+        }
+
+        $regionId = $this->resolveRegionId($user);
+        if (! $regionId) {
+            return $result;
+        }
+
+        $warehouseIds = DB::table('region_warehouse')
+            ->where('region_id', $regionId)
+            ->where('type', 'primary')
+            ->pluck('warehouse_id');
+
+        if ($warehouseIds->isEmpty()) {
+            return $result;
+        }
+
+        $rows = DB::table('product_warehouse')
+            ->whereIn('warehouse_id', $warehouseIds)
+            ->whereIn('product_id', $productIds)
+            ->select('product_id', DB::raw('SUM(quantity) as total'))
+            ->groupBy('product_id')
+            ->get();
+
+        foreach ($rows as $row) {
+            $result[(int) $row->product_id] = (int) $row->total;
+        }
+
+        return $result;
+    }
+
+    /**
      * Резолвит ID региона пользователя с fallback на регион по умолчанию.
      * Если у пользователя не задан region_id (например, у админа), используется Region::defaultId() —
      * та же логика, что в каталоге (CatalogApiController), чтобы наличие в карточке и в корзине совпадало.

@@ -17,6 +17,11 @@ use App\Models\ProductExport;
  */
 class JsonCatalogPreset extends AbstractPreset
 {
+    protected function eagerLoad(): array
+    {
+        return [...parent::eagerLoad(), 'barcodes', 'model'];
+    }
+
     public function key(): string
     {
         return 'json_catalog';

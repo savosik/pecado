@@ -23,6 +23,11 @@ use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
  */
 class ExcelCatalogPreset extends AbstractPreset
 {
+    protected function eagerLoad(): array
+    {
+        return [...parent::eagerLoad(), 'model'];
+    }
+
     public function key(): string
     {
         return 'excel';

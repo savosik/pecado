@@ -87,6 +87,44 @@ class PriceService implements PriceServiceInterface
     }
 
     /**
+     * Получить карту PriceResult для коллекции товаров одним запросом в prices DB.
+     * Без user или без erp_id — все товары без скидки. Если loadPriceMap отдала пусто
+     * (нет индивидуальных цен или prices DB недоступна) — все товары без скидки.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, PriceResult>
+     */
+    public function getPriceMapForProducts(iterable $products, ?User $user = null, ?int $warehouseId = null): array
+    {
+        $productList = [];
+        $productIds = [];
+        foreach ($products as $product) {
+            $productList[] = $product;
+            $productIds[] = (int) $product->id;
+        }
+
+        if ($productList === []) {
+            return [];
+        }
+
+        $priceMap = ($user && $user->erp_id)
+            ? IndividualPriceProxy::loadPriceMap($user->id, $productIds)
+            : collect();
+
+        $result = [];
+        foreach ($productList as $product) {
+            $basePrice = $this->getBasePrice($product);
+            $individualPrice = $priceMap->get($product->id);
+
+            $result[$product->id] = $individualPrice !== null
+                ? PriceResult::withIndividualPrice($basePrice, (float) $individualPrice)
+                : PriceResult::withoutDiscount($basePrice);
+        }
+
+        return $result;
+    }
+
+    /**
      * Get the price of the product in a specific currency.
      */
     public function getCurrencyPrice(Product $product, Currency $currency): float

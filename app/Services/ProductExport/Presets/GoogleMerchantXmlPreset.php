@@ -15,6 +15,11 @@ use App\Models\ProductExport;
  */
 class GoogleMerchantXmlPreset extends AbstractPreset
 {
+    protected function eagerLoad(): array
+    {
+        return [...parent::eagerLoad(), 'barcodes'];
+    }
+
     public function key(): string
     {
         return 'google_merchant';

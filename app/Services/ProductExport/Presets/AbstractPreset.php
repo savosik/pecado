@@ -2,6 +2,7 @@
 
 namespace App\Services\ProductExport\Presets;
 
+use App\Contracts\Pricing\PriceResult;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Attribute;
@@ -42,7 +43,8 @@ abstract class AbstractPreset implements PresetInterface
 
     /**
      * Обработка товаров чанками через callback.
-     * Вызывает $callback для каждого чанка mapped-данных.
+     * Перед mapProduct по каждому чанку батчем подгружаются цены и остатки —
+     * это убирает N+1 на priceService->getPriceResult() и stockService->getAvailableStock().
      *
      * @param  callable(Collection<int, array>): void  $callback  получает коллекцию rich-data массивов
      */
@@ -52,7 +54,16 @@ abstract class AbstractPreset implements PresetInterface
 
         $this->buildBaseQuery()
             ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback) {
-                $mapped = $products->map(fn (Product $product) => $this->mapProduct($product, $clientUser));
+                $productList = $products->all();
+                $priceMap = $this->priceService->getPriceMapForProducts($productList, $clientUser);
+                $stockMap = $this->stockService->getAvailableStockMap($productList, $clientUser);
+
+                $mapped = $products->map(fn (Product $product) => $this->mapProduct(
+                    $product,
+                    $clientUser,
+                    $priceMap[$product->id] ?? null,
+                    $stockMap[$product->id] ?? 0,
+                ));
                 $callback($mapped);
             });
     }
@@ -69,7 +80,16 @@ abstract class AbstractPreset implements PresetInterface
 
         $this->buildBaseQuery()
             ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, &$result) {
-                $mapped = $products->map(fn (Product $product) => $this->mapProduct($product, $clientUser));
+                $productList = $products->all();
+                $priceMap = $this->priceService->getPriceMapForProducts($productList, $clientUser);
+                $stockMap = $this->stockService->getAvailableStockMap($productList, $clientUser);
+
+                $mapped = $products->map(fn (Product $product) => $this->mapProduct(
+                    $product,
+                    $clientUser,
+                    $priceMap[$product->id] ?? null,
+                    $stockMap[$product->id] ?? 0,
+                ));
                 $result = $result->concat($mapped);
             });
 
@@ -77,48 +97,45 @@ abstract class AbstractPreset implements PresetInterface
     }
 
     /**
-     * Базовый запрос: все товары со всеми нужными связями.
+     * Список eager-load relations для запроса каталога.
+     * Базовый набор покрывает то, что нужно mapProduct() во всех пресетах:
+     * бренд, категория с предками, медиа, значения атрибутов.
+     *
+     * Пресеты, которым нужны дополнительные данные (`barcodes`, `model`),
+     * переопределяют этот метод и расширяют список.
+     *
+     * @return array<int, string>
+     */
+    protected function eagerLoad(): array
+    {
+        return [
+            'brand',
+            'category.ancestors',
+            'media',
+            'attributeValues.attribute',
+            'attributeValues.attributeValue',
+        ];
+    }
+
+    /**
+     * Базовый запрос: товары со всеми нужными связями (см. eagerLoad).
+     *
+     * @return Builder<Product>
      */
     protected function buildBaseQuery(): Builder
     {
-        return Product::query()
-            ->with([
-                'brand',
-                'category.ancestors',
-                'media',
-                'attributeValues.attribute',
-                'attributeValues.attributeValue',
-                'warehouses',
-                'barcodes',
-                'model',
-            ]);
+        return Product::query()->with($this->eagerLoad());
     }
 
     /**
      * Парсинг товара в универсальный массив Rich Data.
+     * Цена и остаток приходят готовыми из батч-карт (см. eachChunk/fetchRichData).
      */
-    protected function mapProduct(Product $product, ?User $clientUser): array
+    protected function mapProduct(Product $product, ?User $clientUser, ?PriceResult $priceResult, int $stockAvailable): array
     {
-        // Цена с учетом скидок клиента
-        $price = $product->base_price;
-        if ($clientUser) {
-            try {
-                $priceResult = $this->priceService->getPriceResult($product, $clientUser);
-                $price = round($priceResult->getDisplayPrice(), 2);
-            } catch (\Throwable) {
-                // fallback to base_price
-            }
-        }
-
-        // Остатки по региону клиента
-        $stockAvailable = 0;
-        if ($clientUser) {
-            try {
-                $stockAvailable = $this->stockService->getAvailableStock($product, $clientUser);
-            } catch (\Throwable) {
-                // fallback to 0
-            }
-        }
+        $price = $priceResult !== null
+            ? round($priceResult->getDisplayPrice(), 2)
+            : (float) $product->base_price;
 
         // Категория
         $category = $product->category;
@@ -170,8 +187,15 @@ abstract class AbstractPreset implements PresetInterface
             }
         }
 
-        // Штрихкоды
-        $barcodes = $product->barcodes->pluck('barcode')->toArray();
+        // Штрихкоды — пропускаем, если пресет не запросил relation (см. eagerLoad).
+        $barcodes = $product->relationLoaded('barcodes')
+            ? $product->barcodes->pluck('barcode')->toArray()
+            : [];
+
+        // Модель товара — аналогично.
+        $modelLoaded = $product->relationLoaded('model');
+        $modelName = $modelLoaded ? $product->model?->name : null;
+        $modelCode = $modelLoaded ? $product->model?->code : null;
 
         // Описание — приоритет: description_html > description > short_description
         $description = $product->description_html ?: $product->description ?: $product->short_description;
@@ -211,8 +235,8 @@ abstract class AbstractPreset implements PresetInterface
             'height' => $product->height !== null ? (float) $product->height : null,
             'depth' => $product->depth !== null ? (float) $product->depth : null,
             'hs_code' => $product->hs_code,
-            'model_name' => $product->model?->name,
-            'model_code' => $product->model?->code,
+            'model_name' => $modelName,
+            'model_code' => $modelCode,
             'url' => $product->url ?: url("/products/{$product->slug}"),
         ];
     }

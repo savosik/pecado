@@ -26,4 +26,14 @@ interface StockServiceInterface
      * This is the sum of stock from all preorder warehouses in the user's region.
      */
     public function getPreorderStock(Product $product, ?User $user = null): int;
+
+    /**
+     * Получить карту доступных остатков для коллекции товаров одним батч-запросом.
+     * Ключ массива — product_id, значение — суммарное количество по primary-складам региона пользователя.
+     * Товары без остатков получают 0.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, int>
+     */
+    public function getAvailableStockMap(iterable $products, ?User $user = null): array;
 }
