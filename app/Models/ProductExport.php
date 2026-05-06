@@ -7,11 +7,22 @@ use App\Services\ProductExport\FiltersTextRenderer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
 class ProductExport extends Model
 {
     use HasFactory;
+
+    public const STATUS_IDLE = 'idle';
+
+    public const STATUS_QUEUED = 'queued';
+
+    public const STATUS_GENERATING = 'generating';
+
+    public const STATUS_READY = 'ready';
+
+    public const STATUS_FAILED = 'failed';
 
     protected $fillable = [
         'user_id',
@@ -26,6 +37,8 @@ class ProductExport extends Model
         'is_active',
         'last_downloaded_at',
         'cached_at',
+        'status',
+        'last_run_id',
     ];
 
     protected function casts(): array
@@ -39,6 +52,10 @@ class ProductExport extends Model
             'cached_at' => 'datetime',
         ];
     }
+
+    protected $attributes = [
+        'status' => self::STATUS_IDLE,
+    ];
 
     /**
      * Check if this export is a preset (not a custom export).
@@ -107,6 +124,22 @@ class ProductExport extends Model
     public function clientUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'client_user_id');
+    }
+
+    /**
+     * История запусков генерации.
+     */
+    public function runs(): HasMany
+    {
+        return $this->hasMany(ProductExportRun::class);
+    }
+
+    /**
+     * Последний запуск (для UI: статус, длительность, ошибка).
+     */
+    public function lastRun(): BelongsTo
+    {
+        return $this->belongsTo(ProductExportRun::class, 'last_run_id');
     }
 
     /**
