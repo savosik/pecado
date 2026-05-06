@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { Box } from '@chakra-ui/react';
-import { LuShoppingCart } from 'react-icons/lu';
+import { LuShoppingCart, LuScanBarcode } from 'react-icons/lu';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import EmptyState from '@/components/common/EmptyState';
@@ -11,6 +11,7 @@ import CartToolbar from './CartToolbar';
 import CartTable from './CartTable';
 import CartSummary from './CartSummary';
 import CartFlash from './CartFlash';
+import BarcodeScannerDialog from './BarcodeScannerDialog';
 import { useCartStore } from '@/stores/useCartStore';
 import { toastSuccess, toastInfo, toastError } from '@/utils/toast';
 
@@ -103,6 +104,9 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
         window.addEventListener('cart:changed', onChanged);
         return () => window.removeEventListener('cart:changed', onChanged);
     }, [cartDetails?.items]);
+
+    // ── Сканер для пустой корзины (внутри тулбара живёт собственный) ──
+    const [emptyScannerOpen, setEmptyScannerOpen] = useState(false);
 
     // ── Inline-flash для нечастых уведомлений (вместо мобильных тостов) ──
     const [flash, setFlash] = useState(null);
@@ -371,6 +375,18 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
                         title="Корзина пуста"
                         description="Добавьте товары в корзину, чтобы оформить заказ"
                         action={{ label: 'Перейти в каталог', href: '/products' }}
+                        secondaryAction={{
+                            label: 'Сканировать штрихкод',
+                            icon: LuScanBarcode,
+                            onClick: () => setEmptyScannerOpen(true),
+                        }}
+                    />
+                    <BarcodeScannerDialog
+                        open={emptyScannerOpen}
+                        onClose={() => setEmptyScannerOpen(false)}
+                        onSuccess={() => {
+                            router.reload({ only: ['cartDetails'], preserveScroll: true });
+                        }}
                     />
                 </Box>
             )}
