@@ -448,8 +448,7 @@ class OrderController extends Controller
                 'total_amount' => $order->total_amount,
                 'total_converted' => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
                 'currency_code' => $order->currency_code,
-                'created_at' => $order->created_at?->toISOString(),
-                'created_at_formatted' => $order->created_at?->format('d.m.Y H:i'),
+                'created_at_formatted' => ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
                 'company' => $order->company ? [
                     'id' => $order->company->id,
                     'name' => $order->company->name,

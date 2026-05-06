@@ -54,12 +54,7 @@ export default function OrderShow({ order }) {
     const typeColor  = isPreorder ? 'orange' : 'green';
     const typeBadgeScheme = isPreorder ? 'purple' : 'teal';
 
-    const createdAt = order.created_at
-        ? new Date(order.created_at).toLocaleDateString('ru-RU', {
-            year: 'numeric', month: 'long', day: 'numeric',
-            hour: '2-digit', minute: '2-digit',
-        })
-        : order.created_at_formatted || '—';
+    const createdAt = order.created_at_formatted || '—';
 
     // Объединённый timeline
     const timelineEntries = buildTimeline(order.status_histories, order.change_logs);
@@ -102,7 +97,7 @@ export default function OrderShow({ order }) {
                         {STATUS_LABELS[order.status] ?? order.status}
                     </Badge>
                     <Text fontSize="sm" color="fg.muted">
-                        Заказ {order.number} от {createdAt.split(',')[0]}
+                        Заказ {order.number} от {createdAt.split(' ')[0]}
                     </Text>
                 </Flex>
 
