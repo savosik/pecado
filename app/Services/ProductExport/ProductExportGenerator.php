@@ -4,6 +4,7 @@ namespace App\Services\ProductExport;
 
 use App\Models\ProductExport;
 use App\Models\ProductExportRun;
+use App\Services\ProductExport\Presets\AbstractPreset;
 use App\Services\ProductExport\Presets\PresetInterface;
 use App\Services\ProductExport\Presets\PresetRegistry;
 use Illuminate\Support\Facades\Log;
@@ -58,6 +59,7 @@ class ProductExportGenerator
                 'finished_at' => now(),
                 'duration_ms' => $duration,
                 'bytes' => $bytes,
+                'rows_count' => $preset instanceof AbstractPreset ? $preset->getRowsProcessed() : null,
             ]);
 
             $export->update([

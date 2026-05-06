@@ -26,10 +26,27 @@ abstract class AbstractPreset implements PresetInterface
 {
     protected const CHUNK_SIZE = 500;
 
+    /**
+     * Сколько строк-товаров было обработано в последней генерации.
+     * Заполняется внутри eachChunk/fetchRichData; читается ProductExportGenerator
+     * для записи в product_export_runs.rows_count.
+     */
+    protected int $rowsProcessed = 0;
+
     public function __construct(
         protected PriceServiceInterface $priceService,
         protected StockServiceInterface $stockService,
     ) {}
+
+    /**
+     * Сколько товаров обработала эта генерация. Не включает строки-метаданные
+     * (категории/заголовки), которые пишут отдельно некоторые пресеты — только
+     * пройденные через mapProduct.
+     */
+    public function getRowsProcessed(): int
+    {
+        return $this->rowsProcessed;
+    }
 
     /**
      * Получить пользователя из экспорта.
@@ -51,6 +68,7 @@ abstract class AbstractPreset implements PresetInterface
     protected function eachChunk(ProductExport $export, callable $callback): void
     {
         $clientUser = $this->resolveClientUser($export);
+        $this->rowsProcessed = 0;
 
         $this->buildBaseQuery()
             ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback) {
@@ -64,6 +82,7 @@ abstract class AbstractPreset implements PresetInterface
                     $priceMap[$product->id] ?? null,
                     $stockMap[$product->id] ?? 0,
                 ));
+                $this->rowsProcessed += $mapped->count();
                 $callback($mapped);
             });
     }
@@ -75,6 +94,7 @@ abstract class AbstractPreset implements PresetInterface
     protected function fetchRichData(ProductExport $export): Collection
     {
         $clientUser = $this->resolveClientUser($export);
+        $this->rowsProcessed = 0;
 
         $result = collect();
 
@@ -90,6 +110,7 @@ abstract class AbstractPreset implements PresetInterface
                     $priceMap[$product->id] ?? null,
                     $stockMap[$product->id] ?? 0,
                 ));
+                $this->rowsProcessed += $mapped->count();
                 $result = $result->concat($mapped);
             });
 

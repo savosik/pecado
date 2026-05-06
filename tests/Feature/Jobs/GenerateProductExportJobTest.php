@@ -64,6 +64,7 @@ class GenerateProductExportJobTest extends TestCase
         $this->assertNotNull($run->finished_at);
         $this->assertGreaterThan(0, $run->bytes);
         $this->assertGreaterThanOrEqual(0, $run->duration_ms);
+        $this->assertSame(2, $run->rows_count, 'rows_count должен совпадать с числом товаров в setUp (2)');
 
         $this->assertFileExists($this->export->getCacheFilePath());
     }
