@@ -11,6 +11,7 @@ import { PartySuggest } from '@/components/common/PartySuggest';
 import { BankSuggest } from '@/components/common/BankSuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
 import { AddressSuggest } from '@/components/common/AddressSuggest';
+import { AddressFieldWithMap } from '@/components/common/AddressFieldWithMap';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 import { useDadataBankAutofill } from '@/hooks/useDadataBankAutofill';
 import { LuSave, LuPlus, LuPencil, LuTrash2, LuArrowLeft, LuBuilding2, LuFileText, LuMapPin, LuPhone, LuLandmark, LuSearch } from 'react-icons/lu';
@@ -291,10 +292,11 @@ export default function Form({ company, countries = [] }) {
                             <VStack gap="4" align="stretch" pt="3">
                                 <Field.Root invalid={!!errors.legal_address}>
                                     <Field.Label fontSize="sm" fontWeight="600">Юридический адрес</Field.Label>
-                                    <AddressSuggest
+                                    <AddressFieldWithMap
                                         value={form.legal_address}
                                         onChange={(val) => handleChange('legal_address', val)}
-                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, legal_address_data: s?.data ?? null }))}
+                                        addressData={form.legal_address_data}
+                                        onAddressDataChange={(d) => setForm(prev => ({ ...prev, legal_address_data: d }))}
                                         invalid={!!errors.legal_address}
                                         placeholder="г Москва, ул Примерная, д 1"
                                     />
@@ -303,10 +305,11 @@ export default function Form({ company, countries = [] }) {
 
                                 <Field.Root invalid={!!errors.actual_address}>
                                     <Field.Label fontSize="sm" fontWeight="600">Фактический адрес</Field.Label>
-                                    <AddressSuggest
+                                    <AddressFieldWithMap
                                         value={form.actual_address}
                                         onChange={(val) => handleChange('actual_address', val)}
-                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, actual_address_data: s?.data ?? null }))}
+                                        addressData={form.actual_address_data}
+                                        onAddressDataChange={(d) => setForm(prev => ({ ...prev, actual_address_data: d }))}
                                         invalid={!!errors.actual_address}
                                         placeholder="г Москва, ул Примерная, д 1, оф 100"
                                     />

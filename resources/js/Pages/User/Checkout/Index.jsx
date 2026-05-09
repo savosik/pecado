@@ -14,6 +14,7 @@ import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
 import { AddressSuggest } from '@/components/common/AddressSuggest';
+import { AddressFieldWithMap } from '@/components/common/AddressFieldWithMap';
 import { useDadataPartyAutofill } from '@/hooks/useDadataPartyAutofill';
 
 /**
@@ -57,6 +58,8 @@ export default function CheckoutIndex({
     const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
     const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
     const [normalizing, setNormalizing] = useState(false);
+    // Локальный блок DaData для центровки карты адреса доставки (на сервер не отправляется).
+    const [deliveryAddrData, setDeliveryAddrData] = useState(null);
 
     // Конфликты остатков: считаем по pre-flight stock_status в строках корзины.
     // Если бэк не успел обновить stock_status (race), подмешиваем серверный список.
@@ -344,12 +347,13 @@ export default function CheckoutIndex({
                                     invalid={!!errors.delivery_address}
                                     errorText={errors.delivery_address}
                                 >
-                                    <AddressSuggest
+                                    <AddressFieldWithMap
                                         value={data.delivery_address}
                                         onChange={(val) => setData('delivery_address', val)}
+                                        addressData={deliveryAddrData}
+                                        onAddressDataChange={setDeliveryAddrData}
                                         invalid={!!errors.delivery_address}
                                         placeholder="Город, улица, дом, квартира"
-                                        enableGeolocation
                                     />
                                 </Field>
                             )}
@@ -636,12 +640,14 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
                                     invalid={!!errText('legal_address')}
                                     errorText={errText('legal_address')}
                                 >
-                                    <AddressSuggest
+                                    <AddressFieldWithMap
                                         value={form.legal_address}
                                         onChange={(val) => handleChange('legal_address', val)}
-                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, legal_address_data: s?.data ?? null }))}
+                                        addressData={form.legal_address_data}
+                                        onAddressDataChange={(d) => setForm(prev => ({ ...prev, legal_address_data: d }))}
                                         invalid={!!errText('legal_address')}
                                         placeholder="г Москва, ул Примерная, д 1"
+                                        mapHeight={260}
                                     />
                                 </Field>
 
@@ -650,12 +656,14 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
                                     invalid={!!errText('actual_address')}
                                     errorText={errText('actual_address')}
                                 >
-                                    <AddressSuggest
+                                    <AddressFieldWithMap
                                         value={form.actual_address}
                                         onChange={(val) => handleChange('actual_address', val)}
-                                        onAddressSelected={(s) => setForm(prev => ({ ...prev, actual_address_data: s?.data ?? null }))}
+                                        addressData={form.actual_address_data}
+                                        onAddressDataChange={(d) => setForm(prev => ({ ...prev, actual_address_data: d }))}
                                         invalid={!!errText('actual_address')}
                                         placeholder="г Москва, ул Примерная, д 1, оф 100"
+                                        mapHeight={260}
                                     />
                                 </Field>
 

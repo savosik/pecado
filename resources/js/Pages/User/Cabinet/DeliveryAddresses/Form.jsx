@@ -1,22 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
-    Box, Flex, VStack, Text, Input, Textarea, Button, Card, Field,
+    Box, Flex, VStack, Input, Button, Card, Field,
 } from '@chakra-ui/react';
 import { Head, router, usePage } from '@inertiajs/react';
-import axios from 'axios';
 import CabinetLayout from '../CabinetLayout';
 import { LuSave, LuArrowLeft } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
-import { AddressSuggest } from '@/components/common/AddressSuggest';
-import { YandexAddressMap } from '@/components/common/YandexAddressMap';
-
-const parseCoords = (data) => {
-    if (!data) return null;
-    const lat = parseFloat(data.geo_lat);
-    const lon = parseFloat(data.geo_lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-    return [lat, lon];
-};
+import { AddressFieldWithMap } from '@/components/common/AddressFieldWithMap';
 
 export default function Form({ address }) {
     const { errors: serverErrors } = usePage().props;
@@ -29,58 +19,10 @@ export default function Form({ address }) {
     });
     const [processing, setProcessing] = useState(false);
     const [errors, setErrors] = useState(serverErrors || {});
-    const [reverseLoading, setReverseLoading] = useState(false);
-
-    const coords = useMemo(() => parseCoords(form.address_data), [form.address_data]);
 
     const handleChange = (field, value) => {
         setForm(prev => ({ ...prev, [field]: value }));
         setErrors(prev => ({ ...prev, [field]: undefined }));
-    };
-
-    const handleAddressSelected = (suggestion) => {
-        setForm(prev => ({
-            ...prev,
-            address: suggestion?.unrestricted_value || suggestion?.value || prev.address,
-            address_data: suggestion?.data ?? null,
-        }));
-        setErrors(prev => ({ ...prev, address: undefined }));
-    };
-
-    const handleMapPick = async ([lat, lon]) => {
-        if (reverseLoading) return;
-        setReverseLoading(true);
-        try {
-            const { data } = await axios.post('/api/dadata/geolocate/address', {
-                lat,
-                lon,
-                count: 1,
-                radius_meters: 200,
-            });
-            const item = data?.suggestions?.[0];
-            if (!item) {
-                toaster.create({
-                    title: 'Адрес рядом не найден',
-                    description: 'Попробуйте кликнуть ближе к нужному дому.',
-                    type: 'info',
-                });
-                return;
-            }
-            setForm(prev => ({
-                ...prev,
-                address: item.unrestricted_value || item.value || prev.address,
-                address_data: item.data ?? null,
-            }));
-            setErrors(prev => ({ ...prev, address: undefined }));
-        } catch (err) {
-            const status = err?.response?.status;
-            toaster.create({
-                title: status === 503 ? 'Сервис подсказок временно недоступен' : 'Не удалось определить адрес',
-                type: 'error',
-            });
-        } finally {
-            setReverseLoading(false);
-        }
     };
 
     const validate = () => {
@@ -143,27 +85,19 @@ export default function Form({ address }) {
 
                             <Field.Root invalid={!!errors.address}>
                                 <Field.Label fontSize="sm" fontWeight="600">Адрес *</Field.Label>
-                                <AddressSuggest
+                                <AddressFieldWithMap
                                     value={form.address}
                                     onChange={(val) => handleChange('address', val)}
-                                    onAddressSelected={handleAddressSelected}
+                                    addressData={form.address_data}
+                                    onAddressDataChange={(d) => setForm(prev => ({ ...prev, address_data: d }))}
                                     invalid={!!errors.address}
                                     placeholder="Введите город, улицу, дом"
                                 />
                                 <Field.HelperText fontSize="xs">
-                                    Подсказки с привязкой к ФИАС, индексу и координатам. Уточнить точку можно кликом или перетаскиванием метки на карте.
+                                    Подсказки с привязкой к ФИАС, индексу и координатам. Если нужно уточнить точку — нажмите иконку карты справа.
                                 </Field.HelperText>
                                 {errors.address && <Field.ErrorText>{errors.address}</Field.ErrorText>}
                             </Field.Root>
-
-                            <Box>
-                                <YandexAddressMap
-                                    coords={coords}
-                                    onCoordsPicked={handleMapPick}
-                                    height={320}
-                                    disabled={reverseLoading}
-                                />
-                            </Box>
 
                             <Flex justify="flex-start" pt="2">
                                 <Button

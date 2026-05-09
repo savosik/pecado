@@ -43,9 +43,26 @@ function loadYmaps(apiKey) {
     return loaderPromise;
 }
 
-const DEFAULT_CENTER = [55.751244, 37.618423]; // Москва, центр
+const DEFAULT_CENTER = [55.751244, 37.618423]; // Москва, центр (fallback если геолокация недоступна)
 const DEFAULT_ZOOM = 11;
 const POINT_ZOOM = 16;
+const GEOLOCATION_ZOOM = 14;
+
+// Пробуем определить координаты пользователя без блокировки рендера карты.
+// Resolved-координата используется только для центровки — метка и reverse-geocode не ставятся.
+function tryGetGeolocation() {
+    return new Promise((resolve) => {
+        if (typeof navigator === 'undefined' || !('geolocation' in navigator)) {
+            resolve(null);
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            ({ coords }) => resolve([coords.latitude, coords.longitude]),
+            () => resolve(null),
+            { enableHighAccuracy: false, timeout: 5000, maximumAge: 5 * 60 * 1000 },
+        );
+    });
+}
 
 /**
  * Карта Яндекса с перетаскиваемой меткой. UI-обёртка для DaData:
@@ -80,8 +97,9 @@ export function YandexAddressMap({
         loadYmaps(apiKey)
             .then((ymaps) => {
                 if (cancelled || !containerRef.current) return;
-                const initialCenter = Array.isArray(coords) && coords.length === 2 ? coords : DEFAULT_CENTER;
-                const initialZoom = Array.isArray(coords) && coords.length === 2 ? POINT_ZOOM : DEFAULT_ZOOM;
+                const hasCoords = Array.isArray(coords) && coords.length === 2;
+                const initialCenter = hasCoords ? coords : DEFAULT_CENTER;
+                const initialZoom = hasCoords ? POINT_ZOOM : DEFAULT_ZOOM;
                 const map = new ymaps.Map(containerRef.current, {
                     center: initialCenter,
                     zoom: initialZoom,
@@ -92,8 +110,20 @@ export function YandexAddressMap({
                     draggable: !disabled,
                     preset: 'islands#redDotIcon',
                 });
-                if (Array.isArray(coords) && coords.length === 2) {
+                if (hasCoords) {
                     map.geoObjects.add(placemark);
+                }
+
+                // Если стартовых координат не было — пробуем центровать по геолокации.
+                // Только перемещение центра, без метки и без reverse-geocode (в Москве
+                // геолокация бывает сбита — пусть юзер сам поставит точку кликом).
+                if (!hasCoords) {
+                    tryGetGeolocation().then((geo) => {
+                        if (cancelled || !geo || !mapRef.current) return;
+                        // Если за это время уже поставили метку — не дёргаем центр.
+                        if (mapRef.current.geoObjects.indexOf(placemark) !== -1) return;
+                        mapRef.current.setCenter(geo, GEOLOCATION_ZOOM, { duration: 400 });
+                    });
                 }
 
                 map.events.add('click', (e) => {
