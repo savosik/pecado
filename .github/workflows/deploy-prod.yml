@@ -389,18 +389,22 @@ jobs:
 
       - name: "🏥 Health Check"
         run: |
-          sleep 10
-          # Сначала пробуем HTTPS, если SSL ещё не настроен — пробуем HTTP
-          HTTP_CODE=$(curl -sk -o /dev/null -w "%{http_code}" https://pecado.ru/up 2>/dev/null || echo "000")
-          if [ "$HTTP_CODE" != "200" ]; then
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost/up 2>/dev/null || echo "000")
-          fi
-          if [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ Health check passed (HTTP $HTTP_CODE)"
+          sleep 5
+          # Идём на 127.0.0.1 с Host:pecado.ru — обходим hairpin NAT (с самого
+          # prod-сервера запрос на свой внешний IP не возвращается).
+          # SNI выставляется через --resolve, поэтому SSL/HSTS-флоу проверяется
+          # ровно тот же, что у внешних клиентов.
+          HTTPS_CODE=$(curl -sk --resolve pecado.ru:443:127.0.0.1 -o /dev/null -w "%{http_code}" -m 10 https://pecado.ru/up 2>/dev/null || echo "000")
+          HTTP_REDIRECT=$(curl -s --resolve pecado.ru:80:127.0.0.1 -o /dev/null -w "%{http_code}" -m 5 http://pecado.ru/up 2>/dev/null || echo "000")
+          echo "https://pecado.ru/up via loopback: $HTTPS_CODE"
+          echo "http://pecado.ru/up via loopback (ожидаем 301): $HTTP_REDIRECT"
+          if [ "$HTTPS_CODE" = "200" ]; then
+            echo "✅ Health check passed (HTTPS $HTTPS_CODE)"
           else
-            echo "❌ Health check FAILED (HTTP $HTTP_CODE)"
-            # Поднимаем сайт обратно из maintenance, если он там завис
-            sg docker -c "docker compose -f /srv/pecado/docker-compose.yml -f /srv/pecado/docker-compose.prod.yml exec -T app php artisan up" || true
+            echo "❌ Health check FAILED (HTTPS $HTTPS_CODE)"
+            # Поднимаем сайт из maintenance, если он там завис
+            docker compose -f /srv/pecado/docker-compose.yml -f /srv/pecado/docker-compose.prod.yml exec -T app php artisan up || true
+            docker compose -f /srv/pecado/docker-compose.yml -f /srv/pecado/docker-compose.prod.yml logs --tail=50 nginx app || true
             exit 1
           fi
 
