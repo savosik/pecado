@@ -118,15 +118,15 @@ export default function UserHeader() {
                             <Box as="img" src="/images/logo.png" alt="Pecado" h="10" objectFit="contain" flexShrink="0" />
                         </Link>
 
-                        {/* Catalog Button — desktop (sm+) */}
+                        {/* Catalog Button — на всех ширинах; текст «Каталог» скрыт на <lg */}
                         <Button
                             onClick={openCatalog}
-                            display={{ base: 'none', sm: 'inline-flex' }}
                             size="sm"
                             bg="#9e1b32"
                             color="white"
                             _hover={{ bg: '#7a1527' }}
                             flexShrink="0"
+                            aria-label="Открыть каталог"
                         >
                             <LuMenu />
                             <Text display={{ base: 'none', lg: 'inline' }} textTransform="uppercase" fontSize="xs" letterSpacing="0.05em">Каталог</Text>
