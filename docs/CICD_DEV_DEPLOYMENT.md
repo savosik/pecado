@@ -1,7 +1,9 @@
 # CI/CD: Автодеплой ветки `dev` на Dev-сервер
 
-> **Стек:** Laravel 11 · PHP 8.3-FPM · Vite/Node 20 · MySQL 8 · Redis · RabbitMQ 3 · MeiliSearch · MinIO · Supervisor · Docker Compose
-> **Платформа CI:** GitHub Actions (рекомендуется, т.к. проект уже на Git)
+> ⚠️ **С 2026-05-09 dev-сервер делит внешний IP `93.94.150.16` с prod.** Dev доступен через временные порты `8022 (ssh) / 8080 (http) / 8443 (https) / 25672 (rabbitmq)` — см. [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md). Self-hosted runner на dev-VM работает по исходящему трафику и не зависит от пробросов — workflow `.github/workflows/deploy-dev.yml` функционирует как раньше.
+
+> **Стек:** Laravel 12 · PHP 8.3-FPM · Vite/Node 20 · MySQL 8 (×2: main + prices) · Redis · RabbitMQ 3 · MeiliSearch · MinIO · Supervisor · Docker Compose
+> **Платформа CI:** GitHub Actions (self-hosted runner на dev-сервере, лейбл `dev-server`)
 
 ---
 

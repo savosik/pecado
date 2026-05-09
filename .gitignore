@@ -41,7 +41,11 @@ AGENTS.md
 boost.json
 /.claude/skills/
 /.claude/scheduled_tasks.lock
-/reference/\n# Dev server credentials (local only)\ndocs/DEV_SERVER_CREDENTIALS.md
+/reference/
 /reference
+
+# Server credentials (local only — содержат пароли)
+docs/DEV_SERVER_CREDENTIALS.md
+docs/PROD_SERVER_CREDENTIALS.md
 
 # AsyncAPI и MkDocs: трекаем сборку в git — деплоится через rsync
