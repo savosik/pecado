@@ -77,7 +77,7 @@ Conventional Commits — обязательно:
 | **GitHub Environment `production`** | Settings → Environments | Требует ручной approve перед каждым деплоем |
 | **Ruleset «main: block force-push & deletion»** | Settings → Rules | Запрещает `git push --force` в main, запрещает удаление ветки |
 | **CI test jobs** | `.github/workflows/deploy-prod.yml` | Деплой не идёт без зелёных Lint & Tests + Build Frontend |
-| **Pre-deploy backup БД** | в workflow | snapshot main + prices DBs в `/srv/backups/mysql/pre-deploy/` перед каждым деплоем |
+| **Pre-deploy backup БД** | в workflow | snapshot main + prices DBs в `/media/backups/mysql/pre-deploy/` (отдельный диск `sdb`) перед каждым деплоем; retention: основная БД — 10 последних, цены — 5 последних |
 | **Maintenance mode** | в workflow | `php artisan down` перед миграциями, `up` после |
 | **Health check** | в workflow | `curl https://pecado.ru/up` через loopback (обход hairpin NAT). Если упало — workflow красный |
 
@@ -100,7 +100,7 @@ git push origin dev:main     # CI на main → approve → откат на пр
 
 1. SSH на prod: `ssh ladmin@93.94.150.16`
 2. `cd /srv/pecado && docker compose -f docker-compose.yml -f docker-compose.prod.yml exec app php artisan down`
-3. Восстановить БД из `/srv/backups/mysql/pre-deploy/<timestamp>.sql.gz` (см. [CICD_PROD_DEPLOYMENT.md §10](./CICD_PROD_DEPLOYMENT.md))
+3. Восстановить БД из `/media/backups/mysql/pre-deploy/<timestamp>.sql.gz` (см. [CICD_PROD_DEPLOYMENT.md §10](./CICD_PROD_DEPLOYMENT.md))
 4. Revert миграции: `git revert <SHA-коммита-с-миграцией>` → push → деплой
 5. После того как новый деплой пройдёт: `php artisan up`
 

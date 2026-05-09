@@ -614,7 +614,8 @@ jobs:
       - name: "💾 Backup БД (snapshot перед деплоем)"
         run: |
           set -euo pipefail
-          BACKUP_DIR="/srv/backups/mysql/pre-deploy"
+          # Хранилище — на отдельном диске /dev/sdb (/media), чтобы не забивать системный sda2.
+          BACKUP_DIR="/media/backups/mysql/pre-deploy"
           mkdir -p "$BACKUP_DIR"
           DATE=$(date +%Y-%m-%d_%H%M%S)
 
@@ -628,9 +629,11 @@ jobs:
             sh -c 'exec mysqldump -uroot -p\$MYSQL_ROOT_PASSWORD pecado_prices'" \
             | gzip > "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
 
-          # Оставляем 10 последних
-          ls -t "$BACKUP_DIR"/pecado_2*.sql.gz | tail -n +11 | xargs -r rm -f
-          ls -t "$BACKUP_DIR"/pecado_prices_*.sql.gz | tail -n +11 | xargs -r rm -f
+          # Retention основной БД: оставляем 10 последних
+          ls -1t "$BACKUP_DIR"/pecado_*.sql.gz 2>/dev/null | grep -v '/pecado_prices_' | tail -n +11 | xargs -r rm -fv
+
+          # Retention БД цен: оставляем 5 последних — архивы большие, могут забить диск
+          ls -1t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -fv
 
       - name: "📤 Sync code"
         run: |
@@ -886,8 +889,8 @@ sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/reload-nginx.sh
 
 ```bash
 su - deploy
-sudo mkdir -p /srv/pecado /srv/backups/mysql
-sudo chown -R deploy:deploy /srv/pecado /srv/backups
+sudo mkdir -p /srv/pecado /media/backups/mysql
+sudo chown -R deploy:deploy /srv/pecado /media/backups
 cd /srv
 
 git clone -b main git@github.com:savosik/pecado.git pecado
@@ -928,27 +931,32 @@ curl -k https://pecado.ru/up
 
 ```bash
 #!/bin/bash
+# Ежедневный бэкап обеих БД prod в /media/backups/mysql/daily/
+# Хранилище — на отдельном диске /dev/sdb (/media), чтобы не забивать системный sda2.
 set -euo pipefail
 
-BACKUP_DIR="/srv/backups/mysql/daily"
+BACKUP_DIR="/media/backups/mysql/daily"
 DATE=$(date +%Y-%m-%d_%H%M)
 mkdir -p "$BACKUP_DIR"
 
 cd /srv/pecado
 DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
-# Основная БД
-$DC exec -T mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" pecado' \
+# Main DB
+$DC exec -T mysql sh -c "exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" --single-transaction --quick pecado" \
   | gzip > "$BACKUP_DIR/pecado_${DATE}.sql.gz"
 
-# Prices БД
-$DC exec -T mysql-prices sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" pecado_prices' \
+# Prices DB
+$DC exec -T mysql-prices sh -c "exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" --single-transaction --quick pecado_prices" \
   | gzip > "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
 
-# Удаляем бэкапы старше 30 дней
-find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +30 -delete
+# Retention основной БД: 30 дней (mtime-based)
+find "$BACKUP_DIR" -type f -name "pecado_*.sql.gz" ! -name "pecado_prices_*" -mtime +30 -delete
 
-echo "Backup completed: ${DATE}"
+# Retention БД цен: только последние 5 архивов (count-based — таблицы цен большие)
+ls -1t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -f
+
+echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] Backup OK: ${DATE}"
 ```
 
 ```bash
@@ -1006,7 +1014,7 @@ cd /srv/pecado
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec app php artisan down
 
 # Восстановить из бэкапа
-gunzip < /srv/backups/mysql/pre-deploy/pecado_<DATE>.sql.gz | \
+gunzip < /media/backups/mysql/pre-deploy/pecado_<DATE>.sql.gz | \
   docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T mysql \
   sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" pecado'
 

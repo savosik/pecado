@@ -259,7 +259,8 @@ jobs:
       - name: "💾 Pre-deploy backup БД"
         run: |
           set -euo pipefail
-          BACKUP_DIR="/srv/backups/mysql/pre-deploy"
+          # Хранилище — на отдельном диске /dev/sdb (/media), чтобы не забивать системный sda2.
+          BACKUP_DIR="/media/backups/mysql/pre-deploy"
           mkdir -p "$BACKUP_DIR"
           DATE=$(date +%Y-%m-%d_%H%M%S)
           cd /srv/pecado
@@ -275,9 +276,17 @@ jobs:
             sg docker -c "$DC exec -T mysql-prices sh -c 'exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" pecado_prices'" \
               | gzip > "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
 
-            # Оставляем 10 последних
-            ls -t "$BACKUP_DIR"/pecado_2*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
-            ls -t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm -f
+            # Retention основной БД: оставляем 10 последних
+            echo "==> Rotation main DB (keep last 10)..."
+            ls -1t "$BACKUP_DIR"/pecado_*.sql.gz 2>/dev/null | grep -v '/pecado_prices_' | tail -n +11 | xargs -r rm -fv
+
+            # Retention БД цен: оставляем только 5 последних — таблицы цен большие,
+            # архивы могут забить диск даже сжатыми.
+            echo "==> Rotation prices DB (keep last 5)..."
+            ls -1t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -fv
+
+            echo "==> Pre-deploy backup OK: ${DATE}"
+            df -h /media | tail -1
           else
             echo "==> Контейнеры не запущены, backup пропускаем (первый деплой)"
           fi

@@ -247,7 +247,7 @@ git push origin main
 ### Способ B: Если поломали данные миграцией
 
 1. **Сразу включить maintenance** на сервере: `ssh` → `php artisan down`.
-2. **Восстановить БД** из `/srv/backups/mysql/pre-deploy/<timestamp>.sql.gz`.
+2. **Восстановить БД** из `/media/backups/mysql/pre-deploy/<timestamp>.sql.gz`.
 3. **Revert PR в main** (как Способ A).
 4. После деплоя revert'a — `php artisan up`.
 
@@ -374,7 +374,7 @@ docker exec pecado-app php artisan migrate
 | Доступы к dev-серверу | `docs/DEV_SERVER_CREDENTIALS.md` |
 | Логи на dev | SSH → `/srv/pecado` → `docker compose logs -f app/worker/nginx` |
 | Логи на prod | SSH → `/srv/pecado` → `docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f app` |
-| Бэкапы БД на prod | `/srv/backups/mysql/daily/` (ежедневные) и `/srv/backups/mysql/pre-deploy/` (перед каждым деплоем) |
+| Бэкапы БД на prod | `/media/backups/mysql/daily/` (ежедневные, на отдельном диске `sdb`) и `/media/backups/mysql/pre-deploy/` (перед каждым деплоем). Retention: основная БД — 30 дней daily / 10 последних pre-deploy; БД цен — 5 последних в обоих случаях. |
 | Health endpoint | `https://pecado.ru/up` |
 | RabbitMQ Management | `https://pecado.ru:15672` через SSH-туннель (наружу закрыт) |
 
