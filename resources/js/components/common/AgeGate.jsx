@@ -3,7 +3,7 @@ import { usePage } from '@inertiajs/react';
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 
 const STORAGE_KEY = 'age_confirmed_18plus_at';
-const CONFIRM_TTL_MS = 60 * 60 * 1000; // 1 час
+const CONFIRM_TTL_MS = 30 * 60 * 1000; // 30 минут
 const EXIT_URL = 'https://www.google.com';
 
 /**
@@ -13,7 +13,7 @@ const EXIT_URL = 'https://www.google.com';
  *  - Любому аутентифицированному пользователю — модалка не показывается,
  *    блюр не применяется.
  *  - Гостю:
- *      * нет валидного timestamp в localStorage (или ему больше часа) —
+ *      * нет валидного timestamp в localStorage (или ему больше 30 минут) —
  *        модалка + блюр изображений (класс nsfw-blur на <html>);
  *      * нажатие «Да, мне есть 18» — пишем текущий timestamp, скрываем
  *        модалку, снимаем блюр;
