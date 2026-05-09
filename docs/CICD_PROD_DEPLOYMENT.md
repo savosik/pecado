@@ -1,6 +1,7 @@
 # CI/CD: Деплой ветки `main` на Production-сервер
 
-> **Статус:** 🛠️ В работе. С 2026-05-09 prod (`m-s-web`, локальный `10.2.2.101`) занимает стандартные порты `22/80/443/15672` на общем внешнем IP `93.94.150.16`. Dev (`m-s-site`, локальный `10.2.2.100`) живёт на том же IP через временный проброс альтернативных портов `8022/8080/8443/25672`. Прод-стек ещё не развёрнут (uptime VM ~2 дня, нет `/srv/pecado`, нет docker-контейнеров).
+> **Статус:** ✅ **Production LIVE** с 2026-05-09. Сайт работает на https://pecado.ru, CI/CD активен (push в main → manual approve в Environment `production` → автодеплой). Self-hosted runner `prod-server` (systemd, uid=1000). Branch Protection для main включена.
+> Prod (`m-s-web`, локальный `10.2.2.101`) занимает стандартные порты `22/80/443/15672` на общем внешнем IP `93.94.150.16`. Dev (`m-s-site`, локальный `10.2.2.100`) живёт на том же IP через временный проброс альтернативных портов `8022/8080/8443/25672`.
 > **Стек:** Laravel 12 · PHP 8.3-FPM · Vite/Node 20 · MySQL 8 (×2: main + prices) · Redis · RabbitMQ 3 · MeiliSearch · MinIO · Supervisor · Docker Compose
 > **Связанные документы:** [PROD_WORKFLOW.md](./PROD_WORKFLOW.md) · [PROD_SERVER_CREDENTIALS.md](./PROD_SERVER_CREDENTIALS.md) · [DEV_SERVER_CREDENTIALS.md](./DEV_SERVER_CREDENTIALS.md) (приостановлен) · [CICD_DEV_DEPLOYMENT.md](./CICD_DEV_DEPLOYMENT.md)
 > **Актуализирован:** 2026-05-09 — синхронизирован с реальным [.github/workflows/deploy-dev.yml](../.github/workflows/deploy-dev.yml)
