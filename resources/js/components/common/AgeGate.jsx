@@ -2,26 +2,27 @@ import { useEffect, useState, useCallback } from 'react';
 import { usePage } from '@inertiajs/react';
 import { Box, Button, Flex, Heading, Text } from '@chakra-ui/react';
 
-const STORAGE_KEY = 'age_confirmed_18plus';
+const STORAGE_KEY = 'age_confirmed_18plus_at';
+const CONFIRM_TTL_MS = 60 * 60 * 1000; // 1 час
 const EXIT_URL = 'https://www.google.com';
 
 /**
  * Возрастной гейт для публичной части сайта.
  *
  * Поведение:
- *  - Аутентифицированному с status=active или is_admin — модалка не
- *    показывается, блюр не применяется.
- *  - Гостю/неактивному:
- *      * без флага в localStorage — модалка + блюр изображений (класс
- *        nsfw-blur на <html>);
- *      * нажатие «Да, мне есть 18» — пишем флаг, скрываем модалку,
- *        снимаем блюр;
+ *  - Любому аутентифицированному пользователю — модалка не показывается,
+ *    блюр не применяется.
+ *  - Гостю:
+ *      * нет валидного timestamp в localStorage (или ему больше часа) —
+ *        модалка + блюр изображений (класс nsfw-blur на <html>);
+ *      * нажатие «Да, мне есть 18» — пишем текущий timestamp, скрываем
+ *        модалку, снимаем блюр;
  *      * «Уйти» — редирект на EXIT_URL.
  */
 export default function AgeGate() {
     const { auth } = usePage().props;
     const user = auth?.user || null;
-    const isFullAccess = !!user && (user.is_admin || user.status === 'active');
+    const isAuthenticated = !!user;
 
     // gateActive = нужно ли показывать гейт (модалка + блюр).
     // Начальное значение null — до прочтения localStorage не рендерим ничего,
@@ -29,18 +30,21 @@ export default function AgeGate() {
     const [gateActive, setGateActive] = useState(null);
 
     useEffect(() => {
-        if (isFullAccess) {
+        if (isAuthenticated) {
             setGateActive(false);
             return;
         }
-        let confirmed = false;
+        let confirmedAt = 0;
         try {
-            confirmed = window.localStorage.getItem(STORAGE_KEY) === '1';
+            const raw = window.localStorage.getItem(STORAGE_KEY);
+            confirmedAt = raw ? Number.parseInt(raw, 10) : 0;
+            if (!Number.isFinite(confirmedAt)) confirmedAt = 0;
         } catch {
-            confirmed = false;
+            confirmedAt = 0;
         }
-        setGateActive(!confirmed);
-    }, [isFullAccess]);
+        const isFresh = confirmedAt > 0 && Date.now() - confirmedAt < CONFIRM_TTL_MS;
+        setGateActive(!isFresh);
+    }, [isAuthenticated]);
 
     useEffect(() => {
         const root = document.documentElement;
@@ -54,7 +58,7 @@ export default function AgeGate() {
 
     const handleConfirm = useCallback(() => {
         try {
-            window.localStorage.setItem(STORAGE_KEY, '1');
+            window.localStorage.setItem(STORAGE_KEY, String(Date.now()));
         } catch {
             /* localStorage недоступен — флаг просто не сохранится */
         }
