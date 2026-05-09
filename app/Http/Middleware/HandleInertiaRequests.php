@@ -74,6 +74,9 @@ class HandleInertiaRequests extends Middleware
             'footerMenuItems' => Cache::remember('menu.footer', 3600, fn () => MenuItem::published()->forFooter()->ordered()->get()
             ),
             'bugReportMode' => (bool) config('app.bug_report_mode'),
+            'config' => [
+                'yandex_maps_api_key' => (string) config('services.yandex_maps.api_key', ''),
+            ],
         ];
     }
 }
