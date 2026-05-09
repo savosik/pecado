@@ -859,7 +859,9 @@ export default function CatalogPanel({ open, onClose }) {
                                     {/* Other brands Text List */}
                                     {Object.keys(otherBrandsByLetter).length > 0 && (
                                         <Box>
-                                            <Text fontSize="md" fontWeight="600" mb="4" textTransform="uppercase">Прочие бренды</Text>
+                                            {ownBrands.length > 0 && (
+                                                <Text fontSize="md" fontWeight="600" mb="4" textTransform="uppercase">Прочие бренды</Text>
+                                            )}
                                             <Box
                                                 display="grid"
                                                 gridTemplateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)', xl: 'repeat(5, 1fr)' }}
