@@ -125,7 +125,7 @@ export default function UserFooter() {
                         gap="4"
                     >
                         <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }}>
-                            © {year} Pecado. Все права защищены. v0.1.0
+                            © {year} Pecado. Все права защищены. v0.1.1
                         </Text>
                         <HStack gap="1">
                             <EffectsToggleButton />
