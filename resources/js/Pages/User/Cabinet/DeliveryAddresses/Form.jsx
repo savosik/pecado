@@ -91,10 +91,9 @@ export default function Form({ address }) {
                                     onAddressSelected={(s) => setForm(prev => ({ ...prev, address_data: s?.data ?? null }))}
                                     invalid={!!errors.address}
                                     placeholder="Введите город, улицу, дом"
-                                    enableGeolocation
                                 />
                                 <Field.HelperText fontSize="xs">
-                                    Подсказки с привязкой к ФИАС, индексу и координатам. Кнопка справа определит адрес по геолокации.
+                                    Подсказки с привязкой к ФИАС, индексу и координатам.
                                 </Field.HelperText>
                                 {errors.address && <Field.ErrorText>{errors.address}</Field.ErrorText>}
                             </Field.Root>
