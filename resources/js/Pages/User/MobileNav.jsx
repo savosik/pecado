@@ -145,6 +145,7 @@ export default function MobileNav() {
             borderColor="border"
             _darkBorderColor="gray.700"
             boxShadow="0 -1px 6px rgba(0,0,0,0.06)"
+            paddingBottom="env(safe-area-inset-bottom)"
         >
             <Flex
                 maxW="1360px"
