@@ -182,9 +182,6 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
                                 py="3"
                                 whiteSpace="nowrap"
                                 flexShrink={0}
-                                _selected={{
-                                    '--indicator-offset-x': { base: '0.75rem', md: '1rem' },
-                                }}
                             >
                                 {tab.label}
                             </Tabs.Trigger>
