@@ -58,6 +58,11 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            // TIMESTAMP-колонки хранятся в UTC, MySQL автоматически конвертирует
+            // их в session time_zone при чтении/записи. Выравниваем сессию с
+            // APP_TIMEZONE=Europe/Moscow, иначе Carbon считает значения из БД
+            // как МСК, а это UTC, и при сериализации в JSON время уплывает на 3 часа.
+            'timezone' => env('DB_TIMEZONE', '+03:00'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
@@ -77,6 +82,7 @@ return [
             'prefix_indexes' => true,
             'strict' => true,
             'engine' => null,
+            'timezone' => env('DB_TIMEZONE', '+03:00'),
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
             ]) : [],
