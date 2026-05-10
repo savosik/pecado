@@ -458,10 +458,15 @@ jobs:
           sg docker -c 'docker compose exec -T app php artisan scout:sync-index-settings' || true
           sg docker -c 'docker compose exec -T app php artisan meilisearch:sync-synonyms' || true
 
-          echo "==> [6/7] Перезапуск очередей..."
+          echo "==> [6/7] Применение compose-конфигурации и перезапуск очередей..."
+          # up -d пересоздаёт сервисы с изменёнными портами/env/volumes (mysql, redis,
+          # meilisearch, minio и др.). Без этого изменения compose-файла проходят мимо.
+          sg docker -c 'docker compose up -d --remove-orphans'
           sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
           echo "==> [7/7] Перезагрузка PHP-FPM, workers и nginx..."
+          # restart нужен даже после up -d: app/worker монтируют код через bind mount,
+          # PHP-FPM/queue процессы должны быть перезапущены для подхвата свежего vendor/.
           sg docker -c 'docker compose restart app worker nginx'
 
           echo ""

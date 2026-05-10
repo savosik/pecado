@@ -389,8 +389,14 @@ jobs:
           sg docker -c "$DC exec -T app php artisan scout:sync-index-settings" || true
           sg docker -c "$DC exec -T app php artisan meilisearch:sync-synonyms" || true
 
-          echo "==> [8/9] Перезапуск очередей и контейнеров..."
+          echo "==> [8/9] Применение compose-конфигурации и рестарт..."
+          # up -d пересоздаёт ровно те сервисы, у которых изменились порты/env/volumes
+          # (mysql, redis, meilisearch, minio и пр., которые иначе нигде не trogаются).
+          # Сервисы под profiles=["dev"] (mailpit, node, createbuckets) не поднимаются.
+          sg docker -c "$DC up -d --remove-orphans"
           sg docker -c "$DC exec -T app php artisan queue:restart"
+          # restart нужен даже после up -d: app/worker монтируют код через bind mount,
+          # PHP-FPM/queue процессы должны быть перезапущены для подхвата свежего vendor/.
           sg docker -c "$DC restart app worker nginx"
 
           echo "==> [9/9] Maintenance mode OFF..."
