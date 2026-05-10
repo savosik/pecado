@@ -347,6 +347,9 @@ jobs:
           echo "==> [5/9] Синхронизация ролей и прав..."
           sg docker -c "$DC exec -T app php artisan db:seed --class=RolesAndPermissionsSeeder --force"
 
+          echo "==> [5.1/9] Юридические страницы и пункты меню (идемпотентно)..."
+          sg docker -c "$DC exec -T app php artisan db:seed --class=LegalPagesSeeder --force"
+
           echo "==> [6/9] RabbitMQ users + topology..."
           sg docker -c "$DC up -d rabbitmq"
           for i in $(seq 1 30); do

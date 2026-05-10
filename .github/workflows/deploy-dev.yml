@@ -403,6 +403,9 @@ jobs:
           echo "==> [4/7] Синхронизация ролей и прав..."
           sg docker -c 'docker compose exec -T app php artisan db:seed --class=RolesAndPermissionsSeeder --force'
 
+          echo "==> [4.1/7] Юридические страницы и пункты меню (идемпотентно)..."
+          sg docker -c 'docker compose exec -T app php artisan db:seed --class=LegalPagesSeeder --force'
+
           echo "==> [5/7] Применение актуальной конфигурации RabbitMQ (плагины shovel, persistent volume)..."
           sg docker -c 'docker compose up -d rabbitmq'
 
