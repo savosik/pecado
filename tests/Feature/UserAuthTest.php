@@ -51,6 +51,7 @@ class UserAuthTest extends TestCase
             'email' => 'test@example.com',
             'password' => 'password123',
             'password_confirmation' => 'password123',
+            'terms_accepted' => true,
         ]);
 
         $response->assertRedirect('/onboarding');
@@ -58,6 +59,21 @@ class UserAuthTest extends TestCase
             'email' => 'test@example.com',
         ]);
         $this->assertAuthenticated();
+    }
+
+    public function test_user_cannot_register_without_terms_accepted(): void
+    {
+        $response = $this->post('/register', [
+            'email' => 'test@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ]);
+
+        $response->assertSessionHasErrors('terms_accepted');
+        $this->assertDatabaseMissing('users', [
+            'email' => 'test@example.com',
+        ]);
+        $this->assertGuest();
     }
 
     // ─── Login ────────────────────────────────

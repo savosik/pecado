@@ -1,8 +1,10 @@
 import { useForm } from '@inertiajs/react';
 import { Box, Input, Button, Text, Stack, SimpleGrid } from '@chakra-ui/react';
 import { Field } from '@/components/ui/field';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useAuthDialog } from '@/contexts/AuthDialogContext';
 import PasswordInput from '@/components/ui/password-input';
+import PolicyDialog from '@/components/common/PolicyDialog';
 // import SocialAuthButtons from '@/Pages/Auth/SocialAuthButtons';
 
 export default function RegisterForm() {
@@ -11,6 +13,7 @@ export default function RegisterForm() {
         email: '',
         password: '',
         password_confirmation: '',
+        terms_accepted: false,
     });
 
     const handleSubmit = (e) => {
@@ -74,17 +77,37 @@ export default function RegisterForm() {
                         </Field>
                     </SimpleGrid>
 
+                    <Field invalid={!!errors.terms_accepted} errorText={errors.terms_accepted}>
+                        <Checkbox
+                            checked={data.terms_accepted}
+                            onCheckedChange={(e) => setData('terms_accepted', !!e.checked)}
+                            colorPalette="red"
+                        >
+                            <Text fontSize="sm" color="fg" lineHeight="short">
+                                Я даю согласие на обработку{' '}
+                                <PolicyDialog slug="privacy" triggerLabel="персональных данных" />
+                            </Text>
+                        </Checkbox>
+                    </Field>
+
                     <Button
                         type="submit"
                         width="full"
                         size="lg"
                         loading={processing}
+                        disabled={!data.terms_accepted}
                         bg="#9e1b32"
                         color="white"
                         borderRadius="lg"
                         fontWeight="semibold"
                         fontSize="sm"
                         _hover={{ bg: "#7a1527" }}
+                        _disabled={{
+                            bg: "gray.300",
+                            color: "gray.500",
+                            cursor: "not-allowed",
+                            _hover: { bg: "gray.300" },
+                        }}
                         transition="all 0.2s ease"
                     >
                         Зарегистрироваться

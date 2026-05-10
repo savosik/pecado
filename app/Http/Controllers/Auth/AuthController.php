@@ -78,7 +78,7 @@ class AuthController extends Controller
             'country' => 'nullable|string|in:RU,BY,KZ',
             'city' => 'nullable|string|max:255',
             'password' => 'required|string|min:8|confirmed',
-            'terms_accepted' => 'nullable|boolean',
+            'terms_accepted' => 'required|accepted',
         ], [
             'email.required' => 'Email обязателен для заполнения',
             'email.email' => 'Введите корректный email',
@@ -86,7 +86,8 @@ class AuthController extends Controller
             'password.required' => 'Пароль обязателен для заполнения',
             'password.min' => 'Пароль должен содержать не менее 8 символов',
             'password.confirmed' => 'Пароли не совпадают',
-            'terms_accepted.accepted' => 'Необходимо принять условия использования',
+            'terms_accepted.required' => 'Необходимо дать согласие на обработку персональных данных',
+            'terms_accepted.accepted' => 'Необходимо дать согласие на обработку персональных данных',
         ]);
 
         $defaultRegionId = \App\Models\Region::defaultId();
@@ -98,7 +99,7 @@ class AuthController extends Controller
             'country' => $validated['country'] ?? null,
             'city' => $validated['city'] ?? null,
             'password' => $validated['password'],
-            'terms_accepted' => true,
+            'terms_accepted' => true, // accepted-валидатор гарантировал, что пользователь явно поставил галочку
             'region_id' => $defaultRegionId,
         ]);
 

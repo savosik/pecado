@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\User\CatalogApiController;
 use App\Http\Controllers\User\CatalogController as UserCatalogController;
+use App\Http\Controllers\User\PageController as UserPageController;
 use App\Http\Controllers\User\ProductController;
 use App\Http\Controllers\User\SearchController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,9 @@ Route::get('/products/by-ids', [\App\Http\Controllers\User\ProductByIdsControlle
 
 // QuickView — JSON-карточка товара
 Route::get('/products/{product:slug}', [ProductController::class, 'showJson'])->name('api.products.show');
+
+// CMS-страницы по slug — для встроенного показа в модалках (политика, согласие и т.п.)
+Route::get('/pages/{slug}', [UserPageController::class, 'apiShow'])->name('api.pages.show');
 
 // Лениво генерируемое rich-описание товара (Editor.js JSON через OpenRouter)
 Route::get('/products/{product:slug}/rich-content', [\App\Http\Controllers\Api\ProductRichContentController::class, 'show'])

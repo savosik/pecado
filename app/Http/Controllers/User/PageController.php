@@ -5,12 +5,31 @@ namespace App\Http\Controllers\User;
 use App\Helpers\ContentHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class PageController extends Controller
 {
+    /**
+     * Публичный JSON-эндпоинт: используется для встроенного показа страницы
+     * (например, политики приватности) в модалке без перехода с текущей.
+     */
+    public function apiShow(string $slug): JsonResponse
+    {
+        $page = Page::where('slug', $slug)
+            ->where('is_published', true)
+            ->forRegion(Auth::user()?->region_id)
+            ->firstOrFail(['id', 'title', 'slug', 'content']);
+
+        return response()->json([
+            'title' => $page->title,
+            'slug' => $page->slug,
+            'content' => $page->content,
+        ]);
+    }
+
     /**
      * Показать CMS-страницу по slug.
      */
