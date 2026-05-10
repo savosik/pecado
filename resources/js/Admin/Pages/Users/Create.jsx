@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Create({ regions, countries, statuses, availableRoles, clientStatuses }) {
+export default function Create({ regions, countries, statuses, availableRoles, clientStatuses, personalManagers }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: '',
         email: '',
@@ -18,6 +18,7 @@ export default function Create({ regions, countries, statuses, availableRoles, c
         city: '',
         region_id: '',
         client_status_id: '',
+        personal_manager_id: '',
         roles: [],
         is_subscribed: false,
         terms_accepted: false,
@@ -148,6 +149,21 @@ export default function Create({ regions, countries, statuses, availableRoles, c
                                         {clientStatuses?.map((cs) => (
                                             <option key={cs.id} value={cs.id}>
                                                 {cs.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </FormField>
+
+                                <FormField label="Персональный менеджер" error={errors.personal_manager_id}>
+                                    <select
+                                        value={data.personal_manager_id}
+                                        onChange={(e) => setData('personal_manager_id', e.target.value || '')}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
+                                    >
+                                        <option value="">Без менеджера</option>
+                                        {personalManagers?.map((pm) => (
+                                            <option key={pm.id} value={pm.id}>
+                                                {pm.name}
                                             </option>
                                         ))}
                                     </select>

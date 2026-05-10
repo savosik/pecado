@@ -68,6 +68,7 @@ class User extends Authenticatable implements HasMedia
         'view_token',
         'region_id',
         'client_status_id',
+        'personal_manager_id',
     ];
 
     protected static function boot(): void
@@ -108,6 +109,7 @@ class User extends Authenticatable implements HasMedia
             'status' => UserStatus::class,
             'region_id' => 'integer',
             'client_status_id' => 'integer',
+            'personal_manager_id' => 'integer',
         ];
     }
 
@@ -276,5 +278,13 @@ class User extends Authenticatable implements HasMedia
     public function clientStatus(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(ClientStatus::class);
+    }
+
+    /**
+     * Get the personal manager assigned to the user.
+     */
+    public function personalManager(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(PersonalManager::class);
     }
 }

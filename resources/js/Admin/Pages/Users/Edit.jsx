@@ -9,7 +9,7 @@ import { LuShieldAlert } from 'react-icons/lu';
 
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ user, regions, countries, statuses, availableRoles, clientStatuses }) {
+export default function Edit({ user, regions, countries, statuses, availableRoles, clientStatuses, personalManagers }) {
     const { data, setData, put, processing, errors, transform } = useForm({
         name: user.name || '',
         email: user.email || '',
@@ -20,6 +20,7 @@ export default function Edit({ user, regions, countries, statuses, availableRole
         region_id: user.region_id || '',
         roles: user.role_names || [],
         client_status_id: user.client_status_id || '',
+        personal_manager_id: user.personal_manager_id || '',
         is_subscribed: user.is_subscribed || false,
         terms_accepted: user.terms_accepted || false,
         status: user.status || '',
@@ -177,6 +178,21 @@ export default function Edit({ user, regions, countries, statuses, availableRole
                                         {clientStatuses?.map((cs) => (
                                             <option key={cs.id} value={cs.id}>
                                                 {cs.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </FormField>
+
+                                <FormField label="Персональный менеджер" error={errors.personal_manager_id}>
+                                    <select
+                                        value={data.personal_manager_id}
+                                        onChange={(e) => setData('personal_manager_id', e.target.value || '')}
+                                        style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
+                                    >
+                                        <option value="">Без менеджера</option>
+                                        {personalManagers?.map((pm) => (
+                                            <option key={pm.id} value={pm.id}>
+                                                {pm.name}
                                             </option>
                                         ))}
                                     </select>

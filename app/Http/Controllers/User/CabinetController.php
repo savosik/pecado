@@ -17,7 +17,7 @@ class CabinetController extends Controller
     {
         $user = Auth::user();
         $questionnaire = $user->questionnaire;
-        $user->load('clientStatus');
+        $user->load(['clientStatus', 'personalManager.media']);
 
         $ordersCount = Order::where('user_id', $user->id)->count();
         $favoritesCount = $user->favorites()->count();
@@ -59,6 +59,12 @@ class CabinetController extends Controller
                 'name' => $user->clientStatus->name,
                 'color' => $user->clientStatus->color,
                 'image_url' => $user->clientStatus->getFirstMediaUrl('image'),
+            ] : null,
+            'personalManager' => $user->personalManager ? [
+                'name' => $user->personalManager->name,
+                'phone' => $user->personalManager->phone,
+                'email' => $user->personalManager->email,
+                'photo_url' => $user->personalManager->getFirstMediaUrl('photo'),
             ] : null,
         ]);
     }

@@ -7,6 +7,7 @@ use App\Enums\UserStatus;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\ClientStatus;
+use App\Models\PersonalManager;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -91,6 +92,7 @@ class UserController extends Controller
             ]),
             'availableRoles' => Role::orderBy('name')->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
+            'personalManagers' => PersonalManager::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -112,6 +114,7 @@ class UserController extends Controller
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',
             'client_status_id' => 'nullable|exists:client_statuses,id',
+            'personal_manager_id' => 'nullable|exists:personal_managers,id',
         ]);
 
         $roles = $validated['roles'] ?? [];
@@ -125,7 +128,7 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        $user->load(['region', 'region.currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles', 'clientStatus']);
+        $user->load(['region', 'region.currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles', 'clientStatus', 'personalManager']);
 
         return Inertia::render('Admin/Pages/Users/Edit', [
             'user' => array_merge($user->toArray(), [
@@ -143,6 +146,7 @@ class UserController extends Controller
             ]),
             'availableRoles' => Role::orderBy('name')->get()->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
             'clientStatuses' => ClientStatus::select('id', 'name')->orderBy('name')->get(),
+            'personalManagers' => PersonalManager::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
 
@@ -164,6 +168,7 @@ class UserController extends Controller
             'roles' => 'array',
             'roles.*' => 'string|exists:roles,name',
             'client_status_id' => 'nullable|exists:client_statuses,id',
+            'personal_manager_id' => 'nullable|exists:personal_managers,id',
         ]);
 
         $roles = $validated['roles'] ?? [];

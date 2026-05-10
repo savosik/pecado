@@ -1,13 +1,13 @@
 import {
     Box, Flex, Grid, GridItem, Text, Card, HStack, VStack,
-    Badge,
+    Badge, Image,
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
-import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList } from 'react-icons/lu';
+import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 
-export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null }) {
+export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null }) {
     const { auth } = usePage().props;
     const user = auth?.user;
     const name = user?.name || user?.name || 'Пользователь';
@@ -98,6 +98,93 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                     </Flex>
                 </Card.Body>
             </Card.Root>
+
+            {/* Personal Manager Card */}
+            {personalManager && (
+                <Card.Root
+                    mb="6"
+                    borderRadius="xl"
+                    overflow="hidden"
+                    border="1px solid"
+                    borderColor="border.muted"
+                    bg="bg"
+                >
+                    <Card.Body p={{ base: '4', md: '5' }}>
+                        <Text fontSize="xs" fontWeight="600" color="gray.500" textTransform="uppercase" letterSpacing="0.04em" mb="3">
+                            Ваш персональный менеджер
+                        </Text>
+                        <Flex
+                            align={{ base: 'flex-start', md: 'center' }}
+                            gap={{ base: '3', md: '4' }}
+                            direction={{ base: 'column', sm: 'row' }}
+                        >
+                            {personalManager.photo_url ? (
+                                <Image
+                                    src={personalManager.photo_url}
+                                    alt={personalManager.name}
+                                    w="14"
+                                    h="14"
+                                    borderRadius="full"
+                                    objectFit="cover"
+                                    flexShrink="0"
+                                    border="2px solid"
+                                    borderColor="pecado.100"
+                                    _dark={{ borderColor: 'pecado.900/40' }}
+                                />
+                            ) : (
+                                <Flex
+                                    align="center"
+                                    justify="center"
+                                    w="14"
+                                    h="14"
+                                    borderRadius="full"
+                                    bg="pecado.50"
+                                    color="pecado.500"
+                                    _dark={{ bg: 'pecado.900/20', color: 'pecado.300' }}
+                                    flexShrink="0"
+                                >
+                                    <LuUserRound size={26} />
+                                </Flex>
+                            )}
+                            <Box flex="1" minW="0">
+                                <Text fontSize="md" fontWeight="700" color="gray.900" _dark={{ color: 'gray.50' }} mb="1.5">
+                                    {personalManager.name}
+                                </Text>
+                                <HStack gap={{ base: '3', md: '5' }} flexWrap="wrap">
+                                    {personalManager.phone && (
+                                        <HStack
+                                            as="a"
+                                            href={`tel:${personalManager.phone}`}
+                                            gap="1.5"
+                                            color="gray.700"
+                                            _dark={{ color: 'gray.200' }}
+                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.300' } }}
+                                            transition="color 0.15s"
+                                        >
+                                            <LuPhone size={14} />
+                                            <Text fontSize="sm" fontWeight="500">{personalManager.phone}</Text>
+                                        </HStack>
+                                    )}
+                                    {personalManager.email && (
+                                        <HStack
+                                            as="a"
+                                            href={`mailto:${personalManager.email}`}
+                                            gap="1.5"
+                                            color="gray.700"
+                                            _dark={{ color: 'gray.200' }}
+                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.300' } }}
+                                            transition="color 0.15s"
+                                        >
+                                            <LuMail size={14} />
+                                            <Text fontSize="sm" fontWeight="500" wordBreak="break-all">{personalManager.email}</Text>
+                                        </HStack>
+                                    )}
+                                </HStack>
+                            </Box>
+                        </Flex>
+                    </Card.Body>
+                </Card.Root>
+            )}
 
             {/* Onboarding Reminder */}
             {!questionnaireCompleted && (

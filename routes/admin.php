@@ -618,6 +618,23 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::delete('/client-statuses/{client_status}/media', [\App\Http\Controllers\Admin\ClientStatusController::class, 'deleteMedia'])->name('client-statuses.media.delete');
     });
 
+    // Персональные менеджеры
+    Route::middleware('permission:personal-managers.view')->group(function () {
+        Route::get('/personal-managers', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'index'])->name('personal-managers.index');
+    });
+    Route::middleware('permission:personal-managers.create')->group(function () {
+        Route::get('/personal-managers/create', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'create'])->name('personal-managers.create');
+        Route::post('/personal-managers', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'store'])->name('personal-managers.store');
+    });
+    Route::middleware('permission:personal-managers.edit')->group(function () {
+        Route::get('/personal-managers/{personal_manager}/edit', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'edit'])->name('personal-managers.edit');
+        Route::put('/personal-managers/{personal_manager}', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'update'])->name('personal-managers.update');
+    });
+    Route::middleware('permission:personal-managers.delete')->group(function () {
+        Route::delete('/personal-managers/{personal_manager}', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'destroy'])->name('personal-managers.destroy');
+        Route::delete('/personal-managers/{personal_manager}/media', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'deleteMedia'])->name('personal-managers.media.delete');
+    });
+
     // =====================================================================
     // Финансы
     // =====================================================================
