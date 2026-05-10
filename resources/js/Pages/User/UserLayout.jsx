@@ -10,6 +10,7 @@ import ProductQuickViewMount from '@/components/product/ProductQuickViewMount';
 import { AuthDialogProvider } from '@/contexts/AuthDialogContext';
 import BugReportWidget from '@/Components/BugReportWidget';
 import AgeGate from '@/components/common/AgeGate';
+import CookieConsent from '@/components/common/CookieConsent';
 
 export default function UserLayout({ children, fluid = false }) {
     return (
@@ -37,6 +38,7 @@ export default function UserLayout({ children, fluid = false }) {
                 <Toaster />
                 <BugReportWidget />
                 <AgeGate />
+                <CookieConsent />
             </Box>
         </ProductQuickViewProvider>
         </AuthDialogProvider>
