@@ -116,6 +116,7 @@ export default function Edit({ menuItem }) {
                                             <option value="">Не выбрана</option>
                                             <option value="company">О компании</option>
                                             <option value="buyers">Покупателям</option>
+                                            <option value="legal">Правовая информация</option>
                                         </NativeSelectField>
                                     </NativeSelectRoot>
                                 </FormField>

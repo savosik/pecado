@@ -12,6 +12,7 @@ export default function UserFooter() {
     // Группируем пункты меню по footer_group
     const companyLinks = footerMenuItems.filter((item) => item.footer_group === 'company');
     const buyerLinks = footerMenuItems.filter((item) => item.footer_group === 'buyers');
+    const legalLinks = footerMenuItems.filter((item) => item.footer_group === 'legal');
 
     const renderLink = (item) => (
         <Link
@@ -56,9 +57,9 @@ export default function UserFooter() {
                 _dark={{ bg: 'gray.900', borderColor: 'gray.800', color: 'gray.300' }}
             >
                 <Box maxW="1360px" mx="auto" px={{ base: '3', md: '6' }} py={{ base: '8', md: '10' }}>
-                    {/* Four Columns */}
+                    {/* Columns */}
                     <Grid
-                        templateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' }}
+                        templateColumns={{ base: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(5, 1fr)' }}
                         gap={{ base: '6', md: '8' }}
                         mb="8"
                     >
@@ -111,6 +112,18 @@ export default function UserFooter() {
                                 ))}
                             </VStack>
                         </GridItem>
+
+                        {/* Legal */}
+                        {legalLinks.length > 0 && (
+                            <GridItem>
+                                <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
+                                    Правовая информация
+                                </Text>
+                                <VStack align="start" gap="2">
+                                    {legalLinks.map(renderLink)}
+                                </VStack>
+                            </GridItem>
+                        )}
                     </Grid>
 
                     {/* Bottom Row */}
