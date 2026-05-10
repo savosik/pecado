@@ -55,7 +55,7 @@ class CompanyApiStoreTest extends TestCase
     }
 
     #[Test]
-    public function rejects_tax_id_that_already_exists_for_any_user(): void
+    public function rejects_tax_id_that_belongs_to_another_user(): void
     {
         $otherUser = User::factory()->create();
         Company::factory()->create([
@@ -76,8 +76,69 @@ class CompanyApiStoreTest extends TestCase
             ->assertJsonValidationErrors(['tax_id']);
 
         $this->assertStringContainsString(
-            'уже зарегистрирована',
+            'привязан к другому аккаунту',
             $response->json('errors.tax_id.0')
         );
+    }
+
+    #[Test]
+    public function claims_orphan_company_with_matching_tax_id(): void
+    {
+        $orphan = Company::factory()->create([
+            'user_id' => null,
+            'tax_id' => '7710140679',
+            'legal_name' => 'Старое название из 1С',
+        ]);
+
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->postJson('/cabinet/companies/api', [
+            'country' => 'RU',
+            'name' => 'Тест',
+            'legal_name' => 'ООО Тест',
+            'tax_id' => '7710140679',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertSame($orphan->id, $response->json('company.id'));
+
+        // Та же запись теперь привязана к юзеру и обновлена
+        $this->assertDatabaseHas('companies', [
+            'id' => $orphan->id,
+            'user_id' => $user->id,
+            'legal_name' => 'ООО Тест',
+        ]);
+
+        // Не появилось дубля
+        $this->assertSame(1, Company::where('tax_id', '7710140679')->count());
+    }
+
+    #[Test]
+    public function updates_existing_own_company_with_matching_tax_id(): void
+    {
+        $user = User::factory()->create();
+        $own = Company::factory()->create([
+            'user_id' => $user->id,
+            'tax_id' => '7710140679',
+            'legal_name' => 'Старое название',
+        ]);
+
+        $response = $this->actingAs($user)->postJson('/cabinet/companies/api', [
+            'country' => 'RU',
+            'name' => 'Тест',
+            'legal_name' => 'ООО Тест Обновлённое',
+            'tax_id' => '7710140679',
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertSame($own->id, $response->json('company.id'));
+
+        $this->assertDatabaseHas('companies', [
+            'id' => $own->id,
+            'user_id' => $user->id,
+            'legal_name' => 'ООО Тест Обновлённое',
+        ]);
+
+        $this->assertSame(1, Company::where('tax_id', '7710140679')->count());
     }
 }
