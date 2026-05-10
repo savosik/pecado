@@ -73,9 +73,11 @@ services:
       MEILI_ENV: production
 
   minio:
-    # API (9000) — закрыт наружу, доступ только внутри Docker.
+    # API (9000) — биндим только на внутренний интерфейс 10.2.2.101 (локальная сеть для 1С).
+    # Наружу через 93.94.150.16 не торчит. Дополнительно UFW: allow from 10.2.2.0/24 to any port 9000.
     # Console (9001) — на localhost (через SSH-туннель).
     ports: !override
+      - "10.2.2.101:9000:9000"
       - "127.0.0.1:9001:9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY must be set in .env}
