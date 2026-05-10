@@ -215,6 +215,7 @@ export default function Create({ regions, countries, statuses, availableRoles, c
                                         return (
                                             <Button
                                                 key={status.value}
+                                                type="button"
                                                 size="sm"
                                                 variant={isSelected ? 'solid' : 'outline'}
                                                 colorPalette={palette}

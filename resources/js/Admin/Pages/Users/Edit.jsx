@@ -244,6 +244,7 @@ export default function Edit({ user, regions, countries, statuses, availableRole
                                         return (
                                             <Button
                                                 key={status.value}
+                                                type="button"
                                                 size="sm"
                                                 variant={isSelected ? 'solid' : 'outline'}
                                                 colorPalette={palette}
