@@ -74,7 +74,7 @@ class ReturnServiceTest extends TestCase
 
         $this->assertInstanceOf(ProductReturn::class, $return);
         $this->assertSame($user->id, $return->user_id);
-        $this->assertSame('pending', $return->status->value);
+        $this->assertSame('pending_approval', $return->status->value);
         $this->assertEqualsWithDelta(2469.12, (float) $return->total_amount, 0.01);
 
         $item = $return->items()->first();
@@ -152,7 +152,7 @@ class ReturnServiceTest extends TestCase
             'return_id' => ProductReturn::create([
                 'uuid' => (string) \Illuminate\Support\Str::uuid(),
                 'user_id' => $user->id,
-                'status' => 'confirmed',
+                'status' => 'in_reserve',
                 'total_amount' => 0,
             ])->id,
             'shipment_item_id' => $si->id,

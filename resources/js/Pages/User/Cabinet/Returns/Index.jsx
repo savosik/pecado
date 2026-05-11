@@ -15,14 +15,7 @@ import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import MatchBadge from '@/components/cabinet/MatchBadge';
 import ExportMenu from '@/components/cabinet/ExportMenu';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
-
-const STATUS_COLORS = {
-    pending: 'yellow',
-    confirmed: 'green',
-    ready_to_ship: 'purple',
-    closed: 'blue',
-    cancelled: 'red',
-};
+import { RETURN_STATUS_COLORS as STATUS_COLORS } from '@/constants/returnStatus';
 
 export default function ReturnsIndex({ filters, statuses, reasons, exportEnabled = false, suggestion = null }) {
     const { returns } = usePage().props;

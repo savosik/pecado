@@ -7,14 +7,7 @@ import {
     LuArrowLeft, LuRotateCcw, LuPackage, LuMessageSquare,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
-
-const STATUS_COLORS = {
-    pending: 'yellow',
-    confirmed: 'green',
-    ready_to_ship: 'purple',
-    closed: 'blue',
-    cancelled: 'red',
-};
+import { RETURN_STATUS_COLORS as STATUS_COLORS } from '@/constants/returnStatus';
 
 const REASON_LABELS = {
     defective: 'Бракованный товар',

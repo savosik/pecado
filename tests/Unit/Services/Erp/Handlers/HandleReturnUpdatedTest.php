@@ -26,11 +26,26 @@ class HandleReturnUpdatedTest extends TestCase
     public static function statusFromErpProvider(): array
     {
         return [
-            'pending' => ['pending', ReturnStatus::PENDING],
-            'confirmed' => ['confirmed', ReturnStatus::CONFIRMED],
-            'ready_to_ship' => ['ready_to_ship', ReturnStatus::READY_TO_SHIP],
-            'closed' => ['closed', ReturnStatus::CLOSED],
-            'cancelled' => ['cancelled', ReturnStatus::CANCELLED],
+            // Канонические ключи v15
+            'pending_approval' => ['pending_approval', ReturnStatus::PENDING_APPROVAL],
+            'for_return' => ['for_return', ReturnStatus::FOR_RETURN],
+            'in_reserve' => ['in_reserve', ReturnStatus::IN_RESERVE],
+            'ready_for_shipment' => ['ready_for_shipment', ReturnStatus::READY_FOR_SHIPMENT],
+            'completed' => ['completed', ReturnStatus::COMPLETED],
+            'rejected' => ['rejected', ReturnStatus::REJECTED],
+            // Русские названия из 1С
+            'ru: На согласовании' => ['На согласовании', ReturnStatus::PENDING_APPROVAL],
+            'ru: К возврату' => ['К возврату', ReturnStatus::FOR_RETURN],
+            'ru: В резерве' => ['В резерве', ReturnStatus::IN_RESERVE],
+            'ru: К отгрузке' => ['К отгрузке', ReturnStatus::READY_FOR_SHIPMENT],
+            'ru: Выполнена' => ['Выполнена', ReturnStatus::COMPLETED],
+            'ru: Отклонена' => ['Отклонена', ReturnStatus::REJECTED],
+            // Legacy-ключи до v15
+            'legacy pending' => ['pending', ReturnStatus::PENDING_APPROVAL],
+            'legacy confirmed' => ['confirmed', ReturnStatus::IN_RESERVE],
+            'legacy ready_to_ship' => ['ready_to_ship', ReturnStatus::READY_FOR_SHIPMENT],
+            'legacy closed' => ['closed', ReturnStatus::COMPLETED],
+            'legacy cancelled' => ['cancelled', ReturnStatus::REJECTED],
         ];
     }
 
@@ -38,15 +53,17 @@ class HandleReturnUpdatedTest extends TestCase
     #[DataProvider('statusFromErpProvider')]
     public function it_applies_each_status_from_erp(string $rawStatus, ReturnStatus $expected): void
     {
+        $uuid = 'ret-uuid-'.md5($rawStatus);
+
         $return = ProductReturn::factory()->create([
-            'uuid' => 'ret-uuid-'.$rawStatus,
-            'status' => ReturnStatus::PENDING,
+            'uuid' => $uuid,
+            'status' => ReturnStatus::PENDING_APPROVAL,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
 
         $this->handler->handle([
-            'uuid' => 'ret-uuid-'.$rawStatus,
+            'uuid' => $uuid,
             'status' => $rawStatus,
         ]);
 
@@ -58,7 +75,7 @@ class HandleReturnUpdatedTest extends TestCase
     {
         $return = ProductReturn::factory()->create([
             'uuid' => 'ret-uuid-unknown',
-            'status' => ReturnStatus::PENDING,
+            'status' => ReturnStatus::PENDING_APPROVAL,
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
@@ -71,7 +88,7 @@ class HandleReturnUpdatedTest extends TestCase
             'status' => 'unknown_status',
         ]);
 
-        $this->assertSame(ReturnStatus::PENDING, $return->fresh()->status);
+        $this->assertSame(ReturnStatus::PENDING_APPROVAL, $return->fresh()->status);
     }
 
     #[Test]
@@ -119,7 +136,7 @@ class HandleReturnUpdatedTest extends TestCase
     {
         $return = ProductReturn::factory()->create([
             'uuid' => 'ret-uuid-combo',
-            'status' => ReturnStatus::PENDING,
+            'status' => ReturnStatus::PENDING_APPROVAL,
             'erp_number' => null,
         ]);
 
@@ -128,11 +145,11 @@ class HandleReturnUpdatedTest extends TestCase
         $this->handler->handle([
             'uuid' => 'ret-uuid-combo',
             'number' => 'ВЗВ-000789',
-            'status' => 'confirmed',
+            'status' => 'in_reserve',
         ]);
 
         $fresh = $return->fresh();
         $this->assertEquals('ВЗВ-000789', $fresh->erp_number);
-        $this->assertSame(ReturnStatus::CONFIRMED, $fresh->status);
+        $this->assertSame(ReturnStatus::IN_RESERVE, $fresh->status);
     }
 }

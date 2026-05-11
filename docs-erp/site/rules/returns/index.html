@@ -667,6 +667,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Допустимые статусы (v15)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Допустимые статусы (v15)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#legacy-v1312x-v15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy (v13.12.x → v15)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#returncreated-1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -739,11 +767,28 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#returndeleted-1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Допустимые статусы
+        return.deleted (1С → Сайт)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="return.deleted (1С → Сайт)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Бизнес-правила
       
     </span>
   </a>
@@ -752,6 +797,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1639,6 +1695,34 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#v15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Допустимые статусы (v15)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Допустимые статусы (v15)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#legacy-v1312x-v15" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy (v13.12.x → v15)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#returncreated-1" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1711,11 +1795,28 @@
   
 </li>
         
-          <li class="md-nav__item">
-  <a href="#_5" class="md-nav__link">
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#returndeleted-1" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Допустимые статусы
+        return.deleted (1С → Сайт)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="return.deleted (1С → Сайт)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#-_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Бизнес-правила
       
     </span>
   </a>
@@ -1724,6 +1825,17 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Критерии приёмки
+      
+    </span>
+  </a>
   
 </li>
       
@@ -1777,6 +1889,106 @@
 </tbody>
 </table>
 <hr />
+<h2 id="v15">Допустимые статусы (v15)<a class="headerlink" href="#v15" title="Permanent link">&para;</a></h2>
+<p>Перечисление статусов заявки на возврат на сайте и в шине RabbitMQ
+полностью соответствует справочнику 1С:КА2. Шесть значений в порядке
+жизненного цикла:</p>
+<table>
+<thead>
+<tr>
+<th>№</th>
+<th>Канонический ключ</th>
+<th>Название в 1С</th>
+<th>Лейбл на сайте</th>
+<th>Цвет</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>pending_approval</code></td>
+<td>На согласовании</td>
+<td>На согласовании</td>
+<td>yellow</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>for_return</code></td>
+<td>К возврату</td>
+<td>К возврату</td>
+<td>orange</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>in_reserve</code></td>
+<td>В резерве</td>
+<td>В резерве</td>
+<td>blue</td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>ready_for_shipment</code></td>
+<td>К отгрузке</td>
+<td>К отгрузке</td>
+<td>purple</td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>completed</code></td>
+<td>Выполнена</td>
+<td>Выполнена</td>
+<td>green</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>rejected</code></td>
+<td>Отклонена</td>
+<td>Отклонена</td>
+<td>red</td>
+</tr>
+</tbody>
+</table>
+<p>Источник истины на стороне сайта — <code>App\Enums\ReturnStatus</code>. Маппинг
+русских названий и legacy-ключей до v15 — в
+<code>App\Services\Erp\Support\ReturnStatusMapper</code>.</p>
+<h3 id="legacy-v1312x-v15">Legacy (v13.12.x → v15)<a class="headerlink" href="#legacy-v1312x-v15" title="Permanent link">&para;</a></h3>
+<p>Сохранены для обратной совместимости — переходный период. Сайт переводит
+их в канонические ключи без ошибок.</p>
+<table>
+<thead>
+<tr>
+<th>Legacy-ключ</th>
+<th>Канонический ключ v15</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pending</code></td>
+<td><code>pending_approval</code></td>
+</tr>
+<tr>
+<td><code>confirmed</code></td>
+<td><code>in_reserve</code> (КОбеспечению — более ранний этап)</td>
+</tr>
+<tr>
+<td><code>ready_to_ship</code></td>
+<td><code>ready_for_shipment</code></td>
+</tr>
+<tr>
+<td><code>closed</code></td>
+<td><code>completed</code></td>
+</tr>
+<tr>
+<td><code>cancelled</code></td>
+<td><code>rejected</code></td>
+</tr>
+</tbody>
+</table>
+<p>До v15 ключ <code>confirmed</code> объединял два этапа 1С — «КОбеспечению/В резерве»
+и «КВозврату/К возврату». При миграции данных все <code>confirmed</code> уходят в
+<code>in_reserve</code>; если для конкретной заявки правильным является <code>for_return</code>,
+менеджер 1С переведёт её туда вручную.</p>
+<hr />
 <h2 id="returncreated-1">return.created (Сайт → 1С)<a class="headerlink" href="#returncreated-1" title="Permanent link">&para;</a></h2>
 <h3 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h3>
 <ul>
@@ -1785,6 +1997,7 @@
 <li>Цена каждой позиции фиксируется как <strong>snapshot</strong> из <code>ShipmentItem.price</code> в момент создания возврата. Последующие переоценки реализации со стороны 1С цену возврата не меняют.</li>
 <li>Валюта возврата совпадает с валютой реализации — передаётся полем <code>currency_code</code>.</li>
 <li>Поле <code>order_uuid</code> в корне сообщения <strong>удалено</strong> (v12.13, BREAKING). Если 1С нужно связать возврат с заказом, она делает это через цепочку <code>shipment_uuid → shipment.order_uuid</code>.</li>
+<li>Сайт публикует заявку в статусе <code>pending_approval</code> — она ждёт согласования менеджером в 1С.</li>
 </ul>
 <h3 id="_3">Обязательные поля позиции<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <table>
@@ -1838,54 +2051,33 @@
 <h2 id="returnupdated-1">return.updated (1С → Сайт)<a class="headerlink" href="#returnupdated-1" title="Permanent link">&para;</a></h2>
 <h3 id="-_1">Бизнес-правила<a class="headerlink" href="#-_1" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Обновляет статус возврата по UUID.</li>
+<li>Обновляет статус и/или <code>erp_number</code> заявки на возврат по UUID.</li>
 <li><strong>(v12.3)</strong> Если передан <code>number</code> — сайт сохраняет его как <code>erp_number</code>. Это номер возврата из 1С, который отображается пользователю для коммуникации с менеджером.</li>
-<li><strong>(v13.8)</strong> Поле <code>status</code> ограничено перечислением. Сайт принимает только значения из таблицы ниже; неизвестные строки игнорируются с записью <code>Log::warning</code>, статус возврата не меняется.</li>
+<li><strong>(v15)</strong> Поле <code>status</code> приводится к каноническому ключу через <code>ReturnStatusMapper</code>. Поддерживаются:<ul>
+<li>канонические английские ключи (см. раздел «Допустимые статусы»);</li>
+<li>русские названия 1С (<code>«На согласовании»</code>, <code>«К возврату»</code>, <code>«В резерве»</code>, …);</li>
+<li>legacy-ключи до v15 (<code>pending</code>, <code>confirmed</code>, <code>ready_to_ship</code>, <code>closed</code>, <code>cancelled</code>) — для переходного периода.</li>
 </ul>
-<h3 id="_5">Допустимые статусы<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
-<p>1С передаёт статус возврата как одну из пяти строк по шине. Соответствие со справочником в 1С:</p>
-<table>
-<thead>
-<tr>
-<th>1С (Перечисление)</th>
-<th>Шинный код</th>
-<th>Метка на сайте</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>НеСогласована</td>
-<td><code>pending</code></td>
-<td>Не согласована</td>
-</tr>
-<tr>
-<td>КОбеспечению</td>
-<td><code>confirmed</code></td>
-<td>Подтверждён</td>
-</tr>
-<tr>
-<td>КВозврату</td>
-<td><code>confirmed</code></td>
-<td>Подтверждён</td>
-</tr>
-<tr>
-<td>КОтгрузке</td>
-<td><code>ready_to_ship</code></td>
-<td>К отгрузке</td>
-</tr>
-<tr>
-<td>Выполнена</td>
-<td><code>closed</code></td>
-<td>Выполнена</td>
-</tr>
-<tr>
-<td>Отклонена</td>
-<td><code>cancelled</code></td>
-<td>Отклонена</td>
-</tr>
-</tbody>
-</table>
-<p>КОбеспечению и КВозврату на стороне 1С сворачиваются в одну строку <code>confirmed</code>. Если потребуется различать эти подэтапы — сначала нужно раздвоить маппинг в справочнике 1С (например, ввести строки <code>confirmed_supply</code> и <code>confirmed_return</code>), затем расширить enum в сайтовой схеме.</p>
+</li>
+<li>Неизвестные значения игнорируются с записью <code>Log::warning</code>, статус возврата при этом не меняется.</li>
+</ul>
+<hr />
+<h2 id="returndeleted-1">return.deleted (1С → Сайт)<a class="headerlink" href="#returndeleted-1" title="Permanent link">&para;</a></h2>
+<h3 id="-_2">Бизнес-правила<a class="headerlink" href="#-_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Заявка помечается soft-delete (<code>returns.deleted_at</code> = <code>NOW()</code>). Физическая запись сохраняется для аудита.</li>
+<li>Статус заявки явно не переписывается — её последнее зафиксированное состояние остаётся в БД и доступно в админке через фильтр «Удалённые».</li>
+</ul>
+<hr />
+<h2 id="_5">Критерии приёмки<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h2>
+<ul>
+<li>[ ] Сайт публикует <code>return.created</code> после успешного оформления возврата клиентом — статус заявки <code>pending_approval</code> (v15)</li>
+<li>[ ] Сайт принимает <code>return.updated</code> со всеми 6 каноническими ключами enum (v15)</li>
+<li>[ ] <code>return.updated</code> распознаёт русские названия 1С (например <code>«В резерве»</code>) и legacy-ключи (<code>confirmed</code> → <code>in_reserve</code>) через <code>ReturnStatusMapper</code> (v15)</li>
+<li>[ ] <code>return.deleted</code> делает soft-delete без потери последнего зафиксированного статуса</li>
+<li>[ ] Каждая позиция содержит <code>shipment_uuid</code>, <code>shipment_number</code>, <code>price</code>, <code>currency_code</code> (v12.13, v12.12)</li>
+<li>[ ] Корневое <code>order_uuid</code> не передаётся (v12.13 BREAKING)</li>
+</ul>
 
 
 

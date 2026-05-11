@@ -22,13 +22,14 @@
         "status": {
             "type": "string",
             "enum": [
-                "pending",
-                "confirmed",
-                "ready_to_ship",
-                "closed",
-                "cancelled"
+                "pending_approval",
+                "for_return",
+                "in_reserve",
+                "ready_for_shipment",
+                "completed",
+                "rejected"
             ],
-            "description": "Статус возврата. Соответствие со справочником 1С: НеСогласована=pending, КОбеспечению/КВозврату=confirmed, КОтгрузке=ready_to_ship, Выполнена=closed, Отклонена=cancelled."
+            "description": "Статус возврата в перечислении 1С:КА2 (v15). Маппинг: НеСогласована=pending_approval, КВозврату=for_return, КОбеспечению=in_reserve, КОтгрузке=ready_for_shipment, Выполнена=completed, Отклонена=rejected. Полная таблица — в docs-erp/content/rules/returns.md."
         }
     },
     "additionalProperties": true,

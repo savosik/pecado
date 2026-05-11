@@ -17,17 +17,7 @@ import { LuArrowLeft, LuPencil, LuSave } from "react-icons/lu";
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { toaster } from "@/components/ui/toaster";
-
-const getStatusColor = (status) => {
-    const colors = {
-        pending: "yellow",
-        confirmed: "green",
-        ready_to_ship: "purple",
-        closed: "blue",
-        cancelled: "red",
-    };
-    return colors[status] || "gray";
-};
+import { getReturnStatusColor as getStatusColor } from "@/constants/returnStatus";
 
 const getReasonLabel = (reason) => {
     const labels = {

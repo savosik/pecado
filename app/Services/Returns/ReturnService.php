@@ -44,7 +44,7 @@ class ReturnService
 
             $return = ProductReturn::create([
                 'user_id' => $user->id,
-                'status' => ReturnStatus::PENDING->value,
+                'status' => ReturnStatus::PENDING_APPROVAL->value,
                 'comment' => $data['comment'] ?? null,
                 'total_amount' => $total,
             ]);

@@ -457,6 +457,72 @@
 
 ---
 
+## 1.15а — Обновление заявки на возврат (`return.updated`, v15)
+
+**Зависимости:** существующий возврат у пользователя (создан в 2.4 / 3.5)
+
+### A) Обновление статуса → in_reserve (канонический ключ v15)
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/return.updated.json)
+
+🔵 `return.updated` с `status: "in_reserve"`.
+
+- [ ] Статус возврата → `in_reserve`
+- [ ] В интерфейсе отображается лейбл «В резерве»
+
+### B) Обновление статуса → for_return
+
+🔵 `return.updated` с `status: "for_return"`.
+
+- [ ] Статус → `for_return`
+- [ ] Лейбл «К возврату»
+
+### C) Обновление статуса → completed
+
+🔵 `return.updated` с `status: "completed"`.
+
+- [ ] Статус → `completed`
+- [ ] Лейбл «Выполнена»
+
+### D) Маппинг русских названий из 1С (v15)
+
+🔵 `return.updated` с `status: "В резерве"` (русская строка из перечисления 1С).
+
+- [ ] Статус → `in_reserve`
+- [ ] Никаких ошибок валидации
+
+### E) Маппинг legacy-ключей (v15, переходный период)
+
+🔵 `return.updated` с `status: "confirmed"` / `"ready_to_ship"` / `"closed"` / `"cancelled"`.
+
+- [ ] `confirmed` → `in_reserve`
+- [ ] `ready_to_ship` → `ready_for_shipment`
+- [ ] `closed` → `completed`
+- [ ] `cancelled` → `rejected`
+
+### F) Обновление номера (v12.3)
+
+🔵 `return.updated` с `number: "ВОЗ-2026-0001"`.
+
+- [ ] В колонке `returns.erp_number` сохранён номер из payload
+- [ ] В ЛК и админке отображается `erp_number`
+
+---
+
+## 1.15б — Удаление возврата (`return.deleted`)
+
+**Зависимости:** существующий возврат
+
+🔵 **1С отправляет** `return.deleted`.
+
+> Структура payload → [JSON Schema](/docs/erp/schemas/return.deleted.json)
+
+- [ ] Запись помечена soft-delete (`returns.deleted_at` заполнен)
+- [ ] Не отображается в активных возвратах ЛК и админки
+- [ ] Последний зафиксированный статус сохранён в БД
+
+---
+
 ## 1.16 — Реализации (`shipment.created`)
 
 **Зависимости:** 1.12 (контрагент), 1.13 (заказ)

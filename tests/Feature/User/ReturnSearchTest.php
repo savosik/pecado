@@ -237,11 +237,11 @@ class ReturnSearchTest extends TestCase
     #[Test]
     public function status_array_filter_supports_multi_select(): void
     {
-        $pending = $this->makeReturn(['erp_number' => 'ST-P', 'status' => ReturnStatus::PENDING]);
-        $confirmed = $this->makeReturn(['erp_number' => 'ST-C', 'status' => ReturnStatus::CONFIRMED]);
-        $cancelled = $this->makeReturn(['erp_number' => 'ST-X', 'status' => ReturnStatus::CANCELLED]);
+        $pending = $this->makeReturn(['erp_number' => 'ST-P', 'status' => ReturnStatus::PENDING_APPROVAL]);
+        $confirmed = $this->makeReturn(['erp_number' => 'ST-C', 'status' => ReturnStatus::IN_RESERVE]);
+        $cancelled = $this->makeReturn(['erp_number' => 'ST-X', 'status' => ReturnStatus::REJECTED]);
 
-        $ids = $this->fetchReturnIds('status[]=pending&status[]=confirmed');
+        $ids = $this->fetchReturnIds('status[]=pending_approval&status[]=in_reserve');
 
         $this->assertContains($pending->id, $ids);
         $this->assertContains($confirmed->id, $ids);

@@ -778,10 +778,16 @@ operations:
   # ── US-09: Возвраты ────────────────────────
   receiveReturnUpdated:
     title: Обновление возврата
-    summary: 1С обновляет статус возврата
+    summary: 1С обновляет статус и/или номер возврата
     description: |
       Обработчик: `HandleReturnUpdated`
-      > US-09 отложен на следующий скоп.
+
+      **v15:** Поле `status` приводится к одному из шести канонических ключей
+      (`pending_approval`, `for_return`, `in_reserve`, `ready_for_shipment`,
+      `completed`, `rejected`) через `App\Services\Erp\Support\ReturnStatusMapper`.
+      Маппер принимает канонический английский ключ, русское название из 1С
+      (например `«К возврату»`, `«В резерве»`) или legacy-ключ до v15
+      (`pending`, `confirmed`, `ready_to_ship`, `closed`, `cancelled`).
     action: receive
     channel:
       $ref: '#/channels/erpInReturns'
@@ -2492,27 +2498,29 @@ components:
         status:
           type: string
           enum:
-            - pending
-            - confirmed
-            - ready_to_ship
-            - closed
-            - cancelled
+            - pending_approval
+            - for_return
+            - in_reserve
+            - ready_for_shipment
+            - completed
+            - rejected
           description: |
-            Статус возврата. Соответствие со справочником статусов в 1С:
+            Статус возврата в перечислении 1С:КА2 (v15). Шесть значений
+            жизненного цикла. Маппинг русских названий 1С → канонические ключи:
 
-            | 1С (Перечисление) | Шинный код | Метка на сайте |
+            | Название в 1С | Канонический ключ | Метка на сайте |
             |---|---|---|
-            | НеСогласована | `pending` | Не согласована |
-            | КОбеспечению | `confirmed` | Подтверждён |
-            | КВозврату | `confirmed` | Подтверждён |
-            | КОтгрузке | `ready_to_ship` | К отгрузке |
-            | Выполнена | `closed` | Выполнена |
-            | Отклонена | `cancelled` | Отклонена |
+            | На согласовании | `pending_approval` | На согласовании |
+            | К возврату | `for_return` | К возврату |
+            | В резерве | `in_reserve` | В резерве |
+            | К отгрузке | `ready_for_shipment` | К отгрузке |
+            | Выполнена | `completed` | Выполнена |
+            | Отклонена | `rejected` | Отклонена |
 
-            КОбеспечению и КВозврату на стороне 1С сворачиваются в одну
-            строку `confirmed`. На сайте такой возврат отображается как
-            «Подтверждён». Если потребуется различать эти подэтапы — сначала
-            нужно раздвоить маппинг в справочнике 1С.
+            Legacy-ключи до v15 (`pending`, `confirmed`, `ready_to_ship`,
+            `closed`, `cancelled`) принимаются сайтом для обратной совместимости
+            через `App\Services\Erp\Support\ReturnStatusMapper` (см.
+            docs-erp/content/rules/returns.md).
 
     ReturnCreatedPayload:
       type: object

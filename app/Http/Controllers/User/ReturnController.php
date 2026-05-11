@@ -430,8 +430,8 @@ class ReturnController extends Controller
                     ->join('returns', 'returns.id', '=', 'return_items.return_id')
                     ->whereColumn('return_items.shipment_id', 'shipments.id')
                     ->whereNotIn('returns.status', [
-                        ReturnStatus::CLOSED->value,
-                        ReturnStatus::CANCELLED->value,
+                        ReturnStatus::COMPLETED->value,
+                        ReturnStatus::REJECTED->value,
                     ])
                     ->selectRaw('COUNT(DISTINCT return_items.return_id)');
             }, 'open_returns_count')

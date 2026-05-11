@@ -160,7 +160,7 @@ class ReturnShipmentPickerTest extends TestCase
 
         $pendingReturn = ProductReturn::factory()->create([
             'user_id' => $this->user->id,
-            'status' => ReturnStatus::PENDING,
+            'status' => ReturnStatus::PENDING_APPROVAL,
         ]);
         ReturnItem::factory()->create([
             'return_id' => $pendingReturn->id,
@@ -172,7 +172,7 @@ class ReturnShipmentPickerTest extends TestCase
 
         $confirmedReturn = ProductReturn::factory()->create([
             'user_id' => $this->user->id,
-            'status' => ReturnStatus::CONFIRMED,
+            'status' => ReturnStatus::IN_RESERVE,
         ]);
         ReturnItem::factory()->create([
             'return_id' => $confirmedReturn->id,
@@ -185,7 +185,7 @@ class ReturnShipmentPickerTest extends TestCase
         // Закрытый и отменённый — не считаются.
         $closedReturn = ProductReturn::factory()->create([
             'user_id' => $this->user->id,
-            'status' => ReturnStatus::CLOSED,
+            'status' => ReturnStatus::COMPLETED,
         ]);
         ReturnItem::factory()->create([
             'return_id' => $closedReturn->id,
@@ -197,7 +197,7 @@ class ReturnShipmentPickerTest extends TestCase
 
         $cancelledReturn = ProductReturn::factory()->create([
             'user_id' => $this->user->id,
-            'status' => ReturnStatus::CANCELLED,
+            'status' => ReturnStatus::REJECTED,
         ]);
         ReturnItem::factory()->create([
             'return_id' => $cancelledReturn->id,

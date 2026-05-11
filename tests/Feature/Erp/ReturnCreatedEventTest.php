@@ -52,7 +52,7 @@ class ReturnCreatedEventTest extends TestCase
         $return = ProductReturn::create([
             'uuid' => 'return-evt-uuid-001',
             'user_id' => $user->id,
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'total_amount' => 6000,
         ]);
 
@@ -138,7 +138,7 @@ class ReturnCreatedEventTest extends TestCase
         $return = ProductReturn::create([
             'uuid' => 'return-multi-001',
             'user_id' => $user->id,
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'total_amount' => 6300,
         ]);
 
@@ -178,7 +178,7 @@ class ReturnCreatedEventTest extends TestCase
         $return = ProductReturn::create([
             'uuid' => 'return-no-erp-001',
             'user_id' => $user->id,
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'total_amount' => 0,
         ]);
 

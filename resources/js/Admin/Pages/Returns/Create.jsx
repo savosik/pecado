@@ -18,11 +18,12 @@ import { toaster } from "@/components/ui/toaster";
 import { Select } from "@/components/ui/select";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import ReturnItemsEditor from "@/Admin/Components/ReturnItemsEditor";
+import { RETURN_STATUS_DEFAULT } from "@/constants/returnStatus";
 
 const ReturnsCreate = ({ statuses, reasons }) => {
     const { data, setData, post, processing, errors , transform } = useForm({
         user_id: "",
-        status: "pending",
+        status: RETURN_STATUS_DEFAULT,
         comment: "",
         admin_comment: "",
         items: [],

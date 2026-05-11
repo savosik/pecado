@@ -13,17 +13,7 @@ import { Field } from "@/components/ui/field";
 import { Select } from "@/components/ui/select";
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { DeleteAllButton, TrashedFilter } from '@/Admin/Components';
-
-const getStatusColor = (status) => {
-    const colors = {
-        pending: "yellow",
-        confirmed: "green",
-        ready_to_ship: "purple",
-        closed: "blue",
-        cancelled: "red",
-    };
-    return colors[status] || "gray";
-};
+import { getReturnStatusColor as getStatusColor } from '@/constants/returnStatus';
 
 const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
     const { returns } = usePage().props;

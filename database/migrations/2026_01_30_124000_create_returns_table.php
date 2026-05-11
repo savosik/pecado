@@ -16,7 +16,7 @@ return new class extends Migration
             $table->uuid('uuid')->unique();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('order_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('status')->default(\App\Enums\ReturnStatus::PENDING->value);
+            $table->string('status')->default(\App\Enums\ReturnStatus::PENDING_APPROVAL->value);
             $table->text('comment')->nullable();
             $table->text('admin_comment')->nullable();
             $table->decimal('total_amount', 15, 2)->default(0);

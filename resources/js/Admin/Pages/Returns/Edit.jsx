@@ -19,6 +19,7 @@ import { toaster } from "@/components/ui/toaster";
 import { Select } from "@/components/ui/select";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import ReturnItemsEditor from "@/Admin/Components/ReturnItemsEditor";
+import { RETURN_STATUS_DEFAULT } from "@/constants/returnStatus";
 
 const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
     // Инициализация с выбранным пользователем
@@ -46,7 +47,7 @@ const ReturnsEdit = ({ return: returnData, users, statuses, reasons }) => {
 
     const { data, setData, put, processing, errors , transform } = useForm({
         user_id: returnData.user_id || "",
-        status: returnData.status || "pending",
+        status: returnData.status || RETURN_STATUS_DEFAULT,
         comment: returnData.comment || "",
         admin_comment: returnData.admin_comment || "",
         items: initialItems,

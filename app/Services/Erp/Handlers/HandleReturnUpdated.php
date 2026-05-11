@@ -2,8 +2,8 @@
 
 namespace App\Services\Erp\Handlers;
 
-use App\Enums\ReturnStatus;
 use App\Models\ProductReturn;
+use App\Services\Erp\Support\ReturnStatusMapper;
 use Illuminate\Support\Facades\Log;
 
 class HandleReturnUpdated
@@ -39,7 +39,7 @@ class HandleReturnUpdated
 
         if (isset($payload['status'])) {
             $rawStatus = $payload['status'];
-            $status = ReturnStatus::tryFrom($rawStatus);
+            $status = ReturnStatusMapper::toEnum($rawStatus);
 
             if ($status === null) {
                 Log::warning('HandleReturnUpdated: неизвестный статус из 1С, статус не изменён', [

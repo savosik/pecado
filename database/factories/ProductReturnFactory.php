@@ -24,7 +24,7 @@ class ProductReturnFactory extends Factory
         return [
             'uuid' => $this->faker->uuid(),
             'user_id' => User::factory(),
-            'status' => ReturnStatus::PENDING,
+            'status' => ReturnStatus::PENDING_APPROVAL,
             'comment' => $this->faker->optional()->sentence(),
             'admin_comment' => null,
             'total_amount' => $this->faker->randomFloat(2, 100, 5000),
