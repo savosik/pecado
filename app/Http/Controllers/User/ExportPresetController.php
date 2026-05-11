@@ -88,7 +88,14 @@ class ExportPresetController extends Controller
             ]);
         }
 
-        // Сразу ставим задачу — пока пользователь идёт к ссылке, файл уже строится.
+        // Сразу помечаем выгрузку как поставленную в очередь, чтобы фронт мог
+        // показать индикатор «Генерация в фоне…» сразу после клика, не дожидаясь
+        // момента, когда воркер подхватит задачу и переведёт её в `generating`.
+        if ($export->status !== ProductExport::STATUS_GENERATING) {
+            $export->update(['status' => ProductExport::STATUS_QUEUED]);
+        }
+
+        // Ставим задачу — пока пользователь идёт к ссылке, файл уже строится.
         // ShouldBeUnique гарантирует, что параллельные запросы не запустят
         // несколько generation одновременно.
         GenerateProductExportJob::dispatch($export->id);
@@ -97,7 +104,7 @@ class ExportPresetController extends Controller
             'download_url' => $export->download_url,
             'hash' => $export->hash,
             'export_id' => $export->id,
-            'status' => $export->fresh()->status,
+            'status' => $export->status,
         ]);
     }
 
