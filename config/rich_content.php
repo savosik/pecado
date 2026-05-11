@@ -19,7 +19,7 @@ return [
 
     'max_tokens' => (int) env('RICH_CONTENT_AI_MAX_TOKENS', 8000),
 
-    'request_timeout' => (int) env('RICH_CONTENT_AI_REQUEST_TIMEOUT', 60),
+    'request_timeout' => (int) env('RICH_CONTENT_AI_REQUEST_TIMEOUT', 120),
 
     'min_description_length' => (int) env('RICH_CONTENT_AI_MIN_DESCRIPTION_LENGTH', 80),
 

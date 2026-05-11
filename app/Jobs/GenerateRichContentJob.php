@@ -20,7 +20,7 @@ class GenerateRichContentJob implements ShouldBeUnique, ShouldQueue
 
     public int $tries = 1;
 
-    public int $timeout = 90;
+    public int $timeout = 300;
 
     public function __construct(public int $productId)
     {

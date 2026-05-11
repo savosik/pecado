@@ -48,12 +48,20 @@ class RichContentGenerator
             ['role' => 'user', 'content' => $userPrompt],
         ];
 
+        $rawJson = null;
+
         try {
             $rawJson = $this->callModel($client, $messages);
             $payload = $this->parseAndValidate($rawJson, $allowedTypes);
         } catch (RichContentGenerationException $firstError) {
-            // Один retry: добавляем фидбек об ошибке в диалог
-            $messages[] = ['role' => 'assistant', 'content' => $rawJson ?? ''];
+            // Retry имеет смысл только когда LLM ответил, но JSON не прошёл валидацию.
+            // На сетевые ошибки/таймауты callModel второй запрос только дублирует фейл
+            // и часто получает TLS-обрыв, потому что предыдущее соединение ещё в полёте.
+            if ($rawJson === null) {
+                throw $firstError;
+            }
+
+            $messages[] = ['role' => 'assistant', 'content' => $rawJson];
             $messages[] = [
                 'role' => 'user',
                 'content' => 'Твой предыдущий ответ не прошёл валидацию: '.$firstError->getMessage()."\n\n".
