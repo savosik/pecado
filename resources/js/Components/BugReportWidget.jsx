@@ -138,7 +138,12 @@ export default function BugReportWidget() {
 
     return (
         <>
-            <Box position="fixed" bottom={6} left={6} zIndex={1300}>
+            <Box
+                position="fixed"
+                bottom={{ base: 'calc(56px + env(safe-area-inset-bottom) + 12px)', lg: 6 }}
+                left={6}
+                zIndex={1300}
+            >
                 <IconButton
                     colorPalette="red"
                     rounded="full"
