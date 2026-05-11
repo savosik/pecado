@@ -287,11 +287,11 @@ class OrderSearchTest extends TestCase
     #[Test]
     public function status_array_filter_supports_multi_select(): void
     {
-        $pending = $this->makeOrder(['erp_number' => 'ST-P', 'status' => OrderStatus::PENDING]);
-        $confirmed = $this->makeOrder(['erp_number' => 'ST-C', 'status' => OrderStatus::CONFIRMED]);
+        $pending = $this->makeOrder(['erp_number' => 'ST-P', 'status' => OrderStatus::PENDING_APPROVAL]);
+        $confirmed = $this->makeOrder(['erp_number' => 'ST-C', 'status' => OrderStatus::READY_FOR_PROVISION]);
         $closed = $this->makeOrder(['erp_number' => 'ST-X', 'status' => OrderStatus::CLOSED]);
 
-        $ids = $this->fetchOrderIds('status[]=pending&status[]=confirmed');
+        $ids = $this->fetchOrderIds('status[]=pending_approval&status[]=ready_for_provision');
 
         $this->assertContains($pending->id, $ids);
         $this->assertContains($confirmed->id, $ids);

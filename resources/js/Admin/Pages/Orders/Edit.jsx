@@ -24,6 +24,7 @@ import { Select } from "@/components/ui/select";
 import OrderItemsEditor from "@/Admin/Components/OrderItemsEditor";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
+import { ORDER_STATUS_DEFAULT } from "@/constants/orderStatus";
 
 const getTypeLabel = (type) => type === "preorder" ? "Предзаказ" : "Заказ со склада";
 const getTypeColor = (type) => type === "preorder" ? "purple" : "teal";
@@ -41,7 +42,7 @@ const Edit = ({ order, statuses, currencies }) => {
     const { data, setData, put, processing, errors , transform } = useForm({
         user_id: order.user_id || "",
         company_id: order.company_id || "",
-        status: order.status || "pending",
+        status: order.status || ORDER_STATUS_DEFAULT,
         comment: order.comment || "",
         delivery_address: order.delivery_address || "",
         currency_code: order.currency_code || "RUB",

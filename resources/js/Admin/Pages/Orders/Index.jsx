@@ -13,17 +13,9 @@ import { Select } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { DeleteAllButton, TrashedFilter } from '@/Admin/Components';
+import { getOrderStatusColor } from '@/constants/orderStatus';
 
-const getStatusColor = (status) => {
-    const colors = {
-        pending: "yellow",
-        confirmed: "blue",
-        ready_to_ship: "purple",
-        closed: "green",
-        deleted: "red",
-    };
-    return colors[status] || "gray";
-};
+const getStatusColor = getOrderStatusColor;
 
 const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Со склада';
 const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';

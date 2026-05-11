@@ -7,22 +7,10 @@ import { LuArrowLeft, LuPackage, LuWarehouse, LuShoppingBag } from 'react-icons/
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toaster } from '@/components/ui/toaster';
-
-const STATUS_LABELS = {
-    pending: 'Ожидает',
-    confirmed: 'Подтверждён',
-    ready_to_ship: 'К отгрузке',
-    closed: 'Закрыт',
-    deleted: 'Удалён',
-};
-
-const STATUS_COLORS = {
-    pending: 'yellow',
-    confirmed: 'blue',
-    ready_to_ship: 'purple',
-    closed: 'green',
-    deleted: 'red',
-};
+import {
+    ORDER_STATUS_LABELS as STATUS_LABELS,
+    ORDER_STATUS_COLORS as STATUS_COLORS,
+} from '@/constants/orderStatus';
 
 const TYPE_LABELS = {
     standard: 'Стандартный',

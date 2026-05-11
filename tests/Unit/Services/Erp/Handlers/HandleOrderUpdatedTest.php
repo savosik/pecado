@@ -50,7 +50,7 @@ class HandleOrderUpdatedTest extends TestCase
     {
         $order = Order::factory()->create([
             'uuid' => 'test-uuid-status',
-            'status' => 'pending',
+            'status' => 'pending_approval',
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
@@ -58,10 +58,10 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->handler->handle([
             'uuid' => 'test-uuid-status',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
         ]);
 
-        $this->assertEquals('confirmed', $order->fresh()->status->value);
+        $this->assertEquals('ready_for_provision', $order->fresh()->status->value);
     }
 
     #[Test]
@@ -118,7 +118,7 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->handler->handle([
             'uuid' => 'test-uuid-no-items',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
         ]);
 
         $this->assertCount(1, $order->fresh()->items);
@@ -420,11 +420,11 @@ class HandleOrderUpdatedTest extends TestCase
     }
 
     #[Test]
-    public function it_updates_order_status_to_deleted(): void
+    public function it_soft_deletes_and_sets_closed_when_status_is_deleted_marker(): void
     {
         $order = Order::factory()->create([
             'uuid' => 'test-uuid-status-deleted',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
         ]);
 
         Log::shouldReceive('info')->zeroOrMoreTimes();
@@ -435,7 +435,71 @@ class HandleOrderUpdatedTest extends TestCase
             'status' => 'deleted',
         ]);
 
-        $this->assertEquals('deleted', $order->fresh()->status->value);
+        $fresh = Order::withTrashed()->where('uuid', 'test-uuid-status-deleted')->first();
+        $this->assertEquals('closed', $fresh->status->value);
+        $this->assertNotNull($fresh->deleted_at);
+    }
+
+    #[Test]
+    public function it_restores_soft_deleted_order_when_status_is_not_deleted_marker(): void
+    {
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-status-restored',
+            'status' => 'closed',
+        ]);
+        $order->delete();
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid' => 'test-uuid-status-restored',
+            'status' => 'ready_for_shipment',
+        ]);
+
+        $fresh = Order::withTrashed()->where('uuid', 'test-uuid-status-restored')->first();
+        $this->assertEquals('ready_for_shipment', $fresh->status->value);
+        $this->assertNull($fresh->deleted_at);
+    }
+
+    #[Test]
+    public function it_maps_russian_status_from_1c(): void
+    {
+        Order::factory()->create([
+            'uuid' => 'test-uuid-status-ru',
+            'status' => 'pending_approval',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid' => 'test-uuid-status-ru',
+            'status' => 'Готов к отгрузке',
+        ]);
+
+        $fresh = Order::where('uuid', 'test-uuid-status-ru')->first();
+        $this->assertEquals('ready_for_shipment', $fresh->status->value);
+    }
+
+    #[Test]
+    public function it_maps_legacy_status_keys(): void
+    {
+        Order::factory()->create([
+            'uuid' => 'test-uuid-status-legacy',
+            'status' => 'pending_approval',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid' => 'test-uuid-status-legacy',
+            'status' => 'confirmed',
+        ]);
+
+        $fresh = Order::where('uuid', 'test-uuid-status-legacy')->first();
+        $this->assertEquals('ready_for_provision', $fresh->status->value);
     }
 
     #[Test]
@@ -452,7 +516,7 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->handler->handle([
             'uuid' => 'test-uuid-erp-upd-ts',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'erp_updated_at' => '2026-04-26T14:42:09+03:00',
         ]);
 
@@ -476,7 +540,7 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->handler->handle([
             'uuid' => 'test-uuid-erp-keep-ts',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
         ]);
 
         $fresh = $order->fresh();
@@ -541,7 +605,7 @@ class HandleOrderUpdatedTest extends TestCase
         // даже если payload содержит явное значение.
         $order = Order::factory()->create([
             'uuid' => 'test-uuid-comment-protected',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'comment' => 'Доставить до 12:00, не звонить — оставить у консьержа',
         ]);
 
@@ -550,13 +614,13 @@ class HandleOrderUpdatedTest extends TestCase
 
         $this->handler->handle([
             'uuid' => 'test-uuid-comment-protected',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'comment' => 'Менеджер 1С: попытка переписать клиентский комментарий',
         ]);
 
         $order->refresh();
         $this->assertEquals('Доставить до 12:00, не звонить — оставить у консьержа', $order->comment);
         // Статус всё-таки обновляется — проверяем, что обработчик отрабатывает остальные поля
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('ready_for_provision', $order->status->value);
     }
 }

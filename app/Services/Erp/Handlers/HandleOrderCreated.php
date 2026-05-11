@@ -2,10 +2,12 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Enums\OrderStatus;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Erp\Support\OrderStatusMapper;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -37,7 +39,7 @@ class HandleOrderCreated
             $partnerUuid = $payload['partner_uuid'] ?? null;
             $contractorData = $payload['contractor'] ?? null;
             $items = $payload['items'] ?? [];
-            $status = $payload['status'] ?? 'pending';
+            $status = $payload['status'] ?? OrderStatus::PENDING_APPROVAL->value;
             $type = $payload['type'] ?? 'order';
 
             // --- Пользователь ---
@@ -126,20 +128,23 @@ class HandleOrderCreated
                 }
             }
 
-            // Маппинг статусов из 1С (docs-erp/content/rules/orders.md)
-            $statusMap = [
-                'не согласован' => 'pending',
-                'к выполнению' => 'confirmed',
-                'к отгрузке' => 'ready_to_ship',
-                'к_отгрузке' => 'ready_to_ship',
-                'закрыт' => 'closed',
-                'удален' => 'deleted',
-                'удалён' => 'deleted',
-                'deleted' => 'deleted',
-            ];
+            // Маппинг статусов из 1С (docs-erp/content/rules/orders.md).
+            // 1С может прислать либо канонический английский ключ из enum,
+            // либо русское название из перечисления — оба варианта поддерживаем
+            // через OrderStatusMapper. Если 1С прислала "Удалён/deleted" —
+            // переводим заказ в `closed` и одновременно soft-delete.
+            $shouldSoftDelete = OrderStatusMapper::isDeletedMarker($status);
+            $mappedStatus = OrderStatusMapper::toCanonical($status);
 
-            $normalizedStatus = mb_strtolower(trim($status));
-            $finalStatus = $statusMap[$normalizedStatus] ?? $status;
+            if ($mappedStatus === null) {
+                Log::warning('HandleOrderCreated: нераспознанный статус из 1С, использую pending_approval', [
+                    'uuid' => $uuid,
+                    'status_raw' => $status,
+                ]);
+                $mappedStatus = OrderStatus::PENDING_APPROVAL->value;
+            }
+
+            $finalStatus = $mappedStatus;
 
             // --- Upsert заказа по uuid (без диспатча событий — не публикуем обратно в ERP) ---
             // withTrashed: если заказ был soft-deleted и 1С повторно шлёт его — восстанавливаем.
@@ -228,6 +233,13 @@ class HandleOrderCreated
 
             // Обновляем сумму заказа
             $order->updateQuietly(['total_amount' => $totalAmount]);
+
+            // Если 1С создала/обновила заказ сразу в статусе «Удалён» — soft-delete
+            // (status уже выставлен в closed выше). Не диспатчим OrderDeleted,
+            // иначе сайт опубликует событие обратно в 1С.
+            if ($shouldSoftDelete && ! $order->trashed()) {
+                $order->deleteQuietly();
+            }
 
             $action = $existingOrder ? 'обновлён (upsert)' : 'создан от менеджера';
             Log::info("HandleOrderCreated: заказ {$action}", [

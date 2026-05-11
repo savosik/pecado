@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
@@ -23,12 +24,12 @@ class DashboardController extends AdminController
         $totalRevenue = Order::where('status', 'closed')->sum('total_amount');
 
         // Orders by status
-        $pendingOrders = Order::where('status', 'pending')->count();
-        $completedOrders = Order::where('status', 'closed')->count();
+        $pendingOrders = Order::where('status', OrderStatus::PENDING_APPROVAL->value)->count();
+        $completedOrders = Order::where('status', OrderStatus::CLOSED->value)->count();
         $cancelledOrders = 0; // Статус cancelled удалён в v12.3
 
         // Average order value
-        $avgOrderValue = Order::where('status', 'closed')->avg('total_amount') ?? 0;
+        $avgOrderValue = Order::where('status', OrderStatus::CLOSED->value)->avg('total_amount') ?? 0;
 
         // Sales chart data (last 30 days)
         $salesChartData = Order::selectRaw('DATE(created_at) as date, COUNT(*) as count, SUM(total_amount) as revenue')

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Shipment;
 use Illuminate\Http\Request;
@@ -193,14 +192,7 @@ class ShipmentController extends Controller
                     'type' => $order->type?->value,
                     'type_label' => $order->type?->value === 'preorder' ? 'Предзаказ' : 'Заказ со склада',
                     'status' => $order->status?->value,
-                    'status_label' => match ($order->status) {
-                        OrderStatus::PENDING => 'Ожидает',
-                        OrderStatus::CONFIRMED => 'Подтверждён',
-                        OrderStatus::READY_TO_SHIP => 'К отгрузке',
-                        OrderStatus::CLOSED => 'Закрыт',
-                        OrderStatus::DELETED => 'Удалён',
-                        default => 'Неизвестно',
-                    },
+                    'status_label' => $order->status?->label() ?? 'Неизвестно',
                     'total_amount' => $order->total_amount,
                     'currency_code' => $order->currency_code,
                     'items_count' => $order->items_count,

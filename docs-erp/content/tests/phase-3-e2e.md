@@ -6,18 +6,21 @@
 
 | Шаг | Кто | Действие | Проверка |
 |-----|-----|----------|----------|
-| 1 | 🟢 Сайт | Пользователь оформляет заказ | `order.created` в `erp_out.orders`, статус `pending` |
-| 2 | 🔵 1С | Подтверждает → `order.updated` `confirmed` | Статус → `confirmed`, запись в `order_status_histories` |
-| 3 | 🔵 1С | Готовит к отгрузке → `order.updated` `ready_to_ship` | Статус → `ready_to_ship` |
+| 1 | 🟢 Сайт | Пользователь оформляет заказ | `order.created` в `erp_out.orders`, статус `pending_approval` |
+| 2 | 🔵 1С | Согласовал → `order.updated` `ready_for_provision` | Статус → `ready_for_provision`, запись в `order_status_histories` |
+| 3 | 🔵 1С | Готов к отгрузке → `order.updated` `ready_for_shipment` | Статус → `ready_for_shipment` |
 | 4 | 🔵 1С | Изменил позиции → `order.updated` с `items[]` | Позиции пересозданы, diff в `order_change_logs` |
 | 5 | 🔵 1С | Реализация → `shipment.created` | Реализация в ЛК |
-| 6 | 🔵 1С | Закрывает → `order.updated` `closed` | Статус → `closed` |
-| 7 | 🔵 1С | Удаляет → `order.deleted` | Статус → `deleted` |
-| 8 | 🔵 1С | Баланс → `balance.updated` | Баланс обновлён |
+| 6 | 🔵 1С | Запустил отгрузку → `order.updated` `shipping` | Статус → `shipping` |
+| 7 | 🔵 1С | Готов к закрытию → `order.updated` `ready_for_closure` | Статус → `ready_for_closure` |
+| 8 | 🔵 1С | Закрывает → `order.updated` `closed` | Статус → `closed` |
+| 9 | 🔵 1С | Удаляет → `order.deleted` | soft-delete (`deleted_at` заполнен), статус = `closed` |
+| 10 | 🔵 1С | Баланс → `balance.updated` | Баланс обновлён |
 
 **Итоговая проверка:**
 
-- [ ] `order_status_histories`: `pending` → `confirmed` → `ready_to_ship` → `closed` → `deleted`
+- [ ] `order_status_histories`: `pending_approval` → `ready_for_provision` → `ready_for_shipment` → `shipping` → `ready_for_closure` → `closed`
+- [ ] После `order.deleted`: `orders.deleted_at` заполнен, статус = `closed`
 - [ ] `order_change_logs`: изменения позиций зафиксированы
 - [ ] Реализация привязана к заказу
 - [ ] Баланс отражает задолженность
@@ -74,7 +77,7 @@
 | Шаг | Кто | Действие | Проверка |
 |-----|-----|----------|----------|
 | 1 | 🟢 Сайт | Пользователь оформляет заказ | `order.created` → `erp_out.orders` |
-| 2 | 🔵 1С | `order.updated` `confirmed` → `ready_to_ship` → `closed` | Статусы прошли |
+| 2 | 🔵 1С | `order.updated` `ready_for_provision` → `ready_for_shipment` → `closed` | Статусы прошли |
 | 3 | 🔵 1С | `shipment.created` с `number` (v12.12) и `items[].price` | Реализация в ЛК с ERP-номером |
 | 4 | 🟢 Сайт | Пользователь идёт в ЛК → Реализация → Возврат и оформляет возврат | `return.created` → `erp_out.returns` |
 | 5 | 🔵 1С | Принимает `return.created` | В payload **нет** корневого `order_uuid`; есть `items[].shipment_uuid`, `items[].shipment_number`, `items[].price`, `items[].currency_code` |

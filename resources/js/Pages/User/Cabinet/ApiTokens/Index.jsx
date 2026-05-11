@@ -199,8 +199,8 @@ const apiMethods = [
         }, null, 2),
         responseExample: JSON.stringify({
             orders: [
-                { order_id: 1234, order_number: "ORD-2026-1234", type: "order", total_amount: 18000.00, items_count: 2, status: "pending" },
-                { order_id: 1235, order_number: "ORD-2026-1235", type: "preorder", total_amount: 7400.00, items_count: 1, status: "pending" },
+                { order_id: 1234, order_number: "ORD-2026-1234", type: "order", total_amount: 18000.00, items_count: 2, status: "pending_approval" },
+                { order_id: 1235, order_number: "ORD-2026-1235", type: "preorder", total_amount: 7400.00, items_count: 1, status: "pending_approval" },
             ],
             total_orders: 2,
         }, null, 2),

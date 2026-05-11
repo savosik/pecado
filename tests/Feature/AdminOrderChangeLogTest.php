@@ -159,7 +159,7 @@ class AdminOrderChangeLogTest extends TestCase
             'company_id' => $this->company->id,
             'delivery_address' => $deliveryAddress,
             'comment' => $comment,
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'currency_code' => 'RUB',
             'total_amount' => $price * $quantity,
         ]);

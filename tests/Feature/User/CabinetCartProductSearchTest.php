@@ -148,7 +148,7 @@ class CabinetCartProductSearchTest extends TestCase
 
         $confirmed = Order::factory()->create([
             'user_id' => $this->user->id,
-            'status' => OrderStatus::CONFIRMED,
+            'status' => OrderStatus::READY_FOR_PROVISION,
         ]);
         OrderItem::factory()->create([
             'order_id' => $confirmed->id,
@@ -167,7 +167,7 @@ class CabinetCartProductSearchTest extends TestCase
         // Pending — не считается.
         $pending = Order::factory()->create([
             'user_id' => $this->user->id,
-            'status' => OrderStatus::PENDING,
+            'status' => OrderStatus::PENDING_APPROVAL,
         ]);
         OrderItem::factory()->create([
             'order_id' => $pending->id,
@@ -178,7 +178,7 @@ class CabinetCartProductSearchTest extends TestCase
         $other = User::factory()->create();
         $foreign = Order::factory()->create([
             'user_id' => $other->id,
-            'status' => OrderStatus::CONFIRMED,
+            'status' => OrderStatus::READY_FOR_PROVISION,
         ]);
         OrderItem::factory()->create([
             'order_id' => $foreign->id,

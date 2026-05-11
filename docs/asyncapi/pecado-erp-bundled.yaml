@@ -964,15 +964,22 @@ channels:
                 - '2026-03-17T12:00:00+03:00'
             status:
               type: string
-              description: Статус заказа
+              description: |
+                Статус заказа из справочника 1С:КА2 (v14).
+                Маппинг русских названий — в docs-erp/content/rules/orders.md.
               enum:
-                - pending
-                - confirmed
-                - ready_to_ship
+                - pending_approval
+                - pending_payment_before_provision
+                - ready_for_provision
+                - pending_payment_before_shipment
+                - awaiting_provision
+                - ready_for_shipment
+                - shipping
+                - awaiting_payment
+                - ready_for_closure
                 - closed
-                - deleted
               examples:
-                - pending
+                - pending_approval
             type:
               type: string
               description: >
@@ -1209,19 +1216,58 @@ channels:
                 коммуникации с менеджером.
             status:
               type: string
-              description: |
-                Маппинг статусов:
-                - Не согласован → pending
-                - К выполнению → confirmed
-                - К отгрузке → ready_to_ship
-                - Закрыт → closed
-                - Удалён → deleted
+              description: >
+                Статус заказа из справочника 1С:КА2 (v14). Десять значений
+
+                перечисления. Маппинг русских названий 1С → канонические ключи:
+
+
+                | Название в 1С | Канонический ключ |
+
+                |---|---|
+
+                | Ожидается согласование | `pending_approval` |
+
+                | Ожидается оплата до обеспечения |
+                `pending_payment_before_provision` |
+
+                | Готов к обеспечению | `ready_for_provision` |
+
+                | Ожидается оплата до отгрузки |
+                `pending_payment_before_shipment` |
+
+                | Ожидается обеспечение | `awaiting_provision` |
+
+                | Готов к отгрузке | `ready_for_shipment` |
+
+                | В процессе отгрузки | `shipping` |
+
+                | Ожидается оплата | `awaiting_payment` |
+
+                | Готов к закрытию | `ready_for_closure` |
+
+                | Закрыт | `closed` |
+
+
+                Отдельного статуса «Удалён» больше нет: 1С удаление выражает
+
+                через событие `order.deleted`, сайт делает soft-delete и
+                переводит
+
+                запись в `closed`. Если в `order.updated` придёт legacy-значение
+
+                `deleted` — сайт также сделает soft-delete + status=`closed`.
               enum:
-                - pending
-                - confirmed
-                - ready_to_ship
+                - pending_approval
+                - pending_payment_before_provision
+                - ready_for_provision
+                - pending_payment_before_shipment
+                - awaiting_provision
+                - ready_for_shipment
+                - shipping
+                - awaiting_payment
+                - ready_for_closure
                 - closed
-                - deleted
             erp_created_at:
               type:
                 - string
@@ -2872,15 +2918,22 @@ channels:
                 - '2026-03-17T12:00:00+03:00'
             status:
               type: string
-              description: Статус заказа
+              description: |
+                Статус заказа из справочника 1С:КА2 (v14).
+                Маппинг русских названий — в docs-erp/content/rules/orders.md.
               enum:
-                - pending
-                - confirmed
-                - ready_to_ship
+                - pending_approval
+                - pending_payment_before_provision
+                - ready_for_provision
+                - pending_payment_before_shipment
+                - awaiting_provision
+                - ready_for_shipment
+                - shipping
+                - awaiting_payment
+                - ready_for_closure
                 - closed
-                - deleted
               examples:
-                - pending
+                - pending_approval
             type:
               type: string
               description: >
@@ -4041,6 +4094,13 @@ operations:
   receiveOrderDeleted:
     title: Удаление заказа
     summary: 1С удаляет заказ
+    description: |
+      Обработчик: `HandleOrderDeleted`
+
+      **v14:** Отдельного статуса «Удалён» в перечислении 1С больше нет.
+      На сайте удаление выражается через soft-delete (`orders.deleted_at`)
+      + перевод записи в финальный статус `closed`. Запись остаётся для
+      аудита, но не показывается в активных заказах.
     action: receive
     channel:
       $ref: '#/channels/erpInOrders'
@@ -5493,15 +5553,22 @@ components:
               - '2026-03-17T12:00:00+03:00'
           status:
             type: string
-            description: Статус заказа
+            description: |
+              Статус заказа из справочника 1С:КА2 (v14).
+              Маппинг русских названий — в docs-erp/content/rules/orders.md.
             enum:
-              - pending
-              - confirmed
-              - ready_to_ship
+              - pending_approval
+              - pending_payment_before_provision
+              - ready_for_provision
+              - pending_payment_before_shipment
+              - awaiting_provision
+              - ready_for_shipment
+              - shipping
+              - awaiting_payment
+              - ready_for_closure
               - closed
-              - deleted
             examples:
-              - pending
+              - pending_approval
           type:
             type: string
             description: >
@@ -5746,15 +5813,22 @@ components:
               - '2026-03-17T12:00:00+03:00'
           status:
             type: string
-            description: Статус заказа
+            description: |
+              Статус заказа из справочника 1С:КА2 (v14).
+              Маппинг русских названий — в docs-erp/content/rules/orders.md.
             enum:
-              - pending
-              - confirmed
-              - ready_to_ship
+              - pending_approval
+              - pending_payment_before_provision
+              - ready_for_provision
+              - pending_payment_before_shipment
+              - awaiting_provision
+              - ready_for_shipment
+              - shipping
+              - awaiting_payment
+              - ready_for_closure
               - closed
-              - deleted
             examples:
-              - pending
+              - pending_approval
           type:
             type: string
             description: >
@@ -5991,19 +6065,57 @@ components:
               коммуникации с менеджером.
           status:
             type: string
-            description: |
-              Маппинг статусов:
-              - Не согласован → pending
-              - К выполнению → confirmed
-              - К отгрузке → ready_to_ship
-              - Закрыт → closed
-              - Удалён → deleted
+            description: >
+              Статус заказа из справочника 1С:КА2 (v14). Десять значений
+
+              перечисления. Маппинг русских названий 1С → канонические ключи:
+
+
+              | Название в 1С | Канонический ключ |
+
+              |---|---|
+
+              | Ожидается согласование | `pending_approval` |
+
+              | Ожидается оплата до обеспечения |
+              `pending_payment_before_provision` |
+
+              | Готов к обеспечению | `ready_for_provision` |
+
+              | Ожидается оплата до отгрузки | `pending_payment_before_shipment`
+              |
+
+              | Ожидается обеспечение | `awaiting_provision` |
+
+              | Готов к отгрузке | `ready_for_shipment` |
+
+              | В процессе отгрузки | `shipping` |
+
+              | Ожидается оплата | `awaiting_payment` |
+
+              | Готов к закрытию | `ready_for_closure` |
+
+              | Закрыт | `closed` |
+
+
+              Отдельного статуса «Удалён» больше нет: 1С удаление выражает
+
+              через событие `order.deleted`, сайт делает soft-delete и переводит
+
+              запись в `closed`. Если в `order.updated` придёт legacy-значение
+
+              `deleted` — сайт также сделает soft-delete + status=`closed`.
             enum:
-              - pending
-              - confirmed
-              - ready_to_ship
+              - pending_approval
+              - pending_payment_before_provision
+              - ready_for_provision
+              - pending_payment_before_shipment
+              - awaiting_provision
+              - ready_for_shipment
+              - shipping
+              - awaiting_payment
+              - ready_for_closure
               - closed
-              - deleted
           erp_created_at:
             type:
               - string
@@ -8846,15 +8958,22 @@ components:
             - '2026-03-17T12:00:00+03:00'
         status:
           type: string
-          description: Статус заказа
+          description: |
+            Статус заказа из справочника 1С:КА2 (v14).
+            Маппинг русских названий — в docs-erp/content/rules/orders.md.
           enum:
-            - pending
-            - confirmed
-            - ready_to_ship
+            - pending_approval
+            - pending_payment_before_provision
+            - ready_for_provision
+            - pending_payment_before_shipment
+            - awaiting_provision
+            - ready_for_shipment
+            - shipping
+            - awaiting_payment
+            - ready_for_closure
             - closed
-            - deleted
           examples:
-            - pending
+            - pending_approval
         type:
           type: string
           description: >
@@ -9079,19 +9198,56 @@ components:
             коммуникации с менеджером.
         status:
           type: string
-          description: |
-            Маппинг статусов:
-            - Не согласован → pending
-            - К выполнению → confirmed
-            - К отгрузке → ready_to_ship
-            - Закрыт → closed
-            - Удалён → deleted
+          description: >
+            Статус заказа из справочника 1С:КА2 (v14). Десять значений
+
+            перечисления. Маппинг русских названий 1С → канонические ключи:
+
+
+            | Название в 1С | Канонический ключ |
+
+            |---|---|
+
+            | Ожидается согласование | `pending_approval` |
+
+            | Ожидается оплата до обеспечения |
+            `pending_payment_before_provision` |
+
+            | Готов к обеспечению | `ready_for_provision` |
+
+            | Ожидается оплата до отгрузки | `pending_payment_before_shipment` |
+
+            | Ожидается обеспечение | `awaiting_provision` |
+
+            | Готов к отгрузке | `ready_for_shipment` |
+
+            | В процессе отгрузки | `shipping` |
+
+            | Ожидается оплата | `awaiting_payment` |
+
+            | Готов к закрытию | `ready_for_closure` |
+
+            | Закрыт | `closed` |
+
+
+            Отдельного статуса «Удалён» больше нет: 1С удаление выражает
+
+            через событие `order.deleted`, сайт делает soft-delete и переводит
+
+            запись в `closed`. Если в `order.updated` придёт legacy-значение
+
+            `deleted` — сайт также сделает soft-delete + status=`closed`.
           enum:
-            - pending
-            - confirmed
-            - ready_to_ship
+            - pending_approval
+            - pending_payment_before_provision
+            - ready_for_provision
+            - pending_payment_before_shipment
+            - awaiting_provision
+            - ready_for_shipment
+            - shipping
+            - awaiting_payment
+            - ready_for_closure
             - closed
-            - deleted
         erp_created_at:
           type:
             - string

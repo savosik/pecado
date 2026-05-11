@@ -13,22 +13,10 @@ import {
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
-
-const STATUS_LABELS = {
-    pending: 'Ожидает',
-    confirmed: 'Подтверждён',
-    ready_to_ship: 'К отгрузке',
-    closed: 'Закрыт',
-    deleted: 'Удалён',
-};
-
-const STATUS_COLORS = {
-    pending: 'yellow',
-    confirmed: 'blue',
-    ready_to_ship: 'purple',
-    closed: 'green',
-    deleted: 'red',
-};
+import {
+    ORDER_STATUS_LABELS as STATUS_LABELS,
+    ORDER_STATUS_COLORS as STATUS_COLORS,
+} from '@/constants/orderStatus';
 
 const SHIPMENT_STATUS_COLORS = {
     new: 'blue',

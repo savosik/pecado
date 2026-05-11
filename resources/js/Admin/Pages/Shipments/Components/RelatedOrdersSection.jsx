@@ -10,14 +10,7 @@ import {
     Flex,
 } from "@chakra-ui/react";
 import { LuShoppingBag, LuMapPin, LuMessageSquare } from "react-icons/lu";
-
-const STATUS_COLORS = {
-    pending: "yellow",
-    confirmed: "blue",
-    ready_to_ship: "purple",
-    closed: "green",
-    deleted: "red",
-};
+import { ORDER_STATUS_COLORS as STATUS_COLORS } from "@/constants/orderStatus";
 
 const TYPE_COLORS = {
     preorder: "purple",

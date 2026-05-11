@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ContractorBalanceOverdueDetail;
 use App\Models\Currency;
@@ -417,14 +416,7 @@ class ShipmentController extends Controller
                     'uuid' => $order->uuid,
                     'type' => $order->type?->value,
                     'status' => $order->status?->value,
-                    'status_label' => match ($order->status) {
-                        OrderStatus::PENDING => 'Ожидает',
-                        OrderStatus::CONFIRMED => 'Подтверждён',
-                        OrderStatus::READY_TO_SHIP => 'К отгрузке',
-                        OrderStatus::CLOSED => 'Закрыт',
-                        OrderStatus::DELETED => 'Удалён',
-                        default => 'Неизвестно',
-                    },
+                    'status_label' => $order->status?->label() ?? 'Неизвестно',
                     'company' => $order->company ? ['id' => $order->company->id, 'name' => $order->company->name] : null,
                     'items_count' => $order->items_count,
                     'shipments_count' => $order->shipments_count,

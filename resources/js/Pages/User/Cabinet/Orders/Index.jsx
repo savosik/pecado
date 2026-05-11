@@ -19,14 +19,7 @@ import MatchBadge from '@/components/cabinet/MatchBadge';
 import SavedSearches from '@/components/cabinet/SavedSearches';
 import ExportMenu from '@/components/cabinet/ExportMenu';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
-
-const STATUS_COLORS = {
-    pending: 'yellow',
-    confirmed: 'blue',
-    ready_to_ship: 'purple',
-    closed: 'green',
-    deleted: 'red',
-};
+import { ORDER_STATUS_COLORS as STATUS_COLORS } from '@/constants/orderStatus';
 
 export default function OrdersIndex({ filters, statuses, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
     const { orders, currency } = usePage().props;

@@ -249,9 +249,17 @@ class CabinetCartController extends Controller
         $type = QueryRouter::classify($query);
         $limit = 15;
 
+        // «Куплено» = все статусы после согласования заказа.
+        // PENDING_APPROVAL исключаем — заказ ещё на согласовании в 1С.
         $purchasedStatuses = [
-            OrderStatus::CONFIRMED->value,
-            OrderStatus::READY_TO_SHIP->value,
+            OrderStatus::PENDING_PAYMENT_BEFORE_PROVISION->value,
+            OrderStatus::READY_FOR_PROVISION->value,
+            OrderStatus::PENDING_PAYMENT_BEFORE_SHIPMENT->value,
+            OrderStatus::AWAITING_PROVISION->value,
+            OrderStatus::READY_FOR_SHIPMENT->value,
+            OrderStatus::SHIPPING->value,
+            OrderStatus::AWAITING_PAYMENT->value,
+            OrderStatus::READY_FOR_CLOSURE->value,
             OrderStatus::CLOSED->value,
         ];
 

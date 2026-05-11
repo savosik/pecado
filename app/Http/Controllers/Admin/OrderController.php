@@ -769,13 +769,6 @@ class OrderController extends AdminController
      */
     protected function getStatusLabel(?OrderStatus $status): string
     {
-        return match ($status) {
-            OrderStatus::PENDING => 'Ожидает',
-            OrderStatus::CONFIRMED => 'Подтверждён',
-            OrderStatus::READY_TO_SHIP => 'К отгрузке',
-            OrderStatus::CLOSED => 'Закрыт',
-            OrderStatus::DELETED => 'Удалён',
-            default => 'Неизвестно',
-        };
+        return $status?->label() ?? 'Неизвестно';
     }
 }

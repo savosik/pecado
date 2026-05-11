@@ -19,17 +19,7 @@ import { Field } from "@/components/ui/field";
 import { toaster } from "@/components/ui/toaster";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
 import { RelatedShipmentsSection } from "./Components/RelatedShipmentsSection";
-
-const getStatusColor = (status) => {
-    const colors = {
-        pending: "yellow",
-        confirmed: "blue",
-        ready_to_ship: "purple",
-        closed: "green",
-        deleted: "red",
-    };
-    return colors[status] || "gray";
-};
+import { getOrderStatusColor as getStatusColor } from "@/constants/orderStatus";
 
 const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Заказ со склада';
 const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';

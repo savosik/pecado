@@ -126,7 +126,7 @@ class SearchExportTest extends TestCase
         $confirmed = Order::factory()->create([
             'user_id' => $this->user->id,
             'number' => 'ORD-CONFIRMED',
-            'status' => OrderStatus::CONFIRMED,
+            'status' => OrderStatus::READY_FOR_PROVISION,
         ]);
         $closed = Order::factory()->create([
             'user_id' => $this->user->id,
@@ -135,7 +135,7 @@ class SearchExportTest extends TestCase
         ]);
 
         $response = $this->actingAs($this->user)
-            ->get('/cabinet/orders/export?format=csv&status%5B%5D='.OrderStatus::CONFIRMED->value);
+            ->get('/cabinet/orders/export?format=csv&status%5B%5D='.OrderStatus::READY_FOR_PROVISION->value);
 
         $response->assertOk();
         $body = $response->streamedContent();

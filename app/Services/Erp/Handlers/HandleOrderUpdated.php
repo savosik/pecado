@@ -2,8 +2,10 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Order\OrderChangeLogger;
 use Illuminate\Support\Facades\Log;
 
@@ -31,7 +33,10 @@ class HandleOrderUpdated
             return;
         }
 
-        $order = Order::where('uuid', $uuid)->first();
+        // withTrashed: если заказ был soft-deleted (предыдущий order.updated
+        // пришёл со статусом «Удалён»), 1С может вернуть его «к жизни»
+        // повторным order.updated с другим статусом.
+        $order = Order::withTrashed()->where('uuid', $uuid)->first();
 
         if (! $order) {
             Log::info('HandleOrderUpdated: заказ не найден', ['uuid' => $uuid]);
@@ -42,26 +47,28 @@ class HandleOrderUpdated
         $order->load(['company', 'user']);
         $oldAttrs = $this->changeLogger->snapshotAttributes($order);
 
+        // Если 1С прислала статус «Удалён» — soft-delete + status='closed'.
+        $shouldSoftDelete = false;
+        $shouldRestore = false;
+
         // Обновление статуса
         if (isset($payload['status'])) {
             $rawStatus = $payload['status'];
 
-            // Маппинг статусов из 1С (docs-erp/content/rules/orders.md)
-            $statusMap = [
-                'не согласован' => 'pending',
-                'к выполнению' => 'confirmed',
-                'к отгрузке' => 'ready_to_ship',
-                'к_отгрузке' => 'ready_to_ship', // Вариант с подчеркиванием
-                'закрыт' => 'closed',
-                'удален' => 'deleted',
-                'удалён' => 'deleted',
-                'deleted' => 'deleted',
-            ];
+            $shouldSoftDelete = OrderStatusMapper::isDeletedMarker($rawStatus);
+            $mappedStatus = OrderStatusMapper::toCanonical($rawStatus);
 
-            $normalizedStatus = mb_strtolower(trim($rawStatus));
-            $finalStatus = $statusMap[$normalizedStatus] ?? $rawStatus;
-
-            $order->status = $finalStatus;
+            if ($mappedStatus === null) {
+                Log::warning('HandleOrderUpdated: нераспознанный статус из 1С, игнорирую', [
+                    'uuid' => $uuid,
+                    'status_raw' => $rawStatus,
+                ]);
+            } else {
+                if ($order->trashed() && ! $shouldSoftDelete) {
+                    $shouldRestore = true;
+                }
+                $order->status = $mappedStatus;
+            }
         }
 
         // Обновление номера из 1С (v12.3)
@@ -88,7 +95,17 @@ class HandleOrderUpdated
         }
 
         $order->fromErp = true;
+
+        if ($shouldRestore) {
+            $order->restoreQuietly();
+        }
+
         $order->save();
+
+        // soft-delete после save — чтобы статус 'closed' уже был зафиксирован
+        if ($shouldSoftDelete && ! $order->trashed()) {
+            $order->deleteQuietly();
+        }
 
         // Обновление позиций (если переданы) с журналированием
         if (isset($payload['items']) && is_array($payload['items'])) {

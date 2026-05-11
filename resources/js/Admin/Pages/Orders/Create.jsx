@@ -19,12 +19,13 @@ import { toaster } from "@/components/ui/toaster";
 import { Select } from "@/components/ui/select";
 import OrderItemsEditor from "@/Admin/Components/OrderItemsEditor";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
+import { ORDER_STATUS_DEFAULT } from "@/constants/orderStatus";
 
 const Create = ({ statuses, currencies }) => {
     const { data, setData, post, processing, errors , transform } = useForm({
         user_id: "",
         company_id: "",
-        status: "pending",
+        status: ORDER_STATUS_DEFAULT,
         comment: "",
         delivery_address: "",
         currency_code: "RUB",

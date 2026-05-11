@@ -24,7 +24,19 @@
         },
         "status": {
             "type": "string",
-            "enum": ["pending", "confirmed", "ready_to_ship", "closed", "deleted"]
+            "description": "Статус заказа в перечислении 1С:КА2. Маппинг русских названий ↔ канонических ключей — в docs-erp/content/rules/orders.md.",
+            "enum": [
+                "pending_approval",
+                "pending_payment_before_provision",
+                "ready_for_provision",
+                "pending_payment_before_shipment",
+                "awaiting_provision",
+                "ready_for_shipment",
+                "shipping",
+                "awaiting_payment",
+                "ready_for_closure",
+                "closed"
+            ]
         },
         "partner_uuid": {
             "type": "string",

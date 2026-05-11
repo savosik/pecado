@@ -6,6 +6,66 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [14.0.0] — 2026-05-11
+
+> **BREAKING:** Выравнивание перечисления статусов заказа с справочником
+> 1С:КА2. До v14 на сайте было 5 статусов (`pending`, `confirmed`,
+> `ready_to_ship`, `closed`, `deleted`), 1С же оперирует десятью значениями
+> жизненного цикла заказа. Маппинг русских строк делался вручную в коде
+> handler-ов и был неполным: статусы «Ожидается оплата», «Ожидается
+> обеспечение», «В процессе отгрузки», «Готов к закрытию» и т.д. на сайте
+> просто не существовали — менеджер не мог увидеть, на каком шаге
+> находится заказ.
+
+### Изменено (BREAKING)
+
+- **`order.created` / `order.updated` / `order.created.to_erp`** — поле
+  `status` ограничено новым enum из 10 значений:
+  `pending_approval`, `pending_payment_before_provision`,
+  `ready_for_provision`, `pending_payment_before_shipment`,
+  `awaiting_provision`, `ready_for_shipment`, `shipping`,
+  `awaiting_payment`, `ready_for_closure`, `closed`.
+- **`App\Enums\OrderStatus`** — 10 значений с русскими лейблами,
+  совпадающими с перечислением 1С (см.
+  [правила заказов](rules/orders.md#допустимые-статусы-v14)).
+- **Сайт** — статусы существующих заказов и записей `order_status_histories`
+  смигрированы:
+  `pending → pending_approval`,
+  `confirmed → ready_for_provision`,
+  `ready_to_ship → ready_for_shipment`,
+  `closed → closed`,
+  `deleted → closed` (плюс soft-delete `orders.deleted_at`).
+- **`App\Services\Erp\Support\OrderStatusMapper`** — новый класс. Принимает
+  любой формат (канонический английский ключ, русское название 1С,
+  legacy-значение до v14) и сворачивает в канонический ключ. Если
+  значение не распознано — handler пишет `Log::warning` и не меняет статус.
+- **`HandleOrderDeleted`** — теперь делает soft-delete + переводит в
+  `closed` (вместо отдельного статуса `deleted`).
+- **`HandleOrderUpdated`** — при получении статуса `deleted` (или
+  «Удалён») также делает soft-delete + `closed`. Если новый статус
+  отличается от удалённого, а запись была ранее soft-deleted, сайт её
+  восстанавливает.
+
+### Удалено
+
+- Статус `deleted` в перечислении заказа. Выражается через soft-delete +
+  `closed`.
+
+### Совместимость
+
+- 1С может продолжать слать legacy-значения (`pending`, `confirmed`,
+  `ready_to_ship`, `deleted`, русские названия из предыдущей версии
+  справочника) — сайт автоматически маппит их в новые ключи. Это
+  переходный период; в долгосрочной перспективе 1С перейдёт на
+  отправку канонических английских ключей.
+- Старые JSON-payload'ы со статусом `pending` принимаются и
+  обрабатываются корректно.
+- При первом запуске на dev/prod выполняется миграция
+  `2026_05_11_225320_remap_order_statuses_to_1c_v14`, которая обновляет
+  существующие заказы и их историю.
+
+---
+
 ## [13.12.0] — 2026-04-27
 
 > Фиксация контракта по статусам возврата в `return.updated`. До v13.12

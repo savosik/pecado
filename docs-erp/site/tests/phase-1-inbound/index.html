@@ -1279,10 +1279,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#a-confirmed" class="md-nav__link">
+  <a href="#a-ready_for_provision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A) Только статус → confirmed
+        A) Только статус → ready_for_provision
       
     </span>
   </a>
@@ -1301,10 +1301,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#c-ready_to_ship-v123" class="md-nav__link">
+  <a href="#c-ready_for_shipment-v14" class="md-nav__link">
     <span class="md-ellipsis">
       
-        C) Обновление статуса → ready_to_ship (v12.3)
+        C) Обновление статуса → ready_for_shipment (v14)
       
     </span>
   </a>
@@ -1312,10 +1312,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#d-closed-v123" class="md-nav__link">
+  <a href="#d-shipping-v14" class="md-nav__link">
     <span class="md-ellipsis">
       
-        D) Обновление статуса → closed (v12.3)
+        D) Обновление статуса → shipping (v14)
       
     </span>
   </a>
@@ -1323,10 +1323,54 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#e-deleted" class="md-nav__link">
+  <a href="#e-closed-v123" class="md-nav__link">
     <span class="md-ellipsis">
       
-        E) Обновление статуса → deleted
+        E) Обновление статуса → closed (v12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f-deleted-legacy-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F) Обновление статуса → deleted (legacy маркер удаления, v14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g-soft-deleted-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G) Восстановление soft-deleted заказа (v14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h-1-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H) Маппинг русских названий из 1С (v14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i-legacy-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        I) Маппинг legacy-ключей (v14, переходный период)
       
     </span>
   </a>
@@ -1560,6 +1604,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Гайды для 1С
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Гайды для 1С
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/erp-timestamps-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Аудит-метки 1С (erp_created_at / erp_updated_at)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../initial-load/" class="md-nav__link">
         
@@ -1603,10 +1736,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
             
   
   
@@ -1624,8 +1757,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1650,6 +1783,34 @@
     
   
     v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.6-uniq-companies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.6 — UNIQUE на (ИНН, КПП)
   
 
     
@@ -1719,10 +1880,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
         
           
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
             
   
   
@@ -1740,8 +1901,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2151,10 +2312,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#a-confirmed" class="md-nav__link">
+  <a href="#a-ready_for_provision" class="md-nav__link">
     <span class="md-ellipsis">
       
-        A) Только статус → confirmed
+        A) Только статус → ready_for_provision
       
     </span>
   </a>
@@ -2173,10 +2334,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#c-ready_to_ship-v123" class="md-nav__link">
+  <a href="#c-ready_for_shipment-v14" class="md-nav__link">
     <span class="md-ellipsis">
       
-        C) Обновление статуса → ready_to_ship (v12.3)
+        C) Обновление статуса → ready_for_shipment (v14)
       
     </span>
   </a>
@@ -2184,10 +2345,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#d-closed-v123" class="md-nav__link">
+  <a href="#d-shipping-v14" class="md-nav__link">
     <span class="md-ellipsis">
       
-        D) Обновление статуса → closed (v12.3)
+        D) Обновление статуса → shipping (v14)
       
     </span>
   </a>
@@ -2195,10 +2356,54 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#e-deleted" class="md-nav__link">
+  <a href="#e-closed-v123" class="md-nav__link">
     <span class="md-ellipsis">
       
-        E) Обновление статуса → deleted
+        E) Обновление статуса → closed (v12.3)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#f-deleted-legacy-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        F) Обновление статуса → deleted (legacy маркер удаления, v14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#g-soft-deleted-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        G) Восстановление soft-deleted заказа (v14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#h-1-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        H) Маппинг русских названий из 1С (v14)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#i-legacy-v14" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        I) Маппинг legacy-ключей (v14, переходный период)
       
     </span>
   </a>
@@ -2651,13 +2856,13 @@
 <hr />
 <h2 id="113-ordercreated">1.13 — Заказ от менеджера (<code>order.created</code>)<a class="headerlink" href="#113-ordercreated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.3 (товар), 1.9 (партнёр)</p>
-<p>🔵 <strong>1С отправляет</strong> <code>order.created</code> со статусом <code>confirmed</code>.</p>
+<p>🔵 <strong>1С отправляет</strong> <code>order.created</code> со статусом <code>ready_for_provision</code> (либо русским «Готов к обеспечению»).</p>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/order.created.json">JSON Schema</a></p>
 </blockquote>
 <ul>
 <li>[ ] Заказ создан с <code>external_id</code></li>
-<li>[ ] Статус = <code>confirmed</code></li>
+<li>[ ] Статус = <code>ready_for_provision</code>, в интерфейсе лейбл «Готов к обеспечению»</li>
 <li>[ ] Поле <code>type</code> в payload 1С отсутствует; сайт использует значение по умолчанию <code>"order"</code></li>
 <li>[ ] Позиции с <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code>; <code>discount_percent &lt; 0</code> трактуется как наценка</li>
 <li>[ ] <code>delivery_address</code> сохранён в текстовое поле <code>orders.delivery_address</code> (v12.1)</li>
@@ -2666,13 +2871,13 @@
 <hr />
 <h2 id="114-orderupdated">1.14 — Обновление заказа (<code>order.updated</code>)<a class="headerlink" href="#114-orderupdated" title="Permanent link">&para;</a></h2>
 <p><strong>Зависимости:</strong> 1.13</p>
-<h3 id="a-confirmed">A) Только статус → confirmed<a class="headerlink" href="#a-confirmed" title="Permanent link">&para;</a></h3>
+<h3 id="a-ready_for_provision">A) Только статус → ready_for_provision<a class="headerlink" href="#a-ready_for_provision" title="Permanent link">&para;</a></h3>
 <blockquote>
 <p>Структура payload → <a href="/docs/erp/schemas/order.updated.json">JSON Schema</a></p>
 </blockquote>
-<p>🔵 <code>order.updated</code> с <code>status: "confirmed"</code> (без <code>items</code>).</p>
+<p>🔵 <code>order.updated</code> с <code>status: "ready_for_provision"</code> (без <code>items</code>).</p>
 <ul>
-<li>[ ] Статус → <code>confirmed</code></li>
+<li>[ ] Статус → <code>ready_for_provision</code></li>
 <li>[ ] Запись в <code>order_status_histories</code></li>
 <li>[ ] Позиции НЕ изменились</li>
 </ul>
@@ -2683,23 +2888,50 @@
 <li>[ ] Количество и цены обновлены</li>
 <li>[ ] Diff зафиксирован в <code>order_change_logs</code></li>
 </ul>
-<h3 id="c-ready_to_ship-v123">C) Обновление статуса → ready_to_ship (v12.3)<a class="headerlink" href="#c-ready_to_ship-v123" title="Permanent link">&para;</a></h3>
-<p>🔵 <code>order.updated</code> с <code>status: "ready_to_ship"</code>.</p>
+<h3 id="c-ready_for_shipment-v14">C) Обновление статуса → ready_for_shipment (v14)<a class="headerlink" href="#c-ready_for_shipment-v14" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "ready_for_shipment"</code>.</p>
 <ul>
-<li>[ ] Статус → <code>ready_to_ship</code></li>
-<li>[ ] В интерфейсе отображается лейбл «К отгрузке»</li>
+<li>[ ] Статус → <code>ready_for_shipment</code></li>
+<li>[ ] В интерфейсе отображается лейбл «Готов к отгрузке»</li>
 </ul>
-<h3 id="d-closed-v123">D) Обновление статуса → closed (v12.3)<a class="headerlink" href="#d-closed-v123" title="Permanent link">&para;</a></h3>
+<h3 id="d-shipping-v14">D) Обновление статуса → shipping (v14)<a class="headerlink" href="#d-shipping-v14" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "shipping"</code>.</p>
+<ul>
+<li>[ ] Статус → <code>shipping</code></li>
+<li>[ ] В интерфейсе отображается лейбл «В процессе отгрузки»</li>
+</ul>
+<h3 id="e-closed-v123">E) Обновление статуса → closed (v12.3)<a class="headerlink" href="#e-closed-v123" title="Permanent link">&para;</a></h3>
 <p>🔵 <code>order.updated</code> с <code>status: "closed"</code>.</p>
 <ul>
 <li>[ ] Статус → <code>closed</code></li>
 <li>[ ] В интерфейсе отображается лейбл «Закрыт»</li>
 </ul>
-<h3 id="e-deleted">E) Обновление статуса → deleted<a class="headerlink" href="#e-deleted" title="Permanent link">&para;</a></h3>
-<p>🔵 <code>order.updated</code> с <code>status: "deleted"</code>.</p>
+<h3 id="f-deleted-legacy-v14">F) Обновление статуса → deleted (legacy маркер удаления, v14)<a class="headerlink" href="#f-deleted-legacy-v14" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "deleted"</code> (или с русским «Удалён»).</p>
 <ul>
-<li>[ ] Статус → <code>deleted</code></li>
-<li>[ ] В интерфейсе отображается лейбл «Удалён»</li>
+<li>[ ] Запись помечена soft-delete (<code>deleted_at</code> заполнен)</li>
+<li>[ ] Статус = <code>closed</code></li>
+<li>[ ] Заказ не отображается в активных заказах ЛК и админки</li>
+</ul>
+<h3 id="g-soft-deleted-v14">G) Восстановление soft-deleted заказа (v14)<a class="headerlink" href="#g-soft-deleted-v14" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> для ранее soft-deleted заказа с непустым статусом, отличным от <code>deleted</code> (например, <code>ready_for_shipment</code>).</p>
+<ul>
+<li>[ ] <code>deleted_at</code> сброшен (заказ восстановлен)</li>
+<li>[ ] Статус обновлён на присланный</li>
+<li>[ ] Заказ снова отображается в активных заказах</li>
+</ul>
+<h3 id="h-1-v14">H) Маппинг русских названий из 1С (v14)<a class="headerlink" href="#h-1-v14" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "Готов к отгрузке"</code> (русская строка из перечисления 1С).</p>
+<ul>
+<li>[ ] Статус → <code>ready_for_shipment</code></li>
+<li>[ ] Никаких ошибок валидации</li>
+</ul>
+<h3 id="i-legacy-v14">I) Маппинг legacy-ключей (v14, переходный период)<a class="headerlink" href="#i-legacy-v14" title="Permanent link">&para;</a></h3>
+<p>🔵 <code>order.updated</code> с <code>status: "pending"</code> / <code>"confirmed"</code> / <code>"ready_to_ship"</code>.</p>
+<ul>
+<li>[ ] <code>pending</code> → <code>pending_approval</code></li>
+<li>[ ] <code>confirmed</code> → <code>ready_for_provision</code></li>
+<li>[ ] <code>ready_to_ship</code> → <code>ready_for_shipment</code></li>
 </ul>
 <hr />
 <h2 id="115-orderdeleted">1.15 — Удаление заказа (<code>order.deleted</code>)<a class="headerlink" href="#115-orderdeleted" title="Permanent link">&para;</a></h2>
@@ -2709,8 +2941,10 @@
 <p>Структура payload → <a href="/docs/erp/schemas/order.deleted.json">JSON Schema</a></p>
 </blockquote>
 <ul>
-<li>[ ] Заказ → <code>deleted</code></li>
-<li>[ ] Не отображается в активных заказах</li>
+<li>[ ] Запись помечена soft-delete (<code>deleted_at</code> заполнен)</li>
+<li>[ ] Статус заказа = <code>closed</code> (v14)</li>
+<li>[ ] Не отображается в активных заказах ЛК и админки</li>
+<li>[ ] Повторный <code>order.deleted</code> идемпотентен (не падает, <code>deleted_at</code> не перезаписывается)</li>
 </ul>
 <hr />
 <h2 id="116-shipmentcreated">1.16 — Реализации (<code>shipment.created</code>)<a class="headerlink" href="#116-shipmentcreated" title="Permanent link">&para;</a></h2>

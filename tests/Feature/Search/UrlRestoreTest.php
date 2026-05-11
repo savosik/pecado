@@ -38,7 +38,7 @@ class UrlRestoreTest extends TestCase
     {
         $page = $this->fetchPage(
             '/cabinet/orders?search=ПРИВЕТ'
-            .'&status%5B%5D='.OrderStatus::CONFIRMED->value
+            .'&status%5B%5D='.OrderStatus::READY_FOR_PROVISION->value
             .'&date_from=2026-01-01&date_to=2026-04-29'
             .'&amount_from=100&amount_to=5000'
             .'&items_count_from=2&items_count_to=10'
@@ -47,7 +47,7 @@ class UrlRestoreTest extends TestCase
 
         $filters = $page['props']['filters'];
         $this->assertSame('ПРИВЕТ', $filters['search']);
-        $this->assertSame([OrderStatus::CONFIRMED->value], $filters['status']);
+        $this->assertSame([OrderStatus::READY_FOR_PROVISION->value], $filters['status']);
         $this->assertSame('2026-01-01', $filters['date_from']);
         $this->assertSame('2026-04-29', $filters['date_to']);
         $this->assertSame('100', (string) $filters['amount_from']);

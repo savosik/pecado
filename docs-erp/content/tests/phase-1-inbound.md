@@ -353,12 +353,12 @@
 
 **Зависимости:** 1.3 (товар), 1.9 (партнёр)
 
-🔵 **1С отправляет** `order.created` со статусом `confirmed`.
+🔵 **1С отправляет** `order.created` со статусом `ready_for_provision` (либо русским «Готов к обеспечению»).
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/order.created.json)
 
 - [ ] Заказ создан с `external_id`
-- [ ] Статус = `confirmed`
+- [ ] Статус = `ready_for_provision`, в интерфейсе лейбл «Готов к обеспечению»
 - [ ] Поле `type` в payload 1С отсутствует; сайт использует значение по умолчанию `"order"`
 - [ ] Позиции с `base_price`, `discount_percent`, `final_price`; `discount_percent < 0` трактуется как наценка
 - [ ] `delivery_address` сохранён в текстовое поле `orders.delivery_address` (v12.1)
@@ -370,13 +370,13 @@
 
 **Зависимости:** 1.13
 
-### A) Только статус → confirmed
+### A) Только статус → ready_for_provision
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/order.updated.json)
 
-🔵 `order.updated` с `status: "confirmed"` (без `items`).
+🔵 `order.updated` с `status: "ready_for_provision"` (без `items`).
 
-- [ ] Статус → `confirmed`
+- [ ] Статус → `ready_for_provision`
 - [ ] Запись в `order_status_histories`
 - [ ] Позиции НЕ изменились
 
@@ -388,26 +388,57 @@
 - [ ] Количество и цены обновлены
 - [ ] Diff зафиксирован в `order_change_logs`
 
-### C) Обновление статуса → ready_to_ship (v12.3)
+### C) Обновление статуса → ready_for_shipment (v14)
 
-🔵 `order.updated` с `status: "ready_to_ship"`.
+🔵 `order.updated` с `status: "ready_for_shipment"`.
 
-- [ ] Статус → `ready_to_ship`
-- [ ] В интерфейсе отображается лейбл «К отгрузке»
+- [ ] Статус → `ready_for_shipment`
+- [ ] В интерфейсе отображается лейбл «Готов к отгрузке»
 
-### D) Обновление статуса → closed (v12.3)
+### D) Обновление статуса → shipping (v14)
+
+🔵 `order.updated` с `status: "shipping"`.
+
+- [ ] Статус → `shipping`
+- [ ] В интерфейсе отображается лейбл «В процессе отгрузки»
+
+### E) Обновление статуса → closed (v12.3)
 
 🔵 `order.updated` с `status: "closed"`.
 
 - [ ] Статус → `closed`
 - [ ] В интерфейсе отображается лейбл «Закрыт»
 
-### E) Обновление статуса → deleted
+### F) Обновление статуса → deleted (legacy маркер удаления, v14)
 
-🔵 `order.updated` с `status: "deleted"`.
+🔵 `order.updated` с `status: "deleted"` (или с русским «Удалён»).
 
-- [ ] Статус → `deleted`
-- [ ] В интерфейсе отображается лейбл «Удалён»
+- [ ] Запись помечена soft-delete (`deleted_at` заполнен)
+- [ ] Статус = `closed`
+- [ ] Заказ не отображается в активных заказах ЛК и админки
+
+### G) Восстановление soft-deleted заказа (v14)
+
+🔵 `order.updated` для ранее soft-deleted заказа с непустым статусом, отличным от `deleted` (например, `ready_for_shipment`).
+
+- [ ] `deleted_at` сброшен (заказ восстановлен)
+- [ ] Статус обновлён на присланный
+- [ ] Заказ снова отображается в активных заказах
+
+### H) Маппинг русских названий из 1С (v14)
+
+🔵 `order.updated` с `status: "Готов к отгрузке"` (русская строка из перечисления 1С).
+
+- [ ] Статус → `ready_for_shipment`
+- [ ] Никаких ошибок валидации
+
+### I) Маппинг legacy-ключей (v14, переходный период)
+
+🔵 `order.updated` с `status: "pending"` / `"confirmed"` / `"ready_to_ship"`.
+
+- [ ] `pending` → `pending_approval`
+- [ ] `confirmed` → `ready_for_provision`
+- [ ] `ready_to_ship` → `ready_for_shipment`
 
 ---
 
@@ -419,8 +450,10 @@
 
 > Структура payload → [JSON Schema](/docs/erp/schemas/order.deleted.json)
 
-- [ ] Заказ → `deleted`
-- [ ] Не отображается в активных заказах
+- [ ] Запись помечена soft-delete (`deleted_at` заполнен)
+- [ ] Статус заказа = `closed` (v14)
+- [ ] Не отображается в активных заказах ЛК и админки
+- [ ] Повторный `order.deleted` идемпотентен (не падает, `deleted_at` не перезаписывается)
 
 ---
 

@@ -49,7 +49,7 @@ class CompanyDeduplicationTest extends TestCase
                 'event' => 'order.created',
                 'message_id' => "msg-dedup-{$i}",
                 'uuid' => "order-dedup-{$i}",
-                'status' => 'pending',
+                'status' => 'pending_approval',
                 'contractor' => [
                     'country' => 'RU',
                     'name' => '21 ООО',
@@ -89,7 +89,7 @@ class CompanyDeduplicationTest extends TestCase
                 'event' => 'order.created',
                 'message_id' => "msg-regression-{$i}",
                 'uuid' => "order-regression-{$i}",
-                'status' => 'pending',
+                'status' => 'pending_approval',
                 'contractor' => [
                     'country' => 'RU',
                     'name' => '21 ООО',
@@ -177,7 +177,7 @@ class CompanyDeduplicationTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-restore-001',
             'uuid' => 'order-restore-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'contractor' => [
                 'country' => 'RU',
                 'name' => 'Восстановлена',
@@ -214,7 +214,7 @@ class CompanyDeduplicationTest extends TestCase
                 'event' => 'order.created',
                 'message_id' => "msg-ip-{$idx}",
                 'uuid' => $data['order'],
-                'status' => 'pending',
+                'status' => 'pending_approval',
                 'contractor' => [
                     'country' => 'RU',
                     'name' => $data['name'],
@@ -245,7 +245,7 @@ class CompanyDeduplicationTest extends TestCase
                 'event' => 'order.created',
                 'message_id' => "msg-branch-{$idx}",
                 'uuid' => $data['order'],
-                'status' => 'pending',
+                'status' => 'pending_approval',
                 'contractor' => [
                     'country' => 'RU',
                     'name' => 'Газпром (филиал)',

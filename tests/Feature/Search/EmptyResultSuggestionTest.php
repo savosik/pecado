@@ -71,7 +71,7 @@ class EmptyResultSuggestionTest extends TestCase
     {
         config(['search-cabinet.suggestions' => true]);
 
-        $text = $this->suggestion('/cabinet/orders?status%5B%5D='.OrderStatus::CONFIRMED->value);
+        $text = $this->suggestion('/cabinet/orders?status%5B%5D='.OrderStatus::READY_FOR_PROVISION->value);
         $this->assertIsString($text);
         $this->assertStringContainsString('Попробуйте сбросить', $text);
         $this->assertStringContainsString('Статус', $text);
@@ -82,7 +82,7 @@ class EmptyResultSuggestionTest extends TestCase
     {
         config(['search-cabinet.suggestions' => true]);
 
-        $text = $this->suggestion('/cabinet/orders?search=NONEXISTENT&status%5B%5D='.OrderStatus::CONFIRMED->value);
+        $text = $this->suggestion('/cabinet/orders?search=NONEXISTENT&status%5B%5D='.OrderStatus::READY_FOR_PROVISION->value);
         $this->assertIsString($text);
         $this->assertStringContainsString('Проверьте написание', $text);
         $this->assertStringContainsString('Попробуйте сбросить', $text);

@@ -1157,6 +1157,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Гайды для 1С
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Гайды для 1С
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/erp-timestamps-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Аудит-метки 1С (erp_created_at / erp_updated_at)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../initial-load/" class="md-nav__link">
         
@@ -1200,10 +1289,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
             
   
   
@@ -1221,8 +1310,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1247,6 +1336,34 @@
     
   
     v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.6-uniq-companies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.6 — UNIQUE на (ИНН, КПП)
   
 
     
@@ -1316,10 +1433,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
         
           
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
             
   
   
@@ -1337,8 +1454,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1554,19 +1671,19 @@
 <td>1</td>
 <td>🟢 Сайт</td>
 <td>Пользователь оформляет заказ</td>
-<td><code>order.created</code> в <code>erp_out.orders</code>, статус <code>pending</code></td>
+<td><code>order.created</code> в <code>erp_out.orders</code>, статус <code>pending_approval</code></td>
 </tr>
 <tr>
 <td>2</td>
 <td>🔵 1С</td>
-<td>Подтверждает → <code>order.updated</code> <code>confirmed</code></td>
-<td>Статус → <code>confirmed</code>, запись в <code>order_status_histories</code></td>
+<td>Согласовал → <code>order.updated</code> <code>ready_for_provision</code></td>
+<td>Статус → <code>ready_for_provision</code>, запись в <code>order_status_histories</code></td>
 </tr>
 <tr>
 <td>3</td>
 <td>🔵 1С</td>
-<td>Готовит к отгрузке → <code>order.updated</code> <code>ready_to_ship</code></td>
-<td>Статус → <code>ready_to_ship</code></td>
+<td>Готов к отгрузке → <code>order.updated</code> <code>ready_for_shipment</code></td>
+<td>Статус → <code>ready_for_shipment</code></td>
 </tr>
 <tr>
 <td>4</td>
@@ -1583,17 +1700,29 @@
 <tr>
 <td>6</td>
 <td>🔵 1С</td>
-<td>Закрывает → <code>order.updated</code> <code>closed</code></td>
-<td>Статус → <code>closed</code></td>
+<td>Запустил отгрузку → <code>order.updated</code> <code>shipping</code></td>
+<td>Статус → <code>shipping</code></td>
 </tr>
 <tr>
 <td>7</td>
 <td>🔵 1С</td>
-<td>Удаляет → <code>order.deleted</code></td>
-<td>Статус → <code>deleted</code></td>
+<td>Готов к закрытию → <code>order.updated</code> <code>ready_for_closure</code></td>
+<td>Статус → <code>ready_for_closure</code></td>
 </tr>
 <tr>
 <td>8</td>
+<td>🔵 1С</td>
+<td>Закрывает → <code>order.updated</code> <code>closed</code></td>
+<td>Статус → <code>closed</code></td>
+</tr>
+<tr>
+<td>9</td>
+<td>🔵 1С</td>
+<td>Удаляет → <code>order.deleted</code></td>
+<td>soft-delete (<code>deleted_at</code> заполнен), статус = <code>closed</code></td>
+</tr>
+<tr>
+<td>10</td>
 <td>🔵 1С</td>
 <td>Баланс → <code>balance.updated</code></td>
 <td>Баланс обновлён</td>
@@ -1602,7 +1731,8 @@
 </table>
 <p><strong>Итоговая проверка:</strong></p>
 <ul>
-<li>[ ] <code>order_status_histories</code>: <code>pending</code> → <code>confirmed</code> → <code>ready_to_ship</code> → <code>closed</code> → <code>deleted</code></li>
+<li>[ ] <code>order_status_histories</code>: <code>pending_approval</code> → <code>ready_for_provision</code> → <code>ready_for_shipment</code> → <code>shipping</code> → <code>ready_for_closure</code> → <code>closed</code></li>
+<li>[ ] После <code>order.deleted</code>: <code>orders.deleted_at</code> заполнен, статус = <code>closed</code></li>
 <li>[ ] <code>order_change_logs</code>: изменения позиций зафиксированы</li>
 <li>[ ] Реализация привязана к заказу</li>
 <li>[ ] Баланс отражает задолженность</li>
@@ -1773,7 +1903,7 @@
 <tr>
 <td>2</td>
 <td>🔵 1С</td>
-<td><code>order.updated</code> <code>confirmed</code> → <code>ready_to_ship</code> → <code>closed</code></td>
+<td><code>order.updated</code> <code>ready_for_provision</code> → <code>ready_for_shipment</code> → <code>closed</code></td>
 <td>Статусы прошли</td>
 </tr>
 <tr>

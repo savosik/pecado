@@ -874,7 +874,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'order.created',
             'uuid' => '00000000-0000-4000-a000-000000000b01',
             'number' => 'ORD-UPSERT-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'message_id' => 'msg-order-upsert-first',
             'partner_uuid' => '00000000-0000-4000-a000-000000001b01',
@@ -890,12 +890,12 @@ class ErpIncomingJobTest extends TestCase
 
         $this->assertDatabaseHas('orders', [
             'uuid' => '00000000-0000-4000-a000-000000000b01',
-            'status' => 'pending',
+            'status' => 'pending_approval',
         ]);
 
         // Вторая доставка того же сообщения — но с другим message_id (RabbitMQ retry)
         $retryPayload = array_merge($payload, [
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'message_id' => 'msg-order-upsert-retry',
         ]);
 
@@ -906,7 +906,7 @@ class ErpIncomingJobTest extends TestCase
 
         $order = Order::where('uuid', '00000000-0000-4000-a000-000000000b01')->first();
         // Статус обновлён из второго payload
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('ready_for_provision', $order->status->value);
     }
 
     #[Test]
@@ -918,7 +918,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'order.created',
             'uuid' => '00000000-0000-4000-a000-000000000b02',
             'number' => 'ORD-DUP-NUMBER-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'message_id' => 'msg-order-dupnumber-first',
             'partner_uuid' => '00000000-0000-4000-a000-000000001b02',
@@ -936,7 +936,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'order.created',
             'uuid' => '00000000-0000-4000-a000-000000000b03',
             'number' => 'ORD-DUP-NUMBER-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'message_id' => 'msg-order-dupnumber-second',
             'partner_uuid' => '00000000-0000-4000-a000-000000001b02',
@@ -964,7 +964,7 @@ class ErpIncomingJobTest extends TestCase
             'event' => 'order.created',
             'uuid' => '00000000-0000-4000-a000-000000000c01',
             'number' => 'ORD-NO-COUNTRY-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'message_id' => 'msg-order-no-country',
             'partner_uuid' => '00000000-0000-4000-a000-000000001c01',
@@ -1003,13 +1003,13 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-00000000003f',
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'status' => 'pending',
+            'status' => 'pending_approval',
         ]);
 
         $job = $this->makeJob([
             'event' => 'order.updated',
             'uuid' => '00000000-0000-4000-a000-00000000003f',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'items' => [],
             'message_id' => 'msg-order-upd-001',
             'timestamp' => now()->toIso8601String(),
@@ -1019,7 +1019,7 @@ class ErpIncomingJobTest extends TestCase
 
         $order->refresh();
 
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('ready_for_provision', $order->status->value);
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-order-upd-001',
             'event' => 'order.updated',
@@ -1038,7 +1038,7 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-000000000041',
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'status' => 'pending',
+            'status' => 'pending_approval',
         ]);
 
         // Добавим старую позицию
@@ -1054,7 +1054,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'order.updated',
             'uuid' => '00000000-0000-4000-a000-000000000041',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'items' => [
                 [
                     'product_uuid' => '00000000-0000-4000-a000-000000000025',
@@ -1087,7 +1087,7 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-000000000040',
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'status' => 'pending',
+            'status' => 'pending_approval',
         ]);
 
         ErpProcessedMessage::create([
@@ -1099,14 +1099,14 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'order.updated',
             'uuid' => '00000000-0000-4000-a000-000000000040',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'message_id' => 'msg-order-dup',
         ]);
 
         $job->fire();
 
         $order->refresh();
-        $this->assertEquals('pending', $order->status->value);
+        $this->assertEquals('pending_approval', $order->status->value);
     }
 
     #[Test]
@@ -1115,7 +1115,7 @@ class ErpIncomingJobTest extends TestCase
         $job = $this->makeJob([
             'event' => 'order.updated',
             'uuid' => '00000000-0000-4000-a000-00000000001d',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'message_id' => 'msg-order-unknown',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1137,13 +1137,13 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-00000000a25a',
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
         ]);
 
         $job = $this->makeJob([
             'event' => 'order.updated',
             'uuid' => '00000000-0000-4000-a000-00000000a25a',
-            'status' => 'ready_to_ship',
+            'status' => 'ready_for_shipment',
             'message_id' => 'msg-order-r2s-001',
             'timestamp' => now()->toIso8601String(),
         ]);
@@ -1151,8 +1151,8 @@ class ErpIncomingJobTest extends TestCase
         $job->fire();
 
         $order->refresh();
-        $this->assertEquals('ready_to_ship', $order->status->value);
-        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000a25a', 'status' => 'ready_to_ship']);
+        $this->assertEquals('ready_for_shipment', $order->status->value);
+        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000a25a', 'status' => 'ready_for_shipment']);
     }
 
     #[Test]
@@ -1164,7 +1164,7 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-000000000c15',
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'status' => 'ready_to_ship',
+            'status' => 'ready_for_shipment',
         ]);
 
         $job = $this->makeJob([
@@ -1191,7 +1191,7 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-00000000003e',
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
         ]);
 
         $job = $this->makeJob([
@@ -1203,11 +1203,10 @@ class ErpIncomingJobTest extends TestCase
 
         $job->fire();
 
-        $order->refresh();
+        $fresh = \App\Models\Order::withTrashed()->where('uuid', '00000000-0000-4000-a000-00000000003e')->first();
 
-        $this->assertEquals('deleted', $order->status->value);
-        $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000003e', 'status' => 'deleted']);
+        $this->assertEquals('closed', $fresh->status->value, 'v14: order.deleted → soft-delete + closed');
+        $this->assertNotNull($fresh->deleted_at, 'Заказ должен быть soft-deleted (v14)');
         $this->assertDatabaseHas('erp_processed_messages', [
             'message_id' => 'msg-order-del-001',
             'event' => 'order.deleted',
@@ -1509,14 +1508,14 @@ class ErpIncomingJobTest extends TestCase
             'uuid' => '00000000-0000-4000-a000-00000000000f',
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'status' => 'pending',
+            'status' => 'pending_approval',
         ]);
 
         // 1. order.updated — подтверждение + добавление позиций
         $updateJob = $this->makeJob([
             'event' => 'order.updated',
             'uuid' => '00000000-0000-4000-a000-00000000000f',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'items' => [
                 ['product_uuid' => '00000000-0000-4000-a000-00000000000e', 'quantity' => 5, 'price' => 3000.00],
             ],
@@ -1525,10 +1524,10 @@ class ErpIncomingJobTest extends TestCase
         $updateJob->fire();
 
         $order->refresh();
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('ready_for_provision', $order->status->value);
         $this->assertCount(1, $order->items);
 
-        // 2. order.deleted — отмена
+        // 2. order.deleted — отмена (v14: soft-delete + closed)
         $deleteJob = $this->makeJob([
             'event' => 'order.deleted',
             'uuid' => '00000000-0000-4000-a000-00000000000f',
@@ -1536,23 +1535,23 @@ class ErpIncomingJobTest extends TestCase
         ]);
         $deleteJob->fire();
 
-        $order->refresh();
-        $this->assertEquals('deleted', $order->status->value);
-        $this->assertNull($order->deleted_at, 'Заказ не должен быть soft-deleted — остаётся как лог');
-        $this->assertDatabaseHas('orders', ['uuid' => '00000000-0000-4000-a000-00000000000f', 'status' => 'deleted']);
+        $fresh = Order::withTrashed()->where('uuid', '00000000-0000-4000-a000-00000000000f')->first();
+        $this->assertEquals('closed', $fresh->status->value, 'v14: order.deleted → soft-delete + closed');
+        $this->assertNotNull($fresh->deleted_at, 'v14: Заказ должен быть soft-deleted');
 
-        // 3. Дубль order.updated — не должен обработаться
+        // 3. Дубль order.updated — не должен обработаться (идемпотентность по message_id)
         $dupJob = $this->makeJob([
             'event' => 'order.updated',
             'uuid' => '00000000-0000-4000-a000-00000000000f',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'message_id' => 'msg-life-ord-upd',
         ]);
         $dupJob->fire();
 
         // Статус не должен измениться — дубликат
-        $order->refresh();
-        $this->assertEquals('deleted', $order->status->value);
+        $fresh = Order::withTrashed()->where('uuid', '00000000-0000-4000-a000-00000000000f')->first();
+        $this->assertEquals('closed', $fresh->status->value);
+        $this->assertNotNull($fresh->deleted_at);
     }
 
     // ========================================================

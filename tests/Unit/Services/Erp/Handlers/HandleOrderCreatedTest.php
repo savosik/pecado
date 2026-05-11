@@ -41,7 +41,7 @@ class HandleOrderCreatedTest extends TestCase
             'uuid' => 'order-from-manager-001',
             'number' => 'ORD-2026-0100',
             'date' => '2026-03-17T14:00:00+03:00',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'partner_uuid' => 'erp-partner-001',
             'currency_code' => 'RUB',
@@ -84,7 +84,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-002',
             'uuid' => 'order-auto-company-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'partner_uuid' => 'erp-partner-002',
             'contractor' => [
@@ -121,7 +121,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-003',
             'uuid' => 'order-missing-product-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'partner_uuid' => 'erp-partner-003',
             'items' => [
@@ -151,7 +151,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-004',
             'uuid' => 'order-no-partner-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'partner_uuid' => 'nonexistent-partner',
             'items' => [],
@@ -169,7 +169,7 @@ class HandleOrderCreatedTest extends TestCase
         $this->handler->handle([
             'event' => 'order.created',
             'message_id' => 'msg-test-005',
-            'status' => 'pending',
+            'status' => 'pending_approval',
         ]);
 
         $this->assertEquals(0, Order::count());
@@ -185,7 +185,7 @@ class HandleOrderCreatedTest extends TestCase
                 'uuid' => 'existing-order-001',
                 'number' => 'ORD-OLD',
                 'user_id' => $user->id,
-                'status' => 'confirmed',
+                'status' => 'ready_for_provision',
                 'total_amount' => 1000,
             ]);
         });
@@ -195,7 +195,7 @@ class HandleOrderCreatedTest extends TestCase
             'message_id' => 'msg-test-006',
             'uuid' => 'existing-order-001',
             'number' => 'ORD-NEW',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'items' => [],
         ]);
 
@@ -204,7 +204,7 @@ class HandleOrderCreatedTest extends TestCase
 
         $order = Order::where('uuid', 'existing-order-001')->first();
         // Поля обновлены из нового payload
-        $this->assertEquals('pending', $order->status->value);
+        $this->assertEquals('pending_approval', $order->status->value);
         $this->assertEquals('ORD-NEW', $order->number);
     }
 
@@ -220,7 +220,7 @@ class HandleOrderCreatedTest extends TestCase
                 'uuid' => 'order-with-user-comment',
                 'number' => 'ORD-WITH-COMMENT',
                 'user_id' => $user->id,
-                'status' => 'pending',
+                'status' => 'pending_approval',
                 'total_amount' => 0,
                 'comment' => 'Доставка после 18:00, позвонить за час',
             ]);
@@ -232,7 +232,7 @@ class HandleOrderCreatedTest extends TestCase
             'message_id' => 'msg-test-comment-preserve',
             'uuid' => 'order-with-user-comment',
             'number' => 'ORD-WITH-COMMENT',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             'comment' => 'Комментарий менеджера из 1С',
             'items' => [],
         ]);
@@ -240,7 +240,7 @@ class HandleOrderCreatedTest extends TestCase
         $order = Order::where('uuid', 'order-with-user-comment')->first();
         $this->assertEquals('Доставка после 18:00, позвонить за час', $order->comment);
         // Остальные поля, не относящиеся к comment, обновились
-        $this->assertEquals('confirmed', $order->status->value);
+        $this->assertEquals('ready_for_provision', $order->status->value);
     }
 
     #[Test]
@@ -254,7 +254,7 @@ class HandleOrderCreatedTest extends TestCase
                 'uuid' => 'order-comment-null-payload',
                 'number' => 'ORD-NULL-CMT',
                 'user_id' => $user->id,
-                'status' => 'pending',
+                'status' => 'pending_approval',
                 'total_amount' => 0,
                 'comment' => 'Хрупкий груз',
             ]);
@@ -265,7 +265,7 @@ class HandleOrderCreatedTest extends TestCase
             'message_id' => 'msg-test-comment-null',
             'uuid' => 'order-comment-null-payload',
             'number' => 'ORD-NULL-CMT',
-            'status' => 'confirmed',
+            'status' => 'ready_for_provision',
             // comment в payload отсутствует
             'items' => [],
         ]);
@@ -283,7 +283,7 @@ class HandleOrderCreatedTest extends TestCase
             Order::create([
                 'uuid' => 'order-uuid-first',
                 'number' => 'ORD-SAME-NUMBER',
-                'status' => 'pending',
+                'status' => 'pending_approval',
                 'total_amount' => 0,
             ]);
         });
@@ -293,7 +293,7 @@ class HandleOrderCreatedTest extends TestCase
             'message_id' => 'msg-test-006b',
             'uuid' => 'order-uuid-second',
             'number' => 'ORD-SAME-NUMBER',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'items' => [],
         ]);
 
@@ -310,7 +310,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-007',
             'uuid' => 'order-no-circular-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'items' => [],
         ]);
@@ -323,24 +323,24 @@ class HandleOrderCreatedTest extends TestCase
     }
 
     #[Test]
-    public function creates_order_with_ready_to_ship_status(): void
+    public function creates_order_with_ready_for_shipment_status(): void
     {
         $this->handler->handle([
             'event' => 'order.created',
             'message_id' => 'msg-test-008',
             'uuid' => 'order-erp-status-001',
-            'status' => 'ready_to_ship',
+            'status' => 'ready_for_shipment',
             'type' => 'order',
             'items' => [],
         ]);
 
         $order = Order::where('uuid', 'order-erp-status-001')->first();
         $this->assertNotNull($order);
-        $this->assertEquals('ready_to_ship', $order->status->value);
+        $this->assertEquals('ready_for_shipment', $order->status->value);
     }
 
     #[Test]
-    public function creates_order_with_deleted_status(): void
+    public function soft_deletes_order_when_created_with_deleted_marker(): void
     {
         $this->handler->handle([
             'event' => 'order.created',
@@ -351,9 +351,27 @@ class HandleOrderCreatedTest extends TestCase
             'items' => [],
         ]);
 
-        $order = Order::where('uuid', 'order-erp-status-deleted-001')->first();
+        $order = Order::withTrashed()->where('uuid', 'order-erp-status-deleted-001')->first();
         $this->assertNotNull($order);
-        $this->assertEquals('deleted', $order->status->value);
+        $this->assertEquals('closed', $order->status->value);
+        $this->assertNotNull($order->deleted_at);
+    }
+
+    #[Test]
+    public function maps_russian_status_from_1c_on_create(): void
+    {
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-010',
+            'uuid' => 'order-ru-status-001',
+            'status' => 'Готов к отгрузке',
+            'type' => 'order',
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-ru-status-001')->first();
+        $this->assertNotNull($order);
+        $this->assertEquals('ready_for_shipment', $order->status->value);
     }
 
     #[Test]
@@ -365,7 +383,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-addr-001',
             'uuid' => 'order-with-address-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'partner_uuid' => 'erp-partner-addr-001',
             'delivery_address' => 'г. Москва, ул. Ленина, д. 1',
@@ -386,7 +404,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-addr-002',
             'uuid' => 'order-no-address-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'partner_uuid' => 'erp-partner-addr-002',
             'items' => [],
@@ -404,7 +422,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-erp-ts-001',
             'uuid' => 'order-erp-ts-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'erp_created_at' => '2026-04-26T10:15:32+03:00',
             'erp_updated_at' => '2026-04-26T10:15:32+03:00',
@@ -430,7 +448,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-erp-tz-utc',
             'uuid' => 'order-erp-ts-utc',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'erp_created_at' => '2026-04-26T07:15:32Z',  // UTC = 10:15:32 MSK
             'erp_updated_at' => '2026-04-26T11:42:09+05:00', // = 09:42:09 MSK
@@ -450,7 +468,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-erp-ts-002',
             'uuid' => 'order-erp-ts-002',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'type' => 'order',
             'items' => [],
         ]);
@@ -470,7 +488,7 @@ class HandleOrderCreatedTest extends TestCase
             'event' => 'order.created',
             'message_id' => 'msg-test-negative-discount-001',
             'uuid' => 'order-negative-discount-001',
-            'status' => 'pending',
+            'status' => 'pending_approval',
             'items' => [
                 [
                     'product_uuid' => 'prod-negative-discount-001',

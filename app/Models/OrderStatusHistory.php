@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -36,18 +37,7 @@ class OrderStatusHistory extends Model
      */
     public function getOldStatusLabelAttribute(): ?string
     {
-        if (! $this->old_status) {
-            return null;
-        }
-
-        return match ($this->old_status) {
-            'pending' => 'Ожидает',
-            'confirmed' => 'Подтверждён',
-            'ready_to_ship' => 'К отгрузке',
-            'closed' => 'Закрыт',
-            'deleted' => 'Удалён',
-            default => $this->old_status,
-        };
+        return $this->old_status ? $this->labelFor($this->old_status) : null;
     }
 
     /**
@@ -55,13 +45,13 @@ class OrderStatusHistory extends Model
      */
     public function getNewStatusLabelAttribute(): string
     {
-        return match ($this->new_status) {
-            'pending' => 'Ожидает',
-            'confirmed' => 'Подтверждён',
-            'ready_to_ship' => 'К отгрузке',
-            'closed' => 'Закрыт',
-            'deleted' => 'Удалён',
-            default => $this->new_status,
-        };
+        return $this->labelFor($this->new_status);
+    }
+
+    private function labelFor(string $statusValue): string
+    {
+        $status = OrderStatus::tryFrom($statusValue);
+
+        return $status?->label() ?? $statusValue;
     }
 }

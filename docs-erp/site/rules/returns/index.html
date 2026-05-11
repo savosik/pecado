@@ -739,6 +739,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Допустимые статусы
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1191,6 +1202,95 @@
   
   
   
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Гайды для 1С
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Гайды для 1С
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/erp-timestamps-for-1c/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Аудит-метки 1С (erp_created_at / erp_updated_at)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../../initial-load/" class="md-nav__link">
         
@@ -1234,10 +1334,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
         
           
-          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="">
             
   
   
@@ -1255,8 +1355,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_8">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1281,6 +1381,34 @@
     
   
     v13.2 — UUID для контрагентов
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../migrations/v13.6-uniq-companies/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    v13.6 — UNIQUE на (ИНН, КПП)
   
 
     
@@ -1350,10 +1478,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
         
           
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
             
   
   
@@ -1371,8 +1499,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_10">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1583,6 +1711,17 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#_5" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Допустимые статусы
+      
+    </span>
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -1701,7 +1840,52 @@
 <ul>
 <li>Обновляет статус возврата по UUID.</li>
 <li><strong>(v12.3)</strong> Если передан <code>number</code> — сайт сохраняет его как <code>erp_number</code>. Это номер возврата из 1С, который отображается пользователю для коммуникации с менеджером.</li>
+<li><strong>(v13.8)</strong> Поле <code>status</code> ограничено перечислением. Сайт принимает только значения из таблицы ниже; неизвестные строки игнорируются с записью <code>Log::warning</code>, статус возврата не меняется.</li>
 </ul>
+<h3 id="_5">Допустимые статусы<a class="headerlink" href="#_5" title="Permanent link">&para;</a></h3>
+<p>1С передаёт статус возврата как одну из пяти строк по шине. Соответствие со справочником в 1С:</p>
+<table>
+<thead>
+<tr>
+<th>1С (Перечисление)</th>
+<th>Шинный код</th>
+<th>Метка на сайте</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>НеСогласована</td>
+<td><code>pending</code></td>
+<td>Не согласована</td>
+</tr>
+<tr>
+<td>КОбеспечению</td>
+<td><code>confirmed</code></td>
+<td>Подтверждён</td>
+</tr>
+<tr>
+<td>КВозврату</td>
+<td><code>confirmed</code></td>
+<td>Подтверждён</td>
+</tr>
+<tr>
+<td>КОтгрузке</td>
+<td><code>ready_to_ship</code></td>
+<td>К отгрузке</td>
+</tr>
+<tr>
+<td>Выполнена</td>
+<td><code>closed</code></td>
+<td>Выполнена</td>
+</tr>
+<tr>
+<td>Отклонена</td>
+<td><code>cancelled</code></td>
+<td>Отклонена</td>
+</tr>
+</tbody>
+</table>
+<p>КОбеспечению и КВозврату на стороне 1С сворачиваются в одну строку <code>confirmed</code>. Если потребуется различать эти подэтапы — сначала нужно раздвоить маппинг в справочнике 1С (например, ввести строки <code>confirmed_supply</code> и <code>confirmed_return</code>), затем расширить enum в сайтовой схеме.</p>
 
 
 

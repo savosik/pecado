@@ -19,7 +19,7 @@ return new class extends Migration
             $table->foreignId('company_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('delivery_address_id')->nullable()->constrained('delivery_addresses')->nullOnDelete();
             $table->foreignId('cart_id')->nullable()->constrained()->onDelete('set null');
-            $table->string('status')->default(\App\Enums\OrderStatus::PENDING->value);
+            $table->string('status')->default(\App\Enums\OrderStatus::PENDING_APPROVAL->value);
             $table->text('comment')->nullable();
             $table->decimal('total_amount', 15, 2);
             $table->decimal('exchange_rate', 20, 10)->default(1);

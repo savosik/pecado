@@ -44,7 +44,7 @@ class CheckoutService implements CheckoutServiceInterface
                 'company_id' => $company->id,
                 'delivery_address' => $deliveryAddress,
                 'cart_id' => $cart->id,
-                'status' => \App\Enums\OrderStatus::PENDING,
+                'status' => \App\Enums\OrderStatus::PENDING_APPROVAL,
                 'comment' => $comment,
                 'total_amount' => 0,
                 'exchange_rate' => $currency?->exchange_rate ?? 1.0,
