@@ -383,12 +383,14 @@ export default function OrderShow({ order }) {
                                                         >
                                                             Отгрузка
                                                         </Badge>
+                                                        {/* TODO: пока у отгрузок единственный статус «Выполнена» — бейдж временно скрыт
                                                         <Badge
                                                             colorPalette={SHIPMENT_STATUS_COLORS[shipment.status] || 'gray'}
                                                             variant="subtle" fontSize="2xs" px="2" borderRadius="full"
                                                         >
                                                             {shipment.status_label}
                                                         </Badge>
+                                                        */}
                                                         {shipment.updated_at && (
                                                             <Text fontSize="2xs" color="gray.400" whiteSpace="nowrap">
                                                                 {shipment.updated_at}

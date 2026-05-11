@@ -34,17 +34,18 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
 
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const statusBadge = (
-        <Badge
-            colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
-            variant="subtle" px="3" py="1" borderRadius="full" fontSize="sm"
-        >
-            {shipment.status_label}
-        </Badge>
-    );
+    // TODO: пока у отгрузок единственный статус «Выполнена» — бейдж временно скрыт
+    // const statusBadge = (
+    //     <Badge
+    //         colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
+    //         variant="subtle" px="3" py="1" borderRadius="full" fontSize="sm"
+    //     >
+    //         {shipment.status_label}
+    //     </Badge>
+    // );
 
     return (
-        <CabinetLayout title={`Отгрузка ${shipment.number}`} actions={statusBadge}>
+        <CabinetLayout title={`Отгрузка ${shipment.number}`}>
             <Head title={`Отгрузка ${shipment.number} — Pecado`} />
 
             {/* Назад */}

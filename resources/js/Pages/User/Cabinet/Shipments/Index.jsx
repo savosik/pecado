@@ -379,12 +379,14 @@ export default function ShipmentsIndex({ filters, statuses, exportEnabled = fals
                                                     Отгрузка
                                                 </Badge>
                                                 <Flex align="center" gap="1.5">
+                                                    {/* TODO: пока у отгрузок единственный статус «Выполнена» — бейдж временно скрыт
                                                     <Badge
                                                         colorPalette={STATUS_COLORS[shipment.status] || 'gray'}
                                                         variant="subtle" fontSize="xs" borderRadius="full" px="2.5"
                                                     >
                                                         {shipment.status_label}
                                                     </Badge>
+                                                    */}
                                                     {shipment.updated_at && (
                                                         <Text fontSize="2xs" color="gray.400">{shipment.updated_at}</Text>
                                                     )}
