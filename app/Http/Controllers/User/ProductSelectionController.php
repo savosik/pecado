@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Services\Product\ProductQueryService;
+use App\Support\HomeCache;
 use Illuminate\Support\Facades\Cache;
 
 class ProductSelectionController extends Controller
@@ -94,11 +95,13 @@ class ProductSelectionController extends Controller
 
     /**
      * Сбросить все кеши подборок главной страницы.
+     *
+     * @deprecated используй HomeCache::flushSelections/flushNewProducts/flushBestsellers напрямую.
      */
     public static function clearHomeCache(): void
     {
-        Cache::forget(self::CACHE_KEY_SELECTIONS);
-        Cache::forget(self::CACHE_KEY_NEW.'.10');
-        Cache::forget(self::CACHE_KEY_BESTSELLERS.'.10');
+        HomeCache::flushSelections();
+        HomeCache::flushNewProducts();
+        HomeCache::flushBestsellers();
     }
 }

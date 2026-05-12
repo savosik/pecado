@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
-use App\Http\Controllers\User\ProductSelectionController as UserProductSelectionController;
 use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Models\Region;
+use App\Support\HomeCache;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -135,7 +135,7 @@ class ProductSelectionController extends AdminController
             }
 
             DB::commit();
-            UserProductSelectionController::clearHomeCache();
+            HomeCache::flushSelections();
 
             return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно создана');
         } catch (\Exception $e) {
@@ -290,7 +290,7 @@ class ProductSelectionController extends AdminController
             }
 
             DB::commit();
-            UserProductSelectionController::clearHomeCache();
+            HomeCache::flushSelections();
 
             return $this->redirectAfterSave($request, 'admin.product-selections.index', 'admin.product-selections.edit', $productSelection, 'Подборка успешно обновлена');
         } catch (\Exception $e) {
@@ -310,7 +310,7 @@ class ProductSelectionController extends AdminController
     {
         try {
             $productSelection->delete();
-            UserProductSelectionController::clearHomeCache();
+            HomeCache::flushSelections();
 
             return redirect()->route('admin.product-selections.index')->with('success', 'Подборка успешно удалена');
         } catch (\Exception $e) {
@@ -333,7 +333,7 @@ class ProductSelectionController extends AdminController
 
         if ($media) {
             $media->delete();
-            UserProductSelectionController::clearHomeCache();
+            HomeCache::flushSelections();
 
             return redirect()->back()->with('success', 'Медиафайл успешно удалён');
         }

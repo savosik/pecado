@@ -103,6 +103,15 @@ class AppServiceProvider extends ServiceProvider
 
         \App\Models\CompanyBankAccount::observe(\App\Observers\CompanyBankAccountObserver::class);
 
+        // Инвалидация кешей публички (главная, шапка, подвал)
+        \App\Models\Banner::observe(\App\Observers\BannerObserver::class);
+        \App\Models\Story::observe(\App\Observers\StoryObserver::class);
+        \App\Models\StorySlide::observe(\App\Observers\StorySlideObserver::class);
+        \App\Models\ProductSelection::observe(\App\Observers\ProductSelectionObserver::class);
+        \App\Models\MenuItem::observe(\App\Observers\MenuItemObserver::class);
+        \App\Models\Category::observe(\App\Observers\CategoryObserver::class);
+        \App\Models\Product::observe(\App\Observers\ProductHomeCacheObserver::class);
+
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderCreated::class,
             \App\Listeners\PublishOrderToErp::class,

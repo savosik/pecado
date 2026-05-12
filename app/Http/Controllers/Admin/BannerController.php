@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Banner;
 use App\Models\Region;
+use App\Support\HomeCache;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -99,6 +100,9 @@ class BannerController extends Controller
         // Синхронизировать регионы
         $banner->regions()->sync($validated['region_ids'] ?? []);
 
+        // Pivot-sync не триггерит Banner::saved — сбрасываем кеш повторно после регионов
+        HomeCache::flushBanners();
+
         return $this->redirectAfterSave($request, 'admin.banners.index', 'admin.banners.edit', $banner, 'Баннер успешно создан');
     }
 
@@ -149,6 +153,9 @@ class BannerController extends Controller
 
         // Синхронизировать регионы
         $banner->regions()->sync($validated['region_ids'] ?? []);
+
+        // Pivot-sync не триггерит Banner::saved — сбрасываем кеш повторно после регионов
+        HomeCache::flushBanners();
 
         return $this->redirectAfterSave($request, 'admin.banners.index', 'admin.banners.edit', $banner, 'Баннер успешно обновлен');
     }

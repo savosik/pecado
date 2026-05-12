@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Region;
 use App\Models\Story;
+use App\Support\HomeCache;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Inertia\Inertia;
@@ -78,6 +79,9 @@ class StoryController extends Controller
         // Синхронизировать регионы
         $story->regions()->sync($validated['region_ids'] ?? []);
 
+        // Pivot-sync не триггерит Story::saved — сбрасываем кеш повторно после регионов
+        HomeCache::flushStories();
+
         return $this->redirectAfterSave($request, 'admin.stories.index', 'admin.stories.edit', $story, 'Сторис успешно создан. Теперь добавьте слайды.');
     }
 
@@ -126,6 +130,9 @@ class StoryController extends Controller
 
         // Синхронизировать регионы
         $story->regions()->sync($validated['region_ids'] ?? []);
+
+        // Pivot-sync не триггерит Story::saved — сбрасываем кеш повторно после регионов
+        HomeCache::flushStories();
 
         return $this->redirectAfterSave($request, 'admin.stories.index', 'admin.stories.edit', $story, 'Сторис успешно обновлён');
     }
