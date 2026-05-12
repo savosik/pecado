@@ -88,6 +88,12 @@ class Order extends Model
     /** Флаг: заказ обновляется из ERP — не публиковать обратно в шину */
     public bool $fromErp = false;
 
+    /**
+     * Предыдущий статус заказа (заполняется в `updating` hook перед сменой).
+     * Используется mail-listener-ом, чтобы сформулировать «было → стало» в письме клиенту.
+     */
+    public ?OrderStatus $previousStatus = null;
+
     protected $dispatchesEvents = [
         'updated' => \App\Events\OrderUpdated::class,
         'deleted' => \App\Events\OrderDeleted::class,
@@ -153,8 +159,13 @@ class Order extends Model
         // Автоматическая запись истории при изменении статуса
         static::updating(function (Order $order) {
             if ($order->isDirty('status')) {
+                $original = $order->getOriginal('status');
+                $order->previousStatus = $original instanceof OrderStatus
+                    ? $original
+                    : (is_string($original) ? OrderStatus::tryFrom($original) : null);
+
                 $order->statusHistories()->create([
-                    'old_status' => $order->getOriginal('status'),
+                    'old_status' => $original,
                     'new_status' => $order->status,
                     'user_id' => auth()->id(),
                     'comment' => request()->input('status_comment'),

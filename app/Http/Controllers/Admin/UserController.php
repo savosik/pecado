@@ -115,13 +115,19 @@ class UserController extends Controller
             'roles.*' => 'string|exists:roles,name',
             'client_status_id' => 'nullable|exists:client_statuses,id',
             'personal_manager_id' => 'nullable|exists:personal_managers,id',
+            'send_welcome_email' => 'sometimes|boolean',
         ]);
 
         $roles = $validated['roles'] ?? [];
-        unset($validated['roles']);
+        $sendWelcomeEmail = (bool) ($validated['send_welcome_email'] ?? false);
+        unset($validated['roles'], $validated['send_welcome_email']);
 
         $user = User::create($validated);
         $user->syncRoles($roles);
+
+        if ($sendWelcomeEmail) {
+            \App\Events\UserRegisteredOnSite::dispatch($user, 'admin');
+        }
 
         return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно создан');
     }

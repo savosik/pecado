@@ -97,6 +97,8 @@ class SocialAuthController extends Controller
                 'password' => Hash::make(Str::random(32)),
                 // No admin role by default for social auth users
             ]);
+
+            \App\Events\UserRegisteredOnSite::dispatch($user, "social:{$provider}");
         }
 
         // Create social account

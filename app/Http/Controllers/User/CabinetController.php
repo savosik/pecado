@@ -126,6 +126,8 @@ class CabinetController extends Controller
             'must_change_password' => false,
         ]);
 
+        \App\Events\UserPasswordChanged::dispatch($user, 'cabinet', $request->ip());
+
         return back()->with('success', 'Пароль успешно изменён.');
     }
 }

@@ -106,6 +106,8 @@ class AuthController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
+        \App\Events\UserRegisteredOnSite::dispatch($user, 'web');
+
         return redirect('/onboarding')->with('success', 'Регистрация прошла успешно! Расскажите нам о вашем бизнесе.');
     }
 

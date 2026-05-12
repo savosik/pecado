@@ -123,6 +123,41 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\PublishReturnToErp::class,
         );
 
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\ReturnCreated::class,
+            \App\Listeners\SendReturnCreatedEmail::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\ReturnStatusChanged::class,
+            \App\Listeners\SendReturnStatusChangedEmail::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\UserRegisteredOnSite::class,
+            \App\Listeners\SendWelcomeEmail::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\UserPasswordChanged::class,
+            \App\Listeners\SendPasswordChangedEmail::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderCreated::class,
+            \App\Listeners\SendOrderCreatedEmail::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderCreated::class,
+            \App\Listeners\NotifyManagersAboutNewOrder::class,
+        );
+
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\OrderUpdated::class,
+            \App\Listeners\SendOrderStatusChangedEmail::class,
+        );
+
         // Rate limiter для Content API (ИИ-агент)
         RateLimiter::for('content-api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());

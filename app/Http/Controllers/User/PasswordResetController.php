@@ -77,13 +77,14 @@ class PasswordResetController extends Controller
 
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password): void {
+            function (User $user, string $password) use ($request): void {
                 $user->forceFill([
                     'password' => $password,
                     'remember_token' => Str::random(60),
                 ])->save();
 
                 event(new PasswordReset($user));
+                \App\Events\UserPasswordChanged::dispatch($user, 'reset', $request->ip());
             }
         );
 

@@ -25,6 +25,7 @@ export default function Create({ regions, countries, statuses, availableRoles, c
         status: '',
         comment: '',
         erp_id: '',
+        send_welcome_email: false,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -276,6 +277,13 @@ export default function Create({ regions, countries, statuses, availableRoles, c
                                     onCheckedChange={(e) => setData('terms_accepted', e.checked)}
                                 >
                                     Условия приняты
+                                </Checkbox>
+
+                                <Checkbox
+                                    checked={data.send_welcome_email}
+                                    onCheckedChange={(e) => setData('send_welcome_email', e.checked)}
+                                >
+                                    Отправить приветственное письмо
                                 </Checkbox>
                             </Stack>
                         </Stack>

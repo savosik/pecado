@@ -2,6 +2,7 @@
 
 namespace App\Services\Erp\Handlers;
 
+use App\Events\ReturnStatusChanged;
 use App\Models\ProductReturn;
 use App\Services\Erp\Support\ReturnStatusMapper;
 use Illuminate\Support\Facades\Log;
@@ -31,6 +32,7 @@ class HandleReturnUpdated
         }
 
         $changed = false;
+        $previousStatus = $return->status;
 
         if (isset($payload['number'])) {
             $return->erp_number = $payload['number'];
@@ -54,6 +56,10 @@ class HandleReturnUpdated
 
         if ($changed) {
             $return->save();
+
+            if ($return->wasChanged('status')) {
+                ReturnStatusChanged::dispatch($return, $previousStatus);
+            }
         }
 
         Log::info('HandleReturnUpdated: возврат обновлён', [
