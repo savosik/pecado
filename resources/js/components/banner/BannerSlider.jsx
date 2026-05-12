@@ -195,7 +195,7 @@ export default function BannerSlider({ banners = [], autoPlayMs = 5000 }) {
             ref={containerRef}
             position="relative"
             overflow="hidden"
-            borderRadius="xl"
+            borderRadius="xs"
             mb="8"
             cursor="grab"
             userSelect="none"
