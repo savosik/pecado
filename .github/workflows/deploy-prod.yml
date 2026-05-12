@@ -296,7 +296,7 @@ jobs:
           rsync -a --delete \
             --exclude='.git' \
             --exclude='.env' \
-            --exclude='vendor' \
+            --exclude='/vendor' \
             --exclude='node_modules' \
             --exclude='bootstrap/cache' \
             --exclude='public/hot' \
