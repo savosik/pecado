@@ -1,7 +1,0 @@
-{
-	auto_https off
-}
-
-http://loc.pecado.ru, http://localhost {
-	reverse_proxy nginx:80
-}

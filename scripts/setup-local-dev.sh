@@ -4,11 +4,10 @@
 #
 # Делает:
 #   1. Проверяет /etc/hosts (запись loc.pecado.ru) — подсказывает sudo-команду, если нет.
-#   2. Проверяет, занят ли порт 80.
-#   3. Создаёт/мержит .env: добавляет недостающие переменные из .env.example.
-#   4. Поднимает стек: docker compose up -d.
-#   5. Генерирует APP_KEY, если он пустой.
-#   6. Делает health-чек.
+#   2. Создаёт/мержит .env: добавляет недостающие переменные из .env.example.
+#   3. Поднимает стек: docker compose up -d.
+#   4. Генерирует APP_KEY, если он пустой.
+#   5. Делает health-чек.
 #
 # НЕ делает (нужно вручную):
 #   - sudo-добавление в /etc/hosts (печатает команду).
@@ -48,21 +47,7 @@ else
   HOSTS_OK=0
 fi
 
-# ─── 2. Порт 80 ───────────────────────────────────────────────────────
-log "Проверяю, свободен ли порт 80…"
-if command -v ss >/dev/null 2>&1 && ss -ltnH 'sport = :80' 2>/dev/null | grep -q .; then
-  if docker ps --format '{{.Names}}' | grep -qx 'pecado-caddy'; then
-    ok "порт 80 занят нашим Caddy (pecado-caddy)"
-  else
-    warn "порт 80 занят чем-то посторонним. Проверь:"
-    warn "    sudo lsof -iTCP:80 -sTCP:LISTEN"
-    warn "Caddy не сможет стартовать."
-  fi
-else
-  ok "порт 80 свободен"
-fi
-
-# ─── 3. .env merge ────────────────────────────────────────────────────
+# ─── 2. .env merge ────────────────────────────────────────────────────
 log "Готовлю .env…"
 ENV_KEYS=(
   APP_URL SESSION_DOMAIN SANCTUM_STATEFUL_DOMAINS
@@ -116,17 +101,17 @@ fix_env_value() {
 }
 
 log "Проверяю APP_URL / SESSION_DOMAIN / MEDIA_DISK…"
-fix_env_value APP_URL http://loc.pecado.ru
+fix_env_value APP_URL http://loc.pecado.ru:8085
 fix_env_value SESSION_DOMAIN loc.pecado.ru
 # Локально читаем медиа из dev MinIO. В .env.example стоит 'public',
 # чтобы CI не падал, поэтому форсим тут.
 fix_env_value MEDIA_DISK s3_dev_readonly
 
-# ─── 4. docker compose up -d ──────────────────────────────────────────
+# ─── 3. docker compose up -d ──────────────────────────────────────────
 log "Поднимаю стек: docker compose up -d…"
 docker compose up -d
 
-# ─── 5. APP_KEY ───────────────────────────────────────────────────────
+# ─── 4. APP_KEY ───────────────────────────────────────────────────────
 log "Жду готовности pecado-app…"
 for i in $(seq 1 20); do
   if docker exec pecado-app php -r 'echo "ok";' >/dev/null 2>&1; then
@@ -146,35 +131,29 @@ fi
 # Сбрасываем кэш конфига, чтобы свежий .env подхватился
 docker exec pecado-app php artisan config:clear >/dev/null 2>&1 || true
 
-# ─── 6. Health-чек ────────────────────────────────────────────────────
+# ─── 5. Health-чек ────────────────────────────────────────────────────
 log "Health-чек…"
 sleep 2
 
-CADDY_OK=0
 NGINX_OK=0
 
-if curl -sIf --max-time 5 http://localhost/up >/dev/null 2>&1; then
-  ok "http://localhost/up отвечает (Caddy → nginx → app)"
-  CADDY_OK=1
-fi
-
 if curl -sIf --max-time 5 http://localhost:8085/up >/dev/null 2>&1; then
-  ok "http://localhost:8085/up отвечает (старый порт nginx)"
+  ok "http://localhost:8085/up отвечает (nginx → app)"
   NGINX_OK=1
 fi
 
 if [[ $HOSTS_OK -eq 1 ]]; then
-  if curl -sIf --max-time 5 http://loc.pecado.ru/up >/dev/null 2>&1; then
-    ok "http://loc.pecado.ru/up отвечает"
+  if curl -sIf --max-time 5 http://loc.pecado.ru:8085/up >/dev/null 2>&1; then
+    ok "http://loc.pecado.ru:8085/up отвечает"
   else
-    warn "http://loc.pecado.ru не отвечает, хотя /etc/hosts настроен. Проверь логи: docker logs pecado-caddy"
+    warn "http://loc.pecado.ru:8085 не отвечает, хотя /etc/hosts настроен. Проверь логи: docker logs pecado-nginx"
   fi
 fi
 
-if [[ $CADDY_OK -eq 0 && $NGINX_OK -eq 0 ]]; then
-  warn "Ни Caddy, ни nginx не отвечают на /up. Проверь:"
+if [[ $NGINX_OK -eq 0 ]]; then
+  warn "nginx не отвечает на /up. Проверь:"
   warn "    docker compose ps"
-  warn "    docker compose logs --tail=50 nginx caddy app"
+  warn "    docker compose logs --tail=50 nginx app"
 fi
 
 # ─── Итог ─────────────────────────────────────────────────────────────
@@ -186,5 +165,5 @@ if [[ $HOSTS_OK -eq 0 ]]; then
 fi
 log "  • Стянуть БД с dev (займёт минуты): make db-pull"
 log "  • Только основная БД (быстро):       make db-pull DB=main"
-log "  • Логи Vite/Caddy:                   make dev"
-log "  • Открыть приложение:                http://loc.pecado.ru"
+log "  • Логи Vite/nginx:                   make dev"
+log "  • Открыть приложение:                http://loc.pecado.ru:8085"

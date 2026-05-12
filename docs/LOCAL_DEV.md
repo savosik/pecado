@@ -2,7 +2,7 @@
 
 Этот документ описывает, как поднять локально весь стек Pecado так, чтобы:
 
-- приложение открывалось по `http://loc.pecado.ru` (без порта);
+- приложение открывалось по `http://loc.pecado.ru:8085`;
 - БД содержала те же данные, что на dev-сервере;
 - товарные изображения подгружались из dev MinIO;
 - Vite с HMR запускался автоматически вместе со стеком.
@@ -26,17 +26,7 @@ sudo sh -c 'echo "127.0.0.1 loc.pecado.ru" >> /etc/hosts'
 
 Проверить: `getent hosts loc.pecado.ru` → `127.0.0.1 loc.pecado.ru`.
 
-### 2. Свободный 80-й порт
-
-Caddy слушает 80. Если на хосте уже есть apache2/nginx:
-
-```bash
-sudo lsof -iTCP:80 -sTCP:LISTEN
-```
-
-— покажет, кто держит порт. Гасим/отключаем (`sudo systemctl stop apache2`).
-
-### 3. SSH-доступ к dev-серверу
+### 2. SSH-доступ к dev-серверу
 
 Скрипт `db-pull.sh` ходит по SSH. Проверить:
 
@@ -46,37 +36,37 @@ ssh ladmin@93.94.150.16 echo ok
 
 Если ключа нет — положить в `~/.ssh/`. Креды из [docs/DEV_SERVER_CREDENTIALS.md](DEV_SERVER_CREDENTIALS.md).
 
-### 4. .env
+### 3. .env
 
 ```bash
 cp .env.example .env
 docker compose run --rm app php artisan key:generate
 ```
 
-В `.env` уже подставлены значения для локального dev на `loc.pecado.ru`. Проверить, что есть:
+В `.env` уже подставлены значения для локального dev на `loc.pecado.ru:8085`. Проверить, что есть:
 
-- `APP_URL=http://loc.pecado.ru`
+- `APP_URL=http://loc.pecado.ru:8085`
 - `SESSION_DOMAIN=loc.pecado.ru`
 - `SANCTUM_STATEFUL_DOMAINS=loc.pecado.ru`
 - `VITE_HMR_HOST=loc.pecado.ru`
 - `MEDIA_DISK=s3_dev_readonly` (в `.env.example` стоит `public` — чтобы CI не лез в закрытый dev MinIO; локально форсит `make setup`)
 - `DEV_S3_*`, `DEV_DB_SSH_HOST`
 
-### 5. Поднять стек
+### 4. Поднять стек
 
 ```bash
-make up          # docker compose up -d (включая Caddy)
+make up          # docker compose up -d
 make db-pull     # стянуть обе БД с dev (займёт минуты)
 ```
 
-Открыть `http://loc.pecado.ru` — должна показаться витрина с реальными товарами.
+Открыть `http://loc.pecado.ru:8085` — должна показаться витрина с реальными товарами.
 
 ## Повседневный workflow
 
 | Команда                   | Что делает                                                       |
 |---------------------------|------------------------------------------------------------------|
 | `make up`                 | Поднять стек (Vite внутри `pecado-node` стартует автоматически)  |
-| `make dev`                | `up` + tail логов node/nginx/caddy (видно HMR в реальном времени)|
+| `make dev`                | `up` + tail логов node/nginx (видно HMR в реальном времени)      |
 | `make down`               | Остановить всё                                                   |
 | `make restart`            | down + up                                                        |
 | `make logs S=app`         | Tail логов сервиса (S=имя; пусто — все)                          |
@@ -91,8 +81,8 @@ make db-pull     # стянуть обе БД с dev (займёт минуты)
 ## Архитектура локального стека
 
 ```
-браузер → Caddy(80) → nginx(80) → app(php-fpm 9000)
-                   ↘ (HMR WS) → node(5174→5173)
+браузер → nginx(8085 → :80) → app(php-fpm 9000)
+                            ↘ (HMR WS) → node(5174→5173)
 
 storage чтения (Spatie media) → s3_dev_readonly → 93.94.150.16:9000/pecado
 storage записи (контент upload) → s3 → локальный MinIO (createbuckets)
@@ -100,16 +90,14 @@ storage записи (контент upload) → s3 → локальный MinIO
 БД: pecado-mysql (3308), pecado-mysql-prices (3309) — наполняются db-pull.sh
 ```
 
-`docker-compose.override.yml` добавляет контейнер Caddy поверх основного `docker-compose.yml`. Override подхватывается автоматически.
-
 ## Troubleshooting
 
-### `loc.pecado.ru` не открывается
+### `loc.pecado.ru:8085` не открывается
 
 1. `getent hosts loc.pecado.ru` — должен возвращать `127.0.0.1`. Если нет — см. шаг 1 выше.
-2. `make ps` — в списке должен быть `pecado-caddy`. Если нет — `make up`.
-3. `docker logs pecado-caddy` — ищем ошибки на 80 порту (часто «address already in use»).
-4. `curl -sI http://loc.pecado.ru` — должен вернуть 200/302.
+2. `make ps` — в списке должен быть `pecado-nginx`. Если нет — `make up`.
+3. `docker logs pecado-nginx` — ищем ошибки.
+4. `curl -sI http://loc.pecado.ru:8085` — должен вернуть 200/302.
 
 ### HMR не работает / WebSocket падает
 
@@ -139,14 +127,6 @@ Permission denied (publickey)
 - увеличить таймаут SSH: добавить `ServerAliveInterval 60` в `~/.ssh/config`;
 - запустить ночью.
 
-### Конфликт с собственным `docker-compose.override.yml`
-
-Если у разработчика уже есть свой override — переименовать наш в `docker-compose.caddy.yml` и подключать вручную:
-
-```bash
-docker compose -f docker-compose.yml -f docker-compose.caddy.yml -f docker-compose.override.yml up -d
-```
-
 ### OAuth-логины
 
 Google/Yandex redirect-URL зарегистрированы на prod-домен. На локалке социальный логин не работает — это нормально, тестируем на dev/prod.
@@ -154,5 +134,5 @@ Google/Yandex redirect-URL зарегистрированы на prod-домен
 ## Не делать
 
 - **Не загружать на локалке "тестовые" изображения и не ожидать, что они будут на dev.** Локальные uploads уходят в локальный MinIO (createbuckets bucket `pecado`), не в shared dev-bucket.
-- **Не редактировать `docker-compose.yml` под себя.** Вместо этого использовать `docker-compose.override.yml` (gitignored по конвенции).
+- **Не редактировать `docker-compose.yml` под себя.** Вместо этого использовать `docker-compose.override.yml` (gitignored).
 - **Не коммитить `.env`** — он в `.gitignore`.

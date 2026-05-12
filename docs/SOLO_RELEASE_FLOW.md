@@ -12,7 +12,7 @@
 # 1. Утром / с новой машины — догнать свежий dev
 git pull
 
-# 2. Кодишь → проверяешь локально http://loc.pecado.ru (Vite HMR)
+# 2. Кодишь → проверяешь локально http://loc.pecado.ru:8085 (Vite HMR)
 
 # 3. Коммит и push в dev
 git add <конкретные файлы>
@@ -156,15 +156,15 @@ git push origin dev
 ### Поднять стек
 
 ```bash
-make up                  # docker compose up -d (включая Caddy)
+make up                  # docker compose up -d
 # либо вручную:
 docker compose up -d
 ```
 
 После старта будет работать:
-- Сайт: http://loc.pecado.ru (через Caddy + nginx)
+- Сайт: http://loc.pecado.ru:8085 (nginx → app)
 - Vite HMR на `:5174` (автоматический)
-- Контейнеры: `pecado-app, pecado-nginx, pecado-worker, pecado-mysql, pecado-mysql-prices, pecado-redis, pecado-rabbitmq, pecado-meilisearch, pecado-minio, pecado-mailpit, pecado-node, pecado-caddy`
+- Контейнеры: `pecado-app, pecado-nginx, pecado-worker, pecado-mysql, pecado-mysql-prices, pecado-redis, pecado-rabbitmq, pecado-meilisearch, pecado-minio, pecado-mailpit, pecado-node`
 
 ### Vite HMR
 
@@ -188,7 +188,7 @@ docker logs pecado-node --tail=20
 
 Chrome иногда использует DNS-over-HTTPS, игнорирует `/etc/hosts`. Решения:
 1. `chrome://settings/security` → выключи **«Use secure DNS»**
-2. Открой http://127.0.0.1/ — Caddy вернёт тот же сайт
+2. Открой http://127.0.0.1:8085/ — nginx вернёт тот же сайт
 3. Используй другой браузер (Firefox / Brave)
 
 ---
@@ -258,9 +258,9 @@ dig +short www.pecado.ru # → 93.94.150.16
 curl -sI https://pecado.ru/up   # → HTTP/2 200
 
 # Локально
-curl -sI http://loc.pecado.ru/  # → 200 OK
+curl -sI http://loc.pecado.ru:8085/  # → 200 OK
 ls public/hot                    # существует = Vite в dev-режиме
-docker ps | wc -l                # >= 12 (+caddy и др.)
+docker ps | wc -l                # >= 11 контейнеров
 ```
 
 ---

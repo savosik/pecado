@@ -49,4 +49,7 @@ docs/DEV_SERVER_CREDENTIALS.md
 docs/PROD_SERVER_CREDENTIALS.md
 docs/ERP_1C_PROD_CONNECTION.md
 
+# Локальный compose override — каждый разработчик ведёт свой
+docker-compose.override.yml
+
 # AsyncAPI и MkDocs: трекаем сборку в git — деплоится через rsync

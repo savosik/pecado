@@ -12,10 +12,10 @@ S  ?=
 help:
 	@echo "Доступные команды:"
 	@echo "  make setup        — первичная настройка (.env, /etc/hosts hint, docker up, key:generate)"
-	@echo "  make up           — поднять весь стек (Docker + Vite + Caddy)"
+	@echo "  make up           — поднять весь стек (Docker + Vite)"
 	@echo "  make down         — остановить стек"
 	@echo "  make restart      — перезапустить стек"
-	@echo "  make dev          — поднять и привязаться к логам node/nginx/caddy (HMR live)"
+	@echo "  make dev          — поднять и привязаться к логам node/nginx (HMR live)"
 	@echo "  make logs S=app   — tail логов сервиса (S=имя сервиса; пусто = все)"
 	@echo "  make ps           — статус контейнеров"
 	@echo "  make sh           — войти в pecado-app (bash)"
@@ -35,7 +35,7 @@ down:
 restart: down up
 
 dev: up
-	$(DC) logs -f --tail=50 node nginx caddy
+	$(DC) logs -f --tail=50 node nginx
 
 ps:
 	$(DC) ps
