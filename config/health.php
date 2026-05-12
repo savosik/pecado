@@ -38,7 +38,8 @@ return [
         'enabled' => true,
 
         'notifications' => [
-            Spatie\Health\Notifications\CheckFailedNotification::class => ['mail'],
+            // Локализованная версия — extends Spatie\Health\Notifications\CheckFailedNotification.
+            App\Notifications\Health\HealthCheckFailedNotification::class => ['mail'],
         ],
 
         /*
@@ -64,7 +65,12 @@ return [
         'only_on_failure' => false,
 
         'mail' => [
-            'to' => env('HEALTH_NOTIFY_EMAIL', 'admin@pecado.ru'),
+            // Можно указать несколько адресов через запятую — превратим в массив,
+            // и Spatie\Health\Notifications\Notifiable отправит письмо всем сразу.
+            'to' => array_values(array_filter(array_map(
+                'trim',
+                explode(',', (string) env('HEALTH_NOTIFY_EMAIL', 'slava.triput@gmail.com'))
+            ))),
 
             'from' => [
                 'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
