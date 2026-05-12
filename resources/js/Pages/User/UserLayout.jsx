@@ -26,7 +26,8 @@ export default function UserLayout({ children, fluid = false }) {
                     mx="auto"
                     w="100%"
                     px={fluid ? { base: '0', md: '6' } : { base: '3', md: '6' }}
-                    py="6"
+                    pt="3"
+                    pb="6"
                     pb={{ base: 'calc(70px + env(safe-area-inset-bottom))', lg: '6' }}
                 >
                     {children}

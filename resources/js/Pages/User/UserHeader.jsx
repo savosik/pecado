@@ -102,7 +102,7 @@ export default function UserHeader() {
             <Box
                 as="header"
                 bg="bg"
-                shadow="sm"
+                shadow="md"
                 position="sticky"
                 top="0"
                 zIndex="50"
