@@ -227,6 +227,14 @@ class User extends Authenticatable implements HasMedia
     ];
 
     /**
+     * Отправить локализованное уведомление о сбросе пароля.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new \App\Notifications\Auth\ResetPasswordNotification($token));
+    }
+
+    /**
      * Get the companies for the user.
      */
     public function companies(): HasMany
