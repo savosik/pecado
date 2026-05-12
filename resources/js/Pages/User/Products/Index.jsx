@@ -6,6 +6,7 @@ import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import ProductBreadcrumbs from '@/components/product/ProductBreadcrumbs';
 import CatalogHeader from './CatalogHeader';
+import CategoryChildrenChips from './CategoryChildrenChips';
 import CatalogControls from './CatalogControls';
 import SelectedFilters from './SelectedFilters';
 import ProductGrid from './ProductGrid';
@@ -38,6 +39,7 @@ export default function Index() {
         initialFilters = {},
         breadcrumbs = null,
         categoryTrail = null,
+        categoryChildren = null,
         sortOptions = [],
         appName = 'Pecado',
         pageDescription = null,
@@ -271,6 +273,11 @@ export default function Index() {
                         activeFilterCount={activeFilterCount}
                     />
                 </Flex>
+
+                {/* Подкатегории — компактный ряд чипов под H1 */}
+                {categoryChildren && categoryChildren.length > 0 && (
+                    <CategoryChildrenChips categories={categoryChildren} />
+                )}
 
                 {/* Выбранные фильтры (чипы) */}
                 <SelectedFilters

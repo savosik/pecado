@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -97,6 +98,47 @@ class ProductControllerTest extends TestCase
         $response = $this->get('/categories/unknown-category-slug');
 
         $response->assertNotFound();
+    }
+
+    public function test_by_category_exposes_children_chips_with_subtree_counts(): void
+    {
+        // Иерархия: parent → [child_a → grandchild_a1] и [child_b]
+        $parent = Category::create(['name' => 'Раздел', 'slug' => 'razdel', 'is_active' => true]);
+        $childA = Category::create(['name' => 'A', 'slug' => 'cat-a', 'parent_id' => $parent->id, 'is_active' => true]);
+        $grandA1 = Category::create(['name' => 'A1', 'slug' => 'cat-a1', 'parent_id' => $childA->id, 'is_active' => true]);
+        $childB = Category::create(['name' => 'B', 'slug' => 'cat-b', 'parent_id' => $parent->id, 'is_active' => true]);
+        Category::create(['name' => 'C-empty', 'slug' => 'cat-c', 'parent_id' => $parent->id, 'is_active' => true]);
+        Category::create(['name' => 'D-inactive', 'slug' => 'cat-d', 'parent_id' => $parent->id, 'is_active' => false]);
+
+        // 2 товара в поддереве A (один в A, один в A1), 1 товар в B, 0 в C/D.
+        Product::factory()->create(['category_id' => $childA->id]);
+        Product::factory()->create(['category_id' => $grandA1->id]);
+        Product::factory()->create(['category_id' => $childB->id]);
+
+        $response = $this->get('/categories/razdel');
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            // Только активные дети с count > 0; неактивная D и пустая C исключены
+            ->has('categoryChildren', 2)
+            ->where('categoryChildren.0.slug', 'cat-a')
+            ->where('categoryChildren.0.count', 2)
+            ->where('categoryChildren.1.slug', 'cat-b')
+            ->where('categoryChildren.1.count', 1)
+        );
+    }
+
+    public function test_by_category_returns_empty_children_for_leaf_category(): void
+    {
+        $leaf = Category::create(['name' => 'Лист', 'slug' => 'leaf', 'is_active' => true]);
+        Product::factory()->create(['category_id' => $leaf->id]);
+
+        $response = $this->get('/categories/leaf');
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('categoryChildren', [])
+        );
     }
 
     // ─── bySelection ────────────────────────────────────────

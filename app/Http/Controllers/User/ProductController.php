@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Services\Product\ProductQueryService;
 use App\Services\Product\SimilarProductsService;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -133,8 +134,53 @@ class ProductController extends Controller
                 'slug' => $category->slug,
             ],
             'categoryTrail' => $categoryTrail,
+            'categoryChildren' => $this->buildCategoryChildren($category),
             'breadcrumbs' => $breadcrumbs,
         ]);
+    }
+
+    /**
+     * Прямые активные подкатегории с количеством товаров в каждом поддереве.
+     * Используется как «чип-навигация» под H1: куда можно провалиться.
+     * Скрывает подкатегории, в которых нет видимых товаров.
+     *
+     * @return array<int, array{id: int, name: string, slug: string, count: int}>
+     */
+    private function buildCategoryChildren(Category $category): array
+    {
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Category> $children */
+        $children = $category->children()
+            ->where('is_active', true)
+            ->orderBy('_lft')
+            ->get(['id', 'name', 'slug', '_lft', '_rgt']);
+
+        if ($children->isEmpty()) {
+            return [];
+        }
+
+        // Один запрос: считаем товары в поддереве каждого ребёнка через nested-set join.
+        // Через Eloquent — чтобы применился глобальный HiddenScope (hidden=false).
+        $counts = Product::query()
+            ->join('categories as descendant', 'descendant.id', '=', 'products.category_id')
+            ->join('categories as child', function ($join) {
+                $join->whereColumn('descendant._lft', '>=', 'child._lft')
+                    ->whereColumn('descendant._rgt', '<=', 'child._rgt');
+            })
+            ->whereIn('child.id', $children->pluck('id')->all())
+            ->where('descendant.is_active', true)
+            ->groupBy('child.id')
+            ->pluck(DB::raw('COUNT(*)'), 'child.id');
+
+        return $children
+            ->map(fn (Category $child) => [
+                'id' => $child->id,
+                'name' => $child->name,
+                'slug' => $child->slug,
+                'count' => (int) ($counts[$child->id] ?? 0),
+            ])
+            ->filter(fn (array $c) => $c['count'] > 0)
+            ->values()
+            ->all();
     }
 
     /**
