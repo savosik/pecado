@@ -6,6 +6,32 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property int|null $currency_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Currency|null $currency
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Warehouse> $preorderWarehouses
+ * @property-read int|null $preorder_warehouses_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Warehouse> $primaryWarehouses
+ * @property-read int|null $primary_warehouses_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
+ * @property-read int|null $users_count
+ *
+ * @method static \Database\Factories\RegionFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region whereCurrencyId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Region whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class Region extends Model
 {
     use HasFactory;

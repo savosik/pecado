@@ -11,6 +11,64 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @property int $id
+ * @property int|null $user_id
+ * @property Country|null $country
+ * @property string $name
+ * @property string|null $legal_name
+ * @property string|null $tax_id
+ * @property string|null $registration_number
+ * @property string|null $tax_code
+ * @property string|null $okpo_code
+ * @property string|null $legal_address
+ * @property array<array-key, mixed>|null $legal_address_data
+ * @property string|null $actual_address
+ * @property array<array-key, mixed>|null $actual_address_data
+ * @property string|null $phone
+ * @property string|null $email
+ * @property string|null $erp_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyBankAccount> $bankAccounts
+ * @property-read int|null $bank_accounts_count
+ * @property-read \App\Models\ContractorBalance|null $contractorBalance
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Order> $orders
+ * @property-read int|null $orders_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CompanyBankAccount> $primaryBankAccount
+ * @property-read int|null $primary_bank_account_count
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static \Database\Factories\CompanyFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereActualAddress($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereActualAddressData($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereCountry($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereEmail($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereErpId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereLegalAddress($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereLegalAddressData($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereLegalName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereOkpoCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company wherePhone($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereRegistrationNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereTaxCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereTaxId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Company withoutTrashed()
+ *
+ * @mixin \Eloquent
+ */
 class Company extends Model
 {
     use HasFactory, SoftDeletes;

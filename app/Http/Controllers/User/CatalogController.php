@@ -16,15 +16,17 @@ class CatalogController extends Controller
      */
     public function categories(): JsonResponse
     {
-        $tree = Category::active()->defaultOrder()->get()->toTree();
+        // Только категории с товарами в наличии в Москве — `sort` проставлен командой
+        // categories:resort-by-moscow-stock, NULL означает «нет товаров на всю глубину».
+        $tree = Category::active()
+            ->whereNotNull('sort')
+            ->orderBy('sort')
+            ->orderBy('_lft')
+            ->get()
+            ->toTree();
 
         $mapNode = function ($node) use (&$mapNode) {
             $iconUrl = $node->getFirstMediaUrl('icon');
-
-            // Сортируем подкатегории: те, у которых больше потомков — первыми
-            $sortedChildren = $node->children
-                ->sortByDesc(fn ($child) => $child->children->count())
-                ->values();
 
             return [
                 'id' => $node->id,
@@ -32,7 +34,7 @@ class CatalogController extends Controller
                 'slug' => $node->slug,
                 'parent_id' => $node->parent_id,
                 'icon_url' => $iconUrl ?: null,
-                'children' => $sortedChildren->map($mapNode)->toArray(),
+                'children' => $node->children->map($mapNode)->values()->toArray(),
             ];
         };
 

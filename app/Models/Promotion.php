@@ -6,6 +6,38 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Spatie\MediaLibrary\HasMedia;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $slug
+ * @property string|null $meta_title
+ * @property string|null $meta_description
+ * @property string|null $description
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Spatie\MediaLibrary\MediaCollections\Models\Collections\MediaCollection<int, \App\Models\Media> $media
+ * @property-read int|null $media_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $products
+ * @property-read int|null $products_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Region> $regions
+ * @property-read int|null $regions_count
+ *
+ * @method static \Database\Factories\PromotionFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion forRegion(?int $regionId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereMetaDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereMetaTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereSlug($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Promotion whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class Promotion extends Model implements HasMedia
 {
     use \App\Traits\HasContentMedia;

@@ -10,6 +10,77 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property string|null $number
+ * @property string|null $erp_number Номер заказа в 1С
+ * @property int|null $user_id
+ * @property int|null $company_id
+ * @property string|null $delivery_address
+ * @property int|null $cart_id
+ * @property OrderStatus $status
+ * @property string|null $comment
+ * @property numeric $total_amount
+ * @property numeric $exchange_rate
+ * @property numeric $rate_coefficient
+ * @property string|null $currency_code
+ * @property int|null $parent_id
+ * @property \App\Enums\OrderType $type
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Carbon\Carbon|null $erp_created_at
+ * @property \Carbon\Carbon|null $erp_updated_at
+ * @property-read \App\Models\Cart|null $cart
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrderChangeLog> $changeLogs
+ * @property-read int|null $change_logs_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, Order> $children
+ * @property-read int|null $children_count
+ * @property-read \App\Models\Company|null $company
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrderItem> $items
+ * @property-read int|null $items_count
+ * @property-read Order|null $parent
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ReturnItem> $returnItems
+ * @property-read int|null $return_items_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Shipment> $shipments
+ * @property-read int|null $shipments_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrderStatusHistory> $statusHistories
+ * @property-read int|null $status_histories_count
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static \Database\Factories\OrderFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereCartId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereComment($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereCompanyId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereCurrencyCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereDeliveryAddress($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereErpCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereErpNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereErpUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereExchangeRate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereParentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereRateCoefficient($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereTotalAmount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order withShipmentsCount()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Order withoutTrashed()
+ *
+ * @mixin \Eloquent
+ */
 class Order extends Model
 {
     use HasFactory, SoftDeletes;

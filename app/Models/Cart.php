@@ -9,6 +9,45 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property bool $is_active
+ * @property string|null $description
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read int $instock_quantity
+ * @property-read int $preorder_quantity
+ * @property-read float $total_amount_discounted
+ * @property-read float $total_amount_regular
+ * @property-read int $total_quantity
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CartItem> $instockItems
+ * @property-read int|null $instock_items_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CartItem> $items
+ * @property-read int|null $items_count
+ * @property-read \App\Models\Order|null $order
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\CartItem> $preorderItems
+ * @property-read int|null $preorder_items_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $products
+ * @property-read int|null $products_count
+ * @property-read \App\Models\User $user
+ *
+ * @method static Builder<static>|Cart active()
+ * @method static \Database\Factories\CartFactory factory($count = null, $state = [])
+ * @method static Builder<static>|Cart newModelQuery()
+ * @method static Builder<static>|Cart newQuery()
+ * @method static Builder<static>|Cart query()
+ * @method static Builder<static>|Cart whereCreatedAt($value)
+ * @method static Builder<static>|Cart whereDescription($value)
+ * @method static Builder<static>|Cart whereId($value)
+ * @method static Builder<static>|Cart whereIsActive($value)
+ * @method static Builder<static>|Cart whereName($value)
+ * @method static Builder<static>|Cart whereUpdatedAt($value)
+ * @method static Builder<static>|Cart whereUserId($value)
+ *
+ * @mixin \Eloquent
+ */
 class Cart extends Model
 {
     use HasFactory;

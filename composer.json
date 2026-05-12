@@ -35,6 +35,7 @@
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.4"
     },
     "require-dev": {
+        "barryvdh/laravel-ide-helper": "^3.7",
         "fakerphp/faker": "^1.23",
         "laravel-lang/attributes": "^2.14",
         "laravel-lang/common": "^6.7",

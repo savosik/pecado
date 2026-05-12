@@ -85,7 +85,7 @@ class ProductController extends Controller
         $appName = config('app.name');
 
         // Хлебные крошки: Каталог → предки → текущая категория
-        $ancestors = $category->ancestors()->orderBy('_lft')->get();
+        $ancestors = Category::whereAncestorOf($category->id)->orderBy('_lft')->get();
 
         $breadcrumbs = [
             ['label' => 'Каталог', 'url' => route('products.index')],
@@ -151,6 +151,7 @@ class ProductController extends Controller
         /** @var \Illuminate\Database\Eloquent\Collection<int, Category> $children */
         $children = $category->children()
             ->where('is_active', true)
+            ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', '_lft', '_rgt']);
 
@@ -370,11 +371,11 @@ class ProductController extends Controller
             foreach ($variantProducts as $p) {
                 foreach ($p->attributeValues as $av) {
                     $attr = $av->attribute;
-                    if (! $attr || ! $attr->is_active || ! $attr->show_on_site) {
+                    if (! $attr->is_active || ! $attr->show_on_site) {
                         continue;
                     }
 
-                    $value = $av->attributeValue?->value ?? $av->text_value;
+                    $value = $av->attributeValue->value ?? $av->text_value;
                     if ($value === null || $value === '') {
                         if ($av->number_value !== null) {
                             $formatted = rtrim(rtrim(number_format((float) $av->number_value, 4, '.', ''), '0'), '.');
@@ -518,7 +519,7 @@ class ProductController extends Controller
             // Гость и неактивные пользователи не должны видеть цены — даже в Inertia props.
             // Фронт уже скрывает их через user-проверку, но цена всё равно «утекает» в HTML.
             $user = auth()->user();
-            $canViewPrices = $user && ($user->is_admin || $user->status === UserStatus::ACTIVE);
+            $canViewPrices = $user && ($user->loadMissing('roles')->roles->isNotEmpty() || $user->status === UserStatus::ACTIVE);
             if (! $canViewPrices) {
                 foreach ($variantArrays as &$va) {
                     unset(
@@ -571,7 +572,7 @@ class ProductController extends Controller
 
         foreach ($product->attributeValues as $av) {
             $attr = $av->attribute;
-            $attrName = $attr?->name;
+            $attrName = $attr->name;
             if (! $attrName) {
                 continue;
             }
@@ -583,10 +584,10 @@ class ProductController extends Controller
             // Значение: приоритет по типу атрибута, чтобы boolean не вылезал как "1"
             $value = $av->getFormattedValue();
             if ($value === '' && $attr->isSelect()) {
-                $value = $av->attributeValue?->value ?? '';
+                $value = $av->attributeValue->value ?? '';
             }
 
-            if ($value === '' || $value === null) {
+            if ($value === '') {
                 continue;
             }
 
@@ -754,6 +755,7 @@ class ProductController extends Controller
 
         $children = $category->children()
             ->where('is_active', true)
+            ->orderByRaw('sort IS NULL, sort ASC')
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', 'parent_id']);
 

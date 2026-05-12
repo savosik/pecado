@@ -10,6 +10,43 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property string|null $erp_number Номер возврата в 1С
+ * @property int $user_id
+ * @property ReturnStatus $status
+ * @property string|null $comment
+ * @property string|null $admin_comment
+ * @property numeric $total_amount
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ReturnItem> $items
+ * @property-read int|null $items_count
+ * @property-read \App\Models\User $user
+ *
+ * @method static \Database\Factories\ProductReturnFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereAdminComment($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereComment($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereErpNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereTotalAmount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductReturn withoutTrashed()
+ *
+ * @mixin \Eloquent
+ */
 class ProductReturn extends Model
 {
     use HasFactory, SoftDeletes;

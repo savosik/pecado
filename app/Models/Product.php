@@ -17,6 +17,153 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Spatie\Tags\HasTags;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property numeric $base_price
+ * @property string|null $external_id
+ * @property string|null $sex_opt_id
+ * @property bool $is_new
+ * @property bool $is_bestseller
+ * @property string|null $code
+ * @property string|null $sku
+ * @property string|null $variant_name
+ * @property string|null $slug
+ * @property string|null $url
+ * @property string|null $barcode
+ * @property string|null $tnved
+ * @property numeric|null $weight_gross
+ * @property numeric|null $weight_net
+ * @property numeric|null $width
+ * @property numeric|null $height
+ * @property numeric|null $depth
+ * @property string|null $hs_code
+ * @property string|null $abc_xyz
+ * @property numeric|null $turnover
+ * @property bool $is_marked
+ * @property bool $is_liquidation
+ * @property bool $for_marketplaces
+ * @property string|null $description
+ * @property string|null $description_html
+ * @property array<array-key, mixed>|null $rich_content
+ * @property \Illuminate\Support\Carbon|null $rich_content_generated_at
+ * @property \Illuminate\Support\Carbon|null $rich_content_generation_failed_at
+ * @property int $rich_content_generation_attempts
+ * @property string|null $short_description
+ * @property string|null $meta_title
+ * @property string|null $meta_description
+ * @property int|null $category_id
+ * @property int|null $brand_id
+ * @property int|null $model_id
+ * @property bool $hidden v10: Скрыть в интернете — товар не отображается на сайте
+ * @property int|null $size_chart_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Carbon\Carbon|null $erp_created_at
+ * @property \Carbon\Carbon|null $erp_updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ProductAttributeValue> $attributeValues
+ * @property-read int|null $attribute_values_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Attribute> $attributes
+ * @property-read int|null $attributes_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ProductBarcode> $barcodes
+ * @property-read int|null $barcodes_count
+ * @property-read \App\Models\Brand|null $brand
+ * @property-read \App\Models\Category|null $category
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Certificate> $certificates
+ * @property-read int|null $certificates_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $favoritedByUsers
+ * @property-read int|null $favorited_by_users_count
+ * @property-read string|null $description_rendered
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\IndividualPrice> $individualPrices
+ * @property-read int|null $individual_prices_count
+ * @property-read \Spatie\MediaLibrary\MediaCollections\Models\Collections\MediaCollection<int, \App\Models\Media> $media
+ * @property-read int|null $media_count
+ * @property-read \App\Models\ProductModel|null $model
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\OrderItem> $orderItems
+ * @property-read int|null $order_items_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ProductSelection> $productSelections
+ * @property-read int|null $product_selections_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Promotion> $promotions
+ * @property-read int|null $promotions_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ReturnItem> $returnItems
+ * @property-read int|null $return_items_count
+ * @property \Illuminate\Database\Eloquent\Collection<int, \Spatie\Tags\Tag> $tags
+ * @property-read \App\Models\SizeChart|null $sizeChart
+ * @property-read int|null $tags_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Warehouse> $warehouses
+ * @property-read int|null $warehouses_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $wishlistedByUsers
+ * @property-read int|null $wishlisted_by_users_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product active()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product available(?int $regionId = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product byAttributes(array $valueIds, bool $any = false)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product byInlineAttributes(array $filters)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product byPrice(?float $min = null, ?float $max = null)
+ * @method static \Database\Factories\ProductFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product inBrands(array $ids)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product inCategories(array $ids, bool $descendants = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product inCategory(\App\Models\Category|int $category, bool $descendants = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product inCollections(array $ids)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product inFavourites(int $userId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product inSale(bool $value = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product inStock(string $mode, ?int $regionId = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product search(string $q)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereAbcXyz($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereBarcode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereBasePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereBrandId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereCategoryId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereDepth($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereDescriptionHtml($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereErpCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereErpUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereExternalId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereForMarketplaces($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereHeight($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereHidden($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereHsCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereIsBestseller($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereIsLiquidation($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereIsMarked($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereIsNew($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereMetaDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereMetaTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereModelId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereRichContent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereRichContentGeneratedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereRichContentGenerationAttempts($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereRichContentGenerationFailedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereSexOptId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereShortDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereSizeChartId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereSku($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereSlug($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereTnved($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereTurnover($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereUrl($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereVariantName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereWeightGross($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereWeightNet($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product whereWidth($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product withAllTags(\ArrayAccess|\Spatie\Tags\Tag|array|string $tags, ?string $type = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product withAllTagsOfAnyType($tags)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product withAnyTags(\ArrayAccess|\Spatie\Tags\Tag|array|string $tags, ?string $type = null)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product withAnyTagsOfAnyType($tags)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product withAnyTagsOfType(array|string $type)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Product withoutTags(\ArrayAccess|\Spatie\Tags\Tag|array|string $tags, ?string $type = null)
+ *
+ * @mixin \Eloquent
+ */
 class Product extends Model implements HasMedia
 {
     use HasFactory, HasTags, InteractsWithMedia, ProductQueryScopes, Searchable;

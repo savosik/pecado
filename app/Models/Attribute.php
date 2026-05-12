@@ -9,6 +9,52 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * @property int $id
+ * @property string|null $external_id
+ * @property string $name
+ * @property string $slug
+ * @property string $type
+ * @property string|null $unit
+ * @property bool $is_filterable
+ * @property bool $is_active
+ * @property bool $show_on_site
+ * @property bool $show_in_export
+ * @property bool $is_variant_forming
+ * @property int $sort_order
+ * @property int|null $attribute_group_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\AttributeGroup|null $attributeGroup
+ * @property-read \Kalnoy\Nestedset\Collection<int, \App\Models\Category> $categories
+ * @property-read int|null $categories_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $products
+ * @property-read int|null $products_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AttributeValue> $values
+ * @property-read int|null $values_count
+ *
+ * @method static Builder<static>|Attribute active()
+ * @method static Builder<static>|Attribute newModelQuery()
+ * @method static Builder<static>|Attribute newQuery()
+ * @method static Builder<static>|Attribute query()
+ * @method static Builder<static>|Attribute whereAttributeGroupId($value)
+ * @method static Builder<static>|Attribute whereCreatedAt($value)
+ * @method static Builder<static>|Attribute whereExternalId($value)
+ * @method static Builder<static>|Attribute whereId($value)
+ * @method static Builder<static>|Attribute whereIsActive($value)
+ * @method static Builder<static>|Attribute whereIsFilterable($value)
+ * @method static Builder<static>|Attribute whereIsVariantForming($value)
+ * @method static Builder<static>|Attribute whereName($value)
+ * @method static Builder<static>|Attribute whereShowInExport($value)
+ * @method static Builder<static>|Attribute whereShowOnSite($value)
+ * @method static Builder<static>|Attribute whereSlug($value)
+ * @method static Builder<static>|Attribute whereSortOrder($value)
+ * @method static Builder<static>|Attribute whereType($value)
+ * @method static Builder<static>|Attribute whereUnit($value)
+ * @method static Builder<static>|Attribute whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class Attribute extends Model
 {
     use HasFactory;

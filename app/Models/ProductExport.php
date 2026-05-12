@@ -10,6 +10,54 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property int|null $client_user_id
+ * @property string $name
+ * @property string $hash
+ * @property ExportFormat $format
+ * @property string|null $preset Preset type key (yml, shopify, woocommerce, etc.) — null for custom exports
+ * @property array<array-key, mixed>|null $filters
+ * @property string|null $filters_text Денормализованные имена брендов/категорий/складов/сертификатов из filters JSON для LIKE-поиска
+ * @property array<array-key, mixed> $fields
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $last_downloaded_at
+ * @property \Illuminate\Support\Carbon|null $cached_at When the cached export file was last generated
+ * @property string $status
+ * @property int|null $last_run_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\User|null $clientUser
+ * @property-read string $download_url
+ * @property-read \App\Models\ProductExportRun|null $lastRun
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ProductExportRun> $runs
+ * @property-read int|null $runs_count
+ * @property-read \App\Models\User $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereCachedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereClientUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereFields($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereFilters($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereFiltersText($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereFormat($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereHash($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereLastDownloadedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereLastRunId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport wherePreset($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductExport whereUserId($value)
+ *
+ * @mixin \Eloquent
+ */
 class ProductExport extends Model
 {
     use HasFactory;

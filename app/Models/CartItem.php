@@ -7,6 +7,39 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $cart_id
+ * @property int $product_id
+ * @property int $quantity
+ * @property numeric|null $price
+ * @property string $item_type
+ * @property int|null $warehouse_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Cart $cart
+ * @property-read float $total_amount
+ * @property-read \App\Models\Product $product
+ * @property-read \App\Models\Warehouse|null $warehouse
+ *
+ * @method static \Database\Factories\CartItemFactory factory($count = null, $state = [])
+ * @method static Builder<static>|CartItem instock()
+ * @method static Builder<static>|CartItem newModelQuery()
+ * @method static Builder<static>|CartItem newQuery()
+ * @method static Builder<static>|CartItem preorder()
+ * @method static Builder<static>|CartItem query()
+ * @method static Builder<static>|CartItem whereCartId($value)
+ * @method static Builder<static>|CartItem whereCreatedAt($value)
+ * @method static Builder<static>|CartItem whereId($value)
+ * @method static Builder<static>|CartItem whereItemType($value)
+ * @method static Builder<static>|CartItem wherePrice($value)
+ * @method static Builder<static>|CartItem whereProductId($value)
+ * @method static Builder<static>|CartItem whereQuantity($value)
+ * @method static Builder<static>|CartItem whereUpdatedAt($value)
+ * @method static Builder<static>|CartItem whereWarehouseId($value)
+ *
+ * @mixin \Eloquent
+ */
 class CartItem extends Model
 {
     use HasFactory;

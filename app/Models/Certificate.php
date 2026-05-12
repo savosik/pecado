@@ -8,6 +8,36 @@ use Laravel\Scout\Searchable;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property int $id
+ * @property string|null $external_id
+ * @property string|null $sex_opt_id
+ * @property string $name
+ * @property string $type
+ * @property \Illuminate\Support\Carbon|null $issued_at
+ * @property \Illuminate\Support\Carbon|null $expires_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Spatie\MediaLibrary\MediaCollections\Models\Collections\MediaCollection<int, \App\Models\Media> $media
+ * @property-read int|null $media_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $products
+ * @property-read int|null $products_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereExpiresAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereExternalId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereIssuedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereSexOptId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Certificate whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class Certificate extends Model implements HasMedia
 {
     use HasFactory, InteractsWithMedia, Searchable;

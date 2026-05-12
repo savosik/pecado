@@ -5,6 +5,27 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $partner_id
+ * @property int $product_id
+ * @property int $warehouse_id
+ * @property numeric $price
+ * @property string $updated_at
+ * @property-read \App\Models\User|null $partner
+ * @property-read \App\Models\Product|null $product
+ * @property-read \App\Models\Warehouse|null $warehouse
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice wherePartnerId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice wherePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice whereProductId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|IndividualPrice whereWarehouseId($value)
+ *
+ * @mixin \Eloquent
+ */
 class IndividualPrice extends Model
 {
     protected $connection = 'prices';

@@ -7,6 +7,32 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $name
+ * @property string $address
+ * @property array<array-key, mixed>|null $address_data
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Order> $orders
+ * @property-read int|null $orders_count
+ * @property-read \App\Models\User $user
+ *
+ * @method static \Database\Factories\DeliveryAddressFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress whereAddress($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress whereAddressData($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|DeliveryAddress whereUserId($value)
+ *
+ * @mixin \Eloquent
+ */
 class DeliveryAddress extends Model
 {
     use HasFactory;

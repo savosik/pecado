@@ -9,6 +9,55 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Str;
 
+/**
+ * @property int $id
+ * @property string $uuid
+ * @property string|null $number Локальный или комбинированный номер (если нужен)
+ * @property string|null $erp_number Номер реализации в 1С
+ * @property int|null $user_id
+ * @property int|null $company_id
+ * @property string|null $tax_id
+ * @property \Illuminate\Support\Carbon|null $date
+ * @property string $status
+ * @property string|null $currency_code
+ * @property numeric $total_amount
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property \Carbon\Carbon|null $erp_created_at
+ * @property \Carbon\Carbon|null $erp_updated_at
+ * @property \Illuminate\Support\Carbon|null $deleted_at
+ * @property-read \App\Models\Company|null $company
+ * @property-read string $status_label
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ShipmentItem> $items
+ * @property-read int|null $items_count
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static \Database\Factories\ShipmentFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment onlyTrashed()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereCompanyId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereCurrencyCode($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereDeletedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereErpCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereErpNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereErpUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereNumber($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereTaxId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereTotalAmount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereUserId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment whereUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment withTrashed(bool $withTrashed = true)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Shipment withoutTrashed()
+ *
+ * @mixin \Eloquent
+ */
 class Shipment extends Model
 {
     use HasFactory, SoftDeletes;

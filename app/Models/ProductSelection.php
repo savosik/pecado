@@ -7,6 +7,51 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $slug
+ * @property string|null $short_description
+ * @property string|null $description
+ * @property string|null $meta_title
+ * @property string|null $meta_description
+ * @property bool $is_active
+ * @property bool $show_on_home
+ * @property int $sort_order
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $featuredProducts
+ * @property-read int|null $featured_products_count
+ * @property-read \Spatie\MediaLibrary\MediaCollections\Models\Collections\MediaCollection<int, \App\Models\Media> $media
+ * @property-read int|null $media_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $products
+ * @property-read int|null $products_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Region> $regions
+ * @property-read int|null $regions_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection active()
+ * @method static \Database\Factories\ProductSelectionFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection forRegion(?int $regionId)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection ordered()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection showOnHome()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereMetaDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereMetaTitle($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereShortDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereShowOnHome($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereSlug($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereSortOrder($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ProductSelection whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class ProductSelection extends Model implements HasMedia
 {
     use \App\Traits\HasRegions;

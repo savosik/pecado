@@ -8,6 +8,50 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
 
+/**
+ * @property int $id
+ * @property int $shipment_id
+ * @property int|null $product_id
+ * @property string|null $product_name_snapshot Имя товара на момент создания строки реализации.
+ * @property string|null $brand_name_snapshot Имя бренда товара на момент создания строки реализации.
+ * @property string|null $order_uuid
+ * @property int $quantity
+ * @property numeric $price
+ * @property numeric $auto_discount_percent
+ * @property numeric $manual_discount_percent
+ * @property numeric $total
+ * @property numeric $subtotal
+ * @property int|null $vat_rate
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Order|null $order
+ * @property-read \App\Models\Product|null $product
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\ReturnItem> $returnItems
+ * @property-read int|null $return_items_count
+ * @property-read \App\Models\Shipment|null $shipment
+ *
+ * @method static \Database\Factories\ShipmentItemFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereAutoDiscountPercent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereBrandNameSnapshot($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereManualDiscountPercent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereOrderUuid($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem wherePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereProductId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereProductNameSnapshot($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereQuantity($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereShipmentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereSubtotal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereTotal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ShipmentItem whereVatRate($value)
+ *
+ * @mixin \Eloquent
+ */
 class ShipmentItem extends Model
 {
     use HasFactory, Searchable;

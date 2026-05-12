@@ -8,6 +8,47 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Laravel\Scout\Searchable;
 
+/**
+ * @property int $id
+ * @property int $return_id
+ * @property int $shipment_item_id
+ * @property int $shipment_id
+ * @property int $product_id
+ * @property string|null $product_name_snapshot Имя товара на момент создания возврата. Сохраняется при удалении товара из каталога.
+ * @property string|null $brand_name_snapshot Имя бренда товара на момент создания возврата.
+ * @property int $quantity
+ * @property ReturnReason $reason
+ * @property string|null $reason_comment
+ * @property numeric $price
+ * @property numeric $subtotal
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Product $product
+ * @property-read \App\Models\ProductReturn|null $return
+ * @property-read \App\Models\Shipment|null $shipment
+ * @property-read \App\Models\ShipmentItem $shipmentItem
+ *
+ * @method static \Database\Factories\ReturnItemFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereBrandNameSnapshot($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem wherePrice($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereProductId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereProductNameSnapshot($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereQuantity($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereReason($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereReasonComment($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereReturnId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereShipmentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereShipmentItemId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereSubtotal($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ReturnItem whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class ReturnItem extends Model
 {
     use HasFactory, Searchable;

@@ -8,9 +8,29 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * ERP-промо: группа товаров, помеченная флагом «новинка», «бестселлер» или «ликвидация» в 1С.
+ *
  * Синхронизируется через события promotion.created/updated/deleted (1С → Сайт).
  * На товаре (Product) флаги is_new / is_bestseller / is_liquidation пересчитываются
  * как `EXISTS()` по привязке к любой ErpPromotion соответствующего type.
+ *
+ * @property int $id
+ * @property string $uuid
+ * @property string $type
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $products
+ * @property-read int|null $products_count
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion whereType($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|ErpPromotion whereUuid($value)
+ *
+ * @mixin \Eloquent
  */
 class ErpPromotion extends Model
 {

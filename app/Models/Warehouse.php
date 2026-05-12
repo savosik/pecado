@@ -5,6 +5,31 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string|null $external_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Region> $preorderRegions
+ * @property-read int|null $preorder_regions_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Region> $primaryRegions
+ * @property-read int|null $primary_regions_count
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Product> $products
+ * @property-read int|null $products_count
+ *
+ * @method static \Database\Factories\WarehouseFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse whereExternalId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Warehouse whereUpdatedAt($value)
+ *
+ * @mixin \Eloquent
+ */
 class Warehouse extends Model
 {
     use HasFactory;

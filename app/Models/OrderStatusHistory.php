@@ -6,6 +6,34 @@ use App\Enums\OrderStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * @property int $id
+ * @property int $order_id
+ * @property string|null $old_status
+ * @property string $new_status
+ * @property int|null $user_id
+ * @property string|null $comment
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read string $new_status_label
+ * @property-read string|null $old_status_label
+ * @property-read \App\Models\Order|null $order
+ * @property-read \App\Models\User|null $user
+ *
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory query()
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereComment($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereNewStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereOldStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereOrderId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderStatusHistory whereUserId($value)
+ *
+ * @mixin \Eloquent
+ */
 class OrderStatusHistory extends Model
 {
     protected $fillable = [
