@@ -126,6 +126,115 @@ class CatalogFacetServiceTest extends TestCase
         $this->assertCount(0, $result);
     }
 
+    public function test_attribute_facets_sorted_by_count_desc(): void
+    {
+        $attr = Attribute::create([
+            'name' => 'Цвет',
+            'slug' => 'color',
+            'type' => 'select',
+            'is_filterable' => true,
+            'sort_order' => 0,
+        ]);
+        // sort_order намеренно нарушает ожидаемый count-порядок:
+        // если бы сортировка осталась по sort_order, первым шёл бы «А-редкий».
+        $rare = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'А-редкий', 'sort_order' => 0]);
+        $popular = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Я-популярный', 'sort_order' => 1]);
+        $medium = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'М-средний', 'sort_order' => 2]);
+
+        foreach (range(1, 5) as $_) {
+            Product::factory()->create()->attributeValues()->create([
+                'attribute_id' => $attr->id,
+                'attribute_value_id' => $popular->id,
+            ]);
+        }
+        foreach (range(1, 3) as $_) {
+            Product::factory()->create()->attributeValues()->create([
+                'attribute_id' => $attr->id,
+                'attribute_value_id' => $medium->id,
+            ]);
+        }
+        Product::factory()->create()->attributeValues()->create([
+            'attribute_id' => $attr->id,
+            'attribute_value_id' => $rare->id,
+        ]);
+
+        $result = $this->service->getAttributeFacets(Product::query());
+
+        $values = $result[0]['values'];
+        $this->assertEquals($popular->id, $values[0]['id'], 'Самый частый — сверху');
+        $this->assertEquals($medium->id, $values[1]['id']);
+        $this->assertEquals($rare->id, $values[2]['id']);
+    }
+
+    public function test_attribute_facets_pin_selected_to_top(): void
+    {
+        $attr = Attribute::create([
+            'name' => 'Цвет',
+            'slug' => 'color',
+            'type' => 'select',
+            'is_filterable' => true,
+            'sort_order' => 0,
+        ]);
+        $popular = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Популярный', 'sort_order' => 0]);
+        $rare = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Редкий', 'sort_order' => 1]);
+        $medium = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'Средний', 'sort_order' => 2]);
+
+        foreach (range(1, 10) as $_) {
+            Product::factory()->create()->attributeValues()->create([
+                'attribute_id' => $attr->id,
+                'attribute_value_id' => $popular->id,
+            ]);
+        }
+        foreach (range(1, 5) as $_) {
+            Product::factory()->create()->attributeValues()->create([
+                'attribute_id' => $attr->id,
+                'attribute_value_id' => $medium->id,
+            ]);
+        }
+        Product::factory()->create()->attributeValues()->create([
+            'attribute_id' => $attr->id,
+            'attribute_value_id' => $rare->id,
+        ]);
+
+        // Выбираем «Редкий» — он должен оказаться сверху, несмотря на самый низкий count.
+        $result = $this->service->getAttributeFacets(Product::query(), [$rare->id]);
+
+        $values = $result[0]['values'];
+        $this->assertEquals($rare->id, $values[0]['id'], 'Выбранный значение прибито к верху');
+        $this->assertEquals($popular->id, $values[1]['id'], 'Затем — по count desc');
+        $this->assertEquals($medium->id, $values[2]['id']);
+    }
+
+    public function test_attribute_facets_pin_selected_preserves_selection_order(): void
+    {
+        $attr = Attribute::create([
+            'name' => 'Цвет',
+            'slug' => 'color',
+            'type' => 'select',
+            'is_filterable' => true,
+            'sort_order' => 0,
+        ]);
+        $a = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'A', 'sort_order' => 0]);
+        $b = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'B', 'sort_order' => 1]);
+        $c = AttributeValue::create(['attribute_id' => $attr->id, 'value' => 'C', 'sort_order' => 2]);
+
+        // У всех одинаковый count, чтобы порядок выбора был единственным дискриминатором.
+        foreach ([$a, $b, $c] as $val) {
+            Product::factory()->create()->attributeValues()->create([
+                'attribute_id' => $attr->id,
+                'attribute_value_id' => $val->id,
+            ]);
+        }
+
+        // Выбираем в порядке C, A — ожидаем именно такой порядок сверху.
+        $result = $this->service->getAttributeFacets(Product::query(), [$c->id, $a->id]);
+
+        $values = $result[0]['values'];
+        $this->assertEquals($c->id, $values[0]['id']);
+        $this->assertEquals($a->id, $values[1]['id']);
+        $this->assertEquals($b->id, $values[2]['id']);
+    }
+
     // ─── getBrandFacets ─────────────────────────────────────
 
     public function test_brand_facets_returns_correct_counts(): void

@@ -110,7 +110,6 @@ class CatalogFacetService
                     DB::raw('COUNT(DISTINCT pav.product_id) as count'),
                 ])
                 ->groupBy('pav.attribute_id', 'av.id', 'av.value')
-                ->orderBy('av.sort_order')
                 ->get();
 
             foreach ($rows->groupBy('attribute_id') as $attrId => $attrRows) {
@@ -178,7 +177,6 @@ class CatalogFacetService
                     }
                     if ($attrRef !== null) {
                         $attrRef['values'] = array_merge($attrRef['values'], $missingVals);
-                        usort($attrRef['values'], fn ($a, $b) => mb_strtolower((string) $a['value']) <=> mb_strtolower((string) $b['value']));
                     } else {
                         $attrName = $missingValues->firstWhere('attribute_id', $attrId)->attribute_name;
                         $result[] = [
@@ -191,6 +189,11 @@ class CatalogFacetService
                 }
             }
         }
+
+        foreach ($result as &$resAttr) {
+            $resAttr['values'] = $this->sortValuesPinningSelected($resAttr['values'], $selectedValueIds);
+        }
+        unset($resAttr);
 
         return $result;
     }
@@ -221,7 +224,6 @@ class CatalogFacetService
             ])
             ->groupBy('a.id', 'a.name', 'a.sort_order', 'av.id', 'av.value')
             ->orderBy('a.sort_order')
-            ->orderBy('av.sort_order')
             ->get();
 
         // Группируем строки по атрибуту
@@ -319,12 +321,57 @@ class CatalogFacetService
                     return floatval($a['raw_value'] ?? $a['value'] ?? 0)
                         <=> floatval($b['raw_value'] ?? $b['value'] ?? 0);
                 });
+            } else {
+                $attr['values'] = $this->sortValuesPinningSelected($attr['values'], []);
             }
             unset($attr['sort_order']);
         }
         unset($attr);
 
         return array_values($grouped);
+    }
+
+    /**
+     * Сортировка значений фасета: выбранные сверху в порядке выбора,
+     * остальные — по count убывания (тайбрейкер — алфавит по value).
+     *
+     * Это даёт стабильный UX: пользователь видит свои выбранные опции зафиксированными
+     * на верху списка и не «теряет» только что отмеченный чекбокс при пересчёте.
+     *
+     * @param  array<int, array{id: int|string, value: string, count: int}>  $values
+     * @param  int[]  $selectedValueIds
+     * @return array<int, array{id: int|string, value: string, count: int}>
+     */
+    private function sortValuesPinningSelected(array $values, array $selectedValueIds): array
+    {
+        if (empty($values)) {
+            return $values;
+        }
+
+        $selectedOrder = array_flip(array_values($selectedValueIds));
+
+        $selected = [];
+        $rest = [];
+        foreach ($values as $value) {
+            if (isset($selectedOrder[$value['id']])) {
+                $selected[] = $value;
+            } else {
+                $rest[] = $value;
+            }
+        }
+
+        usort($selected, fn ($a, $b) => $selectedOrder[$a['id']] <=> $selectedOrder[$b['id']]);
+
+        usort($rest, function ($a, $b) {
+            $countDiff = ($b['count'] ?? 0) <=> ($a['count'] ?? 0);
+            if ($countDiff !== 0) {
+                return $countDiff;
+            }
+
+            return mb_strtolower((string) ($a['value'] ?? '')) <=> mb_strtolower((string) ($b['value'] ?? ''));
+        });
+
+        return array_merge($selected, $rest);
     }
 
     /**
