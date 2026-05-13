@@ -54,7 +54,7 @@ export default function BrandStoriesIndex({ brandStories: paginationData, availa
             <PageHeader
                 title="О брендах"
                 subtitle="Описания и истории брендов"
-                actions={<ContentSwitcher />}
+                /* actions={<ContentSwitcher />} */
             />
             <ContentTagFilter
                 tags={availableTags}

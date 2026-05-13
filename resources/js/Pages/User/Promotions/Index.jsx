@@ -26,7 +26,7 @@ export default function PromotionsIndex({ promotions: paginationData, seo, bread
             <PageHeader
                 title="Акции"
                 subtitle="Специальные предложения и скидки"
-                actions={<ContentSwitcher />}
+                /* actions={<ContentSwitcher />} */
             />
 
             {pagination.items.length === 0 ? (

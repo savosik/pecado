@@ -54,7 +54,7 @@ export default function NewsIndex({ news: paginationData, availableTags = [], se
             <PageHeader
                 title="Новости"
                 subtitle="Последние новости и обновления"
-                actions={<ContentSwitcher />}
+                /* actions={<ContentSwitcher />} */
             />
             <ContentTagFilter
                 tags={availableTags}

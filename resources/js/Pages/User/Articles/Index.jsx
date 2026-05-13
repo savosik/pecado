@@ -54,7 +54,7 @@ export default function ArticlesIndex({ articles: paginationData, availableTags 
             <PageHeader
                 title="Статьи"
                 subtitle="Полезные статьи и материалы"
-                actions={<ContentSwitcher />}
+                /* actions={<ContentSwitcher />} */
             />
             <ContentTagFilter
                 tags={availableTags}
