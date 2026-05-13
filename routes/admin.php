@@ -348,6 +348,19 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     });
     Route::delete('/faqs/{faq}', [\App\Http\Controllers\Admin\FaqController::class, 'destroy'])->name('faqs.destroy')->middleware('permission:faqs.delete');
 
+    // Вопросы пользователей (FAQ)
+    Route::middleware('permission:user-questions.view')->group(function () {
+        Route::get('/user-questions', [\App\Http\Controllers\Admin\UserQuestionController::class, 'index'])->name('user-questions.index');
+        Route::get('/user-questions/{question}', [\App\Http\Controllers\Admin\UserQuestionController::class, 'show'])->name('user-questions.show');
+        Route::get('/user-questions/{question}/attachment', [\App\Http\Controllers\Admin\UserQuestionController::class, 'downloadAttachment'])->name('user-questions.attachment');
+    });
+    Route::middleware('permission:user-questions.edit')->group(function () {
+        Route::post('/user-questions/{question}/answer', [\App\Http\Controllers\Admin\UserQuestionController::class, 'answer'])->name('user-questions.answer');
+        Route::post('/user-questions/{question}/reject', [\App\Http\Controllers\Admin\UserQuestionController::class, 'reject'])->name('user-questions.reject');
+        Route::patch('/user-questions/{question}/status', [\App\Http\Controllers\Admin\UserQuestionController::class, 'updateStatus'])->name('user-questions.status');
+    });
+    Route::delete('/user-questions/{question}', [\App\Http\Controllers\Admin\UserQuestionController::class, 'destroy'])->name('user-questions.destroy')->middleware('permission:user-questions.delete');
+
     // =====================================================================
     // Склады
     // =====================================================================

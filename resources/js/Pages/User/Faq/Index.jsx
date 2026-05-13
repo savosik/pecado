@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
-    Accordion, Box, Input, Span, Spinner, Text, VStack,
+    Accordion, Box, Flex, Input, Span, Spinner, Text, VStack,
 } from '@chakra-ui/react';
 import { router } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
@@ -8,6 +8,7 @@ import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import PageHeader from '@/components/common/PageHeader';
 import EmptyState from '@/components/common/EmptyState';
+import AskQuestionForm from './AskQuestionForm';
 import { LuCircleHelp, LuSearch } from 'react-icons/lu';
 
 /**
@@ -62,7 +63,8 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                 subtitle="Часто задаваемые вопросы и ответы"
             />
 
-            <Box maxW="800px">
+            <Flex direction={{ base: 'column', lg: 'row' }} gap="6" align="flex-start">
+              <Box flex="1" minW="0" w="full">
                 {/* Поиск */}
                 <Box mb="6" position="relative">
                     <Input
@@ -176,7 +178,17 @@ export default function FaqIndex({ faqs: initialFaqs, q: initialQ, seo, breadcru
                         </Accordion.Root>
                     </Box>
                 )}
-            </Box>
+              </Box>
+
+              <Box
+                w={{ base: '100%', lg: '380px' }}
+                flexShrink="0"
+                position={{ base: 'static', lg: 'sticky' }}
+                top="80px"
+              >
+                <AskQuestionForm />
+              </Box>
+            </Flex>
         </UserLayout>
     );
 }

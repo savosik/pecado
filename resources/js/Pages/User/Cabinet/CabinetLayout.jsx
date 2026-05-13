@@ -9,7 +9,7 @@ import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
     LuFileDown, LuImage, LuRotateCcw, LuSettings, LuTruck, LuLayoutGrid, LuWrench, LuCode,
-    LuChartPie,
+    LuChartPie, LuMessageSquare,
 } from 'react-icons/lu';
 
 const menuGroups = [
@@ -48,6 +48,12 @@ const menuGroups = [
         title: 'Инструменты',
         items: [
             { href: '/cabinet/media', label: 'Медиатека', icon: LuImage },
+        ],
+    },
+    {
+        title: 'Поддержка',
+        items: [
+            { href: '/cabinet/questions', label: 'Мои вопросы', icon: LuMessageSquare },
         ],
     },
     {

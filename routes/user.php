@@ -5,6 +5,7 @@ use App\Http\Controllers\User\ArticleController;
 use App\Http\Controllers\User\BankAccountController;
 use App\Http\Controllers\User\CabinetCartController;
 use App\Http\Controllers\User\CabinetController;
+use App\Http\Controllers\User\CabinetQuestionsController;
 use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CheckoutController;
 use App\Http\Controllers\User\CompanyController;
@@ -22,6 +23,7 @@ use App\Http\Controllers\User\PromotionController;
 use App\Http\Controllers\User\ReturnController;
 use App\Http\Controllers\User\SearchController;
 use App\Http\Controllers\User\ShipmentController;
+use App\Http\Controllers\User\UserQuestionController;
 use Illuminate\Support\Facades\Route;
 
 // ──────────────────────────────────────────────
@@ -38,6 +40,9 @@ Route::get('/brands/{brand:slug}', [ProductController::class, 'byBrand'])->name(
 Route::get('/categories/{category:slug}', [ProductController::class, 'byCategory'])->name('products.category');
 Route::get('/collections/{selection:slug}', [ProductController::class, 'bySelection'])->name('products.selection');
 Route::get('/faq', [FaqController::class, 'index'])->name('faq');
+Route::post('/faq/questions', [UserQuestionController::class, 'store'])
+    ->middleware('throttle:5,60')
+    ->name('faq.questions.store');
 Route::get('/news', [NewsController::class, 'index'])->name('news.index');
 Route::get('/news/{slug}', [NewsController::class, 'show'])->name('news.show');
 Route::get('/articles', [ArticleController::class, 'index'])->name('articles.index');
@@ -196,6 +201,11 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/shipments/export', [ShipmentController::class, 'export'])->name('shipments.export');
     Route::get('/shipments/{shipment}/items/export', [ShipmentController::class, 'exportItems'])->name('shipments.items.export');
     Route::get('/shipments/{shipment}', [ShipmentController::class, 'show'])->name('shipments.show');
+
+    // Мои вопросы (FAQ)
+    Route::get('/questions', [CabinetQuestionsController::class, 'index'])->name('questions.index');
+    Route::get('/questions/{question}', [CabinetQuestionsController::class, 'show'])->name('questions.show');
+    Route::get('/questions/{question}/attachment', [CabinetQuestionsController::class, 'downloadAttachment'])->name('questions.attachment');
 
     // Медиатека
     Route::get('/media', [MediaController::class, 'index'])->name('media.index');
