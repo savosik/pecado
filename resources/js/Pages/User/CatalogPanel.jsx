@@ -506,13 +506,12 @@ export default function CatalogPanel({ open, onClose }) {
                                             <HStack gap="3" minW="0" flex="1">
                                                 {mobilePath.length === 0 && (
                                                     <Flex
-                                                        w="6" h="6" align="center" justify="center"
-                                                        borderRadius="md" bg="gray.100" flexShrink="0"
-                                                        _dark={{ bg: 'gray.700' }}
+                                                        w="7" h="7" align="center" justify="center"
+                                                        flexShrink="0"
                                                     >
                                                         {node.icon_url
-                                                            ? <Box as="img" src={node.icon_url} w="4" h="4" borderRadius="sm" />
-                                                            : <LuFolder size={14} />
+                                                            ? <Box as="img" src={node.icon_url} w="7" h="7" />
+                                                            : <LuFolder size={18} />
                                                         }
                                                     </Flex>
                                                 )}
@@ -593,12 +592,10 @@ export default function CatalogPanel({ open, onClose }) {
                                                 onClick={() => setActiveRootIndex(-1)}
                                             >
                                                 <Flex
-                                                    w="6" h="6" align="center" justify="center"
-                                                    borderRadius="md" flexShrink="0"
-                                                    bg={activeRootIndex === -1 ? 'whiteAlpha.200' : 'gray.100'}
-                                                    _dark={{ bg: activeRootIndex === -1 ? 'whiteAlpha.200' : 'gray.700' }}
+                                                    w="7" h="7" align="center" justify="center"
+                                                    flexShrink="0"
                                                 >
-                                                    <LuLayoutGrid size={14} />
+                                                    <LuLayoutGrid size={18} />
                                                 </Flex>
                                                 <Text truncate fontWeight="600">Все категории</Text>
                                             </Flex>
@@ -626,14 +623,17 @@ export default function CatalogPanel({ open, onClose }) {
                                                     onClick={() => setActiveRootIndex(idx)}
                                                 >
                                                     <Flex
-                                                        w="6" h="6" align="center" justify="center"
-                                                        borderRadius="md" flexShrink="0"
-                                                        bg={activeRootIndex === idx ? 'whiteAlpha.200' : 'gray.100'}
-                                                        _dark={{ bg: activeRootIndex === idx ? 'whiteAlpha.200' : 'gray.700' }}
+                                                        w="7" h="7" align="center" justify="center"
+                                                        flexShrink="0"
                                                     >
                                                         {root.icon_url
-                                                            ? <Box as="img" src={root.icon_url} w="4" h="4" borderRadius="sm" />
-                                                            : <LuFolder size={14} />
+                                                            ? <Box
+                                                                as="img"
+                                                                src={root.icon_url}
+                                                                w="7" h="7"
+                                                                filter={activeRootIndex === idx ? 'invert(1) brightness(2)' : undefined}
+                                                            />
+                                                            : <LuFolder size={18} />
                                                         }
                                                     </Flex>
                                                     <Text truncate>{root.name}</Text>
