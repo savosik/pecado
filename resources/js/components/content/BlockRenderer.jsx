@@ -76,7 +76,12 @@ function Block({ block }) {
 
 function HeaderBlock({ data }) {
     const Tag = `h${data.level || 2}`;
-    return <Tag className={`cb-header cb-header--${data.level || 2}`}>{data.text}</Tag>;
+    return (
+        <Tag
+            className={`cb-header cb-header--${data.level || 2}`}
+            dangerouslySetInnerHTML={{ __html: data.text || '' }}
+        />
+    );
 }
 
 function ParagraphBlock({ data }) {
@@ -133,7 +138,10 @@ function QuoteBlock({ data }) {
 function PullQuoteBlock({ data }) {
     return (
         <div className="cb-pull-quote">
-            <div className="cb-pull-quote__text">{data.text}</div>
+            <div
+                className="cb-pull-quote__text"
+                dangerouslySetInnerHTML={{ __html: data.text || '' }}
+            />
             {data.caption && <div className="cb-pull-quote__caption">{data.caption}</div>}
         </div>
     );
@@ -309,7 +317,12 @@ function CallToActionBlock({ data }) {
     return (
         <div className={`cb-cta${data.style === 'gradient' ? ' cb-cta--gradient' : ''}`}>
             {data.title && <div className="cb-cta__title">{data.title}</div>}
-            {data.text && <div className="cb-cta__text">{data.text}</div>}
+            {data.text && (
+                <div
+                    className="cb-cta__text"
+                    dangerouslySetInnerHTML={{ __html: data.text }}
+                />
+            )}
             {data.buttonText && (
                 <Link href={data.buttonUrl || '#'} className="cb-cta__button">
                     {data.buttonText}
@@ -361,7 +374,10 @@ function NumberedListBlock({ data }) {
                 <li key={i} className="cb-numbered-list__item">
                     <div>
                         {item.title && <div className="cb-numbered-list__title">{item.title}</div>}
-                        <div className="cb-numbered-list__text">{item.text}</div>
+                        <div
+                            className="cb-numbered-list__text"
+                            dangerouslySetInnerHTML={{ __html: item.text || '' }}
+                        />
                     </div>
                 </li>
             ))}
@@ -423,7 +439,12 @@ function IconFeatureBlock({ data }) {
                 <div key={i} className="cb-icon-features__item">
                     <div className="cb-icon-features__icon">{item.icon}</div>
                     {item.title && <div className="cb-icon-features__title">{item.title}</div>}
-                    {item.text && <div className="cb-icon-features__text">{item.text}</div>}
+                    {item.text && (
+                        <div
+                            className="cb-icon-features__text"
+                            dangerouslySetInnerHTML={{ __html: item.text }}
+                        />
+                    )}
                 </div>
             ))}
         </div>
@@ -599,7 +620,10 @@ function AlertBannerBlock({ data }) {
     return (
         <div className={`cb-alert-banner cb-alert-banner--${style}`}>
             <div className="cb-alert-banner__content">
-                <span className="cb-alert-banner__text">{data.text}</span>
+                <span
+                    className="cb-alert-banner__text"
+                    dangerouslySetInnerHTML={{ __html: data.text || '' }}
+                />
                 {data.btnText && data.btnUrl && (
                     <a href={data.btnUrl} className="cb-alert-banner__btn">{data.btnText}</a>
                 )}
@@ -635,7 +659,12 @@ function StepsBlock({ data }) {
                     <div className="cb-steps__num">{i + 1}</div>
                     <div className="cb-steps__content">
                         {step.title && <div className="cb-steps__title">{step.title}</div>}
-                        {step.text && <div className="cb-steps__text">{step.text}</div>}
+                        {step.text && (
+                            <div
+                                className="cb-steps__text"
+                                dangerouslySetInnerHTML={{ __html: step.text }}
+                            />
+                        )}
                     </div>
                 </div>
             ))}
@@ -652,7 +681,12 @@ function TimelineBlock({ data }) {
                     <div className="cb-timeline__date">{ev.date}</div>
                     <div className="cb-timeline__content">
                         {ev.title && <div className="cb-timeline__title">{ev.title}</div>}
-                        {ev.text && <div className="cb-timeline__text">{ev.text}</div>}
+                        {ev.text && (
+                            <div
+                                className="cb-timeline__text"
+                                dangerouslySetInnerHTML={{ __html: ev.text }}
+                            />
+                        )}
                     </div>
                 </div>
             ))}
