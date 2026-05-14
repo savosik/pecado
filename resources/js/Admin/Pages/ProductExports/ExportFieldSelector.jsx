@@ -3,7 +3,7 @@ import {
     Box, HStack, Stack, Text, Input, IconButton, Button, Badge,
 } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { LuGripVertical, LuX, LuPlus, LuSettings, LuChevronDown } from 'react-icons/lu';
+import { LuGripVertical, LuX, LuPlus, LuSettings, LuChevronDown, LuCopy, LuSquareDashed } from 'react-icons/lu';
 import {
     DndContext,
     closestCenter,
@@ -45,49 +45,169 @@ const SEPARATOR_OPTIONS = [
     { value: 'slash_tight',     label: 'Слеш без пробела  (/)' },
 ];
 
-// Подблок для арифметических модификаторов: × multiply, + add.
+// Подблок для арифметических модификаторов: × multiply, + add,
+// + флаг integer_if_whole (выводить целое если математика сошлась к целому).
 // Используется и в `price`, и в `numeric` модификаторах.
 function ArithmeticControls({ modifiers, onModifiersChange }) {
     const multiply = modifiers?.multiply ?? '';
     const add = modifiers?.add ?? '';
+    const integerIfWhole = !!modifiers?.integer_if_whole;
     return (
-        <HStack gap={2} flexWrap="wrap" mt={1}>
-            <Text fontSize="xs" color="fg.muted" flexShrink={0}>Умножить на:</Text>
+        <Stack gap={1} mt={1}>
+            <HStack gap={2} flexWrap="wrap">
+                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Умножить на:</Text>
+                <Input
+                    size="xs"
+                    w="80px"
+                    type="number"
+                    step="any"
+                    value={multiply}
+                    placeholder="1"
+                    onChange={(e) => onModifiersChange({
+                        ...modifiers,
+                        multiply: e.target.value === '' ? null : e.target.value,
+                    })}
+                />
+                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Прибавить:</Text>
+                <Input
+                    size="xs"
+                    w="80px"
+                    type="number"
+                    step="any"
+                    value={add}
+                    placeholder="0"
+                    onChange={(e) => onModifiersChange({
+                        ...modifiers,
+                        add: e.target.value === '' ? null : e.target.value,
+                    })}
+                />
+                <Text fontSize="xs" color="fg.subtle" flexShrink={0}>
+                    итог = (значение × умножитель) + прибавка
+                </Text>
+            </HStack>
+            <HStack gap={1}>
+                <Badge
+                    size="sm"
+                    cursor="pointer"
+                    variant={integerIfWhole ? 'solid' : 'outline'}
+                    colorPalette={integerIfWhole ? 'pecado' : 'gray'}
+                    onClick={() => onModifiersChange({ ...modifiers, integer_if_whole: !integerIfWhole })}
+                    _hover={{ opacity: 0.8 }}
+                >
+                    {integerIfWhole ? '✓' : ''} Целое если без копеек
+                </Badge>
+                <Text fontSize="xs" color="fg.subtle">
+                    980.00 → 980, но 980.50 → 980.50
+                </Text>
+            </HStack>
+        </Stack>
+    );
+}
+
+// Substring — пост-обработка строкового значения (для любого modifierType).
+// Полезен партнёрам, которым нужен UUID обрезанный до фиксированной длины.
+function SubstringControls({ modifiers, onModifiersChange }) {
+    const start = modifiers?.substring_start ?? '';
+    const length = modifiers?.substring_length ?? '';
+    return (
+        <HStack gap={2} mt={1} flexWrap="wrap">
+            <Text fontSize="xs" color="fg.muted" flexShrink={0}>Обрезать строку:</Text>
+            <Text fontSize="xs" color="fg.subtle">с</Text>
             <Input
                 size="xs"
-                w="80px"
+                w="60px"
                 type="number"
-                step="any"
-                value={multiply}
-                placeholder="1"
-                onChange={(e) => onModifiersChange({
-                    ...modifiers,
-                    multiply: e.target.value === '' ? null : e.target.value,
-                })}
-            />
-            <Text fontSize="xs" color="fg.muted" flexShrink={0}>Прибавить:</Text>
-            <Input
-                size="xs"
-                w="80px"
-                type="number"
-                step="any"
-                value={add}
+                min="0"
+                value={start}
                 placeholder="0"
                 onChange={(e) => onModifiersChange({
                     ...modifiers,
-                    add: e.target.value === '' ? null : e.target.value,
+                    substring_start: e.target.value === '' ? null : parseInt(e.target.value),
                 })}
             />
-            <Text fontSize="xs" color="fg.subtle" flexShrink={0}>
-                итог = (значение × умножитель) + прибавка
-            </Text>
+            <Text fontSize="xs" color="fg.subtle">длина</Text>
+            <Input
+                size="xs"
+                w="60px"
+                type="number"
+                min="1"
+                value={length}
+                placeholder="не обрезать"
+                onChange={(e) => onModifiersChange({
+                    ...modifiers,
+                    substring_length: e.target.value === '' ? null : parseInt(e.target.value),
+                })}
+            />
+            <Text fontSize="xs" color="fg.subtle">символов</Text>
         </HStack>
+    );
+}
+
+// Date format — для полей с modifierType='date'.
+const DATE_FORMAT_PRESETS = [
+    { value: 'd.m.Y H:i:s', label: '08.04.2026 13:21:49' },
+    { value: 'Y-m-d H:i:s', label: '2026-04-08 13:21:49' },
+    { value: 'd.m.Y',       label: '08.04.2026' },
+    { value: 'Y-m-d',       label: '2026-04-08' },
+    { value: 'd/m/Y',       label: '08/04/2026' },
+    { value: 'c',           label: 'ISO 8601 (2026-04-08T13:21:49+00:00)' },
+];
+
+function DateControls({ modifiers, onModifiersChange }) {
+    const format = modifiers?.format || '';
+    const isCustom = format && !DATE_FORMAT_PRESETS.some(p => p.value === format);
+    return (
+        <Stack gap={1} mt={1}>
+            <HStack gap={1} flexWrap="wrap">
+                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Формат:</Text>
+                {DATE_FORMAT_PRESETS.map(p => (
+                    <Badge
+                        key={p.value}
+                        size="sm"
+                        cursor="pointer"
+                        variant={format === p.value ? 'solid' : 'outline'}
+                        colorPalette={format === p.value ? 'pecado' : 'gray'}
+                        onClick={() => onModifiersChange({ ...modifiers, format: p.value })}
+                        _hover={{ opacity: 0.8 }}
+                    >
+                        {p.label}
+                    </Badge>
+                ))}
+                <Badge
+                    size="sm"
+                    cursor="pointer"
+                    variant={isCustom ? 'solid' : 'outline'}
+                    colorPalette={isCustom ? 'pecado' : 'gray'}
+                    _hover={{ opacity: 0.8 }}
+                >
+                    Свой
+                </Badge>
+            </HStack>
+            {isCustom && (
+                <HStack gap={2}>
+                    <Input
+                        size="xs"
+                        w="200px"
+                        value={format}
+                        onChange={(e) => onModifiersChange({ ...modifiers, format: e.target.value })}
+                        placeholder="d.m.Y H:i:s"
+                    />
+                    <Text fontSize="xs" color="fg.subtle">
+                        PHP date(): d=день, m=месяц, Y=год, H:i:s=часы:минуты:секунды
+                    </Text>
+                </HStack>
+            )}
+        </Stack>
     );
 }
 
 // ─── Inline modifier controls ─────────────────────────────────────────────────
 function ModifierControls({ modifierType, modifiers, onModifiersChange, currencies = [] }) {
-    if (!modifierType) return null;
+    // substring и null-modifierType: всё равно показываем SubstringControls,
+    // т.к. это пост-модификатор поверх любого значения.
+    if (!modifierType) {
+        return <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />;
+    }
 
     if (modifierType === 'price') {
         const currencyId = modifiers?.currency_id || null;
@@ -196,31 +316,61 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
 
     if (modifierType === 'multi_value') {
         const separator = modifiers?.separator || 'comma';
+        const sourceSep = modifiers?.source_separator || 'comma';
         return (
-            <HStack gap={1} flexWrap="wrap" mt={1}>
-                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Разделитель:</Text>
-                {SEPARATOR_OPTIONS.map(opt => (
-                    <Badge
-                        key={opt.value}
-                        size="sm"
-                        cursor="pointer"
-                        variant={separator === opt.value ? 'solid' : 'outline'}
-                        colorPalette={separator === opt.value ? 'pecado' : 'gray'}
-                        onClick={() => onModifiersChange({ ...modifiers, separator: opt.value })}
-                        _hover={{ opacity: 0.8 }}
-                    >
-                        {opt.label}
-                    </Badge>
-                ))}
-            </HStack>
+            <Stack gap={1} mt={1}>
+                <HStack gap={1} flexWrap="wrap">
+                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>Разделитель на выходе:</Text>
+                    {SEPARATOR_OPTIONS.map(opt => (
+                        <Badge
+                            key={opt.value}
+                            size="sm"
+                            cursor="pointer"
+                            variant={separator === opt.value ? 'solid' : 'outline'}
+                            colorPalette={separator === opt.value ? 'pecado' : 'gray'}
+                            onClick={() => onModifiersChange({ ...modifiers, separator: opt.value })}
+                            _hover={{ opacity: 0.8 }}
+                        >
+                            {opt.label}
+                        </Badge>
+                    ))}
+                </HStack>
+                <HStack gap={1} flexWrap="wrap">
+                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>Разделитель во входной строке:</Text>
+                    {SEPARATOR_OPTIONS.filter(o => !o.value.endsWith('_tight')).map(opt => (
+                        <Badge
+                            key={opt.value}
+                            size="sm"
+                            cursor="pointer"
+                            variant={sourceSep === opt.value ? 'solid' : 'outline'}
+                            colorPalette={sourceSep === opt.value ? 'pecado' : 'gray'}
+                            onClick={() => onModifiersChange({ ...modifiers, source_separator: opt.value })}
+                            _hover={{ opacity: 0.8 }}
+                        >
+                            {opt.label.split(' ')[0]}
+                        </Badge>
+                    ))}
+                    <Text fontSize="xs" color="fg.subtle">(по умолчанию: запятая)</Text>
+                </HStack>
+                <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
+            </Stack>
         );
     }
 
-    return null;
+    if (modifierType === 'date') {
+        return (
+            <Stack gap={1} mt={1}>
+                <DateControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
+                <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
+            </Stack>
+        );
+    }
+
+    return <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />;
 }
 
 // ─── Sortable row for a selected field ─────────────────────────────────────────
-function SortableFieldRow({ item, index, defaultLabel, description, modifierType, currencies, onLabelChange, onModifiersChange, onRemove }) {
+function SortableFieldRow({ item, index, defaultLabel, description, modifierType, currencies, onLabelChange, onModifiersChange, onRemove, onDuplicate }) {
     const [showModifiers, setShowModifiers] = useState(
         // Auto-open if modifiers are already set
         item.modifiers && Object.keys(item.modifiers).length > 0
@@ -285,8 +435,8 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
                     />
                 </Box>
 
-                {/* Modifier toggle */}
-                {modifierType && (
+                {/* Modifier toggle — показываем всегда: substring работает поверх любого типа */}
+                <Tooltip content="Настройки поля и модификаторы" openDelay={300}>
                     <IconButton
                         size="xs"
                         variant="ghost"
@@ -297,6 +447,22 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
                     >
                         <LuSettings />
                     </IconButton>
+                </Tooltip>
+
+                {/* Duplicate field (create alias copy) */}
+                {onDuplicate && (
+                    <Tooltip content="Скопировать (та же колонка с другим названием)" openDelay={300}>
+                        <IconButton
+                            size="xs"
+                            variant="ghost"
+                            colorPalette="gray"
+                            onClick={() => onDuplicate(index)}
+                            aria-label="Скопировать"
+                            flexShrink={0}
+                        >
+                            <LuCopy />
+                        </IconButton>
+                    </Tooltip>
                 )}
 
                 {/* Remove button */}
@@ -312,8 +478,8 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
                 </IconButton>
             </HStack>
 
-            {/* Modifier controls (collapsible) */}
-            {showModifiers && modifierType && (
+            {/* Modifier controls (collapsible) — рендерим всегда когда открыт */}
+            {showModifiers && (
                 <Box pl={8} pr={2} pb={1}>
                     <ModifierControls
                         modifierType={modifierType}
@@ -515,6 +681,34 @@ export default function ExportFieldSelector({ availableFields, selectedFields, o
         setPickerOpen(false);
     };
 
+    // Дубль поля: тот же базовый ключ + уникальный суффикс #N. Backend в
+    // FieldRegistry::resolve() отрезает всё после `#` и резолвит базовое поле —
+    // в итоге пользователь получает отдельную колонку с теми же данными
+    // и (опционально) другим лейблом / модификатором.
+    const handleDuplicate = (index) => {
+        const source = selectedFields[index];
+        const baseKey = source.key.split('#')[0];
+        // Уникальный суффикс — короткий random чтобы не плодить #1/#2 коллизии
+        const suffix = `alt${Math.random().toString(36).slice(2, 7)}`;
+        const copy = {
+            ...source,
+            key: `${baseKey}#${suffix}`,
+            label: source.label ? `${source.label} (копия)` : '',
+        };
+        const updated = [...selectedFields];
+        updated.splice(index + 1, 0, copy);
+        onChange(updated);
+    };
+
+    // Пустая колонка. Бэкенд резолвит placeholder.{slug} в EmptyPlaceholderField,
+    // который всегда возвращает пустую строку. Полезно когда нужно сохранить
+    // структуру колонок партнёрского CSV, но конкретное значение у нас отсутствует
+    // в системе.
+    const handleAddPlaceholder = () => {
+        const slug = `col${Math.random().toString(36).slice(2, 7)}`;
+        onChange([...selectedFields, { key: `placeholder.${slug}`, label: '' }]);
+    };
+
     return (
         <Stack gap={2}>
             {/* Header */}
@@ -535,20 +729,27 @@ export default function ExportFieldSelector({ availableFields, selectedFields, o
                     strategy={verticalListSortingStrategy}
                 >
                     <Stack gap={1}>
-                        {selectedFields.map((item, index) => (
-                            <SortableFieldRow
-                                key={item.key}
-                                item={item}
-                                index={index}
-                                defaultLabel={labelMap[item.key] || item.key}
-                                description={descriptionMap[item.key]}
-                                modifierType={modifierTypeMap[item.key]}
-                                currencies={currencies}
-                                onLabelChange={handleLabelChange}
-                                onModifiersChange={handleModifiersChange}
-                                onRemove={handleRemove}
-                            />
-                        ))}
+                        {selectedFields.map((item, index) => {
+                            // Резолвим metaданные по базовому ключу (без алиас-суффикса)
+                            const baseKey = item.key.split('#')[0];
+                            const isPlaceholder = baseKey.startsWith('placeholder.');
+                            const fallbackLabel = isPlaceholder ? 'Пустая колонка' : (labelMap[baseKey] || item.key);
+                            return (
+                                <SortableFieldRow
+                                    key={item.key}
+                                    item={item}
+                                    index={index}
+                                    defaultLabel={fallbackLabel}
+                                    description={descriptionMap[baseKey]}
+                                    modifierType={modifierTypeMap[baseKey]}
+                                    currencies={currencies}
+                                    onLabelChange={handleLabelChange}
+                                    onModifiersChange={handleModifiersChange}
+                                    onRemove={handleRemove}
+                                    onDuplicate={isPlaceholder ? null : handleDuplicate}
+                                />
+                            );
+                        })}
                     </Stack>
                 </SortableContext>
             </DndContext>
@@ -567,15 +768,30 @@ export default function ExportFieldSelector({ availableFields, selectedFields, o
                 </Text>
             )}
 
-            {/* Add field button + picker */}
+            {/* Add field / Empty column buttons + picker */}
             <Box position="relative">
-                <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPickerOpen(!pickerOpen)}
-                >
-                    <LuPlus /> Добавить поле
-                </Button>
+                <HStack gap={2}>
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setPickerOpen(!pickerOpen)}
+                    >
+                        <LuPlus /> Добавить поле
+                    </Button>
+                    <Tooltip
+                        content="Добавляет колонку без данных — полезно когда нужно сохранить структуру CSV под партнёра, но конкретного значения у нас нет."
+                        openDelay={300}
+                    >
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            colorPalette="gray"
+                            onClick={handleAddPlaceholder}
+                        >
+                            <LuSquareDashed /> Пустая колонка
+                        </Button>
+                    </Tooltip>
+                </HStack>
 
                 {pickerOpen && (
                     <FieldPicker

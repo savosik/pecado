@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\ExportFormat;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
+use App\Http\Controllers\Traits\ProductExportFieldValidation;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Certificate;
@@ -17,6 +18,7 @@ use Inertia\Inertia;
 
 class ProductExportController extends Controller
 {
+    use ProductExportFieldValidation;
     use RedirectsAfterSave;
 
     protected ProductExportService $exportService;
@@ -63,23 +65,14 @@ class ProductExportController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'name' => 'required|string|max:255',
             'format' => 'required|string|in:json,csv,xml,xls',
             'filters' => 'nullable|array',
             'fields' => 'required|array|min:1',
-            'fields.*.key' => 'required|string',
-            'fields.*.label' => 'nullable|string|max:255',
-            'fields.*.modifiers' => 'nullable|array',
-            'fields.*.modifiers.currency_id' => 'nullable|integer|exists:currencies,id',
-            'fields.*.modifiers.true_value' => 'nullable|string|max:50',
-            'fields.*.modifiers.false_value' => 'nullable|string|max:50',
-            'fields.*.modifiers.separator' => 'nullable|string|max:20',
-            'fields.*.modifiers.multiply' => 'nullable|numeric',
-            'fields.*.modifiers.add' => 'nullable|numeric',
             'is_active' => 'boolean',
             'client_user_id' => 'required|exists:users,id',
-        ], [
+        ], $this->exportFieldRules()), [
             'name.required' => 'Название обязательно',
             'name.max' => 'Название не должно превышать 255 символов',
             'format.required' => 'Формат обязателен',
@@ -125,23 +118,14 @@ class ProductExportController extends Controller
             abort(403);
         }
 
-        $validated = $request->validate([
+        $validated = $request->validate(array_merge([
             'name' => 'required|string|max:255',
             'format' => 'required|string|in:json,csv,xml,xls',
             'filters' => 'nullable|array',
             'fields' => 'required|array|min:1',
-            'fields.*.key' => 'required|string',
-            'fields.*.label' => 'nullable|string|max:255',
-            'fields.*.modifiers' => 'nullable|array',
-            'fields.*.modifiers.currency_id' => 'nullable|integer|exists:currencies,id',
-            'fields.*.modifiers.true_value' => 'nullable|string|max:50',
-            'fields.*.modifiers.false_value' => 'nullable|string|max:50',
-            'fields.*.modifiers.separator' => 'nullable|string|max:20',
-            'fields.*.modifiers.multiply' => 'nullable|numeric',
-            'fields.*.modifiers.add' => 'nullable|numeric',
             'is_active' => 'boolean',
             'client_user_id' => 'required|exists:users,id',
-        ], [
+        ], $this->exportFieldRules()), [
             'name.required' => 'Название обязательно',
             'name.max' => 'Название не должно превышать 255 символов',
             'format.required' => 'Формат обязателен',
@@ -173,20 +157,11 @@ class ProductExportController extends Controller
      */
     public function preview(Request $request)
     {
-        $request->validate([
+        $request->validate(array_merge([
             'filters' => 'nullable|array',
             'fields' => 'required|array|min:1',
-            'fields.*.key' => 'required|string',
-            'fields.*.label' => 'nullable|string|max:255',
-            'fields.*.modifiers' => 'nullable|array',
-            'fields.*.modifiers.currency_id' => 'nullable|integer|exists:currencies,id',
-            'fields.*.modifiers.true_value' => 'nullable|string|max:50',
-            'fields.*.modifiers.false_value' => 'nullable|string|max:50',
-            'fields.*.modifiers.separator' => 'nullable|string|max:20',
-            'fields.*.modifiers.multiply' => 'nullable|numeric',
-            'fields.*.modifiers.add' => 'nullable|numeric',
             'client_user_id' => 'nullable|exists:users,id',
-        ]);
+        ], $this->exportFieldRules()));
 
         $result = $this->exportService->preview(
             $request->input('filters', []),

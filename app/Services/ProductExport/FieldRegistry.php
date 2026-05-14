@@ -118,6 +118,14 @@ class FieldRegistry
             new Fields\AdditionalImagesField,
             new Fields\AllImagesField,
             new Fields\VideoField,
+            // Отдельные колонки на каждое изображение по порядку (image.0 — main,
+            // image.1 / image.2 / image.3 / image.4 — следующие из additional).
+            // Партнёры часто ждут эти колонки отдельно (image, image1, image2…).
+            new Fields\ImageByPositionField(0),
+            new Fields\ImageByPositionField(1),
+            new Fields\ImageByPositionField(2),
+            new Fields\ImageByPositionField(3),
+            new Fields\ImageByPositionField(4),
 
             // Пользовательские (по клиенту) — с инжекцией сервисов
             new Fields\DiscountedPriceField($this->priceService),
