@@ -4,16 +4,15 @@ namespace App\Http\Controllers;
 
 use App\Jobs\GenerateProductExportJob;
 use App\Models\ProductExport;
+use App\Services\ProductExport\Presets\CustomFieldsPreset;
 use App\Services\ProductExport\Presets\PresetInterface;
 use App\Services\ProductExport\Presets\PresetRegistry;
-use App\Services\ProductExportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 
 class ProductExportDownloadController extends Controller
 {
     public function __construct(
-        protected ProductExportService $exportService,
         protected PresetRegistry $presetRegistry,
     ) {}
 
@@ -21,7 +20,9 @@ class ProductExportDownloadController extends Controller
      * Download an export file by hash.
      * This is a public route — security is ensured by the hash uniqueness.
      *
-     * Supports both custom exports and preset exports with caching.
+     * Both custom and preset exports пройдут одинаковый асинхронный пайплайн
+     * с кэшированием в storage/app/exports/{hash} и фоновой прогрев-генерацией
+     * через GenerateProductExportJob.
      */
     public function download(string $hash)
     {
@@ -29,17 +30,11 @@ class ProductExportDownloadController extends Controller
             ->where('is_active', true)
             ->firstOrFail();
 
-        // Пресетная выгрузка — асинхронный пайплайн.
-        if ($export->isPreset()) {
-            return $this->handlePresetDownload($export);
-        }
-
-        // Кастомная выгрузка — оригинальная синхронная логика.
-        return $this->exportService->generate($export);
+        return $this->handleAsyncDownload($export);
     }
 
     /**
-     * Стратегия отдачи пресетной выгрузки:
+     * Стратегия отдачи выгрузки (общая для preset и custom):
      *
      *  1) Свежий кэш (< 10 минут) → отдаём моментально.
      *  2) Иначе диспатчим GenerateProductExportJob (ShouldBeUnique гасит дубликаты).
@@ -47,9 +42,11 @@ class ProductExportDownloadController extends Controller
      *     На async-очереди файл может быть ещё не готов → отдаём stale-копию (если есть)
      *     с заголовком X-Export-Stale, либо 202 со статусом, чтобы клиент ждал.
      */
-    protected function handlePresetDownload(ProductExport $export)
+    protected function handleAsyncDownload(ProductExport $export)
     {
-        $preset = $this->presetRegistry->resolve($export->preset);
+        $preset = $export->isPreset()
+            ? $this->presetRegistry->resolve($export->preset)
+            : app(CustomFieldsPreset::class);
         abort_if(! $preset, 404, 'Формат выгрузки не найден.');
 
         if ($this->hasFreshCacheFile($export)) {
@@ -92,11 +89,29 @@ class ProductExportDownloadController extends Controller
     protected function streamCachedFile(ProductExport $export, PresetInterface $preset, bool $stale = false)
     {
         $filePath = $export->getCacheFilePath();
-        $filename = "export_{$preset->key()}_".now()->format('Y-m-d').".{$preset->fileExtension()}";
+        // Для кастомных выгрузок имя/MIME берём из $export->format, потому что
+        // PresetInterface не получает контекст экспорта в fileExtension()/mimeType()
+        // и не может отдать корректное значение вне writeToStream().
+        if ($export->isPreset()) {
+            $extension = $preset->fileExtension();
+            $mimeType = $preset->mimeType();
+            $slug = $preset->key();
+        } else {
+            $extension = $export->format->extension();
+            $mimeType = match ($export->format) {
+                \App\Enums\ExportFormat::JSON => 'application/json; charset=utf-8',
+                \App\Enums\ExportFormat::XML => 'application/xml; charset=utf-8',
+                \App\Enums\ExportFormat::XLS => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                default => 'text/csv; charset=utf-8',
+            };
+            $slug = \Illuminate\Support\Str::slug($export->name ?: 'export', '_');
+        }
+
+        $filename = "export_{$slug}_".now()->format('Y-m-d').".{$extension}";
 
         $export->update(['last_downloaded_at' => now()]);
 
-        $headers = ['Content-Type' => $preset->mimeType()];
+        $headers = ['Content-Type' => $mimeType];
         if ($stale) {
             $headers['X-Export-Stale'] = '1';
         }

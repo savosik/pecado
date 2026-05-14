@@ -5,6 +5,7 @@ namespace App\Services\ProductExport;
 use App\Models\ProductExport;
 use App\Models\ProductExportRun;
 use App\Services\ProductExport\Presets\AbstractPreset;
+use App\Services\ProductExport\Presets\CustomFieldsPreset;
 use App\Services\ProductExport\Presets\PresetInterface;
 use App\Services\ProductExport\Presets\PresetRegistry;
 use Illuminate\Support\Facades\Log;
@@ -59,7 +60,9 @@ class ProductExportGenerator
                 'finished_at' => now(),
                 'duration_ms' => $duration,
                 'bytes' => $bytes,
-                'rows_count' => $preset instanceof AbstractPreset ? $preset->getRowsProcessed() : null,
+                // AbstractPreset и CustomFieldsPreset оба умеют считать строки;
+                // method_exists короче, чем плодить ещё один интерфейс ради одного метода.
+                'rows_count' => method_exists($preset, 'getRowsProcessed') ? $preset->getRowsProcessed() : null,
             ]);
 
             $export->update([
@@ -90,14 +93,27 @@ class ProductExportGenerator
         }
     }
 
+    /**
+     * Резолвит пресет: либо именованный (yml, shopify…), либо внутренний
+     * адаптер для кастомных выгрузок (preset = null).
+     *
+     * Why: кастомные выгрузки изначально шли через синхронный StreamedResponse,
+     * но для каталогов 5к+ они упирались в PHP-таймаут. После переезда на этот
+     * генератор любая выгрузка кэшируется в storage/app/exports/{hash}, и
+     * GenerateProductExportJob может прогревать её в фоне.
+     */
     protected function resolvePreset(ProductExport $export): PresetInterface
     {
-        $preset = $this->presetRegistry->resolve($export->preset);
-        if (! $preset) {
-            throw new RuntimeException("Пресет «{$export->preset}» не найден.");
+        if ($export->isPreset()) {
+            $preset = $this->presetRegistry->resolve($export->preset);
+            if (! $preset) {
+                throw new RuntimeException("Пресет «{$export->preset}» не найден.");
+            }
+
+            return $preset;
         }
 
-        return $preset;
+        return app(CustomFieldsPreset::class);
     }
 
     /**
