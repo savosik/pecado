@@ -35,11 +35,14 @@ const BOOLEAN_PRESETS = [
 // Шлём код, а не сырой символ: Laravel TrimStrings обрезает пробелы и `\n`
 // до того как значение дойдёт до контроллера, и разделители ломаются.
 const SEPARATOR_OPTIONS = [
-    { value: 'comma',     label: 'Запятая  ( , )' },
-    { value: 'semicolon', label: 'Точка с запятой  ( ; )' },
-    { value: 'pipe',      label: 'Вертикальная черта  ( | )' },
-    { value: 'newline',   label: 'Новая строка  (↵)' },
-    { value: 'slash',     label: 'Слеш  ( / )' },
+    { value: 'comma',           label: 'Запятая  ( , )' },
+    { value: 'comma_tight',     label: 'Запятая без пробела  (,)' },
+    { value: 'semicolon',       label: 'Точка с запятой  ( ; )' },
+    { value: 'semicolon_tight', label: 'Точка с запятой без пробела  (;)' },
+    { value: 'pipe',            label: 'Вертикальная черта  ( | )' },
+    { value: 'newline',         label: 'Новая строка  (↵)' },
+    { value: 'slash',           label: 'Слеш  ( / )' },
+    { value: 'slash_tight',     label: 'Слеш без пробела  (/)' },
 ];
 
 // Подблок для арифметических модификаторов: × multiply, + add.

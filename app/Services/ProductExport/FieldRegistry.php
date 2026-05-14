@@ -5,6 +5,7 @@ namespace App\Services\ProductExport;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Attribute;
+use App\Models\Warehouse;
 use Illuminate\Support\Collection;
 
 /**
@@ -38,6 +39,7 @@ class FieldRegistry
 
         $this->registerStaticFields();
         $this->registerDynamicAttributes();
+        $this->registerDynamicWarehouses();
         $this->booted = true;
     }
 
@@ -77,6 +79,7 @@ class FieldRegistry
             new Fields\BrandNameField,
             new Fields\BrandSlugField,
             new Fields\BrandCategoryField,
+            new Fields\BrandExternalIdField,
 
             // Модель (экспорт)
             new Fields\ModelNameField,
@@ -85,6 +88,8 @@ class FieldRegistry
             // Категории (экспорт)
             new Fields\CategoriesNameField,
             new Fields\CategoryPathField,
+            new Fields\CategoryIdField,
+            new Fields\CategoryExternalIdField,
 
             // Сертификаты (экспорт)
             new Fields\CertificatesNameField,
@@ -152,6 +157,19 @@ class FieldRegistry
         }
     }
 
+    /**
+     * Регистрация динамических полей «Остаток по складу X» из БД.
+     */
+    protected function registerDynamicWarehouses(): void
+    {
+        $warehouses = Warehouse::query()->orderBy('name')->get();
+
+        foreach ($warehouses as $warehouse) {
+            $field = new Fields\WarehouseQuantityField($warehouse, $this->stockService);
+            $this->fields->put($field->key(), $field);
+        }
+    }
+
     // ─── Public API ──────────────────────────────
 
     /**
@@ -172,7 +190,7 @@ class FieldRegistry
     {
         $this->boot();
 
-        // Прямой поиск (статические поля + attr.{id})
+        // Прямой поиск (статические поля + attr.{id} + warehouse.{id}.quantity)
         if ($this->fields->has($key)) {
             return $this->fields->get($key);
         }
@@ -193,6 +211,18 @@ class FieldRegistry
                 return $field instanceof DynamicAttributeField
                     && $field->getAttributeSlug() === $identifier;
             });
+        }
+
+        // image.{N} — виртуальное поле изображения по позиции (0 — главное)
+        if (preg_match('/^image\.(\d+)$/', $key, $m)) {
+            return new Fields\ImageByPositionField((int) $m[1]);
+        }
+
+        // placeholder.{slug} — виртуальная пустая колонка
+        if (str_starts_with($key, 'placeholder.')) {
+            $slug = substr($key, strlen('placeholder.'));
+
+            return new Fields\EmptyPlaceholderField($slug);
         }
 
         // Legacy: attribute filter

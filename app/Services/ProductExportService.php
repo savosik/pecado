@@ -337,10 +337,13 @@ class ProductExportService
      */
     protected const SEPARATOR_MAP = [
         'comma' => ', ',
+        'comma_tight' => ',',
         'semicolon' => '; ',
+        'semicolon_tight' => ';',
         'pipe' => ' | ',
         'newline' => "\n",
         'slash' => ' / ',
+        'slash_tight' => '/',
     ];
 
     protected function applyMultiValueModifier(mixed $value, array $modifiers): mixed

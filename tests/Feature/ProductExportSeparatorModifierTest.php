@@ -49,10 +49,13 @@ class ProductExportSeparatorModifierTest extends TestCase
 
         $cases = [
             'comma' => '111, 222, 333',
+            'comma_tight' => '111,222,333',
             'semicolon' => '111; 222; 333',
+            'semicolon_tight' => '111;222;333',
             'pipe' => '111 | 222 | 333',
             'newline' => "111\n222\n333",
             'slash' => '111 / 222 / 333',
+            'slash_tight' => '111/222/333',
         ];
 
         foreach ($cases as $code => $expected) {
