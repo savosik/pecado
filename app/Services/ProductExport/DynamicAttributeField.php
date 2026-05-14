@@ -70,6 +70,22 @@ class DynamicAttributeField extends ExportField
         };
     }
 
+    /**
+     * Модификаторы экспорта зависят от типа атрибута: number — арифметика
+     * и integer_if_whole, boolean — кастомные true/false-метки.
+     * Why: ранее number-атрибуты типа `partner_retail_price` уходили в выгрузку
+     * как `0.0000` из decimal-каста, и для совместимости с партнёрским
+     * форматом «0» приходилось делать substring/обрезку строки.
+     */
+    public function modifierType(): ?string
+    {
+        return match ($this->attribute->type) {
+            'number' => 'numeric',
+            'boolean' => 'boolean',
+            default => null,
+        };
+    }
+
     public function operators(): array
     {
         return match ($this->attribute->type) {

@@ -189,6 +189,34 @@ class ProductExportPartnerWave5Test extends TestCase
         $this->assertSame('SECOND', $value);
     }
 
+    public function test_dynamic_number_attribute_supports_numeric_modifier(): void
+    {
+        // partner_retail_price — number-атрибут, тип в БД хранится как decimal(15,4).
+        // С modifierType=numeric и integer_if_whole партнёр получит "1500" вместо "1500.0000".
+        $attr = Attribute::where('slug', 'partner_retail_price')->first();
+        $this->assertSame('numeric', (new \App\Services\ProductExport\DynamicAttributeField($attr))->modifierType());
+
+        $product = Product::factory()->create(['code' => 'NUM-001']);
+        DB::table('product_attribute_values')->insert([
+            'product_id' => $product->id,
+            'attribute_id' => $attr->id,
+            'number_value' => 1500,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $service = app(\App\Services\ProductExportService::class);
+        $export = (new \App\Models\ProductExport)->forceFill([
+            'fields' => [
+                ['key' => 'attribute.partner_retail_price', 'modifiers' => ['integer_if_whole' => true]],
+            ],
+            'filters' => [['field' => 'id', 'operator' => '=', 'value' => $product->id]],
+        ]);
+
+        $row = $service->fetchData($export, 1)->first();
+        $this->assertSame(1500, $row['attribute.partner_retail_price']);
+    }
+
     public function test_substring_works_for_field_without_modifier_type(): void
     {
         // external_id — текстовое поле без modifierType. substring-модификатор
