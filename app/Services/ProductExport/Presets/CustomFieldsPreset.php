@@ -355,6 +355,7 @@ class CustomFieldsPreset implements PresetInterface
             'price' => $this->applyPriceModifier($value, $modifiers),
             'numeric' => $this->applyNumericModifier($value, $modifiers),
             'multi_value' => $this->applyMultiValueModifier($value, $modifiers),
+            'date' => $this->applyDateModifier($value, $modifiers),
             default => $value,
         };
     }
@@ -381,7 +382,13 @@ class CustomFieldsPreset implements PresetInterface
             }
         }
 
-        return round($this->applyArithmetic($price, $modifiers), 2);
+        $result = round($this->applyArithmetic($price, $modifiers), 2);
+
+        if (! empty($modifiers['integer_if_whole']) && abs($result - round($result)) < 0.005) {
+            return (int) round($result);
+        }
+
+        return $result;
     }
 
     protected function applyNumericModifier(mixed $value, array $modifiers): mixed
@@ -395,8 +402,20 @@ class CustomFieldsPreset implements PresetInterface
 
         $result = $this->applyArithmetic((float) $value, $modifiers);
 
+        if (! empty($modifiers['integer_if_whole']) && abs($result - round($result)) < 0.005) {
+            return (int) round($result);
+        }
+
         return $isIntInput ? (int) round($result) : round($result, 2);
     }
+
+    protected const SOURCE_SEPARATOR_REGEX = [
+        'comma' => '/\s*,\s*/',
+        'semicolon' => '/\s*;\s*/',
+        'pipe' => '/\s*\|\s*/',
+        'slash' => '/\s*\/\s*/',
+        'newline' => '/\s*\n\s*/',
+    ];
 
     protected function applyMultiValueModifier(mixed $value, array $modifiers): mixed
     {
@@ -407,9 +426,30 @@ class CustomFieldsPreset implements PresetInterface
         $raw = $modifiers['separator'] ?? 'comma';
         $separator = (self::SEPARATOR_MAP[$raw] ?? $raw) ?: ', ';
 
-        $parts = preg_split('/\s*,\s*/', $value);
+        $source = $modifiers['source_separator'] ?? 'comma';
+        $sourceRegex = self::SOURCE_SEPARATOR_REGEX[$source] ?? self::SOURCE_SEPARATOR_REGEX['comma'];
+
+        $parts = preg_split($sourceRegex, $value);
 
         return implode($separator, $parts);
+    }
+
+    protected function applyDateModifier(mixed $value, array $modifiers): mixed
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+        $format = $modifiers['format'] ?? null;
+        if (! $format) {
+            return $value;
+        }
+        try {
+            $dt = $value instanceof \DateTimeInterface ? $value : new \DateTimeImmutable((string) $value);
+        } catch (\Exception) {
+            return $value;
+        }
+
+        return $dt->format($format);
     }
 
     protected function applyArithmetic(float $value, array $modifiers): float

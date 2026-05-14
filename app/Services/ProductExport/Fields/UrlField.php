@@ -2,6 +2,8 @@
 
 namespace App\Services\ProductExport\Fields;
 
+use App\Models\Product;
+use App\Models\User;
 use App\Services\ProductExport\ProductColumnField;
 
 class UrlField extends ProductColumnField
@@ -18,7 +20,7 @@ class UrlField extends ProductColumnField
 
     public function description(): string
     {
-        return 'Полный URL страницы товара на сайте';
+        return 'Полный URL страницы товара на сайте. Если в карточке поле пусто — генерируется как /products/{slug}.';
     }
 
     public function group(): string
@@ -39,5 +41,23 @@ class UrlField extends ProductColumnField
     public function isFilterable(): bool
     {
         return false;
+    }
+
+    /**
+     * Фолбэк на сгенерированный URL по slug. Why: в `products.url` сейчас
+     * NULL у всех товаров — поле под партнёрский ручной override, которым
+     * на проде никто не пользуется, поэтому выгрузка без фолбэка отдавала
+     * пустую колонку.
+     */
+    public function getValue(Product $product, ?User $clientUser = null): mixed
+    {
+        $direct = parent::getValue($product, $clientUser);
+        if ($direct !== null && $direct !== '') {
+            return $direct;
+        }
+
+        return $product->slug
+            ? url('/products/'.$product->slug)
+            : null;
     }
 }

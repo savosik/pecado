@@ -18,7 +18,7 @@ class TnvedField extends ProductColumnField
 
     public function description(): string
     {
-        return 'Код ТН ВЭД для таможенного оформления';
+        return 'Код ТН ВЭД для таможенного оформления (хранится в products.hs_code).';
     }
 
     public function group(): string
@@ -26,9 +26,15 @@ class TnvedField extends ProductColumnField
         return 'Основные';
     }
 
+    /**
+     * В БД код ТН ВЭД хранится в колонке `hs_code` (Harmonised System code),
+     * добавленной миграцией `2026_04_25_120000_add_dimensions_and_classification_to_products_table`.
+     * Старое имя `tnved` оставлено только в ключе поля для обратной совместимости
+     * с уже сохранёнными конфигами выгрузок.
+     */
     protected function column(): string
     {
-        return 'tnved';
+        return 'hs_code';
     }
 
     protected function columnType(): string

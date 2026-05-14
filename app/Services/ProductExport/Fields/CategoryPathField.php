@@ -33,6 +33,17 @@ class CategoryPathField extends ExportField
         return false;
     }
 
+    /**
+     * Поддерживает multi_value-модификатор: клиент может указать
+     * `source_separator=slash` (входной разделитель — слеш с пробелами,
+     * как мы пишем по умолчанию) и любой целевой `separator` —
+     * например `slash_tight` чтобы получить "А/Б/В" без пробелов.
+     */
+    public function modifierType(): ?string
+    {
+        return 'multi_value';
+    }
+
     public function eagerLoad(): array
     {
         return ['category.ancestors'];

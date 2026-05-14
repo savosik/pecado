@@ -242,6 +242,7 @@ class ProductExportService
             'price' => $this->applyPriceModifier($value, $modifiers),
             'numeric' => $this->applyNumericModifier($value, $modifiers),
             'multi_value' => $this->applyMultiValueModifier($value, $modifiers),
+            'date' => $this->applyDateModifier($value, $modifiers),
             default => $value,
         };
     }
@@ -270,7 +271,16 @@ class ProductExportService
             }
         }
 
-        return round($this->applyArithmetic($price, $modifiers), 2);
+        $result = round($this->applyArithmetic($price, $modifiers), 2);
+
+        // Партнёрские прайсы часто пишут целые цены без `.00` — отдаём int,
+        // когда математически округление сходится. Применяется и к ценовому,
+        // и к числовому модификатору (там — рядом).
+        if (! empty($modifiers['integer_if_whole']) && abs($result - round($result)) < 0.005) {
+            return (int) round($result);
+        }
+
+        return $result;
     }
 
     /**
@@ -296,6 +306,14 @@ class ProductExportService
             || (is_string($value) && ctype_digit(ltrim($value, '-')));
 
         $result = $this->applyArithmetic((float) $value, $modifiers);
+
+        // Флаг `integer_if_whole` — для партнёров, которым нужно "980" вместо
+        // "980.00" в выгрузке (например, sex-opt-формат пишет цены целыми, если
+        // там нет копеек). Без флага — стандартное поведение: int → int,
+        // float → 2 знака.
+        if (! empty($modifiers['integer_if_whole']) && abs($result - round($result)) < 0.005) {
+            return (int) round($result);
+        }
 
         return $isIntInput ? (int) round($result) : round($result, 2);
     }
@@ -346,6 +364,19 @@ class ProductExportService
         'slash_tight' => '/',
     ];
 
+    /**
+     * Регулярки для исходных разделителей — что искать в строке от поля,
+     * чтобы разбить на части. По умолчанию запятая, как пишут multi_value-поля
+     * (barcodes, additional_images, warehouse_names и т.п.).
+     */
+    protected const SOURCE_SEPARATOR_REGEX = [
+        'comma' => '/\s*,\s*/',
+        'semicolon' => '/\s*;\s*/',
+        'pipe' => '/\s*\|\s*/',
+        'slash' => '/\s*\/\s*/',
+        'newline' => '/\s*\n\s*/',
+    ];
+
     protected function applyMultiValueModifier(mixed $value, array $modifiers): mixed
     {
         if (! is_string($value)) {
@@ -357,9 +388,43 @@ class ProductExportService
         // пустую строку (после TrimStrings) ловим финальным fallback на запятую.
         $separator = (self::SEPARATOR_MAP[$raw] ?? $raw) ?: ', ';
 
-        $parts = preg_split('/\s*,\s*/', $value);
+        // Поле может писать значение не через запятую: CategoryPathField пишет
+        // через " / ", может прилететь pipe-список и т.д. Параметр
+        // `source_separator` определяет регулярку для разбиения.
+        $source = $modifiers['source_separator'] ?? 'comma';
+        $sourceRegex = self::SOURCE_SEPARATOR_REGEX[$source] ?? self::SOURCE_SEPARATOR_REGEX['comma'];
+
+        $parts = preg_split($sourceRegex, $value);
 
         return implode($separator, $parts);
+    }
+
+    /**
+     * Форматирование дат: принимает Carbon / DateTime / ISO-строку, возвращает
+     * строку по PHP-формату. Why: партнёры просят DD.MM.YYYY HH:MM:SS вместо
+     * нашего дефолта `Y-m-d H:i:s`, и проще дать модификатор, чем плодить
+     * field-варианты на каждый формат.
+     */
+    protected function applyDateModifier(mixed $value, array $modifiers): mixed
+    {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $format = $modifiers['format'] ?? null;
+        if (! $format) {
+            return $value;
+        }
+
+        try {
+            $dt = $value instanceof \DateTimeInterface
+                ? $value
+                : new \DateTimeImmutable((string) $value);
+        } catch (\Exception) {
+            return $value;
+        }
+
+        return $dt->format($format);
     }
 
     /**

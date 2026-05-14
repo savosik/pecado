@@ -45,6 +45,9 @@ abstract class ProductColumnField extends ExportField
         if ($this->columnType() === 'numeric') {
             return 'numeric';
         }
+        if ($this->columnType() === 'date') {
+            return 'date';
+        }
 
         return null;
     }
@@ -82,8 +85,14 @@ abstract class ProductColumnField extends ExportField
     {
         $value = $product->{$this->column()};
 
+        // DateTime отдаём как объект, если поле помечено как date: модификатор
+        // `date` сможет применить любой format-string. Для остальных типов
+        // (текстовых колонок, у которых случайно тип DateTime — не наш кейс)
+        // оставляем строковый дефолт `Y-m-d H:i:s` для обратной совместимости.
         if ($value instanceof \DateTimeInterface) {
-            return $value->format('Y-m-d H:i:s');
+            return $this->columnType() === 'date'
+                ? $value
+                : $value->format('Y-m-d H:i:s');
         }
 
         return $value;
