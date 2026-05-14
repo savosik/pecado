@@ -47,7 +47,7 @@ return new class extends Migration
                 continue;
             }
 
-            DB::table('attributes')->insert([
+            $data = [
                 'external_id' => Str::uuid()->toString(),
                 'name' => $attr['name'],
                 'slug' => $attr['slug'],
@@ -62,7 +62,14 @@ return new class extends Migration
                 'attribute_group_id' => $groupId,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ]);
+            ];
+            // is_partner_only добавляется отдельной миграцией позже —
+            // ставим только если колонка уже существует (для прогона на
+            // свежей БД, где обе миграции идут подряд).
+            if (\Illuminate\Support\Facades\Schema::hasColumn('attributes', 'is_partner_only')) {
+                $data['is_partner_only'] = true;
+            }
+            DB::table('attributes')->insert($data);
         }
     }
 

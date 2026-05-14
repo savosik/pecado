@@ -31,7 +31,7 @@ return new class extends Migration
             ]);
         }
 
-        DB::table('attributes')->insert([
+        $data = [
             'external_id' => Str::uuid()->toString(),
             'name' => 'Код категории поставщика',
             'slug' => 'partner_category_code',
@@ -46,7 +46,11 @@ return new class extends Migration
             'attribute_group_id' => $groupId,
             'created_at' => now(),
             'updated_at' => now(),
-        ]);
+        ];
+        if (\Illuminate\Support\Facades\Schema::hasColumn('attributes', 'is_partner_only')) {
+            $data['is_partner_only'] = true;
+        }
+        DB::table('attributes')->insert($data);
     }
 
     public function down(): void

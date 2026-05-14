@@ -70,6 +70,7 @@ class Attribute extends Model
         'show_on_site',
         'show_in_export',
         'is_variant_forming',
+        'is_partner_only',
         'sort_order',
         'attribute_group_id',
     ];
@@ -87,6 +88,7 @@ class Attribute extends Model
             'show_on_site' => 'boolean',
             'show_in_export' => 'boolean',
             'is_variant_forming' => 'boolean',
+            'is_partner_only' => 'boolean',
             'sort_order' => 'integer',
         ];
     }

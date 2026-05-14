@@ -182,6 +182,14 @@ abstract class AbstractPreset implements PresetInterface
             if ($attr && (! $attr->is_active || ! $attr->show_in_export)) {
                 continue;
             }
+            // is_partner_only — атрибуты с данными из 1С внешнего партнёра
+            // (например, `partner_group_code` под формат sex-opt). Они полезны
+            // только в кастомных партнёрских выгрузках, а в стандартные
+            // пресеты (YML, Shopify, Google Merchant, Tilda…) попадать не
+            // должны — там это бесполезный шум из чужой системы.
+            if ($attr && $attr->is_partner_only) {
+                continue;
+            }
 
             $attrName = $attr?->name ?? "attr_{$av->attribute_id}";
             $attrUnit = $attr?->unit;
