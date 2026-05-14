@@ -111,12 +111,37 @@ class ProductExportDownloadController extends Controller
 
         $export->update(['last_downloaded_at' => now()]);
 
-        $headers = ['Content-Type' => $mimeType];
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
         if ($stale) {
             $headers['X-Export-Stale'] = '1';
         }
 
+        // X-Accel-Redirect: nginx сам стримит файл с диска через internal
+        // location /__internal_exports/, минуя PHP-FPM. Это снимает таймауты
+        // и буферизацию для крупных выгрузок (10+ MB). На non-nginx (тесты,
+        // PHP built-in server) X-Accel-Redirect игнорируется — для них есть
+        // fallback на response()->download().
+        if ($this->shouldUseXAccelRedirect()) {
+            $headers['X-Accel-Redirect'] = '/__internal_exports/'.$export->hash;
+
+            return response('', 200, $headers);
+        }
+
         return response()->download($filePath, $filename, $headers);
+    }
+
+    /**
+     * Используем X-Accel-Redirect только когда видим nginx upstream:
+     * заголовок $_SERVER['SERVER_SOFTWARE'] начинается с "nginx" — это даёт
+     * Symfony/Laravel при работе через PHP-FPM, и не даёт под php-cli/built-in.
+     */
+    protected function shouldUseXAccelRedirect(): bool
+    {
+        return config('app.env') !== 'testing'
+            && str_starts_with((string) ($_SERVER['SERVER_SOFTWARE'] ?? ''), 'nginx');
     }
 
     protected function pendingResponse(ProductExport $export): JsonResponse
