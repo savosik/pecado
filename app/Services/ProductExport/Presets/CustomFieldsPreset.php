@@ -347,10 +347,10 @@ class CustomFieldsPreset implements PresetInterface
     protected function applyModifiers(mixed $value, ?string $modifierType, array $modifiers): mixed
     {
         if (! $modifierType) {
-            return $value;
+            return $this->applySubstringModifier($value, $modifiers);
         }
 
-        return match ($modifierType) {
+        $result = match ($modifierType) {
             'boolean' => $this->applyBooleanModifier($value, $modifiers),
             'price' => $this->applyPriceModifier($value, $modifiers),
             'numeric' => $this->applyNumericModifier($value, $modifiers),
@@ -358,6 +358,22 @@ class CustomFieldsPreset implements PresetInterface
             'date' => $this->applyDateModifier($value, $modifiers),
             default => $value,
         };
+
+        return $this->applySubstringModifier($result, $modifiers);
+    }
+
+    protected function applySubstringModifier(mixed $value, array $modifiers): mixed
+    {
+        if (! isset($modifiers['substring_length'])) {
+            return $value;
+        }
+        if ($value === null || $value === '') {
+            return $value;
+        }
+        $str = is_string($value) ? $value : (string) $value;
+        $start = (int) ($modifiers['substring_start'] ?? 0);
+
+        return mb_substr($str, $start, (int) $modifiers['substring_length']);
     }
 
     protected function applyBooleanModifier(mixed $value, array $modifiers): string

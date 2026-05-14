@@ -233,11 +233,14 @@ class ProductExportService
      */
     protected function applyModifiers(mixed $value, ?string $modifierType, array $modifiers): mixed
     {
+        // substring — пост-модификатор, работает поверх любого основного
+        // типа и даже без него (для строковых полей вроде external_id,
+        // category.external_id). Поэтому раннего return по $modifierType нет.
         if (! $modifierType) {
-            return $value;
+            return $this->applySubstringModifier($value, $modifiers);
         }
 
-        return match ($modifierType) {
+        $result = match ($modifierType) {
             'boolean' => $this->applyBooleanModifier($value, $modifiers),
             'price' => $this->applyPriceModifier($value, $modifiers),
             'numeric' => $this->applyNumericModifier($value, $modifiers),
@@ -245,6 +248,27 @@ class ProductExportService
             'date' => $this->applyDateModifier($value, $modifiers),
             default => $value,
         };
+
+        // substring — общий пост-модификатор для любого типа: партнёры иногда
+        // ждут UUID обрезанным до фиксированной длины (например, sex-opt пишет
+        // category_code = 16 символов UUID). Применяется к строковому
+        // результату после основного модификатора.
+        return $this->applySubstringModifier($result, $modifiers);
+    }
+
+    protected function applySubstringModifier(mixed $value, array $modifiers): mixed
+    {
+        if (! isset($modifiers['substring_length'])) {
+            return $value;
+        }
+        if ($value === null || $value === '') {
+            return $value;
+        }
+        $str = is_string($value) ? $value : (string) $value;
+        $start = (int) ($modifiers['substring_start'] ?? 0);
+        $length = (int) $modifiers['substring_length'];
+
+        return mb_substr($str, $start, $length);
     }
 
     protected function applyBooleanModifier(mixed $value, array $modifiers): string

@@ -190,6 +190,16 @@ class FieldRegistry
     {
         $this->boot();
 
+        // Алиас для дублей: ключ `category_path#alt` резолвится в то же поле,
+        // что и `category_path`, но даёт отдельную колонку в выгрузке. Why:
+        // некоторые партнёры пишут одно и то же значение в две разные колонки
+        // (например, sex-opt отдаёт category_title и category_new_title как
+        // одинаковые строки) — без алиаса второй ключ перезаписал бы первый
+        // в массиве $row.
+        if (($hashPos = strpos($key, '#')) !== false) {
+            $key = substr($key, 0, $hashPos);
+        }
+
         // Прямой поиск (статические поля + attr.{id} + warehouse.{id}.quantity)
         if ($this->fields->has($key)) {
             return $this->fields->get($key);
