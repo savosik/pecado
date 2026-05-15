@@ -172,10 +172,17 @@ class CustomFieldsPreset implements PresetInterface
 
     protected function writeJson($stream, ProductExport $export): void
     {
-        $all = [];
-        $this->eachChunk($export, function (Collection $rows) use (&$all) {
+        // Why: предыдущая реализация копила весь массив товаров в PHP-массиве и
+        // делала один fwrite() в конце — для каталога ~5к товаров × 250 полей
+        // пик памяти доходил до 260+ МБ, на грани soft-лимита worker'а
+        // (--memory=256). Стримим JSON поэлементно, чтобы пик памяти упирался
+        // в один чанк (CHUNK_SIZE товаров), а tmp-файл реально рос на диске
+        // и наблюдатель видел прогресс.
+        fwrite($stream, "[\n");
+        $first = true;
+
+        $this->eachChunk($export, function (Collection $rows) use ($stream, &$first) {
             foreach ($rows as $row) {
-                // Чистим null-атрибуты
                 $clean = array_filter($row, function ($value, $key) {
                     if (str_starts_with($key, 'attribute.') && $value === null) {
                         return false;
@@ -183,11 +190,19 @@ class CustomFieldsPreset implements PresetInterface
 
                     return true;
                 }, ARRAY_FILTER_USE_BOTH);
-                $all[] = $clean;
+
+                $json = json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                $indented = preg_replace('/^/m', '    ', $json);
+
+                if (! $first) {
+                    fwrite($stream, ",\n");
+                }
+                fwrite($stream, $indented);
+                $first = false;
             }
         });
 
-        fwrite($stream, json_encode($all, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
+        fwrite($stream, "\n]");
     }
 
     protected function writeXml($stream, ProductExport $export): void
