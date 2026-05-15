@@ -53,6 +53,28 @@ class StockService implements StockServiceInterface
      */
     public function getAvailableStockMap(iterable $products, ?User $user = null): array
     {
+        return $this->stockMapByWarehouseType($products, $user, 'primary');
+    }
+
+    /**
+     * Симметричная getAvailableStockMap карта по preorder-складам.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, int>
+     */
+    public function getPreorderStockMap(iterable $products, ?User $user = null): array
+    {
+        return $this->stockMapByWarehouseType($products, $user, 'preorder');
+    }
+
+    /**
+     * Общий батч-запрос остатков по типу склада (primary/preorder).
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, int>
+     */
+    private function stockMapByWarehouseType(iterable $products, ?User $user, string $type): array
+    {
         $result = [];
         $productIds = [];
         foreach ($products as $product) {
@@ -71,7 +93,7 @@ class StockService implements StockServiceInterface
 
         $warehouseIds = DB::table('region_warehouse')
             ->where('region_id', $regionId)
-            ->where('type', 'primary')
+            ->where('type', $type)
             ->pluck('warehouse_id');
 
         if ($warehouseIds->isEmpty()) {

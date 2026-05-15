@@ -36,4 +36,13 @@ interface StockServiceInterface
      * @return array<int, int>
      */
     public function getAvailableStockMap(iterable $products, ?User $user = null): array;
+
+    /**
+     * Получить карту preorder-остатков для коллекции товаров одним батч-запросом.
+     * Симметрично getAvailableStockMap, но по preorder-складам региона.
+     *
+     * @param  iterable<Product>  $products
+     * @return array<int, int>
+     */
+    public function getPreorderStockMap(iterable $products, ?User $user = null): array;
 }

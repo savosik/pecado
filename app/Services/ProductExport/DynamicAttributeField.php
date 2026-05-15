@@ -17,9 +17,24 @@ class DynamicAttributeField extends ExportField
 {
     protected Attribute $attribute;
 
+    /**
+     * Замороженный id/type атрибута. Why: extractSingleValue вызывается миллион
+     * раз (254 поля × 5к товаров для большой выгрузки), и каждый \$this->attribute->id
+     * проходит через __get → getAttribute → cast. Локальное property без магии
+     * экономит ~20% на map_rows для каталогов с большим числом attribute-полей.
+     */
+    protected int $attributeId;
+
+    protected bool $isBooleanType;
+
+    protected bool $isNumberType;
+
     public function __construct(Attribute $attribute)
     {
         $this->attribute = $attribute;
+        $this->attributeId = (int) $attribute->id;
+        $this->isBooleanType = $attribute->isBoolean();
+        $this->isNumberType = $attribute->isNumber();
     }
 
     // ─── Identification ────────────────────────────
@@ -228,8 +243,8 @@ class DynamicAttributeField extends ExportField
     {
         $indexed = $product->getExportRowCache('attr_index');
         $values = $indexed !== null
-            ? ($indexed->get($this->attribute->id) ?? collect())
-            : $product->attributeValues->where('attribute_id', $this->attribute->id);
+            ? ($indexed->get($this->attributeId) ?? collect())
+            : $product->attributeValues->where('attribute_id', $this->attributeId);
 
         return $values
             ->map(fn ($av) => $this->extractSingleValue($av))
@@ -240,12 +255,12 @@ class DynamicAttributeField extends ExportField
 
     protected function extractSingleValue(\App\Models\ProductAttributeValue $attrValue): mixed
     {
-        if ($this->attribute->isBoolean()) {
+        if ($this->isBooleanType) {
             return $attrValue->boolean_value !== null
                 ? ((bool) $attrValue->boolean_value ? 'Да' : 'Нет')
                 : null;
         }
-        if ($this->attribute->isNumber()) {
+        if ($this->isNumberType) {
             return $attrValue->number_value;
         }
         if ($attrValue->attribute_value_id) {

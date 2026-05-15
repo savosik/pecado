@@ -515,10 +515,15 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
             'stock_map',
             fn () => $this->stockService->getAvailableStockMap($productList, $clientUser),
         );
+        $preorderMap = $timer->measure(
+            'preorder_stock_map',
+            fn () => $this->stockService->getPreorderStockMap($productList, $clientUser),
+        );
 
         foreach ($productList as $product) {
             $product->setExportRowCache('price_result', $priceMap[$product->id] ?? null);
             $product->setExportRowCache('stock_available', $stockMap[$product->id] ?? 0);
+            $product->setExportRowCache('stock_preorder', $preorderMap[$product->id] ?? 0);
         }
     }
 

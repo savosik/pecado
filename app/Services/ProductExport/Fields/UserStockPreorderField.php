@@ -47,6 +47,11 @@ class UserStockPreorderField extends ExportField
             return 0;
         }
 
+        // Чанк-кеш: stockService->getPreorderStockMap делает 2 запроса на весь чанк.
+        if ($product->hasExportRowCache('stock_preorder')) {
+            return $product->getExportRowCache('stock_preorder') ?? 0;
+        }
+
         return $this->stockService->getPreorderStock($product, $clientUser);
     }
 }
