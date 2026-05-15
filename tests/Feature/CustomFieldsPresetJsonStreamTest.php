@@ -308,7 +308,7 @@ class CustomFieldsPresetJsonStreamTest extends TestCase
         $this->assertSame('SKU-1', $row['sku']);
     }
 
-    public function test_streamed_json_certificates_is_flat_string_array(): void
+    public function test_streamed_json_certificates_is_object_array_with_url(): void
     {
         $user = User::factory()->create();
         $product = Product::factory()->create();
@@ -320,7 +320,7 @@ class CustomFieldsPresetJsonStreamTest extends TestCase
         $export = ProductExport::create([
             'user_id' => $user->id,
             'client_user_id' => $user->id,
-            'name' => 'Certificates flat list test',
+            'name' => 'Certificates object test',
             'format' => ExportFormat::JSON,
             'fields' => [
                 ['key' => 'certificates.name', 'label' => 'certificates'],
@@ -339,7 +339,13 @@ class CustomFieldsPresetJsonStreamTest extends TestCase
         $row = $decoded[0];
 
         $this->assertIsArray($row['certificates']);
-        $this->assertEqualsCanonicalizing(['Сертификат А', 'Сертификат Б'], $row['certificates']);
+        $this->assertCount(2, $row['certificates']);
+        $byId = collect($row['certificates'])->keyBy('id')->all();
+        $this->assertSame('Сертификат А', $byId[$cert1->id]['name']);
+        $this->assertArrayHasKey('url', $byId[$cert1->id]);
+        // Без media у сертификата url=null — ожидаемо
+        $this->assertNull($byId[$cert1->id]['url']);
+        $this->assertSame('Сертификат Б', $byId[$cert2->id]['name']);
     }
 
     public function test_streamed_json_csv_still_returns_strings_for_multi_value(): void

@@ -96,7 +96,7 @@ class CustomFieldsPresetXmlNativeArraysTest extends TestCase
         $this->assertSame('5', (string) $stocksNode->item->quantity);
     }
 
-    public function test_xml_emits_string_array_for_certificates(): void
+    public function test_xml_emits_object_array_for_certificates(): void
     {
         $user = User::factory()->create();
         $product = Product::factory()->create();
@@ -120,7 +120,10 @@ class CustomFieldsPresetXmlNativeArraysTest extends TestCase
 
         $node = $xml->product->certificates_name;
         $this->assertTrue(isset($node->item));
-        $this->assertSame('Сертификат А', (string) $node->item);
+        $this->assertSame((string) $cert->id, (string) $node->item->id);
+        $this->assertSame('Сертификат А', (string) $node->item->name);
+        // url пустой так как нет media-файла
+        $this->assertSame('', (string) $node->item->url);
     }
 
     public function test_xml_scalar_fields_remain_simple(): void

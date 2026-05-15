@@ -40,7 +40,7 @@ class CertificatesNameField extends ExportField
 
     public function eagerLoad(): array
     {
-        return ['certificates'];
+        return ['certificates.media'];
     }
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
@@ -48,8 +48,20 @@ class CertificatesNameField extends ExportField
         return $product->certificates->pluck('name')->implode(', ');
     }
 
+    /**
+     * JSON/XML: возвращаем объекты {id, name, url}. url — ссылка на скачивание
+     * файла сертификата (первый media из коллекции `files`). Если файла нет —
+     * url=null. id стабилен к переименованию сертификата.
+     */
     public function nativeValue(Product $product, ?User $clientUser = null): mixed
     {
-        return $product->certificates->pluck('name')->values()->all();
+        return $product->certificates
+            ->map(fn ($cert) => [
+                'id' => $cert->id,
+                'name' => $cert->name,
+                'url' => $cert->getFirstMediaUrl('files') ?: null,
+            ])
+            ->values()
+            ->all();
     }
 }
