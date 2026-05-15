@@ -59,6 +59,42 @@ class CustomFieldsPresetJsonStreamTest extends TestCase
         }
     }
 
+    public function test_streamed_json_uses_custom_label_as_key(): void
+    {
+        $user = User::factory()->create();
+        Product::factory()->create(['name' => 'Test Product', 'sku' => 'TST-1']);
+
+        $export = ProductExport::create([
+            'user_id' => $user->id,
+            'client_user_id' => $user->id,
+            'name' => 'Label as key test',
+            'format' => ExportFormat::JSON,
+            'fields' => [
+                ['key' => 'name', 'label' => 'product_title'],
+                ['key' => 'sku', 'label' => 'article'],
+            ],
+            'filters' => [],
+            'is_active' => true,
+        ]);
+
+        $stream = fopen('php://memory', 'w+');
+        app(CustomFieldsPreset::class)->writeToStream($stream, $export);
+        rewind($stream);
+        $content = stream_get_contents($stream);
+        fclose($stream);
+
+        $decoded = json_decode($content, true);
+        $this->assertCount(1, $decoded);
+
+        $row = $decoded[0];
+        $this->assertArrayHasKey('product_title', $row, 'JSON-ключ должен быть label, а не технический key');
+        $this->assertArrayHasKey('article', $row);
+        $this->assertArrayNotHasKey('name', $row);
+        $this->assertArrayNotHasKey('sku', $row);
+        $this->assertSame('Test Product', $row['product_title']);
+        $this->assertSame('TST-1', $row['article']);
+    }
+
     public function test_streamed_json_handles_empty_dataset(): void
     {
         $user = User::factory()->create();

@@ -172,26 +172,35 @@ class CustomFieldsPreset implements PresetInterface
 
     protected function writeJson($stream, ProductExport $export): void
     {
-        // Why: предыдущая реализация копила весь массив товаров в PHP-массиве и
-        // делала один fwrite() в конце — для каталога ~5к товаров × 250 полей
-        // пик памяти доходил до 260+ МБ, на грани soft-лимита worker'а
-        // (--memory=256). Стримим JSON поэлементно, чтобы пик памяти упирался
-        // в один чанк (CHUNK_SIZE товаров), а tmp-файл реально рос на диске
-        // и наблюдатель видел прогресс.
+        // Why стрима: предыдущая реализация копила весь массив товаров в
+        // PHP-массиве и делала один fwrite() в конце — для каталога ~5к
+        // товаров × 250 полей пик памяти доходил до 260+ МБ, на грани
+        // soft-лимита worker'а (--memory=256). Стримим JSON поэлементно,
+        // чтобы пик памяти упирался в один чанк (CHUNK_SIZE товаров),
+        // а tmp-файл реально рос на диске и наблюдатель видел прогресс.
+        //
+        // Why label as JSON key: CSV/XLS уже используют пользовательский
+        // label из конструктора как заголовок колонки. JSON же до этого
+        // отдавал технический ключ FieldRegistry (`brand.name`,
+        // `attribute.c-feromonami`), что выглядело как утечка внутренней
+        // схемы. Теперь label становится ключом — UI-конструктор работает
+        // одинаково для всех форматов.
         fwrite($stream, "[\n");
         $first = true;
 
         $this->eachChunk($export, function (Collection $rows) use ($stream, &$first) {
             foreach ($rows as $row) {
-                $clean = array_filter($row, function ($value, $key) {
+                $labeled = [];
+                foreach ($this->fieldKeys as $key) {
+                    $value = $row[$key] ?? null;
                     if (str_starts_with($key, 'attribute.') && $value === null) {
-                        return false;
+                        continue;
                     }
+                    $jsonKey = $this->labels[$key] ?? $key;
+                    $labeled[$jsonKey] = $value;
+                }
 
-                    return true;
-                }, ARRAY_FILTER_USE_BOTH);
-
-                $json = json_encode($clean, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                $json = json_encode($labeled, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
                 $indented = preg_replace('/^/m', '    ', $json);
 
                 if (! $first) {
