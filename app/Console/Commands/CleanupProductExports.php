@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ProductExport;
+use App\Models\ProductExportRun;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -24,7 +25,8 @@ class CleanupProductExports extends Command
         {--dry-run : Только показать что будет удалено, без удаления}
         {--downloaded-days=90 : Удалить файлы, не скачивавшиеся дольше этого срока}
         {--cached-days=30 : Удалить файлы с cached_at старше этого срока (если last_downloaded пуст)}
-        {--tmp-hours=2 : Удалить orphaned *.tmp.* файлы старше этого срока в часах (timeout=25 мин + buffer)}';
+        {--tmp-hours=2 : Удалить orphaned *.tmp.* файлы старше этого срока в часах (timeout=25 мин + buffer)}
+        {--keep-runs-per-export=200 : Оставлять не больше N последних запусков на одну выгрузку в product_export_runs (0 = не чистить)}';
 
     protected $description = 'Очистка orphaned- и stale-файлов кеша product-выгрузок';
 
@@ -112,14 +114,20 @@ class CleanupProductExports extends Command
             $skipped++;
         }
 
+        $runsTrimmed = $this->trimRunHistory(
+            (int) $this->option('keep-runs-per-export'),
+            $dryRun,
+        );
+
         $summary = sprintf(
-            '%s orphaned=%d, stale=%d, tmp_old=%d, kept=%d, освобождено=%s',
+            '%s orphaned=%d, stale=%d, tmp_old=%d, kept=%d, освобождено=%s, runs_trimmed=%d',
             $dryRun ? '[dry-run]' : 'Готово.',
             $orphaned,
             $stale,
             $tmpOld,
             $skipped,
             $this->formatBytes($bytesFreed),
+            $runsTrimmed,
         );
         $this->info($summary);
 
@@ -130,10 +138,67 @@ class CleanupProductExports extends Command
                 'tmp_old' => $tmpOld,
                 'kept' => $skipped,
                 'bytes_freed' => $bytesFreed,
+                'runs_trimmed' => $runsTrimmed,
             ]);
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Удаляет старые product_export_runs, оставляя не больше $keep последних
+     * на каждую выгрузку. Без этого history растёт на ~600 строк/день при
+     * warmup каждые 15 мин — за год ~200к строк. Не катастрофа, но мусор
+     * копится без причины: последние десятки run-ов уже дают полную картину
+     * по duration_ms и ошибкам, более старые — это статистика, для которой
+     * есть отдельные системы мониторинга.
+     *
+     * Защита от удаления текущего last_run_id: ON DELETE SET NULL у FK не
+     * страшно, но мы дополнительно отрезаем по id < min(keep_ids).
+     */
+    protected function trimRunHistory(int $keep, bool $dryRun): int
+    {
+        if ($keep <= 0) {
+            return 0;
+        }
+
+        $totalDeleted = 0;
+
+        ProductExport::query()
+            ->select('id')
+            ->chunkById(500, function ($exports) use ($keep, $dryRun, &$totalDeleted) {
+                foreach ($exports as $export) {
+                    $keepIds = ProductExportRun::query()
+                        ->where('product_export_id', $export->id)
+                        ->orderByDesc('id')
+                        ->limit($keep)
+                        ->pluck('id');
+
+                    if ($keepIds->isEmpty()) {
+                        continue;
+                    }
+
+                    $minKeepId = (int) $keepIds->min();
+
+                    $toDelete = ProductExportRun::query()
+                        ->where('product_export_id', $export->id)
+                        ->where('id', '<', $minKeepId);
+
+                    $count = (int) $toDelete->count();
+                    if ($count === 0) {
+                        continue;
+                    }
+
+                    if (! $dryRun) {
+                        $toDelete->delete();
+                    }
+
+                    $this->line(sprintf('  [runs]   export #%d: %d старых run-ов %s', $export->id, $count, $dryRun ? '(dry-run)' : 'удалено'));
+                    $totalDeleted += $count;
+                }
+            });
+
+        return $totalDeleted;
     }
 
     /**

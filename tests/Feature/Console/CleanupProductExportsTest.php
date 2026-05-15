@@ -3,6 +3,7 @@
 namespace Tests\Feature\Console;
 
 use App\Models\ProductExport;
+use App\Models\ProductExportRun;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -138,5 +139,72 @@ class CleanupProductExportsTest extends TestCase
         $this->artisan('exports:cleanup')->assertSuccessful();
 
         $this->assertFileDoesNotExist($tmpFile, 'tmp старше порога должен удаляться');
+    }
+
+    public function test_trims_run_history_keeping_latest_n(): void
+    {
+        $user = User::factory()->create();
+        $export = ProductExport::create([
+            'user_id' => $user->id,
+            'client_user_id' => $user->id,
+            'name' => 'runs-retention',
+            'format' => 'csv',
+            'preset' => null,
+            'filters' => [],
+            'fields' => [],
+            'is_active' => true,
+            'last_downloaded_at' => now(),
+        ]);
+
+        // Создаём 10 run-ов, ID нарастают.
+        for ($i = 0; $i < 10; $i++) {
+            ProductExportRun::create([
+                'product_export_id' => $export->id,
+                'status' => 'ready',
+                'started_at' => now()->subMinutes(10 - $i),
+                'finished_at' => now()->subMinutes(10 - $i)->addSecond(),
+                'duration_ms' => 100 + $i,
+            ]);
+        }
+
+        $this->assertSame(10, ProductExportRun::where('product_export_id', $export->id)->count());
+
+        // Оставляем последние 3 — должны удалиться первые 7.
+        $this->artisan('exports:cleanup --keep-runs-per-export=3')->assertSuccessful();
+
+        $left = ProductExportRun::where('product_export_id', $export->id)
+            ->orderBy('id')
+            ->pluck('duration_ms')
+            ->all();
+        $this->assertCount(3, $left, 'Должны остаться ровно 3 последних run-а');
+        // Удаляются самые старые (меньший id) — у новых duration_ms = 107, 108, 109.
+        $this->assertSame([107, 108, 109], $left);
+    }
+
+    public function test_keep_runs_zero_disables_retention(): void
+    {
+        $user = User::factory()->create();
+        $export = ProductExport::create([
+            'user_id' => $user->id,
+            'client_user_id' => $user->id,
+            'name' => 'no-retention',
+            'format' => 'csv',
+            'preset' => null,
+            'filters' => [],
+            'fields' => [],
+            'is_active' => true,
+            'last_downloaded_at' => now(),
+        ]);
+
+        for ($i = 0; $i < 5; $i++) {
+            ProductExportRun::create([
+                'product_export_id' => $export->id,
+                'status' => 'ready',
+            ]);
+        }
+
+        $this->artisan('exports:cleanup --keep-runs-per-export=0')->assertSuccessful();
+
+        $this->assertSame(5, ProductExportRun::where('product_export_id', $export->id)->count());
     }
 }
