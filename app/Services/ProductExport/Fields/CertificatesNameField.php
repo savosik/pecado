@@ -47,4 +47,9 @@ class CertificatesNameField extends ExportField
     {
         return $product->certificates->pluck('name')->implode(', ');
     }
+
+    public function nativeValue(Product $product, ?User $clientUser = null): mixed
+    {
+        return $product->certificates->pluck('name')->values()->all();
+    }
 }

@@ -177,14 +177,60 @@ class DynamicAttributeField extends ExportField
 
     // ─── Export Value ──────────────────────────────
 
+    /**
+     * CSV/XLS: возвращаем скаляр если значение одно, склеенную строку если
+     * значений несколько. В БД сейчас стоит unique(product_id, attribute_id),
+     * так что на практике почти всегда 0 или 1 значение — но рефакторим
+     * defensive: если constraint снимут, multi-value сразу заработает.
+     */
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        $attrValue = $product->attributeValues->firstWhere('attribute_id', $this->attribute->id);
+        $values = $this->collectValues($product);
 
-        if (! $attrValue) {
+        if (count($values) === 0) {
             return null;
         }
+        if (count($values) === 1) {
+            return $values[0];
+        }
 
+        return implode(', ', array_map(fn ($v) => (string) $v, $values));
+    }
+
+    /**
+     * JSON/XML: если значение одно — скаляр, если несколько — массив.
+     */
+    public function nativeValue(Product $product, ?User $clientUser = null): mixed
+    {
+        $values = $this->collectValues($product);
+
+        if (count($values) === 0) {
+            return null;
+        }
+        if (count($values) === 1) {
+            return $values[0];
+        }
+
+        return $values;
+    }
+
+    /**
+     * Собрать все значения этого атрибута для товара (0..N штук).
+     *
+     * @return array<int, mixed>
+     */
+    protected function collectValues(Product $product): array
+    {
+        return $product->attributeValues
+            ->where('attribute_id', $this->attribute->id)
+            ->map(fn ($av) => $this->extractSingleValue($av))
+            ->filter(fn ($v) => $v !== null)
+            ->values()
+            ->all();
+    }
+
+    protected function extractSingleValue(\App\Models\ProductAttributeValue $attrValue): mixed
+    {
         if ($this->attribute->isBoolean()) {
             return $attrValue->boolean_value !== null
                 ? ((bool) $attrValue->boolean_value ? 'Да' : 'Нет')

@@ -49,4 +49,12 @@ class AdditionalImagesField extends ExportField
             ->map(fn ($media) => $media->getFullUrl())
             ->implode(', ');
     }
+
+    public function nativeValue(Product $product, ?User $clientUser = null): mixed
+    {
+        return $product->getMedia('additional')
+            ->map(fn ($media) => $media->getFullUrl())
+            ->values()
+            ->all();
+    }
 }

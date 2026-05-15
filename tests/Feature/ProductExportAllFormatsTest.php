@@ -370,6 +370,12 @@ class ProductExportAllFormatsTest extends TestCase
 
     public function test_download_endpoint_works_for_all_formats(): void
     {
+        // Дополнительно прокинем multi-value данные на первый продукт чтобы
+        // проверить что JSON отдаёт массивы, CSV — строки (после deploy 2026-05-15).
+        $firstProduct = \App\Models\Product::first();
+        $firstProduct->barcodes()->create(['barcode' => '111']);
+        $firstProduct->barcodes()->create(['barcode' => '222']);
+
         $formats = [
             ExportFormat::JSON->value => ['format' => ExportFormat::JSON, 'contentType' => 'application/json'],
             ExportFormat::CSV->value => ['format' => ExportFormat::CSV,  'contentType' => 'text/csv'],
@@ -395,6 +401,40 @@ class ProductExportAllFormatsTest extends TestCase
                 $response->headers->get('Content-Disposition'),
                 "Отсутствует Content-Disposition для формата {$formatValue}"
             );
+
+            // Формат-специфичные ассерты на структуру multi-value полей.
+            // В тестах download endpoint возвращает BinaryFileResponse (готовый файл
+            // из storage/app/exports/{hash}) или StreamedResponse. Читаем содержимое
+            // напрямую с диска — это надёжно работает для всех типов response.
+            $cachedPath = $export->fresh()->getCacheFilePath();
+            $this->assertFileExists($cachedPath, "Файл выгрузки должен быть создан для формата {$formatValue}");
+            $content = file_get_contents($cachedPath);
+
+            if ($format === ExportFormat::JSON) {
+                $decoded = json_decode($content, true);
+                $this->assertIsArray($decoded, "JSON должен парситься в массив");
+
+                $withBarcodes = collect($decoded)->first(fn ($row) => ! empty($row['Все штрихкоды']));
+                $this->assertNotNull($withBarcodes, 'Должен быть товар с штрихкодами');
+                $this->assertIsArray(
+                    $withBarcodes['Все штрихкоды'],
+                    'JSON: multi-value barcodes должны быть массивом, не строкой'
+                );
+                $this->assertEqualsCanonicalizing(['111', '222'], $withBarcodes['Все штрихкоды']);
+            }
+
+            if ($format === ExportFormat::CSV) {
+                $this->assertStringNotContainsString(
+                    'Array',
+                    $content,
+                    'CSV не должен содержать слово "Array" — массив попал в строку'
+                );
+                $this->assertStringContainsString(
+                    '111, 222',
+                    $content,
+                    'CSV должен сохранять CSV-строку multi-value (111, 222)'
+                );
+            }
 
             echo "  ✅ HTTP {$formatValue}: OK\n";
         }

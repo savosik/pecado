@@ -209,7 +209,7 @@ class CustomFieldsPreset implements PresetInterface
                 fwrite($stream, $indented);
                 $first = false;
             }
-        });
+        }, native: true);
 
         fwrite($stream, "\n]");
     }
@@ -232,18 +232,63 @@ class CustomFieldsPreset implements PresetInterface
                         continue;
                     }
                     $xmlKey = preg_replace('/[^a-zA-Z0-9_]/', '_', $key);
-                    $xml->writeElement($xmlKey, $this->normalizeValue($value ?? ''));
+                    $this->writeXmlValue($xml, $xmlKey, $value);
                 }
                 $xml->endElement();
             }
             // Сбрасываем буфер чанка на диск — иначе для больших каталогов
             // вся выгрузка останется в памяти XMLWriter до flush().
             fwrite($stream, $xml->outputMemory(true));
-        });
+        }, native: true);
 
         $xml->endElement();
         $xml->endDocument();
         fwrite($stream, $xml->outputMemory(true));
+    }
+
+    /**
+     * Записать одно поле в XML, учитывая что значение может быть скаляром,
+     * списком (numeric-keyed array) или ассоциативным объектом.
+     *
+     * Скаляр: <key>value</key>
+     * Список: <key><item>a</item><item>b</item></key>
+     * Объект: <key><id>1</id><name>...</name></key> (если ключи валидны для XML)
+     *         либо <key><item key="..."><id>...</id></item></key> для сложных кейсов.
+     */
+    protected function writeXmlValue(\XMLWriter $xml, string $elementName, mixed $value): void
+    {
+        $xml->startElement($elementName);
+
+        if (is_array($value)) {
+            $isList = array_is_list($value);
+            foreach ($value as $k => $v) {
+                if ($isList) {
+                    $xml->startElement('item');
+                    if (is_array($v)) {
+                        // Вложенный объект (например warehouse {id, name, quantity})
+                        foreach ($v as $subKey => $subVal) {
+                            $safeKey = preg_replace('/[^a-zA-Z0-9_]/', '_', (string) $subKey);
+                            $xml->writeElement($safeKey, $this->normalizeValue($subVal));
+                        }
+                    } else {
+                        $xml->text($this->normalizeValue($v));
+                    }
+                    $xml->endElement();
+                } else {
+                    // Ассоциативный массив — пишем под ключом через item key="..."
+                    // (имя элемента может быть с кириллицей или спецсимволами,
+                    // что недопустимо в XML-теге, а атрибут такое допускает).
+                    $xml->startElement('item');
+                    $xml->writeAttribute('key', (string) $k);
+                    $xml->text($this->normalizeValue($v));
+                    $xml->endElement();
+                }
+            }
+        } else {
+            $xml->text($this->normalizeValue($value ?? ''));
+        }
+
+        $xml->endElement();
     }
 
     protected function writeXls($stream, ProductExport $export): void
@@ -303,8 +348,12 @@ class CustomFieldsPreset implements PresetInterface
      * Чанк-обработка продуктов: фильтры + eager-load по выбранным полям.
      *
      * @param  callable(Collection<int, array>): void  $callback
+     * @param  bool  $native  Если true — извлекаем значения через nativeValue()
+     *                        и применяем модификаторы в native-режиме (используется
+     *                        для JSON/XML, где нужны нативные массивы). Default false
+     *                        для CSV/XLS — там путь legacy через getValue().
      */
-    protected function eachChunk(ProductExport $export, callable $callback): void
+    protected function eachChunk(ProductExport $export, callable $callback, bool $native = false): void
     {
         $clientUser = $export->client_user_id
             ? User::with('region')->find($export->client_user_id)
@@ -317,8 +366,10 @@ class CustomFieldsPreset implements PresetInterface
             $query->with($relations);
         }
 
-        $query->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback) {
-            $rows = $products->map(fn (Product $p) => $this->extractRow($p, $clientUser));
+        $query->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback, $native) {
+            $rows = $products->map(fn (Product $p) => $native
+                ? $this->extractRowNative($p, $clientUser)
+                : $this->extractRow($p, $clientUser));
             $this->rowsProcessed += $rows->count();
             $callback($rows);
         });
@@ -355,6 +406,29 @@ class CustomFieldsPreset implements PresetInterface
         return $row;
     }
 
+    /**
+     * Извлечение строки в native-режиме (для JSON/XML).
+     * Берём значения через nativeValue() — multi-value поля вернут массивы.
+     * Модификаторы применяются с флагом native=true: multi_value становится
+     * no-op (массив проходит насквозь), substring пропускает массивы.
+     */
+    protected function extractRowNative(Product $product, ?User $clientUser): array
+    {
+        $row = [];
+        foreach ($this->fieldKeys as $key) {
+            $field = $this->registry->resolve($key);
+            $value = $field?->nativeValue($product, $clientUser);
+
+            if ($field && ! empty($this->modifiers[$key])) {
+                $value = $this->applyModifiers($value, $field->modifierType(), $this->modifiers[$key], native: true);
+            }
+
+            $row[$key] = $value;
+        }
+
+        return $row;
+    }
+
     // ─── Modifier logic (зеркально к ProductExportService) ──────────
 
     protected const SEPARATOR_MAP = [
@@ -368,7 +442,12 @@ class CustomFieldsPreset implements PresetInterface
         'slash_tight' => '/',
     ];
 
-    protected function applyModifiers(mixed $value, ?string $modifierType, array $modifiers): mixed
+    /**
+     * @param  bool  $native  В native-режиме (JSON/XML) multi_value-модификатор
+     *                        становится no-op — массив проходит насквозь без
+     *                        склейки. substring пропускает массивы (см. guard ниже).
+     */
+    protected function applyModifiers(mixed $value, ?string $modifierType, array $modifiers, bool $native = false): mixed
     {
         if (! $modifierType) {
             return $this->applySubstringModifier($value, $modifiers);
@@ -378,7 +457,7 @@ class CustomFieldsPreset implements PresetInterface
             'boolean' => $this->applyBooleanModifier($value, $modifiers),
             'price' => $this->applyPriceModifier($value, $modifiers),
             'numeric' => $this->applyNumericModifier($value, $modifiers),
-            'multi_value' => $this->applyMultiValueModifier($value, $modifiers),
+            'multi_value' => $native ? $value : $this->applyMultiValueModifier($value, $modifiers),
             'date' => $this->applyDateModifier($value, $modifiers),
             default => $value,
         };
@@ -388,6 +467,12 @@ class CustomFieldsPreset implements PresetInterface
 
     protected function applySubstringModifier(mixed $value, array $modifiers): mixed
     {
+        // Массивы пропускаем без изменений — substring применим только к строкам.
+        // Why: native-режим JSON/XML может прокинуть сюда массив (multi-value
+        // поля), и попытка `(string) $array` дала бы "Array" + Warning.
+        if (is_array($value)) {
+            return $value;
+        }
         if (! isset($modifiers['substring_length'])) {
             return $value;
         }
@@ -522,6 +607,18 @@ class CustomFieldsPreset implements PresetInterface
         }
         if ($value instanceof \BackedEnum) {
             return (string) $value->value;
+        }
+        // Защита от регрессий: CSV/XLS не должны получать массивы (там путь
+        // через getValue() — уже строка). Но если кто-то прокинет массив
+        // случайно — склеим запятыми, не отдадим "Array".
+        if (is_array($value)) {
+            return implode(', ', array_map(function ($v) {
+                if (is_array($v)) {
+                    return json_encode($v, JSON_UNESCAPED_UNICODE);
+                }
+
+                return (string) $v;
+            }, $value));
         }
 
         return (string) $value;

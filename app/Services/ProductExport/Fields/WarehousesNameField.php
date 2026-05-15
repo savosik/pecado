@@ -47,4 +47,16 @@ class WarehousesNameField extends ExportField
     {
         return $product->warehouses->pluck('name')->implode(', ');
     }
+
+    /**
+     * JSON/XML: возвращаем объекты с id+name. id стабилен к переименованию
+     * склада — клиент сможет матчить значение даже если name изменится.
+     */
+    public function nativeValue(Product $product, ?User $clientUser = null): mixed
+    {
+        return $product->warehouses
+            ->map(fn ($w) => ['id' => $w->id, 'name' => $w->name])
+            ->values()
+            ->all();
+    }
 }

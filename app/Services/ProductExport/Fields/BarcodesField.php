@@ -47,4 +47,9 @@ class BarcodesField extends ExportField
     {
         return $product->barcodes->pluck('barcode')->implode(', ');
     }
+
+    public function nativeValue(Product $product, ?User $clientUser = null): mixed
+    {
+        return $product->barcodes->pluck('barcode')->values()->all();
+    }
 }

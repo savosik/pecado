@@ -47,4 +47,21 @@ class WarehousesQuantityField extends ExportField
     {
         return $product->warehouses->map(fn ($w) => "{$w->name}: {$w->pivot->quantity}")->implode(', ');
     }
+
+    /**
+     * JSON/XML: возвращаем массив объектов {id, name, quantity}. id стабилен
+     * к переименованию склада — клиент сможет матчить остаток по id, не
+     * боясь что переименование сломает интеграцию.
+     */
+    public function nativeValue(Product $product, ?User $clientUser = null): mixed
+    {
+        return $product->warehouses
+            ->map(fn ($w) => [
+                'id' => $w->id,
+                'name' => $w->name,
+                'quantity' => (int) $w->pivot->quantity,
+            ])
+            ->values()
+            ->all();
+    }
 }

@@ -50,4 +50,12 @@ class AllImagesField extends ExportField
 
         return $main->merge($additional)->implode(', ');
     }
+
+    public function nativeValue(Product $product, ?User $clientUser = null): mixed
+    {
+        $main = $product->getMedia('main')->map(fn ($m) => $m->getFullUrl());
+        $additional = $product->getMedia('additional')->map(fn ($m) => $m->getFullUrl());
+
+        return $main->merge($additional)->values()->all();
+    }
 }
