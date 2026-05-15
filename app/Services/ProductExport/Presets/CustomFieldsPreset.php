@@ -44,6 +44,18 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
     /** @var array<string, array<string, mixed>> */
     protected array $modifiers = [];
 
+    /**
+     * Закешированные ExportField по ключам.
+     * Why: FieldRegistry::resolve() для `attribute.{slug}` делает Collection::first()
+     * с замыканием — O(полей_в_реестре). Резолв 254 ключей × 5к товаров = 1.3M
+     * вызовов; кеш в один проход съедает их до 254. Также для `image.{N}` и
+     * `placeholder.*` resolve() возвращает новый объект каждый раз — кеш
+     * убирает лишние аллокации.
+     *
+     * @var array<string, \App\Services\ProductExport\ExportField|null>
+     */
+    protected array $resolvedFields = [];
+
     /** @var array<int, \App\Models\Currency> */
     protected array $currencyCache = [];
 
@@ -53,6 +65,20 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
      * Таймер замеров этапов; ставится Generator-ом перед writeToStream.
      */
     protected ?StepTimer $timer = null;
+
+    /**
+     * Сэмплированный замер времени по каждому полю — позволит увидеть, какие
+     * именно поля доминируют в map_rows. Замеряем не на каждом товаре
+     * (overhead), а раз в SAMPLE_EVERY товаров — статистики хватает,
+     * накладные расходы минимальны.
+     *
+     * @var array<string, array{count:int, sum_ms:float}>
+     */
+    protected array $fieldSamples = [];
+
+    protected int $sampleCounter = 0;
+
+    protected const SAMPLE_EVERY = 50;
 
     public function __construct(
         protected FieldRegistry $registry,
@@ -354,6 +380,9 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
     {
         $this->fieldKeys = [];
         $this->modifiers = [];
+        $this->resolvedFields = [];
+        $this->fieldSamples = [];
+        $this->sampleCounter = 0;
 
         foreach ($fields as $field) {
             if (is_string($field)) {
@@ -364,6 +393,13 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
                     $this->modifiers[$field['key']] = $field['modifiers'];
                 }
             }
+        }
+
+        // Закешировать ExportField один раз — резолв 254 ключей через
+        // Collection::first(fn) на каждом из 5к товаров занимает заметное
+        // время; кеш делает резолв O(fields), а не O(fields × products).
+        foreach ($this->fieldKeys as $key) {
+            $this->resolvedFields[$key] = $this->registry->resolve($key);
         }
     }
 
@@ -424,13 +460,23 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
 
     protected function extractRow(Product $product, ?User $clientUser): array
     {
+        $sample = (++$this->sampleCounter % self::SAMPLE_EVERY) === 0;
         $row = [];
         foreach ($this->fieldKeys as $key) {
-            $field = $this->registry->resolve($key);
+            $field = $this->resolvedFields[$key] ?? null;
+
+            if ($sample) {
+                $t0 = microtime(true);
+            }
+
             $value = $field?->getValue($product, $clientUser);
 
             if ($field && ! empty($this->modifiers[$key])) {
                 $value = $this->applyModifiers($value, $field->modifierType(), $this->modifiers[$key]);
+            }
+
+            if ($sample) {
+                $this->recordFieldSample($key, microtime(true) - $t0);
             }
 
             $row[$key] = $value;
@@ -447,19 +493,76 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
      */
     protected function extractRowNative(Product $product, ?User $clientUser): array
     {
+        $sample = (++$this->sampleCounter % self::SAMPLE_EVERY) === 0;
         $row = [];
         foreach ($this->fieldKeys as $key) {
-            $field = $this->registry->resolve($key);
+            $field = $this->resolvedFields[$key] ?? null;
+
+            if ($sample) {
+                $t0 = microtime(true);
+            }
+
             $value = $field?->nativeValue($product, $clientUser);
 
             if ($field && ! empty($this->modifiers[$key])) {
                 $value = $this->applyModifiers($value, $field->modifierType(), $this->modifiers[$key], native: true);
             }
 
+            if ($sample) {
+                $this->recordFieldSample($key, microtime(true) - $t0);
+            }
+
             $row[$key] = $value;
         }
 
         return $row;
+    }
+
+    /**
+     * Записать сэмпл времени по полю в аккумулятор. Дешёвая операция: array
+     * lookup + два add, никаких I/O.
+     */
+    protected function recordFieldSample(string $key, float $deltaSeconds): void
+    {
+        if (! isset($this->fieldSamples[$key])) {
+            $this->fieldSamples[$key] = ['count' => 0, 'sum_ms' => 0.0];
+        }
+        $this->fieldSamples[$key]['count']++;
+        $this->fieldSamples[$key]['sum_ms'] += $deltaSeconds * 1000;
+    }
+
+    /**
+     * Топ-N самых дорогих полей по среднему времени, с проекцией суммарного
+     * вклада на полный каталог. Generator складывает это в
+     * product_export_runs.steps_json['field_breakdown'].
+     *
+     * @return array<int, array{key:string, avg_ms:float, samples:int, projected_total_ms:int}>
+     */
+    public function getFieldBreakdown(int $limit = 15): array
+    {
+        if ($this->fieldSamples === []) {
+            return [];
+        }
+
+        $rows = [];
+        foreach ($this->fieldSamples as $key => $stat) {
+            if ($stat['count'] === 0) {
+                continue;
+            }
+            $avg = $stat['sum_ms'] / $stat['count'];
+            $rows[] = [
+                'key' => $key,
+                'avg_ms' => round($avg, 3),
+                'samples' => $stat['count'],
+                // Если поле в среднем стоит X мс и в каталоге $rowsProcessed
+                // товаров — проецируем суммарный вклад в map_rows.
+                'projected_total_ms' => (int) round($avg * $this->rowsProcessed),
+            ];
+        }
+
+        usort($rows, fn ($a, $b) => $b['projected_total_ms'] <=> $a['projected_total_ms']);
+
+        return array_slice($rows, 0, $limit);
     }
 
     // ─── Modifier logic (зеркально к ProductExportService) ──────────

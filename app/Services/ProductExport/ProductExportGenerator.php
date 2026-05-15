@@ -73,7 +73,7 @@ class ProductExportGenerator
                 // AbstractPreset и CustomFieldsPreset оба умеют считать строки;
                 // method_exists короче, чем плодить ещё один интерфейс ради одного метода.
                 'rows_count' => method_exists($preset, 'getRowsProcessed') ? $preset->getRowsProcessed() : null,
-                'steps_json' => $this->buildStepsPayload($timer, $duration),
+                'steps_json' => $this->buildStepsPayload($timer, $duration, $preset),
             ]);
 
             $export->update([
@@ -90,7 +90,7 @@ class ProductExportGenerator
                 'finished_at' => now(),
                 'duration_ms' => $duration,
                 'error_message' => mb_substr($e->getMessage(), 0, 5000),
-                'steps_json' => $this->buildStepsPayload($timer, $duration),
+                'steps_json' => $this->buildStepsPayload($timer, $duration, $preset),
             ]);
 
             $export->update(['status' => ProductExport::STATUS_FAILED]);
@@ -111,9 +111,13 @@ class ProductExportGenerator
      * шагов — туда попадает overhead на update() моделей, fsync, rename,
      * mkdir и всё, что мы явно не замеряли.
      *
-     * @return array<string, int>|null
+     * Если пресет умеет в per-field breakdown (CustomFieldsPreset), добавляет
+     * его в payload под ключом `field_breakdown` — это уже не int, а массив
+     * объектов; UI отрисует отдельно, а Eloquent cast 'array' переварит.
+     *
+     * @return array<string, mixed>|null
      */
-    protected function buildStepsPayload(StepTimer $timer, int $totalDurationMs): ?array
+    protected function buildStepsPayload(StepTimer $timer, int $totalDurationMs, ?PresetInterface $preset = null): ?array
     {
         $steps = $timer->toArray();
         if ($steps === []) {
@@ -124,6 +128,13 @@ class ProductExportGenerator
         $other = $totalDurationMs - $known;
         if ($other > 0) {
             $steps['other'] = $other;
+        }
+
+        if ($preset !== null && method_exists($preset, 'getFieldBreakdown')) {
+            $breakdown = $preset->getFieldBreakdown();
+            if (! empty($breakdown)) {
+                $steps['field_breakdown'] = $breakdown;
+            }
         }
 
         return $steps;

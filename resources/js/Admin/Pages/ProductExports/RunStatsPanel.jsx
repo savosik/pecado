@@ -203,6 +203,39 @@ export default function RunStatsPanel({ run }) {
                     </Stack>
                 )}
 
+                {/* Топ полей-виновников (из per-field sampling) */}
+                {Array.isArray(run.steps_json?.field_breakdown) && run.steps_json.field_breakdown.length > 0 && (
+                    <Stack gap={2}>
+                        <Text fontSize="xs" color="fg.muted" fontWeight="bold">
+                            Топ полей по вкладу в map_rows (сэмплированный замер)
+                        </Text>
+                        <Box overflowX="auto">
+                            <Box as="table" w="100%" fontSize="xs" style={{ borderCollapse: 'collapse' }}>
+                                <Box as="thead" color="fg.muted">
+                                    <Box as="tr">
+                                        <Box as="th" textAlign="left" px={2} py={1}>Ключ поля</Box>
+                                        <Box as="th" textAlign="right" px={2} py={1}>Среднее, мс</Box>
+                                        <Box as="th" textAlign="right" px={2} py={1}>Сэмплов</Box>
+                                        <Box as="th" textAlign="right" px={2} py={1}>Проекция на все строки</Box>
+                                    </Box>
+                                </Box>
+                                <Box as="tbody">
+                                    {run.steps_json.field_breakdown.map((f) => (
+                                        <Box as="tr" key={f.key} _odd={{ bg: 'bg' }}>
+                                            <Box as="td" px={2} py={1} fontFamily="mono">{f.key}</Box>
+                                            <Box as="td" px={2} py={1} textAlign="right">{Number(f.avg_ms).toFixed(2)}</Box>
+                                            <Box as="td" px={2} py={1} textAlign="right">{f.samples}</Box>
+                                            <Box as="td" px={2} py={1} textAlign="right" fontWeight="bold">
+                                                {formatMs(f.projected_total_ms)}
+                                            </Box>
+                                        </Box>
+                                    ))}
+                                </Box>
+                            </Box>
+                        </Box>
+                    </Stack>
+                )}
+
                 {/* Ошибка, если упал */}
                 {run.status === 'failed' && run.error_message && (
                     <Box p={3} bg="red.50" borderRadius="md" border="1px solid" borderColor="red.200">
