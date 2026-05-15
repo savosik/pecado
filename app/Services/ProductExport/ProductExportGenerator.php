@@ -202,6 +202,53 @@ class ProductExportGenerator
 
         clearstatcache(true, $finalPath);
 
+        // Создаём .gz-копию рядом для nginx gzip_static — партнёрам отдаём
+        // сжатый поток (Content-Encoding: gzip), CSV/JSON жмутся в 5-10 раз.
+        $this->maybeGzipForStatic($finalPath, $export);
+
         return (int) filesize($finalPath);
+    }
+
+    /**
+     * Записывает рядом с финальным файлом .gz-копию для nginx gzip_static.
+     *
+     * Why только для текстовых форматов: XLSX = zip-based, повторный gzip почти
+     * не сжимает (≤2%) при тех же CPU-затратах. CSV/JSON/XML — отличные
+     * кандидаты (нашей 53 МБ JSON ужмётся до ~5-7 МБ).
+     *
+     * Why стримим, а не file_get_contents+gzencode: 50+ МБ JSON одной строкой
+     * в памяти бьёт по soft-лимиту worker'а.
+     */
+    protected function maybeGzipForStatic(string $path, ProductExport $export): void
+    {
+        $format = $export->format?->value;
+        if (! in_array($format, ['csv', 'json', 'xml'], true)) {
+            return;
+        }
+
+        $src = fopen($path, 'rb');
+        if ($src === false) {
+            return;
+        }
+
+        $gz = gzopen($path.'.gz', 'wb6');
+        if ($gz === false) {
+            fclose($src);
+
+            return;
+        }
+
+        try {
+            while (! feof($src)) {
+                $chunk = fread($src, 65536);
+                if ($chunk === false || $chunk === '') {
+                    break;
+                }
+                gzwrite($gz, $chunk);
+            }
+        } finally {
+            fclose($src);
+            gzclose($gz);
+        }
     }
 }
