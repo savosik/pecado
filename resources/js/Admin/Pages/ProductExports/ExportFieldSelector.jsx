@@ -215,10 +215,14 @@ const DATE_FORMAT_PRESETS = [
 ];
 
 function DateControls({ modifiers, onModifiersChange }) {
-    const format = modifiers?.format || '';
-    const isCustom = format && !DATE_FORMAT_PRESETS.some(p => p.value === format);
-    // Toggle: клик по активному формату — снимает выбор (формат не применяется,
-    // в выгрузке остаётся системный дефолт «Y-m-d H:i:s»).
+    const format = modifiers?.format ?? '';
+    const matchesPreset = DATE_FORMAT_PRESETS.some(p => p.value === format);
+    // «Кастом-режим» нужен и когда format пустой, но пользователь явно нажал
+    // «Свой» (хочет ввести маску с нуля), и когда format задан но не из
+    // пресетов. Используем локальный флаг чтобы инпут не схлопывался при
+    // очистке поля.
+    const [customMode, setCustomMode] = useState(format !== '' && !matchesPreset);
+    const isCustom = customMode || (format !== '' && !matchesPreset);
     const togglePreset = (value) => {
         const newMods = { ...modifiers };
         if (format === value) {
@@ -227,6 +231,7 @@ function DateControls({ modifiers, onModifiersChange }) {
             newMods.format = value;
         }
         onModifiersChange(newMods);
+        setCustomMode(false);
     };
     return (
         <Stack gap={3}>
@@ -234,7 +239,7 @@ function DateControls({ modifiers, onModifiersChange }) {
                 {DATE_FORMAT_PRESETS.map(p => (
                     <TagButton
                         key={p.value}
-                        active={format === p.value}
+                        active={format === p.value && !customMode}
                         onClick={() => togglePreset(p.value)}
                     >
                         {p.label}
@@ -247,8 +252,16 @@ function DateControls({ modifiers, onModifiersChange }) {
                             const newMods = { ...modifiers };
                             delete newMods.format;
                             onModifiersChange(newMods);
+                            setCustomMode(false);
                         } else {
-                            onModifiersChange({ ...modifiers, format: 'd.m.Y' });
+                            setCustomMode(true);
+                            // Если был выбран пресет — сбрасываем; иначе оставляем
+                            // как есть, пользователь начнёт вводить с нуля.
+                            if (matchesPreset) {
+                                const newMods = { ...modifiers };
+                                delete newMods.format;
+                                onModifiersChange(newMods);
+                            }
                         }
                     }}
                 >
@@ -262,10 +275,11 @@ function DateControls({ modifiers, onModifiersChange }) {
                 >
                     <Input
                         size="xs"
-                        w="200px"
+                        w="220px"
                         value={format}
                         onChange={(e) => onModifiersChange({ ...modifiers, format: e.target.value })}
-                        placeholder="d.m.Y H:i:s"
+                        placeholder="например, d.m.Y H:i:s"
+                        autoFocus={customMode && format === ''}
                     />
                 </ModifierRow>
             )}
