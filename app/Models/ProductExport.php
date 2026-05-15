@@ -86,6 +86,7 @@ class ProductExport extends Model
         'last_downloaded_at',
         'cached_at',
         'data_version_at',
+        'estimated_rows',
         'status',
         'last_run_id',
     ];
@@ -100,6 +101,7 @@ class ProductExport extends Model
             'last_downloaded_at' => 'datetime',
             'cached_at' => 'datetime',
             'data_version_at' => 'datetime',
+            'estimated_rows' => 'integer',
         ];
     }
 
@@ -176,6 +178,19 @@ class ProductExport extends Model
         static::saving(function (ProductExport $model) {
             if ($model->isDirty('filters') || ! $model->exists) {
                 $model->filters_text = app(FiltersTextRenderer::class)->render($model->filters ?? []);
+
+                // Пересчитать оценочное число строк под новыми фильтрами —
+                // на каталоге 5к count() с whereHas стоит копейки (~50 мс).
+                // Игнорируем ошибки: если ProductExportService::buildQuery
+                // упадёт на странных фильтрах — лучше оставить старое значение,
+                // чем заблокировать save.
+                try {
+                    $model->estimated_rows = app(\App\Services\ProductExportService::class)
+                        ->buildQuery($model->filters ?? [])
+                        ->count();
+                } catch (\Throwable) {
+                    // оставляем предыдущее значение
+                }
             }
         });
     }

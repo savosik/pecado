@@ -87,6 +87,11 @@ class ProductExportGenerator
                 'data_version_at' => $dataVersionSnapshot->getTimestamp() > 0
                     ? $dataVersionSnapshot
                     : now(),
+                // rows_count точнее, чем count(*) с фильтрами на saving —
+                // он учитывает только реально обработанные пресетом строки.
+                'estimated_rows' => method_exists($preset, 'getRowsProcessed')
+                    ? $preset->getRowsProcessed()
+                    : $export->estimated_rows,
             ]);
 
             return $run->fresh();

@@ -111,12 +111,37 @@ class GenerateProductExportJobTest extends TestCase
         $this->assertSame('product-export:101', $a->uniqueId());
     }
 
-    public function test_job_uses_exports_queue(): void
+    public function test_small_export_goes_to_light_queue(): void
     {
-        Queue::fake();
+        $this->export->update(['estimated_rows' => 50]);
 
+        Queue::fake();
         GenerateProductExportJob::dispatch($this->export->id);
 
-        Queue::assertPushedOn('exports', GenerateProductExportJob::class);
+        Queue::assertPushedOn('exports-light', GenerateProductExportJob::class);
+    }
+
+    public function test_large_export_goes_to_heavy_queue(): void
+    {
+        $this->export->update(['estimated_rows' => 5000]);
+
+        Queue::fake();
+        GenerateProductExportJob::dispatch($this->export->id);
+
+        Queue::assertPushedOn('exports-heavy', GenerateProductExportJob::class);
+    }
+
+    public function test_unknown_estimate_defaults_to_heavy(): void
+    {
+        // saving event может посчитать estimate сам — поэтому явно обнулим
+        // через DB::update, минуя model events.
+        \DB::table('product_exports')
+            ->where('id', $this->export->id)
+            ->update(['estimated_rows' => null]);
+
+        Queue::fake();
+        GenerateProductExportJob::dispatch($this->export->id);
+
+        Queue::assertPushedOn('exports-heavy', GenerateProductExportJob::class);
     }
 }
