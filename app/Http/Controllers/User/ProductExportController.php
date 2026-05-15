@@ -54,8 +54,13 @@ class ProductExportController extends Controller
             $isActive = null;
         }
 
+        // Кабинет показывает только выгрузки, которые клиент СОЗДАЁТ ДЛЯ СЕБЯ
+        // (user_id = client_user_id = я). Админские выгрузки, которые этот же
+        // пользователь сделал для других клиентов через /admin, остаются в
+        // админке и не светятся здесь.
         $query = ProductExport::query()
             ->where('user_id', Auth::id())
+            ->where('client_user_id', Auth::id())
             ->whereNull('preset'); // Пресеты отображаются отдельно в карточках
 
         if ($search !== '') {
@@ -237,7 +242,11 @@ class ProductExportController extends Controller
 
     private function authorizeExport(ProductExport $export): void
     {
-        abort_if($export->user_id !== Auth::id(), 403, 'Доступ запрещён.');
+        // Кабинет видит только «свои-для-себя» выгрузки. Админская выгрузка
+        // того же владельца, но созданная для другого client_user_id,
+        // редактируется через /admin/product-exports, не здесь.
+        $isOwn = $export->user_id === Auth::id() && $export->client_user_id === Auth::id();
+        abort_if(! $isOwn, 403, 'Доступ запрещён.');
     }
 
     private function validateExport(Request $request): array

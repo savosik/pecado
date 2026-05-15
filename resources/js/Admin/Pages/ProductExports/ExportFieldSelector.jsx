@@ -45,6 +45,26 @@ const SEPARATOR_OPTIONS = [
     { value: 'slash_tight',     label: 'Слеш без пробела  (/)' },
 ];
 
+// Обёртка для строки модификатора: лейбл слева + контролы справа.
+function ModifierRow({ label, hint, children }) {
+    return (
+        <HStack gap={3} align="center" flexWrap="wrap">
+            <Text fontSize="xs" color="fg.muted" minW="140px" flexShrink={0}>
+                {label}
+            </Text>
+            <HStack gap={2} align="center" flexWrap="wrap" flex={1}>
+                {children}
+            </HStack>
+            {hint && <Text fontSize="xs" color="fg.subtle">{hint}</Text>}
+        </HStack>
+    );
+}
+
+// Тонкий разделитель между группами модификаторов в подложке.
+function ModifierSep() {
+    return <Box height="1px" bg="border.muted" my={2} />;
+}
+
 // Подблок для арифметических модификаторов: × multiply, + add,
 // + флаг integer_if_whole (выводить целое если математика сошлась к целому).
 // Используется и в `price`, и в `numeric` модификаторах.
@@ -53,9 +73,12 @@ function ArithmeticControls({ modifiers, onModifiersChange }) {
     const add = modifiers?.add ?? '';
     const integerIfWhole = !!modifiers?.integer_if_whole;
     return (
-        <Stack gap={1} mt={1}>
-            <HStack gap={2} flexWrap="wrap">
-                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Умножить на:</Text>
+        <Stack gap={2}>
+            <ModifierRow
+                label="Арифметика"
+                hint="итог = (значение × умножитель) + прибавка"
+            >
+                <Text fontSize="xs" color="fg.subtle">×</Text>
                 <Input
                     size="xs"
                     w="80px"
@@ -68,7 +91,7 @@ function ArithmeticControls({ modifiers, onModifiersChange }) {
                         multiply: e.target.value === '' ? null : e.target.value,
                     })}
                 />
-                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Прибавить:</Text>
+                <Text fontSize="xs" color="fg.subtle">+</Text>
                 <Input
                     size="xs"
                     w="80px"
@@ -81,11 +104,11 @@ function ArithmeticControls({ modifiers, onModifiersChange }) {
                         add: e.target.value === '' ? null : e.target.value,
                     })}
                 />
-                <Text fontSize="xs" color="fg.subtle" flexShrink={0}>
-                    итог = (значение × умножитель) + прибавка
-                </Text>
-            </HStack>
-            <HStack gap={1}>
+            </ModifierRow>
+            <ModifierRow
+                label="Округление"
+                hint="980.00 → 980, но 980.50 без изменений"
+            >
                 <Badge
                     size="sm"
                     cursor="pointer"
@@ -94,12 +117,9 @@ function ArithmeticControls({ modifiers, onModifiersChange }) {
                     onClick={() => onModifiersChange({ ...modifiers, integer_if_whole: !integerIfWhole })}
                     _hover={{ opacity: 0.8 }}
                 >
-                    {integerIfWhole ? '✓' : ''} Целое если без копеек
+                    Целое если без копеек
                 </Badge>
-                <Text fontSize="xs" color="fg.subtle">
-                    980.00 → 980, но 980.50 → 980.50
-                </Text>
-            </HStack>
+            </ModifierRow>
         </Stack>
     );
 }
@@ -110,8 +130,10 @@ function SubstringControls({ modifiers, onModifiersChange }) {
     const start = modifiers?.substring_start ?? '';
     const length = modifiers?.substring_length ?? '';
     return (
-        <HStack gap={2} mt={1} flexWrap="wrap">
-            <Text fontSize="xs" color="fg.muted" flexShrink={0}>Обрезать строку:</Text>
+        <ModifierRow
+            label="Обрезка строки"
+            hint={length ? `с ${start || 0}-го символа, длина ${length}` : 'не обрезать'}
+        >
             <Text fontSize="xs" color="fg.subtle">с</Text>
             <Input
                 size="xs"
@@ -128,18 +150,17 @@ function SubstringControls({ modifiers, onModifiersChange }) {
             <Text fontSize="xs" color="fg.subtle">длина</Text>
             <Input
                 size="xs"
-                w="60px"
+                w="80px"
                 type="number"
                 min="1"
                 value={length}
-                placeholder="не обрезать"
+                placeholder="—"
                 onChange={(e) => onModifiersChange({
                     ...modifiers,
                     substring_length: e.target.value === '' ? null : parseInt(e.target.value),
                 })}
             />
-            <Text fontSize="xs" color="fg.subtle">символов</Text>
-        </HStack>
+        </ModifierRow>
     );
 }
 
@@ -157,9 +178,8 @@ function DateControls({ modifiers, onModifiersChange }) {
     const format = modifiers?.format || '';
     const isCustom = format && !DATE_FORMAT_PRESETS.some(p => p.value === format);
     return (
-        <Stack gap={1} mt={1}>
-            <HStack gap={1} flexWrap="wrap">
-                <Text fontSize="xs" color="fg.muted" flexShrink={0}>Формат:</Text>
+        <Stack gap={2}>
+            <ModifierRow label="Формат даты">
                 {DATE_FORMAT_PRESETS.map(p => (
                     <Badge
                         key={p.value}
@@ -179,12 +199,18 @@ function DateControls({ modifiers, onModifiersChange }) {
                     variant={isCustom ? 'solid' : 'outline'}
                     colorPalette={isCustom ? 'pecado' : 'gray'}
                     _hover={{ opacity: 0.8 }}
+                    onClick={() => {
+                        if (!isCustom) onModifiersChange({ ...modifiers, format: 'd.m.Y' });
+                    }}
                 >
                     Свой
                 </Badge>
-            </HStack>
+            </ModifierRow>
             {isCustom && (
-                <HStack gap={2}>
+                <ModifierRow
+                    label="Шаблон формата"
+                    hint="PHP date(): d=день, m=месяц, Y=год, H:i:s=ЧЧ:ММ:СС"
+                >
                     <Input
                         size="xs"
                         w="200px"
@@ -192,10 +218,7 @@ function DateControls({ modifiers, onModifiersChange }) {
                         onChange={(e) => onModifiersChange({ ...modifiers, format: e.target.value })}
                         placeholder="d.m.Y H:i:s"
                     />
-                    <Text fontSize="xs" color="fg.subtle">
-                        PHP date(): d=день, m=месяц, Y=год, H:i:s=часы:минуты:секунды
-                    </Text>
-                </HStack>
+                </ModifierRow>
             )}
         </Stack>
     );
@@ -212,10 +235,9 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
     if (modifierType === 'price') {
         const currencyId = modifiers?.currency_id || null;
         return (
-            <Stack gap={1} mt={1}>
+            <Stack gap={2}>
                 {currencies.length > 0 && (
-                    <HStack gap={1} flexWrap="wrap">
-                        <Text fontSize="xs" color="fg.muted" flexShrink={0}>Валюта:</Text>
+                    <ModifierRow label="Валюта">
                         <Badge
                             size="sm"
                             cursor="pointer"
@@ -239,7 +261,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                                 {c.symbol} {c.name}
                             </Badge>
                         ))}
-                    </HStack>
+                    </ModifierRow>
                 )}
                 <ArithmeticControls modifiers={modifiers} onModifiersChange={onModifiersChange} />
             </Stack>
@@ -253,14 +275,13 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
     }
 
     if (modifierType === 'boolean') {
-        const trueVal = modifiers?.true_value || 'Да';
-        const falseVal = modifiers?.false_value || 'Нет';
+        const trueVal = modifiers?.true_value ?? '';
+        const falseVal = modifiers?.false_value ?? '';
         const isCustom = !BOOLEAN_PRESETS.some(p => p.true_value === trueVal && p.false_value === falseVal);
 
         return (
-            <Stack gap={1} mt={1}>
-                <HStack gap={1} flexWrap="wrap">
-                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>Формат:</Text>
+            <Stack gap={2}>
+                <ModifierRow label="Формат значения">
                     {BOOLEAN_PRESETS.map((preset, i) => {
                         const active = preset.true_value === trueVal && preset.false_value === falseVal;
                         return (
@@ -287,28 +308,40 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                         variant={isCustom ? 'solid' : 'outline'}
                         colorPalette={isCustom ? 'pecado' : 'gray'}
                         _hover={{ opacity: 0.8 }}
+                        onClick={() => {
+                            if (!isCustom) {
+                                // Заходим в кастом-режим: «1 / пусто» — частый кейс
+                                // партнёрских CSV (sex-opt пишет new=1, иначе пусто).
+                                onModifiersChange({
+                                    ...modifiers,
+                                    true_value: trueVal === '' ? '1' : trueVal,
+                                    false_value: '',
+                                });
+                            }
+                        }}
                     >
                         Свои
                     </Badge>
-                </HStack>
+                </ModifierRow>
                 {isCustom && (
-                    <HStack gap={2}>
+                    <ModifierRow label="Свои значения" hint="пустое поле = пустое значение в CSV">
+                        <Text fontSize="xs" color="fg.subtle">истина</Text>
                         <Input
                             size="xs"
-                            w="80px"
+                            w="100px"
                             value={trueVal}
                             onChange={(e) => onModifiersChange({ ...modifiers, true_value: e.target.value })}
-                            placeholder="Истина"
+                            placeholder="(пусто)"
                         />
-                        <Text fontSize="xs" color="fg.subtle">/</Text>
+                        <Text fontSize="xs" color="fg.subtle">ложь</Text>
                         <Input
                             size="xs"
-                            w="80px"
+                            w="100px"
                             value={falseVal}
                             onChange={(e) => onModifiersChange({ ...modifiers, false_value: e.target.value })}
-                            placeholder="Ложь"
+                            placeholder="(пусто)"
                         />
-                    </HStack>
+                    </ModifierRow>
                 )}
             </Stack>
         );
@@ -318,9 +351,8 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
         const separator = modifiers?.separator || 'comma';
         const sourceSep = modifiers?.source_separator || 'comma';
         return (
-            <Stack gap={1} mt={1}>
-                <HStack gap={1} flexWrap="wrap">
-                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>Разделитель на выходе:</Text>
+            <Stack gap={2}>
+                <ModifierRow label="Разделитель на выходе">
                     {SEPARATOR_OPTIONS.map(opt => (
                         <Badge
                             key={opt.value}
@@ -334,9 +366,8 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                             {opt.label}
                         </Badge>
                     ))}
-                </HStack>
-                <HStack gap={1} flexWrap="wrap">
-                    <Text fontSize="xs" color="fg.muted" flexShrink={0}>Разделитель во входной строке:</Text>
+                </ModifierRow>
+                <ModifierRow label="Разделитель на входе" hint="как поле возвращает значения; по умолчанию — запятая">
                     {SEPARATOR_OPTIONS.filter(o => !o.value.endsWith('_tight')).map(opt => (
                         <Badge
                             key={opt.value}
@@ -350,8 +381,8 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                             {opt.label.split(' ')[0]}
                         </Badge>
                     ))}
-                    <Text fontSize="xs" color="fg.subtle">(по умолчанию: запятая)</Text>
-                </HStack>
+                </ModifierRow>
+                <ModifierSep />
                 <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
             </Stack>
         );
@@ -359,22 +390,25 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
 
     if (modifierType === 'date') {
         return (
-            <Stack gap={1} mt={1}>
+            <Stack gap={2}>
                 <DateControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
+                <ModifierSep />
                 <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
             </Stack>
         );
     }
 
-    return <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />;
+    // Для price/numeric/boolean — добавим substring в конце
+    return null;
 }
 
 // ─── Sortable row for a selected field ─────────────────────────────────────────
 function SortableFieldRow({ item, index, defaultLabel, description, modifierType, currencies, onLabelChange, onModifiersChange, onRemove, onDuplicate }) {
-    const [showModifiers, setShowModifiers] = useState(
-        // Auto-open if modifiers are already set
-        item.modifiers && Object.keys(item.modifiers).length > 0
-    );
+    const hasModifiers = item.modifiers && Object.keys(item.modifiers).filter(k => {
+        const v = item.modifiers[k];
+        return v !== null && v !== undefined && v !== '' && v !== false;
+    }).length > 0;
+    const [showModifiers, setShowModifiers] = useState(hasModifiers);
 
     const {
         attributes,
@@ -435,12 +469,15 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
                     />
                 </Box>
 
-                {/* Modifier toggle — показываем всегда: substring работает поверх любого типа */}
-                <Tooltip content="Настройки поля и модификаторы" openDelay={300}>
+                {/* Modifier toggle — активна когда панель открыта ИЛИ есть значения */}
+                <Tooltip
+                    content={hasModifiers ? 'Модификаторы заданы' : 'Настройки поля и модификаторы'}
+                    openDelay={300}
+                >
                     <IconButton
                         size="xs"
-                        variant="ghost"
-                        colorPalette={showModifiers ? 'pecado' : 'gray'}
+                        variant={hasModifiers || showModifiers ? 'subtle' : 'ghost'}
+                        colorPalette={hasModifiers || showModifiers ? 'pecado' : 'gray'}
                         onClick={() => setShowModifiers(!showModifiers)}
                         aria-label="Настройки поля"
                         flexShrink={0}
@@ -480,7 +517,16 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
 
             {/* Modifier controls (collapsible) — рендерим всегда когда открыт */}
             {showModifiers && (
-                <Box pl={8} pr={2} pb={1}>
+                <Box
+                    mt={2}
+                    ml={8}
+                    mr={2}
+                    p={3}
+                    bg="bg.subtle"
+                    borderRadius="md"
+                    borderWidth="1px"
+                    borderColor="border.muted"
+                >
                     <ModifierControls
                         modifierType={modifierType}
                         modifiers={item.modifiers || {}}
