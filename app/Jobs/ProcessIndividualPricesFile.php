@@ -103,6 +103,11 @@ class ProcessIndividualPricesFile implements ShouldQueue
                 'partner_uuid' => $this->partnerUuid,
                 'elapsed_seconds' => $elapsed,
             ]);
+
+            // Индивидуальные цены — основной источник динамики в кастомных
+            // выгрузках. Инвалидируем глобальную версию: следующий exports:warm
+            // перегенерирует только реально устаревшие выгрузки.
+            app(\App\Services\ProductExport\ProductExportDataVersion::class)->bump();
         } catch (\Exception $e) {
             Log::error('ProcessIndividualPricesFile: ошибка обработки', [
                 'file_url' => $this->fileUrl,

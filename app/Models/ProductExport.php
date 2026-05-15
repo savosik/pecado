@@ -85,6 +85,7 @@ class ProductExport extends Model
         'is_active',
         'last_downloaded_at',
         'cached_at',
+        'data_version_at',
         'status',
         'last_run_id',
     ];
@@ -98,6 +99,7 @@ class ProductExport extends Model
             'format' => ExportFormat::class,
             'last_downloaded_at' => 'datetime',
             'cached_at' => 'datetime',
+            'data_version_at' => 'datetime',
         ];
     }
 
@@ -127,6 +129,11 @@ class ProductExport extends Model
      * Дефолтный TTL — 5 минут. Партнёрские прайсы обновляются по расписанию
      * `exports:warm` каждые 15 минут, а ERP-апдейты цен/остатков прилетают
      * непрерывно — короткий TTL минимизирует окно «несвежих» данных в файле.
+     *
+     * Дополнительно проверяется ProductExportDataVersion: если ERP помечал
+     * изменения каталога после момента генерации (data_version_at) — кеш
+     * не считается свежим, даже если cached_at < 5 минут. Без этой проверки
+     * после ERP-апдейта пришлось бы ждать обычный TTL.
      */
     public function hasFreshCache(int $maxAgeMinutes = 5): bool
     {
@@ -137,6 +144,17 @@ class ProductExport extends Model
         $filePath = $this->getCacheFilePath();
         if (! file_exists($filePath)) {
             return false;
+        }
+
+        // Если глобальная версия данных каталога обновилась после генерации —
+        // файл устарел независимо от cached_at. data_version_at = null — это
+        // pre-PR4 кеш (или ещё ни разу не bump'ались), для grace migration
+        // оставляем такой кеш валидным и проверяем только по cached_at.
+        $currentVersion = app(\App\Services\ProductExport\ProductExportDataVersion::class)->current();
+        if ($currentVersion->getTimestamp() > 0 && $this->data_version_at) {
+            if ($currentVersion->gt($this->data_version_at)) {
+                return false;
+            }
         }
 
         return $this->cached_at->diffInMinutes(now()) < $maxAgeMinutes;

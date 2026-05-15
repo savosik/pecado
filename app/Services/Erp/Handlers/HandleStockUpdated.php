@@ -63,5 +63,9 @@ class HandleStockUpdated
             'old_quantity' => $oldQuantity,
             'new_quantity' => (int) $quantity,
         ]);
+
+        // Кеши выгрузок устарели — exports:warm перегенерирует только активные.
+        // syncWithoutDetaching не триггерит Eloquent saved, поэтому bump явный.
+        app(\App\Services\ProductExport\ProductExportDataVersion::class)->bump();
     }
 }

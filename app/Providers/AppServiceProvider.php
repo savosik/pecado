@@ -112,6 +112,13 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\Category::observe(\App\Observers\CategoryObserver::class);
         \App\Models\Product::observe(\App\Observers\ProductHomeCacheObserver::class);
 
+        // Инвалидация кеша версий выгрузок: после save/delete товара любая
+        // выгрузка, сгенерированная ранее, считается устаревшей.
+        // См. App\Services\ProductExport\ProductExportDataVersion.
+        $bumpExportVersion = fn () => app(\App\Services\ProductExport\ProductExportDataVersion::class)->bump();
+        \App\Models\Product::saved($bumpExportVersion);
+        \App\Models\Product::deleted($bumpExportVersion);
+
         \Illuminate\Support\Facades\Event::listen(
             \App\Events\OrderCreated::class,
             \App\Listeners\PublishOrderToErp::class,

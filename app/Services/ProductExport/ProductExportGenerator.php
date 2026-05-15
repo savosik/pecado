@@ -47,6 +47,11 @@ class ProductExportGenerator
             $preset->setStepTimer($timer);
         }
 
+        // Снимок версии данных каталога ДО старта генерации. Если ERP/observer
+        // bump'нет версию во время генерации — мы запишем старый snapshot, и
+        // hasFreshCache корректно поймёт, что нужна повторная регенерация.
+        $dataVersionSnapshot = app(ProductExportDataVersion::class)->current();
+
         $run = ProductExportRun::create([
             'product_export_id' => $export->id,
             'status' => ProductExportRun::STATUS_GENERATING,
@@ -79,6 +84,9 @@ class ProductExportGenerator
             $export->update([
                 'status' => ProductExport::STATUS_READY,
                 'cached_at' => now(),
+                'data_version_at' => $dataVersionSnapshot->getTimestamp() > 0
+                    ? $dataVersionSnapshot
+                    : now(),
             ]);
 
             return $run->fresh();

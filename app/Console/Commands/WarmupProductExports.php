@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\GenerateProductExportJob;
 use App\Models\ProductExport;
+use App\Services\ProductExport\ProductExportDataVersion;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -34,6 +35,13 @@ class WarmupProductExports extends Command
 
         $cutoff = now()->subDays(max(1, $days));
 
+        // Текущая версия данных каталога. Если экспорт уже отражает её —
+        // прогревать незачем. Если bump'ов ещё не было (свежий Redis / первый
+        // запуск после PR4) — current.getTimestamp() == 0, все выгрузки попадут
+        // под старое поведение (прогревать всё активное).
+        $currentVersion = app(ProductExportDataVersion::class)->current();
+        $hasVersion = $currentVersion->getTimestamp() > 0;
+
         $query = ProductExport::query()
             ->where('is_active', true)
             ->whereNotNull('preset')
@@ -42,6 +50,12 @@ class WarmupProductExports extends Command
                 ProductExport::STATUS_QUEUED,
                 ProductExport::STATUS_GENERATING,
             ])
+            ->when($hasVersion, function ($q) use ($currentVersion) {
+                $q->where(function ($inner) use ($currentVersion) {
+                    $inner->whereNull('data_version_at')
+                        ->orWhere('data_version_at', '<', $currentVersion);
+                });
+            })
             ->orderBy('last_downloaded_at', 'desc');
 
         if ($limit > 0) {
@@ -54,11 +68,13 @@ class WarmupProductExports extends Command
             $dispatched++;
         });
 
-        $this->info("exports:warm: поставлено в очередь {$dispatched} выгрузок (порог: {$days} дн.)");
+        $this->info("exports:warm: поставлено в очередь {$dispatched} выгрузок (порог: {$days} дн., версия данных: ".($hasVersion ? $currentVersion->toDateTimeString() : 'не задана').')');
 
         Log::info('exports.warmup', [
             'dispatched' => $dispatched,
             'days_threshold' => $days,
+            'has_data_version' => $hasVersion,
+            'data_version_at' => $hasVersion ? $currentVersion->toIso8601String() : null,
         ]);
 
         return self::SUCCESS;
