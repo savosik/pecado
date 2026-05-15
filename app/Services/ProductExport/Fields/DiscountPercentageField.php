@@ -46,7 +46,14 @@ class DiscountPercentageField extends ExportField
         if (! $clientUser) {
             return 0;
         }
-        $priceResult = $this->priceService->getPriceResult($product, $clientUser);
+
+        // Берём готовый PriceResult из чанк-кеша если есть — иначе fallback
+        // на per-product вызов. См. DiscountedPriceField для подробностей.
+        /** @var \App\Contracts\Pricing\PriceResult|null $priceResult */
+        $priceResult = $product->getExportRowCache('price_result');
+        if ($priceResult === null) {
+            $priceResult = $this->priceService->getPriceResult($product, $clientUser);
+        }
 
         return $priceResult->discountPercent;
     }

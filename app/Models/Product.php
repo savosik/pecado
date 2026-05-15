@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Helpers\SearchHelper;
 use App\Models\Scopes\HiddenScope;
 use App\Models\Traits\ProductQueryScopes;
+use App\Services\ProductExport\Concerns\HasExportRowCache;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -166,7 +167,7 @@ use Spatie\Tags\HasTags;
  */
 class Product extends Model implements HasMedia
 {
-    use HasFactory, HasTags, InteractsWithMedia, ProductQueryScopes, Searchable;
+    use HasExportRowCache, HasFactory, HasTags, InteractsWithMedia, ProductQueryScopes, Searchable;
 
     /**
      * Автоматическая очистка HTML-сущностей при сохранении.

@@ -47,6 +47,12 @@ class UserStockAvailableField extends ExportField
             return 0;
         }
 
+        // Чанк-кеш: stockService->getAvailableStockMap делает 2 запроса на
+        // весь чанк (не на товар), результат лежит в exportRowCache.
+        if ($product->hasExportRowCache('stock_available')) {
+            return $product->getExportRowCache('stock_available') ?? 0;
+        }
+
         return $this->stockService->getAvailableStock($product, $clientUser);
     }
 }

@@ -435,6 +435,10 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
 
         $endChunks = $timer->start('chunks_total');
         $query->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback, $native, $timer) {
+            // Чанк-уровневые карты: за один батч-запрос для всего чанка,
+            // вместо N походов в сервисы из каждого Field::getValue.
+            $this->preloadChunkCache($products, $clientUser, $timer);
+
             $rows = $timer->measure('map_rows', fn () => $products->map(fn (Product $p) => $native
                 ? $this->extractRowNative($p, $clientUser)
                 : $this->extractRow($p, $clientUser)));
@@ -442,6 +446,40 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
             $timer->measure('write_format', fn () => $callback($rows));
         });
         $endChunks();
+    }
+
+    /**
+     * Перед mapping-ом чанка построить батч-карты priceMap и stockMap, разложить
+     * по товарам через exportRowCache. Поля DiscountedPriceField /
+     * DiscountPercentageField / UserStockAvailableField читают из кеша
+     * вместо отдельного похода в сервис на каждый товар.
+     *
+     * Why только при $clientUser != null: без клиента поля возвращают base_price
+     * или 0 без обращения к сервисам — кеш не нужен.
+     *
+     * @param  Collection<int, Product>  $products
+     */
+    protected function preloadChunkCache(Collection $products, ?User $clientUser, StepTimer $timer): void
+    {
+        if (! $clientUser) {
+            return;
+        }
+
+        $productList = $products->all();
+
+        $priceMap = $timer->measure(
+            'price_map',
+            fn () => $this->priceService->getPriceMapForProducts($productList, $clientUser),
+        );
+        $stockMap = $timer->measure(
+            'stock_map',
+            fn () => $this->stockService->getAvailableStockMap($productList, $clientUser),
+        );
+
+        foreach ($productList as $product) {
+            $product->setExportRowCache('price_result', $priceMap[$product->id] ?? null);
+            $product->setExportRowCache('stock_available', $stockMap[$product->id] ?? 0);
+        }
     }
 
     /**

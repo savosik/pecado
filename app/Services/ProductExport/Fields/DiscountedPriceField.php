@@ -46,7 +46,15 @@ class DiscountedPriceField extends ExportField
         if (! $clientUser) {
             return $product->base_price;
         }
-        $priceResult = $this->priceService->getPriceResult($product, $clientUser);
+
+        // Если CustomFieldsPreset/AbstractPreset уже посчитал priceMap на чанк —
+        // используем готовое значение. На каталоге 5к товаров это убирает
+        // 5к походов в IndividualPriceProxy (отдельная prices-БД) → один батч.
+        /** @var \App\Contracts\Pricing\PriceResult|null $priceResult */
+        $priceResult = $product->getExportRowCache('price_result');
+        if ($priceResult === null) {
+            $priceResult = $this->priceService->getPriceResult($product, $clientUser);
+        }
 
         return round($priceResult->getDisplayPrice(), 2);
     }
