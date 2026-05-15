@@ -45,13 +45,26 @@ class AdditionalImagesField extends ExportField
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        return $product->getMedia('additional')
-            ->map(fn ($media) => $media->getFullUrl())
-            ->implode(', ');
+        $urls = $this->resolveAdditionalUrls($product);
+
+        return implode(', ', $urls);
     }
 
     public function nativeValue(Product $product, ?User $clientUser = null): mixed
     {
+        return $this->resolveAdditionalUrls($product);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function resolveAdditionalUrls(Product $product): array
+    {
+        $mediaUrls = $product->getExportRowCache('media_urls');
+        if ($mediaUrls !== null) {
+            return $mediaUrls['additional'] ?? [];
+        }
+
         return $product->getMedia('additional')
             ->map(fn ($media) => $media->getFullUrl())
             ->values()

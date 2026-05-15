@@ -59,10 +59,15 @@ class ImageByPositionField extends ExportField
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        $main = $product->getMedia('main')->map(fn ($m) => $m->getFullUrl());
-        $additional = $product->getMedia('additional')->map(fn ($m) => $m->getFullUrl());
-        $all = $main->merge($additional)->values();
+        $mediaUrls = $product->getExportRowCache('media_urls');
+        if ($mediaUrls !== null) {
+            return $mediaUrls['all'][$this->position] ?? null;
+        }
 
-        return $all->get($this->position);
+        $main = $product->getMedia('main')->map(fn ($m) => $m->getFullUrl())->all();
+        $additional = $product->getMedia('additional')->map(fn ($m) => $m->getFullUrl())->all();
+        $all = array_merge($main, $additional);
+
+        return $all[$this->position] ?? null;
     }
 }

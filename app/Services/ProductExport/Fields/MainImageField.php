@@ -40,8 +40,11 @@ class MainImageField extends ExportField
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        $media = $product->getFirstMedia('main');
+        $mediaUrls = $product->getExportRowCache('media_urls');
+        if ($mediaUrls !== null) {
+            return $mediaUrls['main'][0] ?? null;
+        }
 
-        return $media?->getFullUrl();
+        return $product->getFirstMedia('main')?->getFullUrl();
     }
 }

@@ -475,6 +475,34 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
             }
         });
 
+        // Индекс медиа: для каждого товара заранее раскладываем URL-ы по
+        // коллекциям. Иначе 5× ImageByPositionField + MainImage + Additional +
+        // AllImages для каждого товара отдельно вызывают getMedia($coll) и
+        // map(getFullUrl) — на 5к товаров топ-15 фиксировал ~40 сек суммарно.
+        $timer->measure('media_index', function () use ($productList) {
+            foreach ($productList as $product) {
+                $byCollection = $product->media->groupBy('collection_name');
+                $main = ($byCollection->get('main') ?? collect())
+                    ->map(fn ($m) => $m->getFullUrl())
+                    ->values()
+                    ->all();
+                $additional = ($byCollection->get('additional') ?? collect())
+                    ->map(fn ($m) => $m->getFullUrl())
+                    ->values()
+                    ->all();
+                $video = ($byCollection->get('video') ?? collect())
+                    ->map(fn ($m) => $m->getFullUrl())
+                    ->values()
+                    ->all();
+                $product->setExportRowCache('media_urls', [
+                    'main' => $main,
+                    'additional' => $additional,
+                    'video' => $video,
+                    'all' => array_merge($main, $additional),
+                ]);
+            }
+        });
+
         if (! $clientUser) {
             return;
         }

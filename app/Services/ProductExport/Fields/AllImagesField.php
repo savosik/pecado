@@ -45,17 +45,27 @@ class AllImagesField extends ExportField
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        $main = $product->getMedia('main')->map(fn ($m) => $m->getFullUrl());
-        $additional = $product->getMedia('additional')->map(fn ($m) => $m->getFullUrl());
-
-        return $main->merge($additional)->implode(', ');
+        return implode(', ', $this->resolveAllUrls($product));
     }
 
     public function nativeValue(Product $product, ?User $clientUser = null): mixed
     {
-        $main = $product->getMedia('main')->map(fn ($m) => $m->getFullUrl());
-        $additional = $product->getMedia('additional')->map(fn ($m) => $m->getFullUrl());
+        return $this->resolveAllUrls($product);
+    }
 
-        return $main->merge($additional)->values()->all();
+    /**
+     * @return array<int, string>
+     */
+    protected function resolveAllUrls(Product $product): array
+    {
+        $mediaUrls = $product->getExportRowCache('media_urls');
+        if ($mediaUrls !== null) {
+            return $mediaUrls['all'] ?? [];
+        }
+
+        $main = $product->getMedia('main')->map(fn ($m) => $m->getFullUrl())->all();
+        $additional = $product->getMedia('additional')->map(fn ($m) => $m->getFullUrl())->all();
+
+        return array_merge($main, $additional);
     }
 }

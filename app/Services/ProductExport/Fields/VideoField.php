@@ -40,8 +40,11 @@ class VideoField extends ExportField
 
     public function getValue(Product $product, ?User $clientUser = null): mixed
     {
-        $media = $product->getFirstMedia('video');
+        $mediaUrls = $product->getExportRowCache('media_urls');
+        if ($mediaUrls !== null) {
+            return $mediaUrls['video'][0] ?? null;
+        }
 
-        return $media?->getFullUrl();
+        return $product->getFirstMedia('video')?->getFullUrl();
     }
 }
