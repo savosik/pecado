@@ -33,15 +33,25 @@ class ProductExportGenerator
      * Сгенерировать файл выгрузки и обновить связанные модели.
      * Бросает RuntimeException, если пресет не найден или поток не открылся —
      * вызывающая сторона (Job) поймает и переведёт run в STATUS_FAILED.
+     *
+     * $queuedForMs — сколько джоба провисела в очереди до старта генерации;
+     * Job передаёт это значение, рассчитанное от ProductExport.queued_at до now().
+     * Нужно, чтобы видеть отдельно «висели в очереди» и «генерировались».
      */
-    public function generate(ProductExport $export): ProductExportRun
+    public function generate(ProductExport $export, ?int $queuedForMs = null): ProductExportRun
     {
         $preset = $this->resolvePreset($export);
+
+        $timer = new StepTimer;
+        if ($preset instanceof TimerAware) {
+            $preset->setStepTimer($timer);
+        }
 
         $run = ProductExportRun::create([
             'product_export_id' => $export->id,
             'status' => ProductExportRun::STATUS_GENERATING,
             'started_at' => now(),
+            'queued_for_ms' => $queuedForMs,
         ]);
 
         $export->update([
@@ -63,6 +73,7 @@ class ProductExportGenerator
                 // AbstractPreset и CustomFieldsPreset оба умеют считать строки;
                 // method_exists короче, чем плодить ещё один интерфейс ради одного метода.
                 'rows_count' => method_exists($preset, 'getRowsProcessed') ? $preset->getRowsProcessed() : null,
+                'steps_json' => $this->buildStepsPayload($timer, $duration),
             ]);
 
             $export->update([
@@ -79,6 +90,7 @@ class ProductExportGenerator
                 'finished_at' => now(),
                 'duration_ms' => $duration,
                 'error_message' => mb_substr($e->getMessage(), 0, 5000),
+                'steps_json' => $this->buildStepsPayload($timer, $duration),
             ]);
 
             $export->update(['status' => ProductExport::STATUS_FAILED]);
@@ -91,6 +103,30 @@ class ProductExportGenerator
 
             throw $e;
         }
+    }
+
+    /**
+     * Превращает накопленные таймером значения в payload для steps_json.
+     * Дописывает «other» как разницу между общим duration и суммой замеренных
+     * шагов — туда попадает overhead на update() моделей, fsync, rename,
+     * mkdir и всё, что мы явно не замеряли.
+     *
+     * @return array<string, int>|null
+     */
+    protected function buildStepsPayload(StepTimer $timer, int $totalDurationMs): ?array
+    {
+        $steps = $timer->toArray();
+        if ($steps === []) {
+            return null;
+        }
+
+        $known = array_sum($steps);
+        $other = $totalDurationMs - $known;
+        if ($other > 0) {
+            $steps['other'] = $other;
+        }
+
+        return $steps;
     }
 
     /**

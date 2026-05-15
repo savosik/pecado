@@ -14,6 +14,7 @@ import {
 import axios from 'axios';
 import FilterBuilder from './FilterBuilder';
 import ExportFieldSelector from './ExportFieldSelector';
+import RunStatsPanel from './RunStatsPanel';
 
 /**
  * Convert legacy string[] fields to {key, label}[] format.
@@ -42,7 +43,7 @@ function normalizeFieldsFormat(fields, availableFields) {
     }));
 }
 
-export default function Edit({ export: exportData, availableFilters, availableFields, formats, currencies }) {
+export default function Edit({ export: exportData, lastRun, availableFilters, availableFields, formats, currencies }) {
     // Ensure filters are in hierarchical format
     const initialFilters = (exportData.filters && exportData.filters.logic)
         ? exportData.filters
@@ -322,6 +323,8 @@ export default function Edit({ export: exportData, availableFilters, availableFi
                                             </IconButton>
                                         </HStack>
                                     </Box>
+
+                                    <RunStatsPanel run={lastRun} />
                                 </Stack>
                             </Tabs.Content>
                         </Tabs.Root>

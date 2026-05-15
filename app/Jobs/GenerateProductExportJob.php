@@ -39,9 +39,18 @@ class GenerateProductExportJob implements ShouldBeUnique, ShouldQueue
 
     public int $uniqueFor = 1800;
 
+    /**
+     * Время dispatch'а в миллисекундах (Unix epoch). Заполняется в конструкторе,
+     * сериализуется вместе с Job. В handle() считаем дельту до старта генерации —
+     * это и есть «висел в очереди». Полезно понимать, упирается ли отдача
+     * в backlog воркеров или в саму генерацию.
+     */
+    public int $dispatchedAtMs;
+
     public function __construct(public int $productExportId)
     {
         $this->onQueue('exports');
+        $this->dispatchedAtMs = (int) round(microtime(true) * 1000);
     }
 
     public function uniqueId(): string
@@ -60,7 +69,9 @@ class GenerateProductExportJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $generator->generate($export);
+        $queuedForMs = max(0, (int) round(microtime(true) * 1000) - $this->dispatchedAtMs);
+
+        $generator->generate($export, $queuedForMs);
     }
 
     public function failed(Throwable $e): void

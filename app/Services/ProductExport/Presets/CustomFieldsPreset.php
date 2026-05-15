@@ -10,6 +10,8 @@ use App\Models\Product;
 use App\Models\ProductExport;
 use App\Models\User;
 use App\Services\ProductExport\FieldRegistry;
+use App\Services\ProductExport\StepTimer;
+use App\Services\ProductExport\TimerAware;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -29,7 +31,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  *
  * Поддерживает 4 формата ($export->format): CSV / JSON / XML / XLS.
  */
-class CustomFieldsPreset implements PresetInterface
+class CustomFieldsPreset implements PresetInterface, TimerAware
 {
     protected const CHUNK_SIZE = 200;
 
@@ -47,12 +49,27 @@ class CustomFieldsPreset implements PresetInterface
 
     protected int $rowsProcessed = 0;
 
+    /**
+     * Таймер замеров этапов; ставится Generator-ом перед writeToStream.
+     */
+    protected ?StepTimer $timer = null;
+
     public function __construct(
         protected FieldRegistry $registry,
         protected PriceServiceInterface $priceService,
         protected StockServiceInterface $stockService,
         protected \App\Contracts\Currency\CurrencyConversionServiceInterface $currencyService,
     ) {}
+
+    public function setStepTimer(?StepTimer $timer): void
+    {
+        $this->timer = $timer;
+    }
+
+    protected function timer(): StepTimer
+    {
+        return $this->timer ??= new StepTimer;
+    }
 
     public function key(): string
     {
@@ -321,8 +338,14 @@ class CustomFieldsPreset implements PresetInterface
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($c))->setAutoSize(true);
         }
 
-        $writer = new Xlsx($spreadsheet);
-        $writer->save($stream);
+        // PhpSpreadsheet держит весь Spreadsheet в памяти и собирает XLSX на save() —
+        // на больших каталогах это самая тяжёлая часть генерации XLS. Замеряем
+        // отдельно, чтобы видеть её вес в steps_json. В PR 2 этот блок планируется
+        // заменить на OpenSpout (streaming writer).
+        $this->timer()->measure('write_format', function () use ($spreadsheet, $stream) {
+            $writer = new Xlsx($spreadsheet);
+            $writer->save($stream);
+        });
     }
 
     // ─── Data plumbing ─────────────────────────────
@@ -347,6 +370,12 @@ class CustomFieldsPreset implements PresetInterface
     /**
      * Чанк-обработка продуктов: фильтры + eager-load по выбранным полям.
      *
+     * Внутри замеряются map_rows / write_format, снаружи — chunks_total.
+     * Разница chunks_total - sum остальных ≈ время загрузки чанков
+     * (query+eager_load). Кастомные пресеты не строят отдельных
+     * price_map / stock_map — эти данные берутся в Field::getValue()
+     * через PriceService / StockService, и их время попадает в map_rows.
+     *
      * @param  callable(Collection<int, array>): void  $callback
      * @param  bool  $native  Если true — извлекаем значения через nativeValue()
      *                        и применяем модификаторы в native-режиме (используется
@@ -355,6 +384,8 @@ class CustomFieldsPreset implements PresetInterface
      */
     protected function eachChunk(ProductExport $export, callable $callback, bool $native = false): void
     {
+        $timer = $this->timer();
+
         $clientUser = $export->client_user_id
             ? User::with('region')->find($export->client_user_id)
             : null;
@@ -366,13 +397,15 @@ class CustomFieldsPreset implements PresetInterface
             $query->with($relations);
         }
 
-        $query->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback, $native) {
-            $rows = $products->map(fn (Product $p) => $native
+        $endChunks = $timer->start('chunks_total');
+        $query->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback, $native, $timer) {
+            $rows = $timer->measure('map_rows', fn () => $products->map(fn (Product $p) => $native
                 ? $this->extractRowNative($p, $clientUser)
-                : $this->extractRow($p, $clientUser));
+                : $this->extractRow($p, $clientUser)));
             $this->rowsProcessed += $rows->count();
-            $callback($rows);
+            $timer->measure('write_format', fn () => $callback($rows));
         });
+        $endChunks();
     }
 
     /**

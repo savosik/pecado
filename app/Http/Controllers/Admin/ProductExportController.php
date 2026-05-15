@@ -97,11 +97,26 @@ class ProductExportController extends Controller
             abort(403);
         }
 
-        // Load clientUser with full name for display
-        $productExport->load('clientUser');
+        // Load clientUser with full name for display + lastRun for stats panel.
+        $productExport->load('clientUser', 'lastRun');
+
+        $lastRun = $productExport->lastRun;
+        $lastRunPayload = $lastRun ? [
+            'id' => $lastRun->id,
+            'status' => $lastRun->status,
+            'started_at' => $lastRun->started_at?->toISOString(),
+            'finished_at' => $lastRun->finished_at?->toISOString(),
+            'duration_ms' => $lastRun->duration_ms,
+            'queued_for_ms' => $lastRun->queued_for_ms,
+            'rows_count' => $lastRun->rows_count,
+            'bytes' => $lastRun->bytes,
+            'steps_json' => $lastRun->steps_json,
+            'error_message' => $lastRun->error_message,
+        ] : null;
 
         return Inertia::render('Admin/Pages/ProductExports/Edit', [
             'export' => $productExport,
+            'lastRun' => $lastRunPayload,
             'availableFilters' => $this->exportService->getAvailableFilters(),
             'availableFields' => $this->exportService->getAvailableFields(),
             'currencies' => Currency::select('id', 'code', 'name', 'symbol', 'is_base')->orderByDesc('is_base')->orderBy('code')->get(),

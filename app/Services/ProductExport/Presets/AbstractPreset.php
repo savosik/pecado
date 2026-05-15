@@ -10,6 +10,8 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductExport;
 use App\Models\User;
+use App\Services\ProductExport\StepTimer;
+use App\Services\ProductExport\TimerAware;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -22,7 +24,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  * Использует chunk-подход для обработки больших каталогов (~10k+ товаров)
  * без переполнения памяти.
  */
-abstract class AbstractPreset implements PresetInterface
+abstract class AbstractPreset implements PresetInterface, TimerAware
 {
     protected const CHUNK_SIZE = 500;
 
@@ -33,10 +35,27 @@ abstract class AbstractPreset implements PresetInterface
      */
     protected int $rowsProcessed = 0;
 
+    /**
+     * Таймер замеров этапов; ставится Generator-ом перед writeToStream.
+     * Если null — используется заглушка-локалка в timer(), и наружу значения
+     * не дампятся (CLI/Tinker-сценарии, тесты с прямым вызовом пресета).
+     */
+    protected ?StepTimer $timer = null;
+
     public function __construct(
         protected PriceServiceInterface $priceService,
         protected StockServiceInterface $stockService,
     ) {}
+
+    public function setStepTimer(?StepTimer $timer): void
+    {
+        $this->timer = $timer;
+    }
+
+    protected function timer(): StepTimer
+    {
+        return $this->timer ??= new StepTimer;
+    }
 
     /**
      * Сколько товаров обработала эта генерация. Не включает строки-метаданные
@@ -63,28 +82,41 @@ abstract class AbstractPreset implements PresetInterface
      * Перед mapProduct по каждому чанку батчем подгружаются цены и остатки —
      * это убирает N+1 на priceService->getPriceResult() и stockService->getAvailableStock().
      *
+     * Внутри замеряются price_map / stock_map / map_rows / write_format,
+     * снаружи — chunks_total. Разница chunks_total - sum остальных ≈ время
+     * загрузки чанков (query+eager_load).
+     *
      * @param  callable(Collection<int, array>): void  $callback  получает коллекцию rich-data массивов
      */
     protected function eachChunk(ProductExport $export, callable $callback): void
     {
         $clientUser = $this->resolveClientUser($export);
         $this->rowsProcessed = 0;
+        $timer = $this->timer();
 
+        $endChunks = $timer->start('chunks_total');
         $this->buildBaseQuery()
-            ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback) {
+            ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, $callback, $timer) {
                 $productList = $products->all();
-                $priceMap = $this->priceService->getPriceMapForProducts($productList, $clientUser);
-                $stockMap = $this->stockService->getAvailableStockMap($productList, $clientUser);
+                $priceMap = $timer->measure(
+                    'price_map',
+                    fn () => $this->priceService->getPriceMapForProducts($productList, $clientUser),
+                );
+                $stockMap = $timer->measure(
+                    'stock_map',
+                    fn () => $this->stockService->getAvailableStockMap($productList, $clientUser),
+                );
 
-                $mapped = $products->map(fn (Product $product) => $this->mapProduct(
+                $mapped = $timer->measure('map_rows', fn () => $products->map(fn (Product $product) => $this->mapProduct(
                     $product,
                     $clientUser,
                     $priceMap[$product->id] ?? null,
                     $stockMap[$product->id] ?? 0,
-                ));
+                )));
                 $this->rowsProcessed += $mapped->count();
-                $callback($mapped);
+                $timer->measure('write_format', fn () => $callback($mapped));
             });
+        $endChunks();
     }
 
     /**
@@ -95,24 +127,33 @@ abstract class AbstractPreset implements PresetInterface
     {
         $clientUser = $this->resolveClientUser($export);
         $this->rowsProcessed = 0;
+        $timer = $this->timer();
 
         $result = collect();
 
+        $endChunks = $timer->start('chunks_total');
         $this->buildBaseQuery()
-            ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, &$result) {
+            ->chunk(static::CHUNK_SIZE, function (Collection $products) use ($clientUser, &$result, $timer) {
                 $productList = $products->all();
-                $priceMap = $this->priceService->getPriceMapForProducts($productList, $clientUser);
-                $stockMap = $this->stockService->getAvailableStockMap($productList, $clientUser);
+                $priceMap = $timer->measure(
+                    'price_map',
+                    fn () => $this->priceService->getPriceMapForProducts($productList, $clientUser),
+                );
+                $stockMap = $timer->measure(
+                    'stock_map',
+                    fn () => $this->stockService->getAvailableStockMap($productList, $clientUser),
+                );
 
-                $mapped = $products->map(fn (Product $product) => $this->mapProduct(
+                $mapped = $timer->measure('map_rows', fn () => $products->map(fn (Product $product) => $this->mapProduct(
                     $product,
                     $clientUser,
                     $priceMap[$product->id] ?? null,
                     $stockMap[$product->id] ?? 0,
-                ));
+                )));
                 $this->rowsProcessed += $mapped->count();
                 $result = $result->concat($mapped);
             });
+        $endChunks();
 
         return $result;
     }
