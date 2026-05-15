@@ -217,14 +217,25 @@ const DATE_FORMAT_PRESETS = [
 function DateControls({ modifiers, onModifiersChange }) {
     const format = modifiers?.format || '';
     const isCustom = format && !DATE_FORMAT_PRESETS.some(p => p.value === format);
+    // Toggle: клик по активному формату — снимает выбор (формат не применяется,
+    // в выгрузке остаётся системный дефолт «Y-m-d H:i:s»).
+    const togglePreset = (value) => {
+        const newMods = { ...modifiers };
+        if (format === value) {
+            delete newMods.format;
+        } else {
+            newMods.format = value;
+        }
+        onModifiersChange(newMods);
+    };
     return (
         <Stack gap={3}>
-            <ModifierRow label="Формат даты">
+            <ModifierRow label="Формат даты" hint="не выбрано — Y-m-d H:i:s (системный)">
                 {DATE_FORMAT_PRESETS.map(p => (
                     <TagButton
                         key={p.value}
                         active={format === p.value}
-                        onClick={() => onModifiersChange({ ...modifiers, format: p.value })}
+                        onClick={() => togglePreset(p.value)}
                     >
                         {p.label}
                     </TagButton>
@@ -232,7 +243,13 @@ function DateControls({ modifiers, onModifiersChange }) {
                 <TagButton
                     active={isCustom}
                     onClick={() => {
-                        if (!isCustom) onModifiersChange({ ...modifiers, format: 'd.m.Y' });
+                        if (isCustom) {
+                            const newMods = { ...modifiers };
+                            delete newMods.format;
+                            onModifiersChange(newMods);
+                        } else {
+                            onModifiersChange({ ...modifiers, format: 'd.m.Y' });
+                        }
                     }}
                 >
                     Свой
@@ -364,27 +381,40 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
     }
 
     if (modifierType === 'multi_value') {
-        const separator = modifiers?.separator || 'comma';
-        const sourceSep = modifiers?.source_separator || 'comma';
+        // Никакого дефолтного значения: если разделитель явно не выбран —
+        // модификатор не применяется и в выгрузку идёт ровно то, что возвращает
+        // поле (это backend-поведение в applyMultiValueModifier тоже).
+        // Клик по уже активному теге снимает выбор.
+        const separator = modifiers?.separator ?? null;
+        const sourceSep = modifiers?.source_separator ?? null;
+        const toggle = (key, val) => {
+            const newMods = { ...modifiers };
+            if (newMods[key] === val) {
+                delete newMods[key];
+            } else {
+                newMods[key] = val;
+            }
+            onModifiersChange(newMods);
+        };
         return (
             <Stack gap={3}>
-                <ModifierRow label="Разделитель на выходе">
+                <ModifierRow label="Разделитель на выходе" hint="не выбрано — оставить как есть">
                     {SEPARATOR_OPTIONS.map(opt => (
                         <TagButton
                             key={opt.value}
                             active={separator === opt.value}
-                            onClick={() => onModifiersChange({ ...modifiers, separator: opt.value })}
+                            onClick={() => toggle('separator', opt.value)}
                         >
                             {opt.label}
                         </TagButton>
                     ))}
                 </ModifierRow>
-                <ModifierRow label="Разделитель на входе" hint="как поле возвращает значения; по умолчанию — запятая">
+                <ModifierRow label="Разделитель на входе" hint="по умолчанию — запятая; нужен если поле возвращает значения через другой символ">
                     {SEPARATOR_OPTIONS.filter(o => !o.value.endsWith('_tight')).map(opt => (
                         <TagButton
                             key={opt.value}
                             active={sourceSep === opt.value}
-                            onClick={() => onModifiersChange({ ...modifiers, source_separator: opt.value })}
+                            onClick={() => toggle('source_separator', opt.value)}
                         >
                             {opt.label.split(' ')[0]}
                         </TagButton>
