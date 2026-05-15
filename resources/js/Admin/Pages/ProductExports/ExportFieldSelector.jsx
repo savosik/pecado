@@ -108,9 +108,10 @@ function TagButton({ active, onClick, children }) {
     );
 }
 
-// Подблок для арифметических модификаторов: × multiply, + add,
-// + флаг integer_if_whole (выводить целое если математика сошлась к целому).
-// Используется и в `price`, и в `numeric` модификаторах.
+// Подблок для арифметических модификаторов: × multiply, + add.
+// Флаг integer_if_whole оставляем универсальным: выводим целое число,
+// если после арифметики дробная часть равна нулю (980.00 → 980, 18.0 → 18,
+// но 980.50 / 18.5 остаются как есть). Полезно и для цен, и для размеров.
 function ArithmeticControls({ modifiers, onModifiersChange }) {
     const multiply = modifiers?.multiply ?? '';
     const add = modifiers?.add ?? '';
@@ -150,13 +151,13 @@ function ArithmeticControls({ modifiers, onModifiersChange }) {
             </ModifierRow>
             <ModifierRow
                 label="Округление"
-                hint="980.00 → 980, но 980.50 без изменений"
+                hint="980.00 → 980, 18.0 → 18, но 980.5 / 18.5 без изменений"
             >
                 <TagButton
                     active={integerIfWhole}
                     onClick={() => onModifiersChange({ ...modifiers, integer_if_whole: !integerIfWhole })}
                 >
-                    Целое если без копеек
+                    Целое если нет дробной части
                 </TagButton>
             </ModifierRow>
         </Stack>
