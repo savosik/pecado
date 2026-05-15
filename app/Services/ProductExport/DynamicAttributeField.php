@@ -217,12 +217,21 @@ class DynamicAttributeField extends ExportField
     /**
      * Собрать все значения этого атрибута для товара (0..N штук).
      *
+     * Если CustomFieldsPreset положил в exportRowCache индекс
+     * `attribute_id => Collection<ProductAttributeValue>` — берём O(1) lookup,
+     * иначе fallback на Collection::where (O(values) на каждый атрибут × N
+     * атрибутов в выгрузке давал квадратичную сложность на товар).
+     *
      * @return array<int, mixed>
      */
     protected function collectValues(Product $product): array
     {
-        return $product->attributeValues
-            ->where('attribute_id', $this->attribute->id)
+        $indexed = $product->getExportRowCache('attr_index');
+        $values = $indexed !== null
+            ? ($indexed->get($this->attribute->id) ?? collect())
+            : $product->attributeValues->where('attribute_id', $this->attribute->id);
+
+        return $values
             ->map(fn ($av) => $this->extractSingleValue($av))
             ->filter(fn ($v) => $v !== null)
             ->values()

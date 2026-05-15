@@ -461,11 +461,23 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
      */
     protected function preloadChunkCache(Collection $products, ?User $clientUser, StepTimer $timer): void
     {
+        $productList = $products->all();
+
+        // Индекс атрибутов на каждом товаре нужен независимо от clientUser —
+        // десятки полей `attribute.*` иначе на каждый товар делают
+        // Collection::where(attribute_id) per-field, что квадратично.
+        $timer->measure('attr_index', function () use ($productList) {
+            foreach ($productList as $product) {
+                $product->setExportRowCache(
+                    'attr_index',
+                    $product->attributeValues->groupBy('attribute_id'),
+                );
+            }
+        });
+
         if (! $clientUser) {
             return;
         }
-
-        $productList = $products->all();
 
         $priceMap = $timer->measure(
             'price_map',
