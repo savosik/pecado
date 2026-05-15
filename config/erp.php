@@ -53,6 +53,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Shovel с ESB Andrey Company (заказы из чужой 1С)
+    |--------------------------------------------------------------------------
+    |
+    | RabbitMQ Shovel тянет заказы из очереди `pecado.orders` на ESB Andrey
+    | (esb.services.andrey.company:45671, AMQPS) и публикует их в локальный
+    | fanout-обменник `external.orders_from_andrey`, откуда они расходятся по:
+    |   - external.orders_from_andrey_for_website (потребитель — сайт, для аудита/отладки)
+    |   - external.orders_from_andrey_for_erp     (потребитель — 1С Pecado)
+    |
+    | Сценарий: «прокидывание» заказов из 1С Andrey в 1С Pecado через шину.
+    | Сайт сам эти сообщения не обрабатывает; очередь _for_website оставлена
+    | как зеркало для мониторинга/отладки.
+    |
+    | Если `ANDREY_ESB_AMQP_URI` пустой — shovel не создаётся (локальный dev / CI).
+    |
+    */
+    'andrey_shovel' => [
+        'name' => 'andrey-orders',
+        'src_uri' => env('ANDREY_ESB_AMQP_URI'),
+        'src_queue' => env('ANDREY_ESB_SRC_QUEUE', 'pecado.orders'),
+        'dest_exchange' => 'external.orders_from_andrey',
+        'prefetch_count' => (int) env('ANDREY_ESB_SHOVEL_PREFETCH', 100),
+        'reconnect_delay' => (int) env('ANDREY_ESB_SHOVEL_RECONNECT_DELAY', 5),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | TTL сообщений в очередях external.remains_for_*
     |--------------------------------------------------------------------------
     |

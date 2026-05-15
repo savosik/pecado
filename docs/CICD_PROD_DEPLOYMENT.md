@@ -307,6 +307,14 @@ RABBITMQ_ERP_PASSWORD=<STRONG_ERP_PASSWORD>
 # Логирование шины ERP (опционально)
 ERP_BUS_LOGGING_ENABLED=true
 
+# ─── Shovel-ы с внешних ESB ───
+# Заказы из чужой 1С через ESB Andrey Company (TLS на порту 45671).
+# Реальные креды — в docs/ANDREY_ESB_CONNECTION.md (файл в .gitignore).
+ANDREY_ESB_AMQP_URI=amqps://pecado:<ANDREY_ESB_PASSWORD>@esb.services.andrey.company:45671/
+ANDREY_ESB_SRC_QUEUE=pecado.orders
+ANDREY_ESB_SHOVEL_PREFETCH=100
+ANDREY_ESB_SHOVEL_RECONNECT_DELAY=5
+
 # ─── Поиск (Meilisearch) ───
 SCOUT_DRIVER=meilisearch
 MEILISEARCH_HOST=http://meilisearch:7700

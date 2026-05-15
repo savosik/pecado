@@ -25,6 +25,10 @@ class SetupRabbitMQTopology extends Command
             'external.remains_for_website',
             'external.remains_for_erp',
         ],
+        'external.orders_from_andrey' => [
+            'external.orders_from_andrey_for_website',
+            'external.orders_from_andrey_for_erp',
+        ],
     ];
 
     /**
@@ -180,8 +184,9 @@ class SetupRabbitMQTopology extends Command
             // 8. Policies (TTL и прочие runtime-свойства очередей)
             $this->setupPolicies();
 
-            // 9. Dynamic shovel с московского ESB
-            $this->setupMoscowShovel();
+            // 9. Dynamic shovel-ы с внешних ESB
+            $this->setupShovel('moscow', config('erp.moscow_shovel'));
+            $this->setupShovel('andrey', config('erp.andrey_shovel'));
 
             $this->info('');
             $this->info('✅ Топология RabbitMQ успешно создана!');
@@ -259,22 +264,23 @@ class SetupRabbitMQTopology extends Command
     }
 
     /**
-     * Настройка dynamic shovel-а, тянущего внешние остатки с московского ESB
-     * и публикующего их в fanout `external.remains`.
+     * Настройка dynamic shovel-а, тянущего сообщения с внешнего ESB
+     * и публикующего их в локальный fanout-обменник.
      *
      * Параметры передаются через Management HTTP API (PUT /api/parameters/shovel/{vhost}/{name}).
-     * Если `MOSCOW_ESB_AMQP_URI` не задан — shovel не создаётся (локальный dev / CI).
+     * Если `src_uri` пуст — shovel не создаётся (локальный dev / CI без доступа к ESB).
+     *
+     * @param  string  $label  человекочитаемое имя источника для логов (`moscow`, `andrey`)
+     * @param  array|null  $cfg  конфигурация из `config/erp.php` (см. `moscow_shovel`, `andrey_shovel`)
      */
-    private function setupMoscowShovel(): void
+    private function setupShovel(string $label, ?array $cfg): void
     {
-        $cfg = config('erp.moscow_shovel');
-        $srcUri = $cfg['src_uri'] ?? null;
-
         $this->info('');
-        $this->info('Настройка shovel-а с московского ESB...');
+        $this->info("Настройка shovel-а '{$label}'...");
 
-        if (empty($srcUri)) {
-            $this->warn('  MOSCOW_ESB_AMQP_URI не задан — shovel пропущен.');
+        if (empty($cfg) || empty($cfg['src_uri'])) {
+            $envHint = strtoupper($label).'_ESB_AMQP_URI';
+            $this->warn("  {$envHint} не задан — shovel '{$label}' пропущен.");
 
             return;
         }
@@ -288,7 +294,7 @@ class SetupRabbitMQTopology extends Command
         $payload = [
             'value' => [
                 'src-protocol' => 'amqp091',
-                'src-uri' => $srcUri,
+                'src-uri' => $cfg['src_uri'],
                 'src-queue' => $cfg['src_queue'],
                 'src-prefetch-count' => $cfg['prefetch_count'],
                 'dest-protocol' => 'amqp091',

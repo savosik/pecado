@@ -48,6 +48,7 @@ boost.json
 docs/DEV_SERVER_CREDENTIALS.md
 docs/PROD_SERVER_CREDENTIALS.md
 docs/ERP_1C_PROD_CONNECTION.md
+docs/ANDREY_ESB_CONNECTION.md
 
 # Локальный compose override — каждый разработчик ведёт свой
 docker-compose.override.yml
