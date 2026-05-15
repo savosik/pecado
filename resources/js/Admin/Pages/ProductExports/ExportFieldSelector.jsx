@@ -48,21 +48,64 @@ const SEPARATOR_OPTIONS = [
 // Обёртка для строки модификатора: лейбл слева + контролы справа.
 function ModifierRow({ label, hint, children }) {
     return (
-        <HStack gap={3} align="center" flexWrap="wrap">
-            <Text fontSize="xs" color="fg.muted" minW="140px" flexShrink={0}>
+        <HStack gap={3} align="flex-start" flexWrap="wrap">
+            <Text
+                fontSize="xs"
+                fontWeight="normal"
+                color="fg.muted"
+                minW="160px"
+                flexShrink={0}
+                pt={1.5}
+            >
                 {label}
             </Text>
-            <HStack gap={2} align="center" flexWrap="wrap" flex={1}>
+            <HStack gap={1.5} align="center" flexWrap="wrap" flex={1} minW={0}>
                 {children}
             </HStack>
-            {hint && <Text fontSize="xs" color="fg.subtle">{hint}</Text>}
+            {hint && (
+                <Text fontSize="xs" color="fg.subtle" pt={1.5} flexShrink={0}>
+                    {hint}
+                </Text>
+            )}
         </HStack>
     );
 }
 
 // Тонкий разделитель между группами модификаторов в подложке.
 function ModifierSep() {
-    return <Box height="1px" bg="border.muted" my={2} />;
+    return <Box height="1px" bg="border.muted" my={3} />;
+}
+
+// «Тегообразная» кнопка для выбора пресетов внутри модификаторов.
+// Активное состояние — мягкая подкрашенная подложка (без чёрной solid-заливки,
+// которая царапает глаз), неактивное — почти прозрачное с тонкой рамкой.
+// Шрифт не жирный, чтобы по визуальному весу не конкурировать с лейблом строки.
+function TagButton({ active, onClick, children }) {
+    return (
+        <Box
+            as="button"
+            type="button"
+            onClick={onClick}
+            px={2.5}
+            py={1}
+            borderRadius="md"
+            borderWidth="1px"
+            borderColor={active ? 'pecado.muted' : 'border.muted'}
+            bg={active ? 'pecado.subtle' : 'bg'}
+            color={active ? 'pecado.fg' : 'fg.muted'}
+            fontSize="xs"
+            fontWeight="normal"
+            lineHeight="1.4"
+            transition="all 0.15s"
+            cursor="pointer"
+            _hover={{
+                bg: active ? 'pecado.subtle' : 'bg.muted',
+                borderColor: active ? 'pecado.solid' : 'border.emphasized',
+            }}
+        >
+            {children}
+        </Box>
+    );
 }
 
 // Подблок для арифметических модификаторов: × multiply, + add,
@@ -73,7 +116,7 @@ function ArithmeticControls({ modifiers, onModifiersChange }) {
     const add = modifiers?.add ?? '';
     const integerIfWhole = !!modifiers?.integer_if_whole;
     return (
-        <Stack gap={2}>
+        <Stack gap={3}>
             <ModifierRow
                 label="Арифметика"
                 hint="итог = (значение × умножитель) + прибавка"
@@ -109,16 +152,12 @@ function ArithmeticControls({ modifiers, onModifiersChange }) {
                 label="Округление"
                 hint="980.00 → 980, но 980.50 без изменений"
             >
-                <Badge
-                    size="sm"
-                    cursor="pointer"
-                    variant={integerIfWhole ? 'solid' : 'outline'}
-                    colorPalette={integerIfWhole ? 'pecado' : 'gray'}
+                <TagButton
+                    active={integerIfWhole}
                     onClick={() => onModifiersChange({ ...modifiers, integer_if_whole: !integerIfWhole })}
-                    _hover={{ opacity: 0.8 }}
                 >
                     Целое если без копеек
-                </Badge>
+                </TagButton>
             </ModifierRow>
         </Stack>
     );
@@ -178,33 +217,25 @@ function DateControls({ modifiers, onModifiersChange }) {
     const format = modifiers?.format || '';
     const isCustom = format && !DATE_FORMAT_PRESETS.some(p => p.value === format);
     return (
-        <Stack gap={2}>
+        <Stack gap={3}>
             <ModifierRow label="Формат даты">
                 {DATE_FORMAT_PRESETS.map(p => (
-                    <Badge
+                    <TagButton
                         key={p.value}
-                        size="sm"
-                        cursor="pointer"
-                        variant={format === p.value ? 'solid' : 'outline'}
-                        colorPalette={format === p.value ? 'pecado' : 'gray'}
+                        active={format === p.value}
                         onClick={() => onModifiersChange({ ...modifiers, format: p.value })}
-                        _hover={{ opacity: 0.8 }}
                     >
                         {p.label}
-                    </Badge>
+                    </TagButton>
                 ))}
-                <Badge
-                    size="sm"
-                    cursor="pointer"
-                    variant={isCustom ? 'solid' : 'outline'}
-                    colorPalette={isCustom ? 'pecado' : 'gray'}
-                    _hover={{ opacity: 0.8 }}
+                <TagButton
+                    active={isCustom}
                     onClick={() => {
                         if (!isCustom) onModifiersChange({ ...modifiers, format: 'd.m.Y' });
                     }}
                 >
                     Свой
-                </Badge>
+                </TagButton>
             </ModifierRow>
             {isCustom && (
                 <ModifierRow
@@ -235,31 +266,23 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
     if (modifierType === 'price') {
         const currencyId = modifiers?.currency_id || null;
         return (
-            <Stack gap={2}>
+            <Stack gap={3}>
                 {currencies.length > 0 && (
                     <ModifierRow label="Валюта">
-                        <Badge
-                            size="sm"
-                            cursor="pointer"
-                            variant={!currencyId ? 'solid' : 'outline'}
-                            colorPalette={!currencyId ? 'pecado' : 'gray'}
+                        <TagButton
+                            active={!currencyId}
                             onClick={() => onModifiersChange({ ...modifiers, currency_id: null })}
-                            _hover={{ opacity: 0.8 }}
                         >
                             Базовая ({currencies.find(c => c.is_base)?.code || 'RUB'})
-                        </Badge>
+                        </TagButton>
                         {currencies.filter(c => !c.is_base).map(c => (
-                            <Badge
+                            <TagButton
                                 key={c.id}
-                                size="sm"
-                                cursor="pointer"
-                                variant={currencyId === c.id ? 'solid' : 'outline'}
-                                colorPalette={currencyId === c.id ? 'pecado' : 'gray'}
+                                active={currencyId === c.id}
                                 onClick={() => onModifiersChange({ ...modifiers, currency_id: c.id })}
-                                _hover={{ opacity: 0.8 }}
                             >
                                 {c.symbol} {c.name}
-                            </Badge>
+                            </TagButton>
                         ))}
                     </ModifierRow>
                 )}
@@ -280,34 +303,26 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
         const isCustom = !BOOLEAN_PRESETS.some(p => p.true_value === trueVal && p.false_value === falseVal);
 
         return (
-            <Stack gap={2}>
+            <Stack gap={3}>
                 <ModifierRow label="Формат значения">
                     {BOOLEAN_PRESETS.map((preset, i) => {
                         const active = preset.true_value === trueVal && preset.false_value === falseVal;
                         return (
-                            <Badge
+                            <TagButton
                                 key={i}
-                                size="sm"
-                                cursor="pointer"
-                                variant={active ? 'solid' : 'outline'}
-                                colorPalette={active ? 'pecado' : 'gray'}
+                                active={active}
                                 onClick={() => onModifiersChange({
                                     ...modifiers,
                                     true_value: preset.true_value,
                                     false_value: preset.false_value,
                                 })}
-                                _hover={{ opacity: 0.8 }}
                             >
                                 {preset.label}
-                            </Badge>
+                            </TagButton>
                         );
                     })}
-                    <Badge
-                        size="sm"
-                        cursor="pointer"
-                        variant={isCustom ? 'solid' : 'outline'}
-                        colorPalette={isCustom ? 'pecado' : 'gray'}
-                        _hover={{ opacity: 0.8 }}
+                    <TagButton
+                        active={isCustom}
                         onClick={() => {
                             if (!isCustom) {
                                 // Заходим в кастом-режим: «1 / пусто» — частый кейс
@@ -321,7 +336,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
                         }}
                     >
                         Свои
-                    </Badge>
+                    </TagButton>
                 </ModifierRow>
                 {isCustom && (
                     <ModifierRow label="Свои значения" hint="пустое поле = пустое значение в CSV">
@@ -351,35 +366,27 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
         const separator = modifiers?.separator || 'comma';
         const sourceSep = modifiers?.source_separator || 'comma';
         return (
-            <Stack gap={2}>
+            <Stack gap={3}>
                 <ModifierRow label="Разделитель на выходе">
                     {SEPARATOR_OPTIONS.map(opt => (
-                        <Badge
+                        <TagButton
                             key={opt.value}
-                            size="sm"
-                            cursor="pointer"
-                            variant={separator === opt.value ? 'solid' : 'outline'}
-                            colorPalette={separator === opt.value ? 'pecado' : 'gray'}
+                            active={separator === opt.value}
                             onClick={() => onModifiersChange({ ...modifiers, separator: opt.value })}
-                            _hover={{ opacity: 0.8 }}
                         >
                             {opt.label}
-                        </Badge>
+                        </TagButton>
                     ))}
                 </ModifierRow>
                 <ModifierRow label="Разделитель на входе" hint="как поле возвращает значения; по умолчанию — запятая">
                     {SEPARATOR_OPTIONS.filter(o => !o.value.endsWith('_tight')).map(opt => (
-                        <Badge
+                        <TagButton
                             key={opt.value}
-                            size="sm"
-                            cursor="pointer"
-                            variant={sourceSep === opt.value ? 'solid' : 'outline'}
-                            colorPalette={sourceSep === opt.value ? 'pecado' : 'gray'}
+                            active={sourceSep === opt.value}
                             onClick={() => onModifiersChange({ ...modifiers, source_separator: opt.value })}
-                            _hover={{ opacity: 0.8 }}
                         >
                             {opt.label.split(' ')[0]}
-                        </Badge>
+                        </TagButton>
                     ))}
                 </ModifierRow>
                 <ModifierSep />
@@ -390,7 +397,7 @@ function ModifierControls({ modifierType, modifiers, onModifiersChange, currenci
 
     if (modifierType === 'date') {
         return (
-            <Stack gap={2}>
+            <Stack gap={3}>
                 <DateControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
                 <ModifierSep />
                 <SubstringControls modifiers={modifiers || {}} onModifiersChange={onModifiersChange} />
@@ -518,10 +525,11 @@ function SortableFieldRow({ item, index, defaultLabel, description, modifierType
             {/* Modifier controls (collapsible) — рендерим всегда когда открыт */}
             {showModifiers && (
                 <Box
-                    mt={2}
+                    mt={3}
                     ml={8}
                     mr={2}
-                    p={3}
+                    px={4}
+                    py={3.5}
                     bg="bg.subtle"
                     borderRadius="md"
                     borderWidth="1px"
@@ -756,7 +764,7 @@ export default function ExportFieldSelector({ availableFields, selectedFields, o
     };
 
     return (
-        <Stack gap={2}>
+        <Stack gap={3}>
             {/* Header */}
             <HStack justify="space-between">
                 <Text fontSize="xs" color="fg.muted">
