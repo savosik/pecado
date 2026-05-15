@@ -111,15 +111,32 @@ class CleanupProductExportsTest extends TestCase
         $this->assertFileDoesNotExist($staleFile, 'Файл выгрузки, не скачивавшейся 120 дней, должен быть удалён');
     }
 
-    public function test_skips_tmp_files(): void
+    public function test_recent_tmp_files_are_kept(): void
     {
-        $tmpFile = "{$this->cacheDir}/__test_some_hash.tmp.12345";
-        file_put_contents($tmpFile, 'tmp content from another worker');
+        // Свежий tmp — другой воркер прямо сейчас в середине генерации.
+        // Cleanup не должен мешать.
+        $tmpFile = "{$this->cacheDir}/__test_recent_hash.tmp.12345";
+        file_put_contents($tmpFile, 'tmp from running worker');
 
         $this->artisan('exports:cleanup')->assertSuccessful();
 
-        $this->assertFileExists($tmpFile, 'tmp-файлы должен чистить сам Generator, cleanup их не трогает');
+        $this->assertFileExists($tmpFile, 'Свежий tmp-файл не должен удаляться');
 
         @unlink($tmpFile);
+    }
+
+    public function test_old_tmp_files_are_removed(): void
+    {
+        // Tmp-файл от убитого воркера (SIGKILL, OOM, supervisor stop) —
+        // Generator не успел его удалить через finally. Без явной чистки
+        // такой файл копится навсегда.
+        $tmpFile = "{$this->cacheDir}/__test_old_hash.tmp.99999";
+        file_put_contents($tmpFile, 'tmp from killed worker');
+        // Сдвигаем mtime на 5 часов назад — больше дефолтного --tmp-hours=2.
+        touch($tmpFile, time() - 5 * 3600);
+
+        $this->artisan('exports:cleanup')->assertSuccessful();
+
+        $this->assertFileDoesNotExist($tmpFile, 'tmp старше порога должен удаляться');
     }
 }
