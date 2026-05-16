@@ -84,6 +84,7 @@ class FieldRegistry
             // Модель (экспорт)
             new Fields\ModelNameField,
             new Fields\ModelCodeField,
+            new Fields\ModelExternalIdField,
 
             // Категории (экспорт)
             new Fields\CategoriesNameField,
@@ -133,6 +134,9 @@ class FieldRegistry
             new Fields\UserStockAvailableField($this->stockService),
             new Fields\UserStockPreorderField($this->stockService),
             new Fields\ClientRegionField,
+
+            // Свод всех атрибутов в одной колонке (sex-opt-совместимый формат)
+            new Fields\AllAttributesField,
 
             // Даты
             new Fields\CreatedAtField,
