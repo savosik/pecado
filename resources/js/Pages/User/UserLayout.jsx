@@ -12,7 +12,7 @@ import BugReportWidget from '@/Components/BugReportWidget';
 import AgeGate from '@/components/common/AgeGate';
 import CookieConsent from '@/components/common/CookieConsent';
 
-export default function UserLayout({ children, fluid = false }) {
+export default function UserLayout({ children, fluid = false, flushTop = false }) {
     return (
         <AuthDialogProvider>
         <ProductQuickViewProvider>
@@ -26,8 +26,7 @@ export default function UserLayout({ children, fluid = false }) {
                     mx="auto"
                     w="100%"
                     px={fluid ? { base: '0', md: '6' } : { base: '3', md: '6' }}
-                    pt="3"
-                    pb="6"
+                    pt={flushTop ? { base: '0', md: '3' } : '3'}
                     pb={{ base: 'calc(70px + env(safe-area-inset-bottom))', lg: '6' }}
                 >
                     {children}

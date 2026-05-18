@@ -195,7 +195,7 @@ export default function BannerSlider({ banners = [], autoPlayMs = 5000 }) {
             ref={containerRef}
             position="relative"
             overflow="hidden"
-            borderRadius="md"
+            borderRadius={{ base: '0', md: 'md' }}
             mb="8"
             cursor="grab"
             userSelect="none"
@@ -213,7 +213,7 @@ export default function BannerSlider({ banners = [], autoPlayMs = 5000 }) {
                 position="relative"
                 h="auto"
                 css={{
-                    aspectRatio: { base: '16 / 9', md: '11 / 4' },
+                    aspectRatio: { base: '16 / 9', lg: '11 / 4' },
                 }}
             >
                 {banners.map((slide, i) => {
@@ -242,7 +242,7 @@ export default function BannerSlider({ banners = [], autoPlayMs = 5000 }) {
                             <picture>
                                 {slide.mobile_image && (
                                     <source
-                                        media="(max-width: 640px)"
+                                        media="(max-width: 1023px)"
                                         srcSet={slide.mobile_image}
                                     />
                                 )}
