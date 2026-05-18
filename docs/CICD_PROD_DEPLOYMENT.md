@@ -308,9 +308,11 @@ RABBITMQ_ERP_PASSWORD=<STRONG_ERP_PASSWORD>
 ERP_BUS_LOGGING_ENABLED=true
 
 # ─── Shovel-ы с внешних ESB ───
-# Заказы из чужой 1С через ESB Andrey Company (TLS на порту 45671).
+# Заказы из чужой 1С через ESB Andrey Company (plain AMQP на порту 45671, vhost `/`).
 # Реальные креды — в docs/ANDREY_ESB_CONNECTION.md (файл в .gitignore).
-ANDREY_ESB_AMQP_URI=amqps://pecado:<ANDREY_ESB_PASSWORD>@esb.services.andrey.company:45671/
+# ВАЖНО: `%2F` в конце URI — это URL-кодированный `/` (default vhost).
+# Хвост просто `/` означал бы ПУСТОЙ vhost и приводил к `access to target virtual host was refused`.
+ANDREY_ESB_AMQP_URI=amqp://pecado:<ANDREY_ESB_PASSWORD>@esb.services.andrey.company:45671/%2F
 ANDREY_ESB_SRC_QUEUE=pecado.orders
 ANDREY_ESB_SHOVEL_PREFETCH=100
 ANDREY_ESB_SHOVEL_RECONNECT_DELAY=5
