@@ -26,7 +26,6 @@ class SetupRabbitMQTopology extends Command
             'external.remains_for_erp',
         ],
         'external.orders_from_andrey' => [
-            'external.orders_from_andrey_for_website',
             'external.orders_from_andrey_for_erp',
         ],
     ];

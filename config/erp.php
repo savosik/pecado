@@ -57,14 +57,14 @@ return [
     |--------------------------------------------------------------------------
     |
     | RabbitMQ Shovel тянет заказы из очереди `pecado.orders` на ESB Andrey
-    | (esb.services.andrey.company:45671, AMQPS) и публикует их в локальный
-    | fanout-обменник `external.orders_from_andrey`, откуда они расходятся по:
-    |   - external.orders_from_andrey_for_website (потребитель — сайт, для аудита/отладки)
-    |   - external.orders_from_andrey_for_erp     (потребитель — 1С Pecado)
+    | (esb.services.andrey.company:45671, plain AMQP) и публикует их в локальный
+    | fanout-обменник `external.orders_from_andrey` → очередь
+    | `external.orders_from_andrey_for_erp` (потребитель — 1С Pecado).
     |
     | Сценарий: «прокидывание» заказов из 1С Andrey в 1С Pecado через шину.
-    | Сайт сам эти сообщения не обрабатывает; очередь _for_website оставлена
-    | как зеркало для мониторинга/отладки.
+    | Сайт сам эти сообщения не обрабатывает. Fanout оставлен (а не прямой
+    | shovel-в-очередь), чтобы при необходимости легко добавить второго
+    | потребителя (например, очередь для отладки) одним bind-ом.
     |
     | Если `ANDREY_ESB_AMQP_URI` пустой — shovel не создаётся (локальный dev / CI).
     |
