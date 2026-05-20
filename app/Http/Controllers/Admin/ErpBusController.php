@@ -50,6 +50,16 @@ class ErpBusController extends AdminController
     ];
 
     /**
+     * Очереди, наполняемые через RabbitMQ Shovel с внешних ESB.
+     * Воркеров со стороны Laravel у них нет — потребители: сайт и 1С Pecado.
+     */
+    private const EXTERNAL_QUEUES = [
+        'external.remains_for_website',
+        'external.remains_for_erp',
+        'external.orders_from_andrey_for_erp',
+    ];
+
+    /**
      * Отображение страницы «Шина ERP».
      */
     public function index(Request $request): Response
@@ -247,6 +257,7 @@ class ErpBusController extends AdminController
                 'incoming' => $this->mapQueues(self::INCOMING_QUEUES, $queueMap),
                 'dlq' => $this->mapQueues(self::DLQ_QUEUES, $queueMap),
                 'outgoing' => $this->mapQueues(self::OUTGOING_QUEUES, $queueMap),
+                'external' => $this->mapQueues(self::EXTERNAL_QUEUES, $queueMap),
             ];
         } catch (\Exception $e) {
             return ['error' => "Ошибка подключения: {$e->getMessage()}"];

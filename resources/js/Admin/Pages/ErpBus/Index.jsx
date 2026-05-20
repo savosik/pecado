@@ -25,6 +25,7 @@ import {
     LuInbox,
     LuSend,
     LuSkull,
+    LuArrowDownToLine,
     LuTrash2,
     LuShieldAlert,
     LuFileText,
@@ -321,6 +322,12 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                         icon={LuSend}
                         queues={queues.outgoing || []}
                         colorPalette="blue"
+                    />
+                    <QueueSection
+                        title="Внешние (через shovel)"
+                        icon={LuArrowDownToLine}
+                        queues={queues.external || []}
+                        colorPalette="cyan"
                     />
                 </VStack>
             )}
