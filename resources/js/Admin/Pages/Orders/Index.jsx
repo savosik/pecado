@@ -223,7 +223,16 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
             ),
         },
         { label: "ID", key: "id", sortable: true },
-        { label: "Номер", key: "number", sortable: true, render: (value, order) => value || ("#" + order.id) },
+        {
+            label: "Номер", key: "number", sortable: true, render: (value, order) => (
+                <Box>
+                    <Text fontSize="sm">{value || ("#" + order.id)}</Text>
+                    {order.erp_number && order.erp_number !== order.number && (
+                        <Text fontSize="xs" color="gray.500">1С: {order.erp_number}</Text>
+                    )}
+                </Box>
+            ),
+        },
         {
             label: "Пользователь",
             key: "user",

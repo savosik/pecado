@@ -118,6 +118,7 @@ class OrderController extends AdminController
                 'id' => $order->id,
                 'uuid' => $order->uuid,
                 'number' => $order->number,
+                'erp_number' => $order->erp_number,
                 'type' => $order->type?->value,
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
