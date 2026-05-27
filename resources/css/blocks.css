@@ -866,8 +866,17 @@
 /* ── Stats ── */
 .cb-stats { display: flex; flex-wrap: wrap; gap: 20px; margin: var(--cb-gap) 0; }
 .cb-stats__item { flex: 1; min-width: 140px; text-align: center; background: var(--cb-bg-subtle); padding: 24px; border-radius: var(--cb-radius); border: 1px solid var(--cb-border); }
-.cb-stats__value { font-size: 2.4rem; font-weight: 800; color: var(--cb-accent); line-height: 1; margin-bottom: 8px; }
+.cb-stats__value { font-size: 2.4rem; font-weight: 800; color: var(--cb-accent); line-height: 1; margin-bottom: 8px; white-space: nowrap; }
 .cb-stats__label { font-size: 0.912rem; color: var(--cb-muted); font-weight: 500; }
+@media (max-width: 640px) {
+    .cb-stats { gap: 12px; }
+    .cb-stats__item { min-width: 120px; padding: 16px 12px; }
+    .cb-stats__value { font-size: 1.8rem; }
+}
+@media (max-width: 400px) {
+    .cb-stats__item { min-width: calc(50% - 6px); flex: 0 0 calc(50% - 6px); }
+    .cb-stats__value { font-size: 1.6rem; }
+}
 
 /* ── Logo Wall ── */
 .cb-logowall { margin: var(--cb-gap) 0; overflow: hidden; }
