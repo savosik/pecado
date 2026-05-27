@@ -54,3 +54,6 @@ docs/ANDREY_ESB_CONNECTION.md
 docker-compose.override.yml
 
 # AsyncAPI и MkDocs: трекаем сборку в git — деплоится через rsync
+
+# Временные файлы и скрипты разработки
+/tmp/
