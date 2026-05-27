@@ -8,7 +8,7 @@ import { Provider } from '@/components/ui/provider';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ChangePasswordDialog from '@/components/common/ChangePasswordDialog';
 
-const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
+const appName = import.meta.env.VITE_APP_NAME || 'Pecado';
 
 /**
  * Обёртка-layout, которая добавляет глобальный диалог смены пароля.
