@@ -131,6 +131,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/companies/{company}/edit', [CompanyController::class, 'edit'])->name('companies.edit');
     Route::put('/companies/{company}', [CompanyController::class, 'update'])->name('companies.update');
     Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])->name('companies.destroy');
+    Route::post('/companies/{company}/toggle-default', [CompanyController::class, 'toggleDefault'])->name('companies.toggle-default');
 
     // Bank Accounts (JSON API)
     Route::post('/bank-accounts', [BankAccountController::class, 'store'])->name('bank-accounts.store');

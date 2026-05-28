@@ -135,8 +135,27 @@ class CompanyController extends Controller
                 'name' => $company->name,
                 'legal_name' => $company->legal_name,
                 'tax_id' => $company->tax_id,
+                'is_default' => (bool) $company->is_default,
             ],
         ], 201);
+    }
+
+    public function toggleDefault(Company $company): JsonResponse
+    {
+        $this->authorizeCompany($company);
+
+        $newValue = ! $company->is_default;
+
+        Company::where('user_id', Auth::id())->update(['is_default' => false]);
+
+        if ($newValue) {
+            $company->update(['is_default' => true]);
+        }
+
+        return response()->json([
+            'is_default' => $newValue,
+            'company_id' => $company->id,
+        ]);
     }
 
     private function authorizeCompany(Company $company): void

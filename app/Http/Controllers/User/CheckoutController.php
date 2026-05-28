@@ -57,7 +57,7 @@ class CheckoutController extends Controller
         ];
 
         // Компании и адреса пользователя
-        $companies = $user->companies()->select('id', 'name', 'legal_name', 'tax_id')->get();
+        $companies = $user->companies()->select('id', 'name', 'legal_name', 'tax_id', 'is_default')->get();
         $addresses = $user->deliveryAddresses()->select('id', 'name', 'address')->get();
 
         return Inertia::render('User/Checkout/Index', [

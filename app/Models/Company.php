@@ -27,6 +27,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property array<array-key, mixed>|null $actual_address_data
  * @property string|null $phone
  * @property string|null $email
+ * @property bool $is_default
  * @property string|null $erp_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -102,6 +103,7 @@ class Company extends Model
         'actual_address_data',
         'phone',
         'email',
+        'is_default',
         'erp_id',
     ];
 
@@ -116,6 +118,7 @@ class Company extends Model
             'country' => Country::class,
             'legal_address_data' => 'array',
             'actual_address_data' => 'array',
+            'is_default' => 'boolean',
         ];
     }
 

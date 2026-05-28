@@ -7,12 +7,14 @@ import { Head, Link, router } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import { LuPlus, LuPencil, LuTrash2, LuBuilding2, LuWallet, LuChevronLeft, LuChevronRight } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
+import { Checkbox } from '@/components/ui/checkbox';
 import axios from 'axios';
 
 const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default function Index({ companies = { data: [], current_page: 1, last_page: 1 } }) {
     const [deleteCompany, setDeleteCompany] = useState(null);
+    const [companiesData, setCompaniesData] = useState(companies.data);
 
     const handlePageChange = (page) => {
         router.get('/cabinet/companies', { page }, { preserveState: true, replace: true });
@@ -87,11 +89,12 @@ export default function Index({ companies = { data: [], current_page: 1, last_pa
                                     <Table.ColumnHeader>Счетов</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Баланс (₽)</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Просрочка (₽)</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="center">По умолч.</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {companies.data.map((c) => (
+                                {companiesData.map((c) => (
                                     <Table.Row key={c.id}>
                                         <Table.Cell>
                                             <Box>
@@ -126,6 +129,18 @@ export default function Index({ companies = { data: [], current_page: 1, last_pa
                                                 </Badge>
                                             ) : <Text color="gray.400" fontSize="sm">—</Text>}
                                         </Table.Cell>
+                                        <Table.Cell textAlign="center">
+                                            <DefaultToggle
+                                                company={c}
+                                                onToggled={(id, val) => {
+                                                    setCompaniesData(prev => prev.map(x =>
+                                                        x.id === id
+                                                            ? { ...x, is_default: val }
+                                                            : { ...x, is_default: false }
+                                                    ));
+                                                }}
+                                            />
+                                        </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <HStack gap="1" justify="flex-end">
                                                 <IconButton
@@ -157,16 +172,31 @@ export default function Index({ companies = { data: [], current_page: 1, last_pa
 
                     {/* Mobile Cards */}
                     <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="border.muted" />}>
-                        {companies.data.map((c) => (<Flex key={c.id} p="4" align="start" justify="space-between" direction="column" gap="2">
+                        {companiesData.map((c) => (<Flex key={c.id} p="4" align="start" justify="space-between" direction="column" gap="2">
                             <Flex w="100%" align="center" justify="space-between">
                                 <Box flex="1" minW="0">
-                                    <Text fontWeight="600" fontSize="sm" noOfLines={1}>{c.name}</Text>
+                                    <HStack gap="2" align="center">
+                                        <Text fontWeight="600" fontSize="sm" noOfLines={1}>{c.name}</Text>
+                                        {c.is_default && (
+                                            <Badge colorPalette="pecado" variant="subtle" fontSize="xs">По умолч.</Badge>
+                                        )}
+                                    </HStack>
                                     <HStack gap="2" mt="1">
                                         {c.tax_id && <Text fontSize="xs" color="gray.400">ИНН: {c.tax_id}</Text>}
                                         <Badge colorPalette="blue" variant="subtle" fontSize="xs">{c.bank_accounts_count || 0} счетов</Badge>
                                     </HStack>
                                 </Box>
                                 <HStack gap="1" flexShrink="0">
+                                    <DefaultToggle
+                                        company={c}
+                                        onToggled={(id, val) => {
+                                            setCompaniesData(prev => prev.map(x =>
+                                                x.id === id
+                                                    ? { ...x, is_default: val }
+                                                    : { ...x, is_default: false }
+                                            ));
+                                        }}
+                                    />
                                     <IconButton
                                         as={Link}
                                         href={`/cabinet/companies/${c.id}/edit`}
@@ -298,5 +328,34 @@ export default function Index({ companies = { data: [], current_page: 1, last_pa
                 </Portal>
             </Dialog.Root>
         </CabinetLayout>
+    );
+}
+
+function DefaultToggle({ company, onToggled }) {
+    const [loading, setLoading] = useState(false);
+
+    const handleToggle = async () => {
+        setLoading(true);
+        try {
+            const { data } = await axios.post(`/cabinet/companies/${company.id}/toggle-default`);
+            onToggled(company.id, data.is_default);
+            toaster.create({
+                title: data.is_default ? 'Компания по умолчанию установлена' : 'Компания по умолчанию сброшена',
+                type: 'success',
+            });
+        } catch {
+            toaster.create({ title: 'Ошибка при изменении', type: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Checkbox
+            checked={!!company.is_default}
+            onChange={handleToggle}
+            disabled={loading}
+            aria-label="Компания по умолчанию"
+        />
     );
 }

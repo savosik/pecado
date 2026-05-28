@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
-    Textarea, NativeSelect, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
+    Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
 import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuTriangleAlert, LuWand } from 'react-icons/lu';
 import axios from 'axios';
@@ -50,7 +50,7 @@ export default function CheckoutIndex({
 
     // Form state
     const { data, setData, post, processing, errors } = useForm({
-        company_id: initialCompanies.length > 0 ? initialCompanies[0].id : '',
+        company_id: (initialCompanies.find(c => c.is_default) ?? initialCompanies[0])?.id ?? '',
         delivery_address: addresses.length > 0 ? addresses[0].address : '',
         comment: '',
     });
@@ -255,25 +255,45 @@ export default function CheckoutIndex({
                             </Flex>
 
                             {companies.length > 0 ? (
-                                <Field
-                                    label="Выберите компанию"
-                                    invalid={!!errors.company_id}
-                                    errorText={errors.company_id}
-                                >
-                                    <NativeSelect.Root size="md">
-                                        <NativeSelect.Field
-                                            value={data.company_id}
-                                            onChange={(e) => setData('company_id', e.target.value)}
-                                        >
-                                            {companies.map((c) => (
-                                                <option key={c.id} value={c.id}>
-                                                    {c.name}{c.legal_name ? ` (${c.legal_name})` : ''}
-                                                </option>
-                                            ))}
-                                        </NativeSelect.Field>
-                                        <NativeSelect.Indicator />
-                                    </NativeSelect.Root>
-                                </Field>
+                                <Box>
+                                    <RadioCard.Root
+                                        value={String(data.company_id)}
+                                        onValueChange={({ value }) => setData('company_id', Number(value))}
+                                        gap="2"
+                                    >
+                                        {companies.map((c) => (
+                                            <RadioCard.Item key={c.id} value={String(c.id)} width="full">
+                                                <RadioCard.ItemHiddenInput />
+                                                <RadioCard.ItemControl>
+                                                    <RadioCard.ItemContent>
+                                                        <Flex align="center" gap="3" width="full">
+                                                            <Box flex="1" minW="0">
+                                                                <RadioCard.ItemText fontWeight="600" fontSize="sm">
+                                                                    {c.name}
+                                                                </RadioCard.ItemText>
+                                                                {c.legal_name && (
+                                                                    <Text fontSize="xs" color="fg.muted">{c.legal_name}</Text>
+                                                                )}
+                                                                {c.tax_id && (
+                                                                    <Text fontSize="xs" color="fg.muted">ИНН: {c.tax_id}</Text>
+                                                                )}
+                                                            </Box>
+                                                            {c.is_default && (
+                                                                <Badge colorPalette="pecado" variant="subtle" fontSize="xs" flexShrink="0">
+                                                                    По умолч.
+                                                                </Badge>
+                                                            )}
+                                                        </Flex>
+                                                    </RadioCard.ItemContent>
+                                                    <RadioCard.ItemIndicator />
+                                                </RadioCard.ItemControl>
+                                            </RadioCard.Item>
+                                        ))}
+                                    </RadioCard.Root>
+                                    {errors.company_id && (
+                                        <Text color="red.500" fontSize="sm" mt="1">{errors.company_id}</Text>
+                                    )}
+                                </Box>
                             ) : (
                                 <Text color="fg.muted" fontSize="sm">
                                     У вас нет зарегистрированных компаний. Добавьте первую, чтобы оформить заказ.
