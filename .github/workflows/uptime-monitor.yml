@@ -1,0 +1,71 @@
+name: Uptime Monitor
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Проверка доступности pecado.ru
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Проверить /up
+        id: check_up
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 --retry 2 --retry-delay 5 https://pecado.ru/up)
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" != "200" ]; then
+            echo "FAIL: /up вернул $STATUS"
+            exit 1
+          fi
+          echo "OK: /up вернул $STATUS"
+
+      - name: Проверить /health (JSON)
+        id: check_health
+        if: success()
+        run: |
+          RESPONSE=$(curl -s --max-time 20 https://pecado.ru/health)
+          echo "response=$RESPONSE" >> "$GITHUB_OUTPUT"
+          # Проверяем что в ответе нет failed-статуса
+          if echo "$RESPONSE" | grep -q '"status":"failed"'; then
+            FAILED=$(echo "$RESPONSE" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          checks = data.get('checkResults', [])
+          failed = [c['name'] for c in checks if c.get('status') == 'failed']
+          print(', '.join(failed))
+            " 2>/dev/null || echo "неизвестно")
+            echo "WARN: health check провалился: $FAILED"
+            echo "failed_checks=$FAILED" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "OK: все health checks прошли"
+
+      - name: Отправить уведомление о недоступности
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.beget.com
+          server_port: 465
+          secure: true
+          username: no-reply@pecado.ru
+          password: ${{ secrets.MONITOR_SMTP_PASSWORD }}
+          subject: "ALERT: pecado.ru — проблема (${{ github.run_number }})"
+          to: slava.triput@gmail.com
+          from: "Pecado Monitor <no-reply@pecado.ru>"
+          body: |
+            Мониторинг зафиксировал проблему на pecado.ru.
+
+            /up статус: ${{ steps.check_up.outputs.status || 'нет ответа' }}
+            Упавшие checks: ${{ steps.check_health.outputs.failed_checks || 'сервер недоступен' }}
+
+            Время: ${{ github.event.repository.updated_at }}
+            Workflow: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Если сервер полностью недоступен — зайди через SSH:
+            ssh ladmin@93.94.150.16
+            cd /srv/pecado
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
