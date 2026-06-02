@@ -102,7 +102,7 @@ const ReturnItemsEditor = ({
                     <Text fontSize="sm" color="fg.muted">
                         {addDisabled
                             ? "Сначала выберите пользователя"
-                            : "Выберите реализацию и отметьте позиции, которые нужно вернуть"}
+                            : "Введите название, артикул или штрихкод товара — мы найдём все ваши отгрузки с ним"}
                     </Text>
                     <Button
                         colorPalette={accentColor}
@@ -110,7 +110,7 @@ const ReturnItemsEditor = ({
                         disabled={addDisabled}
                         w={{ base: "full", sm: "auto" }}
                     >
-                        <LuPlus /> Выбрать реализацию
+                        <LuPlus /> Добавить товар к возврату
                     </Button>
                 </Flex>
             ) : (
@@ -463,7 +463,7 @@ const AddFromShipmentForm = ({
             <Box bg="gray.50" px={6} py={4} borderBottomWidth="1px" borderColor="border.muted">
                 <HStack justify="space-between" mb={4}>
                     <Heading size="sm" color="gray.700">
-                        {step === 1 ? "Выбор реализации" : `Позиции реализации ${selectedShipment?.number || ""}`}
+                        {step === 1 ? "Поиск товара для возврата" : `Позиции реализации ${selectedShipment?.number || ""}`}
                     </Heading>
                     <IconButton size="xs" variant="ghost" colorPalette="gray" onClick={onCancel}>
                         <LuX />
@@ -474,7 +474,7 @@ const AddFromShipmentForm = ({
             <Card.Body p={6}>
                 {step === 1 && (
                     <VStack align="stretch" gap={4}>
-                        <Field label="Поиск по номеру, товару или артикулу">
+                        <Field label="Название товара, артикул или штрихкод">
                             <HStack>
                                 <Box flex={1} position="relative">
                                     <Box position="absolute" left="3" top="50%" transform="translateY(-50%)" color="gray.400">
@@ -483,8 +483,9 @@ const AddFromShipmentForm = ({
                                     <Input
                                         value={query}
                                         onChange={(e) => setQuery(e.target.value)}
-                                        placeholder="Номер реализации, товар, артикул, штрихкод…"
+                                        placeholder="Например: «Помада», арт. 12345 или штрихкод…"
                                         pl="10"
+                                        autoFocus
                                     />
                                 </Box>
                             </HStack>
@@ -511,6 +512,14 @@ const AddFromShipmentForm = ({
                                     >
                                         <Flex justify="space-between" align="flex-start" gap={2} flexWrap="wrap">
                                             <VStack align="start" gap={1} flex={1} minW={0}>
+                                                {s.match_source === "composition" && s.match_product?.name && (
+                                                    <HStack gap={1} flexWrap="wrap">
+                                                        <Badge colorPalette={accentColor} variant="subtle" fontSize="xs">
+                                                            {s.match_product.name}
+                                                            {s.match_product.sku ? ` · ${s.match_product.sku}` : ""}
+                                                        </Badge>
+                                                    </HStack>
+                                                )}
                                                 <HStack flexWrap="wrap">
                                                     <Badge colorPalette="blue" variant="solid">{s.number}</Badge>
                                                     {s.date && <Text fontSize="sm" color="gray.500">от {s.date}</Text>}
@@ -524,12 +533,6 @@ const AddFromShipmentForm = ({
                                                 <Text fontSize="sm" color="gray.600">
                                                     Позиций: <b>{s.items_count}</b>, сумма: <b>{parseFloat(s.total_amount).toFixed(2)} {s.currency_code || "₽"}</b>
                                                 </Text>
-                                                {s.match_source === "composition" && s.match_product?.name && (
-                                                    <Text fontSize="xs" color={`${accentColor}.700`}>
-                                                        …содержит: {s.match_product.name}
-                                                        {s.match_product.sku ? ` (${s.match_product.sku})` : ""}
-                                                    </Text>
-                                                )}
                                                 {s.user && (
                                                     <Text fontSize="xs" color="gray.500">{s.user.name} ({s.user.email})</Text>
                                                 )}
@@ -542,8 +545,8 @@ const AddFromShipmentForm = ({
                         ) : (
                             <Box p={6} textAlign="center" bg="orange.50/50" borderRadius="lg" borderWidth="1px" borderColor="orange.200">
                                 <LuPackage size={32} style={{ margin: "0 auto", opacity: 0.5, marginBottom: 8 }} />
-                                <Text fontWeight="medium" color="orange.800">Реализации не найдены</Text>
-                                <Text fontSize="sm" color="orange.600">Нет отгрузок, удовлетворяющих условиям поиска</Text>
+                                <Text fontWeight="medium" color="orange.800">Товар не найден в ваших отгрузках</Text>
+                                <Text fontSize="sm" color="orange.600">Попробуйте другое название, артикул или штрихкод</Text>
                             </Box>
                         )}
                     </VStack>
