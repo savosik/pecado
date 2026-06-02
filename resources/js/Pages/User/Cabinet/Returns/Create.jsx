@@ -127,8 +127,12 @@ export default function ReturnsCreate({ reasons }) {
                     </Card.Root>
 
                     {/* Кнопка отправки */}
-                    <Flex justify="flex-end" gap="3">
-                        <Button asChild variant="outline" size="md">
+                    <Flex
+                        justify={{ base: 'stretch', sm: 'flex-end' }}
+                        direction={{ base: 'column-reverse', sm: 'row' }}
+                        gap="3"
+                    >
+                        <Button asChild variant="outline" size="md" w={{ base: 'full', sm: 'auto' }}>
                             <Link href="/cabinet/returns">Отмена</Link>
                         </Button>
                         <Button
@@ -138,6 +142,7 @@ export default function ReturnsCreate({ reasons }) {
                             _hover={{ bg: '#7a1527' }}
                             size="md"
                             loading={processing}
+                            w={{ base: 'full', sm: 'auto' }}
                         >
                             <LuSave size={16} /> Отправить заявку
                         </Button>
