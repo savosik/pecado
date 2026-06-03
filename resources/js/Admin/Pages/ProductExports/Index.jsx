@@ -125,7 +125,7 @@ export default function Index({ exports, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.product-exports', openDeleteDialog, { permissionPrefix: 'product-exports' }),
+        createActionsColumn('admin.product-exports', openDeleteDialog, { permissionPrefix: 'product-exports' , showView: true}),
     ];
 
     return (

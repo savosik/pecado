@@ -87,7 +87,7 @@ export default function Index({ brandStories, filters }) {
                 </HStack>
             ),
         },
-        createActionsColumn('admin.brand-stories', openDeleteDialog, { permissionPrefix: 'brand-stories' }),
+        createActionsColumn('admin.brand-stories', openDeleteDialog, { permissionPrefix: 'brand-stories' , showView: true}),
     ];
 
     return (

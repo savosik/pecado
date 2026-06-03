@@ -95,6 +95,37 @@ class CompanyController extends Controller
         return $this->redirectAfterSave($request, 'admin.companies.index', 'admin.companies.edit', $company, 'Компания успешно создана');
     }
 
+    public function show(Company $company)
+    {
+        $company->load(['user', 'bankAccounts']);
+
+        return Inertia::render('Admin/Pages/Companies/Show', [
+            'company' => [
+                'id' => $company->id,
+                'name' => $company->name,
+                'legal_name' => $company->legal_name,
+                'country' => $company->country,
+                'tax_id' => $company->tax_id,
+                'registration_number' => $company->registration_number,
+                'tax_code' => $company->tax_code,
+                'okpo_code' => $company->okpo_code,
+                'legal_address' => $company->legal_address,
+                'actual_address' => $company->actual_address,
+                'phone' => $company->phone,
+                'email' => $company->email,
+                'erp_id' => $company->erp_id,
+                'user' => $company->user ? [
+                    'id' => $company->user->id,
+                    'name' => $company->user->name,
+                    'email' => $company->user->email,
+                ] : null,
+                'bank_accounts_count' => $company->bankAccounts->count(),
+                'created_at' => $company->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $company->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(Company $company)
     {
         $company->load(['user', 'bankAccounts']);

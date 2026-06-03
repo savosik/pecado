@@ -68,6 +68,25 @@ class CurrencyController extends Controller
         return $this->redirectAfterSave($request, 'admin.currencies.index', 'admin.currencies.edit', $currency, 'Валюта успешно создана');
     }
 
+    public function show(Currency $currency)
+    {
+        return Inertia::render('Admin/Pages/Currencies/Show', [
+            'currency' => [
+                'id' => $currency->id,
+                'code' => $currency->code,
+                'name' => $currency->name,
+                'symbol' => $currency->symbol,
+                'is_base' => $currency->is_base,
+                'official_rate' => $currency->official_rate,
+                'rate_coefficient' => $currency->rate_coefficient,
+                'exchange_rate' => $currency->exchange_rate,
+                'exchange_rate_date' => $currency->exchange_rate_date?->format('d.m.Y'),
+                'created_at' => $currency->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $currency->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(Currency $currency)
     {
         return Inertia::render('Admin/Pages/Currencies/Edit', [

@@ -49,7 +49,7 @@ const WarehousesIndex = ({ filters }) => {
         { label: "ID", key: "id", sortable: true },
         { label: "Название", key: "name", sortable: true },
         { label: "Внешний ID", key: "external_id", sortable: true },
-        createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id), { permissionPrefix: 'warehouses' }),
+        createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id), { permissionPrefix: 'warehouses', showView: true }),
     ];
 
     const handleDelete = () => {

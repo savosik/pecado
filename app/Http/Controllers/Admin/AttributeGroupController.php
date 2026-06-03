@@ -63,6 +63,21 @@ class AttributeGroupController extends Controller
         return $this->redirectAfterSave($request, 'admin.attribute-groups.index', 'admin.attribute-groups.edit', $attributeGroup, 'Группа атрибутов успешно создана');
     }
 
+    public function show(AttributeGroup $attributeGroup)
+    {
+        $attributeGroup->loadCount('attributes');
+
+        return Inertia::render('Admin/Pages/AttributeGroups/Show', [
+            'attributeGroup' => [
+                'id' => $attributeGroup->id,
+                'name' => $attributeGroup->name,
+                'attributes_count' => $attributeGroup->attributes_count,
+                'created_at' => $attributeGroup->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $attributeGroup->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(AttributeGroup $attributeGroup)
     {
         return Inertia::render('Admin/Pages/AttributeGroups/Edit', [

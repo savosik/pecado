@@ -101,6 +101,36 @@ class NewsController extends Controller
         return $this->redirectAfterSave($request, 'admin.news.index', 'admin.news.edit', $newsItem, 'Новость успешно создана');
     }
 
+    public function show(News $news)
+    {
+        $news->load('regions:id,name');
+        $news->tag_list = $news->tags->pluck('name')->toArray();
+        $news->list_image = $news->getFirstMediaUrl('list-item');
+        $news->detail_desktop_image = $news->getFirstMediaUrl('detail-item-desktop');
+        $news->detail_mobile_image = $news->getFirstMediaUrl('detail-item-mobile');
+
+        return Inertia::render('Admin/Pages/News/Show', [
+            'news' => [
+                'id' => $news->id,
+                'title' => $news->title,
+                'slug' => $news->slug,
+                'short_description' => $news->short_description,
+                'detailed_description' => $news->detailed_description,
+                'is_published' => $news->is_published,
+                'published_at' => $news->published_at?->format('d.m.Y H:i'),
+                'meta_title' => $news->meta_title,
+                'meta_description' => $news->meta_description,
+                'list_image' => $news->list_image,
+                'detail_desktop_image' => $news->detail_desktop_image,
+                'detail_mobile_image' => $news->detail_mobile_image,
+                'tags' => $news->tag_list,
+                'regions' => $news->regions->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->toArray(),
+                'created_at' => $news->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $news->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(News $news)
     {
         $news->tag_list = $news->tags->pluck('name')->toArray();

@@ -86,6 +86,20 @@ class RoleController extends Controller
         return $this->redirectAfterSave($request, 'admin.roles.index', 'admin.roles.edit', $role, 'Роль успешно создана');
     }
 
+    public function show(Role $role)
+    {
+        return Inertia::render('Admin/Pages/Roles/Show', [
+            'role' => [
+                'id' => $role->id,
+                'name' => $role->name,
+                'permissions' => $role->permissions->pluck('name')->toArray(),
+                'users_count' => $role->users()->count(),
+            ],
+            'permissionGroups' => $this->buildPermissionTree(),
+            'actionLabels' => $this->actionLabels,
+        ]);
+    }
+
     public function edit(Role $role)
     {
         return Inertia::render('Admin/Pages/Roles/Edit', [

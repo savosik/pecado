@@ -182,6 +182,32 @@ class FavoriteController extends AdminController
     }
 
     /**
+     * Display the specified favorite.
+     */
+    public function show(Favorite $favorite): Response
+    {
+        $favorite->load(['user', 'product.media']);
+
+        return Inertia::render('Admin/Pages/Favorites/Show', [
+            'favorite' => [
+                'id' => $favorite->id,
+                'created_at' => $favorite->created_at?->format('d.m.Y H:i'),
+                'user' => $favorite->user ? [
+                    'id' => $favorite->user->id,
+                    'name' => $favorite->user->name,
+                    'email' => $favorite->user->email,
+                ] : null,
+                'product' => $favorite->product ? [
+                    'id' => $favorite->product->id,
+                    'name' => $favorite->product->name,
+                    'sku' => $favorite->product->sku,
+                    'image_url' => $favorite->product->getFirstMediaUrl('main'),
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified favorite.
      */
     public function edit(Favorite $favorite): Response

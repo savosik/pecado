@@ -203,7 +203,7 @@ const WishlistIndex = ({ filters }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.wishlist', (item) => setDeleteId(item.id), { permissionPrefix: 'wishlist' }),
+        createActionsColumn('admin.wishlist', (item) => setDeleteId(item.id), { permissionPrefix: 'wishlist' , showView: true}),
     ];
 
     const handleDelete = () => {

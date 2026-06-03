@@ -203,7 +203,7 @@ const FavoritesIndex = ({ filters }) => {
                 </Text>
             ),
         },
-        createActionsColumn('admin.favorites', (favorite) => setDeleteId(favorite.id), { permissionPrefix: 'favorites' }),
+        createActionsColumn('admin.favorites', (favorite) => setDeleteId(favorite.id), { permissionPrefix: 'favorites' , showView: true}),
     ];
 
     const handleDelete = () => {

@@ -77,6 +77,31 @@ class RegionController extends Controller
     }
 
     /**
+     * Display the specified region.
+     */
+    public function show(Region $region): \Inertia\Response
+    {
+        $region->load(['primaryWarehouses', 'preorderWarehouses', 'currency']);
+
+        return Inertia::render('Admin/Pages/Regions/Show', [
+            'region' => [
+                'id' => $region->id,
+                'name' => $region->name,
+                'currency' => $region->currency ? [
+                    'id' => $region->currency->id,
+                    'code' => $region->currency->code,
+                    'name' => $region->currency->name,
+                    'symbol' => $region->currency->symbol,
+                ] : null,
+                'primary_warehouses' => $region->primaryWarehouses->map(fn ($w) => ['id' => $w->id, 'name' => $w->name])->toArray(),
+                'preorder_warehouses' => $region->preorderWarehouses->map(fn ($w) => ['id' => $w->id, 'name' => $w->name])->toArray(),
+                'created_at' => $region->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $region->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Region $region)

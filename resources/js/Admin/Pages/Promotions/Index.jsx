@@ -73,7 +73,7 @@ export default function Index({ promotions, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.promotions', openDeleteDialog, { permissionPrefix: 'promotions' }),
+        createActionsColumn('admin.promotions', openDeleteDialog, { permissionPrefix: 'promotions' , showView: true}),
     ];
 
     return (

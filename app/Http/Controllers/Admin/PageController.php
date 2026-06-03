@@ -90,6 +90,31 @@ class PageController extends Controller
         return $this->redirectAfterSave($request, 'admin.pages.index', 'admin.pages.edit', $page, 'Страница успешно создана');
     }
 
+    public function show(Page $page)
+    {
+        $page->load('regions:id,name');
+        $page->list_image = $page->getFirstMediaUrl('list-item');
+        $page->detail_desktop_image = $page->getFirstMediaUrl('detail-item-desktop');
+        $page->detail_mobile_image = $page->getFirstMediaUrl('detail-item-mobile');
+
+        return Inertia::render('Admin/Pages/Pages/Show', [
+            'page' => [
+                'id' => $page->id,
+                'title' => $page->title,
+                'slug' => $page->slug,
+                'content' => $page->content,
+                'meta_title' => $page->meta_title,
+                'meta_description' => $page->meta_description,
+                'list_image' => $page->list_image,
+                'detail_desktop_image' => $page->detail_desktop_image,
+                'detail_mobile_image' => $page->detail_mobile_image,
+                'regions' => $page->regions->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->toArray(),
+                'created_at' => $page->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $page->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(Page $page)
     {
         $page->list_image = $page->getFirstMediaUrl('list-item');

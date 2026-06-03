@@ -80,6 +80,30 @@ class ProductBarcodeController extends AdminController
     }
 
     /**
+     * Display the specified barcode.
+     */
+    public function show(ProductBarcode $productBarcode): Response
+    {
+        $productBarcode->load(['product.media', 'product.brand']);
+
+        return Inertia::render('Admin/Pages/ProductBarcodes/Show', [
+            'productBarcode' => [
+                'id' => $productBarcode->id,
+                'barcode' => $productBarcode->barcode,
+                'product' => $productBarcode->product ? [
+                    'id' => $productBarcode->product->id,
+                    'name' => $productBarcode->product->name,
+                    'sku' => $productBarcode->product->sku,
+                    'image_url' => $productBarcode->product->getFirstMediaUrl('main'),
+                    'brand_name' => $productBarcode->product->brand?->name,
+                ] : null,
+                'created_at' => $productBarcode->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $productBarcode->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified barcode.
      */
     public function edit(ProductBarcode $productBarcode): Response

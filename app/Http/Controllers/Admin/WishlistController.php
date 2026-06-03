@@ -186,6 +186,32 @@ class WishlistController extends AdminController
     }
 
     /**
+     * Display the specified wishlist item.
+     */
+    public function show(WishlistItem $wishlist): Response
+    {
+        $wishlist->load(['user', 'product.media']);
+
+        return Inertia::render('Admin/Pages/Wishlist/Show', [
+            'wishlistItem' => [
+                'id' => $wishlist->id,
+                'created_at' => $wishlist->created_at?->format('d.m.Y H:i'),
+                'user' => $wishlist->user ? [
+                    'id' => $wishlist->user->id,
+                    'name' => $wishlist->user->name,
+                    'email' => $wishlist->user->email,
+                ] : null,
+                'product' => $wishlist->product ? [
+                    'id' => $wishlist->product->id,
+                    'name' => $wishlist->product->name,
+                    'sku' => $wishlist->product->sku,
+                    'image_url' => $wishlist->product->getFirstMediaUrl('main'),
+                ] : null,
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified wishlist item.
      */
     public function edit(WishlistItem $wishlist): Response

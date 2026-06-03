@@ -76,6 +76,27 @@ class MenuItemController extends Controller
         return $this->redirectAfterSave($request, 'admin.menu-items.index', 'admin.menu-items.edit', $menuItem, 'Пункт меню успешно создан');
     }
 
+    public function show(MenuItem $menuItem)
+    {
+        return Inertia::render('Admin/Pages/MenuItems/Show', [
+            'menuItem' => [
+                'id' => $menuItem->id,
+                'title' => $menuItem->title,
+                'url' => $menuItem->url,
+                'icon' => $menuItem->icon,
+                'badge_text' => $menuItem->badge_text,
+                'badge_color' => $menuItem->badge_color,
+                'location' => $menuItem->location,
+                'footer_group' => $menuItem->footer_group,
+                'sort_order' => $menuItem->sort_order,
+                'is_published' => $menuItem->is_published,
+                'open_in_new_tab' => $menuItem->open_in_new_tab,
+                'created_at' => $menuItem->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $menuItem->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(MenuItem $menuItem)
     {
         return Inertia::render('Admin/Pages/MenuItems/Edit', [

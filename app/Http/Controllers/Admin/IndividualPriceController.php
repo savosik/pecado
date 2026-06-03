@@ -133,6 +133,43 @@ class IndividualPriceController extends Controller
     }
 
     /**
+     * Просмотр индивидуальной цены
+     */
+    public function show(Request $request)
+    {
+        $request->validate([
+            'partner_id' => 'required|integer',
+            'product_id' => 'required|integer',
+            'warehouse_id' => 'required|integer',
+        ]);
+
+        $price = IndividualPrice::where('partner_id', $request->partner_id)
+            ->where('product_id', $request->product_id)
+            ->where('warehouse_id', $request->warehouse_id)
+            ->firstOrFail();
+
+        $partner = User::find($price->partner_id);
+        $product = Product::find($price->product_id);
+        $warehouse = Warehouse::find($price->warehouse_id);
+
+        return Inertia::render('Admin/Pages/IndividualPrices/Show', [
+            'individualPrice' => [
+                'partner_id' => $price->partner_id,
+                'product_id' => $price->product_id,
+                'warehouse_id' => $price->warehouse_id,
+                'price' => $price->price,
+                'updated_at' => $price->updated_at?->format('d.m.Y H:i'),
+            ],
+            'labels' => [
+                'partner' => $partner ? $partner->name : "ID: {$price->partner_id}",
+                'partner_email' => $partner?->email ?? '',
+                'product' => $product ? "{$product->sku} — {$product->name}" : "ID: {$price->product_id}",
+                'warehouse' => $warehouse?->name ?? "ID: {$price->warehouse_id}",
+            ],
+        ]);
+    }
+
+    /**
      * Форма редактирования
      */
     public function edit(Request $request)

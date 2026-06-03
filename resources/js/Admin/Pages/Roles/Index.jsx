@@ -46,7 +46,7 @@ export default function Index({ roles, filters }) {
             label: 'Пользователей',
             render: (count) => <Badge colorPalette="green">{count || 0}</Badge>,
         },
-        createActionsColumn('admin.roles', openDeleteDialog, { permissionPrefix: 'roles' }),
+        createActionsColumn('admin.roles', openDeleteDialog, { permissionPrefix: 'roles' , showView: true}),
     ];
 
     return (

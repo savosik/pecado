@@ -75,6 +75,24 @@ class FaqController extends Controller
         return $this->redirectAfterSave($request, 'admin.faqs.index', 'admin.faqs.edit', $faq, 'FAQ успешно создан');
     }
 
+    public function show(Faq $faq)
+    {
+        $faq->load('regions:id,name');
+
+        return Inertia::render('Admin/Pages/Faqs/Show', [
+            'faq' => [
+                'id' => $faq->id,
+                'title' => $faq->title,
+                'content' => $faq->content,
+                'sort_order' => $faq->sort_order,
+                'is_published' => $faq->is_published,
+                'regions' => $faq->regions->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->toArray(),
+                'created_at' => $faq->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $faq->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(Faq $faq)
     {
         $faq->region_ids = $faq->regions->pluck('id')->toArray();

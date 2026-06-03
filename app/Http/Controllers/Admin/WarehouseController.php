@@ -63,6 +63,22 @@ class WarehouseController extends Controller
     }
 
     /**
+     * Display the specified warehouse.
+     */
+    public function show(Warehouse $warehouse): \Inertia\Response
+    {
+        return Inertia::render('Admin/Pages/Warehouses/Show', [
+            'warehouse' => [
+                'id' => $warehouse->id,
+                'name' => $warehouse->name,
+                'external_id' => $warehouse->external_id,
+                'created_at' => $warehouse->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $warehouse->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified resource.
      */
     public function edit(Warehouse $warehouse)

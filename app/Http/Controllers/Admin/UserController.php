@@ -132,6 +132,35 @@ class UserController extends Controller
         return $this->redirectAfterSave($request, 'admin.users.index', 'admin.users.edit', $user, 'Пользователь успешно создан');
     }
 
+    public function show(User $user)
+    {
+        $user->load(['region', 'region.currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles', 'clientStatus', 'personalManager']);
+
+        return Inertia::render('Admin/Pages/Users/Show', [
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => $user->phone,
+                'country' => $user->country,
+                'city' => $user->city,
+                'status' => $user->status,
+                'comment' => $user->comment,
+                'erp_id' => $user->erp_id,
+                'is_subscribed' => $user->is_subscribed,
+                'created_at' => $user->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $user->updated_at?->format('d.m.Y H:i'),
+                'region' => $user->region ? ['id' => $user->region->id, 'name' => $user->region->name] : null,
+                'roles' => $user->roles->pluck('name')->toArray(),
+                'companies_count' => $user->companies->count(),
+                'delivery_addresses_count' => $user->deliveryAddresses->count(),
+                'client_status' => $user->clientStatus ? ['id' => $user->clientStatus->id, 'name' => $user->clientStatus->name] : null,
+                'personal_manager' => $user->personalManager ? ['id' => $user->personalManager->id, 'name' => $user->personalManager->name] : null,
+                'has_questionnaire' => $user->questionnaire !== null,
+            ],
+        ]);
+    }
+
     public function edit(User $user)
     {
         $user->load(['region', 'region.currency', 'companies', 'deliveryAddresses', 'questionnaire', 'roles', 'clientStatus', 'personalManager']);

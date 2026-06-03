@@ -101,6 +101,36 @@ class ArticleController extends Controller
         return $this->redirectAfterSave($request, 'admin.articles.index', 'admin.articles.edit', $article, 'Статья успешно создана');
     }
 
+    public function show(Article $article)
+    {
+        $article->load('regions:id,name');
+        $article->tag_list = $article->tags->pluck('name')->toArray();
+        $article->list_image = $article->getFirstMediaUrl('list-item');
+        $article->detail_desktop_image = $article->getFirstMediaUrl('detail-item-desktop');
+        $article->detail_mobile_image = $article->getFirstMediaUrl('detail-item-mobile');
+
+        return Inertia::render('Admin/Pages/Articles/Show', [
+            'article' => [
+                'id' => $article->id,
+                'title' => $article->title,
+                'slug' => $article->slug,
+                'short_description' => $article->short_description,
+                'detailed_description' => $article->detailed_description,
+                'is_published' => $article->is_published,
+                'published_at' => $article->published_at?->format('d.m.Y H:i'),
+                'meta_title' => $article->meta_title,
+                'meta_description' => $article->meta_description,
+                'list_image' => $article->list_image,
+                'detail_desktop_image' => $article->detail_desktop_image,
+                'detail_mobile_image' => $article->detail_mobile_image,
+                'tags' => $article->tag_list,
+                'regions' => $article->regions->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->toArray(),
+                'created_at' => $article->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $article->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(Article $article)
     {
         $article->tag_list = $article->tags->pluck('name')->toArray();

@@ -95,6 +95,40 @@ class CertificateController extends AdminController
     }
 
     /**
+     * Display the specified certificate.
+     */
+    public function show(Certificate $certificate): Response
+    {
+        $certificate->load(['media', 'products.media']);
+
+        return Inertia::render('Admin/Pages/Certificates/Show', [
+            'certificate' => [
+                'id' => $certificate->id,
+                'name' => $certificate->name,
+                'external_id' => $certificate->external_id,
+                'type' => $certificate->type,
+                'issued_at' => $certificate->issued_at?->format('d.m.Y'),
+                'expires_at' => $certificate->expires_at?->format('d.m.Y'),
+                'media' => $certificate->getMedia('files')->map(fn ($m) => [
+                    'id' => $m->id,
+                    'url' => $m->getUrl(),
+                    'name' => $m->file_name,
+                    'size' => $m->size,
+                    'mime_type' => $m->mime_type,
+                ]),
+                'products' => $certificate->products->map(fn ($p) => [
+                    'id' => $p->id,
+                    'name' => $p->name,
+                    'sku' => $p->sku,
+                    'image_url' => $p->getFirstMediaUrl('main'),
+                ])->toArray(),
+                'created_at' => $certificate->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $certificate->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified certificate.
      */
     public function edit(Certificate $certificate): Response

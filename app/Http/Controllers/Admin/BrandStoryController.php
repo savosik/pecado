@@ -120,6 +120,37 @@ class BrandStoryController extends Controller
         return $this->redirectAfterSave($request, 'admin.brand-stories.index', 'admin.brand-stories.edit', $brandStory, 'Статья о бренде успешно создана');
     }
 
+    public function show(BrandStory $brandStory)
+    {
+        $brandStory->load(['brand', 'regions:id,name']);
+        $brandStory->tag_list = $brandStory->tags->pluck('name')->toArray();
+        $brandStory->list_image = $brandStory->getFirstMediaUrl('list-item');
+        $brandStory->detail_desktop_image = $brandStory->getFirstMediaUrl('detail-item-desktop');
+        $brandStory->detail_mobile_image = $brandStory->getFirstMediaUrl('detail-item-mobile');
+
+        return Inertia::render('Admin/Pages/BrandStories/Show', [
+            'brandStory' => [
+                'id' => $brandStory->id,
+                'title' => $brandStory->title,
+                'slug' => $brandStory->slug,
+                'short_description' => $brandStory->short_description,
+                'detailed_description' => $brandStory->detailed_description,
+                'is_published' => $brandStory->is_published,
+                'published_at' => $brandStory->published_at?->format('d.m.Y H:i'),
+                'meta_title' => $brandStory->meta_title,
+                'meta_description' => $brandStory->meta_description,
+                'brand' => $brandStory->brand ? ['id' => $brandStory->brand->id, 'name' => $brandStory->brand->name] : null,
+                'list_image' => $brandStory->list_image,
+                'detail_desktop_image' => $brandStory->detail_desktop_image,
+                'detail_mobile_image' => $brandStory->detail_mobile_image,
+                'tags' => $brandStory->tag_list,
+                'regions' => $brandStory->regions->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->toArray(),
+                'created_at' => $brandStory->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $brandStory->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(BrandStory $brandStory)
     {
         $brandStory->tag_list = $brandStory->tags->pluck('name')->toArray();

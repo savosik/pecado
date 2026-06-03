@@ -109,6 +109,35 @@ class UserQuestionnaireController extends Controller
         ]);
     }
 
+    public function show(UserQuestionnaire $userQuestionnaire)
+    {
+        $userQuestionnaire->load(['user']);
+
+        return Inertia::render('Admin/Pages/UserQuestionnaires/Show', [
+            'questionnaire' => [
+                'id' => $userQuestionnaire->id,
+                'business_type' => $userQuestionnaire->business_type,
+                'business_name' => $userQuestionnaire->business_name,
+                'website_url' => $userQuestionnaire->website_url,
+                'years_in_business' => $userQuestionnaire->years_in_business,
+                'monthly_order_volume' => $userQuestionnaire->monthly_order_volume,
+                'has_physical_store' => $userQuestionnaire->has_physical_store,
+                'store_count' => $userQuestionnaire->store_count,
+                'product_categories' => $userQuestionnaire->product_categories,
+                'how_found_us' => $userQuestionnaire->how_found_us,
+                'additional_info' => $userQuestionnaire->additional_info,
+                'completed_at' => $userQuestionnaire->completed_at?->format('d.m.Y H:i'),
+                'user' => $userQuestionnaire->user ? [
+                    'id' => $userQuestionnaire->user->id,
+                    'name' => $userQuestionnaire->user->name,
+                    'email' => $userQuestionnaire->user->email,
+                ] : null,
+                'created_at' => $userQuestionnaire->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $userQuestionnaire->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(UserQuestionnaire $userQuestionnaire)
     {
         $userQuestionnaire->load(['user']);
