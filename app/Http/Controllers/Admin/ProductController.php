@@ -66,6 +66,63 @@ class ProductController extends AdminController
     }
 
     /**
+     * Display the specified product.
+     */
+    public function show($id): Response
+    {
+        $product = Product::withoutGlobalScope(HiddenScope::class)->findOrFail($id);
+
+        $product->load([
+            'brand',
+            'model',
+            'category',
+            'media',
+            'tags',
+            'barcodes',
+            'warehouses',
+            'attributeValues.attribute',
+        ]);
+
+        return Inertia::render('Admin/Pages/Products/Show', [
+            'product' => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'sku' => $product->sku,
+                'code' => $product->code,
+                'external_id' => $product->external_id,
+                'variant_name' => $product->variant_name,
+                'base_price' => $product->base_price,
+                'hidden' => (bool) $product->hidden,
+                'is_new' => (bool) $product->is_new,
+                'is_bestseller' => (bool) $product->is_bestseller,
+                'is_marked' => (bool) $product->is_marked,
+                'is_liquidation' => (bool) $product->is_liquidation,
+                'for_marketplaces' => (bool) $product->for_marketplaces,
+                'weight_gross' => $product->weight_gross,
+                'weight_net' => $product->weight_net,
+                'width' => $product->width,
+                'height' => $product->height,
+                'depth' => $product->depth,
+                'erp_created_at' => $product->erp_created_at?->format('d.m.Y H:i'),
+                'erp_updated_at' => $product->erp_updated_at?->format('d.m.Y H:i'),
+                'brand' => $product->brand ? ['id' => $product->brand->id, 'name' => $product->brand->name] : null,
+                'category' => $product->category ? ['id' => $product->category->id, 'name' => $product->category->name] : null,
+                'model' => $product->model ? ['id' => $product->model->id, 'name' => $product->model->name] : null,
+                'main_image' => $product->getFirstMediaUrl('main'),
+                'additional_media' => $product->getMedia('additional')->map(fn ($m) => ['id' => $m->id, 'url' => $m->getUrl()]),
+                'tags' => $product->tags->pluck('name'),
+                'barcodes' => $product->barcodes->pluck('barcode'),
+                'warehouses' => $product->warehouses->map(fn ($w) => ['name' => $w->name, 'quantity' => $w->pivot->quantity]),
+                'attributes' => $product->attributeValues->map(fn ($av) => [
+                    'attribute_name' => $av->attribute->name,
+                    'value' => $av->text_value ?? ($av->number_value !== null ? (string) $av->number_value : ($av->boolean_value !== null ? ($av->boolean_value ? 'Да' : 'Нет') : null)),
+                ])->filter(fn ($av) => $av['value'] !== null)->values(),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for creating a new product.
      */
     public function create(): Response

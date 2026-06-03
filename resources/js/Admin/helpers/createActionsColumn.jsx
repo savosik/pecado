@@ -1,19 +1,27 @@
 import { HStack, IconButton } from '@chakra-ui/react';
 import { router } from '@inertiajs/react';
-import { LuPencil, LuTrash2 } from 'react-icons/lu';
+import { LuEye, LuPencil, LuTrash2 } from 'react-icons/lu';
 import { usePermission } from '@/Admin/hooks/usePermission';
 
-/**
- * ActionsCell — React-компонент для рендера ячейки действий.
- */
-const ActionsCell = ({ row, routeName, onDelete, showEdit, showDelete, extraActions, permissionPrefix }) => {
+const ActionsCell = ({ row, routeName, onDelete, showView, showEdit, showDelete, extraActions, permissionPrefix }) => {
     const { can } = usePermission();
 
+    const canView = !permissionPrefix || can(`${permissionPrefix}.view`);
     const canEdit = !permissionPrefix || can(`${permissionPrefix}.edit`);
     const canDelete = !permissionPrefix || can(`${permissionPrefix}.delete`);
 
     return (
         <HStack gap={1}>
+            {showView && canView && (
+                <IconButton
+                    size="sm"
+                    variant="ghost"
+                    aria-label="Просмотреть"
+                    onClick={() => router.visit(route(`${routeName}.show`, row.id))}
+                >
+                    <LuEye />
+                </IconButton>
+            )}
             {extraActions && extraActions(row)}
             {showEdit && canEdit && (
                 <IconButton
@@ -46,6 +54,7 @@ const ActionsCell = ({ row, routeName, onDelete, showEdit, showDelete, extraActi
  * @param {string} routeName - Базовый маршрут (напр. 'admin.brands')
  * @param {Function} onDelete - Обработчик удаления (получает row)
  * @param {Object} options
+ * @param {boolean} options.showView - Показать кнопку просмотра (по умолчанию false)
  * @param {boolean} options.showEdit - Показать кнопку редактирования (по умолчанию true)
  * @param {boolean} options.showDelete - Показать кнопку удаления (по умолчанию true)
  * @param {string} options.permissionPrefix - Префикс ресурса для проверки прав (напр. 'products').
@@ -54,6 +63,7 @@ const ActionsCell = ({ row, routeName, onDelete, showEdit, showDelete, extraActi
  */
 export const createActionsColumn = (routeName, onDelete, options = {}) => {
     const {
+        showView = false,
         showEdit = true,
         showDelete = true,
         extraActions,
@@ -68,6 +78,7 @@ export const createActionsColumn = (routeName, onDelete, options = {}) => {
                 row={row}
                 routeName={routeName}
                 onDelete={onDelete}
+                showView={showView}
                 showEdit={showEdit}
                 showDelete={showDelete}
                 extraActions={extraActions}

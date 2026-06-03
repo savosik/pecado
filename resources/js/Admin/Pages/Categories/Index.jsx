@@ -135,7 +135,7 @@ export default function Index({ categories, filters }) {
                 </Badge>
             ),
         },
-        createActionsColumn('admin.categories', openDeleteDialog, { permissionPrefix: 'categories' }),
+        createActionsColumn('admin.categories', openDeleteDialog, { permissionPrefix: 'categories', showView: true }),
     ];
 
     const viewMode = filters.view || 'list';

@@ -209,7 +209,7 @@ const ReturnsIndex = ({ filters, statuses, reasons, trashedCount }) => {
                     </IconButton>
                 ) : null,
             }
-            : createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id), { permissionPrefix: 'returns' }),
+            : createActionsColumn('admin.returns', (returnItem) => setDeleteId(returnItem.id), { permissionPrefix: 'returns', showView: true }),
     ];
 
     const handleDelete = () => {

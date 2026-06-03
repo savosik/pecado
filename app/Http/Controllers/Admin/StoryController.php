@@ -54,6 +54,26 @@ class StoryController extends Controller
         return response()->json($stories);
     }
 
+    public function show(Story $story)
+    {
+        $story->load('regions:id,name');
+        $story->loadCount('slides');
+
+        return Inertia::render('Admin/Pages/Stories/Show', [
+            'story' => [
+                'id' => $story->id,
+                'name' => $story->name,
+                'slug' => $story->slug,
+                'is_active' => (bool) $story->is_active,
+                'is_published' => (bool) $story->is_published,
+                'show_name' => (bool) $story->show_name,
+                'sort_order' => $story->sort_order,
+                'slides_count' => $story->slides_count,
+                'regions' => $story->regions->map(fn ($r) => ['id' => $r->id, 'name' => $r->name]),
+            ],
+        ]);
+    }
+
     public function create()
     {
         return Inertia::render('Admin/Pages/Stories/Create', [

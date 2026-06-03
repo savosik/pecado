@@ -81,7 +81,7 @@ export default function Index({ stories, filters }) {
             label: 'Порядок',
             sortable: true,
         },
-        createActionsColumn('admin.stories', openDeleteDialog, { permissionPrefix: 'stories' }),
+        createActionsColumn('admin.stories', openDeleteDialog, { permissionPrefix: 'stories', showView: true }),
     ];
 
     return (

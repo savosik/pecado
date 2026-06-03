@@ -133,7 +133,7 @@ export default function Index({ products, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.products', openDeleteDialog, { permissionPrefix: 'products' }),
+        createActionsColumn('admin.products', openDeleteDialog, { permissionPrefix: 'products', showView: true }),
     ];
 
     return (

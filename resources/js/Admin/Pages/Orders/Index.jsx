@@ -300,7 +300,7 @@ const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
                     </IconButton>
                 ) : null,
             }
-            : createActionsColumn('admin.orders', openDeleteDialog, { permissionPrefix: 'orders' }),
+            : createActionsColumn('admin.orders', openDeleteDialog, { permissionPrefix: 'orders', showView: true }),
     ], [selectedOrders.length, orders.data, selectedOrdersSet, isTrashed, can, handleSelectAll, handleSelectOrder, openDeleteDialog]);
 
     const handleDelete = useCallback(() => {

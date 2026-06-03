@@ -89,6 +89,34 @@ class CategoryController extends AdminController
     }
 
     /**
+     * Display the specified category.
+     */
+    public function show(Category $category): Response
+    {
+        $category->load(['parent', 'media', 'tags', 'attributes:id,name']);
+        $category->loadCount('products');
+
+        return Inertia::render('Admin/Pages/Categories/Show', [
+            'category' => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'slug' => $category->slug,
+                'external_id' => $category->external_id,
+                'is_active' => (bool) $category->is_active,
+                'short_description' => $category->short_description,
+                'description' => $category->description,
+                'meta_title' => $category->meta_title,
+                'meta_description' => $category->meta_description,
+                'icon_url' => $category->getFirstMediaUrl('icon'),
+                'products_count' => $category->products_count,
+                'parent' => $category->parent ? ['id' => $category->parent->id, 'name' => $category->parent->name] : null,
+                'tags' => $category->tags->pluck('name'),
+                'attributes' => $category->attributes->map(fn ($a) => ['id' => $a->id, 'name' => $a->name]),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for creating a new category.
      */
     public function create(): Response

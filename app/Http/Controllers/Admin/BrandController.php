@@ -60,6 +60,34 @@ class BrandController extends AdminController
     }
 
     /**
+     * Display the specified brand.
+     */
+    public function show(Brand $brand): Response
+    {
+        $brand->load(['parent', 'media', 'tags']);
+        $brand->loadCount('products');
+
+        return Inertia::render('Admin/Pages/Brands/Show', [
+            'brand' => [
+                'id' => $brand->id,
+                'name' => $brand->name,
+                'slug' => $brand->slug,
+                'external_id' => $brand->external_id,
+                'is_featured' => (bool) $brand->is_featured,
+                'category' => $brand->category?->label(),
+                'short_description' => $brand->short_description,
+                'description' => $brand->description,
+                'meta_title' => $brand->meta_title,
+                'meta_description' => $brand->meta_description,
+                'logo_url' => $brand->getFirstMediaUrl('logo'),
+                'products_count' => $brand->products_count,
+                'parent' => $brand->parent ? ['id' => $brand->parent->id, 'name' => $brand->parent->name] : null,
+                'tags' => $brand->tags->pluck('name'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for creating a new brand.
      */
     public function create(): Response
