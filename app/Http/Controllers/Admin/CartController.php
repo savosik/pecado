@@ -193,6 +193,49 @@ class CartController extends AdminController
     }
 
     /**
+     * Display the specified cart.
+     */
+    public function show(Cart $cart): Response
+    {
+        $cart->load(['user', 'items.product.media', 'items.product.brand']);
+
+        $totalAmount = $cart->items->sum(function ($item) {
+            return ($item->product?->base_price ?? 0) * $item->quantity;
+        });
+
+        return Inertia::render('Admin/Pages/Carts/Show', [
+            'cart' => [
+                'id' => $cart->id,
+                'name' => $cart->name,
+                'user_id' => $cart->user_id,
+                'created_at' => $cart->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $cart->updated_at?->format('d.m.Y H:i'),
+                'user' => $cart->user ? [
+                    'id' => $cart->user->id,
+                    'name' => $cart->user->name,
+                    'email' => $cart->user->email,
+                ] : null,
+                'items' => $cart->items->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'product_id' => $item->product_id,
+                        'quantity' => $item->quantity,
+                        'product' => $item->product ? [
+                            'id' => $item->product->id,
+                            'name' => $item->product->name,
+                            'base_price' => $item->product->base_price,
+                            'sku' => $item->product->sku,
+                            'image_url' => $item->product->getFirstMediaUrl('main'),
+                            'brand_name' => $item->product->brand?->name,
+                        ] : null,
+                    ];
+                }),
+                'total_amount' => round($totalAmount, 2),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified cart.
      */
     public function edit(Cart $cart): Response

@@ -92,6 +92,25 @@ class PersonalManagerController extends AdminController
         );
     }
 
+    public function show(PersonalManager $personalManager): Response
+    {
+        $personalManager->load('media');
+        $personalManager->loadCount('users');
+
+        return Inertia::render('Admin/Pages/PersonalManagers/Show', [
+            'personalManager' => [
+                'id' => $personalManager->id,
+                'name' => $personalManager->name,
+                'phone' => $personalManager->phone,
+                'email' => $personalManager->email,
+                'photo_url' => $personalManager->getFirstMediaUrl('photo'),
+                'users_count' => $personalManager->users_count,
+                'created_at' => $personalManager->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $personalManager->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(PersonalManager $personalManager): Response
     {
         $personalManager->load('media');

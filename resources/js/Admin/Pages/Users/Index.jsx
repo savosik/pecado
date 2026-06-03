@@ -137,7 +137,7 @@ export default function Index({ users, filters, statuses, statusCounts, availabl
                 </Text>
             ),
         },
-        createActionsColumn('admin.users', openDeleteDialog, { permissionPrefix: 'users' }),
+        createActionsColumn('admin.users', openDeleteDialog, { permissionPrefix: 'users' , showView: true}),
     ];
 
     return (

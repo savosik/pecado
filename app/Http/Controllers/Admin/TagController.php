@@ -72,6 +72,26 @@ class TagController extends Controller
         return $this->redirectAfterSave($request, 'admin.tags.index', 'admin.tags.edit', $tag, 'Тег успешно создан');
     }
 
+    public function show(Tag $tag)
+    {
+        $displayName = is_array($tag->name)
+            ? ($tag->name['ru'] ?? $tag->name['en'] ?? implode(', ', $tag->name))
+            : $tag->name;
+
+        return Inertia::render('Admin/Pages/Tags/Show', [
+            'tag' => [
+                'id' => $tag->id,
+                'display_name' => $displayName,
+                'name' => $tag->name,
+                'slug' => $tag->slug,
+                'type' => $tag->type,
+                'order_column' => $tag->order_column,
+                'created_at' => $tag->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $tag->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(Tag $tag)
     {
         // Преобразуем name для редактирования

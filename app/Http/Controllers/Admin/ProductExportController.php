@@ -90,6 +90,33 @@ class ProductExportController extends Controller
         return $this->redirectAfterSave($request, 'admin.product-exports.index', 'admin.product-exports.edit', $export, 'Выгрузка успешно создана');
     }
 
+    public function show(ProductExport $productExport)
+    {
+        if ($productExport->user_id !== auth()->id()) {
+            abort(403);
+        }
+
+        $productExport->load('clientUser');
+
+        return Inertia::render('Admin/Pages/ProductExports/Show', [
+            'export' => [
+                'id' => $productExport->id,
+                'name' => $productExport->name,
+                'format' => $productExport->format,
+                'is_active' => $productExport->is_active,
+                'fields' => $productExport->fields,
+                'filters' => $productExport->filters,
+                'client_user' => $productExport->clientUser ? [
+                    'id' => $productExport->clientUser->id,
+                    'name' => $productExport->clientUser->name,
+                    'email' => $productExport->clientUser->email,
+                ] : null,
+                'created_at' => $productExport->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $productExport->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(ProductExport $productExport)
     {
         // Ensure user can only edit their own exports

@@ -95,7 +95,7 @@ export default function Index({ questionnaires, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.user-questionnaires', openDeleteDialog, { showView: false , permissionPrefix: 'user-questionnaires' }),
+        createActionsColumn('admin.user-questionnaires', openDeleteDialog, { showView: true, permissionPrefix: 'user-questionnaires' }),
     ];
 
     return (

@@ -90,6 +90,26 @@ class SizeChartController extends AdminController
     }
 
     /**
+     * Display the specified size chart.
+     */
+    public function show(SizeChart $sizeChart): Response
+    {
+        $sizeChart->load('brands');
+
+        return Inertia::render('Admin/Pages/SizeCharts/Show', [
+            'sizeChart' => [
+                'id' => $sizeChart->id,
+                'uuid' => $sizeChart->uuid,
+                'name' => $sizeChart->name,
+                'values' => is_array($sizeChart->values) ? $sizeChart->values : json_decode($sizeChart->values ?? '[]', true),
+                'brands' => $sizeChart->brands->map(fn ($b) => ['id' => $b->id, 'name' => $b->name])->toArray(),
+                'created_at' => $sizeChart->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $sizeChart->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified size chart.
      */
     public function edit(SizeChart $sizeChart): Response

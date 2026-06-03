@@ -147,7 +147,7 @@ export default function Index({ companies, filters, trashedCount }) {
                     </IconButton>
                 ) : null,
             }
-            : createActionsColumn('admin.companies', openDeleteDialog, { permissionPrefix: 'companies' }),
+            : createActionsColumn('admin.companies', openDeleteDialog, { permissionPrefix: 'companies' , showView: true}),
     ];
 
     return (

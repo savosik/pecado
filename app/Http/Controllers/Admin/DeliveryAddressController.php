@@ -62,6 +62,27 @@ class DeliveryAddressController extends Controller
         return $this->redirectAfterSave($request, 'admin.delivery-addresses.index', 'admin.delivery-addresses.edit', $deliveryAddress, 'Адрес доставки успешно создан');
     }
 
+    public function show(DeliveryAddress $deliveryAddress)
+    {
+        $deliveryAddress->load('user');
+
+        return Inertia::render('Admin/Pages/DeliveryAddresses/Show', [
+            'deliveryAddress' => [
+                'id' => $deliveryAddress->id,
+                'name' => $deliveryAddress->name,
+                'address' => $deliveryAddress->address,
+                'address_data' => $deliveryAddress->address_data,
+                'user' => $deliveryAddress->user ? [
+                    'id' => $deliveryAddress->user->id,
+                    'name' => $deliveryAddress->user->name,
+                    'email' => $deliveryAddress->user->email,
+                ] : null,
+                'created_at' => $deliveryAddress->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $deliveryAddress->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(DeliveryAddress $deliveryAddress)
     {
         $deliveryAddress->load('user');

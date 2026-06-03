@@ -91,6 +91,26 @@ class ProductModelController extends AdminController
     }
 
     /**
+     * Display the specified product model.
+     */
+    public function show(ProductModel $productModel): Response
+    {
+        $productModel->loadCount('products');
+
+        return Inertia::render('Admin/Pages/ProductModels/Show', [
+            'productModel' => [
+                'id' => $productModel->id,
+                'name' => $productModel->name,
+                'code' => $productModel->code,
+                'external_id' => $productModel->external_id,
+                'products_count' => $productModel->products_count,
+                'created_at' => $productModel->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $productModel->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified product model.
      */
     public function edit(ProductModel $productModel): Response

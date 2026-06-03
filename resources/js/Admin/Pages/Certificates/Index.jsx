@@ -88,7 +88,7 @@ export default function Index({ certificates, filters }) {
                 </HStack>
             ),
         },
-        createActionsColumn('admin.certificates', openDeleteDialog, { permissionPrefix: 'certificates' }),
+        createActionsColumn('admin.certificates', openDeleteDialog, { permissionPrefix: 'certificates' , showView: true}),
     ];
 
     return (

@@ -76,7 +76,7 @@ export default function Index({ sizeCharts, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.size-charts', openDeleteDialog, { permissionPrefix: 'size-charts' }),
+        createActionsColumn('admin.size-charts', openDeleteDialog, { permissionPrefix: 'size-charts' , showView: true}),
     ];
 
     return (

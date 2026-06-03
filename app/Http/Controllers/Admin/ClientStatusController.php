@@ -100,6 +100,28 @@ class ClientStatusController extends AdminController
     }
 
     /**
+     * Display the specified client status.
+     */
+    public function show(ClientStatus $clientStatus): Response
+    {
+        $clientStatus->load('media');
+
+        return Inertia::render('Admin/Pages/ClientStatuses/Show', [
+            'clientStatus' => [
+                'id' => $clientStatus->id,
+                'name' => $clientStatus->name,
+                'color' => $clientStatus->color,
+                'description' => $clientStatus->description,
+                'amount_from' => $clientStatus->amount_from,
+                'external_id' => $clientStatus->external_id,
+                'image_url' => $clientStatus->getFirstMediaUrl('image'),
+                'created_at' => $clientStatus->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $clientStatus->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified client status.
      */
     public function edit(ClientStatus $clientStatus): Response

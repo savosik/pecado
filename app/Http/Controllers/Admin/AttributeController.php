@@ -132,6 +132,36 @@ class AttributeController extends AdminController
     }
 
     /**
+     * Display the specified attribute.
+     */
+    public function show(Attribute $attribute): Response
+    {
+        $attribute->load(['values', 'categories:id,name', 'attributeGroup:id,name']);
+        $attribute->loadCount('values');
+
+        return Inertia::render('Admin/Pages/Attributes/Show', [
+            'attribute' => [
+                'id' => $attribute->id,
+                'name' => $attribute->name,
+                'slug' => $attribute->slug,
+                'type' => $attribute->type,
+                'unit' => $attribute->unit,
+                'is_filterable' => $attribute->is_filterable,
+                'is_active' => $attribute->is_active,
+                'show_on_site' => $attribute->show_on_site,
+                'show_in_export' => $attribute->show_in_export,
+                'is_variant_forming' => $attribute->is_variant_forming,
+                'sort_order' => $attribute->sort_order,
+                'attribute_group' => $attribute->attributeGroup ? ['id' => $attribute->attributeGroup->id, 'name' => $attribute->attributeGroup->name] : null,
+                'categories' => $attribute->categories->map(fn ($c) => ['id' => $c->id, 'name' => $c->name])->toArray(),
+                'values' => $attribute->values->map(fn ($v) => ['id' => $v->id, 'value' => $v->value, 'sort_order' => $v->sort_order])->toArray(),
+                'created_at' => $attribute->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $attribute->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
+    /**
      * Show the form for editing the specified attribute.
      */
     public function edit(Attribute $attribute): Response

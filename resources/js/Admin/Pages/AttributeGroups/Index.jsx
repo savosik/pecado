@@ -46,7 +46,7 @@ export default function Index({ attributeGroups, filters }) {
             label: 'Атрибутов',
             render: (val) => <Badge colorPalette="blue">{val}</Badge>,
         },
-        createActionsColumn('admin.attribute-groups', openDeleteDialog, { permissionPrefix: 'attribute-groups' }),
+        createActionsColumn('admin.attribute-groups', openDeleteDialog, { permissionPrefix: 'attribute-groups' , showView: true}),
     ];
 
     return (

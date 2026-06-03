@@ -75,6 +75,32 @@ class CompanyBankAccountController extends Controller
         return $this->redirectAfterSave($request, 'admin.company-bank-accounts.index', 'admin.company-bank-accounts.edit', $bankAccount, 'Банковский счет успешно создан');
     }
 
+    public function show(CompanyBankAccount $companyBankAccount)
+    {
+        $companyBankAccount->load(['company.user']);
+
+        return Inertia::render('Admin/Pages/CompanyBankAccounts/Show', [
+            'bankAccount' => [
+                'id' => $companyBankAccount->id,
+                'bank_name' => $companyBankAccount->bank_name,
+                'bank_bik' => $companyBankAccount->bank_bik,
+                'correspondent_account' => $companyBankAccount->correspondent_account,
+                'account_number' => $companyBankAccount->account_number,
+                'is_primary' => $companyBankAccount->is_primary,
+                'company' => $companyBankAccount->company ? [
+                    'id' => $companyBankAccount->company->id,
+                    'name' => $companyBankAccount->company->name,
+                    'user' => $companyBankAccount->company->user ? [
+                        'id' => $companyBankAccount->company->user->id,
+                        'name' => $companyBankAccount->company->user->name,
+                    ] : null,
+                ] : null,
+                'created_at' => $companyBankAccount->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $companyBankAccount->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(CompanyBankAccount $companyBankAccount)
     {
         $companyBankAccount->load(['company.user']);

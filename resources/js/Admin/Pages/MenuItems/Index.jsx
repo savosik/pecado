@@ -108,7 +108,7 @@ export default function Index({ menuItems, filters }) {
                 </Badge>
             ),
         },
-        createActionsColumn('admin.menu-items', openDeleteDialog, { permissionPrefix: 'menu-items' }),
+        createActionsColumn('admin.menu-items', openDeleteDialog, { permissionPrefix: 'menu-items' , showView: true}),
     ];
 
     return (

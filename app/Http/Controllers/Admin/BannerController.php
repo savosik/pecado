@@ -106,6 +106,33 @@ class BannerController extends Controller
         return $this->redirectAfterSave($request, 'admin.banners.index', 'admin.banners.edit', $banner, 'Баннер успешно создан');
     }
 
+    public function show(Banner $banner)
+    {
+        $banner->load('regions:id,name');
+        $banner->desktop_image = $banner->getFirstMediaUrl('desktop');
+        $banner->mobile_image = $banner->getFirstMediaUrl('mobile');
+        if ($banner->linkable) {
+            $banner->linkable_name = $banner->linkable->title ?? $banner->linkable->name ?? null;
+        }
+
+        return Inertia::render('Admin/Pages/Banners/Show', [
+            'banner' => [
+                'id' => $banner->id,
+                'title' => $banner->title,
+                'linkable_type' => $banner->linkable_type,
+                'linkable_id' => $banner->linkable_id,
+                'linkable_name' => $banner->linkable_name ?? null,
+                'is_active' => $banner->is_active,
+                'sort_order' => $banner->sort_order,
+                'desktop_image' => $banner->desktop_image,
+                'mobile_image' => $banner->mobile_image,
+                'regions' => $banner->regions->map(fn ($r) => ['id' => $r->id, 'name' => $r->name])->toArray(),
+                'created_at' => $banner->created_at?->format('d.m.Y H:i'),
+                'updated_at' => $banner->updated_at?->format('d.m.Y H:i'),
+            ],
+        ]);
+    }
+
     public function edit(Banner $banner)
     {
         $banner->desktop_image = $banner->getFirstMediaUrl('desktop');

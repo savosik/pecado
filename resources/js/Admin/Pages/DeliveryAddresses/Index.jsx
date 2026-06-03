@@ -74,7 +74,7 @@ export default function Index({ deliveryAddresses, filters }) {
                 </Text>
             ),
         },
-        createActionsColumn('admin.delivery-addresses', openDeleteDialog, { permissionPrefix: 'delivery-addresses' }),
+        createActionsColumn('admin.delivery-addresses', openDeleteDialog, { permissionPrefix: 'delivery-addresses' , showView: true}),
     ];
 
     return (
