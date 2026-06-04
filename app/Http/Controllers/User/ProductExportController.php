@@ -12,6 +12,7 @@ use App\Models\Currency;
 use App\Models\ProductExport;
 use App\Models\Warehouse;
 use App\Services\ProductExportService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -123,7 +124,7 @@ class ProductExportController extends Controller
         return Inertia::render('User/Cabinet/ProductExports/Form', [
             'export' => null,
             'availableFilters' => $this->rewriteFilterUrls($this->exportService->getAvailableFilters()),
-            'availableFields' => $this->exportService->getAvailableFields(),
+            'availableFields' => $this->exportService->getAvailableFields(Auth::user()),
             'currencies' => Currency::select('id', 'code', 'name', 'symbol', 'is_base')
                 ->orderByDesc('is_base')
                 ->orderBy('code')
@@ -154,7 +155,7 @@ class ProductExportController extends Controller
         return Inertia::render('User/Cabinet/ProductExports/Form', [
             'export' => $productExport,
             'availableFilters' => $this->rewriteFilterUrls($this->exportService->getAvailableFilters()),
-            'availableFields' => $this->exportService->getAvailableFields(),
+            'availableFields' => $this->exportService->getAvailableFields(Auth::user()),
             'currencies' => Currency::select('id', 'code', 'name', 'symbol', 'is_base')
                 ->orderByDesc('is_base')
                 ->orderBy('code')
@@ -223,6 +224,12 @@ class ProductExportController extends Controller
                 ->limit(50)
                 ->get(),
             'warehouses' => Warehouse::query()
+                ->when(Auth::user()?->region_id, function ($q) {
+                    $ids = DB::table('region_warehouse')
+                        ->where('region_id', Auth::user()->region_id)
+                        ->pluck('warehouse_id');
+                    $q->whereIn('id', $ids);
+                })
                 ->when($search, fn ($q) => $q->where('name', 'like', "%{$search}%"))
                 ->select('id', 'name')
                 ->orderBy('name')

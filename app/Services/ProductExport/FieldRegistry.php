@@ -287,8 +287,12 @@ class FieldRegistry
 
     /**
      * Доступные поля экспорта, сгруппированные для фронтенда.
+     *
+     * @param  int[]|null  $regionWarehouseIds  Если передан — поля WarehouseQuantityField
+     *                                          фильтруются до складов из этого списка.
+     *                                          null = показывать все (для AdminPanel).
      */
-    public function getAvailableFields(): array
+    public function getAvailableFields(?array $regionWarehouseIds = null): array
     {
         $this->boot();
 
@@ -296,6 +300,13 @@ class FieldRegistry
 
         $this->fields
             ->filter(fn (ExportField $f) => $f->isExportable())
+            ->filter(function (ExportField $f) use ($regionWarehouseIds) {
+                if ($regionWarehouseIds !== null && $f instanceof Fields\WarehouseQuantityField) {
+                    return in_array($f->getWarehouseId(), $regionWarehouseIds, true);
+                }
+
+                return true;
+            })
             ->each(function (ExportField $field) use (&$groups) {
                 $group = $field->group();
                 // Для динамических атрибутов — группа "Атрибуты"

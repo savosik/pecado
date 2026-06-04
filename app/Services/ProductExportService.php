@@ -12,6 +12,7 @@ use App\Services\ProductExport\FieldRegistry;
 use BackedEnum;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -36,10 +37,23 @@ class ProductExportService
 
     /**
      * Available export fields (delegates to registry).
+     *
+     * Если передан $user с region_id — поля WarehouseQuantityField фильтруются
+     * до складов, привязанных к региону пользователя.
      */
-    public function getAvailableFields(): array
+    public function getAvailableFields(?User $user = null): array
     {
-        return $this->registry->getAvailableFields();
+        $regionWarehouseIds = null;
+
+        if ($user && $user->region_id) {
+            $regionWarehouseIds = DB::table('region_warehouse')
+                ->where('region_id', $user->region_id)
+                ->pluck('warehouse_id')
+                ->map(fn ($id) => (int) $id)
+                ->toArray();
+        }
+
+        return $this->registry->getAvailableFields($regionWarehouseIds);
     }
 
     /**

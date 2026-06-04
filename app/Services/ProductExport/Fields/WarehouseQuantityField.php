@@ -26,6 +26,11 @@ class WarehouseQuantityField extends ExportField
         $this->warehouse = $warehouse;
     }
 
+    public function getWarehouseId(): int
+    {
+        return $this->warehouse->id;
+    }
+
     public function key(): string
     {
         return "warehouse.{$this->warehouse->id}.quantity";
