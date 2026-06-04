@@ -64,6 +64,20 @@
                 "null"
             ]
         },
+        "manager_comment": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Комментарий для менеджера — передаётся в отдельный реквизит заказа в 1С"
+        },
+        "warehouse_comment": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "description": "Комментарий для склада — передаётся в отдельный реквизит заказа в 1С"
+        },
         "timestamp": {
             "type": "string",
             "format": "date-time"

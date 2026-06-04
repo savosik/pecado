@@ -43,6 +43,8 @@ class PublishOrderToErp
             'partner_uuid' => $order->user?->erp_id,
             'warehouse_uuids' => $this->resolveWarehouseUuids($order),
             'comment' => $order->comment,
+            'manager_comment' => $order->manager_comment ?: null,
+            'warehouse_comment' => $order->warehouse_comment ?: null,
             'delivery_address' => $order->delivery_address,
             'timestamp' => now()->toIso8601String(),
         ];

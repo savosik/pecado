@@ -498,4 +498,65 @@ class PublishOrderToErpTest extends TestCase
                 && $job->payload['warehouse_uuids'] === [];
         });
     }
+
+    // v15: manager_comment / warehouse_comment
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function order_created_payload_includes_manager_and_warehouse_comments(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'comments-test-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'comment' => 'Общий комментарий',
+            'manager_comment' => 'Клиент просил счёт на ИП',
+            'warehouse_comment' => 'Упаковать без логотипа',
+        ]);
+
+        Queue::fake();
+
+        $event = new OrderCreated($order);
+        $listener = new \App\Listeners\PublishOrderToErp;
+        $listener->handle($event);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return $job->payload['comment'] === 'Общий комментарий'
+                && $job->payload['manager_comment'] === 'Клиент просил счёт на ИП'
+                && $job->payload['warehouse_comment'] === 'Упаковать без логотипа';
+        });
+    }
+
+    #[Test]
+    public function order_created_payload_sends_null_when_comments_empty(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'empty-comments-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'manager_comment' => null,
+            'warehouse_comment' => null,
+        ]);
+
+        Queue::fake();
+
+        $event = new OrderCreated($order);
+        $listener = new \App\Listeners\PublishOrderToErp;
+        $listener->handle($event);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return array_key_exists('manager_comment', $job->payload)
+                && $job->payload['manager_comment'] === null
+                && array_key_exists('warehouse_comment', $job->payload)
+                && $job->payload['warehouse_comment'] === null;
+        });
+    }
 }

@@ -6,6 +6,7 @@ use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
 use App\Listeners\PublishContractorToErp;
 use App\Models\ClientStatus;
+use App\Models\PersonalManager;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -53,6 +54,9 @@ class HandlePartnerCreated
         // v11: client_status → ClientStatus по external_id
         $clientStatusId = $this->resolveClientStatusId($payload);
 
+        // v15: manager → PersonalManager по erp_uuid
+        $personalManagerId = $this->resolvePersonalManagerId($payload);
+
         if (! $uuid || ! $email) {
             Log::warning('partner.created: отсутствует uuid или email', ['payload' => $payload]);
 
@@ -63,7 +67,7 @@ class HandlePartnerCreated
         $user = User::where('erp_id', $uuid)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $city, $country, $phone, $userStatus, $clientStatusId) {
+            User::withoutEvents(function () use ($user, $uuid, $city, $country, $phone, $userStatus, $clientStatusId, $personalManagerId) {
                 $updateData = array_filter([
                     'erp_id' => $uuid,
                     'status' => $userStatus,
@@ -75,6 +79,11 @@ class HandlePartnerCreated
                 // client_status_id может быть null (сброс) — не фильтруем
                 if ($clientStatusId !== false) {
                     $updateData['client_status_id'] = $clientStatusId;
+                }
+
+                // personal_manager_id может быть null (сброс) — не фильтруем
+                if ($personalManagerId !== false) {
+                    $updateData['personal_manager_id'] = $personalManagerId;
                 }
 
                 $user->update($updateData);
@@ -94,7 +103,7 @@ class HandlePartnerCreated
         $user = User::where('email', $login)->first();
 
         if ($user) {
-            User::withoutEvents(function () use ($user, $uuid, $userStatus, $clientStatusId) {
+            User::withoutEvents(function () use ($user, $uuid, $userStatus, $clientStatusId, $personalManagerId) {
                 $updateData = [
                     'erp_id' => $uuid,
                     'status' => $userStatus,
@@ -102,6 +111,10 @@ class HandlePartnerCreated
 
                 if ($clientStatusId !== false) {
                     $updateData['client_status_id'] = $clientStatusId;
+                }
+
+                if ($personalManagerId !== false) {
+                    $updateData['personal_manager_id'] = $personalManagerId;
                 }
 
                 $user->update($updateData);
@@ -148,6 +161,10 @@ class HandlePartnerCreated
             $createData['client_status_id'] = $clientStatusId;
         }
 
+        if ($personalManagerId !== false) {
+            $createData['personal_manager_id'] = $personalManagerId;
+        }
+
         $newUser = User::withoutEvents(function () use ($createData) {
             return User::create($createData);
         });
@@ -160,6 +177,50 @@ class HandlePartnerCreated
         ]);
 
         NormalizeUserDataJob::dispatch($newUser->id);
+    }
+
+    /**
+     * Резолвит manager из payload в personal_manager_id.
+     *
+     * @return int|null|false int — найден/создан, null — сбросить, false — не менять
+     */
+    private function resolvePersonalManagerId(array $payload): int|null|false
+    {
+        // Ключ отсутствует → не менять
+        if (! array_key_exists('manager', $payload)) {
+            return false;
+        }
+
+        $manager = $payload['manager'];
+
+        // Явный null → сбросить привязку
+        if ($manager === null) {
+            return null;
+        }
+
+        $erpUuid = $manager['uuid'] ?? null;
+        $name = $manager['name'] ?? null;
+
+        if (! $erpUuid) {
+            Log::warning('partner.created: manager.uuid отсутствует, менеджер не изменён', [
+                'manager' => $manager,
+                'uuid' => $payload['uuid'] ?? null,
+            ]);
+
+            return false;
+        }
+
+        $personalManager = PersonalManager::firstOrCreate(
+            ['erp_uuid' => $erpUuid],
+            ['name' => $name ?? $erpUuid],
+        );
+
+        // Обновляем имя если оно изменилось в 1С
+        if ($name && $personalManager->name !== $name) {
+            $personalManager->update(['name' => $name]);
+        }
+
+        return $personalManager->id;
     }
 
     /**

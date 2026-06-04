@@ -415,6 +415,6 @@ class CustomFieldsPresetJsonStreamTest extends TestCase
         // Sanity check: пик должен быть ниже 50 МБ для 500 товаров×3 поля.
         // Если writeJson() снова начнёт копить весь массив — пик легко
         // улетит за пределы chunk_size×per_row_bytes.
-        $this->assertLessThan(50 * 1024 * 1024, $delta, "Память подскочила на ".round($delta / 1024 / 1024, 1)." МБ — JSON может снова копить весь массив");
+        $this->assertLessThan(50 * 1024 * 1024, $delta, 'Память подскочила на '.round($delta / 1024 / 1024, 1).' МБ — JSON может снова копить весь массив');
     }
 }

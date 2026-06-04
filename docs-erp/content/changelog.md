@@ -57,6 +57,17 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
   `in_reserve`. Менеджер 1С при необходимости переведёт нужные заявки в
   `for_return` вручную.
 
+### Добавлено (2026-06-04)
+
+- **Менеджер партнёра (US-02 v15)** — поле `manager: { uuid, name } | null` в `partner.created` и `partner.updated` (1С → Сайт).
+    - Таблица `personal_managers` — добавлена колонка `erp_uuid` (unique, nullable) для матчинга с 1С.
+    - Обработчик `HandlePartnerCreated` — при получении `manager` находит или создаёт `PersonalManager` по `erp_uuid`, привязывает к `user.personal_manager_id`. `manager = null` сбрасывает привязку. Ключ `manager` отсутствует — привязка не меняется.
+- **Комментарии менеджера и склада в заказах (US-08 v15)** — поля `manager_comment`, `warehouse_comment` в `order.created` / `order.updated` (Сайт → 1С).
+    - Таблица `orders` — добавлены колонки `manager_comment`, `warehouse_comment` (text, nullable).
+    - Форма чекаута — два дополнительных textarea для комментариев.
+    - Слушатель `PublishOrderToErp` — включает оба поля в payload при публикации заказа.
+    - 1С пишет их в отдельные реквизиты: `Доп_КомментарийДляМенеджера` / `Доп_КомментарийДляСклада`.
+
 ---
 
 ## [14.0.0] — 2026-05-11

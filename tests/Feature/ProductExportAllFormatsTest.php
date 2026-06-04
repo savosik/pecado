@@ -412,7 +412,7 @@ class ProductExportAllFormatsTest extends TestCase
 
             if ($format === ExportFormat::JSON) {
                 $decoded = json_decode($content, true);
-                $this->assertIsArray($decoded, "JSON должен парситься в массив");
+                $this->assertIsArray($decoded, 'JSON должен парситься в массив');
 
                 $withBarcodes = collect($decoded)->first(fn ($row) => ! empty($row['Все штрихкоды']));
                 $this->assertNotNull($withBarcodes, 'Должен быть товар с штрихкодами');

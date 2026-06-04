@@ -103,7 +103,9 @@ class CheckoutController extends Controller
                 $cart,
                 $company,
                 $request->validated('delivery_address'),
-                $request->validated('comment')
+                $request->validated('comment'),
+                $request->validated('manager_comment'),
+                $request->validated('warehouse_comment')
             );
 
             // Очистить корзину после успешного заказа

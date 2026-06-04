@@ -113,6 +113,8 @@ export default function OrderShow({ order }) {
                                     bold
                                 />
                                 {order.comment && <InfoRow label="Комментарий" value={order.comment} />}
+                                {order.manager_comment && <InfoRow label="Комментарий для менеджера" value={order.manager_comment} />}
+                                {order.warehouse_comment && <InfoRow label="Комментарий для склада" value={order.warehouse_comment} />}
                             </VStack>
                         </Card.Body>
                     </Card.Root>

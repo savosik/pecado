@@ -23,6 +23,8 @@ class StoreCheckoutRequest extends FormRequest
             ],
             'delivery_address' => ['required', 'string', 'max:1000'],
             'comment' => ['nullable', 'string', 'max:5000'],
+            'manager_comment' => ['nullable', 'string'],
+            'warehouse_comment' => ['nullable', 'string'],
         ];
     }
 

@@ -54,6 +54,23 @@
                 "string",
                 "null"
             ]
+        },
+        "manager": {
+            "type": [
+                "object",
+                "null"
+            ],
+            "properties": {
+                "uuid": {
+                    "type": "string",
+                    "description": "UUID пользователя-менеджера в 1С (Справочник «Пользователи»)"
+                },
+                "name": {
+                    "type": "string",
+                    "description": "ФИО/наименование менеджера для отображения"
+                }
+            },
+            "required": ["uuid", "name"]
         }
     },
     "additionalProperties": true,

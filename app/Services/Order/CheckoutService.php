@@ -33,9 +33,11 @@ class CheckoutService implements CheckoutServiceInterface
         Cart $cart,
         Company $company,
         string $deliveryAddress,
-        ?string $comment = null
+        ?string $comment = null,
+        ?string $managerComment = null,
+        ?string $warehouseComment = null
     ): Collection {
-        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment) {
+        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment) {
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);
 
@@ -46,6 +48,8 @@ class CheckoutService implements CheckoutServiceInterface
                 'cart_id' => $cart->id,
                 'status' => \App\Enums\OrderStatus::PENDING_APPROVAL,
                 'comment' => $comment,
+                'manager_comment' => $managerComment ?: null,
+                'warehouse_comment' => $warehouseComment ?: null,
                 'total_amount' => 0,
                 'exchange_rate' => $currency?->exchange_rate ?? 1.0,
                 'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,

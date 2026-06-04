@@ -6,6 +6,7 @@ use App\Enums\UserStatus;
 use App\Events\UserCreated;
 use App\Events\UserUpdated;
 use App\Models\ClientStatus;
+use App\Models\PersonalManager;
 use App\Models\Region;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandlePartnerCreated;
@@ -427,6 +428,141 @@ class HandlePartnerCreatedTest extends TestCase
     }
 
     // ──────────────────────────────────────────────
+    // v15: manager — резолвинг менеджера
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_creates_and_assigns_personal_manager_when_new(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'manager-test@example.com',
+            'erp_id' => null,
+        ]);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-with-manager-001',
+            'email' => 'manager-test@example.com',
+            'manager' => [
+                'uuid' => 'erp-manager-uuid-001',
+                'name' => 'Иванов Иван Иванович',
+            ],
+        ]);
+
+        $user->refresh();
+        $this->assertNotNull($user->personal_manager_id);
+
+        $manager = PersonalManager::find($user->personal_manager_id);
+        $this->assertNotNull($manager);
+        $this->assertEquals('erp-manager-uuid-001', $manager->erp_uuid);
+        $this->assertEquals('Иванов Иван Иванович', $manager->name);
+    }
+
+    #[Test]
+    public function it_reuses_existing_personal_manager_by_erp_uuid(): void
+    {
+        $existingManager = PersonalManager::create([
+            'erp_uuid' => 'erp-manager-uuid-reuse',
+            'name' => 'Петров Пётр Петрович',
+        ]);
+
+        $user = User::factory()->create([
+            'email' => 'manager-reuse@example.com',
+            'erp_id' => null,
+        ]);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-manager-reuse',
+            'email' => 'manager-reuse@example.com',
+            'manager' => [
+                'uuid' => 'erp-manager-uuid-reuse',
+                'name' => 'Петров Пётр Петрович',
+            ],
+        ]);
+
+        $user->refresh();
+        $this->assertEquals($existingManager->id, $user->personal_manager_id);
+        $this->assertEquals(1, PersonalManager::where('erp_uuid', 'erp-manager-uuid-reuse')->count());
+    }
+
+    #[Test]
+    public function it_resets_personal_manager_when_null(): void
+    {
+        $manager = PersonalManager::create([
+            'erp_uuid' => 'erp-manager-reset',
+            'name' => 'Сидоров Сидор',
+        ]);
+
+        $user = User::factory()->create([
+            'email' => 'manager-reset@example.com',
+            'erp_id' => 'uuid-manager-reset-001',
+            'personal_manager_id' => $manager->id,
+        ]);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-manager-reset-001',
+            'email' => 'manager-reset@example.com',
+            'manager' => null,
+        ]);
+
+        $user->refresh();
+        $this->assertNull($user->personal_manager_id);
+    }
+
+    #[Test]
+    public function it_does_not_change_manager_when_key_absent(): void
+    {
+        $manager = PersonalManager::create([
+            'erp_uuid' => 'erp-manager-absent',
+            'name' => 'Козлов Козёл',
+        ]);
+
+        $user = User::factory()->create([
+            'email' => 'manager-absent@example.com',
+            'erp_id' => 'uuid-manager-absent-001',
+            'personal_manager_id' => $manager->id,
+        ]);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-manager-absent-001',
+            'email' => 'manager-absent@example.com',
+            // ключ manager отсутствует — менеджер не должен измениться
+        ]);
+
+        $user->refresh();
+        $this->assertEquals($manager->id, $user->personal_manager_id);
+    }
+
+    #[Test]
+    public function it_assigns_manager_to_new_user_created_from_erp(): void
+    {
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'uuid-new-user-with-manager',
+            'email' => 'new-user-manager@example.com',
+            'password' => 'pass12345',
+            'manager' => [
+                'uuid' => 'erp-manager-new-user',
+                'name' => 'Новый Менеджер',
+            ],
+        ]);
+
+        $user = User::where('email', 'new-user-manager@example.com')->first();
+        $this->assertNotNull($user);
+        $this->assertNotNull($user->personal_manager_id);
+
+        $manager = PersonalManager::find($user->personal_manager_id);
+        $this->assertEquals('erp-manager-new-user', $manager->erp_uuid);
+    }
+
     // Дефолтный регион при создании из 1С
     // ──────────────────────────────────────────────
 

@@ -445,6 +445,8 @@ class OrderController extends Controller
                 'status_label' => $this->getStatusLabel($order->status),
                 'type' => $order->type?->value,
                 'comment' => $order->comment,
+                'manager_comment' => $order->manager_comment,
+                'warehouse_comment' => $order->warehouse_comment,
                 'total_amount' => $order->total_amount,
                 'total_converted' => $this->convertAmount((float) $order->total_amount, $order->currency_code, $this->getUserCurrency($request)),
                 'currency_code' => $order->currency_code,

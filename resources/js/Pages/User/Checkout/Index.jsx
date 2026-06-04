@@ -53,6 +53,8 @@ export default function CheckoutIndex({
         company_id: (initialCompanies.find(c => c.is_default) ?? initialCompanies[0])?.id ?? '',
         delivery_address: addresses.length > 0 ? addresses[0].address : '',
         comment: '',
+        manager_comment: '',
+        warehouse_comment: '',
     });
 
     const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
@@ -389,15 +391,40 @@ export default function CheckoutIndex({
                         >
                             <Flex align="center" gap="2" mb="3">
                                 <LuMessageSquare size={20} />
-                                <Text fontWeight="600" fontSize="lg">Комментарий к заказу</Text>
+                                <Text fontWeight="600" fontSize="lg">Комментарии к заказу</Text>
                             </Flex>
 
-                            <Textarea
-                                placeholder="Ваши пожелания или комментарии..."
-                                value={data.comment}
-                                onChange={(e) => setData('comment', e.target.value)}
-                                rows={3}
-                            />
+                            <Stack gap="4">
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="500" mb="1.5" color="fg.muted">Общий комментарий</Text>
+                                    <Textarea
+                                        placeholder="Ваши пожелания или комментарии..."
+                                        value={data.comment}
+                                        onChange={(e) => setData('comment', e.target.value)}
+                                        rows={2}
+                                    />
+                                </Box>
+
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="500" mb="1.5" color="fg.muted">Комментарий для менеджера</Text>
+                                    <Textarea
+                                        placeholder="Заметка для менеджера: особые условия, счёт на ИП и т.д."
+                                        value={data.manager_comment}
+                                        onChange={(e) => setData('manager_comment', e.target.value)}
+                                        rows={2}
+                                    />
+                                </Box>
+
+                                <Box>
+                                    <Text fontSize="sm" fontWeight="500" mb="1.5" color="fg.muted">Комментарий для склада</Text>
+                                    <Textarea
+                                        placeholder="Заметка для склада: упаковка, маркировка и т.д."
+                                        value={data.warehouse_comment}
+                                        onChange={(e) => setData('warehouse_comment', e.target.value)}
+                                        rows={2}
+                                    />
+                                </Box>
+                            </Stack>
                         </Box>
 
                         {/* ═══ Кнопки ═══ */}

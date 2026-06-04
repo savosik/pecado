@@ -18,6 +18,8 @@ interface CheckoutServiceInterface
         Cart $cart,
         Company $company,
         string $deliveryAddress,
-        ?string $comment = null
+        ?string $comment = null,
+        ?string $managerComment = null,
+        ?string $warehouseComment = null
     ): Collection;
 }

@@ -10,6 +10,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 
 /**
  * @property int $id
+ * @property string|null $erp_uuid
  * @property string $name
  * @property string|null $phone
  * @property string|null $email
@@ -37,6 +38,7 @@ class PersonalManager extends Model implements HasMedia
     use HasFactory, InteractsWithMedia;
 
     protected $fillable = [
+        'erp_uuid',
         'name',
         'phone',
         'email',

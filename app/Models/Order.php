@@ -21,6 +21,8 @@ use Illuminate\Support\Str;
  * @property int|null $cart_id
  * @property OrderStatus $status
  * @property string|null $comment
+ * @property string|null $manager_comment
+ * @property string|null $warehouse_comment
  * @property numeric $total_amount
  * @property numeric $exchange_rate
  * @property numeric $rate_coefficient
@@ -108,6 +110,8 @@ class Order extends Model
         'cart_id',
         'status',
         'comment',
+        'manager_comment',
+        'warehouse_comment',
         'delivery_address',
         'total_amount',
         'exchange_rate',

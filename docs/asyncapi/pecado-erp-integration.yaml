@@ -1627,6 +1627,24 @@ components:
             Примеры: "silver", "gold", "diamond", "individual".
           examples:
             - 'gold'
+        manager:
+          type:
+            - object
+            - 'null'
+          description: |
+            Основной менеджер партнёра в 1С (v15). Опционально — сейчас 1С
+            не включает это поле в partner.updated, но поле задекларировано
+            для совместимости на будущее. При null — менеджер не меняется.
+          properties:
+            uuid:
+              type: string
+              description: UUID пользователя-менеджера в 1С (Справочник «Пользователи»)
+            name:
+              type: string
+              description: ФИО/наименование менеджера
+          required:
+            - uuid
+            - name
 
     # ── US-02: Партнёры (partner.created) ────
     PartnerCreatedFromErpPayload:
@@ -1706,6 +1724,28 @@ components:
             Примеры: "silver", "gold", "diamond", "individual".
           examples:
             - 'gold'
+        manager:
+          type:
+            - object
+            - 'null'
+          description: |
+            Основной менеджер партнёра в 1С (v15). Присутствует всегда в partner.created.
+            При null — менеджер не назначен (сбрасывает привязку на сайте).
+            Сайт матчит по PersonalManager.erp_uuid; при отсутствии — создаёт новую запись.
+          properties:
+            uuid:
+              type: string
+              description: UUID пользователя-менеджера в 1С (Справочник «Пользователи»)
+              examples:
+                - 'f2c1d4e7-0000-4000-a000-9ab000000000'
+            name:
+              type: string
+              description: ФИО/наименование менеджера
+              examples:
+                - 'Иванов Иван Иванович'
+          required:
+            - uuid
+            - name
 
     PartnerCreatedFromSitePayload:
       type: object
@@ -2393,7 +2433,25 @@ components:
           description: Поправочный коэффициент
         comment:
           type: string
-          description: Комментарий покупателя
+          description: Комментарий покупателя (общий, пишется в стандартный комментарий заказа в 1С)
+        manager_comment:
+          type:
+            - string
+            - 'null'
+          description: |
+            Комментарий для менеджера (v15). Опциональное поле.
+            Пишется в реквизит «Комментарий для менеджера» (Доп_КомментарийДляМенеджера) заказа в 1С.
+            1С хранит как версионируемый журнал с меткой даты — передавать только текст без дат/префиксов.
+            Пустая строка или отсутствие поля — реквизит в 1С не меняется.
+        warehouse_comment:
+          type:
+            - string
+            - 'null'
+          description: |
+            Комментарий для склада (v15). Опциональное поле.
+            Пишется в реквизит «Комментарий для склада» (Доп_КомментарийДляСклада) заказа в 1С.
+            1С хранит как версионируемый журнал с меткой даты — передавать только текст без дат/префиксов.
+            Пустая строка или отсутствие поля — реквизит в 1С не меняется.
         items:
           type: array
           minItems: 1
