@@ -63,6 +63,7 @@ class PersonalManagerController extends AdminController
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
+            'erp_uuid' => 'nullable|uuid|unique:personal_managers,erp_uuid',
             'photo' => 'nullable|image|max:20480',
         ], [
             'name.required' => 'Имя обязательно для заполнения.',
@@ -70,6 +71,8 @@ class PersonalManagerController extends AdminController
             'phone.max' => 'Телефон не должен превышать 50 символов.',
             'email.email' => 'Введите корректный email.',
             'email.max' => 'Email не должен превышать 255 символов.',
+            'erp_uuid.uuid' => 'UUID должен быть в формате xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.',
+            'erp_uuid.unique' => 'Этот UUID уже используется другим менеджером.',
             'photo.image' => 'Файл должен быть изображением.',
             'photo.max' => 'Максимальный размер фото — 20 МБ.',
         ]);
@@ -100,6 +103,7 @@ class PersonalManagerController extends AdminController
         return Inertia::render('Admin/Pages/PersonalManagers/Show', [
             'personalManager' => [
                 'id' => $personalManager->id,
+                'erp_uuid' => $personalManager->erp_uuid,
                 'name' => $personalManager->name,
                 'phone' => $personalManager->phone,
                 'email' => $personalManager->email,
@@ -118,6 +122,7 @@ class PersonalManagerController extends AdminController
         return Inertia::render('Admin/Pages/PersonalManagers/Edit', [
             'personalManager' => [
                 'id' => $personalManager->id,
+                'erp_uuid' => $personalManager->erp_uuid,
                 'name' => $personalManager->name,
                 'phone' => $personalManager->phone,
                 'email' => $personalManager->email,
@@ -133,6 +138,7 @@ class PersonalManagerController extends AdminController
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
+            'erp_uuid' => 'nullable|uuid|unique:personal_managers,erp_uuid,' . $personalManager->id,
             'photo' => 'nullable|image|max:20480',
         ], [
             'name.required' => 'Имя обязательно для заполнения.',
@@ -140,6 +146,8 @@ class PersonalManagerController extends AdminController
             'phone.max' => 'Телефон не должен превышать 50 символов.',
             'email.email' => 'Введите корректный email.',
             'email.max' => 'Email не должен превышать 255 символов.',
+            'erp_uuid.uuid' => 'UUID должен быть в формате xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.',
+            'erp_uuid.unique' => 'Этот UUID уже используется другим менеджером.',
             'photo.image' => 'Файл должен быть изображением.',
             'photo.max' => 'Максимальный размер фото — 20 МБ.',
         ]);

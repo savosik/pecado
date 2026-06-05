@@ -10,6 +10,7 @@ export default function Edit({ personalManager }) {
         name: personalManager.name || '',
         phone: personalManager.phone || '',
         email: personalManager.email || '',
+        erp_uuid: personalManager.erp_uuid || '',
         photo: null,
         _method: 'PUT',
     });
@@ -112,6 +113,15 @@ export default function Edit({ personalManager }) {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField label="UUID в 1С (ERP)" error={errors.erp_uuid}>
+                                <Input
+                                    value={data.erp_uuid}
+                                    onChange={(e) => setData('erp_uuid', e.target.value)}
+                                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                                    fontFamily="mono"
+                                />
+                            </FormField>
 
                             <Box>
                                 <Box fontSize="lg" fontWeight="semibold" mb={4}>

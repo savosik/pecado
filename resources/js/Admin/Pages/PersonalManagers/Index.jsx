@@ -87,6 +87,13 @@ export default function Index({ personalManagers, filters }) {
             ),
         },
         {
+            key: 'erp_uuid',
+            label: 'UUID в 1С',
+            render: (_, item) => (
+                <Text fontSize="xs" color="gray.500" fontFamily="mono">{item.erp_uuid || '—'}</Text>
+            ),
+        },
+        {
             key: 'users_count',
             label: 'Клиентов',
             render: (_, item) => (
