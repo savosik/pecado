@@ -49,6 +49,13 @@ class HomeController extends Controller
                 'description' => 'Pecado — широкий ассортимент товаров для взрослых. Доставка по всей России.',
                 'url' => url('/'),
                 'type' => 'website',
+                'structured_data' => [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Organization',
+                    'name' => 'Pecado',
+                    'url' => url('/'),
+                    'logo' => url('/images/logo.svg'),
+                ],
             ],
         ]);
     }

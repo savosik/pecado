@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\User\PasswordResetController;
 use App\Http\Controllers\User\SocialAuthController;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -46,6 +47,16 @@ Route::middleware('auth')->group(function () {
 // User-facing routes (Home, Products, Cabinet)
 // ──────────────────────────────────────────────
 require __DIR__.'/user.php';
+
+// Sitemap
+Route::get('/sitemap.xml', function () {
+    $path = public_path('sitemap.xml');
+    if (! file_exists($path)) {
+        Artisan::call('sitemap:generate');
+    }
+
+    return response()->file($path, ['Content-Type' => 'application/xml']);
+})->name('sitemap');
 
 // Старый путь /catalog → постоянный редирект на /products. Сохраняется,
 // чтобы битые ссылки в AI-генерируемом контенте и старые SEO-ссылки

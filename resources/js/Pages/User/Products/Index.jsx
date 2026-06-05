@@ -225,14 +225,26 @@ export default function Index() {
         </Flex>
     ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleAttributeValuesChange, handleInlineAttributeChange]);
 
-    // ─── Динамический SEO (поисковый запрос → title) ───
+    // ─── Динамический SEO (поисковый запрос → title, noindex для фильтров) ───
     const dynamicSeo = useMemo(() => {
         const base = { ...seo };
         if (filters.q) {
             base.title = `Поиск: ${filters.q} — ${appName}`;
         }
+        const isFiltered = !!(
+            filters.price_min ||
+            filters.price_max ||
+            (filters.brand_ids?.length && !isBrandPage) ||
+            (filters.category_ids?.length && !isCategoryPage) ||
+            filters.attribute_value_ids?.length ||
+            (filters.attribute_inline_filters && Object.keys(filters.attribute_inline_filters).length > 0) ||
+            filters.in_stock_mode
+        );
+        if (isFiltered) {
+            base.robots = 'noindex, follow';
+        }
         return base;
-    }, [seo, filters.q, appName]);
+    }, [seo, filters, appName, isBrandPage, isCategoryPage]);
 
     return (
         <UserLayout fluid>

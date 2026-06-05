@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { Head, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
+import SeoHead from '@/components/common/SeoHead';
 import { Box, Grid, GridItem } from '@chakra-ui/react';
 import UserLayout from '../UserLayout';
 import ProductBreadcrumbs from '@/components/product/ProductBreadcrumbs';
@@ -14,7 +15,7 @@ import { buildProductInfoProps, getProductDescription } from '@/utils/product';
  * Show — детальная страница товара.
  */
 export default function Show() {
-    const { product, media, categoryTrail, variants, certificates, specifications, specificationGroups, sizeChart, similarProducts, currency, auth } = usePage().props;
+    const { product, media, categoryTrail, variants, certificates, specifications, specificationGroups, sizeChart, similarProducts, currency, auth, seo } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
     const user = auth?.user || null;
 
@@ -30,7 +31,7 @@ export default function Show() {
 
     return (
         <UserLayout>
-            <Head title={product.name} />
+            <SeoHead seo={seo} />
 
             {/* Хлебные крошки */}
             <ProductBreadcrumbs categoryTrail={categoryTrail} productName={product.name} />

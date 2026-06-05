@@ -12,6 +12,7 @@ use App\Models\ProductSelection;
 use App\Services\Product\ProductQueryService;
 use App\Services\Product\SimilarProductsService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
@@ -729,6 +730,39 @@ class ProductController extends Controller
             'specificationGroups' => $specificationGroups,
             'sizeChart' => $sizeChart,
             'similarProducts' => $similarProducts,
+            'seo' => $this->buildProductSeo($product),
+        ];
+    }
+
+    private function buildProductSeo(Product $product): array
+    {
+        $ogImage = $product->getFirstMediaUrl('main', 'large') ?: $product->getFirstMediaUrl('main');
+        $description = $product->meta_description
+            ?: Str::limit(strip_tags((string) ($product->short_description ?: $product->description)), 155);
+
+        return [
+            'title' => $product->meta_title ?: $product->name.' — купить в Pecado',
+            'description' => $description,
+            'canonical' => route('products.show', $product->slug),
+            'url' => route('products.show', $product->slug),
+            'type' => 'product',
+            'image' => $ogImage ?: null,
+            'structured_data' => [
+                '@context' => 'https://schema.org',
+                '@type' => 'Product',
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'description' => strip_tags((string) ($product->short_description ?: $product->description)),
+                'image' => $ogImage ? [$ogImage] : [],
+                'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
+                'offers' => [
+                    '@type' => 'Offer',
+                    'priceCurrency' => 'RUB',
+                    'price' => (float) $product->base_price,
+                    'url' => route('products.show', $product->slug),
+                    'availability' => 'https://schema.org/InStock',
+                ],
+            ],
         ];
     }
 

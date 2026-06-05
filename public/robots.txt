@@ -1,2 +1,23 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /cabinet
+Disallow: /cart
+Disallow: /checkout
+Disallow: /orders
+Disallow: /favorites
+Disallow: /api
+Disallow: /horizon
+Disallow: /pulse
+Disallow: /telescope
+Disallow: /docs/api
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /onboarding
+Disallow: /preview
+Disallow: /export
+Disallow: /health
+Disallow: /content-blueprint
+
+Sitemap: https://pecado.ru/sitemap.xml

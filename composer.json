@@ -30,6 +30,7 @@
         "spatie/laravel-health": "^1.39",
         "spatie/laravel-medialibrary": "^11.0.0",
         "spatie/laravel-permission": "^7.2",
+        "spatie/laravel-sitemap": "^8.0",
         "spatie/laravel-tags": "^4.10",
         "tightenco/ziggy": "^2.6",
         "vladimir-yuldashev/laravel-queue-rabbitmq": "^14.4"
