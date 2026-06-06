@@ -6,6 +6,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import CabinetLayout from './CabinetLayout';
 import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
+import PwaInstallBanner from '@/components/PwaInstallBanner';
 
 export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null }) {
     const { auth } = usePage().props;
@@ -98,6 +99,8 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                     </Flex>
                 </Card.Body>
             </Card.Root>
+
+            <PwaInstallBanner />
 
             {/* Personal Manager Card */}
             {personalManager && (

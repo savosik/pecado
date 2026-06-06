@@ -4,6 +4,7 @@ import {
 import { Link, usePage } from '@inertiajs/react';
 import { ColorModeButton } from '@/components/ui/color-mode';
 import EffectsToggleButton from '@/components/common/EffectsToggleButton';
+import PwaInstallBanner from '@/components/PwaInstallBanner';
 
 export default function UserFooter() {
     const { footerCategories = [], footerMenuItems = [] } = usePage().props;
@@ -125,6 +126,11 @@ export default function UserFooter() {
                             </GridItem>
                         )}
                     </Grid>
+
+                    {/* PWA Install Banner — только мобилки */}
+                    <Box display={{ base: 'block', md: 'none' }} mb="6">
+                        <PwaInstallBanner />
+                    </Box>
 
                     {/* Bottom Row */}
                     <Flex

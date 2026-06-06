@@ -1,4 +1,17 @@
 import axios from 'axios';
+
+// Перехватываем промпт установки PWA до монтирования React
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    window.__pwaInstallPrompt = e;
+});
+
+// Регистрируем service worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
 import { router } from '@inertiajs/react';
 import { toastError } from '@/utils/toast';
 
