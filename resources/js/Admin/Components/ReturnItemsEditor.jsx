@@ -475,7 +475,7 @@ const AddFromShipmentForm = ({
                 {step === 1 && (
                     <VStack align="stretch" gap={4}>
                         <Field label="Название товара, артикул или штрихкод">
-                            <HStack>
+                            <HStack w="full">
                                 <Box flex={1} position="relative">
                                     <Box position="absolute" left="3" top="50%" transform="translateY(-50%)" color="gray.400">
                                         <LuSearch />
