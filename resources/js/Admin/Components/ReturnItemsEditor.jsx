@@ -542,13 +542,13 @@ const AddFromShipmentForm = ({
                                     </Box>
                                 ))}
                             </VStack>
-                        ) : (
+                        ) : query.trim() ? (
                             <Box p={6} textAlign="center" bg="orange.50/50" borderRadius="lg" borderWidth="1px" borderColor="orange.200">
                                 <LuPackage size={32} style={{ margin: "0 auto", opacity: 0.5, marginBottom: 8 }} />
                                 <Text fontWeight="medium" color="orange.800">Товар не найден в ваших отгрузках</Text>
                                 <Text fontSize="sm" color="orange.600">Попробуйте другое название, артикул или штрихкод</Text>
                             </Box>
-                        )}
+                        ) : null}
                     </VStack>
                 )}
 
