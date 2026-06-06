@@ -69,6 +69,7 @@ class ProductController extends Controller
             ],
             'breadcrumbs' => [
                 ['label' => 'Каталог', 'url' => route('products.index')],
+                ['label' => 'Бренды', 'url' => route('brands.index')],
                 ['label' => $brand->name, 'url' => null],
             ],
         ]);

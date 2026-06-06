@@ -36,6 +36,7 @@ Route::get('/products/novinki', [ProductController::class, 'novelties'])->name('
 Route::get('/products/bestsellery', [ProductController::class, 'bestsellers'])->name('products.bestsellers');
 Route::get('/products/favorites', [ProductController::class, 'favorites'])->middleware('auth')->name('products.favorites');
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
+Route::get('/brands', [App\Http\Controllers\User\BrandsController::class, 'index'])->name('brands.index');
 Route::get('/brands/{brand:slug}', [ProductController::class, 'byBrand'])->name('products.brand');
 Route::get('/categories/{category:slug}', [ProductController::class, 'byCategory'])->name('products.category');
 Route::get('/collections/{selection:slug}', [ProductController::class, 'bySelection'])->name('products.selection');
