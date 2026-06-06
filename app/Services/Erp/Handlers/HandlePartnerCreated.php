@@ -6,7 +6,6 @@ use App\Enums\UserStatus;
 use App\Jobs\NormalizeUserDataJob;
 use App\Listeners\PublishContractorToErp;
 use App\Models\ClientStatus;
-use App\Models\PersonalManager;
 use App\Models\Region;
 use App\Models\User;
 use Illuminate\Support\Facades\Log;
@@ -29,7 +28,7 @@ use Illuminate\Support\Str;
  */
 class HandlePartnerCreated
 {
-    use NormalizesCountry;
+    use NormalizesCountry, ResolvesPersonalManager;
 
     public function handle(array $payload): void
     {
@@ -177,50 +176,6 @@ class HandlePartnerCreated
         ]);
 
         NormalizeUserDataJob::dispatch($newUser->id);
-    }
-
-    /**
-     * Резолвит manager из payload в personal_manager_id.
-     *
-     * @return int|null|false int — найден/создан, null — сбросить, false — не менять
-     */
-    private function resolvePersonalManagerId(array $payload): int|null|false
-    {
-        // Ключ отсутствует → не менять
-        if (! array_key_exists('manager', $payload)) {
-            return false;
-        }
-
-        $manager = $payload['manager'];
-
-        // Явный null → сбросить привязку
-        if ($manager === null) {
-            return null;
-        }
-
-        $erpUuid = $manager['uuid'] ?? null;
-        $name = $manager['name'] ?? null;
-
-        if (! $erpUuid) {
-            Log::warning('partner.created: manager.uuid отсутствует, менеджер не изменён', [
-                'manager' => $manager,
-                'uuid' => $payload['uuid'] ?? null,
-            ]);
-
-            return false;
-        }
-
-        $personalManager = PersonalManager::firstOrCreate(
-            ['erp_uuid' => $erpUuid],
-            ['name' => $name ?? $erpUuid],
-        );
-
-        // Обновляем имя если оно изменилось в 1С
-        if ($name && $personalManager->name !== $name) {
-            $personalManager->update(['name' => $name]);
-        }
-
-        return $personalManager->id;
     }
 
     /**

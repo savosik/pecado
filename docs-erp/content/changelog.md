@@ -6,6 +6,17 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [15.1.0] — 2026-06-05
+
+### Добавлено
+
+- **`partner.updated`** — поддержка поля `manager` (обработчик `HandlePartnerUpdated`).
+  Поведение аналогично `partner.created`: объект `{uuid, name}` — привязывает/создаёт `PersonalManager` по `erp_uuid`;
+  `null` — сбрасывает `personal_manager_id`; отсутствие ключа — менеджер не меняется.
+  Логика вынесена в общий трейт `ResolvesPersonalManager`, используемый обоими обработчиками.
+
+---
+
 ## [15.0.0] — 2026-05-12
 
 > **BREAKING:** Выравнивание перечисления статусов возврата с справочником

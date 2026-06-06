@@ -6,6 +6,7 @@ use App\Enums\UserStatus;
 use App\Events\UserCreated;
 use App\Events\UserUpdated;
 use App\Models\ClientStatus;
+use App\Models\PersonalManager;
 use App\Models\User;
 use App\Services\Erp\Handlers\HandlePartnerUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -338,6 +339,123 @@ class HandlePartnerUpdatedTest extends TestCase
 
         $user->refresh();
         $this->assertNull($user->client_status_id);
+    }
+
+    // ──────────────────────────────────────────────
+    // manager → personal_manager_id (v15.1)
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_assigns_existing_personal_manager_by_erp_uuid(): void
+    {
+        $manager = PersonalManager::factory()->create([
+            'erp_uuid' => 'mgr-uuid-0001',
+            'name' => 'Иванов Иван',
+        ]);
+
+        $user = User::factory()->create([
+            'erp_id' => 'user-uuid-mgr-01',
+            'personal_manager_id' => null,
+        ]);
+
+        (new HandlePartnerUpdated)->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-mgr-assign',
+            'uuid' => 'user-uuid-mgr-01',
+            'manager' => ['uuid' => 'mgr-uuid-0001', 'name' => 'Иванов Иван'],
+        ]);
+
+        $this->assertEquals($manager->id, $user->refresh()->personal_manager_id);
+    }
+
+    #[Test]
+    public function it_creates_personal_manager_if_not_exists(): void
+    {
+        $user = User::factory()->create([
+            'erp_id' => 'user-uuid-mgr-02',
+            'personal_manager_id' => null,
+        ]);
+
+        (new HandlePartnerUpdated)->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-mgr-create',
+            'uuid' => 'user-uuid-mgr-02',
+            'manager' => ['uuid' => 'mgr-uuid-new', 'name' => 'Петров Пётр'],
+        ]);
+
+        $user->refresh();
+        $manager = PersonalManager::where('erp_uuid', 'mgr-uuid-new')->first();
+
+        $this->assertNotNull($manager);
+        $this->assertEquals('Петров Пётр', $manager->name);
+        $this->assertEquals($manager->id, $user->personal_manager_id);
+    }
+
+    #[Test]
+    public function it_resets_personal_manager_when_manager_is_null(): void
+    {
+        $manager = PersonalManager::factory()->create([
+            'erp_uuid' => 'mgr-uuid-reset',
+        ]);
+
+        $user = User::factory()->create([
+            'erp_id' => 'user-uuid-mgr-03',
+            'personal_manager_id' => $manager->id,
+        ]);
+
+        (new HandlePartnerUpdated)->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-mgr-reset',
+            'uuid' => 'user-uuid-mgr-03',
+            'manager' => null,
+        ]);
+
+        $this->assertNull($user->refresh()->personal_manager_id);
+    }
+
+    #[Test]
+    public function it_does_not_change_manager_when_key_absent(): void
+    {
+        $manager = PersonalManager::factory()->create([
+            'erp_uuid' => 'mgr-uuid-keep',
+        ]);
+
+        $user = User::factory()->create([
+            'erp_id' => 'user-uuid-mgr-04',
+            'personal_manager_id' => $manager->id,
+        ]);
+
+        (new HandlePartnerUpdated)->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-mgr-absent',
+            'uuid' => 'user-uuid-mgr-04',
+            'name' => 'Изменилось только имя',
+            // manager отсутствует — не менять
+        ]);
+
+        $this->assertEquals($manager->id, $user->refresh()->personal_manager_id);
+    }
+
+    #[Test]
+    public function it_updates_manager_name_if_changed(): void
+    {
+        $manager = PersonalManager::factory()->create([
+            'erp_uuid' => 'mgr-uuid-rename',
+            'name' => 'Старое Имя',
+        ]);
+
+        $user = User::factory()->create([
+            'erp_id' => 'user-uuid-mgr-05',
+        ]);
+
+        (new HandlePartnerUpdated)->handle([
+            'event' => 'partner.updated',
+            'message_id' => 'msg-mgr-rename',
+            'uuid' => 'user-uuid-mgr-05',
+            'manager' => ['uuid' => 'mgr-uuid-rename', 'name' => 'Новое Имя'],
+        ]);
+
+        $this->assertEquals('Новое Имя', $manager->refresh()->name);
     }
 
     // ──────────────────────────────────────────────
