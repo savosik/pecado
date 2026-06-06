@@ -27,19 +27,29 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
     ];
 
     const statusLabels = {
-        pending: 'Ожидает',
-        confirmed: 'Подтверждён',
-        ready_to_ship: 'К отгрузке',
+        pending_approval: 'Ожидается согласование',
+        pending_payment_before_provision: 'Ожидается оплата до обеспечения',
+        ready_for_provision: 'Готов к обеспечению',
+        pending_payment_before_shipment: 'Ожидается оплата до отгрузки',
+        awaiting_provision: 'Ожидается обеспечение',
+        ready_for_shipment: 'Готов к отгрузке',
+        shipping: 'В процессе отгрузки',
+        awaiting_payment: 'Ожидается оплата',
+        ready_for_closure: 'Готов к закрытию',
         closed: 'Закрыт',
-        deleted: 'Удалён',
     };
 
     const statusColors = {
-        pending: 'yellow',
-        confirmed: 'blue',
-        ready_to_ship: 'purple',
-        closed: 'green',
-        deleted: 'red',
+        pending_approval: 'yellow',
+        pending_payment_before_provision: 'orange',
+        ready_for_provision: 'cyan',
+        pending_payment_before_shipment: 'orange',
+        awaiting_provision: 'blue',
+        ready_for_shipment: 'purple',
+        shipping: 'teal',
+        awaiting_payment: 'orange',
+        ready_for_closure: 'green',
+        closed: 'gray',
     };
 
     return (
