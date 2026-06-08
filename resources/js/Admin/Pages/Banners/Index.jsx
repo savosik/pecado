@@ -86,16 +86,25 @@ export default function Index({ banners, filters }) {
             key: 'linkable',
             label: 'Ссылка',
             render: (_, row) => (
-                <Box>
-                    <Text fontSize="sm" fontWeight="medium">
-                        {getLinkableType(row.linkable_type)}
-                    </Text>
-                    {row.linkable_name && (
-                        <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }}>
-                            {row.linkable_name}
+                row.link_url ? (
+                    <Box>
+                        <Text fontSize="sm" fontWeight="medium">URL</Text>
+                        <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }} truncate maxW="220px">
+                            {row.link_url}
                         </Text>
-                    )}
-                </Box>
+                    </Box>
+                ) : (
+                    <Box>
+                        <Text fontSize="sm" fontWeight="medium">
+                            {getLinkableType(row.linkable_type)}
+                        </Text>
+                        {row.linkable_name && (
+                            <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }}>
+                                {row.linkable_name}
+                            </Text>
+                        )}
+                    </Box>
+                )
             ),
         },
         {

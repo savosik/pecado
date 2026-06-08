@@ -71,6 +71,8 @@ class BannerController extends Controller
      * Создать баннер.
      *
      * Поддерживает загрузку desktop/mobile изображений через файл (multipart) или URL.
+     * Ссылка баннера задаётся либо полиморфной связью (`linkable_type` + `linkable_id`),
+     * либо произвольным URL/путём в поле `link_url` (имеет приоритет на витрине).
      */
     public function store(Request $request): JsonResponse
     {
@@ -78,6 +80,7 @@ class BannerController extends Controller
             'title' => 'required|string|max:255',
             'linkable_type' => 'nullable|string',
             'linkable_id' => 'nullable|integer',
+            'link_url' => 'nullable|string|max:2048',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
             'desktop_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg,mp4,webm,mov|max:10240',
@@ -105,6 +108,7 @@ class BannerController extends Controller
             'title' => 'sometimes|required|string|max:255',
             'linkable_type' => 'nullable|string',
             'linkable_id' => 'nullable|integer',
+            'link_url' => 'nullable|string|max:2048',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
             'desktop_image' => 'nullable|file|mimes:jpeg,png,jpg,webp,gif,svg,mp4,webm,mov|max:10240',
@@ -138,6 +142,7 @@ class BannerController extends Controller
             'title' => $banner->title,
             'linkable_type' => $banner->linkable_type,
             'linkable_id' => $banner->linkable_id,
+            'link_url' => $banner->link_url,
             'is_active' => (bool) $banner->is_active,
             'sort_order' => $banner->sort_order,
             'images' => [

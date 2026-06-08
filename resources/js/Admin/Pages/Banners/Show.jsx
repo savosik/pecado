@@ -46,7 +46,7 @@ export default function Show() {
                             <InfoRow label="ID" value={banner.id?.toString()} />
                             <InfoRow label="Заголовок" value={banner.title} />
                             <InfoRow label="Порядок" value={banner.sort_order?.toString()} />
-                            <InfoRow label="Ссылка на" value={banner.linkable_name} />
+                            <InfoRow label="Ссылка на" value={banner.link_url || banner.linkable_name} />
                             <Box>
                                 <Text fontSize="xs" color="gray.500" mb="0.5">Активен</Text>
                                 <Badge colorPalette={banner.is_active ? 'green' : 'gray'} variant="subtle">

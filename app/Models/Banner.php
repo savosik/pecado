@@ -14,6 +14,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property string $title
  * @property string|null $linkable_type
  * @property int|null $linkable_id
+ * @property string|null $link_url
  * @property bool $is_active
  * @property int $sort_order
  * @property \Illuminate\Support\Carbon|null $created_at
@@ -34,6 +35,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Banner whereCreatedAt($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Banner whereId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Banner whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|Banner whereLinkUrl($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Banner whereLinkableId($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Banner whereLinkableType($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|Banner whereSortOrder($value)
@@ -51,6 +53,7 @@ class Banner extends Model implements HasMedia
         'title',
         'linkable_type',
         'linkable_id',
+        'link_url',
         'is_active',
         'sort_order',
     ];

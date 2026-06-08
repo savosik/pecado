@@ -10,9 +10,10 @@ import axios from 'axios';
 export default function Edit({ banner, regions = [] }) {
     const [data, setFormData] = useState({
         title: banner.title || '',
-        linkable_type: banner.linkable_type || '',
+        linkable_type: banner.link_url ? 'url' : (banner.linkable_type || ''),
         linkable_id: banner.linkable_id || null,
         _linkable_name: banner.linkable_name || '',
+        link_url: banner.link_url || '',
         is_active: banner.is_active ?? true,
         sort_order: banner.sort_order || 0,
         desktop_image: null,
@@ -33,6 +34,7 @@ export default function Edit({ banner, regions = [] }) {
 
     const entityTypeOptions = [
         { value: '', label: 'Нет ссылки' },
+        { value: 'url', label: 'Произвольная ссылка (URL)' },
         { value: 'App\\Models\\Product', label: 'Товар' },
         { value: 'App\\Models\\Page', label: 'Страница' },
         { value: 'App\\Models\\Article', label: 'Статья' },
@@ -59,6 +61,7 @@ export default function Edit({ banner, regions = [] }) {
             linkable_type: e.target.value,
             linkable_id: null,
             _linkable_name: '',
+            link_url: '',
         });
     };
 
@@ -72,11 +75,20 @@ export default function Edit({ banner, regions = [] }) {
 
         // Append simple fields
         formDataToSend.append('title', data.title);
-        if (data.linkable_type) {
+        // Явно отправляем все поля ссылки (пустые → null), чтобы при смене типа
+        // очищались значения от предыдущего варианта.
+        if (data.linkable_type === 'url') {
+            formDataToSend.append('link_url', data.link_url || '');
+            formDataToSend.append('linkable_type', '');
+            formDataToSend.append('linkable_id', '');
+        } else if (data.linkable_type) {
             formDataToSend.append('linkable_type', data.linkable_type);
-        }
-        if (data.linkable_id) {
-            formDataToSend.append('linkable_id', data.linkable_id);
+            formDataToSend.append('linkable_id', data.linkable_id || '');
+            formDataToSend.append('link_url', '');
+        } else {
+            formDataToSend.append('linkable_type', '');
+            formDataToSend.append('linkable_id', '');
+            formDataToSend.append('link_url', '');
         }
         formDataToSend.append('is_active', data.is_active ? '1' : '0');
         formDataToSend.append('sort_order', data.sort_order);
@@ -166,7 +178,17 @@ export default function Edit({ banner, regions = [] }) {
                                     </NativeSelectRoot>
                                 </FormField>
 
-                                {data.linkable_type && (
+                                {data.linkable_type === 'url' && (
+                                    <FormField label="URL-ссылка" error={errors.link_url} helperText="Абсолютный URL (https://…) или относительный путь (/promo)">
+                                        <Input
+                                            value={data.link_url}
+                                            onChange={(e) => setData('link_url', e.target.value)}
+                                            placeholder="https://example.com или /promo"
+                                        />
+                                    </FormField>
+                                )}
+
+                                {data.linkable_type && data.linkable_type !== 'url' && (
                                     <FormField label="Сущность" error={errors.linkable_id}>
                                         <EntitySelector
                                             value={data.linkable_id ? { id: data.linkable_id, name: data._linkable_name || banner.linkable_name } : null}

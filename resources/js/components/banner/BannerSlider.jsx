@@ -220,9 +220,14 @@ export default function BannerSlider({ banners = [], autoPlayMs = 5000 }) {
                     const position = getSlidePosition(i);
                     if (position === null) return null;
 
+                    const isExternal = /^https?:\/\//i.test(slide.link_url || '');
                     const Wrapper = slide.link_url ? 'a' : 'div';
                     const wrapperProps = slide.link_url
-                        ? { href: slide.link_url, 'aria-label': slide.title || `Баннер ${i + 1}` }
+                        ? {
+                            href: slide.link_url,
+                            'aria-label': slide.title || `Баннер ${i + 1}`,
+                            ...(isExternal ? { target: '_blank', rel: 'noopener noreferrer' } : {}),
+                        }
                         : {};
 
                     const translateX = `calc(${position * 100}% + ${dragOffset}px)`;

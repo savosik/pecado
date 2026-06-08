@@ -13,6 +13,7 @@ export default function Create({ regions = [] }) {
         linkable_type: '',
         linkable_id: null,
         _linkable_name: '',
+        link_url: '',
         is_active: true,
         sort_order: 0,
         desktop_image: null,
@@ -33,6 +34,7 @@ export default function Create({ regions = [] }) {
 
     const entityTypeOptions = [
         { value: '', label: 'Нет ссылки' },
+        { value: 'url', label: 'Произвольная ссылка (URL)' },
         { value: 'App\\Models\\Product', label: 'Товар' },
         { value: 'App\\Models\\Page', label: 'Страница' },
         { value: 'App\\Models\\Article', label: 'Статья' },
@@ -59,6 +61,7 @@ export default function Create({ regions = [] }) {
             linkable_type: e.target.value,
             linkable_id: null,
             _linkable_name: '',
+            link_url: '',
         });
     };
 
@@ -71,11 +74,15 @@ export default function Create({ regions = [] }) {
 
         // Append simple fields
         formDataToSend.append('title', data.title);
-        if (data.linkable_type) {
+        if (data.linkable_type === 'url') {
+            if (data.link_url) {
+                formDataToSend.append('link_url', data.link_url);
+            }
+        } else if (data.linkable_type) {
             formDataToSend.append('linkable_type', data.linkable_type);
-        }
-        if (data.linkable_id) {
-            formDataToSend.append('linkable_id', data.linkable_id);
+            if (data.linkable_id) {
+                formDataToSend.append('linkable_id', data.linkable_id);
+            }
         }
         formDataToSend.append('is_active', data.is_active ? '1' : '0');
         formDataToSend.append('sort_order', data.sort_order);
@@ -165,7 +172,17 @@ export default function Create({ regions = [] }) {
                                     </NativeSelectRoot>
                                 </FormField>
 
-                                {data.linkable_type && (
+                                {data.linkable_type === 'url' && (
+                                    <FormField label="URL-ссылка" error={errors.link_url} helperText="Абсолютный URL (https://…) или относительный путь (/promo)">
+                                        <Input
+                                            value={data.link_url}
+                                            onChange={(e) => setData('link_url', e.target.value)}
+                                            placeholder="https://example.com или /promo"
+                                        />
+                                    </FormField>
+                                )}
+
+                                {data.linkable_type && data.linkable_type !== 'url' && (
                                     <FormField label="Сущность" error={errors.linkable_id}>
                                         <EntitySelector
                                             value={data.linkable_id ? { id: data.linkable_id, name: data._linkable_name } : null}

@@ -49,6 +49,33 @@ class BannerTest extends TestCase
             ->assertJsonPath('data.title', 'Главный баннер');
     }
 
+    public function test_store_creates_banner_with_link_url(): void
+    {
+        $this->withHeaders($this->authHeaders())
+            ->postJson('/api/content/banners', [
+                'title' => 'Баннер с URL',
+                'link_url' => 'https://example.com/promo',
+                'is_active' => true,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.link_url', 'https://example.com/promo');
+
+        $this->assertDatabaseHas('banners', [
+            'title' => 'Баннер с URL',
+            'link_url' => 'https://example.com/promo',
+        ]);
+    }
+
+    public function test_update_sets_link_url(): void
+    {
+        $banner = Banner::factory()->create(['link_url' => null]);
+
+        $this->withHeaders($this->authHeaders())
+            ->putJson("/api/content/banners/{$banner->id}", ['link_url' => '/sale'])
+            ->assertOk()
+            ->assertJsonPath('data.link_url', '/sale');
+    }
+
     public function test_show_returns_banner(): void
     {
         $banner = Banner::factory()->create();

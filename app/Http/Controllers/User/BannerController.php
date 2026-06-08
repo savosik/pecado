@@ -48,10 +48,15 @@ class BannerController extends Controller
     }
 
     /**
-     * Резолвить URL из полиморфной связи linkable.
+     * Резолвить URL баннера: приоритет у произвольной ссылки link_url,
+     * иначе — из полиморфной связи linkable.
      */
     private static function resolveLinkUrl(Banner $banner): ?string
     {
+        if (! empty($banner->link_url)) {
+            return $banner->link_url;
+        }
+
         $linkable = $banner->linkable;
 
         if (! $linkable) {
