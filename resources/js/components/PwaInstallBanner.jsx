@@ -3,6 +3,7 @@ import { Box, Card, Flex, Text, HStack } from '@chakra-ui/react';
 import { LuSmartphone, LuX } from 'react-icons/lu';
 
 const STORAGE_KEY = 'pwa_install_dismissed';
+const DISMISS_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 дней
 
 function isMobileDevice() {
     return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -19,29 +20,42 @@ function isAlreadyInstalled() {
     );
 }
 
+function isDismissedRecently() {
+    const val = localStorage.getItem(STORAGE_KEY);
+    if (!val) return false;
+    const ts = parseInt(val, 10);
+    // Поддержка старого формата '1'
+    if (isNaN(ts)) return true;
+    return Date.now() - ts < DISMISS_TTL_MS;
+}
+
 export default function PwaInstallBanner() {
     const [deferredPrompt, setDeferredPrompt] = useState(null);
     const [showIosHint, setShowIosHint] = useState(false);
     const [dismissed, setDismissed] = useState(false);
 
     useEffect(() => {
-        if (localStorage.getItem(STORAGE_KEY)) return;
         if (!isMobileDevice()) return;
         if (isAlreadyInstalled()) return;
 
-        if (window.__pwaInstallPrompt) {
-            setDeferredPrompt(window.__pwaInstallPrompt);
-        }
-
+        // Слушатель регистрируем всегда — браузер пошлёт событие после переустановки,
+        // и тогда нужно сбросить флаг скрытия баннера
         const handler = (e) => {
             e.preventDefault();
             window.__pwaInstallPrompt = e;
+            localStorage.removeItem(STORAGE_KEY);
             setDeferredPrompt(e);
+            setDismissed(false);
         };
         window.addEventListener('beforeinstallprompt', handler);
 
-        if (isIosDevice()) {
-            setShowIosHint(true);
+        if (!isDismissedRecently()) {
+            if (window.__pwaInstallPrompt) {
+                setDeferredPrompt(window.__pwaInstallPrompt);
+            }
+            if (isIosDevice()) {
+                setShowIosHint(true);
+            }
         }
 
         return () => window.removeEventListener('beforeinstallprompt', handler);
@@ -53,14 +67,14 @@ export default function PwaInstallBanner() {
         const { outcome } = await deferredPrompt.userChoice;
         window.__pwaInstallPrompt = null;
         setDeferredPrompt(null);
-        if (outcome === 'accepted') {
-            localStorage.setItem(STORAGE_KEY, '1');
-            setDismissed(true);
-        }
+        // После установки isAlreadyInstalled() вернёт true — ключ не нужен
+        localStorage.removeItem(STORAGE_KEY);
+        setDismissed(true);
     };
 
     const handleDismiss = () => {
-        localStorage.setItem(STORAGE_KEY, '1');
+        // Храним timestamp — через 7 дней баннер покажется снова
+        localStorage.setItem(STORAGE_KEY, Date.now().toString());
         setDismissed(true);
     };
 
