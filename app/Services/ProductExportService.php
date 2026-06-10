@@ -19,6 +19,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProductExportService
 {
+    use \App\Services\ProductExport\Concerns\RestrictsWarehousesByRegion;
+
     /** @var array<int, Currency> Pre-loaded currencies for current export run */
     protected array $currencyCache = [];
 
@@ -191,9 +193,16 @@ class ProductExportService
         $query = $this->buildQuery($export->filters ?? []);
 
         [$fieldKeys, , $modifiers] = $this->normalizeFields($export->fields ?? []);
+
+        $clientUser = $export->client_user_id
+            ? User::with('region')->find($export->client_user_id)
+            : null;
+
         $relations = $this->registry->eagerLoadFor($fieldKeys);
         if (! empty($relations)) {
-            $query->with($relations);
+            // Режем склады по региону клиента, чтобы preview совпадал с файлом
+            // и не показывал остатки складов вне региона клиента.
+            $query->with($this->restrictWarehouseRelations($relations, $clientUser));
         }
 
         if ($limit) {
@@ -201,10 +210,6 @@ class ProductExportService
         }
 
         $products = $query->get();
-
-        $clientUser = $export->client_user_id
-            ? User::with('region')->find($export->client_user_id)
-            : null;
 
         return $products->map(function ($product) use ($fieldKeys, $modifiers, $clientUser) {
             return $this->extractFields($product, $fieldKeys, $modifiers, $clientUser);

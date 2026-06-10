@@ -33,6 +33,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
  */
 class CustomFieldsPreset implements PresetInterface, TimerAware
 {
+    use \App\Services\ProductExport\Concerns\RestrictsWarehousesByRegion;
+
     protected const CHUNK_SIZE = 200;
 
     /** @var array<int, string> */
@@ -430,7 +432,10 @@ class CustomFieldsPreset implements PresetInterface, TimerAware
 
         $query = $this->buildQuery($export->filters ?? []);
         if (! empty($relations)) {
-            $query->with($relations);
+            // Режем склады по региону клиента: складские поля читают
+            // $product->warehouses напрямую и без этого отдали бы остатки
+            // складов вне региона клиента (например «Москва персональный»).
+            $query->with($this->restrictWarehouseRelations($relations, $clientUser));
         }
 
         $endChunks = $timer->start('chunks_total');
