@@ -2019,6 +2019,14 @@
 <li><strong>(v10)</strong> Поле <code>is_active</code> (boolean) — активность партнёра. <code>false</code> → пользователь не может оформлять заказы</li>
 <li><strong>(v11)</strong> Поле <code>client_status</code> — произвольная строка, код статуса клиента (уровень лояльности). Резолвится через <code>ClientStatus.external_id</code>. Примеры: <code>silver</code>, <code>gold</code>, <code>diamond</code>, <code>individual</code></li>
 <li><strong>(v12.7.5)</strong> Поле <code>password</code> — тип изменён с <code>integer</code> на <code>string</code>, <code>maxLength</code> увеличен до 32. 1С передаёт CRC32 как строку длиной до 10 символов</li>
+<li><strong>(v15)</strong> Поле <code>manager</code> — объект <code>{ uuid, name }</code> или <code>null</code>. Основной менеджер партнёра в 1С.<ul>
+<li><code>manager.uuid</code> — UUID пользователя 1С (Справочник «Пользователи»), <strong>не</strong> UUID партнёра/контрагента</li>
+<li><code>manager.name</code> — ФИО/наименование для отображения на сайте</li>
+<li>Сайт ищет <code>PersonalManager</code> по <code>erp_uuid</code>; если не найден — создаёт новую запись с <code>name</code> из payload</li>
+<li><code>manager = null</code> — менеджер не назначен; сайт сбрасывает <code>user.personal_manager_id = null</code></li>
+<li>Отсутствие ключа <code>manager</code> в payload — менеджер не меняется (идемпотентность)</li>
+</ul>
+</li>
 </ul>
 <h3 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2026,6 +2034,8 @@
 <li>[ ] Сайт создаёт/обновляет пользователя с <code>name</code> как единое поле</li>
 <li>[ ] При первом входе — обязательная смена пароля (<code>must_change_password</code>)</li>
 <li>[ ] Партнёры без email пропускаются при выгрузке</li>
+<li>[ ] <strong>(v15)</strong> Поле <code>manager</code> обрабатывается: новый менеджер создаётся или привязывается по <code>erp_uuid</code></li>
+<li>[ ] <strong>(v15)</strong> <code>manager = null</code> сбрасывает <code>personal_manager_id</code> пользователя</li>
 </ul>
 <hr />
 <h2 id="partnerupdated-1">partner.updated (1С → Сайт)<a class="headerlink" href="#partnerupdated-1" title="Permanent link">&para;</a></h2>
@@ -2078,6 +2088,11 @@
 <td><code>client_status_id</code></td>
 <td>Код → <code>ClientStatus.external_id</code></td>
 </tr>
+<tr>
+<td><code>manager</code></td>
+<td><code>personal_manager_id</code></td>
+<td><code>{uuid,name}</code> → <code>PersonalManager.erp_uuid</code>; <code>null</code> → сброс</td>
+</tr>
 </tbody>
 </table>
 <div class="admonition info">
@@ -2089,6 +2104,7 @@
 <ul>
 <li><strong>(v12)</strong> Новое событие <code>partner.updated</code> — выделено из <code>partner.created</code> как самостоятельное событие для обновления атрибутов</li>
 <li><strong>(v12)</strong> Удалены поля <code>currency</code> и <code>region</code> из входящих событий партнёра</li>
+<li><strong>(v15.1)</strong> Поле <code>manager</code> (опциональное) — при наличии обрабатывается аналогично <code>partner.created</code>: сайт ищет <code>PersonalManager</code> по <code>erp_uuid</code>, при отсутствии — создаёт. <code>null</code> — сбрасывает привязку. Отсутствие ключа — не меняет</li>
 </ul>
 <h3 id="_7">Критерии приёмки<a class="headerlink" href="#_7" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2099,6 +2115,9 @@
 <li>[ ] При неизвестном <code>client_status</code> — логирование предупреждения, текущий статус не меняется</li>
 <li>[ ] При <code>is_active = false</code> — пользователь блокируется</li>
 <li>[ ] Если пользователь не найден ни по <code>erp_id</code>, ни по <code>email</code> — событие игнорируется с логом</li>
+<li>[ ] <strong>(v15.1)</strong> При <code>manager</code> в payload — привязывает/создаёт <code>PersonalManager</code> по <code>erp_uuid</code></li>
+<li>[ ] <strong>(v15.1)</strong> При <code>manager = null</code> — сбрасывает <code>personal_manager_id</code> пользователя</li>
+<li>[ ] <strong>(v15.1)</strong> При отсутствии ключа <code>manager</code> — менеджер не меняется</li>
 </ul>
 <hr />
 <h2 id="partnercreated-1_1">partner.created (Сайт → 1С)<a class="headerlink" href="#partnercreated-1_1" title="Permanent link">&para;</a></h2>

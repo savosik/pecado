@@ -1710,7 +1710,7 @@
 <td>0.1.7</td>
 <td>Внешние остатки (ESB)</td>
 <td>UI → Queues</td>
-<td><code>external.remains_for_website</code>, <code>external.remains_for_erp</code> + exchange <code>external.remains</code> (fanout, v12.14)</td>
+<td><code>external.remains_for_erp</code> + exchange <code>external.remains</code> (fanout, v12.14). Очередь <code>external.remains_for_website</code> удалена в v15.2 — её быть <strong>не должно</strong></td>
 </tr>
 <tr>
 <td>0.1.8</td>
@@ -1747,7 +1747,7 @@
 <td>0.2.1</td>
 <td>Supervisor</td>
 <td><code>docker exec pecado-worker supervisorctl status</code></td>
-<td>Все <code>erp-*-consumer</code> + <code>erp-promotions-consumer</code> + <code>external-remains-consumer</code> в <code>RUNNING</code></td>
+<td>Все <code>erp-*-consumer</code> + <code>erp-promotions-consumer</code> в <code>RUNNING</code>. Процесса <code>external-remains-consumer</code> <strong>больше нет</strong> (снят в v15.2)</td>
 </tr>
 <tr>
 <td>0.2.2</td>
@@ -1858,6 +1858,12 @@
 <p>Они понадобятся 1С-нику для формирования payload.</p>
 </div>
 <h2 id="05-esb-v1215">0.5 Внешние остатки (ESB, v12.15)<a class="headerlink" href="#05-esb-v1215" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Отключено в v15.2 (2026-06-11)</p>
+<p>Потребитель внешних остатков на стороне сайта отключён, очередь
+<code>external.remains_for_website</code> удалена. Проверки 0.5.1–0.5.2 ниже —
+исторические (актуальны только при возврате потребителя).</p>
+</div>
 <table>
 <thead>
 <tr>
@@ -1878,7 +1884,7 @@
 <td>0.5.2</td>
 <td>Consumer внешних остатков</td>
 <td><code>supervisorctl status external-remains-consumer</code></td>
-<td><code>RUNNING</code></td>
+<td>~~<code>RUNNING</code>~~ — процесс снят в v15.2</td>
 </tr>
 <tr>
 <td>0.5.3</td>

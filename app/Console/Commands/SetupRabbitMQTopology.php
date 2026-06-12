@@ -22,12 +22,28 @@ class SetupRabbitMQTopology extends Command
      */
     private const EXTERNAL_FANOUTS = [
         'external.remains' => [
-            'external.remains_for_website',
+            // external.remains_for_website отключена 2026-06-11 (v15.2): сайт
+            // больше не потребляет внешние остатки. Очередь удаляется в DELETED_QUEUES.
             'external.remains_for_erp',
         ],
         'external.orders_from_andrey' => [
             'external.orders_from_andrey_for_erp',
         ],
+    ];
+
+    /**
+     * Очереди, которые нужно удалить при первом запуске после миграции топологии.
+     *
+     * v15.2 (2026-06-11): сайт перестал потреблять внешние остатки —
+     * очередь external.remains_for_website отвязывается от fanout `external.remains`
+     * и удаляется (queue_delete заодно снимает её binding). 1С продолжает получать
+     * остатки через external.remains_for_erp. queue_delete идемпотентен:
+     * если очереди уже нет (CI / свежий dev), 404 ловится и не роняет setup.
+     *
+     * @var array<int, string>
+     */
+    private const DELETED_QUEUES = [
+        'external.remains_for_website',
     ];
 
     /**
@@ -177,6 +193,11 @@ class SetupRabbitMQTopology extends Command
                 }
             }
 
+            // 7.5. Удаление осиротевших очередей (миграция топологии)
+            foreach (self::DELETED_QUEUES as $queue) {
+                $this->deleteQueue($connection, $queue);
+            }
+
             $channel->close();
             $connection->close();
 
@@ -195,6 +216,31 @@ class SetupRabbitMQTopology extends Command
             $this->error("Ошибка: {$e->getMessage()}");
 
             return Command::FAILURE;
+        }
+    }
+
+    /**
+     * Удаление осиротевшей очереди (вместе с её bindings).
+     *
+     * Используется отдельный канал: queue_delete на несуществующей очереди бросает
+     * 404 и закрывает канал. Чтобы это не уронило основной канал в окружениях,
+     * где очереди никогда не было (CI / свежий dev), изолируем операцию.
+     */
+    private function deleteQueue(AMQPStreamConnection $connection, string $queue): void
+    {
+        $channel = $connection->channel();
+
+        try {
+            $channel->queue_delete($queue);
+            $this->info("  🗑 Удалена осиротевшая очередь: {$queue}");
+        } catch (\Exception $e) {
+            $this->info("  Очередь {$queue} отсутствует — пропуск (идемпотентность)");
+        } finally {
+            try {
+                $channel->close();
+            } catch (\Throwable) {
+                // канал уже закрыт брокером после 404 — это нормально
+            }
         }
     }
 

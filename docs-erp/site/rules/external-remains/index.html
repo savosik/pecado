@@ -1699,6 +1699,19 @@
 
 
 <h1 id="esb">Внешние остатки (московский ESB)<a class="headerlink" href="#esb" title="Permanent link">&para;</a></h1>
+<div class="admonition warning">
+<p class="admonition-title">Отключено 2026-06-11 (v15.2)</p>
+<p>Потребитель сайта отключён: supervisor-процесс <code>external-remains-consumer</code>
+снят, очередь <code>external.remains_for_website</code> отвязана от fanout <code>external.remains</code>
+и удалена в <code>rabbitmq:setup</code>. Сайт <strong>больше не потребляет</strong> внешние остатки.
+1С продолжает получать их через <code>external.remains_for_erp</code>.</p>
+<p>Код потребителя (<code>ExternalRemainsJob</code>, <code>HandleExternalProductQuantityUpdated</code>,
+JSON Schema, connection <code>rabbitmq-external-remains</code>, config <code>erp.external_remains</code>)
+оставлен на случай возврата. Чтобы снова включить: вернуть очередь в
+<code>EXTERNAL_FANOUTS</code> и убрать из <code>DELETED_QUEUES</code> в <code>SetupRabbitMQTopology</code>,
+вернуть supervisor-программу <code>external-remains-consumer</code>. Описание ниже —
+историческое, для справки.</p>
+</div>
 <p>Этот раздел описывает обработку событий <code>product.quantity.updated</code>, приходящих с внешнего ESB через shovel <code>moscow-remains</code> в очередь <code>external.remains_for_website</code>. Это <strong>отдельный протокол от 1С↔Сайт</strong> (envelope <code>{service, uid, event: {name, payload}, ...}</code>), поэтому он не описан в AsyncAPI 1С↔Сайт — только локальной JSON Schema <code>external.product_quantity_updated.json</code>.</p>
 <h2 id="_1">Источник данных<a class="headerlink" href="#_1" title="Permanent link">&para;</a></h2>
 <table>

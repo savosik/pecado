@@ -2058,7 +2058,16 @@
 <li>Заказ фиксируется в валюте пользователя с курсом и коэффициентом</li>
 <li>После отправки пользователь изменять заказ <strong>не может</strong></li>
 <li>Если ни один склад из <code>warehouse_uuids</code> не найден — используется <code>ОсновнойСклад</code></li>
-<li><code>comment</code> включается в комментарий к заказу в 1С</li>
+<li><code>comment</code> включается в стандартный комментарий к заказу в 1С</li>
+<li><strong>(v15)</strong> Три независимых поля комментариев:<ul>
+<li><code>comment</code> → стандартный «Комментарий» заказа в 1С</li>
+<li><code>manager_comment</code> → реквизит «Комментарий для менеджера» (<code>Доп_КомментарийДляМенеджера</code>)</li>
+<li><code>warehouse_comment</code> → реквизит «Комментарий для склада» (<code>Доп_КомментарийДляСклада</code>)</li>
+<li>Поля <strong>не смешиваются</strong>. 1С хранит <code>manager_comment</code> / <code>warehouse_comment</code> как версионируемый журнал с меткой даты — передавать <strong>только сам текст</strong> без дат/префиксов</li>
+<li>Пустая строка или отсутствие поля — соответствующий реквизит в 1С не меняется</li>
+<li>Дедупликация на стороне 1С: повторная доставка того же текста не добавляет дубликат</li>
+</ul>
+</li>
 <li><code>discount_percent</code> может быть отрицательным: положительное значение означает скидку, отрицательное — наценку; источник истины для суммы позиции — <code>final_price</code></li>
 <li>Сайт публикует заказ в статусе <code>pending_approval</code> — он ждёт согласования менеджером в 1С</li>
 </ul>
@@ -2192,6 +2201,9 @@
 <hr />
 <h2 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h2>
 <ul>
+<li>[ ] <strong>(v15)</strong> <code>manager_comment</code> и <code>warehouse_comment</code> включаются в payload <code>order.created</code> / <code>order.updated</code></li>
+<li>[ ] <strong>(v15)</strong> Оба поля хранятся в <code>orders.manager_comment</code> / <code>orders.warehouse_comment</code></li>
+<li>[ ] <strong>(v15)</strong> Пустая строка или отсутствие поля — реквизит в 1С не меняется (сайт передаёт <code>null</code>)</li>
 <li>[ ] Сайт публикует <code>order.created</code> при оформлении заказа в статусе <code>pending_approval</code></li>
 <li>[ ] Каждая позиция содержит <code>base_price</code>, <code>discount_percent</code>, <code>final_price</code> (v7)</li>
 <li>[ ] <code>discount_percent</code> поддерживает как скидку (<code>&gt; 0</code>), так и наценку (<code>&lt; 0</code>); сумма позиции определяется по <code>final_price</code> (v12.7.1)</li>

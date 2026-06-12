@@ -62,20 +62,20 @@
 
 ## Shovel: остатки с московского ESB (external.remains)
 
-Часть событий об остатках приходит не напрямую из 1С:КА2 Pecado, а через **RabbitMQ Shovel**, тянущий сообщения из очереди `remains_for_moscow` на внешнем ESB (`93.125.18.73:5672`) и публикующий их в локальный **fanout-обменник** `external.remains`. Оттуда каждое сообщение копируется в две durable-очереди:
+Часть событий об остатках приходит не напрямую из 1С:КА2 Pecado, а через **RabbitMQ Shovel**, тянущий сообщения из очереди `remains_for_moscow` на внешнем ESB (`93.125.18.73:5672`) и публикующий их в локальный **fanout-обменник** `external.remains`. Оттуда сообщение копируется в durable-очередь потребителя:
 
 | Очередь | Потребитель |
 |---|---|
-| `external.remains_for_website` | Сайт Pecado |
 | `external.remains_for_erp` | 1С:КА2 (ERP) |
+
+> **Изменено 2026-06-11 (v15.2):** очередь `external.remains_for_website` (потребитель — сайт Pecado) отключена и удалена. Сайт больше не потребляет внешние остатки. Fanout оставлен для очереди 1С и на случай возврата потребителя сайта.
 
 ```
 ESB (93.125.18.73)                     pecado-rabbitmq
   ┌──────────────────────┐            ┌────────────────────────────────┐
   │ remains_for_moscow   │  shovel    │  external.remains (fanout)     │
   │ (TTL 3 дня)          │ ─────────► │             │                  │
-  └──────────────────────┘            │             ├─► external.remains_for_website
-                                      │             └─► external.remains_for_erp
+  └──────────────────────┘            │             └─► external.remains_for_erp
                                       └────────────────────────────────┘
 ```
 
@@ -104,14 +104,14 @@ Shovel создаётся/обновляется автоматически ко
 
 ### Потребители очередей
 
-| Очередь | Потребитель | Статус на 2026-04-21 |
+| Очередь | Потребитель | Статус на 2026-06-11 |
 |---|---|---|
-| `external.remains_for_website` | `ExternalRemainsJob` (сайт), supervisor-процесс `external-remains-consumer` | Реализован — берёт остатки только по складу «Тюмень Основной» (см. [бизнес-правила](rules/external-remains.md)) |
+| `external.remains_for_website` | — | **Отключена и удалена (v15.2):** сайт больше не потребляет внешние остатки. Supervisor-процесс `external-remains-consumer` снят, очередь удаляется в `rabbitmq:setup`. Код `ExternalRemainsJob` оставлен для возможного возврата (см. [бизнес-правила](rules/external-remains.md)) |
 | `external.remains_for_erp` | 1С:КА2 (AMQP-чтение) | Не реализован |
 
 ### TTL сообщений (policy `external-remains-ttl`)
 
-На обе очереди применяется RabbitMQ policy:
+На очереди `external.remains_for_*` применяется RabbitMQ policy (после v15.2 матчится только `external.remains_for_erp`):
 
 | Поле | Значение |
 |---|---|

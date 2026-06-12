@@ -1,5 +1,18 @@
 # Внешние остатки (московский ESB)
 
+!!! warning "Отключено 2026-06-11 (v15.2)"
+    Потребитель сайта отключён: supervisor-процесс `external-remains-consumer`
+    снят, очередь `external.remains_for_website` отвязана от fanout `external.remains`
+    и удалена в `rabbitmq:setup`. Сайт **больше не потребляет** внешние остатки.
+    1С продолжает получать их через `external.remains_for_erp`.
+
+    Код потребителя (`ExternalRemainsJob`, `HandleExternalProductQuantityUpdated`,
+    JSON Schema, connection `rabbitmq-external-remains`, config `erp.external_remains`)
+    оставлен на случай возврата. Чтобы снова включить: вернуть очередь в
+    `EXTERNAL_FANOUTS` и убрать из `DELETED_QUEUES` в `SetupRabbitMQTopology`,
+    вернуть supervisor-программу `external-remains-consumer`. Описание ниже —
+    историческое, для справки.
+
 Этот раздел описывает обработку событий `product.quantity.updated`, приходящих с внешнего ESB через shovel `moscow-remains` в очередь `external.remains_for_website`. Это **отдельный протокол от 1С↔Сайт** (envelope `{service, uid, event: {name, payload}, ...}`), поэтому он не описан в AsyncAPI 1С↔Сайт — только локальной JSON Schema `external.product_quantity_updated.json`.
 
 ## Источник данных

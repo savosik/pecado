@@ -6,6 +6,35 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [15.2.0] — 2026-06-11
+
+### Удалено
+
+- **Очередь `external.remains_for_website`** и её потребитель на стороне сайта.
+  Сайт больше не принимает внешние остатки с московского ESB. Изменения:
+    - Очередь отвязана от fanout `external.remains` (убрана из `EXTERNAL_FANOUTS`)
+      и удаляется в `php artisan rabbitmq:setup` (новый список `DELETED_QUEUES`,
+      `queue_delete` идемпотентен — 404 на отсутствующей очереди не роняет setup).
+    - Снят supervisor-процесс `[program:external-remains-consumer]`
+      (`docker/supervisor/conf.d/worker.conf`).
+    - Очередь убрана из мониторинга `rabbitmq:status` и админ-страницы «Шина ERP».
+- **Не затронуто:** fanout `external.remains` и очередь `external.remains_for_erp`
+  сохранены — **1С продолжает получать остатки** с московского ESB без изменений.
+  Shovel `moscow-remains` и policy `external-remains-ttl` остаются.
+
+### Примечания
+
+- Код потребителя сайта (`ExternalRemainsJob`, `HandleExternalProductQuantityUpdated`,
+  JSON Schema `external.product_quantity_updated.json`, connection
+  `rabbitmq-external-remains`, config `erp.external_remains`) оставлен в репозитории
+  на случай возврата. Инструкция по реактивации — в
+  [правилах внешних остатков](rules/external-remains.md).
+- Покрыто интеграционным тестом `ExternalRemainsTopologyIntegrationTest`: после
+  `rabbitmq:setup` очередь `external.remains_for_website` отсутствует, а
+  `external.remains_for_erp` по-прежнему получает копии из fanout.
+
+---
+
 ## [15.1.0] — 2026-06-05
 
 ### Добавлено

@@ -53,7 +53,6 @@ class RabbitMQStatus extends Command
             'default',
         ],
         'Внешние источники (Shovel)' => [
-            'external.remains_for_website',
             'external.remains_for_erp',
         ],
     ];

@@ -54,7 +54,6 @@ class ErpBusController extends AdminController
      * Воркеров со стороны Laravel у них нет — потребители: сайт и 1С Pecado.
      */
     private const EXTERNAL_QUEUES = [
-        'external.remains_for_website',
         'external.remains_for_erp',
         'external.orders_from_andrey_for_erp',
     ];

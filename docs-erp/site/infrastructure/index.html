@@ -1986,7 +1986,7 @@
 <p>Если <code>RABBITMQ_ERP_*</code> не заданы — пользователь <code>erp_1c</code> пропускается (используется на dev-сервере, но не нужен в CI/локальных средах).</p>
 </blockquote>
 <h2 id="shovel-esb-externalremains">Shovel: остатки с московского ESB (external.remains)<a class="headerlink" href="#shovel-esb-externalremains" title="Permanent link">&para;</a></h2>
-<p>Часть событий об остатках приходит не напрямую из 1С:КА2 Pecado, а через <strong>RabbitMQ Shovel</strong>, тянущий сообщения из очереди <code>remains_for_moscow</code> на внешнем ESB (<code>93.125.18.73:5672</code>) и публикующий их в локальный <strong>fanout-обменник</strong> <code>external.remains</code>. Оттуда каждое сообщение копируется в две durable-очереди:</p>
+<p>Часть событий об остатках приходит не напрямую из 1С:КА2 Pecado, а через <strong>RabbitMQ Shovel</strong>, тянущий сообщения из очереди <code>remains_for_moscow</code> на внешнем ESB (<code>93.125.18.73:5672</code>) и публикующий их в локальный <strong>fanout-обменник</strong> <code>external.remains</code>. Оттуда сообщение копируется в durable-очередь потребителя:</p>
 <table>
 <thead>
 <tr>
@@ -1996,21 +1996,19 @@
 </thead>
 <tbody>
 <tr>
-<td><code>external.remains_for_website</code></td>
-<td>Сайт Pecado</td>
-</tr>
-<tr>
 <td><code>external.remains_for_erp</code></td>
 <td>1С:КА2 (ERP)</td>
 </tr>
 </tbody>
 </table>
+<blockquote>
+<p><strong>Изменено 2026-06-11 (v15.2):</strong> очередь <code>external.remains_for_website</code> (потребитель — сайт Pecado) отключена и удалена. Сайт больше не потребляет внешние остатки. Fanout оставлен для очереди 1С и на случай возврата потребителя сайта.</p>
+</blockquote>
 <div class="highlight"><pre><span></span><code>ESB (93.125.18.73)                     pecado-rabbitmq
   ┌──────────────────────┐            ┌────────────────────────────────┐
   │ remains_for_moscow   │  shovel    │  external.remains (fanout)     │
   │ (TTL 3 дня)          │ ─────────► │             │                  │
-  └──────────────────────┘            │             ├─► external.remains_for_website
-                                      │             └─► external.remains_for_erp
+  └──────────────────────┘            │             └─► external.remains_for_erp
                                       └────────────────────────────────┘
 </code></pre></div>
 <h3 id="shovel-dynamic-management-api">Параметры shovel-а (dynamic, через Management API)<a class="headerlink" href="#shovel-dynamic-management-api" title="Permanent link">&para;</a></h3>
@@ -2077,14 +2075,14 @@
 <tr>
 <th>Очередь</th>
 <th>Потребитель</th>
-<th>Статус на 2026-04-21</th>
+<th>Статус на 2026-06-11</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code>external.remains_for_website</code></td>
-<td><code>ExternalRemainsJob</code> (сайт), supervisor-процесс <code>external-remains-consumer</code></td>
-<td>Реализован — берёт остатки только по складу «Тюмень Основной» (см. <a href="../rules/external-remains/">бизнес-правила</a>)</td>
+<td>—</td>
+<td><strong>Отключена и удалена (v15.2):</strong> сайт больше не потребляет внешние остатки. Supervisor-процесс <code>external-remains-consumer</code> снят, очередь удаляется в <code>rabbitmq:setup</code>. Код <code>ExternalRemainsJob</code> оставлен для возможного возврата (см. <a href="../rules/external-remains/">бизнес-правила</a>)</td>
 </tr>
 <tr>
 <td><code>external.remains_for_erp</code></td>
@@ -2094,7 +2092,7 @@
 </tbody>
 </table>
 <h3 id="ttl-policy-external-remains-ttl">TTL сообщений (policy <code>external-remains-ttl</code>)<a class="headerlink" href="#ttl-policy-external-remains-ttl" title="Permanent link">&para;</a></h3>
-<p>На обе очереди применяется RabbitMQ policy:</p>
+<p>На очереди <code>external.remains_for_*</code> применяется RabbitMQ policy (после v15.2 матчится только <code>external.remains_for_erp</code>):</p>
 <table>
 <thead>
 <tr>

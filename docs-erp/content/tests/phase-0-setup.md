@@ -13,7 +13,7 @@
 | 0.1.4 | Входящие очереди | UI → Queues | `erp_in.*` (включая `erp_in.promotions`, v12.11) |
 | 0.1.5 | Исходящие очереди | UI → Queues | `erp_out.partners`, `erp_out.orders`, `erp_out.returns`, `erp_out.contractors` (v13.2) |
 | 0.1.6 | DLQ очереди | UI → Queues | `erp_dlq.*` |
-| 0.1.7 | Внешние остатки (ESB) | UI → Queues | `external.remains_for_website`, `external.remains_for_erp` + exchange `external.remains` (fanout, v12.14) |
+| 0.1.7 | Внешние остатки (ESB) | UI → Queues | `external.remains_for_erp` + exchange `external.remains` (fanout, v12.14). Очередь `external.remains_for_website` удалена в v15.2 — её быть **не должно** |
 | 0.1.8 | Shovel `moscow-remains` | UI → Admin → Shovel Status | Состояние `running`, тянет из ESB (v12.14) |
 | 0.1.9 | Пользователи и права | `rabbitmqctl list_users` / `list_user_permissions erp_1c` | `pecado_admin`, `pecado_app`, `erp_1c`; у `erp_1c` есть configure/write/read на `external.remains_for_erp` (v12.14, fix 2026-04-25) |
 | 0.1.10 | Пересоздание | `docker exec pecado-app php artisan rabbitmq:setup` | Топология (включая promotions, contractors, external.remains) создана идемпотентно |
@@ -22,7 +22,7 @@
 
 | # | Проверка | Команда | Результат |
 |---|---|---|---|
-| 0.2.1 | Supervisor | `docker exec pecado-worker supervisorctl status` | Все `erp-*-consumer` + `erp-promotions-consumer` + `external-remains-consumer` в `RUNNING` |
+| 0.2.1 | Supervisor | `docker exec pecado-worker supervisorctl status` | Все `erp-*-consumer` + `erp-promotions-consumer` в `RUNNING`. Процесса `external-remains-consumer` **больше нет** (снят в v15.2) |
 | 0.2.2 | Concurrency на каталоге/ценах | `supervisorctl status erp-catalog-consumer` | `numprocs=6` для `catalog` и `prices` (v13.0) |
 | 0.2.3 | Перезапуск | `docker exec pecado-worker supervisorctl restart all` | Все `RUNNING` |
 
@@ -59,8 +59,13 @@
 
 ## 0.5 Внешние остатки (ESB, v12.15)
 
+!!! warning "Отключено в v15.2 (2026-06-11)"
+    Потребитель внешних остатков на стороне сайта отключён, очередь
+    `external.remains_for_website` удалена. Проверки 0.5.1–0.5.2 ниже —
+    исторические (актуальны только при возврате потребителя).
+
 | # | Что проверить | Где | Ожидаемый результат |
 |---|---|---|---|
 | 0.5.1 | UUID склада «Тюмень Основной» | `config/erp.php` → `external_remains.tyumen_warehouse_uuid` или env `EXTERNAL_REMAINS_TYUMEN_WAREHOUSE_UUID` | Совпадает с UUID этого склада в 1С Pecado (по умолчанию `f8083799-0838-11e0-a1ea-505054503030`) |
-| 0.5.2 | Consumer внешних остатков | `supervisorctl status external-remains-consumer` | `RUNNING` |
+| 0.5.2 | Consumer внешних остатков | `supervisorctl status external-remains-consumer` | ~~`RUNNING`~~ — процесс снят в v15.2 |
 | 0.5.3 | Логирование шины | env `ERP_BUS_LOGGING_ENABLED=true` (опционально) | Все входящие/исходящие пишутся в `erp_bus_messages` (v12.6) |
