@@ -274,7 +274,7 @@ export default function ProductQuickViewModal() {
                                 justify="center"
                                 gap="2"
                                 w="100%"
-                                py="2.5"
+                                py="1.5"
                                 borderTopWidth="1px"
                                 borderColor="border"
                                 color="fg.muted"
