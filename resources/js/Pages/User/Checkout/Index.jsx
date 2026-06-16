@@ -57,7 +57,11 @@ export default function CheckoutIndex({
         warehouse_comment: '',
     });
 
-    const [useNewAddress, setUseNewAddress] = useState(addresses.length === 0);
+    // Выбор адреса: id сохранённого адреса (строкой) либо 'new' для ручного ввода.
+    const [addressChoice, setAddressChoice] = useState(
+        addresses.length > 0 ? String(addresses[0].id) : 'new',
+    );
+    const useNewAddress = addressChoice === 'new';
     const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
     const [normalizing, setNormalizing] = useState(false);
     // Локальный блок DaData для центровки карты адреса доставки (на сервер не отправляется).
@@ -316,58 +320,62 @@ export default function CheckoutIndex({
                                 <Text fontWeight="600" fontSize="lg">Адрес доставки</Text>
                             </Flex>
 
-                            {addresses.length > 0 && (
-                                <Flex gap="3" mb="3" flexWrap="wrap">
-                                    <Button
-                                        size="sm"
-                                        variant={!useNewAddress ? 'solid' : 'outline'}
-                                        colorPalette="pecado"
-                                        onClick={() => {
-                                            setUseNewAddress(false);
-                                            setData('delivery_address', addresses[0].address);
-                                        }}
-                                    >
-                                        Сохранённый адрес
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant={useNewAddress ? 'solid' : 'outline'}
-                                        colorPalette="pecado"
-                                        onClick={() => {
-                                            setUseNewAddress(true);
-                                            setData('delivery_address', '');
-                                        }}
-                                    >
-                                        Другой адрес
-                                    </Button>
-                                </Flex>
-                            )}
+                            <RadioCard.Root
+                                value={addressChoice}
+                                onValueChange={({ value }) => {
+                                    setAddressChoice(value);
+                                    if (value === 'new') {
+                                        setData('delivery_address', '');
+                                    } else {
+                                        const addr = addresses.find((a) => String(a.id) === value);
+                                        setData('delivery_address', addr?.address ?? '');
+                                    }
+                                }}
+                                gap="2"
+                            >
+                                {addresses.map((a) => (
+                                    <RadioCard.Item key={a.id} value={String(a.id)} width="full">
+                                        <RadioCard.ItemHiddenInput />
+                                        <RadioCard.ItemControl>
+                                            <RadioCard.ItemContent>
+                                                <Box flex="1" minW="0">
+                                                    {a.name && (
+                                                        <RadioCard.ItemText fontWeight="600" fontSize="sm">
+                                                            {a.name}
+                                                        </RadioCard.ItemText>
+                                                    )}
+                                                    <Text fontSize={a.name ? 'xs' : 'sm'} color={a.name ? 'fg.muted' : 'fg'}>
+                                                        {a.address}
+                                                    </Text>
+                                                </Box>
+                                            </RadioCard.ItemContent>
+                                            <RadioCard.ItemIndicator />
+                                        </RadioCard.ItemControl>
+                                    </RadioCard.Item>
+                                ))}
 
-                            {!useNewAddress && addresses.length > 0 ? (
-                                <Field
-                                    label="Выберите адрес"
-                                    invalid={!!errors.delivery_address}
-                                    errorText={errors.delivery_address}
-                                >
-                                    <NativeSelect.Root size="md">
-                                        <NativeSelect.Field
-                                            value={data.delivery_address}
-                                            onChange={(e) => setData('delivery_address', e.target.value)}
-                                        >
-                                            {addresses.map((a) => (
-                                                <option key={a.id} value={a.address}>
-                                                    {a.name ? `${a.name}: ` : ''}{a.address}
-                                                </option>
-                                            ))}
-                                        </NativeSelect.Field>
-                                        <NativeSelect.Indicator />
-                                    </NativeSelect.Root>
-                                </Field>
-                            ) : (
+                                <RadioCard.Item value="new" width="full">
+                                    <RadioCard.ItemHiddenInput />
+                                    <RadioCard.ItemControl>
+                                        <RadioCard.ItemContent>
+                                            <RadioCard.ItemText fontWeight="600" fontSize="sm">
+                                                Другой адрес
+                                            </RadioCard.ItemText>
+                                            <Text fontSize="xs" color="fg.muted">
+                                                Указать новый адрес доставки
+                                            </Text>
+                                        </RadioCard.ItemContent>
+                                        <RadioCard.ItemIndicator />
+                                    </RadioCard.ItemControl>
+                                </RadioCard.Item>
+                            </RadioCard.Root>
+
+                            {useNewAddress && (
                                 <Field
                                     label="Введите адрес доставки"
                                     invalid={!!errors.delivery_address}
                                     errorText={errors.delivery_address}
+                                    mt="3"
                                 >
                                     <AddressFieldWithMap
                                         value={data.delivery_address}
@@ -378,6 +386,10 @@ export default function CheckoutIndex({
                                         placeholder="Город, улица, дом, квартира"
                                     />
                                 </Field>
+                            )}
+
+                            {!useNewAddress && errors.delivery_address && (
+                                <Text color="red.500" fontSize="sm" mt="2">{errors.delivery_address}</Text>
                             )}
                         </Box>
 
