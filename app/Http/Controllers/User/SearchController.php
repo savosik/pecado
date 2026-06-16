@@ -43,6 +43,7 @@ class SearchController extends Controller
             'type' => ['sometimes', 'string', 'in:all,products,categories,brands,articles'],
             'limit' => ['sometimes', 'integer', 'min:1', 'max:50'],
             'page' => ['sometimes', 'integer', 'min:1'],
+            'availability' => ['sometimes', 'string', 'in:all,in_stock,in_stock_preorder'],
             'include_unavailable' => ['sometimes', 'boolean'],
         ], [
             'q.min' => 'Минимум 2 символа для поиска.',
@@ -53,7 +54,15 @@ class SearchController extends Controller
         $type = $validated['type'] ?? 'all';
         $limit = $validated['limit'] ?? null;
         $page = (int) ($validated['page'] ?? 1);
-        $includeUnavailable = (bool) ($validated['include_unavailable'] ?? true);
+
+        // Режим фильтрации по наличию: all | in_stock | in_stock_preorder.
+        // По умолчанию показываем все товары. Сохраняем обратную совместимость
+        // со старым булевым параметром include_unavailable.
+        $availability = $validated['availability'] ?? null;
+        if ($availability === null) {
+            $includeUnavailable = (bool) ($validated['include_unavailable'] ?? true);
+            $availability = $includeUnavailable ? 'all' : 'in_stock_preorder';
+        }
 
         // Без запроса — пустые результаты (страница /search без параметров)
         $results = [];
@@ -61,7 +70,7 @@ class SearchController extends Controller
         $totalCount = 0;
 
         if ($query) {
-            $results = $this->performSearch($query, $type, $limit, $page, $includeUnavailable);
+            $results = $this->performSearch($query, $type, $limit, $page, $availability);
 
             // Извлекаем мета-данные пагинации товаров
             if (isset($results['_products_meta'])) {
@@ -93,6 +102,7 @@ class SearchController extends Controller
         $responseData = [
             'query' => $query,
             'type' => $type,
+            'availability' => $availability,
             'results' => $results,
             'productsMeta' => $productsMeta,
         ];
@@ -197,7 +207,7 @@ class SearchController extends Controller
      *
      * @return array<string, array>
      */
-    private function performSearch(string $query, string $type, ?int $limit, int $page, bool $includeUnavailable): array
+    private function performSearch(string $query, string $type, ?int $limit, int $page, string $availability): array
     {
         $results = [];
         $searchAll = $type === 'all';
@@ -226,13 +236,19 @@ class SearchController extends Controller
 
                 $products = $paginated->getCollection();
 
-                // Фильтрация по наличию (если не include_unavailable).
-                // Предзаказы (preorder_stock > 0) считаются доступными и НЕ скрываются.
-                if (! $includeUnavailable) {
-                    $products = $products->filter(function (Product $product) {
-                        return ($product->primary_stock ?? 0) > 0
-                            || ($product->preorder_stock ?? 0) > 0;
-                    })->values();
+                // Фильтрация по наличию.
+                // - in_stock: только товары с остатком на основных складах региона.
+                // - in_stock_preorder: в наличии ИЛИ доступные под предзаказ.
+                // - all: без фильтрации.
+                if ($availability === 'in_stock') {
+                    $products = $products->filter(
+                        fn (Product $product) => ($product->primary_stock ?? 0) > 0
+                    )->values();
+                } elseif ($availability === 'in_stock_preorder') {
+                    $products = $products->filter(
+                        fn (Product $product) => ($product->primary_stock ?? 0) > 0
+                            || ($product->preorder_stock ?? 0) > 0
+                    )->values();
                 }
 
                 // Стабильная пересортировка: товары в наличии (primary_stock > 0) выше

@@ -21,8 +21,9 @@ const LS_INFINITE_SCROLL_KEY = 'search_infinite_scroll';
  *
  * Поддерживает два режима пагинации: классическую и бесконечную прокрутку.
  */
-export default function SearchIndex({ query, results, productsMeta }) {
+export default function SearchIndex({ query, results, productsMeta, availability }) {
     const q = query || '';
+    const avail = availability || 'all';
     const res = results || {};
     const initialProducts = res.products || [];
     const categories = res.categories || [];
@@ -70,11 +71,20 @@ export default function SearchIndex({ query, results, productsMeta }) {
 
     /** Переход на другую страницу (классическая пагинация) */
     const handlePageChange = useCallback((page) => {
-        router.get('/search', { q, page }, {
+        router.get('/search', { q, page, availability: avail }, {
             preserveState: false,
             preserveScroll: false,
         });
-    }, [q]);
+    }, [q, avail]);
+
+    /** Смена фильтра наличия — перезагружаем результаты с первой страницы */
+    const handleAvailabilityChange = useCallback((next) => {
+        if (next === avail) return;
+        router.get('/search', { q, availability: next }, {
+            preserveState: false,
+            preserveScroll: true,
+        });
+    }, [q, avail]);
 
     /** Загрузить ещё (бесконечная прокрутка) */
     const handleLoadMore = useCallback(() => {
@@ -85,7 +95,7 @@ export default function SearchIndex({ query, results, productsMeta }) {
         setLoadingMore(true);
         const nextPage = currentMeta.current_page + 1;
 
-        fetch(`/search?q=${encodeURIComponent(q)}&page=${nextPage}&type=products`, {
+        fetch(`/search?q=${encodeURIComponent(q)}&page=${nextPage}&type=products&availability=${avail}`, {
             headers: { Accept: 'application/json' },
         })
             .then((r) => {
@@ -116,7 +126,7 @@ export default function SearchIndex({ query, results, productsMeta }) {
                 console.error('Ошибка загрузки товаров:', err);
                 setLoadingMore(false);
             });
-    }, [q, currentMeta, loadingMore]);
+    }, [q, avail, currentMeta, loadingMore]);
 
     /** Переключение режима бесконечной прокрутки */
     const handleInfiniteScrollToggle = useCallback((enabled) => {
@@ -158,8 +168,9 @@ export default function SearchIndex({ query, results, productsMeta }) {
                     subtitle={q && hasAny ? formatTotal(totalResults) : undefined}
                 />
 
-                {/* Empty state */}
-                {!hasAny && q && (
+                {/* Empty state — только в режиме «Все»; при активном фильтре пустоту
+                    показывает секция товаров со своим сообщением и контролом */}
+                {!hasAny && q && avail === 'all' && (
                     <EmptyState
                         icon={LuSearch}
                         title="По вашему запросу ничего не найдено"
@@ -192,10 +203,26 @@ export default function SearchIndex({ query, results, productsMeta }) {
                 </SearchSection>
             )}
 
-            {/* Товары — ProductGrid (идентично каталогу). На base — list view от края до края. */}
-            {products.length > 0 && (
+            {/* Товары — ProductGrid (идентично каталогу). На base — list view от края до края.
+                Секция остаётся видимой при активном фильтре, даже если он дал пустой результат,
+                чтобы пользователь мог переключить режим обратно. */}
+            {q && meta && (products.length > 0 || avail !== 'all') && (
                 <SearchSection title="Товары" fluid>
-                    {meta?.no_exact_match && (
+                    <Box px={{ base: '3', md: '0' }} mb="5">
+                        <AvailabilityFilter value={avail} onChange={handleAvailabilityChange} />
+                    </Box>
+
+                    {products.length === 0 && (
+                        <Box px={{ base: '3', md: '0' }}>
+                            <EmptyState
+                                icon={LuSearch}
+                                title="Нет товаров с выбранным наличием"
+                                description="Попробуйте выбрать «Все», чтобы увидеть остальные товары по запросу"
+                            />
+                        </Box>
+                    )}
+
+                    {products.length > 0 && meta?.no_exact_match && (
                         <Flex
                             align="flex-start"
                             gap="3"
@@ -217,27 +244,32 @@ export default function SearchIndex({ query, results, productsMeta }) {
                             </Box>
                         </Flex>
                     )}
-                    <ProductGrid
-                        products={products}
-                        view={view}
-                        templateColumns={{
-                            base: 'repeat(2, minmax(0, 1fr))',
-                            md: 'repeat(3, minmax(0, 1fr))',
-                            lg: 'repeat(4, minmax(0, 1fr))',
-                            xl: 'repeat(5, minmax(0, 1fr))',
-                        }}
-                    />
 
-                    {/* Пагинация товаров */}
-                    {meta && (
-                        <ProductPagination
-                            meta={meta}
-                            onPageChange={handlePageChange}
-                            onLoadMore={handleLoadMore}
-                            loadingMore={loadingMore}
-                            infiniteScroll={infiniteScroll}
-                            onInfiniteScrollToggle={handleInfiniteScrollToggle}
-                        />
+                    {products.length > 0 && (
+                        <>
+                            <ProductGrid
+                                products={products}
+                                view={view}
+                                templateColumns={{
+                                    base: 'repeat(2, minmax(0, 1fr))',
+                                    md: 'repeat(3, minmax(0, 1fr))',
+                                    lg: 'repeat(4, minmax(0, 1fr))',
+                                    xl: 'repeat(5, minmax(0, 1fr))',
+                                }}
+                            />
+
+                            {/* Пагинация товаров */}
+                            {meta && (
+                                <ProductPagination
+                                    meta={meta}
+                                    onPageChange={handlePageChange}
+                                    onLoadMore={handleLoadMore}
+                                    loadingMore={loadingMore}
+                                    infiniteScroll={infiniteScroll}
+                                    onInfiniteScrollToggle={handleInfiniteScrollToggle}
+                                />
+                            )}
+                        </>
                     )}
                 </SearchSection>
             )}
@@ -302,6 +334,68 @@ function SearchSection({ title, children, fluid = false }) {
             </Heading>
             {fluid ? children : <Box px={{ base: '3', md: '0' }}>{children}</Box>}
         </Box>
+    );
+}
+
+/**
+ * Сегмент-контрол фильтра товаров по наличию.
+ *
+ * Режимы: все / в наличии / в наличии + предзаказ. Стилизован в фирменной
+ * палитре pecado, адаптивен (на мобиле переносится и сжимает подписи).
+ *
+ * @param {{ value: 'all'|'in_stock'|'in_stock_preorder', onChange: (v: string) => void }} props
+ */
+function AvailabilityFilter({ value, onChange }) {
+    const options = [
+        { value: 'all', label: 'Все' },
+        { value: 'in_stock', label: 'В наличии' },
+        { value: 'in_stock_preorder', label: 'В наличии + предзаказ' },
+    ];
+
+    return (
+        <Flex
+            display="inline-flex"
+            align="center"
+            gap="1"
+            p="1"
+            bg="bg.muted"
+            borderRadius="full"
+            border="1px solid"
+            borderColor="border.muted"
+            flexWrap="wrap"
+            maxW="full"
+            role="group"
+            aria-label="Фильтр товаров по наличию"
+        >
+            {options.map((opt) => {
+                const active = value === opt.value;
+                return (
+                    <Box
+                        as="button"
+                        type="button"
+                        key={opt.value}
+                        onClick={() => onChange(opt.value)}
+                        aria-pressed={active}
+                        px={{ base: '3', md: '4' }}
+                        py="1.5"
+                        fontSize={{ base: 'xs', md: 'sm' }}
+                        fontWeight="medium"
+                        lineHeight="1.2"
+                        whiteSpace="nowrap"
+                        borderRadius="full"
+                        cursor="pointer"
+                        transition="background-color 0.15s, color 0.15s, box-shadow 0.15s"
+                        color={active ? 'white' : 'fg.muted'}
+                        bg={active ? 'pecado.500' : 'transparent'}
+                        boxShadow={active ? 'sm' : 'none'}
+                        _hover={active ? { bg: 'pecado.600' } : { bg: 'bg.subtle', color: 'fg' }}
+                        _focusVisible={{ outline: '2px solid', outlineColor: 'pecado.500', outlineOffset: '2px' }}
+                    >
+                        {opt.label}
+                    </Box>
+                );
+            })}
+        </Flex>
     );
 }
 

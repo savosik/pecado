@@ -12,6 +12,7 @@ use App\Models\SearchHistory;
 use App\Models\User;
 use App\Models\Warehouse;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SearchControllerTest extends TestCase
@@ -32,6 +33,33 @@ class SearchControllerTest extends TestCase
     private function addStock(Product $product, int $quantity = 10): void
     {
         $warehouse = Warehouse::firstOrCreate(['name' => 'TestWarehouse']);
+        $product->warehouses()->attach($warehouse->id, ['quantity' => $quantity]);
+    }
+
+    /**
+     * Создать регион по умолчанию с основным и предзаказным складами.
+     *
+     * @return array{primary: Warehouse, preorder: Warehouse}
+     */
+    private function setupRegionWarehouses(): array
+    {
+        $region = Region::factory()->create();
+        $primary = Warehouse::factory()->create();
+        $preorder = Warehouse::factory()->create();
+
+        DB::table('region_warehouse')->insert([
+            ['region_id' => $region->id, 'warehouse_id' => $primary->id, 'type' => 'primary', 'created_at' => now(), 'updated_at' => now()],
+            ['region_id' => $region->id, 'warehouse_id' => $preorder->id, 'type' => 'preorder', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        return ['primary' => $primary, 'preorder' => $preorder];
+    }
+
+    /**
+     * Привязать товар к конкретному складу с количеством.
+     */
+    private function attachWarehouse(Product $product, Warehouse $warehouse, int $quantity): void
+    {
         $product->warehouses()->attach($warehouse->id, ['quantity' => $quantity]);
     }
 
@@ -181,6 +209,74 @@ class SearchControllerTest extends TestCase
 
         $this->assertContains($available->id, $productIds);
         $this->assertContains($unavailable->id, $productIds);
+    }
+
+    public function test_search_availability_in_stock_shows_only_in_stock(): void
+    {
+        $wh = $this->setupRegionWarehouses();
+
+        $inStock = Product::factory()->create(['name' => 'InStock Zeta']);
+        $this->attachWarehouse($inStock, $wh['primary'], 5);
+
+        $preorderOnly = Product::factory()->create(['name' => 'Preorder Zeta']);
+        $this->attachWarehouse($preorderOnly, $wh['preorder'], 7);
+
+        $noStock = Product::factory()->create(['name' => 'NoStock Zeta']);
+
+        $response = $this->getJson('/search?q=Zeta&availability=in_stock');
+
+        $response->assertOk();
+        $response->assertJsonPath('availability', 'in_stock');
+
+        $ids = collect($response->json('results.products'))->pluck('id')->all();
+
+        $this->assertContains($inStock->id, $ids);
+        $this->assertNotContains($preorderOnly->id, $ids, 'Только под предзаказ — не «в наличии»');
+        $this->assertNotContains($noStock->id, $ids);
+    }
+
+    public function test_search_availability_in_stock_preorder_includes_preorder(): void
+    {
+        $wh = $this->setupRegionWarehouses();
+
+        $inStock = Product::factory()->create(['name' => 'InStock Eta']);
+        $this->attachWarehouse($inStock, $wh['primary'], 5);
+
+        $preorderOnly = Product::factory()->create(['name' => 'Preorder Eta']);
+        $this->attachWarehouse($preorderOnly, $wh['preorder'], 7);
+
+        $noStock = Product::factory()->create(['name' => 'NoStock Eta']);
+
+        $response = $this->getJson('/search?q=Eta&availability=in_stock_preorder');
+
+        $response->assertOk();
+        $response->assertJsonPath('availability', 'in_stock_preorder');
+
+        $ids = collect($response->json('results.products'))->pluck('id')->all();
+
+        $this->assertContains($inStock->id, $ids);
+        $this->assertContains($preorderOnly->id, $ids, 'Предзаказ должен входить в режим in_stock_preorder');
+        $this->assertNotContains($noStock->id, $ids, 'Товар без остатков исключается');
+    }
+
+    public function test_search_availability_all_includes_everything(): void
+    {
+        $wh = $this->setupRegionWarehouses();
+
+        $inStock = Product::factory()->create(['name' => 'InStock Theta']);
+        $this->attachWarehouse($inStock, $wh['primary'], 5);
+
+        $noStock = Product::factory()->create(['name' => 'NoStock Theta']);
+
+        $response = $this->getJson('/search?q=Theta&availability=all');
+
+        $response->assertOk();
+        $response->assertJsonPath('availability', 'all');
+
+        $ids = collect($response->json('results.products'))->pluck('id')->all();
+
+        $this->assertContains($inStock->id, $ids);
+        $this->assertContains($noStock->id, $ids, 'В режиме all показываются и товары без остатков');
     }
 
     // ─── Сохранение в историю ───────────────────────────────
