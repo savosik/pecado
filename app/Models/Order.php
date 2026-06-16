@@ -160,6 +160,16 @@ class Order extends Model
             }
         });
 
+        // Автоматическая запись истории при создании заказа
+        static::created(function (Order $order) {
+            $order->statusHistories()->create([
+                'old_status' => null,
+                'new_status' => $order->status,
+                'user_id' => auth()->id(),
+                'comment' => request()->input('status_comment'),
+            ]);
+        });
+
         // Автоматическая запись истории при изменении статуса
         static::updating(function (Order $order) {
             if ($order->isDirty('status')) {
