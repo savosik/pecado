@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { Box, Flex, Grid, GridItem, IconButton, Skeleton } from '@chakra-ui/react';
-import { LuX } from 'react-icons/lu';
-import { usePage } from '@inertiajs/react';
+import { Box, Flex, Grid, GridItem, IconButton, Skeleton, Text } from '@chakra-ui/react';
+import { LuArrowRight, LuX } from 'react-icons/lu';
+import { router, usePage } from '@inertiajs/react';
 import { useProductQuickView } from '@/contexts/ProductQuickViewContext';
 import { buildProductInfoProps, getProductDescription } from '@/utils/product';
 import ProductGallery from './ProductGallery';
@@ -258,6 +258,36 @@ export default function ProductQuickViewModal() {
                                 </>
                             )}
                         </Box>
+
+                        {/* Подвал — переход на страницу товара */}
+                        {!loading && product?.slug && (
+                            <Flex
+                                as="button"
+                                type="button"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    const slug = product.slug;
+                                    closeQuickView();
+                                    router.visit(`/products/${encodeURIComponent(slug)}`);
+                                }}
+                                align="center"
+                                justify="center"
+                                gap="2"
+                                w="100%"
+                                py="2.5"
+                                borderTopWidth="1px"
+                                borderColor="border"
+                                color="fg.muted"
+                                cursor="pointer"
+                                transition="background 0.15s, color 0.15s"
+                                _hover={{ bg: 'bg.muted', color: 'fg' }}
+                            >
+                                <Text fontSize="sm" fontWeight="medium">
+                                    Перейти на страницу товара
+                                </Text>
+                                <LuArrowRight size={16} />
+                            </Flex>
+                        )}
                     </Box>
                 </Box>
             </Flex>
