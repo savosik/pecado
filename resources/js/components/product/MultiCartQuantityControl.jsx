@@ -5,7 +5,7 @@ import { usePage } from '@inertiajs/react';
 import { Tooltip } from '@/components/ui/tooltip';
 import QuantityControl from '@/components/common/QuantityControl';
 import CartQuantityControl from './CartQuantityControl';
-import { cartFrameProps, cartFrameTooltip, splitQty } from '@/utils/cartFrame';
+import { cartFrameProps, splitQty } from '@/utils/cartFrame';
 
 const DEBOUNCE_MS = 700;
 
@@ -73,6 +73,12 @@ function MultiCartQuantityControl({
     useEffect(() => {
         if (!open) return undefined;
         const onPointerDown = (e) => {
+            // Кнопки счётчика пересоздаются при переходе количества 0↔1
+            // (появляется/исчезает обёртка-подсказка). К моменту, когда этот
+            // обработчик отрабатывает, старый узел уже оторван от DOM, и
+            // contains() ложно вернул бы «снаружи» → панель бы захлопнулась.
+            // Игнорируем такие оторванные цели.
+            if (e.target && e.target.isConnected === false) return;
             if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
                 setOpen(false);
             }
@@ -242,28 +248,6 @@ function PerCartRow({ cart, productId, stockQuantity, maxTotal, size, disabled, 
     }, [cart.id, productId, stockQuantity, onUpdate]);
 
     const frame = cartFrameProps(split.instock, split.preorder);
-    const tooltipText = cartFrameTooltip(split.instock, split.preorder);
-
-    const counter = (
-        <Box
-            borderWidth="2px"
-            rounded="md"
-            overflow="hidden"
-            transition="border-color 220ms ease-out, background 220ms ease-out"
-            {...frame}
-        >
-            <QuantityControl
-                value={qty}
-                onChange={handleChange}
-                min={0}
-                max={maxTotal > 0 ? maxTotal : undefined}
-                size={size}
-                fullWidth
-                disabled={disabled}
-                outerBorder={false}
-            />
-        </Box>
-    );
 
     return (
         <Box
@@ -279,13 +263,24 @@ function PerCartRow({ cart, productId, stockQuantity, maxTotal, size, disabled, 
                 </Text>
                 {syncing && <Spinner size="xs" color="pecado.500" flexShrink="0" />}
             </Flex>
-            {tooltipText ? (
-                <Tooltip content={tooltipText} positioning={{ placement: 'top' }} openDelay={250} closeDelay={0}>
-                    {counter}
-                </Tooltip>
-            ) : (
-                counter
-            )}
+            <Box
+                borderWidth="2px"
+                rounded="md"
+                overflow="hidden"
+                transition="border-color 220ms ease-out, background 220ms ease-out"
+                {...frame}
+            >
+                <QuantityControl
+                    value={qty}
+                    onChange={handleChange}
+                    min={0}
+                    max={maxTotal > 0 ? maxTotal : undefined}
+                    size={size}
+                    fullWidth
+                    disabled={disabled}
+                    outerBorder={false}
+                />
+            </Box>
         </Box>
     );
 }
