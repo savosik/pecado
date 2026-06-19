@@ -141,6 +141,8 @@ function MultiCartQuantityControl({
                             variant="outline"
                             size={size}
                             flexShrink="0"
+                            alignSelf="stretch"
+                            h="auto"
                             onClick={toggle}
                             aria-expanded={open}
                         >
