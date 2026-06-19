@@ -498,6 +498,59 @@ class CartService implements CartServiceInterface
     }
 
     /**
+     * Quantities of a single product across all of the user's carts.
+     *
+     * Используется мульти-корзинным контролом на странице товара и в quick
+     * view: показывает, сколько данного товара лежит в каждой корзине, чтобы
+     * пользователь мог сразу набросать его в несколько корзин.
+     *
+     * @return array{
+     *     max_total: int,
+     *     available: int,
+     *     preorder: int,
+     *     carts: array<int, array{id:int, name:string, is_active:bool, quantity:int, instock:int, preorder:int}>
+     * }
+     */
+    public function getProductQuantitiesAcrossCarts(User $user, Product $product): array
+    {
+        $stock = $this->stockService->getStock($product, $user);
+        $available = (int) $stock['available'];
+        $preorderStock = (int) $stock['preorder'];
+
+        $carts = $user->carts()->orderBy('id')->get();
+
+        // Строки данного товара по всем корзинам пользователя — одним запросом.
+        $itemsByCart = CartItem::query()
+            ->whereIn('cart_id', $carts->pluck('id'))
+            ->where('product_id', $product->id)
+            ->select('cart_id', 'item_type', 'quantity')
+            ->get()
+            ->groupBy('cart_id');
+
+        $cartsPayload = $carts->map(function (Cart $cart) use ($itemsByCart) {
+            $rows = $itemsByCart->get($cart->id, collect());
+            $instock = (int) $rows->where('item_type', 'instock')->sum('quantity');
+            $preorder = (int) $rows->where('item_type', 'preorder')->sum('quantity');
+
+            return [
+                'id' => $cart->id,
+                'name' => $cart->name,
+                'is_active' => (bool) $cart->is_active,
+                'quantity' => $instock + $preorder,
+                'instock' => $instock,
+                'preorder' => $preorder,
+            ];
+        })->values()->all();
+
+        return [
+            'max_total' => $available + $preorderStock,
+            'available' => $available,
+            'preorder' => $preorderStock,
+            'carts' => $cartsPayload,
+        ];
+    }
+
+    /**
      * Get cart items summary for API.
      */
     public function getCartItemsSummary(Cart $cart): array

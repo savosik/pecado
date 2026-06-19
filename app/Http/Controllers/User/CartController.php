@@ -560,4 +560,51 @@ class CartController extends Controller
             'message' => 'Корзина удалена.',
         ]);
     }
+
+    // ────────────────────────────────────────────
+    // API — Мульти-корзинный контрол (страница товара / quick view)
+    // ────────────────────────────────────────────
+
+    /**
+     * Quantities of a product across all of the user's carts.
+     * GET /api/cart/product-quantities/{product}
+     */
+    public function productQuantities(Request $request, Product $product): JsonResponse
+    {
+        return response()->json(
+            $this->cartService->getProductQuantitiesAcrossCarts($request->user(), $product)
+        );
+    }
+
+    /**
+     * Set product quantity in a specific (possibly non-active) cart.
+     * POST /api/cart/carts/{cart}/set-product-quantity
+     */
+    public function setProductQuantityInCart(Request $request, Cart $cart): JsonResponse
+    {
+        Gate::authorize('update', $cart);
+
+        $validated = $request->validate([
+            'product_id' => 'required|exists:products,id',
+            'quantity' => 'required|integer|min:0',
+        ], [
+            'product_id.required' => 'Укажите товар.',
+            'product_id.exists' => 'Товар не найден.',
+            'quantity.required' => 'Укажите количество.',
+            'quantity.integer' => 'Количество должно быть целым числом.',
+            'quantity.min' => 'Количество не может быть отрицательным.',
+        ]);
+
+        $user = $request->user();
+        $product = Product::findOrFail($validated['product_id']);
+
+        $result = $this->cartService->setProductQuantity($user, $cart, $product, $validated['quantity']);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Количество обновлено.',
+            'cart_id' => $cart->id,
+            ...$result,
+        ]);
+    }
 }

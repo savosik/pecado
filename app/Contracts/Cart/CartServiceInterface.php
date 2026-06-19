@@ -106,6 +106,18 @@ interface CartServiceInterface
     public function getActiveQuantities(User $user): array;
 
     /**
+     * Quantities of a single product across all of the user's carts.
+     *
+     * @return array{
+     *     max_total: int,
+     *     available: int,
+     *     preorder: int,
+     *     carts: array<int, array{id:int, name:string, is_active:bool, quantity:int, instock:int, preorder:int}>
+     * }
+     */
+    public function getProductQuantitiesAcrossCarts(User $user, Product $product): array;
+
+    /**
      * Get cart items summary for API.
      */
     public function getCartItemsSummary(Cart $cart): array;

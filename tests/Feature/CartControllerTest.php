@@ -803,4 +803,101 @@ class CartControllerTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['product_id']);
     }
+
+    // ─── API: Мульти-корзинный контрол ─────────────────────
+
+    public function test_product_quantities_returns_qty_per_cart(): void
+    {
+        $active = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true, 'name' => 'Основная корзина']);
+        $other = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => false, 'name' => 'Вторая корзина']);
+        $product = Product::factory()->create();
+
+        CartItem::factory()->create([
+            'cart_id' => $active->id, 'product_id' => $product->id,
+            'item_type' => 'instock', 'quantity' => 3,
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $other->id, 'product_id' => $product->id,
+            'item_type' => 'preorder', 'quantity' => 2,
+        ]);
+
+        $response = $this->actingAs($this->user)->getJson("/api/cart/product-quantities/{$product->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('max_total', 15)
+            ->assertJsonCount(2, 'carts');
+
+        $carts = collect($response->json('carts'))->keyBy('id');
+        $this->assertSame(3, $carts[$active->id]['quantity']);
+        $this->assertSame(3, $carts[$active->id]['instock']);
+        $this->assertTrue($carts[$active->id]['is_active']);
+        $this->assertSame(2, $carts[$other->id]['quantity']);
+        $this->assertSame(2, $carts[$other->id]['preorder']);
+        $this->assertFalse($carts[$other->id]['is_active']);
+    }
+
+    public function test_product_quantities_excludes_other_users_carts(): void
+    {
+        $mine = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $stranger = User::factory()->create();
+        Cart::factory()->create(['user_id' => $stranger->id, 'is_active' => true]);
+        $product = Product::factory()->create();
+
+        $response = $this->actingAs($this->user)->getJson("/api/cart/product-quantities/{$product->id}");
+
+        $response->assertOk()->assertJsonCount(1, 'carts');
+        $this->assertSame($mine->id, $response->json('carts.0.id'));
+    }
+
+    public function test_set_product_quantity_in_specific_cart(): void
+    {
+        Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => true]);
+        $target = Cart::factory()->create(['user_id' => $this->user->id, 'is_active' => false]);
+        $product = Product::factory()->create();
+
+        $response = $this->actingAs($this->user)->postJson("/api/cart/carts/{$target->id}/set-product-quantity", [
+            'product_id' => $product->id,
+            'quantity' => 12,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('cart_id', $target->id)
+            ->assertJsonPath('instock', 10)
+            ->assertJsonPath('preorder', 2)
+            ->assertJsonPath('clamped', 12);
+
+        $this->assertDatabaseHas('cart_items', [
+            'cart_id' => $target->id,
+            'product_id' => $product->id,
+            'item_type' => 'instock',
+            'quantity' => 10,
+        ]);
+    }
+
+    public function test_set_product_quantity_in_cart_forbidden_for_other_user(): void
+    {
+        $stranger = User::factory()->create();
+        $strangerCart = Cart::factory()->create(['user_id' => $stranger->id, 'is_active' => true]);
+        $product = Product::factory()->create();
+
+        $response = $this->actingAs($this->user)->postJson("/api/cart/carts/{$strangerCart->id}/set-product-quantity", [
+            'product_id' => $product->id,
+            'quantity' => 5,
+        ]);
+
+        $response->assertForbidden();
+        $this->assertDatabaseMissing('cart_items', [
+            'cart_id' => $strangerCart->id,
+            'product_id' => $product->id,
+        ]);
+    }
+
+    public function test_multi_cart_endpoints_require_auth(): void
+    {
+        $product = Product::factory()->create();
+        $cart = Cart::factory()->create();
+
+        $this->getJson("/api/cart/product-quantities/{$product->id}")->assertUnauthorized();
+        $this->postJson("/api/cart/carts/{$cart->id}/set-product-quantity")->assertUnauthorized();
+    }
 }

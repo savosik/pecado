@@ -90,6 +90,8 @@ Route::prefix('api')->middleware('auth')->group(function () {
     Route::get('/cart/active-quantities', [CartController::class, 'activeQuantities']);
     Route::post('/cart/set-product-quantity', [CartController::class, 'setProductQuantity']);
     Route::post('/cart/set-products-quantity', [CartController::class, 'setProductsQuantity']);
+    Route::get('/cart/product-quantities/{product}', [CartController::class, 'productQuantities']);
+    Route::post('/cart/carts/{cart}/set-product-quantity', [CartController::class, 'setProductQuantityInCart']);
     Route::post('/cart/add-product', [CartController::class, 'addProduct']);
     Route::post('/cart/add-by-barcode', [CartController::class, 'addByBarcode']);
     Route::patch('/cart/items/{item}', [CartController::class, 'updateItem']);

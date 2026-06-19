@@ -4,7 +4,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { LuHash, LuCode, LuBarcode, LuCopy, LuHeart, LuCheck, LuClock3, LuCircleX, LuChevronDown, LuChevronUp } from 'react-icons/lu';
 import { Link, usePage } from '@inertiajs/react';
 import TagList from './TagList';
-import CartQuantityControl from './CartQuantityControl';
+import MultiCartQuantityControl from './MultiCartQuantityControl';
 import { useFavoritesStore } from '@/stores/useFavoritesStore';
 import { LOGIN_URL } from '@/constants/user';
 
@@ -264,8 +264,8 @@ export default function ProductInfo({
 
                         <Flex align="center" gap="2" flexShrink="0">
                             {(inStock || isPreorder) && price > 0 && (
-                                <Box w="200px">
-                                    <CartQuantityControl
+                                <Box w="240px">
+                                    <MultiCartQuantityControl
                                         productId={productId}
                                         stockQuantity={stockQuantity}
                                         preorderQuantity={preorderQuantity}
