@@ -105,6 +105,9 @@ function MultiCartQuantityControl({
 
     const otherCarts = carts.filter((c) => !c.is_active);
     const hasMultiple = carts.length > 1;
+    // Счётчики в выпадающей панели — на размер компактнее основного,
+    // чтобы названию корзины оставалось место.
+    const rowSize = { xl: 'lg', lg: 'md', md: 'sm', sm: 'xs', xs: 'xs' }[size] || 'sm';
 
     return (
         <Box ref={wrapperRef} position="relative" w={fullWidth ? '100%' : undefined}>
@@ -146,9 +149,10 @@ function MultiCartQuantityControl({
                     position="absolute"
                     top="100%"
                     left="0"
-                    right="0"
                     mt="2"
                     zIndex="20"
+                    w="20rem"
+                    maxW="calc(100vw - 1.5rem)"
                     bg="bg"
                     _dark={{ bg: 'gray.800', borderColor: 'gray.700' }}
                     borderWidth="1px"
@@ -168,7 +172,7 @@ function MultiCartQuantityControl({
                                 productId={productId}
                                 stockQuantity={stockQuantity}
                                 maxTotal={maxTotal}
-                                size={size}
+                                size={rowSize}
                                 disabled={disabled}
                                 onUpdate={applyCartUpdate}
                             />
@@ -254,6 +258,7 @@ function PerCartRow({ cart, productId, stockQuantity, maxTotal, size, disabled, 
                 min={0}
                 max={maxTotal > 0 ? maxTotal : undefined}
                 size={size}
+                fullWidth
                 disabled={disabled}
                 outerBorder={false}
             />
@@ -261,31 +266,27 @@ function PerCartRow({ cart, productId, stockQuantity, maxTotal, size, disabled, 
     );
 
     return (
-        <Flex
-            align="center"
-            gap="2"
+        <Box
             p="2"
             rounded="md"
             borderWidth="1px"
             borderColor="border"
             _dark={{ borderColor: 'gray.700' }}
         >
-            <Box flex="1" minW="0">
-                <Text fontSize="sm" fontWeight="500" truncate>
+            <Flex align="center" gap="1.5" mb="1">
+                <Text fontSize="xs" color="fg.muted" truncate flex="1" minW="0">
                     {cart.name}
                 </Text>
-            </Box>
-            <Flex align="center" gap="1.5" flexShrink="0">
-                {syncing && <Spinner size="xs" color="pecado.500" />}
-                {tooltipText ? (
-                    <Tooltip content={tooltipText} positioning={{ placement: 'top' }} openDelay={250} closeDelay={0}>
-                        {counter}
-                    </Tooltip>
-                ) : (
-                    counter
-                )}
+                {syncing && <Spinner size="xs" color="pecado.500" flexShrink="0" />}
             </Flex>
-        </Flex>
+            {tooltipText ? (
+                <Tooltip content={tooltipText} positioning={{ placement: 'top' }} openDelay={250} closeDelay={0}>
+                    {counter}
+                </Tooltip>
+            ) : (
+                counter
+            )}
+        </Box>
     );
 }
 
