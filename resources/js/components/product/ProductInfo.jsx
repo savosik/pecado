@@ -30,6 +30,7 @@ export default function ProductInfo({
     preorderQuantity = 0,
     tags = [],
     discountPct = null,
+    variantsSlot = null,
 }) {
     const { auth } = usePage().props;
     const user = auth?.user && (auth.user.status === 'active' || auth.user.is_admin) ? auth.user : null;
@@ -226,6 +227,9 @@ export default function ProductInfo({
                     ))}
                 </Flex>
             </Box>
+
+            {/* Варианты товара — между артикулами и ценой, чтобы выбор фасовки шёл до цены */}
+            {variantsSlot}
 
             {/* Цена, наличие и корзина — только для авторизованных */}
             {user && (

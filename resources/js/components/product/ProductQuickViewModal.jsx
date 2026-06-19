@@ -204,15 +204,16 @@ export default function ProductQuickViewModal() {
                                 <>
                                     {/* Mobile layout */}
                                     <Box display={{ base: 'block', lg: 'none' }} spaceY="6">
-                                        <ProductInfo {...productInfoProps} />
-
-                                        {variants.length > 0 && (
-                                            <ProductVariants
-                                                variants={variants}
-                                                currentProductId={product.id}
-                                                modelName={product.model_name}
-                                            />
-                                        )}
+                                        <ProductInfo
+                                            {...productInfoProps}
+                                            variantsSlot={variants.length > 0 ? (
+                                                <ProductVariants
+                                                    variants={variants}
+                                                    currentProductId={product.id}
+                                                    modelName={product.model_name}
+                                                />
+                                            ) : null}
+                                        />
 
                                         <ProductGallery media={media} productName={product.name} />
 
@@ -234,15 +235,16 @@ export default function ProductQuickViewModal() {
                                         </GridItem>
 
                                         <GridItem colSpan={8} spaceY="6">
-                                            <ProductInfo {...productInfoProps} />
-
-                                            {variants.length > 0 && (
-                                                <ProductVariants
-                                                    variants={variants}
-                                                    currentProductId={product.id}
-                                                    modelName={product.model_name}
-                                                />
-                                            )}
+                                            <ProductInfo
+                                                {...productInfoProps}
+                                                variantsSlot={variants.length > 0 ? (
+                                                    <ProductVariants
+                                                        variants={variants}
+                                                        currentProductId={product.id}
+                                                        modelName={product.model_name}
+                                                    />
+                                                ) : null}
+                                            />
 
                                             <ProductDetailTabs
                                                 specifications={specifications}

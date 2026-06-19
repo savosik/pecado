@@ -46,15 +46,16 @@ export default function Show() {
             >
                 {/* Mobile: info → варианты → галерея → табы */}
                 <Box display={{ base: 'block', lg: 'none' }} spaceY="6">
-                    <ProductInfo {...productInfoProps} />
-
-                    {variants && variants.length > 0 && (
-                        <ProductVariants
-                            variants={variants}
-                            currentProductId={product.id}
-                            modelName={product.model_name}
-                        />
-                    )}
+                    <ProductInfo
+                        {...productInfoProps}
+                        variantsSlot={variants && variants.length > 0 ? (
+                            <ProductVariants
+                                variants={variants}
+                                currentProductId={product.id}
+                                modelName={product.model_name}
+                            />
+                        ) : null}
+                    />
 
                     <ProductGallery media={media} productName={product.name} />
 
@@ -76,15 +77,16 @@ export default function Show() {
                     </GridItem>
 
                     <GridItem colSpan={8} spaceY="6">
-                        <ProductInfo {...productInfoProps} />
-
-                        {variants && variants.length > 0 && (
-                            <ProductVariants
-                                variants={variants}
-                                currentProductId={product.id}
-                                modelName={product.model_name}
-                            />
-                        )}
+                        <ProductInfo
+                            {...productInfoProps}
+                            variantsSlot={variants && variants.length > 0 ? (
+                                <ProductVariants
+                                    variants={variants}
+                                    currentProductId={product.id}
+                                    modelName={product.model_name}
+                                />
+                            ) : null}
+                        />
 
                         <ProductDetailTabs
                             specifications={specifications}
