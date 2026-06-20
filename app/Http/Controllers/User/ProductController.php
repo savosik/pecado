@@ -54,6 +54,7 @@ class ProductController extends Controller
             'seo' => [
                 'title' => $brand->meta_title ?: "{$brand->name} — каталог в {$appName}",
                 'description' => $brand->meta_description ?: "Товары бренда {$brand->name} в интернет-магазине {$appName}",
+                'keywords' => $brand->meta_keywords,
                 'h1' => $brand->name,
                 'canonical' => $canonical,
                 'url' => $canonical,
@@ -122,6 +123,7 @@ class ProductController extends Controller
             'seo' => [
                 'title' => $category->meta_title ?: "{$category->name} — купить в {$appName}",
                 'description' => $category->meta_description ?: "Купить {$category->name} в интернет-магазине {$appName}",
+                'keywords' => $category->meta_keywords,
                 'h1' => $category->name,
                 'canonical' => $canonical,
                 'url' => $canonical,
@@ -744,6 +746,7 @@ class ProductController extends Controller
         return [
             'title' => $product->meta_title ?: $product->name.' — купить в Pecado',
             'description' => $description,
+            'keywords' => $product->meta_keywords,
             'canonical' => route('products.show', $product->slug),
             'url' => route('products.show', $product->slug),
             'type' => 'product',

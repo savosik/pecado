@@ -63,6 +63,52 @@ class ProductControllerTest extends TestCase
         $response->assertNotFound();
     }
 
+    // ─── meta keywords (F03) ────────────────────────────────
+
+    public function test_category_with_meta_keywords_passes_seo_keywords(): void
+    {
+        $category = Category::factory()->create([
+            'name' => 'Вибраторы',
+            'slug' => 'vibratory-kw',
+            'meta_keywords' => 'купить вибратор, женский вибратор',
+        ]);
+
+        $response = $this->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.keywords', 'купить вибратор, женский вибратор')
+        );
+    }
+
+    public function test_category_without_meta_keywords_has_null_seo_keywords(): void
+    {
+        $category = Category::factory()->create(['name' => 'Без ключей', 'slug' => 'no-kw']);
+
+        $response = $this->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.keywords', null)
+        );
+    }
+
+    public function test_brand_with_meta_keywords_passes_seo_keywords(): void
+    {
+        $brand = Brand::factory()->create([
+            'name' => 'Tenga',
+            'slug' => 'tenga-kw',
+            'meta_keywords' => 'tenga купить, мастурбатор tenga',
+        ]);
+
+        $response = $this->get("/brands/{$brand->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.keywords', 'tenga купить, мастурбатор tenga')
+        );
+    }
+
     // ─── byCategory ─────────────────────────────────────────
 
     public function test_by_category_renders_with_category_preset(): void

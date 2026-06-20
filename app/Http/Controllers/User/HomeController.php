@@ -47,6 +47,7 @@ class HomeController extends Controller
             'seo' => [
                 'title' => 'Pecado — Интернет-магазин для взрослых',
                 'description' => 'Pecado — широкий ассортимент товаров для взрослых. Доставка по всей России.',
+                'keywords' => 'секс шоп, интим магазин, товары для взрослых, секс шоп онлайн, секс шоп доставка, интернет магазин для взрослых',
                 'url' => url('/'),
                 'type' => 'website',
                 'structured_data' => [
