@@ -1,44 +1,23 @@
 import { Head } from '@inertiajs/react';
 
 /**
- * SEO-компонент с Open Graph, Twitter Card и JSON-LD structured data.
+ * SEO-компонент.
  *
- * @param {{ seo: { title?: string, description?: string, keywords?: string, image?: string, url?: string, canonical?: string, type?: string, robots?: string, structured_data?: object|object[] } }} props
+ * Полная SEO-мета (description, keywords, canonical, robots, Open Graph,
+ * Twitter Card, JSON-LD) рендерится сервером в resources/views/app.blade.php
+ * из seo-пропа — она видна в view-source и краулерам без SSR React.
+ *
+ * Здесь управляем только <title>, чтобы он обновлялся при клиентской
+ * SPA-навигации (Inertia заменяет <title inertia> без дублирования).
+ *
+ * @param {{ seo?: { title?: string } }} props
  */
 export default function SeoHead({ seo }) {
-    if (!seo) return null;
-
-    const { title, description, keywords, image, url, canonical, type = 'website', robots, structured_data } = seo;
+    if (!seo?.title) return null;
 
     return (
         <Head>
-            {title && <title>{title}</title>}
-            {description && <meta name="description" content={description} />}
-            {keywords && <meta name="keywords" content={keywords} />}
-            {canonical && <link rel="canonical" href={canonical} />}
-            {robots && <meta name="robots" content={robots} />}
-
-            {/* Open Graph */}
-            {title && <meta property="og:title" content={title} />}
-            {description && <meta property="og:description" content={description} />}
-            {type && <meta property="og:type" content={type} />}
-            {url && <meta property="og:url" content={url} />}
-            {image && <meta property="og:image" content={image} />}
-
-            {/* Twitter Card */}
-            <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
-            {title && <meta name="twitter:title" content={title} />}
-            {description && <meta name="twitter:description" content={description} />}
-            {image && <meta name="twitter:image" content={image} />}
-
-            {/* JSON-LD Structured Data */}
-            {structured_data && (
-                <script type="application/ld+json">
-                    {JSON.stringify(
-                        Array.isArray(structured_data) ? structured_data : [structured_data]
-                    )}
-                </script>
-            )}
+            <title>{seo.title}</title>
         </Head>
     );
 }

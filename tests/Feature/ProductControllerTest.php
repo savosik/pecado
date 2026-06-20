@@ -109,6 +109,36 @@ class ProductControllerTest extends TestCase
         );
     }
 
+    public function test_category_meta_rendered_server_side_in_html(): void
+    {
+        $category = Category::factory()->create([
+            'name' => 'Вибраторы',
+            'slug' => 'vibratory-html',
+            'meta_title' => 'Вибраторы | Pecado',
+            'meta_description' => 'Описание вибраторов',
+            'meta_keywords' => 'купить вибратор, женский вибратор',
+        ]);
+
+        $response = $this->withoutVite()->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        // Мета должна присутствовать прямо в HTML (view-source), а не только в Inertia-payload.
+        $response->assertSee('<title inertia>Вибраторы | Pecado</title>', false);
+        $response->assertSee('<meta name="description" content="Описание вибраторов">', false);
+        $response->assertSee('<meta name="keywords" content="купить вибратор, женский вибратор">', false);
+        $response->assertSee('<link rel="canonical"', false);
+    }
+
+    public function test_category_without_keywords_omits_keywords_tag_in_html(): void
+    {
+        $category = Category::factory()->create(['name' => 'Без ключей', 'slug' => 'no-kw-html']);
+
+        $response = $this->withoutVite()->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        $response->assertDontSee('<meta name="keywords"', false);
+    }
+
     // ─── byCategory ─────────────────────────────────────────
 
     public function test_by_category_renders_with_category_preset(): void
