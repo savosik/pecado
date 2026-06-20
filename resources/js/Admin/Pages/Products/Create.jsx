@@ -25,6 +25,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
         rich_content: '',
         meta_title: '',
         meta_description: '',
+        meta_keywords: '',
         sku: '',
         code: '',
         external_id: '',
@@ -72,7 +73,7 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
         categories: ['category_id'].some(field => errors[field]),
         relations: ['brand_id', 'model_id', 'size_chart_id'].some(field => errors[field]),
         pricing: ['base_price', 'is_new', 'is_bestseller', 'is_marked', 'is_liquidation', 'for_marketplaces'].some(field => errors[field]),
-        descriptions: ['short_description', 'description', 'description_html', 'meta_title', 'meta_description'].some(field => errors[field]),
+        descriptions: ['short_description', 'description', 'description_html', 'meta_title', 'meta_description', 'meta_keywords'].some(field => errors[field]),
         richContent: ['rich_content'].some(field => errors[field]),
         media: ['image', 'additional_images', 'video'].some(field => errors[field]),
         logistics: ['weight_gross', 'weight_net', 'width', 'height', 'depth', 'hs_code', 'abc_xyz', 'turnover'].some(field => errors[field]),
@@ -521,6 +522,18 @@ export default function Create({ brands, categoryTree, sizeCharts }) {
                                             />
                                         </FormField>
                                     </SimpleGrid>
+
+                                    <FormField
+                                        label="Ключевые слова (meta keywords)"
+                                        error={errors.meta_keywords}
+                                        helperText="Ключевые слова через запятую"
+                                    >
+                                        <Input
+                                            value={data.meta_keywords}
+                                            onChange={(e) => setData('meta_keywords', e.target.value)}
+                                            placeholder="ключевое слово, ещё одно, ..."
+                                        />
+                                    </FormField>
                                 </Stack>
                             </Tabs.Content>
 

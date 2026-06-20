@@ -53,6 +53,7 @@ use Spatie\Tags\HasTags;
  * @property string|null $short_description
  * @property string|null $meta_title
  * @property string|null $meta_description
+ * @property string|null $meta_keywords
  * @property int|null $category_id
  * @property int|null $brand_id
  * @property int|null $model_id
@@ -248,6 +249,7 @@ class Product extends Model implements HasMedia
         'short_description',
         'meta_title',
         'meta_description',
+        'meta_keywords',
         'category_id',
         'brand_id',
         'model_id',

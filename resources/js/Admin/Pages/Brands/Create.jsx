@@ -19,6 +19,7 @@ export default function Create({ brands, categories }) {
         description: '',
         meta_title: '',
         meta_description: '',
+        meta_keywords: '',
         is_featured: false,
         logo: null,
         tags: [],
@@ -34,7 +35,7 @@ export default function Create({ brands, categories }) {
     const tabErrors = useMemo(() => ({
         general: ['name', 'parent_id', 'category', 'external_id', 'slug'].some(field => errors[field]),
         descriptions: ['short_description', 'description'].some(field => errors[field]),
-        seo: ['meta_title', 'meta_description'].some(field => errors[field]),
+        seo: ['meta_title', 'meta_description', 'meta_keywords'].some(field => errors[field]),
         media: ['logo', 'tags'].some(field => errors[field]),
     }), [errors]);
 
@@ -239,6 +240,18 @@ export default function Create({ brands, categories }) {
                                             />
                                         </FormField>
                                     </SimpleGrid>
+
+                                    <FormField
+                                        label="Ключевые слова (meta keywords)"
+                                        error={errors.meta_keywords}
+                                        helperText="Ключевые слова через запятую"
+                                    >
+                                        <Input
+                                            value={data.meta_keywords}
+                                            onChange={(e) => setData('meta_keywords', e.target.value)}
+                                            placeholder="ключевое слово, ещё одно, ..."
+                                        />
+                                    </FormField>
                                 </Stack>
                             </Tabs.Content>
 

@@ -26,6 +26,7 @@ use Spatie\Tags\HasTags;
  * @property string|null $description
  * @property string|null $meta_title
  * @property string|null $meta_description
+ * @property string|null $meta_keywords
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\Attribute> $attributes
@@ -134,6 +135,7 @@ class Category extends Model implements HasMedia
         'description',
         'meta_title',
         'meta_description',
+        'meta_keywords',
     ];
 
     protected $casts = [

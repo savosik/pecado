@@ -24,6 +24,7 @@ use Spatie\Tags\HasTags;
  * @property bool $is_featured
  * @property string|null $meta_title
  * @property string|null $meta_description
+ * @property string|null $meta_keywords
  * @property int|null $parent_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -78,6 +79,7 @@ class Brand extends Model implements HasMedia
         'is_featured',
         'meta_title',
         'meta_description',
+        'meta_keywords',
         'parent_id',
     ];
 
