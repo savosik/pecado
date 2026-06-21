@@ -47,6 +47,7 @@ export default function ProductQuickViewModal() {
     const product = data?.product;
     const media = data?.media ?? [];
     const categoryTrail = data?.categoryTrail ?? [];
+    const categoryName = categoryTrail?.[categoryTrail.length - 1]?.name || '';
     const variants = data?.variants ?? [];
     const certificates = data?.certificates ?? [];
     const specifications = data?.specifications ?? {};
@@ -215,7 +216,7 @@ export default function ProductQuickViewModal() {
                                             ) : null}
                                         />
 
-                                        <ProductGallery media={media} productName={product.name} />
+                                        <ProductGallery media={media} productName={product.name} categoryName={categoryName} />
 
                                         <ProductDetailTabs
                                             specifications={specifications}
@@ -231,7 +232,7 @@ export default function ProductQuickViewModal() {
                                     {/* Desktop layout */}
                                     <Grid display={{ base: 'none', lg: 'grid' }} templateColumns="repeat(12, 1fr)" gap="6">
                                         <GridItem colSpan={4}>
-                                            <ProductGallery media={media} productName={product.name} />
+                                            <ProductGallery media={media} productName={product.name} categoryName={categoryName} />
                                         </GridItem>
 
                                         <GridItem colSpan={8} spaceY="6">

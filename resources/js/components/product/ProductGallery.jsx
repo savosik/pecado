@@ -7,9 +7,12 @@ import { LuChevronLeft, LuChevronRight, LuZoomIn, LuPlay, LuX } from 'react-icon
  * ProductGallery — галерея изображений/видео товара
  * с настоящим drag-свайпом (как в BannerSlider), стрелками и лайтбоксом.
  *
- * @param {{ media: Array<{url: string, type: 'image'|'video'}>, productName: string }} props
+ * @param {{ media: Array<{url: string, type: 'image'|'video'}>, productName: string, categoryName?: string }} props
  */
-export default function ProductGallery({ media = [], productName = '' }) {
+export default function ProductGallery({ media = [], productName = '', categoryName = '' }) {
+    // База alt для image-SEO: «{название} — {категория}» (или только название, если категории нет).
+    const altBase = categoryName ? `${productName} — ${categoryName}` : productName;
+    const imageAlt = (n) => `${altBase} — фото ${n}`;
     const [currentIndex, setCurrentIndex] = useState(() => {
         const firstImage = Array.isArray(media) ? media.findIndex(m => m?.type === 'image') : -1;
         return firstImage >= 0 ? firstImage : 0;
@@ -287,7 +290,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                         <Box
                                             as="img"
                                             src={item.large || item.url}
-                                            alt={`${productName} ${i + 1}`}
+                                            alt={imageAlt(i + 1)}
                                             w="100%" h="100%"
                                             objectFit="cover"
                                             draggable="false"
@@ -316,7 +319,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                     <Box
                                         as="img"
                                         src={item.large || item.url}
-                                        alt={productName}
+                                        alt={altBase}
                                         w="100%" h="100%"
                                         objectFit="cover"
                                         decoding="async"
@@ -430,7 +433,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                             </Flex>
                                         </Box>
                                     ) : (
-                                        <Box as="img" src={item.thumb || item.url} alt={`${productName} ${index + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
+                                        <Box as="img" src={item.thumb || item.url} alt={imageAlt(index + 1)} w="100%" h="100%" objectFit="cover" loading="lazy" />
                                     )}
                                 </Box>
                             ))}
@@ -503,7 +506,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                             {media[currentIndex]?.type === 'video' ? (
                                 <Box as="video" src={media[currentIndex].url} maxW="95vw" maxH="80vh" objectFit="contain" controls autoPlay />
                             ) : (
-                                <Box as="img" src={media[currentIndex]?.large || media[currentIndex]?.url} alt={productName} maxW="95vw" maxH="80vh" objectFit="contain" decoding="async" />
+                                <Box as="img" src={media[currentIndex]?.large || media[currentIndex]?.url} alt={altBase} maxW="95vw" maxH="80vh" objectFit="contain" decoding="async" />
                             )}
                         </Box>
 
@@ -563,7 +566,7 @@ export default function ProductGallery({ media = [], productName = '' }) {
                                                 </Flex>
                                             </Box>
                                         ) : (
-                                            <Box as="img" src={item.thumb || item.url} alt={`${productName} ${index + 1}`} w="100%" h="100%" objectFit="cover" loading="lazy" />
+                                            <Box as="img" src={item.thumb || item.url} alt={imageAlt(index + 1)} w="100%" h="100%" objectFit="cover" loading="lazy" />
                                         )}
                                     </Box>
                                 ))}

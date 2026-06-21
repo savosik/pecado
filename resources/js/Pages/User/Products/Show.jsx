@@ -22,6 +22,9 @@ export default function Show() {
     const productInfoProps = buildProductInfoProps(product, currencySymbol);
     const { price, isPreorder, inStock: isInStock, stockQuantity, preorderQuantity } = productInfoProps;
 
+    // Категория товара (последний элемент цепочки) — для alt изображений (image-SEO).
+    const categoryName = categoryTrail?.[categoryTrail.length - 1]?.name || '';
+
     // Флаг для глобального перехватчика QuickView в bootstrap.js:
     // на детальной странице товара клики по ссылкам /products/{slug} идут обычной навигацией.
     useEffect(() => {
@@ -57,7 +60,7 @@ export default function Show() {
                         ) : null}
                     />
 
-                    <ProductGallery media={media} productName={product.name} />
+                    <ProductGallery media={media} productName={product.name} categoryName={categoryName} />
 
                     <ProductDetailTabs
                         specifications={specifications}
@@ -73,7 +76,7 @@ export default function Show() {
                 {/* Desktop: gallery (4) + info (8) */}
                 <Grid display={{ base: 'none', lg: 'grid' }} templateColumns="repeat(12, 1fr)" gap="6">
                     <GridItem colSpan={4}>
-                        <ProductGallery media={media} productName={product.name} />
+                        <ProductGallery media={media} productName={product.name} categoryName={categoryName} />
                     </GridItem>
 
                     <GridItem colSpan={8} spaceY="6">
