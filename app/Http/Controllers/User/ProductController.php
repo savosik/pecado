@@ -31,7 +31,7 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title' => "Каталог товаров — {$appName}",
+                'title' => "Каталог товаров | {$appName}",
                 'description' => "Каталог товаров интернет-магазина {$appName}",
                 'h1' => 'Каталог товаров',
                 'canonical' => $canonical,
@@ -52,7 +52,7 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title' => $brand->meta_title ?: "{$brand->name} — каталог в {$appName}",
+                'title' => $brand->meta_title ?: "{$brand->name} — каталог товаров | {$appName}",
                 'description' => $brand->meta_description ?: "Товары бренда {$brand->name} в интернет-магазине {$appName}",
                 'keywords' => $brand->meta_keywords,
                 'h1' => $brand->name,
@@ -121,7 +121,7 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title' => $category->meta_title ?: "{$category->name} — купить в {$appName}",
+                'title' => $category->meta_title ?: "{$category->name} — купить с доставкой | {$appName}",
                 'description' => $category->meta_description ?: "Купить {$category->name} в интернет-магазине {$appName}",
                 'keywords' => $category->meta_keywords,
                 'h1' => $category->name,
@@ -200,7 +200,7 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title' => $selection->meta_title ?: "{$selection->name} — {$appName}",
+                'title' => $selection->meta_title ?: "{$selection->name} — подборка товаров | {$appName}",
                 'description' => $selection->meta_description ?: "{$selection->name} — подборка товаров в {$appName}",
                 'h1' => $selection->name,
                 'canonical' => $canonical,
@@ -234,7 +234,7 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title' => "Избранные товары — {$appName}",
+                'title' => "Избранные товары | {$appName}",
                 'description' => "Ваши избранные товары в {$appName}",
                 'h1' => 'Избранные товары',
                 'canonical' => $canonical,
@@ -258,7 +258,7 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title' => "Новинки — {$appName}",
+                'title' => "Новинки | {$appName}",
                 'description' => "Новинки интернет-магазина {$appName}",
                 'h1' => 'Новинки',
                 'canonical' => $canonical,
@@ -286,7 +286,7 @@ class ProductController extends Controller
 
         return $this->renderCatalog([
             'seo' => [
-                'title' => "Бестселлеры — {$appName}",
+                'title' => "Бестселлеры | {$appName}",
                 'description' => "Бестселлеры интернет-магазина {$appName}",
                 'h1' => 'Бестселлеры',
                 'canonical' => $canonical,
@@ -744,7 +744,7 @@ class ProductController extends Controller
             ?: Str::limit(strip_tags((string) ($product->short_description ?: $product->description)), 155);
 
         return [
-            'title' => $product->meta_title ?: $product->name.' — купить в Pecado',
+            'title' => $product->meta_title ?: $product->name.' — купить с доставкой | Pecado',
             'description' => $description,
             'keywords' => $product->meta_keywords,
             'canonical' => route('products.show', $product->slug),

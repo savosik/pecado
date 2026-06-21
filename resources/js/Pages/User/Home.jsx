@@ -1,5 +1,5 @@
-import { Box } from '@chakra-ui/react';
-import { Head, usePage } from '@inertiajs/react';
+import { Box, Heading } from '@chakra-ui/react';
+import { usePage } from '@inertiajs/react';
 import UserLayout from './UserLayout';
 import SeoHead from '@/components/common/SeoHead';
 import BannerSlider from '@/components/banner/BannerSlider';
@@ -23,7 +23,11 @@ export default function Home({
         <UserLayout fluid flushTop={stories.length === 0}>
             {showWelcome && <WelcomeDialog userName={auth?.user?.name} />}
             <SeoHead seo={seo} />
-            <Head title={seo?.title || 'Pecado — Интернет-магазин для взрослых'} />
+
+            {/* Единственный H1 страницы (визуально скрыт — дизайн главной без заголовка). */}
+            <Heading as="h1" srOnly>
+                {seo?.h1 || 'Секс-шоп Pecado'}
+            </Heading>
 
             <StoryCircles stories={stories} />
             <BannerSlider banners={banners} />

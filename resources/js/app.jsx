@@ -24,7 +24,12 @@ function GlobalLayout({ children }) {
 }
 
 createInertiaApp({
-    title: (title) => `${title} - ${appName}`,
+    title: (title) => {
+        // Дедуп суффикса: если бренд уже есть в title (мета из CSV) — не дублируем.
+        if (!title) return appName;
+
+        return title.includes(appName) ? title : `${title} | ${appName}`;
+    },
     resolve: async (name) => {
         const pages = import.meta.glob('./Pages/**/*.jsx');
         const adminPages = import.meta.glob('./Admin/**/*.jsx');

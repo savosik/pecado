@@ -26,7 +26,7 @@ class ProductControllerTest extends TestCase
         $response->assertInertia(function (AssertableInertia $page) use ($appName) {
             $page->component('User/Products/Index')
                 ->has('seo')
-                ->where('seo.title', "Каталог товаров — {$appName}")
+                ->where('seo.title', "Каталог товаров | {$appName}")
                 ->where('seo.h1', 'Каталог товаров')
                 ->where('seo.canonical', route('products.index'))
                 ->where('seo.url', route('products.index'));
@@ -268,7 +268,7 @@ class ProductControllerTest extends TestCase
         $response->assertInertia(function (AssertableInertia $page) use ($appName) {
             $page->component('User/Products/Index')
                 ->has('seo')
-                ->where('seo.title', "Избранные товары — {$appName}")
+                ->where('seo.title', "Избранные товары | {$appName}")
                 ->where('seo.canonical', route('products.favorites'))
                 ->where('seo.url', route('products.favorites'))
                 ->where('initialFilters.in_favourites', 1);
