@@ -77,8 +77,10 @@ export default function Show() {
                     </GridItem>
 
                     <GridItem colSpan={8} spaceY="6">
+                        {/* Desktop-дубль: семантически не H1 (единственный H1 — в mobile-блоке выше), визуально идентичен. */}
                         <ProductInfo
                             {...productInfoProps}
+                            headingAs="p"
                             variantsSlot={variants && variants.length > 0 ? (
                                 <ProductVariants
                                     variants={variants}

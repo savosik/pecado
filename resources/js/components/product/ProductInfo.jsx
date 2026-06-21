@@ -31,6 +31,7 @@ export default function ProductInfo({
     tags = [],
     discountPct = null,
     variantsSlot = null,
+    headingAs = 'h1',
 }) {
     const { auth } = usePage().props;
     const user = auth?.user && (auth.user.status === 'active' || auth.user.is_admin) ? auth.user : null;
@@ -160,7 +161,7 @@ export default function ProductInfo({
                     </Flex>
                 )}
 
-                <Heading as="h1" size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" mb="3" lineHeight="1.2" css={{ wordBreak: 'break-word' }}>
+                <Heading as={headingAs} size={{ base: 'xl', md: '3xl' }} fontWeight="bold" color="fg" mb="3" lineHeight="1.2" css={{ wordBreak: 'break-word' }}>
                     {name}
                 </Heading>
 
