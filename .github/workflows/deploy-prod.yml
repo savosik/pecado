@@ -145,6 +145,9 @@ jobs:
     name: "⚡ Build Frontend"
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: write   # удаление старых артефактов для освобождения квоты
 
     steps:
       - name: "📥 Checkout"
@@ -177,6 +180,18 @@ jobs:
 
       - name: "📚 Build MkDocs (Manual test plan)"
         run: mkdocs build -f mkdocs-testing.yml --strict
+
+      - name: "🧹 Prune old artifacts (free storage quota)"
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Артефакты деплоя — внутрирановый handoff. Удаляем накопившийся
+          # «хвост» старше 2 часов (освобождает забитую квоту), свежие
+          # артефакты параллельных ранов не трогаем.
+          gh api repos/${{ github.repository }}/actions/artifacts --paginate \
+            -q '.artifacts[] | select((.created_at|fromdateiso8601) < (now - 7200)) | .id' \
+          | xargs -r -I{} -P4 gh api -X DELETE \
+              repos/${{ github.repository }}/actions/artifacts/{} || true
 
       - name: "📤 Upload build artifacts"
         uses: actions/upload-artifact@v4
