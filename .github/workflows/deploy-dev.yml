@@ -254,13 +254,24 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Артефакты деплоя — внутрирановый handoff. Удаляем накопившийся
-          # «хвост» старше 2 часов (освобождает забитую квоту), свежие
-          # артефакты параллельных ранов не трогаем.
-          gh api repos/${{ github.repository }}/actions/artifacts --paginate \
-            -q '.artifacts[] | select((.created_at|fromdateiso8601) < (now - 7200)) | .id' \
-          | xargs -r -I{} -P4 gh api -X DELETE \
-              repos/${{ github.repository }}/actions/artifacts/{} || true
+          # Артефакты деплоя — внутрирановый handoff. Удаляем все артефакты
+          # прошлых ранов (кроме текущего) ДО загрузки своих — освобождает
+          # забитую квоту хранилища. Диагностика прав в логе.
+          set -uo pipefail
+          ids=$(gh api repos/${{ github.repository }}/actions/artifacts --paginate \
+            -q ".artifacts[] | select(.workflow_run.id != ${{ github.run_id }}) | .id") || true
+          n=$(printf '%s\n' "$ids" | grep -c . || true)
+          echo "Артефактов к удалению: ${n:-0}"
+          fail=0
+          for id in $ids; do
+            if gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" >/dev/null 2>&1; then
+              echo "  удалён $id"
+            else
+              echo "  НЕ удалён $id (нет прав actions:write?)"; fail=1
+            fi
+          done
+          [ "$fail" = "1" ] && echo "⚠️ Часть удалений не прошла — проверь Settings → Actions → Workflow permissions = Read and write"
+          exit 0
 
       - name: "📤 Upload build artifacts"
         uses: actions/upload-artifact@v4
