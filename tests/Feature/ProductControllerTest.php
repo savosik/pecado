@@ -232,6 +232,61 @@ class ProductControllerTest extends TestCase
         $this->assertStringContainsString('"@type":"BreadcrumbList"', $html);
     }
 
+    // ─── canonical / noindex фильтров и пагинации (F06) ─────
+
+    public function test_clean_category_is_indexable_without_robots(): void
+    {
+        $category = Category::create(['name' => 'Кат', 'slug' => 'clean-cat', 'is_active' => true]);
+
+        $response = $this->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->missing('seo.robots')
+            ->where('seo.canonical', route('products.category', $category))
+        );
+    }
+
+    public function test_filtered_category_gets_noindex_with_clean_canonical(): void
+    {
+        $category = Category::create(['name' => 'Кат', 'slug' => 'filtered-cat', 'is_active' => true]);
+
+        $response = $this->withoutVite()->get("/categories/{$category->slug}?sort=price_asc&price_min=100");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.robots', 'noindex, follow')
+            // canonical остаётся чистым (без query).
+            ->where('seo.canonical', route('products.category', $category))
+        );
+        $this->assertStringContainsString('<meta name="robots" content="noindex, follow">', $response->getContent());
+    }
+
+    public function test_paginated_category_gets_noindex(): void
+    {
+        $category = Category::create(['name' => 'Кат', 'slug' => 'paged-cat', 'is_active' => true]);
+
+        // page=1 — каноничная, без noindex
+        $this->get("/categories/{$category->slug}?page=1")
+            ->assertInertia(fn (AssertableInertia $page) => $page->missing('seo.robots'));
+
+        // page=2 — noindex
+        $this->get("/categories/{$category->slug}?page=2")
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('seo.robots', 'noindex, follow'));
+    }
+
+    public function test_filtered_brand_gets_noindex(): void
+    {
+        $brand = Brand::factory()->create(['name' => 'Tenga', 'slug' => 'tenga-f']);
+
+        $response = $this->get("/brands/{$brand->slug}?in_stock_mode=in_stock");
+
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.robots', 'noindex, follow')
+            ->where('seo.canonical', route('products.brand', $brand))
+        );
+    }
+
     // ─── byCategory ─────────────────────────────────────────
 
     public function test_by_category_renders_with_category_preset(): void

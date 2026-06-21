@@ -11,6 +11,7 @@ use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Services\Product\ProductQueryService;
 use App\Services\Product\SimilarProductsService;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -921,7 +922,33 @@ class ProductController extends Controller
     {
         $props['sortOptions'] = CatalogSort::options();
 
+        // Фильтр/поиск/сортировка/пагинация → неканоничное состояние листинга.
+        // canonical в seo уже указывает на чистый URL (без query), добавляем noindex,
+        // чтобы не плодить индексируемые дубли. Серверно — видно краулерам в view-source.
+        if (isset($props['seo']) && empty($props['seo']['robots']) && $this->isNonCanonicalListing(request())) {
+            $props['seo']['robots'] = 'noindex, follow';
+        }
+
         return Inertia::render('User/Products/Index', $props);
+    }
+
+    /**
+     * Листинг в неканоничном состоянии: присутствуют фильтры/поиск/сортировка или страница > 1.
+     */
+    private function isNonCanonicalListing(Request $request): bool
+    {
+        $filterKeys = [
+            'q', 'price_min', 'price_max', 'brand_ids', 'category_ids',
+            'attribute_value_ids', 'attribute_inline_filters', 'in_stock_mode', 'sort',
+        ];
+
+        foreach ($filterKeys as $key) {
+            if ($request->filled($key)) {
+                return true;
+            }
+        }
+
+        return (int) $request->query('page', 1) > 1;
     }
 
     /**
