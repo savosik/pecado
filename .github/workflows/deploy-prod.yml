@@ -183,7 +183,7 @@ jobs:
         with:
           name: frontend-build
           path: public/build
-          retention-days: 7
+          retention-days: 1
 
       - name: "📤 Upload AsyncAPI docs"
         uses: actions/upload-artifact@v4
@@ -192,21 +192,21 @@ jobs:
           path: |
             docs/asyncapi/html
             docs/asyncapi/pecado-erp-bundled.yaml
-          retention-days: 7
+          retention-days: 1
 
       - name: "📤 Upload MkDocs site"
         uses: actions/upload-artifact@v4
         with:
           name: mkdocs-site
           path: docs-erp/site
-          retention-days: 7
+          retention-days: 1
 
       - name: "📤 Upload MkDocs testing site"
         uses: actions/upload-artifact@v4
         with:
           name: mkdocs-testing-site
           path: docs-testing/site
-          retention-days: 7
+          retention-days: 1
 
   # ─────────────────────────────────────────────────────────────
   # JOB 3: Деплой на Prod-сервер
