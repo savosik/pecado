@@ -151,6 +151,7 @@ class ProductController extends Controller
             ],
             'categoryTrail' => $categoryTrail,
             'categoryChildren' => $this->buildCategoryChildren($category),
+            'categorySiblings' => $this->buildCategorySiblings($category),
             'breadcrumbs' => $breadcrumbs,
         ]);
     }
@@ -171,29 +172,65 @@ class ProductController extends Controller
             ->orderBy('_lft')
             ->get(['id', 'name', 'slug', '_lft', '_rgt']);
 
-        if ($children->isEmpty()) {
+        return $this->categoryChipsWithCounts($children);
+    }
+
+    /**
+     * Смежные (родственные) активные категории — другие дети того же родителя
+     * (или другие корневые, если категория корневая). Для внутренней перелинковки (F07).
+     *
+     * @return array<int, array{id: int, name: string, slug: string, count: int}>
+     */
+    private function buildCategorySiblings(Category $category): array
+    {
+        $query = $category->parent_id
+            ? Category::where('parent_id', $category->parent_id)
+            : Category::whereIsRoot();
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, Category> $siblings */
+        $siblings = $query
+            ->where('is_active', true)
+            ->where('id', '!=', $category->id)
+            ->orderByRaw('sort IS NULL, sort ASC')
+            ->orderBy('_lft')
+            ->limit(16)
+            ->get(['id', 'name', 'slug', '_lft', '_rgt']);
+
+        return $this->categoryChipsWithCounts($siblings);
+    }
+
+    /**
+     * Превратить набор категорий в «чипы» с количеством товаров в поддереве каждой.
+     * Скрывает категории без видимых товаров.
+     *
+     * @param  \Illuminate\Database\Eloquent\Collection<int, Category>  $categories
+     * @return array<int, array{id: int, name: string, slug: string, count: int}>
+     */
+    private function categoryChipsWithCounts(\Illuminate\Database\Eloquent\Collection $categories): array
+    {
+        if ($categories->isEmpty()) {
             return [];
         }
 
-        // Один запрос: считаем товары в поддереве каждого ребёнка через nested-set join.
+        // Один запрос: считаем товары в поддереве каждой категории через nested-set join.
         // Через Eloquent — чтобы применился глобальный HiddenScope (hidden=false).
         $counts = Product::query()
             ->join('categories as descendant', 'descendant.id', '=', 'products.category_id')
-            ->join('categories as child', function ($join) {
-                $join->whereColumn('descendant._lft', '>=', 'child._lft')
-                    ->whereColumn('descendant._rgt', '<=', 'child._rgt');
+            ->join('categories as anchor', function ($join) {
+                $join->whereColumn('descendant._lft', '>=', 'anchor._lft')
+                    ->whereColumn('descendant._rgt', '<=', 'anchor._rgt');
             })
-            ->whereIn('child.id', $children->pluck('id')->all())
+            ->whereIn('anchor.id', $categories->pluck('id')->all())
             ->where('descendant.is_active', true)
-            ->groupBy('child.id')
-            ->pluck(DB::raw('COUNT(*)'), 'child.id');
+            ->groupBy('anchor.id')
+            ->pluck(DB::raw('COUNT(*)'), 'anchor.id');
 
-        return $children
-            ->map(fn (Category $child) => [
-                'id' => $child->id,
-                'name' => $child->name,
-                'slug' => $child->slug,
-                'count' => (int) ($counts[$child->id] ?? 0),
+        return $categories
+            ->map(fn (Category $c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+                'slug' => $c->slug,
+                'count' => (int) ($counts[$c->id] ?? 0),
             ])
             ->filter(fn (array $c) => $c['count'] > 0)
             ->values()

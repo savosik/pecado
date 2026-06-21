@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { Box, Flex } from '@chakra-ui/react';
+import { Box, Flex, Heading } from '@chakra-ui/react';
 import { usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
 import SeoHead from '@/components/common/SeoHead';
@@ -41,6 +41,7 @@ export default function Index() {
         breadcrumbs = null,
         categoryTrail = null,
         categoryChildren = null,
+        categorySiblings = null,
         sortOptions = [],
         appName = 'Pecado',
         pageDescription = null,
@@ -349,6 +350,16 @@ export default function Index() {
             {isCategoryListing && pageDescription && (
                 <Box px={{ base: '3', md: '0' }}>
                     <SeoTextBlock html={pageDescription} title={seo.h1} />
+                </Box>
+            )}
+
+            {/* Смежные категории — внутренняя перелинковка (F07) */}
+            {isCategoryListing && categorySiblings && categorySiblings.length > 0 && (
+                <Box mt="8" px={{ base: '3', md: '0' }}>
+                    <Heading as="h2" size="md" mb="3" color="fg">
+                        Смежные категории
+                    </Heading>
+                    <CategoryChildrenChips categories={categorySiblings} />
                 </Box>
             )}
 

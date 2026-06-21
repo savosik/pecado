@@ -232,6 +232,49 @@ class ProductControllerTest extends TestCase
         $this->assertStringContainsString('"@type":"BreadcrumbList"', $html);
     }
 
+    // ─── смежные категории / перелинковка (F07) ─────────────
+
+    public function test_category_exposes_siblings_with_products(): void
+    {
+        $parent = Category::create(['name' => 'Раздел', 'slug' => 'p7', 'is_active' => true]);
+        $current = Category::create(['name' => 'Текущая', 'slug' => 'cur7', 'parent_id' => $parent->id, 'is_active' => true]);
+        $sibA = Category::create(['name' => 'Смежная A', 'slug' => 'sib-a', 'parent_id' => $parent->id, 'is_active' => true]);
+        $sibB = Category::create(['name' => 'Смежная B', 'slug' => 'sib-b', 'parent_id' => $parent->id, 'is_active' => true]);
+        Category::create(['name' => 'Смежная пустая', 'slug' => 'sib-empty', 'parent_id' => $parent->id, 'is_active' => true]);
+        Category::create(['name' => 'Смежная неактивная', 'slug' => 'sib-off', 'parent_id' => $parent->id, 'is_active' => false]);
+
+        Product::factory()->create(['category_id' => $current->id]);
+        Product::factory()->create(['category_id' => $sibA->id]);
+        Product::factory()->create(['category_id' => $sibB->id]);
+
+        $response = $this->get("/categories/{$current->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            // Смежные с товарами: A и B; текущая, пустая и неактивная исключены.
+            ->has('categorySiblings', 2)
+            ->where('categorySiblings.0.slug', 'sib-a')
+            ->where('categorySiblings.1.slug', 'sib-b')
+            ->where('categorySiblings.0.count', 1)
+        );
+    }
+
+    public function test_root_category_siblings_are_other_roots(): void
+    {
+        $current = Category::create(['name' => 'Корень 1', 'slug' => 'root-1', 'is_active' => true]);
+        $otherRoot = Category::create(['name' => 'Корень 2', 'slug' => 'root-2', 'is_active' => true]);
+        Product::factory()->create(['category_id' => $current->id]);
+        Product::factory()->create(['category_id' => $otherRoot->id]);
+
+        $response = $this->get("/categories/{$current->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->has('categorySiblings', 1)
+            ->where('categorySiblings.0.slug', 'root-2')
+        );
+    }
+
     // ─── SEO-текст категории (F04) ──────────────────────────
 
     public function test_category_passes_seo_text_props(): void
