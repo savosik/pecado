@@ -139,9 +139,9 @@ class ProductControllerTest extends TestCase
         $response->assertDontSee('<meta name="keywords"', false);
     }
 
-    // ─── ItemList JSON-LD (F09) ─────────────────────────────
+    // ─── ItemList + BreadcrumbList JSON-LD (F09 + F05) ──────
 
-    public function test_category_listing_exposes_itemlist_jsonld(): void
+    public function test_category_listing_exposes_breadcrumb_and_itemlist_jsonld(): void
     {
         $category = Category::create(['name' => 'Вибраторы', 'slug' => 'vibratory-il', 'is_active' => true]);
         Product::factory()->create(['category_id' => $category->id, 'name' => 'Товар А']);
@@ -151,18 +151,24 @@ class ProductControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
-            ->where('seo.structured_data.0.@type', 'ItemList')
+            // [0] BreadcrumbList: Каталог → Вибраторы
+            ->where('seo.structured_data.0.@type', 'BreadcrumbList')
             ->has('seo.structured_data.0.itemListElement', 2)
-            ->where('seo.structured_data.0.itemListElement.0.@type', 'ListItem')
-            ->where('seo.structured_data.0.itemListElement.0.position', 1)
-            ->has('seo.structured_data.0.itemListElement.0.url')
-            ->has('seo.structured_data.0.itemListElement.0.name')
+            ->where('seo.structured_data.0.itemListElement.0.name', 'Каталог')
+            ->where('seo.structured_data.0.itemListElement.1.name', 'Вибраторы')
+            // Последний элемент (текущая страница) — без item.
+            ->missing('seo.structured_data.0.itemListElement.1.item')
+            // [1] ItemList товаров
+            ->where('seo.structured_data.1.@type', 'ItemList')
+            ->has('seo.structured_data.1.itemListElement', 2)
+            ->where('seo.structured_data.1.itemListElement.0.@type', 'ListItem')
+            ->where('seo.structured_data.1.itemListElement.0.position', 1)
         );
 
-        // JSON-LD должен присутствовать в серверном HTML.
+        // Обе разметки в серверном HTML.
         $html = $response->getContent();
+        $this->assertStringContainsString('"@type":"BreadcrumbList"', $html);
         $this->assertStringContainsString('"@type":"ItemList"', $html);
-        $this->assertStringContainsString('"@type":"ListItem"', $html);
     }
 
     public function test_brand_listing_exposes_itemlist_jsonld(): void
@@ -175,21 +181,55 @@ class ProductControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
-            ->where('seo.structured_data.0.@type', 'ItemList')
-            ->has('seo.structured_data.0.itemListElement', 1)
+            // [0] BreadcrumbList: Каталог → Бренды → Tenga
+            ->where('seo.structured_data.0.@type', 'BreadcrumbList')
+            ->has('seo.structured_data.0.itemListElement', 3)
+            ->where('seo.structured_data.0.itemListElement.1.name', 'Бренды')
+            // [1] ItemList товаров бренда
+            ->where('seo.structured_data.1.@type', 'ItemList')
+            ->has('seo.structured_data.1.itemListElement', 1)
         );
     }
 
-    public function test_empty_category_has_no_itemlist(): void
+    public function test_empty_category_has_breadcrumb_but_no_itemlist(): void
     {
         $category = Category::create(['name' => 'Пусто', 'slug' => 'empty-il', 'is_active' => true]);
 
         $response = $this->get("/categories/{$category->slug}");
 
         $response->assertOk();
+        // Пустая категория: BreadcrumbList есть, ItemList — нет.
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
-            ->where('seo.structured_data', null)
+            ->has('seo.structured_data', 1)
+            ->where('seo.structured_data.0.@type', 'BreadcrumbList')
         );
+    }
+
+    public function test_product_page_exposes_product_and_breadcrumb_jsonld(): void
+    {
+        $category = Category::create(['name' => 'Вибраторы', 'slug' => 'vibr-prod', 'is_active' => true]);
+        $product = Product::factory()->create([
+            'category_id' => $category->id,
+            'name' => 'Вибратор X',
+            'slug' => 'vibrator-x',
+        ]);
+
+        $response = $this->withoutVite()->get("/products/{$product->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Show')
+            ->where('seo.structured_data.0.@type', 'Product')
+            ->where('seo.structured_data.1.@type', 'BreadcrumbList')
+            ->where('seo.structured_data.1.itemListElement.0.name', 'Каталог')
+            ->where('seo.structured_data.1.itemListElement.1.name', 'Вибраторы')
+            ->where('seo.structured_data.1.itemListElement.2.name', 'Вибратор X')
+            // Текущая страница (товар) — без item.
+            ->missing('seo.structured_data.1.itemListElement.2.item')
+        );
+
+        $html = $response->getContent();
+        $this->assertStringContainsString('"@type":"Product"', $html);
+        $this->assertStringContainsString('"@type":"BreadcrumbList"', $html);
     }
 
     // ─── byCategory ─────────────────────────────────────────

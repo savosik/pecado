@@ -259,7 +259,8 @@ export default function Index() {
                         productName={seo.h1 || ''}
                     />
                 ) : breadcrumbs && breadcrumbs.length > 0 ? (
-                    <Breadcrumbs items={breadcrumbs} />
+                    // Бренд-листинг: BreadcrumbList отдаётся сервером — клиентский дубль отключаем.
+                    <Breadcrumbs items={breadcrumbs} jsonLd={false} />
                 ) : null}
 
                 {/* Заголовок + Контролы в одну строку */}

@@ -7,12 +7,16 @@ import { LuChevronRight, LuChevronDown } from 'react-icons/lu';
  * Хлебные крошки с JSON-LD (BreadcrumbList schema) и поддержкой siblings dropdown.
  *
  * items: Array<{ label: string, url?: string, siblings?: Array<{ label: string, href: string }> }>
+ *
+ * jsonLd: рендерить ли клиентский BreadcrumbList JSON-LD. На категориях/брендах/товарах
+ * разметка отдаётся сервером (seo.structured_data, см. app.blade.php), поэтому там
+ * передаётся jsonLd={false}, чтобы не было дубля.
  */
-export default function Breadcrumbs({ items }) {
+export default function Breadcrumbs({ items, jsonLd = true }) {
     if (!items || items.length === 0) return null;
 
-    // JSON-LD BreadcrumbList
-    const jsonLd = {
+    // JSON-LD BreadcrumbList (клиентский — для страниц без серверной разметки крошек)
+    const breadcrumbJsonLd = jsonLd ? {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: items.map((item, index) => ({
@@ -21,14 +25,16 @@ export default function Breadcrumbs({ items }) {
             name: item.label,
             ...(item.url ? { item: item.url } : {}),
         })),
-    };
+    } : null;
 
     return (
         <>
-            <script
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
-            />
+            {breadcrumbJsonLd && (
+                <script
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+                />
+            )}
             <Box
                 as="nav"
                 fontSize="sm"

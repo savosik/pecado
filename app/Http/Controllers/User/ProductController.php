@@ -52,6 +52,13 @@ class ProductController extends Controller
 
         $itemList = $this->buildListingItemList(fn ($q) => $q->where('brand_id', $brand->id));
 
+        $breadcrumbs = [
+            ['label' => 'Каталог', 'url' => route('products.index')],
+            ['label' => 'Бренды', 'url' => route('brands.index')],
+            ['label' => $brand->name, 'url' => null],
+        ];
+        $breadcrumbList = $this->buildBreadcrumbList($breadcrumbs);
+
         return $this->renderCatalog([
             'seo' => [
                 'title' => $brand->meta_title ?: "{$brand->name} — каталог товаров | {$appName}",
@@ -60,7 +67,7 @@ class ProductController extends Controller
                 'h1' => $brand->name,
                 'canonical' => $canonical,
                 'url' => $canonical,
-                'structured_data' => $itemList ? [$itemList] : null,
+                'structured_data' => array_values(array_filter([$breadcrumbList, $itemList])),
             ],
             'pageDescription' => $brand->short_description,
             'initialFilters' => [
@@ -71,11 +78,7 @@ class ProductController extends Controller
                 'name' => $brand->name,
                 'slug' => $brand->slug,
             ],
-            'breadcrumbs' => [
-                ['label' => 'Каталог', 'url' => route('products.index')],
-                ['label' => 'Бренды', 'url' => route('brands.index')],
-                ['label' => $brand->name, 'url' => null],
-            ],
+            'breadcrumbs' => $breadcrumbs,
         ]);
     }
 
@@ -123,6 +126,7 @@ class ProductController extends Controller
         $canonical = route('products.category', $category);
 
         $itemList = $this->buildListingItemList(fn ($q) => $q->inCategory($category->id, true));
+        $breadcrumbList = $this->buildBreadcrumbList($breadcrumbs);
 
         return $this->renderCatalog([
             'seo' => [
@@ -132,7 +136,7 @@ class ProductController extends Controller
                 'h1' => $category->name,
                 'canonical' => $canonical,
                 'url' => $canonical,
-                'structured_data' => $itemList ? [$itemList] : null,
+                'structured_data' => array_values(array_filter([$breadcrumbList, $itemList])),
             ],
             'pageDescription' => $category->description,
             'initialFilters' => [
@@ -783,11 +787,63 @@ class ProductController extends Controller
         ];
     }
 
+    /**
+     * Собрать BreadcrumbList JSON-LD из крошек (`['label' => ..., 'url' => абсолютный|null]`).
+     * Последний элемент (текущая страница) обычно без `url` → без `item`.
+     *
+     * @param  array<int, array{label: string, url: string|null}>  $crumbs
+     * @return array<string, mixed>|null
+     */
+    private function buildBreadcrumbList(array $crumbs): ?array
+    {
+        if (empty($crumbs)) {
+            return null;
+        }
+
+        $items = [];
+        foreach (array_values($crumbs) as $i => $crumb) {
+            $item = [
+                '@type' => 'ListItem',
+                'position' => $i + 1,
+                'name' => $crumb['label'],
+            ];
+            if (! empty($crumb['url'])) {
+                $item['item'] = $crumb['url'];
+            }
+            $items[] = $item;
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $items,
+        ];
+    }
+
     private function buildProductSeo(Product $product): array
     {
         $ogImage = $product->getFirstMediaUrl('main', 'large') ?: $product->getFirstMediaUrl('main');
         $description = $product->meta_description
             ?: Str::limit(strip_tags((string) ($product->short_description ?: $product->description)), 155);
+
+        $productSchema = [
+            '@context' => 'https://schema.org',
+            '@type' => 'Product',
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'description' => strip_tags((string) ($product->short_description ?: $product->description)),
+            'image' => $ogImage ? [$ogImage] : [],
+            'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
+            'offers' => [
+                '@type' => 'Offer',
+                'priceCurrency' => 'RUB',
+                'price' => (float) $product->base_price,
+                'url' => route('products.show', $product->slug),
+                'availability' => 'https://schema.org/InStock',
+            ],
+        ];
+
+        $breadcrumbList = $this->buildBreadcrumbList($this->productBreadcrumbs($product));
 
         return [
             'title' => $product->meta_title ?: $product->name.' — купить с доставкой | Pecado',
@@ -797,23 +853,32 @@ class ProductController extends Controller
             'url' => route('products.show', $product->slug),
             'type' => 'product',
             'image' => $ogImage ?: null,
-            'structured_data' => [
-                '@context' => 'https://schema.org',
-                '@type' => 'Product',
-                'name' => $product->name,
-                'sku' => $product->sku,
-                'description' => strip_tags((string) ($product->short_description ?: $product->description)),
-                'image' => $ogImage ? [$ogImage] : [],
-                'brand' => $product->brand ? ['@type' => 'Brand', 'name' => $product->brand->name] : null,
-                'offers' => [
-                    '@type' => 'Offer',
-                    'priceCurrency' => 'RUB',
-                    'price' => (float) $product->base_price,
-                    'url' => route('products.show', $product->slug),
-                    'availability' => 'https://schema.org/InStock',
-                ],
-            ],
+            // $productSchema всегда первый и непустой → array_filter сохраняет порядок-список.
+            'structured_data' => array_filter([$productSchema, $breadcrumbList]),
         ];
+    }
+
+    /**
+     * Крошки товара: Каталог → предки категории → категория → название товара (без url).
+     *
+     * @return array<int, array{label: string, url: string|null}>
+     */
+    private function productBreadcrumbs(Product $product): array
+    {
+        $crumbs = [
+            ['label' => 'Каталог', 'url' => route('products.index')],
+        ];
+
+        if ($product->category) {
+            foreach ($product->category->ancestors->sortBy('_lft') as $ancestor) {
+                $crumbs[] = ['label' => $ancestor->name, 'url' => route('products.category', $ancestor->slug)];
+            }
+            $crumbs[] = ['label' => $product->category->name, 'url' => route('products.category', $product->category->slug)];
+        }
+
+        $crumbs[] = ['label' => $product->name, 'url' => null];
+
+        return $crumbs;
     }
 
     /**

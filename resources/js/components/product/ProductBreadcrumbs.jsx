@@ -121,5 +121,6 @@ export default function ProductBreadcrumbs({ categoryTrail = [], productName = '
         };
     }, [categoryTrail]);
 
-    return <Breadcrumbs items={items} />;
+    // BreadcrumbList JSON-LD отдаётся сервером (seo.structured_data) — клиентский дубль отключаем.
+    return <Breadcrumbs items={items} jsonLd={false} />;
 }
