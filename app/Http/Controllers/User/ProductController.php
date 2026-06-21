@@ -140,6 +140,7 @@ class ProductController extends Controller
                 'structured_data' => array_values(array_filter([$breadcrumbList, $itemList])),
             ],
             'pageDescription' => $category->description,
+            'pageIntro' => $category->short_description,
             'initialFilters' => [
                 'category_id' => $category->id,
             ],

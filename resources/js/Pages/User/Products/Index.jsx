@@ -6,6 +6,7 @@ import SeoHead from '@/components/common/SeoHead';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import ProductBreadcrumbs from '@/components/product/ProductBreadcrumbs';
 import CatalogHeader from './CatalogHeader';
+import SeoTextBlock from '@/components/common/SeoTextBlock';
 import CategoryChildrenChips from './CategoryChildrenChips';
 import CatalogControls from './CatalogControls';
 import SelectedFilters from './SelectedFilters';
@@ -43,9 +44,13 @@ export default function Index() {
         sortOptions = [],
         appName = 'Pecado',
         pageDescription = null,
+        pageIntro = null,
         auth,
         currency,
     } = usePage().props;
+
+    // Категорийный листинг: короткий интро вверху, полный SEO-текст — блоком внизу.
+    const isCategoryListing = !!(categoryTrail && categoryTrail.length > 0);
 
     const currencySymbol = currency?.symbol || '₽';
     const currencyCode = currency?.code || 'RUB';
@@ -268,7 +273,7 @@ export default function Index() {
                     <CatalogHeader
                         h1={seo.h1 || 'Каталог товаров'}
                         total={meta?.total ?? null}
-                        description={pageDescription || (!breadcrumbs ? seo.description : undefined)}
+                        description={isCategoryListing ? pageIntro : (pageDescription || (!breadcrumbs ? seo.description : undefined))}
                     />
 
                     <CatalogControls
@@ -339,6 +344,13 @@ export default function Index() {
                     )}
                 </Box>
             </Flex>
+
+            {/* SEO-текст категории (полный) — посадочное место для текстов волн */}
+            {isCategoryListing && pageDescription && (
+                <Box px={{ base: '3', md: '0' }}>
+                    <SeoTextBlock html={pageDescription} title={seo.h1} />
+                </Box>
+            )}
 
             {/* Mobile Filters Drawer */}
             <ProductFiltersSheet

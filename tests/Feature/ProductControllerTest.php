@@ -232,6 +232,28 @@ class ProductControllerTest extends TestCase
         $this->assertStringContainsString('"@type":"BreadcrumbList"', $html);
     }
 
+    // ─── SEO-текст категории (F04) ──────────────────────────
+
+    public function test_category_passes_seo_text_props(): void
+    {
+        $category = Category::create([
+            'name' => 'Вибраторы',
+            'slug' => 'vibr-seo',
+            'is_active' => true,
+            'short_description' => 'Краткое интро.',
+            'description' => '<p>Полный SEO-текст про вибраторы.</p>',
+        ]);
+
+        $response = $this->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            // Короткий интро — вверху (CatalogHeader), полный текст — в нижнем SEO-блоке.
+            ->where('pageIntro', 'Краткое интро.')
+            ->where('pageDescription', '<p>Полный SEO-текст про вибраторы.</p>')
+        );
+    }
+
     // ─── canonical / noindex фильтров и пагинации (F06) ─────
 
     public function test_clean_category_is_indexable_without_robots(): void
