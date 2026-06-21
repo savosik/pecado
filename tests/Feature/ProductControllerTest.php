@@ -139,6 +139,59 @@ class ProductControllerTest extends TestCase
         $response->assertDontSee('<meta name="keywords"', false);
     }
 
+    // ─── ItemList JSON-LD (F09) ─────────────────────────────
+
+    public function test_category_listing_exposes_itemlist_jsonld(): void
+    {
+        $category = Category::create(['name' => 'Вибраторы', 'slug' => 'vibratory-il', 'is_active' => true]);
+        Product::factory()->create(['category_id' => $category->id, 'name' => 'Товар А']);
+        Product::factory()->create(['category_id' => $category->id, 'name' => 'Товар Б']);
+
+        $response = $this->withoutVite()->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.structured_data.0.@type', 'ItemList')
+            ->has('seo.structured_data.0.itemListElement', 2)
+            ->where('seo.structured_data.0.itemListElement.0.@type', 'ListItem')
+            ->where('seo.structured_data.0.itemListElement.0.position', 1)
+            ->has('seo.structured_data.0.itemListElement.0.url')
+            ->has('seo.structured_data.0.itemListElement.0.name')
+        );
+
+        // JSON-LD должен присутствовать в серверном HTML.
+        $html = $response->getContent();
+        $this->assertStringContainsString('"@type":"ItemList"', $html);
+        $this->assertStringContainsString('"@type":"ListItem"', $html);
+    }
+
+    public function test_brand_listing_exposes_itemlist_jsonld(): void
+    {
+        $category = Category::create(['name' => 'Кат', 'slug' => 'cat-il', 'is_active' => true]);
+        $brand = Brand::factory()->create(['name' => 'Tenga', 'slug' => 'tenga-il']);
+        Product::factory()->create(['brand_id' => $brand->id, 'category_id' => $category->id]);
+
+        $response = $this->get("/brands/{$brand->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.structured_data.0.@type', 'ItemList')
+            ->has('seo.structured_data.0.itemListElement', 1)
+        );
+    }
+
+    public function test_empty_category_has_no_itemlist(): void
+    {
+        $category = Category::create(['name' => 'Пусто', 'slug' => 'empty-il', 'is_active' => true]);
+
+        $response = $this->get("/categories/{$category->slug}");
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->where('seo.structured_data', null)
+        );
+    }
+
     // ─── byCategory ─────────────────────────────────────────
 
     public function test_by_category_renders_with_category_preset(): void

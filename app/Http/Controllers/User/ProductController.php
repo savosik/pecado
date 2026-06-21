@@ -50,6 +50,8 @@ class ProductController extends Controller
 
         $canonical = route('products.brand', $brand);
 
+        $itemList = $this->buildListingItemList(fn ($q) => $q->where('brand_id', $brand->id));
+
         return $this->renderCatalog([
             'seo' => [
                 'title' => $brand->meta_title ?: "{$brand->name} — каталог товаров | {$appName}",
@@ -58,6 +60,7 @@ class ProductController extends Controller
                 'h1' => $brand->name,
                 'canonical' => $canonical,
                 'url' => $canonical,
+                'structured_data' => $itemList ? [$itemList] : null,
             ],
             'pageDescription' => $brand->short_description,
             'initialFilters' => [
@@ -119,6 +122,8 @@ class ProductController extends Controller
 
         $canonical = route('products.category', $category);
 
+        $itemList = $this->buildListingItemList(fn ($q) => $q->inCategory($category->id, true));
+
         return $this->renderCatalog([
             'seo' => [
                 'title' => $category->meta_title ?: "{$category->name} — купить с доставкой | {$appName}",
@@ -127,6 +132,7 @@ class ProductController extends Controller
                 'h1' => $category->name,
                 'canonical' => $canonical,
                 'url' => $canonical,
+                'structured_data' => $itemList ? [$itemList] : null,
             ],
             'pageDescription' => $category->description,
             'initialFilters' => [
@@ -734,6 +740,46 @@ class ProductController extends Controller
             'sizeChart' => $sizeChart,
             'similarProducts' => $similarProducts,
             'seo' => $this->buildProductSeo($product),
+        ];
+    }
+
+    /**
+     * Собрать ItemList JSON-LD для листинга (первая страница, дефолтная сортировка Newest).
+     *
+     * @param  \Closure(\Illuminate\Database\Eloquent\Builder<\App\Models\Product>): mixed  $scope  ограничение выборки (категория/бренд)
+     * @return array<string, mixed>|null null, если товаров нет
+     */
+    private function buildListingItemList(\Closure $scope): ?array
+    {
+        $query = Product::query()
+            // Только товары активных категорий — как в каталоге (CatalogApiController::buildBaseQuery).
+            ->whereHas('category', fn ($q) => $q->where('is_active', true))
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(20);
+
+        $scope($query);
+
+        $products = $query->get(['id', 'name', 'slug']);
+
+        if ($products->isEmpty()) {
+            return null;
+        }
+
+        $items = [];
+        foreach ($products as $i => $product) {
+            $items[] = [
+                '@type' => 'ListItem',
+                'position' => $i + 1,
+                'url' => route('products.show', $product->slug),
+                'name' => $product->name,
+            ];
+        }
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'ItemList',
+            'itemListElement' => $items,
         ];
     }
 
