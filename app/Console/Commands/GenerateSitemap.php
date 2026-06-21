@@ -15,7 +15,8 @@ use Spatie\Sitemap\Tags\Url;
 
 class GenerateSitemap extends Command
 {
-    protected $signature = 'sitemap:generate';
+    protected $signature = 'sitemap:generate
+        {--path= : Путь к файлу sitemap (по умолчанию public/sitemap.xml)}';
 
     protected $description = 'Генерация sitemap.xml';
 
@@ -32,7 +33,8 @@ class GenerateSitemap extends Command
         $this->addPromotions($sitemap);
         $this->addBrandStories($sitemap);
 
-        $sitemap->writeToFile(public_path('sitemap.xml'));
+        $path = $this->option('path') ?: public_path('sitemap.xml');
+        $sitemap->writeToFile($path);
 
         $this->info('sitemap.xml сгенерирован: '.count($sitemap->getTags()).' URL');
 

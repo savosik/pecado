@@ -57,3 +57,6 @@ docker-compose.override.yml
 
 # Временные файлы и скрипты разработки
 /tmp/
+
+# Генерируется командой sitemap:generate (своё на каждом окружении)
+/public/sitemap.xml
