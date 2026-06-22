@@ -214,9 +214,6 @@ jobs:
     name: "⚡ Build Frontend"
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
-      actions: write   # удаление старых артефактов для освобождения квоты
 
     steps:
       - name: "📥 Checkout"
@@ -250,58 +247,18 @@ jobs:
       - name: "📚 Build MkDocs (Manual test plan)"
         run: mkdocs build -f mkdocs-testing.yml --strict
 
-      - name: "🧹 Prune old artifacts (free storage quota)"
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # Артефакты деплоя — внутрирановый handoff. Удаляем все артефакты
-          # прошлых ранов (кроме текущего) ДО загрузки своих — освобождает
-          # забитую квоту хранилища. Диагностика прав в логе.
-          set -uo pipefail
-          ids=$(gh api repos/${{ github.repository }}/actions/artifacts --paginate \
-            -q ".artifacts[] | select(.workflow_run.id != ${{ github.run_id }}) | .id") || true
-          n=$(printf '%s\n' "$ids" | grep -c . || true)
-          echo "Артефактов к удалению: ${n:-0}"
-          fail=0
-          for id in $ids; do
-            if gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id" >/dev/null 2>&1; then
-              echo "  удалён $id"
-            else
-              echo "  НЕ удалён $id (нет прав actions:write?)"; fail=1
-            fi
-          done
-          [ "$fail" = "1" ] && echo "⚠️ Часть удалений не прошла — проверь Settings → Actions → Workflow permissions = Read and write"
-          exit 0
-
-      - name: "📤 Upload build artifacts"
-        uses: actions/upload-artifact@v4
+      # Передаём сборку в deploy-job через КЭШ, а не artifact storage:
+      # у кэша отдельная квота (10 ГБ, LRU) без биллинг-блокировки upload.
+      - name: "💾 Cache build output for deploy"
+        uses: actions/cache/save@v4
         with:
-          name: frontend-build
-          path: public/build
-          retention-days: 1
-
-      - name: "📤 Upload AsyncAPI docs"
-        uses: actions/upload-artifact@v4
-        with:
-          name: asyncapi-docs
+          key: pecado-dev-build-${{ github.run_id }}
           path: |
+            public/build
             docs/asyncapi/html
             docs/asyncapi/pecado-erp-bundled.yaml
-          retention-days: 1
-
-      - name: "📤 Upload MkDocs site"
-        uses: actions/upload-artifact@v4
-        with:
-          name: mkdocs-site
-          path: docs-erp/site
-          retention-days: 1
-
-      - name: "📤 Upload MkDocs testing site"
-        uses: actions/upload-artifact@v4
-        with:
-          name: mkdocs-testing-site
-          path: docs-testing/site
-          retention-days: 1
+            docs-erp/site
+            docs-testing/site
 
   # ─────────────────────────────────────────────────────────────
   # JOB 3: Деплой на Dev-сервер
@@ -321,29 +278,17 @@ jobs:
       - name: "📥 Checkout"
         uses: actions/checkout@v4
 
-      - name: "📥 Download frontend build"
-        uses: actions/download-artifact@v4
+      - name: "💾 Restore build output from cache"
+        uses: actions/cache/restore@v4
         with:
-          name: frontend-build
-          path: public/build
-
-      - name: "📥 Download AsyncAPI docs"
-        uses: actions/download-artifact@v4
-        with:
-          name: asyncapi-docs
-          path: docs/asyncapi
-
-      - name: "📥 Download MkDocs site"
-        uses: actions/download-artifact@v4
-        with:
-          name: mkdocs-site
-          path: docs-erp/site
-
-      - name: "📥 Download MkDocs testing site"
-        uses: actions/download-artifact@v4
-        with:
-          name: mkdocs-testing-site
-          path: docs-testing/site
+          key: pecado-dev-build-${{ github.run_id }}
+          path: |
+            public/build
+            docs/asyncapi/html
+            docs/asyncapi/pecado-erp-bundled.yaml
+            docs-erp/site
+            docs-testing/site
+          fail-on-cache-miss: true
 
       - name: "🔧 Fix Docker file ownership"
         run: |
