@@ -274,7 +274,7 @@ export default function Index() {
                     <CatalogHeader
                         h1={seo.h1 || 'Каталог товаров'}
                         total={meta?.total ?? null}
-                        description={isCategoryListing ? pageIntro : (pageDescription || (!breadcrumbs ? seo.description : undefined))}
+                        description={isCategoryListing ? pageIntro : (isBrandPage ? undefined : (pageDescription || (!breadcrumbs ? seo.description : undefined)))}
                     />
 
                     <CatalogControls
@@ -346,8 +346,8 @@ export default function Index() {
                 </Box>
             </Flex>
 
-            {/* SEO-текст категории (полный) — посадочное место для текстов волн */}
-            {isCategoryListing && pageDescription && (
+            {/* SEO-текст категории/бренда (полный) — посадочное место для текстов волн */}
+            {(isCategoryListing || isBrandPage) && pageDescription && (
                 <Box px={{ base: '3', md: '0' }}>
                     <SeoTextBlock html={pageDescription} title={seo.h1} />
                 </Box>
