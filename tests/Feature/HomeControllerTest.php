@@ -25,8 +25,8 @@ class HomeControllerTest extends TestCase
 
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Home')
-            ->where('seo.title', 'Секс-шоп Pecado — интернет-магазин товаров для взрослых')
-            ->where('seo.h1', 'Секс-шоп Pecado')
+            ->where('seo.title', 'Pecado — оптовый поставщик товаров для взрослых')
+            ->where('seo.h1', 'Pecado — товары для взрослых оптом')
             // SEO-текст главной (из seo/texts/home.html) для нижнего блока.
             ->where('seoText', fn ($t) => is_string($t) && str_contains($t, 'оптов'))
         );
@@ -39,11 +39,11 @@ class HomeControllerTest extends TestCase
 
         // Ровно один <title> в серверном HTML.
         $this->assertSame(1, substr_count($html, '<title'));
-        // Заголовок из CSV присутствует.
-        $this->assertStringContainsString('<title inertia>Секс-шоп Pecado — интернет-магазин товаров для взрослых</title>', $html);
+        // B2B-заголовок главной (без позиционирования как «секс-шоп»).
+        $this->assertStringContainsString('<title inertia>Pecado — оптовый поставщик товаров для взрослых</title>', $html);
+        $this->assertStringNotContainsString('Секс-шоп', $html);
         // Бренд не задвоен.
         $this->assertStringNotContainsString('Pecado - Pecado', $html);
         $this->assertStringNotContainsString('Pecado | Pecado', $html);
-        $this->assertStringNotContainsString('купить в Pecado', $html);
     }
 }
