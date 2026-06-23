@@ -43,9 +43,17 @@ class ImportSeoTexts extends Command
         $notFoundSlugs = [];
         $tableRows = [];
 
+        // Спец-файлы, которые не привязаны к категории/бренду по слагу
+        // (текст главной читает HomeController напрямую из seo/texts/home.html).
+        $skip = ['home'];
+
         foreach ($files as $file) {
             $slug = pathinfo($file, PATHINFO_FILENAME);
             $html = trim((string) file_get_contents($file));
+
+            if (in_array($slug, $skip, true)) {
+                continue;
+            }
 
             if ($html === '') {
                 $tableRows[] = [$slug, 'пустой файл', ''];
