@@ -27,6 +27,8 @@ class HomeControllerTest extends TestCase
         $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Home')
             ->where('seo.title', 'Секс-шоп Pecado — интернет-магазин товаров для взрослых')
             ->where('seo.h1', 'Секс-шоп Pecado')
+            // SEO-текст главной (из seo/texts/home.html) для нижнего блока.
+            ->where('seoText', fn ($t) => is_string($t) && str_contains($t, 'секс шоп'))
         );
     }
 

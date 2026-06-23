@@ -59,7 +59,19 @@ class HomeController extends Controller
                     'logo' => url('/images/logo.svg'),
                 ],
             ],
+            'seoText' => $this->homeSeoText(),
         ]);
+    }
+
+    /**
+     * SEO-текст главной (нижний сворачиваемый блок).
+     * Хранится в seo/texts/home.html (как тексты категорий), деплоится через git.
+     */
+    private function homeSeoText(): ?string
+    {
+        $path = base_path('seo/texts/home.html');
+
+        return is_file($path) ? (trim((string) file_get_contents($path)) ?: null) : null;
     }
 
     /**

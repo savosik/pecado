@@ -7,6 +7,7 @@ import StoryCircles from '@/components/stories/StoryCircles';
 import ProductSelectionTabs from '@/components/product/ProductSelectionCarousel';
 import ProductGrid from '@/components/product/ProductGrid';
 import WelcomeDialog from '@/components/common/WelcomeDialog';
+import SeoTextBlock from '@/components/common/SeoTextBlock';
 
 export default function Home({
     banners = [],
@@ -15,6 +16,7 @@ export default function Home({
     newProducts = [],
     bestsellerProducts = [],
     seo,
+    seoText = null,
 }) {
     const { flash, auth } = usePage().props;
     const showWelcome = flash?.onboarding_completed;
@@ -59,6 +61,13 @@ export default function Home({
                         linkText="Смотреть все бестселлеры"
                         maxItems={5}
                     />
+                </Box>
+            )}
+
+            {/* SEO-текст главной (нижний сворачиваемый блок) */}
+            {seoText && (
+                <Box mt="8">
+                    <SeoTextBlock html={seoText} title={seo?.h1 || 'Секс-шоп Pecado'} />
                 </Box>
             )}
         </UserLayout>
