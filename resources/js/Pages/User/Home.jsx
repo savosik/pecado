@@ -67,7 +67,7 @@ export default function Home({
             {/* SEO-текст главной (нижний сворачиваемый блок) */}
             {seoText && (
                 <Box mt="8">
-                    <SeoTextBlock html={seoText} title={seo?.h1 || 'Секс-шоп Pecado'} />
+                    <SeoTextBlock html={seoText} title="Pecado — товары для взрослых" />
                 </Box>
             )}
         </UserLayout>
