@@ -473,6 +473,130 @@ class PublishOrderToErpTest extends TestCase
         });
     }
 
+    /**
+     * ⚠️ КОСТЫЛЬ: для предзаказа UUID склада «Тюмень Основной» (source)
+     * подменяется на target в массиве warehouse_uuids.
+     */
+    #[Test]
+    public function preorder_warehouse_uuid_override_replaces_tyumen_uuid(): void
+    {
+        Queue::fake();
+
+        config()->set('erp.preorder_warehouse_uuid_override', [
+            'enabled' => true,
+            'source_uuid' => 'tyumen-source-uuid',
+            'target_uuid' => 'tyumen-target-uuid',
+        ]);
+
+        $region = Region::factory()->create();
+        $tyumen = Warehouse::factory()->create(['external_id' => 'tyumen-source-uuid']);
+        $other = Warehouse::factory()->create(['external_id' => 'wh-preorder-other']);
+        $region->preorderWarehouses()->attach([
+            $tyumen->id => ['type' => 'preorder'],
+            $other->id => ['type' => 'preorder'],
+        ]);
+
+        $user = User::factory()->create(['erp_id' => 'preorder-override-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::PREORDER,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $uuids = $job->payload['warehouse_uuids'] ?? [];
+
+            return in_array('tyumen-target-uuid', $uuids, true)
+                && ! in_array('tyumen-source-uuid', $uuids, true)
+                && in_array('wh-preorder-other', $uuids, true);
+        });
+    }
+
+    /**
+     * ⚠️ КОСТЫЛЬ не затрагивает обычные заказы (type = order) —
+     * UUID Тюмени остаётся исходным.
+     */
+    #[Test]
+    public function order_type_is_not_affected_by_preorder_warehouse_override(): void
+    {
+        Queue::fake();
+
+        config()->set('erp.preorder_warehouse_uuid_override', [
+            'enabled' => true,
+            'source_uuid' => 'tyumen-source-uuid',
+            'target_uuid' => 'tyumen-target-uuid',
+        ]);
+
+        $region = Region::factory()->create();
+        $tyumen = Warehouse::factory()->create(['external_id' => 'tyumen-source-uuid']);
+        $region->primaryWarehouses()->attach($tyumen->id, ['type' => 'primary']);
+
+        $user = User::factory()->create(['erp_id' => 'order-no-override-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::ORDER,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $uuids = $job->payload['warehouse_uuids'] ?? [];
+
+            return in_array('tyumen-source-uuid', $uuids, true)
+                && ! in_array('tyumen-target-uuid', $uuids, true);
+        });
+    }
+
+    /**
+     * ⚠️ КОСТЫЛЬ откатывается флагом enabled=false — подмена не выполняется.
+     */
+    #[Test]
+    public function preorder_warehouse_uuid_override_disabled_keeps_source(): void
+    {
+        Queue::fake();
+
+        config()->set('erp.preorder_warehouse_uuid_override', [
+            'enabled' => false,
+            'source_uuid' => 'tyumen-source-uuid',
+            'target_uuid' => 'tyumen-target-uuid',
+        ]);
+
+        $region = Region::factory()->create();
+        $tyumen = Warehouse::factory()->create(['external_id' => 'tyumen-source-uuid']);
+        $region->preorderWarehouses()->attach($tyumen->id, ['type' => 'preorder']);
+
+        $user = User::factory()->create(['erp_id' => 'preorder-disabled-erp', 'region_id' => $region->id]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::PREORDER,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $uuids = $job->payload['warehouse_uuids'] ?? [];
+
+            return in_array('tyumen-source-uuid', $uuids, true)
+                && ! in_array('tyumen-target-uuid', $uuids, true);
+        });
+    }
+
     #[Test]
     public function order_created_payload_warehouse_uuids_empty_when_no_region(): void
     {

@@ -134,4 +134,38 @@ return [
     'product_models' => [
         'preserve_existing' => env('ERP_PRESERVE_PRODUCT_MODEL', true),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | ⚠️ ВРЕМЕННЫЙ КОСТЫЛЬ (HACK): подмена UUID склада в предзаказах
+    |--------------------------------------------------------------------------
+    |
+    | TODO(костыль): по требованию 1С при публикации заказов типа `preorder`
+    | в массиве `warehouse_uuids` исходящего сообщения UUID склада
+    | «Тюмень Основной» временно подменяется на фиксированный `target_uuid`.
+    |
+    | Подмена работает ТОЛЬКО для предзаказов (`type = preorder`).
+    | Обычные заказы (`type = order`) не затрагиваются.
+    |
+    | Как откатить:
+    |   - быстро, без деплоя:  PREORDER_WAREHOUSE_UUID_OVERRIDE_ENABLED=false
+    |   - полностью: удалить этот блок и вызов applyPreorderWarehouseOverride()
+    |     в App\Listeners\PublishOrderToErp::resolveWarehouseUuids().
+    |
+    | source_uuid — исходный external_id склада «Тюмень Основной» в warehouses
+    |               (совпадает с external_remains.tyumen_warehouse_uuid).
+    | target_uuid — временный UUID, который пишем вместо него.
+    |
+    */
+    'preorder_warehouse_uuid_override' => [
+        'enabled' => env('PREORDER_WAREHOUSE_UUID_OVERRIDE_ENABLED', true),
+        'source_uuid' => env(
+            'PREORDER_WAREHOUSE_UUID_OVERRIDE_SOURCE',
+            'f8083799-0838-11e0-a1ea-505054503030',
+        ),
+        'target_uuid' => env(
+            'PREORDER_WAREHOUSE_UUID_OVERRIDE_TARGET',
+            '3d0a3eb9-0c23-11ee-8ddc-ee348b24c7ce',
+        ),
+    ],
 ];
