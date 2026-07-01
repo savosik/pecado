@@ -40,6 +40,7 @@ class ProductQueryService
             ])->values()->toArray(),
             'is_new' => $product->is_new,
             'is_bestseller' => $product->is_bestseller,
+            'is_marked' => $product->is_marked,
             // Для кешированных данных primary_stock/preorder_stock = null → 0.
             // Это ожидаемо: enrichProductsWithStock() перезапишет значения после извлечения из кеша.
             'stock_quantity' => (int) ($product->primary_stock ?? 0),

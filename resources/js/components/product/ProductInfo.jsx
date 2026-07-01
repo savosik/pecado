@@ -24,6 +24,7 @@ export default function ProductInfo({
     category = null,
     isNew = false,
     isBestseller = false,
+    isMarked = false,
     inStock = true,
     isPreorder = false,
     stockQuantity = 0,
@@ -117,7 +118,7 @@ export default function ProductInfo({
         );
     };
 
-    const hasStatusBadges = isNew || isBestseller;
+    const hasStatusBadges = isNew || isBestseller || isMarked;
 
     return (
         <Box spaceY="4">
@@ -156,6 +157,11 @@ export default function ProductInfo({
                         {isBestseller && (
                             <Badge colorPalette="orange" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
                                 Хит
+                            </Badge>
+                        )}
+                        {isMarked && (
+                            <Badge colorPalette="yellow" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
+                                Маркированный товар
                             </Badge>
                         )}
                     </Flex>

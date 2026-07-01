@@ -203,6 +203,7 @@ export default function ProductListItem({ product, loading = false }) {
                         product.is_new && { key: 'new', label: 'Новинка', colorPalette: 'green' },
                         product.is_bestseller && { key: 'best', label: 'Хит', colorPalette: 'orange' },
                         hasSale && discountPct && { key: 'sale', label: `−${Math.round(discountPct)}%`, colorPalette: 'red' },
+                        product.is_marked && { key: 'marked', label: 'Маркировка', colorPalette: 'yellow' },
                     ].filter(Boolean)}
                 />
 

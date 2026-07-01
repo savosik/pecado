@@ -26,6 +26,7 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
         category: product.category,
         isNew: product.is_new,
         isBestseller: product.is_bestseller,
+        isMarked: product.is_marked,
         inStock: isInStock,
         isPreorder,
         stockQuantity: stockQty,

@@ -118,8 +118,8 @@ export default function SimilarProductItem({ product }) {
                             </Badge>
                         )}
                         {product.is_marked && (
-                            <Badge colorPalette="gray" fontSize="2xs" fontWeight="700" borderRadius="md" px="1">
-                                Марк
+                            <Badge colorPalette="yellow" fontSize="2xs" fontWeight="700" borderRadius="md" px="1">
+                                Маркировка
                             </Badge>
                         )}
                     </Flex>

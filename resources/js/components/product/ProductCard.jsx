@@ -118,6 +118,11 @@ function ProductCard({ product, loading = false }) {
                             −{Math.round(discountPct)}%
                         </Badge>
                     )}
+                    {product.is_marked && (
+                        <Badge colorPalette="yellow" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
+                            Маркировка
+                        </Badge>
+                    )}
                 </Box>
             </Box>
 
