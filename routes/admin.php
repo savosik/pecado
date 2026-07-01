@@ -557,6 +557,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Подборки товаров
     Route::middleware('permission:product-selections.view')->group(function () {
         Route::get('/product-selections', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'index'])->name('product-selections.index');
+        Route::get('/product-selections/search', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'search'])->name('product-selections.search');
         Route::get('/product-selections/{product_selection}', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'show'])->name('product-selections.show')->whereNumber('product_selection');
     });
     Route::middleware('permission:product-selections.create')->group(function () {

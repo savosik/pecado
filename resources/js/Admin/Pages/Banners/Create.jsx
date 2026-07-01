@@ -41,6 +41,7 @@ export default function Create({ regions = [] }) {
         { value: 'App\\Models\\Category', label: 'Категория' },
         { value: 'App\\Models\\News', label: 'Новость' },
         { value: 'App\\Models\\Promotion', label: 'Акция' },
+        { value: 'App\\Models\\ProductSelection', label: 'Подборка' },
     ];
 
     const getEntitySearchUrl = (type) => {
@@ -51,6 +52,7 @@ export default function Create({ regions = [] }) {
             'App\\Models\\Category': 'admin.categories.search',
             'App\\Models\\News': 'admin.news.search',
             'App\\Models\\Promotion': 'admin.promotions.search',
+            'App\\Models\\ProductSelection': 'admin.product-selections.search',
         };
         const routeName = routeMap[type];
         return routeName ? route(routeName) : '';

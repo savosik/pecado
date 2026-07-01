@@ -340,4 +340,26 @@ class ProductSelectionController extends AdminController
 
         return redirect()->back()->withErrors(['error' => 'Медиафайл не найден']);
     }
+
+    /**
+     * Поиск подборок для селектора сущностей (например, при выборе ссылки баннера).
+     */
+    public function search(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $query = ProductSelection::query();
+
+        if ($search = $request->input('search')) {
+            $query->where('name', 'like', "%{$search}%");
+        }
+
+        $selections = $query->select('id', 'name')
+            ->limit(20)
+            ->get()
+            ->map(fn ($selection) => [
+                'id' => $selection->id,
+                'name' => $selection->name,
+            ]);
+
+        return response()->json($selections);
+    }
 }

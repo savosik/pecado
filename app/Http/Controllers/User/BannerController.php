@@ -77,6 +77,7 @@ class BannerController extends Controller
             \App\Models\News::class => "/news/{$slug}",
             \App\Models\Article::class => "/articles/{$slug}",
             \App\Models\Page::class => "/pages/{$slug}",
+            \App\Models\ProductSelection::class => "/collections/{$slug}",
             default => null,
         };
     }
