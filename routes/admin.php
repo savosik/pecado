@@ -41,7 +41,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:products.view')->group(function () {
         Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
         Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-        Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
+        Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show')->whereNumber('product');
     });
     Route::middleware('permission:products.create')->group(function () {
         Route::get('/products/create', [ProductController::class, 'create'])->name('products.create');
@@ -61,7 +61,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::get('/categories/attributes', [CategoryController::class, 'attributes'])->name('categories.attributes');
         Route::get('/categories/search', [CategoryController::class, 'search'])->name('categories.search');
         Route::get('/categories', [CategoryController::class, 'index'])->name('categories.index');
-        Route::get('/categories/{category}', [CategoryController::class, 'show'])->name('categories.show');
+        Route::get('/categories/{category}', [CategoryController::class, 'show'])->name('categories.show')->whereNumber('category');
     });
     Route::middleware('permission:categories.create')->group(function () {
         Route::get('/categories/create', [CategoryController::class, 'create'])->name('categories.create');
@@ -79,7 +79,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:brands.view')->group(function () {
         Route::get('/brands/search', [\App\Http\Controllers\Admin\BrandController::class, 'search'])->name('brands.search');
         Route::get('/brands', [\App\Http\Controllers\Admin\BrandController::class, 'index'])->name('brands.index');
-        Route::get('/brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'show'])->name('brands.show');
+        Route::get('/brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'show'])->name('brands.show')->whereNumber('brand');
     });
     Route::middleware('permission:brands.create')->group(function () {
         Route::get('/brands/create', [\App\Http\Controllers\Admin\BrandController::class, 'create'])->name('brands.create');
@@ -98,7 +98,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:product-models.view')->group(function () {
         Route::get('/product-models/search', [\App\Http\Controllers\Admin\ProductModelController::class, 'search'])->name('product-models.search');
         Route::get('/product-models', [\App\Http\Controllers\Admin\ProductModelController::class, 'index'])->name('product-models.index');
-        Route::get('/product-models/{product_model}', [\App\Http\Controllers\Admin\ProductModelController::class, 'show'])->name('product-models.show');
+        Route::get('/product-models/{product_model}', [\App\Http\Controllers\Admin\ProductModelController::class, 'show'])->name('product-models.show')->whereNumber('product_model');
     });
     Route::middleware('permission:product-models.create')->group(function () {
         Route::get('/product-models/create', [\App\Http\Controllers\Admin\ProductModelController::class, 'create'])->name('product-models.create');
@@ -113,7 +113,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Атрибуты
     Route::middleware('permission:attributes.view')->group(function () {
         Route::get('/attributes', [\App\Http\Controllers\Admin\AttributeController::class, 'index'])->name('attributes.index');
-        Route::get('/attributes/{attribute}', [\App\Http\Controllers\Admin\AttributeController::class, 'show'])->name('attributes.show');
+        Route::get('/attributes/{attribute}', [\App\Http\Controllers\Admin\AttributeController::class, 'show'])->name('attributes.show')->whereNumber('attribute');
     });
     Route::middleware('permission:attributes.create')->group(function () {
         Route::get('/attributes/create', [\App\Http\Controllers\Admin\AttributeController::class, 'create'])->name('attributes.create');
@@ -129,7 +129,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:attribute-groups.view')->group(function () {
         Route::get('/attribute-groups/search', [\App\Http\Controllers\Admin\AttributeGroupController::class, 'search'])->name('attribute-groups.search');
         Route::get('/attribute-groups', [\App\Http\Controllers\Admin\AttributeGroupController::class, 'index'])->name('attribute-groups.index');
-        Route::get('/attribute-groups/{attribute_group}', [\App\Http\Controllers\Admin\AttributeGroupController::class, 'show'])->name('attribute-groups.show');
+        Route::get('/attribute-groups/{attribute_group}', [\App\Http\Controllers\Admin\AttributeGroupController::class, 'show'])->name('attribute-groups.show')->whereNumber('attribute_group');
     });
     Route::middleware('permission:attribute-groups.create')->group(function () {
         Route::get('/attribute-groups/create', [\App\Http\Controllers\Admin\AttributeGroupController::class, 'create'])->name('attribute-groups.create');
@@ -144,7 +144,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Размерные сетки
     Route::middleware('permission:size-charts.view')->group(function () {
         Route::get('/size-charts', [\App\Http\Controllers\Admin\SizeChartController::class, 'index'])->name('size-charts.index');
-        Route::get('/size-charts/{size_chart}', [\App\Http\Controllers\Admin\SizeChartController::class, 'show'])->name('size-charts.show');
+        Route::get('/size-charts/{size_chart}', [\App\Http\Controllers\Admin\SizeChartController::class, 'show'])->name('size-charts.show')->whereNumber('size_chart');
     });
     Route::middleware('permission:size-charts.create')->group(function () {
         Route::get('/size-charts/create', [\App\Http\Controllers\Admin\SizeChartController::class, 'create'])->name('size-charts.create');
@@ -159,7 +159,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Штрихкоды
     Route::middleware('permission:product-barcodes.view')->group(function () {
         Route::get('/product-barcodes', [\App\Http\Controllers\Admin\ProductBarcodeController::class, 'index'])->name('product-barcodes.index');
-        Route::get('/product-barcodes/{product_barcode}', [\App\Http\Controllers\Admin\ProductBarcodeController::class, 'show'])->name('product-barcodes.show');
+        Route::get('/product-barcodes/{product_barcode}', [\App\Http\Controllers\Admin\ProductBarcodeController::class, 'show'])->name('product-barcodes.show')->whereNumber('product_barcode');
     });
     Route::middleware('permission:product-barcodes.create')->group(function () {
         Route::get('/product-barcodes/create', [\App\Http\Controllers\Admin\ProductBarcodeController::class, 'create'])->name('product-barcodes.create');
@@ -175,7 +175,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:certificates.view')->group(function () {
         Route::get('/certificates/search', [\App\Http\Controllers\Admin\CertificateController::class, 'search'])->name('certificates.search');
         Route::get('/certificates', [\App\Http\Controllers\Admin\CertificateController::class, 'index'])->name('certificates.index');
-        Route::get('/certificates/{certificate}', [\App\Http\Controllers\Admin\CertificateController::class, 'show'])->name('certificates.show');
+        Route::get('/certificates/{certificate}', [\App\Http\Controllers\Admin\CertificateController::class, 'show'])->name('certificates.show')->whereNumber('certificate');
     });
     Route::middleware('permission:certificates.create')->group(function () {
         Route::get('/certificates/create', [\App\Http\Controllers\Admin\CertificateController::class, 'create'])->name('certificates.create');
@@ -191,7 +191,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:product-exports.view')->group(function () {
         Route::get('/product-exports', [\App\Http\Controllers\Admin\ProductExportController::class, 'index'])->name('product-exports.index');
         Route::get('/product-exports/filter-options', [\App\Http\Controllers\Admin\ProductExportController::class, 'filterOptions'])->name('product-exports.filter-options');
-        Route::get('/product-exports/{product_export}', [\App\Http\Controllers\Admin\ProductExportController::class, 'show'])->name('product-exports.show');
+        Route::get('/product-exports/{product_export}', [\App\Http\Controllers\Admin\ProductExportController::class, 'show'])->name('product-exports.show')->whereNumber('product_export');
     });
     Route::middleware('permission:product-exports.create')->group(function () {
         Route::get('/product-exports/create', [\App\Http\Controllers\Admin\ProductExportController::class, 'create'])->name('product-exports.create');
@@ -210,7 +210,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:tags.view')->group(function () {
         Route::get('/tags/search', [\App\Http\Controllers\Admin\TagController::class, 'search'])->name('tags.search');
         Route::get('/tags', [\App\Http\Controllers\Admin\TagController::class, 'index'])->name('tags.index');
-        Route::get('/tags/{tag}', [\App\Http\Controllers\Admin\TagController::class, 'show'])->name('tags.show');
+        Route::get('/tags/{tag}', [\App\Http\Controllers\Admin\TagController::class, 'show'])->name('tags.show')->whereNumber('tag');
     });
     Route::middleware('permission:tags.create')->group(function () {
         Route::get('/tags/create', [\App\Http\Controllers\Admin\TagController::class, 'create'])->name('tags.create');
@@ -237,7 +237,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:pages.view')->group(function () {
         Route::get('/pages/search', [\App\Http\Controllers\Admin\PageController::class, 'search'])->name('pages.search');
         Route::get('/pages', [\App\Http\Controllers\Admin\PageController::class, 'index'])->name('pages.index');
-        Route::get('/pages/{page}', [\App\Http\Controllers\Admin\PageController::class, 'show'])->name('pages.show');
+        Route::get('/pages/{page}', [\App\Http\Controllers\Admin\PageController::class, 'show'])->name('pages.show')->whereNumber('page');
     });
     Route::middleware('permission:pages.create')->group(function () {
         Route::get('/pages/create', [\App\Http\Controllers\Admin\PageController::class, 'create'])->name('pages.create');
@@ -253,7 +253,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:banners.view')->group(function () {
         Route::get('/banners/search', [\App\Http\Controllers\Admin\BannerController::class, 'search'])->name('banners.search');
         Route::get('/banners', [\App\Http\Controllers\Admin\BannerController::class, 'index'])->name('banners.index');
-        Route::get('/banners/{banner}', [\App\Http\Controllers\Admin\BannerController::class, 'show'])->name('banners.show');
+        Route::get('/banners/{banner}', [\App\Http\Controllers\Admin\BannerController::class, 'show'])->name('banners.show')->whereNumber('banner');
     });
     Route::middleware('permission:banners.create')->group(function () {
         Route::get('/banners/create', [\App\Http\Controllers\Admin\BannerController::class, 'create'])->name('banners.create');
@@ -273,7 +273,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:stories.view')->group(function () {
         Route::get('/stories/search', [\App\Http\Controllers\Admin\StoryController::class, 'search'])->name('stories.search');
         Route::get('/stories', [\App\Http\Controllers\Admin\StoryController::class, 'index'])->name('stories.index');
-        Route::get('/stories/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'show'])->name('stories.show');
+        Route::get('/stories/{story}', [\App\Http\Controllers\Admin\StoryController::class, 'show'])->name('stories.show')->whereNumber('story');
     });
     Route::middleware('permission:stories.create')->group(function () {
         Route::get('/stories/create', [\App\Http\Controllers\Admin\StoryController::class, 'create'])->name('stories.create');
@@ -294,7 +294,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:articles.view')->group(function () {
         Route::get('/articles/search', [\App\Http\Controllers\Admin\ArticleController::class, 'search'])->name('articles.search');
         Route::get('/articles', [\App\Http\Controllers\Admin\ArticleController::class, 'index'])->name('articles.index');
-        Route::get('/articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'show'])->name('articles.show');
+        Route::get('/articles/{article}', [\App\Http\Controllers\Admin\ArticleController::class, 'show'])->name('articles.show')->whereNumber('article');
     });
     Route::middleware('permission:articles.create')->group(function () {
         Route::get('/articles/create', [\App\Http\Controllers\Admin\ArticleController::class, 'create'])->name('articles.create');
@@ -310,7 +310,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:brand-stories.view')->group(function () {
         Route::get('/brand-stories/search', [\App\Http\Controllers\Admin\BrandStoryController::class, 'search'])->name('brand-stories.search');
         Route::get('/brand-stories', [\App\Http\Controllers\Admin\BrandStoryController::class, 'index'])->name('brand-stories.index');
-        Route::get('/brand-stories/{brand_story}', [\App\Http\Controllers\Admin\BrandStoryController::class, 'show'])->name('brand-stories.show');
+        Route::get('/brand-stories/{brand_story}', [\App\Http\Controllers\Admin\BrandStoryController::class, 'show'])->name('brand-stories.show')->whereNumber('brand_story');
     });
     Route::middleware('permission:brand-stories.create')->group(function () {
         Route::get('/brand-stories/create', [\App\Http\Controllers\Admin\BrandStoryController::class, 'create'])->name('brand-stories.create');
@@ -326,7 +326,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:news.view')->group(function () {
         Route::get('/news/search', [\App\Http\Controllers\Admin\NewsController::class, 'search'])->name('news.search');
         Route::get('/news', [\App\Http\Controllers\Admin\NewsController::class, 'index'])->name('news.index');
-        Route::get('/news/{news}', [\App\Http\Controllers\Admin\NewsController::class, 'show'])->name('news.show');
+        Route::get('/news/{news}', [\App\Http\Controllers\Admin\NewsController::class, 'show'])->name('news.show')->whereNumber('news');
     });
     Route::middleware('permission:news.create')->group(function () {
         Route::get('/news/create', [\App\Http\Controllers\Admin\NewsController::class, 'create'])->name('news.create');
@@ -341,7 +341,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Меню
     Route::middleware('permission:menu-items.view')->group(function () {
         Route::get('/menu-items', [\App\Http\Controllers\Admin\MenuItemController::class, 'index'])->name('menu-items.index');
-        Route::get('/menu-items/{menu_item}', [\App\Http\Controllers\Admin\MenuItemController::class, 'show'])->name('menu-items.show');
+        Route::get('/menu-items/{menu_item}', [\App\Http\Controllers\Admin\MenuItemController::class, 'show'])->name('menu-items.show')->whereNumber('menu_item');
     });
     Route::middleware('permission:menu-items.create')->group(function () {
         Route::get('/menu-items/create', [\App\Http\Controllers\Admin\MenuItemController::class, 'create'])->name('menu-items.create');
@@ -357,7 +357,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:faqs.view')->group(function () {
         Route::get('/faqs/search', [\App\Http\Controllers\Admin\FaqController::class, 'search'])->name('faqs.search');
         Route::get('/faqs', [\App\Http\Controllers\Admin\FaqController::class, 'index'])->name('faqs.index');
-        Route::get('/faqs/{faq}', [\App\Http\Controllers\Admin\FaqController::class, 'show'])->name('faqs.show');
+        Route::get('/faqs/{faq}', [\App\Http\Controllers\Admin\FaqController::class, 'show'])->name('faqs.show')->whereNumber('faq');
     });
     Route::middleware('permission:faqs.create')->group(function () {
         Route::get('/faqs/create', [\App\Http\Controllers\Admin\FaqController::class, 'create'])->name('faqs.create');
@@ -372,7 +372,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Вопросы пользователей (FAQ)
     Route::middleware('permission:user-questions.view')->group(function () {
         Route::get('/user-questions', [\App\Http\Controllers\Admin\UserQuestionController::class, 'index'])->name('user-questions.index');
-        Route::get('/user-questions/{question}', [\App\Http\Controllers\Admin\UserQuestionController::class, 'show'])->name('user-questions.show');
+        Route::get('/user-questions/{question}', [\App\Http\Controllers\Admin\UserQuestionController::class, 'show'])->name('user-questions.show')->whereNumber('question');
         Route::get('/user-questions/{question}/attachment', [\App\Http\Controllers\Admin\UserQuestionController::class, 'downloadAttachment'])->name('user-questions.attachment');
     });
     Route::middleware('permission:user-questions.edit')->group(function () {
@@ -388,7 +388,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:warehouses.view')->group(function () {
         Route::get('/warehouses/search', [\App\Http\Controllers\Admin\WarehouseController::class, 'search'])->name('warehouses.search');
         Route::get('/warehouses', [\App\Http\Controllers\Admin\WarehouseController::class, 'index'])->name('warehouses.index');
-        Route::get('/warehouses/{warehouse}', [\App\Http\Controllers\Admin\WarehouseController::class, 'show'])->name('warehouses.show');
+        Route::get('/warehouses/{warehouse}', [\App\Http\Controllers\Admin\WarehouseController::class, 'show'])->name('warehouses.show')->whereNumber('warehouse');
     });
     Route::middleware('permission:warehouses.create')->group(function () {
         Route::get('/warehouses/create', [\App\Http\Controllers\Admin\WarehouseController::class, 'create'])->name('warehouses.create');
@@ -403,7 +403,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Регионы
     Route::middleware('permission:regions.view')->group(function () {
         Route::get('/regions', [\App\Http\Controllers\Admin\RegionController::class, 'index'])->name('regions.index');
-        Route::get('/regions/{region}', [\App\Http\Controllers\Admin\RegionController::class, 'show'])->name('regions.show');
+        Route::get('/regions/{region}', [\App\Http\Controllers\Admin\RegionController::class, 'show'])->name('regions.show')->whereNumber('region');
     });
     Route::middleware('permission:regions.create')->group(function () {
         Route::get('/regions/create', [\App\Http\Controllers\Admin\RegionController::class, 'create'])->name('regions.create');
@@ -422,7 +422,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Заказы
     Route::middleware('permission:orders.view')->group(function () {
         Route::get('/orders', [\App\Http\Controllers\Admin\OrderController::class, 'index'])->name('orders.index');
-        Route::get('/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show');
+        Route::get('/orders/{order}', [\App\Http\Controllers\Admin\OrderController::class, 'show'])->name('orders.show')->whereNumber('order');
     });
     Route::middleware('permission:orders.create')->group(function () {
         Route::get('/orders/create', [\App\Http\Controllers\Admin\OrderController::class, 'create'])->name('orders.create');
@@ -442,7 +442,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Корзины
     Route::middleware('permission:carts.view')->group(function () {
         Route::get('/carts', [\App\Http\Controllers\Admin\CartController::class, 'index'])->name('carts.index');
-        Route::get('/carts/{cart}', [\App\Http\Controllers\Admin\CartController::class, 'show'])->name('carts.show');
+        Route::get('/carts/{cart}', [\App\Http\Controllers\Admin\CartController::class, 'show'])->name('carts.show')->whereNumber('cart');
     });
     Route::middleware('permission:carts.create')->group(function () {
         Route::get('/carts/create', [\App\Http\Controllers\Admin\CartController::class, 'create'])->name('carts.create');
@@ -473,7 +473,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::get('/returns/shipment-items', [\App\Http\Controllers\Admin\ReturnController::class, 'getShipmentItems'])->name('returns.shipment-items');
     });
     Route::middleware('permission:returns.view')->group(function () {
-        Route::get('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'show'])->name('returns.show');
+        Route::get('/returns/{return}', [\App\Http\Controllers\Admin\ReturnController::class, 'show'])->name('returns.show')->whereNumber('return');
     });
     Route::middleware('permission:returns.edit')->group(function () {
         Route::post('/returns/bulk-status', [\App\Http\Controllers\Admin\ReturnController::class, 'bulkUpdateStatus'])->name('returns.bulk-status');
@@ -488,7 +488,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Реализации
     Route::middleware('permission:shipments.view')->group(function () {
         Route::get('/shipments', [\App\Http\Controllers\Admin\ShipmentController::class, 'index'])->name('shipments.index');
-        Route::get('/shipments/{shipment}', [\App\Http\Controllers\Admin\ShipmentController::class, 'show'])->name('shipments.show');
+        Route::get('/shipments/{shipment}', [\App\Http\Controllers\Admin\ShipmentController::class, 'show'])->name('shipments.show')->whereNumber('shipment');
     });
     Route::delete('/shipments/{shipment}', [\App\Http\Controllers\Admin\ShipmentController::class, 'destroy'])->name('shipments.destroy')->middleware('permission:shipments.delete');
     Route::delete('/shipments/{id}/force-delete', [\App\Http\Controllers\Admin\ShipmentController::class, 'forceDestroy'])->name('shipments.force-delete')->middleware('permission:shipments.delete');
@@ -497,7 +497,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:favorites.view')->group(function () {
         Route::get('/favorites', [\App\Http\Controllers\Admin\FavoriteController::class, 'index'])->name('favorites.index');
         Route::get('/favorites/search-users', [\App\Http\Controllers\Admin\FavoriteController::class, 'searchUsers'])->name('favorites.search-users');
-        Route::get('/favorites/{favorite}', [\App\Http\Controllers\Admin\FavoriteController::class, 'show'])->name('favorites.show');
+        Route::get('/favorites/{favorite}', [\App\Http\Controllers\Admin\FavoriteController::class, 'show'])->name('favorites.show')->whereNumber('favorite');
     });
     Route::middleware('permission:favorites.create')->group(function () {
         Route::get('/favorites/create', [\App\Http\Controllers\Admin\FavoriteController::class, 'create'])->name('favorites.create');
@@ -516,7 +516,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:wishlist.view')->group(function () {
         Route::get('/wishlist', [\App\Http\Controllers\Admin\WishlistController::class, 'index'])->name('wishlist.index');
         Route::get('/wishlist/search-users', [\App\Http\Controllers\Admin\WishlistController::class, 'searchUsers'])->name('wishlist.search-users');
-        Route::get('/wishlist/{wishlist}', [\App\Http\Controllers\Admin\WishlistController::class, 'show'])->name('wishlist.show');
+        Route::get('/wishlist/{wishlist}', [\App\Http\Controllers\Admin\WishlistController::class, 'show'])->name('wishlist.show')->whereNumber('wishlist');
     });
     Route::middleware('permission:wishlist.create')->group(function () {
         Route::get('/wishlist/create', [\App\Http\Controllers\Admin\WishlistController::class, 'create'])->name('wishlist.create');
@@ -539,7 +539,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:promotions.view')->group(function () {
         Route::get('/promotions/search', [\App\Http\Controllers\Admin\PromotionController::class, 'search'])->name('promotions.search');
         Route::get('/promotions', [\App\Http\Controllers\Admin\PromotionController::class, 'index'])->name('promotions.index');
-        Route::get('/promotions/{promotion}', [\App\Http\Controllers\Admin\PromotionController::class, 'show'])->name('promotions.show');
+        Route::get('/promotions/{promotion}', [\App\Http\Controllers\Admin\PromotionController::class, 'show'])->name('promotions.show')->whereNumber('promotion');
     });
     Route::middleware('permission:promotions.create')->group(function () {
         Route::get('/promotions/create', [\App\Http\Controllers\Admin\PromotionController::class, 'create'])->name('promotions.create');
@@ -557,7 +557,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Подборки товаров
     Route::middleware('permission:product-selections.view')->group(function () {
         Route::get('/product-selections', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'index'])->name('product-selections.index');
-        Route::get('/product-selections/{product_selection}', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'show'])->name('product-selections.show');
+        Route::get('/product-selections/{product_selection}', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'show'])->name('product-selections.show')->whereNumber('product_selection');
     });
     Route::middleware('permission:product-selections.create')->group(function () {
         Route::get('/product-selections/create', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'create'])->name('product-selections.create');
@@ -579,7 +579,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:users.view')->group(function () {
         Route::get('/users/search', [\App\Http\Controllers\Admin\UserController::class, 'search'])->name('users.search');
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index'])->name('users.index');
-        Route::get('/users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'show'])->name('users.show');
+        Route::get('/users/{user}', [\App\Http\Controllers\Admin\UserController::class, 'show'])->name('users.show')->whereNumber('user');
     });
     Route::middleware('permission:users.create')->group(function () {
         Route::get('/users/create', [\App\Http\Controllers\Admin\UserController::class, 'create'])->name('users.create');
@@ -595,7 +595,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:companies.view')->group(function () {
         Route::get('/companies/search', [\App\Http\Controllers\Admin\CompanyController::class, 'search'])->name('companies.search');
         Route::get('/companies', [\App\Http\Controllers\Admin\CompanyController::class, 'index'])->name('companies.index');
-        Route::get('/companies/{company}', [\App\Http\Controllers\Admin\CompanyController::class, 'show'])->name('companies.show');
+        Route::get('/companies/{company}', [\App\Http\Controllers\Admin\CompanyController::class, 'show'])->name('companies.show')->whereNumber('company');
     });
     Route::middleware('permission:companies.create')->group(function () {
         Route::get('/companies/create', [\App\Http\Controllers\Admin\CompanyController::class, 'create'])->name('companies.create');
@@ -612,7 +612,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:company-bank-accounts.view')->group(function () {
         Route::get('/company-bank-accounts/search', [\App\Http\Controllers\Admin\CompanyBankAccountController::class, 'search'])->name('company-bank-accounts.search');
         Route::get('/company-bank-accounts', [\App\Http\Controllers\Admin\CompanyBankAccountController::class, 'index'])->name('company-bank-accounts.index');
-        Route::get('/company-bank-accounts/{company_bank_account}', [\App\Http\Controllers\Admin\CompanyBankAccountController::class, 'show'])->name('company-bank-accounts.show');
+        Route::get('/company-bank-accounts/{company_bank_account}', [\App\Http\Controllers\Admin\CompanyBankAccountController::class, 'show'])->name('company-bank-accounts.show')->whereNumber('company_bank_account');
     });
     Route::middleware('permission:company-bank-accounts.create')->group(function () {
         Route::get('/company-bank-accounts/create', [\App\Http\Controllers\Admin\CompanyBankAccountController::class, 'create'])->name('company-bank-accounts.create');
@@ -628,7 +628,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:delivery-addresses.view')->group(function () {
         Route::get('/delivery-addresses/search', [\App\Http\Controllers\Admin\DeliveryAddressController::class, 'search'])->name('delivery-addresses.search');
         Route::get('/delivery-addresses', [\App\Http\Controllers\Admin\DeliveryAddressController::class, 'index'])->name('delivery-addresses.index');
-        Route::get('/delivery-addresses/{delivery_address}', [\App\Http\Controllers\Admin\DeliveryAddressController::class, 'show'])->name('delivery-addresses.show');
+        Route::get('/delivery-addresses/{delivery_address}', [\App\Http\Controllers\Admin\DeliveryAddressController::class, 'show'])->name('delivery-addresses.show')->whereNumber('delivery_address');
     });
     Route::middleware('permission:delivery-addresses.create')->group(function () {
         Route::get('/delivery-addresses/create', [\App\Http\Controllers\Admin\DeliveryAddressController::class, 'create'])->name('delivery-addresses.create');
@@ -643,7 +643,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Анкеты
     Route::middleware('permission:user-questionnaires.view')->group(function () {
         Route::get('/user-questionnaires', [\App\Http\Controllers\Admin\UserQuestionnaireController::class, 'index'])->name('user-questionnaires.index');
-        Route::get('/user-questionnaires/{user_questionnaire}', [\App\Http\Controllers\Admin\UserQuestionnaireController::class, 'show'])->name('user-questionnaires.show');
+        Route::get('/user-questionnaires/{user_questionnaire}', [\App\Http\Controllers\Admin\UserQuestionnaireController::class, 'show'])->name('user-questionnaires.show')->whereNumber('user_questionnaire');
     });
     Route::middleware('permission:user-questionnaires.create')->group(function () {
         Route::get('/user-questionnaires/create', [\App\Http\Controllers\Admin\UserQuestionnaireController::class, 'create'])->name('user-questionnaires.create');
@@ -658,7 +658,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Статусы клиентов
     Route::middleware('permission:client-statuses.view')->group(function () {
         Route::get('/client-statuses', [\App\Http\Controllers\Admin\ClientStatusController::class, 'index'])->name('client-statuses.index');
-        Route::get('/client-statuses/{client_status}', [\App\Http\Controllers\Admin\ClientStatusController::class, 'show'])->name('client-statuses.show');
+        Route::get('/client-statuses/{client_status}', [\App\Http\Controllers\Admin\ClientStatusController::class, 'show'])->name('client-statuses.show')->whereNumber('client_status');
     });
     Route::middleware('permission:client-statuses.create')->group(function () {
         Route::get('/client-statuses/create', [\App\Http\Controllers\Admin\ClientStatusController::class, 'create'])->name('client-statuses.create');
@@ -676,7 +676,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Персональные менеджеры
     Route::middleware('permission:personal-managers.view')->group(function () {
         Route::get('/personal-managers', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'index'])->name('personal-managers.index');
-        Route::get('/personal-managers/{personal_manager}', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'show'])->name('personal-managers.show');
+        Route::get('/personal-managers/{personal_manager}', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'show'])->name('personal-managers.show')->whereNumber('personal_manager');
     });
     Route::middleware('permission:personal-managers.create')->group(function () {
         Route::get('/personal-managers/create', [\App\Http\Controllers\Admin\PersonalManagerController::class, 'create'])->name('personal-managers.create');
@@ -699,7 +699,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:currencies.view')->group(function () {
         Route::get('/currencies/search', [\App\Http\Controllers\Admin\CurrencyController::class, 'search'])->name('currencies.search');
         Route::get('/currencies', [\App\Http\Controllers\Admin\CurrencyController::class, 'index'])->name('currencies.index');
-        Route::get('/currencies/{currency}', [\App\Http\Controllers\Admin\CurrencyController::class, 'show'])->name('currencies.show');
+        Route::get('/currencies/{currency}', [\App\Http\Controllers\Admin\CurrencyController::class, 'show'])->name('currencies.show')->whereNumber('currency');
     });
     Route::middleware('permission:currencies.create')->group(function () {
         Route::get('/currencies/create', [\App\Http\Controllers\Admin\CurrencyController::class, 'create'])->name('currencies.create');
@@ -716,7 +716,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:contractor-balances.view')->group(function () {
         Route::get('/contractor-balances/search', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'search'])->name('contractor-balances.search');
         Route::get('/contractor-balances', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'index'])->name('contractor-balances.index');
-        Route::get('/contractor-balances/{contractor_balance}', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'show'])->name('contractor-balances.show');
+        Route::get('/contractor-balances/{contractor_balance}', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'show'])->name('contractor-balances.show')->whereNumber('contractor_balance');
     });
     Route::middleware('permission:contractor-balances.create')->group(function () {
         Route::get('/contractor-balances/create', [\App\Http\Controllers\Admin\ContractorBalanceController::class, 'create'])->name('contractor-balances.create');
@@ -774,7 +774,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     // Роли
     Route::middleware('permission:roles.view')->group(function () {
         Route::get('/roles', [\App\Http\Controllers\Admin\RoleController::class, 'index'])->name('roles.index');
-        Route::get('/roles/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'show'])->name('roles.show');
+        Route::get('/roles/{role}', [\App\Http\Controllers\Admin\RoleController::class, 'show'])->name('roles.show')->whereNumber('role');
     });
     Route::middleware('permission:roles.create')->group(function () {
         Route::get('/roles/create', [\App\Http\Controllers\Admin\RoleController::class, 'create'])->name('roles.create');
