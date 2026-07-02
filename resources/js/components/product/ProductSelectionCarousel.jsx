@@ -135,10 +135,9 @@ export default function ProductSelectionTabs({ selections = [] }) {
                                 />
                             </Box>
                         )}
-                        {/* Десктопный баннер (на больших экранах) */}
+                        {/* Десктопный баннер (на больших экранах) — в естественных пропорциях фото */}
                         {activeSelection.desktop_image && (
                             <Box
-                                css={{ aspectRatio: '8 / 3' }}
                                 display={{ base: activeSelection.mobile_image ? 'none' : 'block', md: 'block' }}
                                 overflow="hidden"
                             >
@@ -146,8 +145,8 @@ export default function ProductSelectionTabs({ selections = [] }) {
                                     src={activeSelection.desktop_image}
                                     alt={activeSelection.name}
                                     w="100%"
-                                    h="100%"
-                                    objectFit="cover"
+                                    h="auto"
+                                    display="block"
                                     loading="lazy"
                                 />
                             </Box>
@@ -155,7 +154,6 @@ export default function ProductSelectionTabs({ selections = [] }) {
                         {/* Fallback: если есть только мобильный, показываем его и на десктопе */}
                         {!activeSelection.desktop_image && activeSelection.mobile_image && (
                             <Box
-                                css={{ aspectRatio: '8 / 3' }}
                                 display={{ base: 'none', md: 'block' }}
                                 overflow="hidden"
                             >
@@ -163,8 +161,8 @@ export default function ProductSelectionTabs({ selections = [] }) {
                                     src={activeSelection.mobile_image}
                                     alt={activeSelection.name}
                                     w="100%"
-                                    h="100%"
-                                    objectFit="cover"
+                                    h="auto"
+                                    display="block"
                                     loading="lazy"
                                 />
                             </Box>
