@@ -19,6 +19,7 @@ export { SelectRelation } from './SelectRelation';
 export { BarcodeSelector } from './BarcodeSelector';
 export { ProductSelector } from './ProductSelector';
 export { EntitySelector } from './EntitySelector';
+export { MultiEntitySelector } from './MultiEntitySelector';
 export { FileUploader } from './FileUploader';
 export { ContentMediaFields } from './ContentMediaFields';
 export * from './CertificateSelector';

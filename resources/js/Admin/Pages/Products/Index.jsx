@@ -3,18 +3,16 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, HStack, Badge, Image, Text, Button } from '@chakra-ui/react';
 import { LuPlus, LuDownload } from 'react-icons/lu';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { usePermission } from '@/Admin/hooks/usePermission';
+import ProductsFilterPanel from './Components/ProductsFilterPanel';
 
 export default function Index({ products, filters }) {
     const { can } = usePermission();
     const {
         searchQuery,
-        handleSearch,
-        handleSort,
-        handlePerPageChange,
+        setSearchQuery,
         deleteDialogOpen,
         entityToDelete,
         openDeleteDialog,
@@ -30,22 +28,50 @@ export default function Index({ products, filters }) {
         entityLabel: 'Товар',
     });
 
-    const toggleWithoutImages = (checked) => {
-        navigate({
-            search: filters.search,
-            sort_by: filters.sort_by,
-            sort_order: filters.sort_order,
-            per_page: filters.per_page,
-            without_images: checked ? 1 : undefined,
-        });
-    };
-
-    const exportUrl = route('admin.products.export', {
+    // Полный набор применённых фильтров (для навигации и URL экспорта).
+    const filterParams = {
         search: filters.search || undefined,
         sort_by: filters.sort_by,
         sort_order: filters.sort_order,
-        without_images: filters.without_images ? 1 : undefined,
-    });
+        per_page: filters.per_page,
+        brands: filters.brands?.length ? filters.brands : undefined,
+        categories: filters.categories?.length ? filters.categories : undefined,
+        tags: filters.tags?.length ? filters.tags : undefined,
+        images: filters.images || undefined,
+        description_filter: filters.description_filter || undefined,
+        hidden: filters.hidden || undefined,
+        price_min: filters.price_min || undefined,
+        price_max: filters.price_max || undefined,
+        flags: filters.flags?.length ? filters.flags : undefined,
+        stock: filters.stock || undefined,
+    };
+
+    // Применить изменения фильтров поверх текущих (со сбросом пагинации).
+    const applyFilters = (changes) => {
+        navigate({ ...filterParams, ...changes });
+    };
+
+    const clearFilters = () => {
+        navigate({
+            sort_by: filters.sort_by,
+            sort_order: filters.sort_order,
+            per_page: filters.per_page,
+        });
+    };
+
+    // Сортировка и смена размера страницы — поверх applyFilters, чтобы не терять фильтры.
+    const handleSort = (field, direction) => {
+        const newDirection = direction || (
+            filters.sort_by === field && filters.sort_order === 'asc' ? 'desc' : 'asc'
+        );
+        applyFilters({ sort_by: field, sort_order: newDirection });
+    };
+
+    const handlePerPageChange = (perPage) => {
+        applyFilters({ per_page: perPage });
+    };
+
+    const exportUrl = route('admin.products.export', filterParams);
 
     const columns = [
         {
@@ -194,16 +220,18 @@ export default function Index({ products, filters }) {
                 <Box flex="1" minW="240px">
                     <SearchInput
                         value={searchQuery}
-                        onChange={handleSearch}
+                        onChange={(value) => {
+                            setSearchQuery(value);
+                            applyFilters({ search: value || undefined });
+                        }}
                         placeholder="Поиск по названию, SKU, коду..."
                     />
                 </Box>
-                <Checkbox
-                    checked={!!filters.without_images}
-                    onCheckedChange={(e) => toggleWithoutImages(e.checked)}
-                >
-                    Только без картинок
-                </Checkbox>
+                <ProductsFilterPanel
+                    filters={filters}
+                    onApply={applyFilters}
+                    onClear={clearFilters}
+                />
             </HStack>
 
             <DataTable

@@ -34,6 +34,12 @@ class ProductController extends AdminController
 
         $products = $query->paginate($perPage)->withQueryString();
 
+        // Подписи выбранных элементов мультивыборов — чтобы чипы рендерились
+        // сразу после перезагрузки страницы (не дожидаясь async-поиска).
+        $brandIds = array_filter(array_map('intval', (array) $request->input('brands', [])));
+        $categoryIds = array_filter(array_map('intval', (array) $request->input('categories', [])));
+        $tagIds = array_filter(array_map('intval', (array) $request->input('tags', [])));
+
         return Inertia::render('Admin/Pages/Products/Index', [
             'products' => $products,
             'filters' => [
@@ -41,7 +47,19 @@ class ProductController extends AdminController
                 'sort_by' => $request->input('sort_by', 'id'),
                 'sort_order' => $request->input('sort_order', 'desc'),
                 'per_page' => $perPage,
-                'without_images' => $request->boolean('without_images'),
+                'brands' => $brandIds,
+                'categories' => $categoryIds,
+                'tags' => $tagIds,
+                'images' => $request->input('images'),
+                'description_filter' => $request->input('description_filter'),
+                'hidden' => $request->input('hidden'),
+                'price_min' => $request->input('price_min'),
+                'price_max' => $request->input('price_max'),
+                'flags' => array_values((array) $request->input('flags', [])),
+                'stock' => $request->input('stock'),
+                'brands_selected' => empty($brandIds) ? [] : Brand::whereIn('id', $brandIds)->get(['id', 'name']),
+                'categories_selected' => empty($categoryIds) ? [] : Category::whereIn('id', $categoryIds)->get(['id', 'name']),
+                'tags_selected' => empty($tagIds) ? [] : \Spatie\Tags\Tag::whereIn('id', $tagIds)->get()->map(fn ($t) => ['id' => $t->id, 'name' => $t->name]),
             ],
         ]);
     }
@@ -53,10 +71,15 @@ class ProductController extends AdminController
     {
         $query = $this->buildIndexQuery($request);
 
-        $headers = ['ID', 'Название', 'SKU', 'Код', 'Бренд', 'Категория', 'Цена, ₽', 'Есть картинка'];
+        $headers = ['ID', 'Название', 'SKU', 'Код', 'Бренд', 'Категория', 'Цена, ₽', 'Есть картинка', 'Теги', 'Скрыт', 'Есть описание'];
 
         $rows = (function () use ($query) {
             foreach ($query->lazy(500) as $product) {
+                $tags = $product->tags
+                    ->pluck('name')
+                    ->map(fn ($n) => is_array($n) ? ($n['ru'] ?? reset($n)) : $n)
+                    ->implode(', ');
+
                 yield [
                     $product->id,
                     $product->name,
@@ -66,11 +89,15 @@ class ProductController extends AdminController
                     $product->category?->name,
                     (float) $product->base_price,
                     $product->media->isNotEmpty() ? 'да' : 'нет',
+                    $tags,
+                    $product->hidden ? 'да' : 'нет',
+                    filled($product->description) ? 'да' : 'нет',
                 ];
             }
         })();
 
-        $suffix = $request->boolean('without_images') ? '_bez_kartinok' : '';
+        $withoutImages = $request->input('images') === 'without' || $request->boolean('without_images');
+        $suffix = $withoutImages ? '_bez_kartinok' : '';
         $filename = 'tovary'.$suffix.'_'.now()->format('Ymd_His');
 
         return $exporter->stream($filename, $headers, $rows, 'Товары');
@@ -96,9 +123,84 @@ class ProductController extends AdminController
             });
         }
 
-        // Фильтр: только товары без изображений
+        // Фильтр по брендам
+        $brandIds = array_filter(array_map('intval', (array) $request->input('brands', [])));
+        if (! empty($brandIds)) {
+            $query->inBrands($brandIds);
+        }
+
+        // Фильтр по категориям (с учётом вложенных подкатегорий)
+        $categoryIds = array_filter(array_map('intval', (array) $request->input('categories', [])));
+        if (! empty($categoryIds)) {
+            $query->inCategories($categoryIds);
+        }
+
+        // Фильтр по тегам
+        $tagIds = array_filter(array_map('intval', (array) $request->input('tags', [])));
+        if (! empty($tagIds)) {
+            $query->whereHas('tags', function ($q) use ($tagIds) {
+                $q->whereIn('tags.id', $tagIds);
+            });
+        }
+
+        // Фильтр по наличию изображений.
+        // Обратная совместимость: старый параметр without_images=1 → images=without.
+        $images = $request->input('images');
         if ($request->boolean('without_images')) {
+            $images = 'without';
+        }
+        if ($images === 'with') {
+            $query->whereHas('media');
+        } elseif ($images === 'without') {
             $query->whereDoesntHave('media');
+        }
+
+        // Фильтр по наличию описания
+        $descriptionFilter = $request->input('description_filter');
+        if ($descriptionFilter === 'with') {
+            $query->whereNotNull('description')->where('description', '<>', '');
+        } elseif ($descriptionFilter === 'without') {
+            $query->where(function ($q) {
+                $q->whereNull('description')->orWhere('description', '=', '');
+            });
+        }
+
+        // Фильтр по видимости на сайте (скрыт/видим)
+        $hidden = $request->input('hidden');
+        if ($hidden === 'yes') {
+            $query->where('hidden', true);
+        } elseif ($hidden === 'no') {
+            $query->where('hidden', false);
+        }
+
+        // Фильтр по диапазону цены
+        $priceMin = $request->input('price_min');
+        $priceMax = $request->input('price_max');
+        $query->byPrice(
+            is_numeric($priceMin) ? (float) $priceMin : null,
+            is_numeric($priceMax) ? (float) $priceMax : null,
+        );
+
+        // Фильтр по флагам-бейджам (AND-семантика: товар удовлетворяет всем выбранным)
+        $allowedFlags = ['is_new', 'is_bestseller', 'is_liquidation', 'is_marked', 'for_marketplaces'];
+        foreach ((array) $request->input('flags', []) as $flag) {
+            if (in_array($flag, $allowedFlags, true)) {
+                $query->where($flag, true);
+            }
+        }
+
+        // Фильтр по наличию на складе.
+        // Упрощённо, без региональной логики (в админке нет региона пользователя):
+        // считаем «в наличии», если есть остаток > 0 на любом складе.
+        $stock = $request->input('stock');
+        if ($stock === 'in') {
+            $query->whereHas('warehouses', function ($q) {
+                $q->where('product_warehouse.quantity', '>', 0);
+            });
+        } elseif ($stock === 'out') {
+            $query->whereDoesntHave('warehouses', function ($q) {
+                $q->where('product_warehouse.quantity', '>', 0);
+            });
         }
 
         // Сортировка
