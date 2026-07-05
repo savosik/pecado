@@ -60,3 +60,6 @@ docker-compose.override.yml
 
 # Генерируется командой sitemap:generate (своё на каждом окружении)
 /public/sitemap.xml
+
+# Локальные SEO-материалы (семантика, ТЗ, канбан) — не версионируем
+/seo/
