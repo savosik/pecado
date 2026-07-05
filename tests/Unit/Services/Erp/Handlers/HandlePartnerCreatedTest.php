@@ -103,6 +103,53 @@ class HandlePartnerCreatedTest extends TestCase
     }
 
     #[Test]
+    public function it_normalizes_email_to_lowercase_so_temporary_password_matches(): void
+    {
+        // 1С генерирует временный пароль как crc32 от email в НИЖНЕМ регистре
+        $password = sprintf('%u', crc32('mixed@case.ru'));
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'erp-uuid-email-case',
+            'email' => 'Mixed@Case.RU',
+            'password' => $password,
+        ]);
+
+        $user = User::where('erp_id', 'erp-uuid-email-case')->first();
+        $this->assertNotNull($user);
+        // E-mail сохранён в нижнем регистре
+        $this->assertSame('mixed@case.ru', $user->email);
+        // Отображаемый в админке временный пароль реально работает как пароль
+        $this->assertSame($password, $user->temporary_password);
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check($user->temporary_password, $user->password));
+    }
+
+    #[Test]
+    public function it_finds_existing_user_by_login_case_insensitively(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'existing@partner.ru',
+            'status' => UserStatus::PROCESSING,
+            'erp_id' => null,
+        ]);
+
+        $handler = new HandlePartnerCreated;
+        $handler->handle([
+            'event' => 'partner.created',
+            'uuid' => 'erp-uuid-login-case',
+            'email' => 'Existing@Partner.RU',
+        ]);
+
+        $user->refresh();
+
+        // Не создан дубль, а привязан erp_id к существующему
+        $this->assertSame(1, User::where('email', 'existing@partner.ru')->count());
+        $this->assertSame('erp-uuid-login-case', $user->erp_id);
+        $this->assertEquals(UserStatus::ACTIVE, $user->status);
+    }
+
+    #[Test]
     public function it_sets_must_change_password_true_for_erp_created_user(): void
     {
         $handler = new HandlePartnerCreated;

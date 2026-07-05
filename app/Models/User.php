@@ -141,6 +141,20 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * E-mail всегда храним в нижнем регистре (с trim).
+     *
+     * Иначе temporary_password (crc32 от email) расходится с паролем, который
+     * 1С генерирует от email в нижнем регистре, и партнёр не может войти по
+     * выданному временному паролю.
+     */
+    protected function email(): Attribute
+    {
+        return Attribute::make(
+            set: fn (?string $value) => $value !== null ? mb_strtolower(trim($value)) : $value,
+        );
+    }
+
+    /**
      * Временный пароль для пользователей, которым требуется смена пароля.
      */
     protected function temporaryPassword(): Attribute

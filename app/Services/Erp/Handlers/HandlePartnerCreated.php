@@ -33,8 +33,12 @@ class HandlePartnerCreated
     public function handle(array $payload): void
     {
         $uuid = $payload['uuid'] ?? null;
+        // E-mail нормализуем в нижний регистр: 1С генерирует пароль от lowercase-email,
+        // иначе temporary_password (crc32 email) не совпадёт и партнёр не войдёт.
         $email = $payload['email'] ?? null;
+        $email = $email !== null ? mb_strtolower(trim($email)) : null;
         $login = $payload['login'] ?? $email;
+        $login = $login !== null ? mb_strtolower(trim($login)) : null;
         $name = $payload['name'] ?? null;
 
         $phone = $payload['phone'] ?? null;
