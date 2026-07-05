@@ -40,6 +40,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
 
     Route::middleware('permission:products.view')->group(function () {
         Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
+        Route::get('/products/export', [ProductController::class, 'export'])->name('products.export');
         Route::get('/products', [ProductController::class, 'index'])->name('products.index');
         Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show')->whereNumber('product');
     });

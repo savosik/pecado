@@ -2,7 +2,8 @@ import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DataTable, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
 import { Box, HStack, Badge, Image, Text, Button } from '@chakra-ui/react';
-import { LuPlus } from 'react-icons/lu';
+import { LuPlus, LuDownload } from 'react-icons/lu';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { usePermission } from '@/Admin/hooks/usePermission';
@@ -24,8 +25,26 @@ export default function Index({ products, filters }) {
         openDeleteAllDialog,
         confirmDeleteAll,
         closeDeleteAllDialog,
+        navigate,
     } = useResourceIndex('admin.products', filters, {
         entityLabel: 'Товар',
+    });
+
+    const toggleWithoutImages = (checked) => {
+        navigate({
+            search: filters.search,
+            sort_by: filters.sort_by,
+            sort_order: filters.sort_order,
+            per_page: filters.per_page,
+            without_images: checked ? 1 : undefined,
+        });
+    };
+
+    const exportUrl = route('admin.products.export', {
+        search: filters.search || undefined,
+        sort_by: filters.sort_by,
+        sort_order: filters.sort_order,
+        without_images: filters.without_images ? 1 : undefined,
     });
 
     const columns = [
@@ -150,6 +169,15 @@ export default function Index({ products, filters }) {
                         onConfirm={confirmDeleteAll}
                         isLoading={deleteAllProcessing}
                     />
+                        <Button
+                            variant="outline"
+                            colorPalette="green"
+                            asChild
+                        >
+                            <a href={exportUrl}>
+                                <LuDownload /> Экспорт в Excel
+                            </a>
+                        </Button>
                         {can('products.create') && (
                     <Button
                         colorPalette="blue"
@@ -162,13 +190,21 @@ export default function Index({ products, filters }) {
                 }
             />
 
-            <Box mb={4}>
-                <SearchInput
-                    value={searchQuery}
-                    onChange={handleSearch}
-                    placeholder="Поиск по названию, SKU, коду..."
-                />
-            </Box>
+            <HStack mb={4} gap={4} align="center" flexWrap="wrap">
+                <Box flex="1" minW="240px">
+                    <SearchInput
+                        value={searchQuery}
+                        onChange={handleSearch}
+                        placeholder="Поиск по названию, SKU, коду..."
+                    />
+                </Box>
+                <Checkbox
+                    checked={!!filters.without_images}
+                    onCheckedChange={(e) => toggleWithoutImages(e.checked)}
+                >
+                    Только без картинок
+                </Checkbox>
+            </HStack>
 
             <DataTable
                 data={products.data}

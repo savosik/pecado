@@ -26,6 +26,63 @@ class ProductController extends AdminController
      */
     public function index(Request $request): Response
     {
+        $query = $this->buildIndexQuery($request);
+
+        // Пагинация
+        $perPage = (int) $request->input('per_page', 15);
+        $perPage = min(max($perPage, 5), 100); // Ограничение от 5 до 100
+
+        $products = $query->paginate($perPage)->withQueryString();
+
+        return Inertia::render('Admin/Pages/Products/Index', [
+            'products' => $products,
+            'filters' => [
+                'search' => $request->input('search'),
+                'sort_by' => $request->input('sort_by', 'id'),
+                'sort_order' => $request->input('sort_order', 'desc'),
+                'per_page' => $perPage,
+                'without_images' => $request->boolean('without_images'),
+            ],
+        ]);
+    }
+
+    /**
+     * Экспорт списка товаров в Excel с учётом текущих фильтров.
+     */
+    public function export(Request $request, \App\Services\SimpleXlsxExporter $exporter): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $query = $this->buildIndexQuery($request);
+
+        $headers = ['ID', 'Название', 'SKU', 'Код', 'Бренд', 'Категория', 'Цена, ₽', 'Есть картинка'];
+
+        $rows = (function () use ($query) {
+            foreach ($query->lazy(500) as $product) {
+                yield [
+                    $product->id,
+                    $product->name,
+                    $product->sku,
+                    $product->code,
+                    $product->brand?->name,
+                    $product->category?->name,
+                    (float) $product->base_price,
+                    $product->media->isNotEmpty() ? 'да' : 'нет',
+                ];
+            }
+        })();
+
+        $suffix = $request->boolean('without_images') ? '_bez_kartinok' : '';
+        $filename = 'tovary'.$suffix.'_'.now()->format('Ymd_His');
+
+        return $exporter->stream($filename, $headers, $rows, 'Товары');
+    }
+
+    /**
+     * Общий построитель запроса для списка и экспорта товаров.
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\Product>
+     */
+    private function buildIndexQuery(Request $request): \Illuminate\Database\Eloquent\Builder
+    {
         $query = Product::withoutGlobalScope(HiddenScope::class)
             ->with(['brand', 'model', 'category', 'media', 'tags']);
 
@@ -39,6 +96,11 @@ class ProductController extends AdminController
             });
         }
 
+        // Фильтр: только товары без изображений
+        if ($request->boolean('without_images')) {
+            $query->whereDoesntHave('media');
+        }
+
         // Сортировка
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
@@ -48,21 +110,7 @@ class ProductController extends AdminController
             $query->orderBy($sortBy, $sortOrder);
         }
 
-        // Пагинация
-        $perPage = (int) $request->input('per_page', 15);
-        $perPage = min(max($perPage, 5), 100); // Ограничение от 5 до 100
-
-        $products = $query->paginate($perPage)->withQueryString();
-
-        return Inertia::render('Admin/Pages/Products/Index', [
-            'products' => $products,
-            'filters' => [
-                'search' => $search,
-                'sort_by' => $sortBy,
-                'sort_order' => $sortOrder,
-                'per_page' => $perPage,
-            ],
-        ]);
+        return $query;
     }
 
     /**
