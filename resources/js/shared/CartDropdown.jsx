@@ -329,20 +329,28 @@ export default function CartDropdown() {
 
                             <Separator />
 
-                            {/* Link to full cart page */}
+                            {/* Link to full cart page — proper Menu.Item, чтобы Ark
+                                корректно обрабатывал hover/фокус/клик (иначе кнопка
+                                «пропадает» при наведении и иногда не нажимается). */}
                             <Box px="2" py="2">
-                                <Button
+                                <Menu.Item
+                                    value="go-to-cart"
                                     asChild
-                                    size="sm"
-                                    variant="solid"
-                                    colorPalette="pecado"
-                                    w="full"
+                                    justifyContent="center"
+                                    gap="1.5"
+                                    fontWeight="600"
+                                    color="white"
+                                    bg="pecado.solid"
+                                    borderRadius="md"
+                                    py="2"
+                                    _hover={{ bg: 'pecado.700', color: 'white' }}
+                                    _highlighted={{ bg: 'pecado.700', color: 'white' }}
                                 >
                                     <Link href="/cart">
                                         Перейти в корзину
                                         <LuChevronRight size={16} />
                                     </Link>
-                                </Button>
+                                </Menu.Item>
                             </Box>
                         </Menu.Content>
                     </Menu.Positioner>
