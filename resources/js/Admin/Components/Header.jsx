@@ -1,7 +1,8 @@
 import React from "react";
-import { Box, HStack, IconButton, Text, Breadcrumb, Menu } from "@chakra-ui/react";
-import { usePage, router } from "@inertiajs/react";
-import { LuMenu, LuUser, LuLogOut } from "react-icons/lu";
+import { Box, HStack, IconButton, Text, Breadcrumb, Menu, Button } from "@chakra-ui/react";
+import { usePage, router, Link } from "@inertiajs/react";
+import { LuMenu, LuUser, LuLogOut, LuStore } from "react-icons/lu";
+import { Tooltip } from "@/components/ui/tooltip";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { menuConfig } from "../config/menuConfig";
 
@@ -112,6 +113,15 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
 
                 {/* Right: Theme toggle + User menu */}
                 <HStack gap={2}>
+                    <Tooltip content="Перейти на витрину" positioning={{ placement: "bottom" }}>
+                        <Button asChild variant="outline" size="sm" colorPalette="gray">
+                            <Link href="/">
+                                <LuStore />
+                                <Text display={{ base: "none", sm: "inline" }}>На витрину</Text>
+                            </Link>
+                        </Button>
+                    </Tooltip>
+
                     <ColorModeButton />
 
                     <Menu.Root>

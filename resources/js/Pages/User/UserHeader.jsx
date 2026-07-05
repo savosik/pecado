@@ -17,7 +17,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     LuHeart, LuUser, LuMenu, LuShoppingCart,
     LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
-    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge,
+    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge, LuShieldCheck,
 } from 'react-icons/lu';
 
 // Маппинг имён иконок на компоненты
@@ -137,6 +137,17 @@ export default function UserHeader() {
 
                         {/* Desktop Actions — lg+ */}
                         <HStack as="nav" gap="2" display={{ base: 'none', lg: 'flex' }} flexShrink="0">
+
+                            {user?.is_admin && (
+                                <Tooltip content="Перейти в админку" positioning={{ placement: 'bottom' }}>
+                                    <Button asChild variant="outline" colorPalette="pecado" size="sm">
+                                        <Link href="/admin">
+                                            <LuShieldCheck />
+                                            <Text display={{ base: 'none', xl: 'inline' }}>Админка</Text>
+                                        </Link>
+                                    </Button>
+                                </Tooltip>
+                            )}
 
                             {user && (
                                 <>
@@ -415,6 +426,18 @@ export default function UserHeader() {
                                                 <HStack px="3" py="2.5" borderRadius="md" _hover={{ bg: 'gray.50' }} _dark={{ _hover: { bg: 'gray.800' } }}>
                                                     <LuShoppingCart size={18} />
                                                     <Text fontSize="sm" fontWeight="500">Корзина</Text>
+                                                </HStack>
+                                            </Link>
+                                        </>
+                                    )}
+
+                                    {user?.is_admin && (
+                                        <>
+                                            <Separator />
+                                            <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                                                <HStack px="3" py="2.5" borderRadius="md" color="pecado.600" _hover={{ bg: 'pecado.50' }} _dark={{ color: 'pecado.300', _hover: { bg: 'pecado.900/20' } }}>
+                                                    <LuShieldCheck size={18} />
+                                                    <Text fontSize="sm" fontWeight="600">Админка</Text>
                                                 </HStack>
                                             </Link>
                                         </>
