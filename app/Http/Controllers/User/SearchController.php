@@ -128,7 +128,12 @@ class SearchController extends Controller
             'q.min' => 'Минимум 2 символа для поиска.',
         ]);
 
+        // Точное совпадение по артикулу / коду 1С / штрихкоду → единственная
+        // подсказка. Meilisearch не трогаем, чтобы не подмешивать фаззи-соседей.
         $exactMatch = $this->exactMatcher->match($validated['q']);
+        if ($exactMatch !== null) {
+            return response()->json([$this->formatProductCompact($exactMatch)]);
+        }
 
         try {
             $searchBuilder = Product::search($validated['q'])
@@ -142,12 +147,6 @@ class SearchController extends Controller
             $products = $searchBuilder->take(8)->get();
         } catch (\Throwable) {
             $products = collect();
-        }
-
-        if ($exactMatch !== null) {
-            $products = $products->reject(fn (Product $p) => $p->id === $exactMatch->id)->values();
-            $products->prepend($exactMatch);
-            $products = $products->take(8);
         }
 
         $products = $products->map(fn (Product $product) => $this->formatProductCompact($product));
@@ -217,7 +216,29 @@ class SearchController extends Controller
             $perPage = $limit ?? 20;
 
             // Fast-path: точное совпадение по sku/code/barcode (только на первой странице).
+            // Если запрос 100% совпал с артикулом / кодом 1С / штрихкодом — отдаём
+            // ЕДИНСТВЕННЫЙ товар и не обращаемся к Meilisearch (иначе он подмешает
+            // фаззи-соседей). Прочие сущности (категории, бренды, статьи) тоже
+            // пропускаем — пользователь искал конкретный код.
             $exactMatch = $page === 1 ? $this->exactMatcher->match($query) : null;
+            if ($exactMatch !== null) {
+                $exactArray = [ProductQueryService::productToArray($exactMatch)];
+                $exactArray = ProductQueryService::enrichProductsWithDiscounts($exactArray);
+                $exactArray = ProductQueryService::convertProductsPrices($exactArray);
+
+                $results['products'] = $exactArray;
+                $results['_products_meta'] = [
+                    'current_page' => 1,
+                    'last_page' => 1,
+                    'per_page' => $perPage,
+                    'total' => 1,
+                    'from' => 1,
+                    'to' => 1,
+                    'no_exact_match' => false,
+                ];
+
+                return $results;
+            }
 
             try {
                 $searchBuilder = Product::search($query)
@@ -259,18 +280,12 @@ class SearchController extends Controller
                 );
                 $products = $inStockProducts->concat($preorderProducts)->values();
 
-                // Пин точного матча первым; если Scout его не вернул — total +1.
-                $exactWasInScout = false;
-                if ($exactMatch !== null) {
-                    $exactWasInScout = $products->contains(fn (Product $p) => $p->id === $exactMatch->id);
-                    $products = $products->reject(fn (Product $p) => $p->id === $exactMatch->id)->values();
-                    $products->prepend($exactMatch);
-                }
-
-                // Точное вхождение запроса (case-insensitive) в name/sku/code/barcode/brand
+                // Сюда попадаем только когда точного матча по коду НЕ было
+                // (иначе выше отдали единственный товар и вышли). Проверяем точное
+                // вхождение запроса (case-insensitive) в name/sku/code/barcode/brand
                 // хотя бы одного из товаров? Если нет — Scout вернул только фаззи-соседей,
                 // фронт покажет «Точного совпадения не найдено — похожие товары».
-                $hasExact = $exactMatch !== null || $this->exactMatcher->hasLiteralMatch($products, $query);
+                $hasExact = $this->exactMatcher->hasLiteralMatch($products, $query);
 
                 // Преобразование через ProductQueryService (полный формат, как в каталоге)
                 $productArray = $products
@@ -286,9 +301,6 @@ class SearchController extends Controller
 
                 // Мета-данные пагинации
                 $total = $paginated->total();
-                if ($exactMatch !== null && ! $exactWasInScout) {
-                    $total += 1;
-                }
 
                 $from = $paginated->firstItem();
                 $to = $paginated->lastItem();
@@ -320,25 +332,10 @@ class SearchController extends Controller
                     'query' => $query,
                     'error' => $e->getMessage(),
                 ]);
-                // Scout упал — отдаём хотя бы точный матч, если он есть.
-                if ($exactMatch !== null) {
-                    $exactArray = [ProductQueryService::productToArray($exactMatch)];
-                    $exactArray = ProductQueryService::enrichProductsWithDiscounts($exactArray);
-                    $exactArray = ProductQueryService::convertProductsPrices($exactArray);
-                    $results['products'] = $exactArray;
-                    $results['_products_meta'] = [
-                        'current_page' => 1,
-                        'last_page' => 1,
-                        'per_page' => $perPage,
-                        'total' => 1,
-                        'from' => 1,
-                        'to' => 1,
-                        'no_exact_match' => false,
-                    ];
-                } else {
-                    $results['products'] = [];
-                    $results['_products_meta'] = null;
-                }
+                // Точный матч по коду отрабатывает выше отдельной веткой, сюда он
+                // не доходит — при падении Scout просто отдаём пустой результат.
+                $results['products'] = [];
+                $results['_products_meta'] = null;
             }
         }
 

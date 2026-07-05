@@ -413,9 +413,11 @@ class SearchControllerTest extends TestCase
         $response = $this->getJson('/search?q='.urlencode('УТ-00008062').'&type=products');
 
         $response->assertOk();
-        $first = $response->json('results.products.0');
+        $products = $response->json('results.products');
 
-        $this->assertSame($exact->id, $first['id'], 'Точный матч по SKU должен быть первым в выдаче');
+        $this->assertCount(1, $products, 'Точный матч по SKU должен давать единственный результат');
+        $this->assertSame($exact->id, $products[0]['id'], 'Точный матч по SKU должен быть первым в выдаче');
+        $this->assertSame(1, $response->json('productsMeta.total'));
     }
 
     public function test_exact_code_match_pinned_first(): void
@@ -435,9 +437,10 @@ class SearchControllerTest extends TestCase
         $response = $this->getJson('/search?q='.urlencode('ОТ-00004152').'&type=products');
 
         $response->assertOk();
-        $first = $response->json('results.products.0');
+        $products = $response->json('results.products');
 
-        $this->assertSame($exact->id, $first['id']);
+        $this->assertCount(1, $products, 'Точный матч по коду 1С должен давать единственный результат');
+        $this->assertSame($exact->id, $products[0]['id']);
     }
 
     public function test_exact_barcode_match_pinned_first(): void
@@ -457,9 +460,10 @@ class SearchControllerTest extends TestCase
         $response = $this->getJson('/search?q=4607004920454&type=products');
 
         $response->assertOk();
-        $first = $response->json('results.products.0');
+        $products = $response->json('results.products');
 
-        $this->assertSame($exact->id, $first['id'], 'Точный матч из product_barcodes должен быть первым');
+        $this->assertCount(1, $products, 'Точный матч по штрихкоду должен давать единственный результат');
+        $this->assertSame($exact->id, $products[0]['id'], 'Точный матч из product_barcodes должен быть первым');
     }
 
     public function test_short_query_skips_fast_path(): void
@@ -507,9 +511,10 @@ class SearchControllerTest extends TestCase
         $response = $this->getJson('/api/search/suggestions?q=ABC-001');
 
         $response->assertOk();
-        $first = $response->json('0');
+        $suggestions = $response->json();
 
-        $this->assertSame($exact->id, $first['id']);
+        $this->assertCount(1, $suggestions, 'Точный матч по SKU в подсказках — единственный результат');
+        $this->assertSame($exact->id, $suggestions[0]['id']);
     }
 
     public function test_no_exact_match_flag_set_when_query_not_in_any_product(): void
@@ -569,9 +574,35 @@ class SearchControllerTest extends TestCase
         $this->assertFalse($meta['no_exact_match']);
     }
 
+    public function test_exact_code_match_returns_only_product_for_type_all(): void
+    {
+        // Точный матч по коду при type=all не должен подмешивать другие сущности.
+        $exact = Product::factory()->create([
+            'name' => 'Товар с уникальным кодом',
+            'sku' => 'ONLYONE-9911',
+        ]);
+        $this->addStock($exact);
+
+        // Категория и бренд с «шумным» названием — при обычном поиске могли бы попасть.
+        Category::factory()->create(['name' => 'ONLYONE категория', 'is_active' => true]);
+        Brand::factory()->create(['name' => 'ONLYONE бренд']);
+
+        $response = $this->getJson('/search?q=ONLYONE-9911');
+
+        $response->assertOk();
+        $results = $response->json('results');
+
+        $this->assertCount(1, $results['products']);
+        $this->assertSame($exact->id, $results['products'][0]['id']);
+        // Прочие сущности не должны появляться — искали конкретный код.
+        $this->assertArrayNotHasKey('categories', $results);
+        $this->assertArrayNotHasKey('brands', $results);
+        $this->assertArrayNotHasKey('articles', $results);
+    }
+
     public function test_exact_match_not_duplicated_in_results(): void
     {
-        // Товар, который Scout тоже найдёт по sku — не должен дублироваться после пиннинга.
+        // Товар, который Scout тоже найдёт по sku — должен вернуться единственным.
         $exact = Product::factory()->create([
             'name' => 'Уникальное имя для теста',
             'sku' => 'UNIQ-12345',
@@ -661,12 +692,13 @@ class SearchControllerTest extends TestCase
         $response = $this->getJson('/search?q=PRE-ORDER-001&type=products');
 
         $response->assertOk();
-        $first = $response->json('results.products.0');
+        $products = $response->json('results.products');
 
+        $this->assertCount(1, $products, 'Точный матч отдаётся единственным результатом даже для предзаказа');
         $this->assertSame(
             $exactPreorder->id,
-            $first['id'],
-            'Точный матч по SKU должен пиниться первым даже для товара под предзаказ'
+            $products[0]['id'],
+            'Точный матч по SKU должен отдаваться даже для товара под предзаказ'
         );
     }
 
