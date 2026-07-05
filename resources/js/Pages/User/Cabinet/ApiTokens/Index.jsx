@@ -369,6 +369,10 @@ export default function Index({ tokens: initialTokens }) {
                         <Text fontSize="sm" color="green.300" fontFamily="mono">
                             {window.location.origin}/api/client-api/{'<token>'}
                         </Text>
+                        <Text fontSize="2xs" color="amber.300" fontFamily="mono" mt="2">
+                            # Только по HTTPS. Запросы по http перенаправляются на https,
+                            # при этом POST-запросы (создание заказа) теряют тело — используйте https сразу.
+                        </Text>
                     </Box>
 
                     {/* Identifier hint */}
@@ -537,6 +541,9 @@ export default function Index({ tokens: initialTokens }) {
                                 <VStack align="stretch" gap="1">
                                     <Text fontSize="xs" color="gray.500">
                                         • Ограничение: <strong>60 запросов в минуту</strong> на один ключ
+                                    </Text>
+                                    <Text fontSize="xs" color="gray.500">
+                                        • Протокол: <strong>только HTTPS</strong> (запросы по http перенаправляются, POST теряет тело)
                                     </Text>
                                     <Text fontSize="xs" color="gray.500">
                                         • Формат ответа: <strong>JSON</strong> (Content-Type: application/json)
