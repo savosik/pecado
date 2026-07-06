@@ -82,6 +82,11 @@ Route::prefix('content')
         Route::get('products/price-intervals', [\App\Http\Controllers\Api\Content\ProductController::class, 'priceIntervals'])->name('products.price-intervals');
         Route::get('products/{product}', [\App\Http\Controllers\Api\Content\ProductController::class, 'show'])->name('products.show');
 
+        // ── Каталог — изображения товаров (запись) ─────────────────
+        Route::get('products/{product}/media', [\App\Http\Controllers\Api\Content\ProductMediaController::class, 'index'])->name('products.media.index');
+        Route::post('products/{product}/media', [\App\Http\Controllers\Api\Content\ProductMediaController::class, 'store'])->name('products.media.store');
+        Route::delete('products/{product}/media/{media}', [\App\Http\Controllers\Api\Content\ProductMediaController::class, 'destroy'])->name('products.media.destroy');
+
         Route::get('brands', [\App\Http\Controllers\Api\Content\BrandController::class, 'index'])->name('brands.index');
         Route::get('brands/{brand}', [\App\Http\Controllers\Api\Content\BrandController::class, 'show'])->name('brands.show');
 
