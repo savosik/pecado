@@ -7,6 +7,7 @@ use Dedoc\Scramble\Support\Generator\OpenApi;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Horizon\Horizon;
@@ -178,6 +179,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('content-api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
+
+        // Scramble: спека API (/docs/api, /docs/api.json) публично доступна.
+        // По умолчанию RestrictedDocsAccess пускает только в local; открываем всем,
+        // чтобы ИИ-агент мог скачать OpenAPI-контракт по URL на dev/prod.
+        Gate::define('viewApiDocs', fn ($user = null) => true);
 
         // Scramble: документировать только /api/content/* роуты
         Scramble::registerApi('content', [
