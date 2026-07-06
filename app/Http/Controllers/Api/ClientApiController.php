@@ -166,39 +166,52 @@ class ClientApiController extends Controller
             ], 422);
         }
 
-        // Резолвить товары и проверить остатки
+        // Резолвим товары и раскладываем на выполнимую часть.
+        // Дружественная логика: заказ принимается даже если часть позиций
+        // недоступна. Недостающее не блокирует заказ, а попадает в
+        // информационный ответ (unavailable — не попали в заказ вовсе,
+        // partial — отгружены не в полном объёме).
         $instockItems = [];
         $preorderItems = [];
-        $errors = [];
-        $insufficientStock = [];
+        $unavailable = [];
+        $partial = [];
 
-        foreach ($validated['products'] as $index => $item) {
-            $product = $this->resolveProduct($item['identifier']);
-            if (! $product) {
-                $errors[] = "Товар \"{$item['identifier']}\" не найден (позиция ".($index + 1).')';
-
-                continue;
-            }
-
-            $stock = $this->stockService->getStock($product, $user);
-            $totalAvailable = $stock['available'] + $stock['preorder'];
+        foreach ($validated['products'] as $item) {
             $requestedQty = $item['quantity'];
 
-            // Проверка: хватает ли остатков
-            if ($requestedQty > $totalAvailable) {
-                $insufficientStock[] = [
+            $product = $this->resolveProduct($item['identifier']);
+            if (! $product) {
+                $unavailable[] = [
                     'identifier' => $item['identifier'],
-                    'name' => $product->name,
                     'requested' => $requestedQty,
-                    'available' => $totalAvailable,
+                    'reason' => 'not_found',
+                    'message' => 'Товар не найден',
                 ];
 
                 continue;
             }
 
-            // Разделение на instock и preorder (как в CartService)
-            $instockQty = min($requestedQty, $stock['available']);
-            $preorderQty = $requestedQty - $instockQty;
+            $stock = $this->stockService->getStock($product, $user);
+            $available = $stock['available'];
+            $preorder = $stock['preorder'];
+            $totalAvailable = $available + $preorder;
+
+            if ($totalAvailable <= 0) {
+                $unavailable[] = [
+                    'identifier' => $item['identifier'],
+                    'name' => $product->name,
+                    'requested' => $requestedQty,
+                    'reason' => 'out_of_stock',
+                    'message' => 'Нет в наличии',
+                ];
+
+                continue;
+            }
+
+            // Отгружаем столько, сколько реально доступно; остаток запроса — в shortfall.
+            $fulfillQty = min($requestedQty, $totalAvailable);
+            $instockQty = min($fulfillQty, $available);
+            $preorderQty = $fulfillQty - $instockQty;
 
             if ($instockQty > 0) {
                 $instockItems[] = ['product' => $product, 'quantity' => $instockQty];
@@ -206,31 +219,42 @@ class ClientApiController extends Controller
             if ($preorderQty > 0) {
                 $preorderItems[] = ['product' => $product, 'quantity' => $preorderQty];
             }
+
+            if ($fulfillQty < $requestedQty) {
+                $partial[] = [
+                    'identifier' => $item['identifier'],
+                    'name' => $product->name,
+                    'requested' => $requestedQty,
+                    'fulfilled' => $fulfillQty,
+                    'shortfall' => $requestedQty - $fulfillQty,
+                ];
+            }
         }
 
-        if (! empty($errors)) {
+        // Совсем нечего отгружать — заказ не создаём.
+        if (empty($instockItems) && empty($preorderItems)) {
             return response()->json([
-                'error' => 'Некоторые товары не найдены',
-                'details' => $errors,
-            ], 422);
-        }
-
-        if (! empty($insufficientStock)) {
-            return response()->json([
-                'error' => 'Недостаточно остатков для некоторых товаров',
-                'details' => $insufficientStock,
+                'error' => 'Ни одна из позиций недоступна для заказа',
+                'unavailable' => $unavailable,
             ], 422);
         }
 
         // Валюта пользователя (как в CheckoutService)
         $currency = $this->currencyResolver->resolve($user);
 
+        // Дополняем комментарий системной пометкой о недоступных/частичных
+        // позициях, чтобы менеджер и 1С видели, что клиент запрашивал больше.
+        $comment = $validated['comment'] ?? null;
+        if ($note = $this->buildFulfillmentNote($unavailable, $partial)) {
+            $comment = $comment !== null && $comment !== '' ? ($comment."\n\n".$note) : $note;
+        }
+
         $baseOrderData = [
             'user_id' => $user->id,
             'company_id' => $company->id,
             'delivery_address' => $validated['address'] ?? null,
             'status' => OrderStatus::PENDING_APPROVAL,
-            'comment' => $validated['comment'] ?? null,
+            'comment' => $comment,
             'total_amount' => 0,
             'exchange_rate' => $currency?->exchange_rate ?? 1.0,
             'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
@@ -279,10 +303,48 @@ class ClientApiController extends Controller
             'status' => $order->status?->value ?? OrderStatus::PENDING_APPROVAL->value,
         ], $createdOrders);
 
-        return response()->json([
+        $response = [
             'orders' => $responseOrders,
             'total_orders' => count($createdOrders),
-        ], 201);
+            'fully_fulfilled' => empty($unavailable) && empty($partial),
+        ];
+
+        if (! empty($unavailable) || ! empty($partial)) {
+            $response['warnings'] = [
+                'message' => 'Заказ принят. Часть позиций недоступна или отгружена не в полном объёме.',
+                'unavailable' => $unavailable,
+                'partial' => $partial,
+            ];
+        }
+
+        return response()->json($response, 201);
+    }
+
+    /**
+     * Собрать текстовую пометку о недоступных/частичных позициях для комментария заказа.
+     * Возвращает null, если заказ выполнен полностью.
+     *
+     * @param  array<int, array<string, mixed>>  $unavailable
+     * @param  array<int, array<string, mixed>>  $partial
+     */
+    protected function buildFulfillmentNote(array $unavailable, array $partial): ?string
+    {
+        if (empty($unavailable) && empty($partial)) {
+            return null;
+        }
+
+        $lines = ['[API] Заказ принят не в полном объёме:'];
+
+        foreach ($unavailable as $u) {
+            $label = $u['name'] ?? $u['identifier'];
+            $lines[] = "— «{$label}» (запрошено {$u['requested']}): {$u['message']}";
+        }
+
+        foreach ($partial as $p) {
+            $lines[] = "— «{$p['name']}»: запрошено {$p['requested']}, отгружено {$p['fulfilled']}, не хватило {$p['shortfall']}";
+        }
+
+        return implode("\n", $lines);
     }
 
     /**

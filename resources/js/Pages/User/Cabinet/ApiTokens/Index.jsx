@@ -177,7 +177,7 @@ const apiMethods = [
         method: 'POST',
         path: '/orders',
         title: 'Создать заказ',
-        description: 'Создаёт заказ. Проверяет остатки и автоматически разделяет товары на заказ (в наличии) и предзаказ — создаются отдельные заказы.',
+        description: 'Создаёт заказ из доступных позиций. Остатки автоматически делятся на заказ (в наличии) и предзаказ. Если части запрошенного нет — заказ всё равно принимается, а недоступные и частично отгруженные позиции возвращаются в блоке warnings. Заказ отклоняется (422) только когда недоступны все позиции.',
         icon: LuShoppingCart,
         color: 'blue',
         params: [
@@ -203,15 +203,22 @@ const apiMethods = [
                 { order_id: 1235, order_number: "ORD-2026-1235", type: "preorder", total_amount: 7400.00, items_count: 1, status: "pending_approval" },
             ],
             total_orders: 2,
+            fully_fulfilled: false,
+            warnings: {
+                message: "Заказ принят. Часть позиций недоступна или отгружена не в полном объёме.",
+                unavailable: [
+                    { identifier: "XYZ-999", requested: 3, reason: "not_found", message: "Товар не найден" },
+                    { identifier: "ART-007", name: "Товар 7", requested: 2, reason: "out_of_stock", message: "Нет в наличии" },
+                ],
+                partial: [
+                    { identifier: "ART-001", name: "Товар 1", requested: 100, fulfilled: 25, shortfall: 75 },
+                ],
+            },
         }, null, 2),
         errorExamples: [
             {
-                title: 'Товар не найден (422)',
-                body: JSON.stringify({ error: "Некоторые товары не найдены", details: ["Товар \"XYZ-999\" не найден (позиция 2)"] }, null, 2),
-            },
-            {
-                title: 'Недостаточно остатков (422)',
-                body: JSON.stringify({ error: "Недостаточно остатков для некоторых товаров", details: [{ identifier: "ART-001", name: "Товар 1", requested: 100, available: 25 }] }, null, 2),
+                title: 'Все позиции недоступны (422)',
+                body: JSON.stringify({ error: "Ни одна из позиций недоступна для заказа", unavailable: [{ identifier: "XYZ-999", requested: 3, reason: "not_found", message: "Товар не найден" }] }, null, 2),
             },
             {
                 title: 'ИНН не найден (422)',
