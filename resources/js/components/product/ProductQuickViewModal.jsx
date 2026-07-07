@@ -8,6 +8,7 @@ import ProductGallery from './ProductGallery';
 import ProductInfo from './ProductInfo';
 import ProductDetailTabs from './ProductDetailTabs';
 import ProductVariants from './ProductVariants';
+import ProductPromotions from './ProductPromotions';
 
 /**
  * Модальное окно быстрого просмотра товара.
@@ -54,6 +55,7 @@ export default function ProductQuickViewModal() {
     const specificationGroups = data?.specificationGroups ?? [];
     const sizeChart = data?.sizeChart ?? null;
     const similarProducts = data?.similarProducts ?? [];
+    const promotions = data?.promotions ?? [];
 
     const productInfoProps = product ? buildProductInfoProps(product, currencySymbol) : {};
 
@@ -214,6 +216,7 @@ export default function ProductQuickViewModal() {
                                                     modelName={product.model_name}
                                                 />
                                             ) : null}
+                                            promotionsSlot={<ProductPromotions promotions={promotions} />}
                                         />
 
                                         <ProductGallery media={media} productName={product.name} categoryName={categoryName} />
@@ -245,6 +248,7 @@ export default function ProductQuickViewModal() {
                                                         modelName={product.model_name}
                                                     />
                                                 ) : null}
+                                                promotionsSlot={<ProductPromotions promotions={promotions} />}
                                             />
 
                                             <ProductDetailTabs
