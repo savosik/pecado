@@ -113,6 +113,10 @@ class AllAttributesField extends ExportField
         if ($attr->isNumber()) {
             return $av->number_value;
         }
+        if ($attr->isDateTime()) {
+            // «Срок годности» и др. date-time атрибуты хранятся в datetime_value.
+            return $av->datetime_value?->format('Y-m-d');
+        }
         if ($av->attribute_value_id) {
             return $av->attributeValue?->value ?? $av->attribute_value_id;
         }

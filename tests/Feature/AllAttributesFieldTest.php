@@ -193,6 +193,79 @@ class AllAttributesFieldTest extends TestCase
         $this->assertNull($decoded[0]['attrs']);
     }
 
+    public function test_all_attributes_includes_date_time_shelf_life(): void
+    {
+        // Регрессия: «Срок годности» приходит из 1С как date-time атрибут и
+        // хранится в datetime_value. Раньше AllAttributesField его не читал —
+        // колонка «Все характеристики» молча теряла дату.
+        $user = User::factory()->create();
+        $product = Product::factory()->create();
+
+        $shelf = Attribute::create([
+            'name' => 'Срок годности', 'slug' => 'srok-godnosti',
+            'type' => 'date-time', 'is_active' => true,
+        ]);
+        $product->attributeValues()->create([
+            'attribute_id' => $shelf->id,
+            'datetime_value' => '2027-08-15 00:00:00',
+        ]);
+
+        $export = ProductExport::create([
+            'user_id' => $user->id,
+            'client_user_id' => $user->id,
+            'name' => 'Shelf-life all attrs',
+            'format' => ExportFormat::CSV,
+            'fields' => [['key' => 'all_attributes', 'label' => 'attrs']],
+            'filters' => [],
+            'is_active' => true,
+        ]);
+
+        $stream = fopen('php://memory', 'w+');
+        app(CustomFieldsPreset::class)->writeToStream($stream, $export);
+        rewind($stream);
+        $content = stream_get_contents($stream);
+        fclose($stream);
+
+        $this->assertStringContainsString('Срок годности:2027-08-15', $content);
+    }
+
+    public function test_dynamic_attribute_field_exports_date_time_value(): void
+    {
+        // Регрессия: в конструкторе выгрузок отдельное поле date-time атрибута
+        // («годен до») отдавало пусто, т.к. DynamicAttributeField не читал
+        // datetime_value. Проверяем, что дата теперь попадает в выгрузку.
+        $user = User::factory()->create();
+        $product = Product::factory()->create();
+
+        $shelf = Attribute::create([
+            'name' => 'Срок годности', 'slug' => 'srok-godnosti',
+            'type' => 'date-time', 'is_active' => true,
+        ]);
+        $product->attributeValues()->create([
+            'attribute_id' => $shelf->id,
+            'datetime_value' => '2027-08-15 00:00:00',
+        ]);
+
+        $export = ProductExport::create([
+            'user_id' => $user->id,
+            'client_user_id' => $user->id,
+            'name' => 'Shelf-life constructor field',
+            'format' => ExportFormat::JSON,
+            'fields' => [['key' => 'attribute.srok-godnosti', 'label' => 'goden_do']],
+            'filters' => [],
+            'is_active' => true,
+        ]);
+
+        $stream = fopen('php://memory', 'w+');
+        app(CustomFieldsPreset::class)->writeToStream($stream, $export);
+        rewind($stream);
+        $content = stream_get_contents($stream);
+        fclose($stream);
+
+        $decoded = json_decode($content, true);
+        $this->assertSame('2027-08-15', $decoded[0]['goden_do']);
+    }
+
     public function test_model_external_id_field_returns_uuid(): void
     {
         $product = Product::factory()->create();

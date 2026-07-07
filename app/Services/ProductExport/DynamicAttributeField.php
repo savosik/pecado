@@ -29,12 +29,15 @@ class DynamicAttributeField extends ExportField
 
     protected bool $isNumberType;
 
+    protected bool $isDateTimeType;
+
     public function __construct(Attribute $attribute)
     {
         $this->attribute = $attribute;
         $this->attributeId = (int) $attribute->id;
         $this->isBooleanType = $attribute->isBoolean();
         $this->isNumberType = $attribute->isNumber();
+        $this->isDateTimeType = $attribute->isDateTime();
     }
 
     // ─── Identification ────────────────────────────
@@ -81,6 +84,7 @@ class DynamicAttributeField extends ExportField
             'boolean' => 'boolean',
             'number' => 'numeric',
             'select' => 'select',
+            'date-time' => 'date',
             default => 'text', // string
         };
     }
@@ -97,6 +101,7 @@ class DynamicAttributeField extends ExportField
         return match ($this->attribute->type) {
             'number' => 'numeric',
             'boolean' => 'boolean',
+            'date-time' => 'date',
             default => null,
         };
     }
@@ -107,6 +112,7 @@ class DynamicAttributeField extends ExportField
             'boolean' => ['='],
             'number' => ['=', '>', '<', '>=', '<=', 'between'],
             'select' => ['in', 'not_in'],
+            'date-time' => ['>', '<', 'between'],
             default => ['=', 'contains', 'not_contains', 'starts_with'],
         };
     }
@@ -155,6 +161,7 @@ class DynamicAttributeField extends ExportField
                 'select' => $this->applySelectFilter($q, $operator, $value),
                 'number' => $this->applyNumberFilter($q, $operator, $value),
                 'boolean' => $q->where('boolean_value', (bool) $value),
+                'date-time' => $this->applyDateFilter($q, $operator, $value),
                 default => $this->applyStringFilter($q, $operator, $value),
             };
         });
@@ -176,6 +183,15 @@ class DynamicAttributeField extends ExportField
             $q->whereBetween('number_value', [$value[0], $value[1]]);
         } else {
             $q->where('number_value', $operator, $value);
+        }
+    }
+
+    protected function applyDateFilter($q, string $operator, mixed $value): void
+    {
+        if ($operator === 'between' && is_array($value) && count($value) === 2) {
+            $q->whereBetween('datetime_value', [$value[0], $value[1]]);
+        } else {
+            $q->where('datetime_value', $operator, $value);
         }
     }
 
@@ -262,6 +278,12 @@ class DynamicAttributeField extends ExportField
         }
         if ($this->isNumberType) {
             return $attrValue->number_value;
+        }
+        if ($this->isDateTimeType) {
+            // Значение хранится в datetime_value (напр. «Срок годности» из 1С).
+            // Отдаём чистую дату Y-m-d по умолчанию; date-модификатор конструктора
+            // при заданном формате переразберёт строку и применит свой (напр. d.m.Y).
+            return $attrValue->datetime_value?->format('Y-m-d');
         }
         if ($attrValue->attribute_value_id) {
             return $attrValue->attributeValue?->value ?? $attrValue->attribute_value_id;

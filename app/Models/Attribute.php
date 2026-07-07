@@ -172,4 +172,12 @@ class Attribute extends Model
     {
         return $this->type === 'boolean';
     }
+
+    /**
+     * Check if attribute is of type 'date-time' (напр. «Срок годности» из 1С).
+     */
+    public function isDateTime(): bool
+    {
+        return $this->type === 'date-time';
+    }
 }
