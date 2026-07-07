@@ -64,8 +64,26 @@ class CatalogApiController extends Controller
         $products = ProductQueryService::enrichProductsWithDiscounts($products);
         $products = ProductQueryService::convertProductsPrices($products);
 
-        // Добавляем is_favorited для авторизованных пользователей
+        // Флаг участия в акции (region-aware) — маркер «Акция» в карточке каталога.
+        // Учитываем регион пользователя тем же scope forRegion, что и карточка товара,
+        // чтобы бейдж в сетке совпадал с тем, что видно на детальной странице.
         $user = Auth::user();
+        $productIds = collect($products)->pluck('id')->all();
+        $promoProductIds = [];
+        if (! empty($productIds)) {
+            $promoProductIds = Product::whereIn('id', $productIds)
+                ->whereHas('promotions', fn ($q) => $q->forRegion($user?->region_id))
+                ->pluck('id')
+                ->flip()
+                ->toArray();
+        }
+        $products = array_map(function ($product) use ($promoProductIds) {
+            $product['has_promotion'] = isset($promoProductIds[$product['id']]);
+
+            return $product;
+        }, $products);
+
+        // Добавляем is_favorited для авторизованных пользователей
         if ($user) {
             $productIds = collect($products)->pluck('id')->toArray();
             $favoritedIds = DB::table('favorites')

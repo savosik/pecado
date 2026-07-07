@@ -1,7 +1,7 @@
 import { memo, useCallback, useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy, LuTag } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
@@ -97,12 +97,33 @@ function ProductCard({ product, loading = false }) {
                 onMouseEnter={handleMouseEnter}
                 onMouseLeave={handleMouseLeave}
             >
+                {/* Акцентная полоса — товар участвует в акции */}
+                {product.has_promotion && (
+                    <Box
+                        position="absolute"
+                        top="0"
+                        left="0"
+                        right="0"
+                        h="3px"
+                        zIndex="1"
+                        pointerEvents="none"
+                        bgGradient="to-r"
+                        gradientFrom="purple.400"
+                        gradientTo="pink.400"
+                    />
+                )}
                 <Link href={`/products/${product.slug}`}>
                     <ProductMiniGallery product={product} maxImages={6} showMainImage isHovered={isImageHovered} />
                 </Link>
 
                 {/* Бейджи */}
                 <Box position="absolute" top="2" left="2" display="flex" flexDirection="column" gap="1" pointerEvents="none">
+                    {product.has_promotion && (
+                        <Badge colorPalette="purple" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" display="inline-flex" alignItems="center" gap="1">
+                            <LuTag size={10} />
+                            Акция
+                        </Badge>
+                    )}
                     {product.is_new && (
                         <Badge colorPalette="green" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
                             Новинка
