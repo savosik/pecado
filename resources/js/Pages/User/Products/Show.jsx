@@ -8,6 +8,7 @@ import ProductGallery from '@/components/product/ProductGallery';
 import ProductInfo from '@/components/product/ProductInfo';
 import ProductDetailTabs from '@/components/product/ProductDetailTabs';
 import ProductVariants from '@/components/product/ProductVariants';
+import ProductPromotions from '@/components/product/ProductPromotions';
 import MobileActionsBar from '@/components/product/MobileActionsBar';
 import { buildProductInfoProps, getProductDescription } from '@/utils/product';
 
@@ -15,7 +16,7 @@ import { buildProductInfoProps, getProductDescription } from '@/utils/product';
  * Show — детальная страница товара.
  */
 export default function Show() {
-    const { product, media, categoryTrail, variants, certificates, specifications, specificationGroups, sizeChart, similarProducts, currency, auth, seo } = usePage().props;
+    const { product, media, categoryTrail, variants, certificates, specifications, specificationGroups, sizeChart, similarProducts, promotions, currency, auth, seo } = usePage().props;
     const currencySymbol = currency?.symbol || '₽';
     const user = auth?.user || null;
 
@@ -58,6 +59,7 @@ export default function Show() {
                                 modelName={product.model_name}
                             />
                         ) : null}
+                        promotionsSlot={<ProductPromotions promotions={promotions} />}
                     />
 
                     <ProductGallery media={media} productName={product.name} categoryName={categoryName} />
@@ -91,6 +93,7 @@ export default function Show() {
                                     modelName={product.model_name}
                                 />
                             ) : null}
+                            promotionsSlot={<ProductPromotions promotions={promotions} />}
                         />
 
                         <ProductDetailTabs

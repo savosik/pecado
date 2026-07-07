@@ -772,6 +772,21 @@ class ProductController extends Controller
         // текущего товара. Только в наличии или в предзаказе.
         $similarProducts = app(SimilarProductsService::class)->forProduct($product);
 
+        // Акции, в которых участвует товар. Фильтруем по региону пользователя
+        // (как в PromotionController) — чтобы не показывать чужие региональные акции.
+        $promotions = $product->promotions()
+            ->forRegion(auth()->user()?->region_id)
+            ->orderByDesc('promotions.created_at')
+            ->get()
+            ->map(fn (\App\Models\Promotion $promotion) => [
+                'id' => $promotion->id,
+                'name' => $promotion->name,
+                'slug' => $promotion->slug,
+                'image' => $promotion->getFirstMediaUrl('list-item') ?: null,
+            ])
+            ->values()
+            ->all();
+
         return [
             'product' => $productData,
             'media' => $media,
@@ -782,6 +797,7 @@ class ProductController extends Controller
             'specificationGroups' => $specificationGroups,
             'sizeChart' => $sizeChart,
             'similarProducts' => $similarProducts,
+            'promotions' => $promotions,
             'seo' => $this->buildProductSeo($product),
         ];
     }

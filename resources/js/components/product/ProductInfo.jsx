@@ -32,6 +32,7 @@ export default function ProductInfo({
     tags = [],
     discountPct = null,
     variantsSlot = null,
+    promotionsSlot = null,
     headingAs = 'h1',
 }) {
     const { auth } = usePage().props;
@@ -237,6 +238,9 @@ export default function ProductInfo({
 
             {/* Варианты товара — между артикулами и ценой, чтобы выбор фасовки шёл до цены */}
             {variantsSlot}
+
+            {/* Акции, в которых участвует товар — видны всем, в т.ч. гостям */}
+            {promotionsSlot}
 
             {/* Цена, наличие и корзина — только для авторизованных */}
             {user && (
