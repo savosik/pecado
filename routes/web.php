@@ -58,6 +58,11 @@ Route::get('/sitemap.xml', function () {
     return response()->file($path, ['Content-Type' => 'application/xml']);
 })->name('sitemap');
 
+// Публичный YML-фид Яндекс.Маркета (розничные цены, товары активных категорий).
+// Генерируется по расписанию: feed:build-yandex (см. routes/console.php).
+Route::get('/feed/yandex-market.yml', [\App\Http\Controllers\YandexMarketFeedController::class, 'show'])
+    ->name('feed.yandex-market');
+
 // Старый путь /catalog → постоянный редирект на /products. Сохраняется,
 // чтобы битые ссылки в AI-генерируемом контенте и старые SEO-ссылки
 // уводили на актуальный каталог, а не на 404.

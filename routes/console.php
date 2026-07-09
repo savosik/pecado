@@ -17,3 +17,4 @@ Schedule::command('exports:warm')->everyFifteenMinutes()->withoutOverlapping(); 
 Schedule::command('exports:cleanup')->dailyAt('04:30')->withoutOverlapping(); // удаление orphaned/stale файлов кеша выгрузок
 Schedule::command('erp:cleanup-messages')->dailyAt('05:00'); // очистка лога шины ERP старше 30 дней
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
+Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
