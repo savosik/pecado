@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\Warehouse;
 use App\Services\Feed\YandexMarketFeedBuilder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -12,6 +13,8 @@ class YandexMarketFeedTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected Warehouse $warehouse;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -19,15 +22,31 @@ class YandexMarketFeedTest extends TestCase
         // Чистим кэш-файл между тестами: ensure() отдаёт готовый файл, поэтому
         // остаток от прошлого прогона мог бы подменить свежие данные.
         @unlink(app(YandexMarketFeedBuilder::class)->path());
+
+        // Целевой склад фида (config feed.yandex_market.warehouse).
+        $this->warehouse = Warehouse::factory()->create([
+            'name' => config('feed.yandex_market.warehouse'),
+        ]);
     }
 
-    public function test_route_returns_valid_yml_with_retail_price(): void
+    /**
+     * Товар активной категории с заданным остатком на целевом складе.
+     */
+    protected function productInStock(float $price, int $qty): Product
     {
         $category = Category::factory()->create(['is_active' => true]);
         $product = Product::factory()->create([
             'category_id' => $category->id,
-            'base_price' => 1990.00,
+            'base_price' => $price,
         ]);
+        $product->warehouses()->attach($this->warehouse->id, ['quantity' => $qty]);
+
+        return $product;
+    }
+
+    public function test_route_returns_valid_yml_with_retail_price_and_warehouse_stock(): void
+    {
+        $product = $this->productInStock(1990.00, 7);
 
         $response = $this->get('/feed/yandex-market.yml');
 
@@ -37,23 +56,41 @@ class YandexMarketFeedTest extends TestCase
         // BinaryFileResponse не буферизует тело — читаем сгенерированный файл.
         $body = file_get_contents(app(YandexMarketFeedBuilder::class)->path());
         $this->assertStringContainsString('<yml_catalog', $body);
-        $this->assertStringContainsString('<offers>', $body);
         $this->assertStringContainsString($product->name, $body);
         // Розничная цена base_price, без oldprice.
         $this->assertStringContainsString('<price>1990</price>', $body);
         $this->assertStringNotContainsString('<oldprice>', $body);
+        // Остаток и доступность — с целевого склада.
+        $this->assertStringContainsString('<count>7</count>', $body);
+        $this->assertMatchesRegularExpression('/<offer[^>]*available="true"/', $body);
+    }
+
+    public function test_excludes_products_without_stock_on_target_warehouse(): void
+    {
+        $inStock = $this->productInStock(500, 3);
+        $outOfStock = $this->productInStock(500, 0);
+
+        // Товар с остатком на другом складе — не считается.
+        $otherWarehouse = Warehouse::factory()->create(['name' => 'Тюмень Основной']);
+        $elsewhere = $this->productInStock(500, 0);
+        $elsewhere->warehouses()->attach($otherWarehouse->id, ['quantity' => 99]);
+
+        $xml = file_get_contents(app(YandexMarketFeedBuilder::class)->build());
+
+        $this->assertStringContainsString($inStock->name, $xml);
+        $this->assertStringNotContainsString($outOfStock->name, $xml);
+        $this->assertStringNotContainsString($elsewhere->name, $xml);
     }
 
     public function test_excludes_products_of_inactive_categories(): void
     {
-        $active = Category::factory()->create(['is_active' => true]);
         $inactive = Category::factory()->create(['is_active' => false]);
-
-        $shown = Product::factory()->create(['category_id' => $active->id, 'base_price' => 500]);
         $hidden = Product::factory()->create(['category_id' => $inactive->id, 'base_price' => 500]);
+        $hidden->warehouses()->attach($this->warehouse->id, ['quantity' => 5]);
 
-        $body = app(YandexMarketFeedBuilder::class)->build();
-        $xml = file_get_contents($body);
+        $shown = $this->productInStock(500, 5);
+
+        $xml = file_get_contents(app(YandexMarketFeedBuilder::class)->build());
 
         $this->assertStringContainsString($shown->name, $xml);
         $this->assertStringNotContainsString($hidden->name, $xml);
@@ -61,24 +98,12 @@ class YandexMarketFeedTest extends TestCase
 
     public function test_excludes_zero_price_products(): void
     {
-        $category = Category::factory()->create(['is_active' => true]);
-        $free = Product::factory()->create(['category_id' => $category->id, 'base_price' => 0]);
-        $paid = Product::factory()->create(['category_id' => $category->id, 'base_price' => 100]);
+        $free = $this->productInStock(0, 5);
+        $paid = $this->productInStock(100, 5);
 
         $xml = file_get_contents(app(YandexMarketFeedBuilder::class)->build());
 
         $this->assertStringContainsString($paid->name, $xml);
         $this->assertStringNotContainsString($free->name, $xml);
-    }
-
-    public function test_available_flag_reflects_stock(): void
-    {
-        $category = Category::factory()->create(['is_active' => true]);
-        Product::factory()->create(['category_id' => $category->id, 'base_price' => 100]);
-
-        $xml = file_get_contents(app(YandexMarketFeedBuilder::class)->build());
-
-        // Без остатков товар присутствует, но помечен как отсутствующий.
-        $this->assertMatchesRegularExpression('/<offer[^>]*available="(true|false)"/', $xml);
     }
 }
