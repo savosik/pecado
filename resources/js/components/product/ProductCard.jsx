@@ -150,7 +150,7 @@ function ProductCard({ product, loading = false }) {
                         </Badge>
                     )}
                     {shelfLife && (
-                        <Badge colorPalette="gray" variant="solid" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" title="Срок годности">
+                        <Badge colorPalette="gray" variant="subtle" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" title="Срок годности">
                             {shelfLife}
                         </Badge>
                     )}
