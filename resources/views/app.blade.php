@@ -4,6 +4,10 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
+        @production
+            <meta name="yandex-verification" content="7050fc1b2f8a8507" />
+        @endproduction
+
         {{-- SEO-мета рендерится сервером из seo-пропа Inertia (без SSR React) — видна в view-source и краулерам. --}}
         @php
             $seo = $page['props']['seo'] ?? [];
