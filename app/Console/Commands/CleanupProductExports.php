@@ -86,6 +86,15 @@ class CleanupProductExports extends Command
                 continue;
             }
 
+            // Зарезервированные файлы публичных фидов (feed_*) не привязаны к
+            // ProductExport.hash и живут в этом же каталоге ради X-Accel-локации
+            // nginx — их не трогаем (иначе удалились бы как orphan).
+            if (str_starts_with($name, 'feed_')) {
+                $skipped++;
+
+                continue;
+            }
+
             // Имя файла = hash; .gz-копия = hash.gz.
             $hash = preg_replace('/\.gz$/', '', $name);
 

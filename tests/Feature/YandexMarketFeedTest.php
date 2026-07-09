@@ -106,4 +106,16 @@ class YandexMarketFeedTest extends TestCase
         $this->assertStringContainsString($paid->name, $xml);
         $this->assertStringNotContainsString($free->name, $xml);
     }
+
+    public function test_feed_file_survives_exports_cleanup(): void
+    {
+        $this->productInStock(100, 5);
+        $path = app(YandexMarketFeedBuilder::class)->build();
+        $this->assertFileExists($path);
+
+        // Файл фида лежит в exports/, но с префиксом feed_ — cleanup его щадит.
+        $this->artisan('exports:cleanup')->assertSuccessful();
+
+        $this->assertFileExists($path);
+    }
 }

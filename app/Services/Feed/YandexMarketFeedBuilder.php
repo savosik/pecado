@@ -20,18 +20,29 @@ use Illuminate\Support\Facades\Log;
  */
 class YandexMarketFeedBuilder
 {
-    /** Имя файла фида внутри каталога feeds. */
-    public const FILE = 'yandex-market.yml';
+    /**
+     * Имя файла фида. Префикс `feed_` — зарезервированный: exports:cleanup
+     * не трогает такие файлы (см. CleanupProductExports).
+     */
+    public const FILE = 'feed_yandex-market.yml';
+
+    /**
+     * Internal-путь для X-Accel-Redirect. nginx location /__internal_exports/
+     * ссылается на storage/app/exports/, поэтому файл лежит именно там —
+     * это даёт быструю отдачу через nginx, минуя PHP-FPM.
+     */
+    public const XACCEL_URI = '/__internal_exports/'.self::FILE;
 
     /** Ключ блокировки на время генерации. */
     protected const LOCK_KEY = 'feed:yandex-market:build';
 
     /**
-     * Абсолютный путь к файлу фида.
+     * Абсолютный путь к файлу фида. Каталог exports/ переиспользуется ради
+     * готовой X-Accel-локации nginx; от очистки файл защищён префиксом feed_.
      */
     public function path(): string
     {
-        return storage_path('app/feeds/'.self::FILE);
+        return storage_path('app/exports/'.self::FILE);
     }
 
     /**
