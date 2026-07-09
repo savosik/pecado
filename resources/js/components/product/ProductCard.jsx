@@ -21,7 +21,9 @@ function ProductCard({ product, loading = false }) {
         price, salePrice, discountPct,
     } = useProductHelpers(product);
 
-    const shelfLife = formatShelfLife(product.shelf_life);
+    // product может быть undefined в режиме скелетона (loading) — optional chaining
+    // обязателен, иначе падаем ещё до раннего return скелетона.
+    const shelfLife = formatShelfLife(product?.shelf_life);
 
     const [isImageHovered, setIsImageHovered] = useState(false);
     const handleMouseEnter = useCallback(() => setIsImageHovered(true), []);
