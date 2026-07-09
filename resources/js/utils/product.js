@@ -1,4 +1,19 @@
 /**
+ * Форматирует ISO-дату срока годности («Y-m-d») в компактный бейдж «до MM/YY».
+ * Парсим строку напрямую (без new Date), чтобы не поймать сдвиг месяца из-за
+ * часового пояса. Возвращает null, если срок не указан/невалиден.
+ *
+ * @param {string|null|undefined} dateStr
+ * @returns {string|null}
+ */
+export function formatShelfLife(dateStr) {
+    if (!dateStr) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dateStr));
+    if (!m) return null;
+    return `до ${m[2]}/${m[1].slice(-2)}`;
+}
+
+/**
  * Собирает props для компонента ProductInfo из данных товара.
  * Используется в Show.jsx и ProductQuickViewModal.jsx.
  */
@@ -27,6 +42,7 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
         isNew: product.is_new,
         isBestseller: product.is_bestseller,
         isMarked: product.is_marked,
+        shelfLife: formatShelfLife(product.shelf_life),
         inStock: isInStock,
         isPreorder,
         stockQuantity: stockQty,

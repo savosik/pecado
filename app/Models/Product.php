@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Scout\Searchable;
 use Spatie\Image\Enums\Fit;
 use Spatie\MediaLibrary\HasMedia;
@@ -385,6 +386,18 @@ class Product extends Model implements HasMedia
     public function attributeValues(): HasMany
     {
         return $this->hasMany(ProductAttributeValue::class);
+    }
+
+    /**
+     * Значение срока годности (date-time атрибут из 1С) — для бейджа «до MM/YY»
+     * в каталоге/карточке/QuickView. Атрибут опознаётся по стабильному slug
+     * (см. config('catalog.shelf_life_attribute_slug')). unique(product_id,
+     * attribute_id) гарантирует не более одной строки.
+     */
+    public function shelfLifeValue(): HasOne
+    {
+        return $this->hasOne(ProductAttributeValue::class)
+            ->whereHas('attribute', fn ($q) => $q->where('slug', config('catalog.shelf_life_attribute_slug')));
     }
 
     /**

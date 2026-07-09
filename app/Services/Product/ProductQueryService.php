@@ -41,6 +41,9 @@ class ProductQueryService
             'is_new' => $product->is_new,
             'is_bestseller' => $product->is_bestseller,
             'is_marked' => $product->is_marked,
+            // Срок годности (date-time атрибут из 1С) для бейджа «до MM/YY».
+            // ISO-дата; фронт форматирует в MM/YY. null — если срок не указан.
+            'shelf_life' => $product->shelfLifeValue?->datetime_value?->toDateString(),
             // Для кешированных данных primary_stock/preorder_stock = null → 0.
             // Это ожидаемо: enrichProductsWithStock() перезапишет значения после извлечения из кеша.
             'stock_quantity' => (int) ($product->primary_stock ?? 0),
@@ -59,7 +62,7 @@ class ProductQueryService
      */
     public static function productEagerLoads(): array
     {
-        return ['brand', 'media', 'tags'];
+        return ['brand', 'media', 'tags', 'shelfLifeValue'];
     }
 
     /**

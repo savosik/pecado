@@ -386,6 +386,7 @@ class ProductController extends Controller
             'certificates.media',
             'attributeValues.attribute.attributeGroup',
             'attributeValues.attributeValue',
+            'shelfLifeValue',
             'media',
             'barcodes',
             'tags',

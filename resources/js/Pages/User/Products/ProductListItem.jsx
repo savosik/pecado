@@ -6,6 +6,7 @@ import ProductMiniGallery from '@/components/product/ProductMiniGallery';
 import TagList from '@/components/product/TagList';
 import CartQuantityControl from '@/components/product/CartQuantityControl';
 import { useProductHelpers } from '@/hooks/useProductHelpers';
+import { formatShelfLife } from '@/utils/product';
 
 /**
  * ProductListItem — горизонтальная карточка товара для list-режима каталога.
@@ -204,6 +205,7 @@ export default function ProductListItem({ product, loading = false }) {
                         product.is_bestseller && { key: 'best', label: 'Хит', colorPalette: 'orange' },
                         hasSale && discountPct && { key: 'sale', label: `−${Math.round(discountPct)}%`, colorPalette: 'red' },
                         product.is_marked && { key: 'marked', label: 'Маркировка', colorPalette: 'yellow' },
+                        formatShelfLife(product.shelf_life) && { key: 'shelf', label: formatShelfLife(product.shelf_life), colorPalette: 'gray' },
                     ].filter(Boolean)}
                 />
 

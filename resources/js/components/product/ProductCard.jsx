@@ -6,6 +6,7 @@ import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
 import { useProductHelpers } from '@/hooks/useProductHelpers';
+import { formatShelfLife } from '@/utils/product';
 import { toaster } from '@/components/ui/toaster';
 
 /**
@@ -19,6 +20,8 @@ function ProductCard({ product, loading = false }) {
         hasSale, isInStock, isPreorder, brandName,
         price, salePrice, discountPct,
     } = useProductHelpers(product);
+
+    const shelfLife = formatShelfLife(product.shelf_life);
 
     const [isImageHovered, setIsImageHovered] = useState(false);
     const handleMouseEnter = useCallback(() => setIsImageHovered(true), []);
@@ -142,6 +145,11 @@ function ProductCard({ product, loading = false }) {
                     {product.is_marked && (
                         <Badge colorPalette="yellow" fontSize="2xs" fontWeight="700" borderRadius="md" px="2">
                             Маркировка
+                        </Badge>
+                    )}
+                    {shelfLife && (
+                        <Badge colorPalette="gray" variant="solid" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" title="Срок годности">
+                            {shelfLife}
                         </Badge>
                     )}
                 </Box>
