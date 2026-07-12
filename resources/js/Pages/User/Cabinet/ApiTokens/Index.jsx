@@ -182,7 +182,8 @@ const apiMethods = [
         color: 'blue',
         params: [
             { name: 'inn', type: 'string', required: true, desc: 'ИНН компании' },
-            { name: 'address', type: 'string', desc: 'Адрес доставки' },
+            { name: 'delivery_method', type: 'string', desc: 'Способ доставки: «delivery» — доставка по адресу (по умолчанию), «pickup» — самовывоз (адрес не требуется)' },
+            { name: 'address', type: 'string', desc: 'Адрес доставки. При delivery_method = «pickup» игнорируется' },
             { name: 'comment', type: 'string', desc: 'Комментарий' },
             { name: 'products', type: 'array', required: true, desc: 'Массив товаров' },
             { name: 'products[].identifier', type: 'string', required: true, desc: 'UUID / code / sku / barcode' },
@@ -190,6 +191,7 @@ const apiMethods = [
         ],
         requestBody: JSON.stringify({
             inn: "7707083893",
+            delivery_method: "delivery",
             address: "г. Москва, ул. Примерная, 1",
             comment: "Срочный заказ",
             products: [
@@ -199,8 +201,8 @@ const apiMethods = [
         }, null, 2),
         responseExample: JSON.stringify({
             orders: [
-                { order_id: 1234, order_number: "ORD-2026-1234", type: "order", total_amount: 18000.00, items_count: 2, status: "pending_approval" },
-                { order_id: 1235, order_number: "ORD-2026-1235", type: "preorder", total_amount: 7400.00, items_count: 1, status: "pending_approval" },
+                { order_id: 1234, order_number: "ORD-2026-1234", type: "order", delivery_method: "delivery", total_amount: 18000.00, items_count: 2, status: "pending_approval" },
+                { order_id: 1235, order_number: "ORD-2026-1235", type: "preorder", delivery_method: "delivery", total_amount: 7400.00, items_count: 1, status: "pending_approval" },
             ],
             total_orders: 2,
             fully_fulfilled: false,

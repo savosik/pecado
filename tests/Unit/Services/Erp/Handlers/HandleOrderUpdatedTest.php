@@ -623,4 +623,54 @@ class HandleOrderUpdatedTest extends TestCase
         // Статус всё-таки обновляется — проверяем, что обработчик отрабатывает остальные поля
         $this->assertEquals('ready_for_provision', $order->status->value);
     }
+
+    // v15.3: delivery_method (Самовывоз)
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function it_updates_delivery_method_when_provided(): void
+    {
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-dm-update',
+            'status' => 'pending_approval',
+            'delivery_method' => 'delivery',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->handler->handle([
+            'uuid' => 'test-uuid-dm-update',
+            'delivery_method' => 'pickup',
+        ]);
+
+        $this->assertSame('pickup', $order->fresh()->delivery_method->value);
+    }
+
+    #[Test]
+    public function it_keeps_delivery_method_when_key_absent_or_null(): void
+    {
+        $order = Order::factory()->create([
+            'uuid' => 'test-uuid-dm-keep',
+            'status' => 'pending_approval',
+            'delivery_method' => 'pickup',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        // Ключ отсутствует — способ не меняется
+        $this->handler->handle([
+            'uuid' => 'test-uuid-dm-keep',
+            'status' => 'ready_for_provision',
+        ]);
+        $this->assertSame('pickup', $order->fresh()->delivery_method->value);
+
+        // Явный null — тоже не меняется
+        $this->handler->handle([
+            'uuid' => 'test-uuid-dm-keep',
+            'delivery_method' => null,
+        ]);
+        $this->assertSame('pickup', $order->fresh()->delivery_method->value);
+    }
 }

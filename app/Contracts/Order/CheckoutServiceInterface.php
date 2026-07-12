@@ -2,6 +2,7 @@
 
 namespace App\Contracts\Order;
 
+use App\Enums\DeliveryMethod;
 use App\Models\Cart;
 use App\Models\Company;
 use Illuminate\Support\Collection;
@@ -17,9 +18,10 @@ interface CheckoutServiceInterface
     public function checkout(
         Cart $cart,
         Company $company,
-        string $deliveryAddress,
+        ?string $deliveryAddress,
         ?string $comment = null,
         ?string $managerComment = null,
-        ?string $warehouseComment = null
+        ?string $warehouseComment = null,
+        DeliveryMethod $deliveryMethod = DeliveryMethod::DELIVERY
     ): Collection;
 }

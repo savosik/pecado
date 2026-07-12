@@ -165,6 +165,13 @@ class HandleOrderCreated
                     'comment' => $payload['comment'] ?? null,
                 ];
 
+                // v15.3: способ доставки (delivery | pickup, опционально).
+                // Для нового заказа отсутствие/null = delivery (default колонки).
+                // При upsert отсутствие поля не сбрасывает сохранённое значение.
+                if (! empty($payload['delivery_method'])) {
+                    $fields['delivery_method'] = $payload['delivery_method'];
+                }
+
                 // v13.7: аудит-метки 1С (опционально). При отсутствии в payload
                 // на upsert не перезаписываем — пишем только то, что прислали.
                 // TZ-нормализация — в App\Casts\ErpDatetime.
@@ -248,6 +255,7 @@ class HandleOrderCreated
                 'user_id' => $userId,
                 'company_id' => $companyId,
                 'delivery_address' => $payload['delivery_address'] ?? null,
+                'delivery_method' => $payload['delivery_method'] ?? null,
                 'items_count' => count($items),
                 'total_amount' => $totalAmount,
             ]);

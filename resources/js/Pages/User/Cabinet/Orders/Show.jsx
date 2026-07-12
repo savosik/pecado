@@ -9,7 +9,7 @@ import {
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
-    LuSearch,
+    LuSearch, LuStore,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -139,7 +139,15 @@ export default function OrderShow({ order }) {
                                         </Box>
                                     </HStack>
                                 )}
-                                {order.delivery_address && (
+                                {order.delivery_method === 'pickup' ? (
+                                    <HStack gap="2" align="start">
+                                        <LuStore size={16} style={{ marginTop: 2, flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
+                                        <Box>
+                                            <Text fontSize="sm" fontWeight="600">Самовывоз</Text>
+                                            <Text fontSize="xs" color="fg.muted">Заказ забирается со склада самостоятельно</Text>
+                                        </Box>
+                                    </HStack>
+                                ) : order.delivery_address && (
                                     <HStack gap="2" align="start">
                                         <LuMapPin size={16} style={{ marginTop: 2, flexShrink: 0, color: 'var(--chakra-colors-gray-400)' }} />
                                         <Box>
@@ -147,7 +155,7 @@ export default function OrderShow({ order }) {
                                         </Box>
                                     </HStack>
                                 )}
-                                {!order.company && !order.delivery_address && (
+                                {!order.company && !order.delivery_address && order.delivery_method !== 'pickup' && (
                                     <Text fontSize="sm" color="fg.muted">Нет данных</Text>
                                 )}
                             </VStack>

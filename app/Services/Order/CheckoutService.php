@@ -6,6 +6,7 @@ use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Order\CheckoutServiceInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderType;
 use App\Events\OrderCreated;
 use App\Models\Cart;
@@ -32,19 +33,22 @@ class CheckoutService implements CheckoutServiceInterface
     public function checkout(
         Cart $cart,
         Company $company,
-        string $deliveryAddress,
+        ?string $deliveryAddress,
         ?string $comment = null,
         ?string $managerComment = null,
-        ?string $warehouseComment = null
+        ?string $warehouseComment = null,
+        DeliveryMethod $deliveryMethod = DeliveryMethod::DELIVERY
     ): Collection {
-        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment) {
+        return DB::transaction(function () use ($cart, $company, $deliveryAddress, $comment, $managerComment, $warehouseComment, $deliveryMethod) {
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);
 
             $baseOrderData = [
                 'user_id' => $user->id,
                 'company_id' => $company->id,
-                'delivery_address' => $deliveryAddress,
+                // При самовывозе адрес доставки не хранится
+                'delivery_address' => $deliveryMethod === DeliveryMethod::PICKUP ? null : $deliveryAddress,
+                'delivery_method' => $deliveryMethod,
                 'cart_id' => $cart->id,
                 'status' => \App\Enums\OrderStatus::PENDING_APPROVAL,
                 'comment' => $comment,

@@ -7,6 +7,7 @@ use App\Contracts\Order\CheckoutServiceInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\Country;
+use App\Enums\DeliveryMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreCheckoutRequest;
 use Illuminate\Http\RedirectResponse;
@@ -105,7 +106,8 @@ class CheckoutController extends Controller
                 $request->validated('delivery_address'),
                 $request->validated('comment'),
                 $request->validated('manager_comment'),
-                $request->validated('warehouse_comment')
+                $request->validated('warehouse_comment'),
+                DeliveryMethod::from($request->validated('delivery_method'))
             );
 
             // Очистить корзину после успешного заказа

@@ -683,4 +683,121 @@ class PublishOrderToErpTest extends TestCase
                 && $job->payload['warehouse_comment'] === null;
         });
     }
+
+    // v15.3: delivery_method (Самовывоз)
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function order_created_payload_includes_pickup_delivery_method_with_null_address(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'pickup-test-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'delivery_method' => \App\Enums\DeliveryMethod::PICKUP,
+            'delivery_address' => null,
+        ]);
+
+        Queue::fake();
+
+        $event = new OrderCreated($order);
+        $listener = new \App\Listeners\PublishOrderToErp;
+        $listener->handle($event);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return $job->payload['delivery_method'] === 'pickup'
+                && array_key_exists('delivery_address', $job->payload)
+                && $job->payload['delivery_address'] === null;
+        });
+    }
+
+    #[Test]
+    public function order_created_payload_defaults_to_delivery_method_delivery(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'delivery-default-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+
+        // Заказ без явного указания способа доставки (legacy-путь) — default колонки
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'delivery_address' => 'г. Москва, ул. Тестовая, д. 1',
+        ]);
+
+        Queue::fake();
+
+        $event = new OrderCreated($order);
+        $listener = new \App\Listeners\PublishOrderToErp;
+        $listener->handle($event);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            return $job->payload['delivery_method'] === 'delivery';
+        });
+    }
+
+    #[Test]
+    public function pickup_order_payload_passes_outbound_schema_validation(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'pickup-schema-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $product = Product::factory()->create(['external_id' => 'pickup-prod-001']);
+
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'delivery_method' => \App\Enums\DeliveryMethod::PICKUP,
+            'delivery_address' => null,
+        ]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'quantity' => 1,
+            'price' => 500.00,
+            'subtotal' => 500.00,
+        ]);
+
+        Queue::fake();
+
+        $event = new OrderCreated($order);
+        $listener = new \App\Listeners\PublishOrderToErp;
+        $listener->handle($event);
+
+        $validator = app(\App\Services\Erp\ErpMessageValidator::class);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) use ($validator) {
+            $result = $validator->validateOutbound('order.created', $job->payload);
+
+            return $result['valid'] === true;
+        });
+    }
+
+    #[Test]
+    public function payload_with_invalid_delivery_method_fails_outbound_schema_validation(): void
+    {
+        $validator = app(\App\Services\Erp\ErpMessageValidator::class);
+
+        $payload = [
+            'event' => 'order.created',
+            'message_id' => 'msg-invalid-dm-test',
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'delivery_method' => 'courier',
+            'items' => [
+                ['product_uuid' => 'x', 'quantity' => 1, 'base_price' => 1, 'discount_percent' => 0, 'final_price' => 1],
+            ],
+        ];
+
+        $result = $validator->validateOutbound('order.created', $payload);
+
+        $this->assertFalse($result['valid']);
+    }
 }

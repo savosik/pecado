@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Contracts\Currency\UserCurrencyResolverInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Events\OrderCreated;
@@ -144,12 +145,14 @@ class ClientApiController extends Controller
         $validated = $request->validate([
             'inn' => 'required|string|max:12',
             'address' => 'nullable|string|max:500',
+            'delivery_method' => 'nullable|in:delivery,pickup',
             'comment' => 'nullable|string|max:1000',
             'products' => 'required|array|min:1',
             'products.*.identifier' => 'required|string|max:255',
             'products.*.quantity' => 'required|integer|min:1',
         ], [
             'inn.required' => 'ИНН обязателен',
+            'delivery_method.in' => 'Недопустимый способ доставки. Допустимые значения: delivery, pickup',
             'products.required' => 'Список товаров обязателен',
             'products.min' => 'Список товаров не может быть пустым',
             'products.*.identifier.required' => 'Идентификатор товара обязателен',
@@ -249,10 +252,16 @@ class ClientApiController extends Controller
             $comment = $comment !== null && $comment !== '' ? ($comment."\n\n".$note) : $note;
         }
 
+        // Способ доставки (v15.3): delivery по умолчанию; при самовывозе адрес не хранится
+        $deliveryMethod = $validated['delivery_method'] ?? DeliveryMethod::DELIVERY->value;
+
         $baseOrderData = [
             'user_id' => $user->id,
             'company_id' => $company->id,
-            'delivery_address' => $validated['address'] ?? null,
+            'delivery_address' => $deliveryMethod === DeliveryMethod::PICKUP->value
+                ? null
+                : ($validated['address'] ?? null),
+            'delivery_method' => $deliveryMethod,
             'status' => OrderStatus::PENDING_APPROVAL,
             'comment' => $comment,
             'total_amount' => 0,
@@ -298,6 +307,7 @@ class ClientApiController extends Controller
             'order_id' => $order->id,
             'order_number' => $order->number,
             'type' => $order->type?->value ?? 'order',
+            'delivery_method' => $order->delivery_method?->value ?? DeliveryMethod::DELIVERY->value,
             'total_amount' => round((float) $order->total_amount, 2),
             'items_count' => $order->items()->count(),
             'status' => $order->status?->value ?? OrderStatus::PENDING_APPROVAL->value,

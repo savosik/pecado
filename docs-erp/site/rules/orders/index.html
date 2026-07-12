@@ -2070,6 +2070,11 @@
 </li>
 <li><code>discount_percent</code> может быть отрицательным: положительное значение означает скидку, отрицательное — наценку; источник истины для суммы позиции — <code>final_price</code></li>
 <li>Сайт публикует заказ в статусе <code>pending_approval</code> — он ждёт согласования менеджером в 1С</li>
+<li><strong>(v15.3)</strong> Поле <code>delivery_method</code> — способ доставки: <code>delivery</code> (доставка по адресу) или <code>pickup</code> (самовывоз)<ul>
+<li>Поле опциональное, отсутствие = <code>delivery</code></li>
+<li>При <code>pickup</code> поле <code>delivery_address</code> = <code>null</code> — 1С <strong>не должна требовать</strong> адрес доставки</li>
+</ul>
+</li>
 </ul>
 <h3 id="1">Сторона 1С<a class="headerlink" href="#1" title="Permanent link">&para;</a></h3>
 <ul>
@@ -2088,6 +2093,7 @@
 <li><code>discount_percent</code> может быть отрицательным: положительное значение означает скидку, отрицательное — наценку; сайт сохраняет значение как есть и рассчитывает сумму по <code>final_price</code></li>
 <li><strong>(v13.7)</strong> Опциональные аудит-метки <code>erp_created_at</code> / <code>erp_updated_at</code> (ISO-8601 datetime с TZ) — момент создания/изменения документа на стороне 1С. Сохраняются на сайте в одноимённые колонки <code>orders.erp_created_at</code> / <code>orders.erp_updated_at</code>, отображаются в админке. Поля <strong>не required</strong>: payload без них принимается, существующие значения колонок не перезаписываются. Подробнее: <a href="../../guides/erp-timestamps-for-1c/">«Аудит-метки 1С: erp_created_at / erp_updated_at»</a></li>
 <li><strong>(v13.8)</strong> При upsert уже существующего заказа (заказ создан пользователем на сайте, затем 1С прислал <code>order.created</code> с тем же <code>uuid</code>) поле <code>comment</code> из payload <strong>не перезаписывает</strong> комментарий, оставленный пользователем при оформлении. Для нового заказа <code>comment</code> сохраняется как обычно</li>
+<li><strong>(v15.3)</strong> Поле <code>delivery_method</code> (<code>delivery</code> | <code>pickup</code>) сохраняется в <code>orders.delivery_method</code>. Для нового заказа отсутствие поля или <code>null</code> = <code>delivery</code>. При upsert существующего заказа отсутствие поля <strong>не сбрасывает</strong> ранее сохранённый способ доставки</li>
 </ul>
 <hr />
 <h2 id="orderupdated-1">order.updated (1С → Сайт)<a class="headerlink" href="#orderupdated-1" title="Permanent link">&para;</a></h2>
@@ -2109,6 +2115,7 @@
 <li>Если новый статус не равен <code>deleted</code>, а запись была ранее soft-deleted (1С «оживила» удалённый заказ) — сайт снимает soft-delete (<code>restoreQuietly</code>) и пересохраняет с новым статусом</li>
 <li><strong>(v13.7)</strong> Опциональные аудит-метки <code>erp_created_at</code> / <code>erp_updated_at</code>. При обновлении достаточно передавать только <code>erp_updated_at</code> — <code>erp_created_at</code> уже зафиксирован в момент <code>order.created</code>. Поля <strong>не required</strong>, отсутствие в payload не перезаписывает существующие значения. Подробнее: <a href="../../guides/erp-timestamps-for-1c/">«Аудит-метки 1С: erp_created_at / erp_updated_at»</a></li>
 <li><strong>(v13.8)</strong> Поле <code>comment</code> сайт <strong>никогда не обновляет</strong> из шины 1С. Это пользовательское поле, оставленное клиентом при оформлении заказа на сайте — оно неприкосновенно. Даже если 1С передаст <code>comment</code> в payload <code>order.updated</code>, сайт его проигнорирует</li>
+<li><strong>(v15.3)</strong> Если передан <code>delivery_method</code> (<code>delivery</code> | <code>pickup</code>) — сайт обновляет <code>orders.delivery_method</code>. Отсутствие ключа или <code>null</code> — способ доставки <strong>не меняется</strong></li>
 </ul>
 <h3 id="_3">Маппинг статусов<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <table>
@@ -2213,6 +2220,8 @@
 <li>[ ] <code>order.deleted</code> и <code>order.updated</code> со статусом <code>deleted</code> (legacy) делают soft-delete + переводят в <code>closed</code> (v14)</li>
 <li>[ ] История изменений позиций фиксируется в <code>order_change_logs</code> (v11)</li>
 <li>[ ] <code>delivery_address</code> сохраняется напрямую в текстовое поле <code>orders.delivery_address</code> (v12.1)</li>
+<li>[ ] <strong>(v15.3)</strong> <code>delivery_method</code> (<code>delivery</code> | <code>pickup</code>) передаётся в <code>order.created</code> (Сайт → 1С); при <code>pickup</code> <code>delivery_address</code> = <code>null</code></li>
+<li>[ ] <strong>(v15.3)</strong> Сайт принимает <code>delivery_method</code> в <code>order.created</code> / <code>order.updated</code> от 1С; отсутствие поля не сбрасывает сохранённое значение</li>
 </ul>
 
 

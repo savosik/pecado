@@ -506,4 +506,66 @@ class HandleOrderCreatedTest extends TestCase
         $this->assertEquals(-15.00, (float) $order->items->first()->discount_percent);
         $this->assertEquals(1150.00, (float) $order->items->first()->final_price);
     }
+
+    // v15.3: delivery_method (Самовывоз)
+    // ──────────────────────────────────────────────
+
+    #[Test]
+    public function saves_pickup_delivery_method_from_payload(): void
+    {
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-dm-001',
+            'uuid' => 'order-pickup-001',
+            'status' => 'pending_approval',
+            'delivery_method' => 'pickup',
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-pickup-001')->first();
+        $this->assertNotNull($order);
+        $this->assertSame('pickup', $order->delivery_method->value);
+    }
+
+    #[Test]
+    public function defaults_to_delivery_when_delivery_method_missing(): void
+    {
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-dm-002',
+            'uuid' => 'order-no-dm-001',
+            'status' => 'pending_approval',
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'order-no-dm-001')->first();
+        $this->assertNotNull($order);
+        $this->assertSame('delivery', $order->delivery_method->value);
+    }
+
+    #[Test]
+    public function upsert_without_delivery_method_does_not_reset_pickup(): void
+    {
+        Order::withoutEvents(function () {
+            Order::create([
+                'uuid' => 'existing-pickup-001',
+                'status' => 'pending_approval',
+                'delivery_method' => 'pickup',
+                'total_amount' => 500,
+            ]);
+        });
+
+        // 1С прислала order.created без delivery_method — способ не должен сброситься
+        $this->handler->handle([
+            'event' => 'order.created',
+            'message_id' => 'msg-test-dm-003',
+            'uuid' => 'existing-pickup-001',
+            'status' => 'ready_for_provision',
+            'items' => [],
+        ]);
+
+        $order = Order::where('uuid', 'existing-pickup-001')->first();
+        $this->assertSame('pickup', $order->delivery_method->value);
+        $this->assertSame('ready_for_provision', $order->status->value);
+    }
 }

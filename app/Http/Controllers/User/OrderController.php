@@ -458,6 +458,8 @@ class OrderController extends Controller
                     'tax_id' => $order->company->tax_id,
                 ] : null,
                 'delivery_address' => $order->delivery_address,
+                'delivery_method' => $order->delivery_method?->value ?? 'delivery',
+                'delivery_method_label' => $order->delivery_method?->label() ?? 'Доставка',
                 'items' => $order->items->map(function ($item) {
                     return [
                         'id' => $item->id,

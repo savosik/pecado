@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
  * @property int|null $user_id
  * @property int|null $company_id
  * @property string|null $delivery_address
+ * @property \App\Enums\DeliveryMethod $delivery_method
  * @property int|null $cart_id
  * @property OrderStatus $status
  * @property string|null $comment
@@ -113,6 +114,7 @@ class Order extends Model
         'manager_comment',
         'warehouse_comment',
         'delivery_address',
+        'delivery_method',
         'total_amount',
         'exchange_rate',
         'rate_coefficient',
@@ -136,6 +138,7 @@ class Order extends Model
             'exchange_rate' => 'decimal:10',
             'rate_coefficient' => 'decimal:4',
             'type' => \App\Enums\OrderType::class,
+            'delivery_method' => \App\Enums\DeliveryMethod::class,
             'erp_created_at' => \App\Casts\ErpDatetime::class,
             'erp_updated_at' => \App\Casts\ErpDatetime::class,
         ];

@@ -80,6 +80,12 @@ class HandleOrderUpdated
             $order->delivery_address = $payload['delivery_address'];
         }
 
+        // v15.3: способ доставки (delivery | pickup).
+        // Отсутствие ключа или null — способ доставки не меняется.
+        if (! empty($payload['delivery_method'])) {
+            $order->delivery_method = $payload['delivery_method'];
+        }
+
         // v13.8: comment — пользовательское поле, не перезаписываем из шины 1С.
         // То, что клиент ввёл при оформлении заказа на сайте, неприкосновенно.
 
@@ -120,6 +126,7 @@ class HandleOrderUpdated
             'uuid' => $uuid,
             'status' => $payload['status'] ?? 'не изменён',
             'delivery_address' => isset($payload['delivery_address']) ? 'обновлён' : 'не изменён',
+            'delivery_method' => ! empty($payload['delivery_method']) ? $payload['delivery_method'] : 'не изменён',
         ]);
     }
 

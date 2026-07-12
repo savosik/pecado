@@ -205,4 +205,72 @@ class ClientApiOrdersTest extends TestCase
 
         $res->assertStatus(404);
     }
+
+    // ─── Способ доставки (v15.3) ─────────────────────────
+
+    public function test_pickup_order_is_created_with_null_address(): void
+    {
+        $this->product('ART-A', available: 10);
+
+        $res = $this->order([['identifier' => 'ART-A', 'quantity' => 2]], [
+            'delivery_method' => 'pickup',
+            'address' => 'г. Москва, ул. Лишняя, д. 1',
+        ]);
+
+        $res->assertStatus(201)
+            ->assertJsonPath('orders.0.delivery_method', 'pickup');
+
+        $order = Order::first();
+        $this->assertSame('pickup', $order->delivery_method->value);
+        // Адрес игнорируется при самовывозе
+        $this->assertNull($order->delivery_address);
+    }
+
+    public function test_order_without_delivery_method_defaults_to_delivery(): void
+    {
+        $this->product('ART-A', available: 10);
+
+        $res = $this->order([['identifier' => 'ART-A', 'quantity' => 1]], [
+            'address' => 'г. Москва, ул. Примерная, д. 1',
+        ]);
+
+        $res->assertStatus(201)
+            ->assertJsonPath('orders.0.delivery_method', 'delivery');
+
+        $order = Order::first();
+        $this->assertSame('delivery', $order->delivery_method->value);
+        $this->assertSame('г. Москва, ул. Примерная, д. 1', $order->delivery_address);
+    }
+
+    public function test_invalid_delivery_method_is_rejected(): void
+    {
+        $this->product('ART-A', available: 10);
+
+        $res = $this->order([['identifier' => 'ART-A', 'quantity' => 1]], [
+            'delivery_method' => 'courier',
+        ]);
+
+        $res->assertStatus(422)
+            ->assertJsonValidationErrors('delivery_method');
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_pickup_split_creates_both_orders_with_pickup(): void
+    {
+        $this->product('ART-A', available: 2, preorder: 10);
+
+        $res = $this->order([['identifier' => 'ART-A', 'quantity' => 5]], [
+            'delivery_method' => 'pickup',
+        ]);
+
+        $res->assertStatus(201)
+            ->assertJson(['total_orders' => 2]);
+
+        $this->assertSame(2, Order::count());
+        foreach (Order::all() as $order) {
+            $this->assertSame('pickup', $order->delivery_method->value);
+            $this->assertNull($order->delivery_address);
+        }
+    }
 }

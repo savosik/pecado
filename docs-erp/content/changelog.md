@@ -6,6 +6,31 @@ Payload-схемы: [AsyncAPI](/docs/erp/spec.yaml) | [JSON Schemas](/docs/erp/s
 
 ---
 
+## [15.3.0] — 2026-07-11
+
+### Добавлено
+
+- **`delivery_method` в `order.created` / `order.updated` (оба направления)** —
+  способ доставки: `delivery` (доставка по адресу) | `pickup` (самовывоз).
+  Опциональное поле, обратная совместимость сохранена: отсутствие поля = `delivery`.
+    - `order.created` (Сайт → 1С): при `pickup` поле `delivery_address` = `null` —
+      1С не должна требовать адрес доставки.
+    - `order.created` (1С → Сайт): для нового заказа отсутствие поля = `delivery`;
+      при upsert существующего заказа отсутствие поля не сбрасывает сохранённый способ.
+    - `order.updated` (1С → Сайт): отсутствие ключа или `null` — способ доставки не меняется.
+    - Схемы: `order.created.to_erp.json`, `order.created.json`, `order.updated.json`;
+      AsyncAPI: `OrderCreatedPayload`, `OrderUpdatedPayload`.
+    - На сайте хранится в `orders.delivery_method`; выбор доступен на оформлении
+      заказа и в клиентском API (`POST /orders`, поле `delivery_method`).
+
+### Исправлено
+
+- **AsyncAPI `OrderUpdatedPayload` синхронизирован с JSON-схемой `order.updated.json`**:
+  добавлено ранее отсутствовавшее в спецификации поле `delivery_address` (v12.1).
+- **`info.version` AsyncAPI выровнена с changelog** (была 15.1.0 при актуальной 15.2.1).
+
+---
+
 ## [15.2.1] — 2026-07-05
 
 ### Исправлено

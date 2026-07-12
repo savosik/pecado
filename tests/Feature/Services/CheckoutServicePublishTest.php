@@ -98,4 +98,91 @@ class CheckoutServicePublishTest extends TestCase
             return ($job->payload['event'] ?? null) === 'order.created';
         });
     }
+
+    #[Test]
+    public function checkout_с_самовывозом_создаёт_заказ_без_адреса_и_публикует_pickup_в_шину(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create(['erp_id' => 'u-erp-pickup']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $product = Product::factory()->create(['external_id' => 'p-erp-pickup']);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'item_type' => 'instock',
+        ]);
+
+        $checkout = $this->app->make(CheckoutServiceInterface::class);
+        $cart->load('items.product', 'user');
+
+        $orders = $checkout->checkout(
+            $cart,
+            $company,
+            null,
+            null,
+            null,
+            null,
+            \App\Enums\DeliveryMethod::PICKUP,
+        );
+
+        $this->assertCount(1, $orders);
+        $order = $orders->first()->fresh();
+        $this->assertSame(\App\Enums\DeliveryMethod::PICKUP, $order->delivery_method);
+        $this->assertNull($order->delivery_address);
+
+        $validator = app(\App\Services\Erp\ErpMessageValidator::class);
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function (PublishOrderToErpJob $job) use ($validator) {
+            return ($job->payload['delivery_method'] ?? null) === 'pickup'
+                && $job->payload['delivery_address'] === null
+                && $validator->validateOutbound('order.created', $job->payload)['valid'] === true;
+        });
+    }
+
+    #[Test]
+    public function checkout_с_самовывозом_разбивает_корзину_на_два_pickup_заказа(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 2,
+            'item_type' => 'instock',
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 3,
+            'item_type' => 'preorder',
+        ]);
+
+        $checkout = $this->app->make(CheckoutServiceInterface::class);
+        $cart->load('items.product', 'user');
+
+        $orders = $checkout->checkout(
+            $cart,
+            $company,
+            'этот адрес должен быть проигнорирован',
+            null,
+            null,
+            null,
+            \App\Enums\DeliveryMethod::PICKUP,
+        );
+
+        $this->assertCount(2, $orders);
+        foreach ($orders as $order) {
+            $fresh = $order->fresh();
+            $this->assertSame(\App\Enums\DeliveryMethod::PICKUP, $fresh->delivery_method);
+            $this->assertNull($fresh->delivery_address);
+        }
+    }
 }

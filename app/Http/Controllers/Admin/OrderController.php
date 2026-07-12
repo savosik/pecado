@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Events\OrderCreated;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
@@ -193,6 +194,7 @@ class OrderController extends AdminController
             'user_id' => 'required|exists:users,id',
             'company_id' => 'required|exists:companies,id',
             'delivery_address' => 'nullable|string|max:1000',
+            'delivery_method' => 'nullable|in:'.implode(',', array_column(DeliveryMethod::cases(), 'value')),
             'status' => 'required|string|in:'.implode(',', array_column(OrderStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'currency_code' => 'nullable|string|max:3',
@@ -220,6 +222,7 @@ class OrderController extends AdminController
                 'user_id' => $validated['user_id'],
                 'company_id' => $validated['company_id'],
                 'delivery_address' => $validated['delivery_address'] ?? null,
+                'delivery_method' => $validated['delivery_method'] ?? DeliveryMethod::DELIVERY->value,
                 'status' => $validated['status'],
                 'comment' => $validated['comment'] ?? null,
                 'currency_code' => $validated['currency_code'] ?? 'RUB',
@@ -309,6 +312,8 @@ class OrderController extends AdminController
                     'name' => $order->company->name,
                 ] : null,
                 'delivery_address' => $order->delivery_address,
+                'delivery_method' => $order->delivery_method?->value ?? 'delivery',
+                'delivery_method_label' => $order->delivery_method?->label() ?? 'Доставка',
                 'items' => $order->items->map(function ($item) {
                     return [
                         'id' => $item->id,
@@ -408,6 +413,7 @@ class OrderController extends AdminController
                 'user_id' => $order->user_id,
                 'company_id' => $order->company_id,
                 'delivery_address' => $order->delivery_address,
+                'delivery_method' => $order->delivery_method?->value ?? 'delivery',
                 'status' => $order->status?->value,
                 'comment' => $order->comment,
                 'currency_code' => $order->currency_code,
@@ -495,6 +501,7 @@ class OrderController extends AdminController
             'user_id' => 'required|exists:users,id',
             'company_id' => 'required|exists:companies,id',
             'delivery_address' => 'nullable|string|max:1000',
+            'delivery_method' => 'nullable|in:'.implode(',', array_column(DeliveryMethod::cases(), 'value')),
             'status' => 'required|string|in:'.implode(',', array_column(OrderStatus::cases(), 'value')),
             'comment' => 'nullable|string',
             'currency_code' => 'nullable|string|max:3',
@@ -529,6 +536,7 @@ class OrderController extends AdminController
                 'user_id' => $validated['user_id'],
                 'company_id' => $validated['company_id'],
                 'delivery_address' => $validated['delivery_address'] ?? null,
+                'delivery_method' => $validated['delivery_method'] ?? $order->delivery_method?->value ?? DeliveryMethod::DELIVERY->value,
                 'status' => $validated['status'],
                 'comment' => $validated['comment'] ?? null,
                 'currency_code' => $validated['currency_code'] ?? 'RUB',

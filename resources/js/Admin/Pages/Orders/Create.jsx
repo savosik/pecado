@@ -28,6 +28,7 @@ const Create = ({ statuses, currencies }) => {
         status: ORDER_STATUS_DEFAULT,
         comment: "",
         delivery_address: "",
+        delivery_method: "delivery",
         currency_code: "RUB",
         items: [],
     });
@@ -55,6 +56,13 @@ const Create = ({ statuses, currencies }) => {
             label: `${currency.name} (${currency.code})`,
             value: currency.code,
         })) : [],
+    });
+
+    const deliveryMethodsCollection = createListCollection({
+        items: [
+            { label: "Доставка", value: "delivery" },
+            { label: "Самовывоз", value: "pickup" },
+        ],
     });
 
     // Handler for user selection
@@ -265,6 +273,29 @@ const Create = ({ statuses, currencies }) => {
                         <Card.Root>
                             <Card.Body gap={4}>
                                 <Field
+                                    label="Способ доставки"
+                                    invalid={!!errors.delivery_method}
+                                    errorText={errors.delivery_method}
+                                >
+                                    <Select.Root
+                                        collection={deliveryMethodsCollection}
+                                        value={data.delivery_method ? [data.delivery_method] : []}
+                                        onValueChange={(e) => setData("delivery_method", e.value[0])}
+                                    >
+                                        <Select.Trigger>
+                                            <Select.ValueText placeholder="Выберите способ доставки" />
+                                        </Select.Trigger>
+                                        <Select.Content>
+                                            {deliveryMethodsCollection.items.map((method) => (
+                                                <Select.Item key={method.value} item={method}>
+                                                    {method.label}
+                                                </Select.Item>
+                                            ))}
+                                        </Select.Content>
+                                    </Select.Root>
+                                </Field>
+                                {data.delivery_method !== "pickup" && (
+                                <Field
                                     label="Адрес доставки"
                                     invalid={!!errors.delivery_address}
                                     errorText={errors.delivery_address}
@@ -276,6 +307,7 @@ const Create = ({ statuses, currencies }) => {
                                         rows={3}
                                     />
                                 </Field>
+                                )}
                                 <Field
                                     label="Комментарий"
                                     invalid={!!errors.comment}

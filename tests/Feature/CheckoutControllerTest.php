@@ -462,4 +462,160 @@ class CheckoutControllerTest extends TestCase
         $response->assertRedirect(route('cabinet.orders.index'));
         $response->assertSessionHas('success');
     }
+
+    // ─── Способ доставки (v15.3) ─────────────────────────
+
+    public function test_checkout_store_pickup_without_address_succeeds(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        $company = Company::factory()->create(['user_id' => $this->user->id]);
+
+        $order = Order::create([
+            'uuid' => \Illuminate\Support\Str::uuid(),
+            'user_id' => $this->user->id,
+            'company_id' => $company->id,
+            'delivery_address' => null,
+            'delivery_method' => \App\Enums\DeliveryMethod::PICKUP,
+            'status' => \App\Enums\OrderStatus::PENDING_APPROVAL,
+            'total_amount' => 100.00,
+            'exchange_rate' => 1,
+            'rate_coefficient' => 1,
+            'currency_code' => 'RUB',
+            'type' => \App\Enums\OrderType::ORDER,
+        ]);
+
+        $capturedArgs = null;
+        $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
+        $checkoutMock->expects($this->once())
+            ->method('checkout')
+            ->willReturnCallback(function (...$args) use (&$capturedArgs, $order) {
+                $capturedArgs = $args;
+
+                return collect([$order]);
+            });
+        $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
+
+        $response = $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'pickup',
+            // Адрес не передаём — при самовывозе не обязателен
+        ]);
+
+        $response->assertSessionDoesntHaveErrors();
+        $response->assertRedirect(route('cabinet.orders.show', $order));
+
+        // Сервис получил null-адрес и PICKUP
+        $this->assertNull($capturedArgs[2]);
+        $this->assertSame(\App\Enums\DeliveryMethod::PICKUP, $capturedArgs[6]);
+    }
+
+    public function test_checkout_store_pickup_ignores_passed_address(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        $company = Company::factory()->create(['user_id' => $this->user->id]);
+
+        $order = Order::create([
+            'uuid' => \Illuminate\Support\Str::uuid(),
+            'user_id' => $this->user->id,
+            'company_id' => $company->id,
+            'delivery_method' => \App\Enums\DeliveryMethod::PICKUP,
+            'status' => \App\Enums\OrderStatus::PENDING_APPROVAL,
+            'total_amount' => 100.00,
+            'exchange_rate' => 1,
+            'rate_coefficient' => 1,
+            'currency_code' => 'RUB',
+            'type' => \App\Enums\OrderType::ORDER,
+        ]);
+
+        $capturedArgs = null;
+        $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
+        $checkoutMock->method('checkout')
+            ->willReturnCallback(function (...$args) use (&$capturedArgs, $order) {
+                $capturedArgs = $args;
+
+                return collect([$order]);
+            });
+        $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
+
+        $response = $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'pickup',
+            'delivery_address' => 'г. Москва, ул. Лишняя, д. 1',
+        ]);
+
+        $response->assertSessionDoesntHaveErrors();
+        // exclude_if отбрасывает адрес при самовывозе — сервис получает null
+        $this->assertNull($capturedArgs[2]);
+    }
+
+    public function test_checkout_store_delivery_requires_address(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        $company = Company::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'delivery',
+        ]);
+
+        $response->assertSessionHasErrors('delivery_address');
+    }
+
+    public function test_checkout_store_rejects_invalid_delivery_method(): void
+    {
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        $company = Company::factory()->create(['user_id' => $this->user->id]);
+
+        $response = $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'courier',
+            'delivery_address' => 'г. Москва, ул. Тестовая, д. 1',
+        ]);
+
+        $response->assertSessionHasErrors('delivery_method');
+    }
 }

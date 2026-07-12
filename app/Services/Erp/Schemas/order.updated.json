@@ -39,6 +39,11 @@
             "type": ["string", "null"],
             "description": "Адрес доставки (строка). Сайт создаёт или находит запись в delivery_addresses."
         },
+        "delivery_method": {
+            "type": ["string", "null"],
+            "enum": ["delivery", "pickup", null],
+            "description": "Способ доставки (v15.3): delivery — доставка по адресу, pickup — самовывоз. Отсутствие ключа или null — способ доставки не меняется."
+        },
         "erp_created_at": {
             "type": ["string", "null"],
             "format": "date-time",

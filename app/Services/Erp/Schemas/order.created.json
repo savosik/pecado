@@ -170,6 +170,18 @@
         "delivery_address": {
             "type": "string"
         },
+        "delivery_method": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "enum": [
+                "delivery",
+                "pickup",
+                null
+            ],
+            "description": "Способ доставки (v15.3): delivery — доставка по адресу, pickup — самовывоз. Отсутствие поля или null = delivery."
+        },
         "currency_code": {
             "type": "string",
             "minLength": 3,

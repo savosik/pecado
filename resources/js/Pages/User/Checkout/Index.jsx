@@ -4,7 +4,7 @@ import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
     Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuTriangleAlert, LuWand } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand } from 'react-icons/lu';
 import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -51,6 +51,7 @@ export default function CheckoutIndex({
     // Form state
     const { data, setData, post, processing, errors } = useForm({
         company_id: (initialCompanies.find(c => c.is_default) ?? initialCompanies[0])?.id ?? '',
+        delivery_method: 'delivery',
         delivery_address: addresses.length > 0 ? addresses[0].address : '',
         comment: '',
         manager_comment: '',
@@ -307,7 +308,81 @@ export default function CheckoutIndex({
                             )}
                         </Box>
 
-                        {/* ═══ Адрес доставки ═══ */}
+                        {/* ═══ Способ доставки ═══ */}
+                        <Box
+                            bg="bg"
+                            borderWidth="1px"
+                            borderColor="border"
+                            rounded="lg"
+                            p={{ base: '4', md: '5' }}
+                        >
+                            <Flex align="center" gap="2" mb="3">
+                                <LuTruck size={20} />
+                                <Text fontWeight="600" fontSize="lg">Способ доставки</Text>
+                            </Flex>
+
+                            <RadioCard.Root
+                                value={data.delivery_method}
+                                onValueChange={({ value }) => {
+                                    setData((prev) => ({
+                                        ...prev,
+                                        delivery_method: value,
+                                        delivery_address: value === 'pickup'
+                                            ? ''
+                                            : (addressChoice !== 'new'
+                                                ? (addresses.find((a) => String(a.id) === addressChoice)?.address ?? '')
+                                                : ''),
+                                    }));
+                                }}
+                                orientation="horizontal"
+                                gap="2"
+                            >
+                                <Flex gap="2" direction={{ base: 'column', md: 'row' }} width="full">
+                                    <RadioCard.Item value="delivery" flex="1">
+                                        <RadioCard.ItemHiddenInput />
+                                        <RadioCard.ItemControl>
+                                            <RadioCard.ItemContent>
+                                                <Flex align="center" gap="2">
+                                                    <LuTruck size={16} />
+                                                    <RadioCard.ItemText fontWeight="600" fontSize="sm">
+                                                        Доставка
+                                                    </RadioCard.ItemText>
+                                                </Flex>
+                                                <Text fontSize="xs" color="fg.muted">
+                                                    Доставим по указанному адресу
+                                                </Text>
+                                            </RadioCard.ItemContent>
+                                            <RadioCard.ItemIndicator />
+                                        </RadioCard.ItemControl>
+                                    </RadioCard.Item>
+
+                                    <RadioCard.Item value="pickup" flex="1">
+                                        <RadioCard.ItemHiddenInput />
+                                        <RadioCard.ItemControl>
+                                            <RadioCard.ItemContent>
+                                                <Flex align="center" gap="2">
+                                                    <LuStore size={16} />
+                                                    <RadioCard.ItemText fontWeight="600" fontSize="sm">
+                                                        Самовывоз
+                                                    </RadioCard.ItemText>
+                                                </Flex>
+                                                <Text fontSize="xs" color="fg.muted">
+                                                    Заберёте заказ со склада самостоятельно
+                                                </Text>
+                                            </RadioCard.ItemContent>
+                                            <RadioCard.ItemIndicator />
+                                        </RadioCard.ItemControl>
+                                    </RadioCard.Item>
+                                </Flex>
+                            </RadioCard.Root>
+
+                            {errors.delivery_method && (
+                                <Text color="red.500" fontSize="sm" mt="2">{errors.delivery_method}</Text>
+                            )}
+                        </Box>
+
+                        {/* ═══ Адрес доставки (скрыт при самовывозе) ═══ */}
+                        {data.delivery_method === 'delivery' && (
                         <Box
                             bg="bg"
                             borderWidth="1px"
@@ -392,6 +467,7 @@ export default function CheckoutIndex({
                                 <Text color="red.500" fontSize="sm" mt="2">{errors.delivery_address}</Text>
                             )}
                         </Box>
+                        )}
 
                         {/* ═══ Комментарий ═══ */}
                         <Box

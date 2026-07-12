@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 15.1.0
+  version: 15.3.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -695,6 +695,8 @@ operations:
       Формат идентичен `order.created` от сайта, но отправляется из 1С.
 
       **v13:** Поле `delivery_address` (строка) сохраняется напрямую в текстовое поле `orders.delivery_address`.
+
+      **v15.3:** Поле `delivery_method` (`delivery` | `pickup`) сохраняется в `orders.delivery_method`. Отсутствие поля или null = `delivery`.
     action: receive
     channel:
       $ref: '#/channels/erpInOrders'
@@ -719,6 +721,8 @@ operations:
       **v11:** При обработке `order.updated` сайт фиксирует diff позиций в `order_change_logs`.
 
       **v13:** Поле `delivery_address` (строка) обновляется напрямую в текстовом поле `orders.delivery_address`.
+
+      **v15.3:** Поле `delivery_method` (`delivery` | `pickup`) обновляет `orders.delivery_method`. Отсутствие ключа или null — способ доставки не меняется.
     action: receive
     channel:
       $ref: '#/channels/erpInOrders'
@@ -763,6 +767,10 @@ operations:
       Поле `type` отправляется **только** от сайта — 1С не использует и не возвращает это поле.
       Заказ фиксируется в валюте пользователя с курсом и коэффициентом.
       После отправки пользователь изменять заказ НЕ может.
+
+      **v15.3:** Поле `delivery_method` (`delivery` | `pickup`) передаёт способ доставки.
+      При `pickup` (самовывоз) поле `delivery_address` = null — 1С не должна требовать адрес.
+      Отсутствие поля = `delivery`.
     action: send
     channel:
       $ref: '#/channels/erpOutOrders'
@@ -2425,6 +2433,16 @@ components:
         delivery_address:
           type: string
           description: Адрес доставки
+        delivery_method:
+          type: string
+          enum:
+            - delivery
+            - pickup
+          default: delivery
+          description: |
+            Способ доставки (v15.3). Опциональное поле, отсутствие = `delivery`.
+            `delivery` — доставка по адресу, `pickup` — самовывоз.
+            При `pickup` поле `delivery_address` = null — адрес не требуется.
         currency_code:
           $ref: '#/components/schemas/CurrencyCode'
         exchange_rate:
@@ -2515,6 +2533,23 @@ components:
             - awaiting_payment
             - ready_for_closure
             - closed
+        delivery_address:
+          type:
+            - string
+            - 'null'
+          description: "Адрес доставки (строка, v12.1). Сайт создаёт или находит запись в delivery_addresses. Отсутствие ключа — адрес не меняется."
+        delivery_method:
+          type:
+            - string
+            - 'null'
+          enum:
+            - delivery
+            - pickup
+            - null
+          description: |
+            Способ доставки (v15.3). `delivery` — доставка по адресу,
+            `pickup` — самовывоз. Отсутствие ключа или null —
+            способ доставки не меняется.
         erp_created_at:
           type:
             - string

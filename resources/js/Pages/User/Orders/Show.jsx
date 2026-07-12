@@ -103,7 +103,9 @@ export default function OrderShow({ order }) {
                                     value={`${order.company.name}${order.company.legal_name ? ` (${order.company.legal_name})` : ''}`}
                                 />
                             )}
-                            {order.delivery_address && (
+                            {order.delivery_method === 'pickup' ? (
+                                <InfoRow label="Способ доставки" value="Самовывоз" />
+                            ) : order.delivery_address && (
                                 <InfoRow
                                     label="Адрес доставки"
                                     value={order.delivery_address}

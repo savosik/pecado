@@ -46,6 +46,8 @@ class PublishOrderToErp
             'manager_comment' => $order->manager_comment ?: null,
             'warehouse_comment' => $order->warehouse_comment ?: null,
             'delivery_address' => $order->delivery_address,
+            // v15.3: способ доставки — delivery | pickup (отсутствие = delivery)
+            'delivery_method' => $order->delivery_method?->value ?? 'delivery',
             'timestamp' => now()->toIso8601String(),
         ];
 

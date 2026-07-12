@@ -186,7 +186,14 @@ const OrderShow = () => {
                                 </>
                             )}
 
-                            {order.delivery_address && (
+                            <Box borderTopWidth="1px" pt={3}>
+                                <Text fontWeight="medium" mb={2}>Способ доставки</Text>
+                                <Badge colorPalette={order.delivery_method === 'pickup' ? 'orange' : 'blue'} variant="subtle">
+                                    {order.delivery_method_label ?? 'Доставка'}
+                                </Badge>
+                            </Box>
+
+                            {order.delivery_method !== 'pickup' && order.delivery_address && (
                                 <Box borderTopWidth="1px" pt={3}>
                                     <Text fontWeight="medium" mb={2}>Адрес доставки</Text>
                                     <Text>{order.delivery_address}</Text>

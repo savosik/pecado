@@ -138,7 +138,7 @@ class PersonalManagerController extends AdminController
             'name' => 'required|string|max:255',
             'phone' => 'nullable|string|max:50',
             'email' => 'nullable|email|max:255',
-            'erp_uuid' => 'nullable|uuid|unique:personal_managers,erp_uuid,' . $personalManager->id,
+            'erp_uuid' => 'nullable|uuid|unique:personal_managers,erp_uuid,'.$personalManager->id,
             'photo' => 'nullable|image|max:20480',
         ], [
             'name.required' => 'Имя обязательно для заполнения.',
