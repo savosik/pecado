@@ -47,6 +47,7 @@ class DeliveryAddress extends Model
         'name',
         'address',
         'address_data',
+        'is_default',
     ];
 
     /**
@@ -56,6 +57,7 @@ class DeliveryAddress extends Model
     {
         return [
             'address_data' => 'array',
+            'is_default' => 'boolean',
         ];
     }
 

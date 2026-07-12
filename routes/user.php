@@ -162,6 +162,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/delivery-addresses/{deliveryAddress}/edit', [DeliveryAddressController::class, 'edit'])->name('delivery-addresses.edit');
     Route::put('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'update'])->name('delivery-addresses.update');
     Route::delete('/delivery-addresses/{deliveryAddress}', [DeliveryAddressController::class, 'destroy'])->name('delivery-addresses.destroy');
+    Route::post('/delivery-addresses/{deliveryAddress}/toggle-default', [DeliveryAddressController::class, 'toggleDefault'])->name('delivery-addresses.toggle-default');
 
     // Product Exports
     Route::post('/product-exports/preview', [ProductExportController::class, 'preview'])->name('product-exports.preview');

@@ -618,4 +618,173 @@ class CheckoutControllerTest extends TestCase
 
         $response->assertSessionHasErrors('delivery_method');
     }
+
+    // ─── Сохранение адреса и запоминание способа доставки ──
+
+    /**
+     * @return array{Order, \App\Models\Company}
+     */
+    private function mockSuccessfulCheckout(): array
+    {
+        $company = Company::factory()->create(['user_id' => $this->user->id]);
+
+        $order = Order::create([
+            'uuid' => \Illuminate\Support\Str::uuid(),
+            'user_id' => $this->user->id,
+            'company_id' => $company->id,
+            'delivery_address' => 'Москва, ул. Новая, д. 7',
+            'status' => \App\Enums\OrderStatus::PENDING_APPROVAL,
+            'total_amount' => 100.00,
+            'exchange_rate' => 1,
+            'rate_coefficient' => 1,
+            'currency_code' => 'RUB',
+            'type' => \App\Enums\OrderType::ORDER,
+        ]);
+
+        $checkoutMock = $this->createMock(CheckoutServiceInterface::class);
+        $checkoutMock->method('checkout')->willReturn(collect([$order]));
+        $this->app->instance(CheckoutServiceInterface::class, $checkoutMock);
+
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        return [$order, $company];
+    }
+
+    public function test_checkout_store_saves_new_address_when_requested(): void
+    {
+        [$order, $company] = $this->mockSuccessfulCheckout();
+
+        $response = $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'delivery',
+            'delivery_address' => 'Москва, ул. Новая, д. 7',
+            'save_address' => true,
+            'address_name' => 'Офис',
+        ]);
+
+        $response->assertRedirect(route('cabinet.orders.show', $order));
+        $this->assertDatabaseHas('delivery_addresses', [
+            'user_id' => $this->user->id,
+            'name' => 'Офис',
+            'address' => 'Москва, ул. Новая, д. 7',
+            'is_default' => false,
+        ]);
+    }
+
+    public function test_checkout_store_does_not_save_address_without_flag(): void
+    {
+        [, $company] = $this->mockSuccessfulCheckout();
+
+        $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'delivery',
+            'delivery_address' => 'Москва, ул. Новая, д. 7',
+        ]);
+
+        $this->assertDatabaseCount('delivery_addresses', 0);
+    }
+
+    public function test_checkout_store_saves_address_as_default_and_resets_others(): void
+    {
+        [, $company] = $this->mockSuccessfulCheckout();
+
+        $old = \App\Models\DeliveryAddress::factory()->create([
+            'user_id' => $this->user->id,
+            'is_default' => true,
+        ]);
+
+        $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'delivery',
+            'delivery_address' => 'Москва, ул. Новая, д. 7',
+            'save_address' => true,
+            'address_name' => 'Новый',
+            'address_make_default' => true,
+        ]);
+
+        $this->assertDatabaseHas('delivery_addresses', [
+            'user_id' => $this->user->id,
+            'address' => 'Москва, ул. Новая, д. 7',
+            'is_default' => true,
+        ]);
+        $this->assertFalse($old->fresh()->is_default);
+    }
+
+    public function test_checkout_store_does_not_duplicate_existing_address(): void
+    {
+        [, $company] = $this->mockSuccessfulCheckout();
+
+        \App\Models\DeliveryAddress::factory()->create([
+            'user_id' => $this->user->id,
+            'address' => 'Москва, ул. Новая, д. 7',
+        ]);
+
+        $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'delivery',
+            'delivery_address' => 'Москва, ул. Новая, д. 7',
+            'save_address' => true,
+        ]);
+
+        $this->assertDatabaseCount('delivery_addresses', 1);
+    }
+
+    public function test_checkout_store_remembers_delivery_method(): void
+    {
+        [, $company] = $this->mockSuccessfulCheckout();
+
+        $this->actingAs($this->user)->post('/checkout', [
+            'company_id' => $company->id,
+            'delivery_method' => 'pickup',
+        ]);
+
+        $this->assertSame(
+            \App\Enums\DeliveryMethod::PICKUP,
+            $this->user->fresh()->default_delivery_method
+        );
+    }
+
+    public function test_checkout_index_prefills_default_address_and_method(): void
+    {
+        $this->user->update(['default_delivery_method' => \App\Enums\DeliveryMethod::PICKUP]);
+
+        \App\Models\DeliveryAddress::factory()->create([
+            'user_id' => $this->user->id,
+            'is_default' => false,
+        ]);
+        $default = \App\Models\DeliveryAddress::factory()->create([
+            'user_id' => $this->user->id,
+            'is_default' => true,
+        ]);
+
+        $cart = Cart::factory()->create([
+            'user_id' => $this->user->id,
+            'is_active' => true,
+        ]);
+        CartItem::factory()->create([
+            'cart_id' => $cart->id,
+            'product_id' => Product::factory()->create()->id,
+            'quantity' => 1,
+            'item_type' => 'instock',
+        ]);
+
+        $response = $this->actingAs($this->user)->get('/checkout');
+
+        $response->assertOk();
+        $response->assertInertia(fn ($page) => $page
+            ->component('User/Checkout/Index')
+            ->where('defaultDeliveryMethod', 'pickup')
+            ->where('addresses.0.id', $default->id)
+            ->where('addresses.0.is_default', true)
+        );
+    }
 }

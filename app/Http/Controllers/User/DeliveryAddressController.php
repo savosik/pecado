@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\DeliveryAddress;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -13,7 +14,8 @@ class DeliveryAddressController extends Controller
     public function index()
     {
         $addresses = DeliveryAddress::where('user_id', Auth::id())
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
             ->get();
 
         return Inertia::render('User/Cabinet/DeliveryAddresses/Index', [
@@ -69,6 +71,28 @@ class DeliveryAddressController extends Controller
 
         return redirect()->route('cabinet.delivery-addresses.index')
             ->with('success', 'Адрес доставки успешно удалён.');
+    }
+
+    /**
+     * Переключить адрес доставки по умолчанию.
+     * У пользователя может быть только один адрес по умолчанию.
+     */
+    public function toggleDefault(DeliveryAddress $deliveryAddress): JsonResponse
+    {
+        $this->authorizeAddress($deliveryAddress);
+
+        $newValue = ! $deliveryAddress->is_default;
+
+        DeliveryAddress::where('user_id', Auth::id())->update(['is_default' => false]);
+
+        if ($newValue) {
+            $deliveryAddress->update(['is_default' => true]);
+        }
+
+        return response()->json([
+            'is_default' => $newValue,
+            'address_id' => $deliveryAddress->id,
+        ]);
     }
 
     private function authorizeAddress(DeliveryAddress $deliveryAddress): void

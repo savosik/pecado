@@ -41,6 +41,28 @@ class StoreCheckoutRequest extends FormRequest
                 'string',
                 'max:1000',
             ],
+            // Сохранение нового адреса в список пользователя (только при доставке).
+            'save_address' => [
+                'exclude_if:delivery_method,'.DeliveryMethod::PICKUP->value,
+                'sometimes',
+                'boolean',
+            ],
+            'address_name' => [
+                'exclude_if:delivery_method,'.DeliveryMethod::PICKUP->value,
+                'nullable',
+                'string',
+                'max:255',
+            ],
+            'address_make_default' => [
+                'exclude_if:delivery_method,'.DeliveryMethod::PICKUP->value,
+                'sometimes',
+                'boolean',
+            ],
+            'address_data' => [
+                'exclude_if:delivery_method,'.DeliveryMethod::PICKUP->value,
+                'nullable',
+                'array',
+            ],
             'comment' => ['nullable', 'string', 'max:5000'],
             'manager_comment' => ['nullable', 'string'],
             'warehouse_comment' => ['nullable', 'string'],

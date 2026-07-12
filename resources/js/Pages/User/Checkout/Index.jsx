@@ -10,6 +10,7 @@ import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import { toaster } from '@/components/ui/toaster';
 import { Field } from '@/components/ui/field';
+import { Checkbox } from '@/components/ui/checkbox';
 import { PhoneInput } from '@/components/common/PhoneInput';
 import { PartySuggest } from '@/components/common/PartySuggest';
 import { EmailSuggest } from '@/components/common/EmailSuggest';
@@ -36,6 +37,7 @@ export default function CheckoutIndex({
     companies: initialCompanies = [],
     addresses = [],
     countries = [],
+    defaultDeliveryMethod = 'delivery',
 }) {
     const { currency, errors: serverErrors, flash } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
@@ -48,19 +50,27 @@ export default function CheckoutIndex({
 
     const [companies, setCompanies] = useState(initialCompanies);
 
+    // Адрес по умолчанию (или первый), от него зависит предвыбор на странице.
+    const defaultAddress = addresses.find((a) => a.is_default) ?? addresses[0] ?? null;
+
     // Form state
     const { data, setData, post, processing, errors } = useForm({
         company_id: (initialCompanies.find(c => c.is_default) ?? initialCompanies[0])?.id ?? '',
-        delivery_method: 'delivery',
-        delivery_address: addresses.length > 0 ? addresses[0].address : '',
+        delivery_method: defaultDeliveryMethod,
+        delivery_address: defaultDeliveryMethod === 'delivery' && defaultAddress ? defaultAddress.address : '',
         comment: '',
         manager_comment: '',
         warehouse_comment: '',
+        // Сохранение нового адреса в список пользователя.
+        save_address: false,
+        address_name: '',
+        address_make_default: false,
+        address_data: null,
     });
 
     // Выбор адреса: id сохранённого адреса (строкой) либо 'new' для ручного ввода.
     const [addressChoice, setAddressChoice] = useState(
-        addresses.length > 0 ? String(addresses[0].id) : 'new',
+        defaultAddress ? String(defaultAddress.id) : 'new',
     );
     const useNewAddress = addressChoice === 'new';
     const [companyDialogOpen, setCompanyDialogOpen] = useState(false);
@@ -446,6 +456,7 @@ export default function CheckoutIndex({
                             </RadioCard.Root>
 
                             {useNewAddress && (
+                                <>
                                 <Field
                                     label="Введите адрес доставки"
                                     invalid={!!errors.delivery_address}
@@ -456,11 +467,53 @@ export default function CheckoutIndex({
                                         value={data.delivery_address}
                                         onChange={(val) => setData('delivery_address', val)}
                                         addressData={deliveryAddrData}
-                                        onAddressDataChange={setDeliveryAddrData}
+                                        onAddressDataChange={(val) => {
+                                            setDeliveryAddrData(val);
+                                            setData('address_data', val);
+                                        }}
                                         invalid={!!errors.delivery_address}
                                         placeholder="Город, улица, дом, квартира"
                                     />
                                 </Field>
+
+                                <Stack gap="3" mt="3">
+                                    <Checkbox
+                                        checked={data.save_address}
+                                        onCheckedChange={({ checked }) => {
+                                            setData('save_address', !!checked);
+                                            if (!checked) {
+                                                setData('address_make_default', false);
+                                            }
+                                        }}
+                                    >
+                                        Сохранить в мои адреса
+                                    </Checkbox>
+
+                                    {data.save_address && (
+                                        <>
+                                            <Field
+                                                label="Название адреса"
+                                                helperText="Необязательно, например «Офис» или «Склад»"
+                                                invalid={!!errors.address_name}
+                                                errorText={errors.address_name}
+                                            >
+                                                <Input
+                                                    value={data.address_name}
+                                                    onChange={(e) => setData('address_name', e.target.value)}
+                                                    placeholder="Название адреса"
+                                                />
+                                            </Field>
+
+                                            <Checkbox
+                                                checked={data.address_make_default}
+                                                onCheckedChange={({ checked }) => setData('address_make_default', !!checked)}
+                                            >
+                                                Сделать адресом по умолчанию
+                                            </Checkbox>
+                                        </>
+                                    )}
+                                </Stack>
+                                </>
                             )}
 
                             {!useNewAddress && errors.delivery_address && (

@@ -10,6 +10,8 @@ use App\Enums\Country;
 use App\Enums\DeliveryMethod;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreCheckoutRequest;
+use App\Models\DeliveryAddress;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -59,7 +61,11 @@ class CheckoutController extends Controller
 
         // Компании и адреса пользователя
         $companies = $user->companies()->select('id', 'name', 'legal_name', 'tax_id', 'is_default')->get();
-        $addresses = $user->deliveryAddresses()->select('id', 'name', 'address')->get();
+        $addresses = $user->deliveryAddresses()
+            ->select('id', 'name', 'address', 'is_default')
+            ->orderByDesc('is_default')
+            ->orderByDesc('created_at')
+            ->get();
 
         return Inertia::render('User/Checkout/Index', [
             'cart' => [
@@ -77,6 +83,8 @@ class CheckoutController extends Controller
             ],
             'companies' => $companies,
             'addresses' => $addresses,
+            // Запомненный способ доставки из последнего заказа (иначе — доставка).
+            'defaultDeliveryMethod' => ($user->default_delivery_method ?? DeliveryMethod::DELIVERY)->value,
             'countries' => collect(Country::cases())->map(fn ($c) => [
                 'value' => $c->value,
                 'label' => $c->label(),
@@ -99,6 +107,8 @@ class CheckoutController extends Controller
 
         $company = $user->companies()->findOrFail($request->validated('company_id'));
 
+        $deliveryMethod = DeliveryMethod::from($request->validated('delivery_method'));
+
         try {
             $orders = $this->checkoutService->checkout(
                 $cart,
@@ -107,8 +117,16 @@ class CheckoutController extends Controller
                 $request->validated('comment'),
                 $request->validated('manager_comment'),
                 $request->validated('warehouse_comment'),
-                DeliveryMethod::from($request->validated('delivery_method'))
+                $deliveryMethod
             );
+
+            // Запомнить выбранный способ доставки для предвыбора на следующем checkout.
+            $user->update(['default_delivery_method' => $deliveryMethod]);
+
+            // Сохранить новый адрес в список пользователя (только при доставке и по запросу).
+            if ($deliveryMethod === DeliveryMethod::DELIVERY && $request->boolean('save_address')) {
+                $this->saveDeliveryAddress($user, $request);
+            }
 
             // Очистить корзину после успешного заказа
             $cart->items()->delete();
@@ -131,6 +149,47 @@ class CheckoutController extends Controller
                 ])
                 ->with('stock_conflicts', $e->getItems());
         }
+    }
+
+    /**
+     * Сохранить введённый на checkout адрес в список адресов пользователя.
+     * Дубли (точное совпадение строки адреса) не создаём.
+     * При address_make_default делаем адрес адресом по умолчанию.
+     */
+    private function saveDeliveryAddress(User $user, StoreCheckoutRequest $request): void
+    {
+        $address = trim((string) $request->validated('delivery_address'));
+
+        if ($address === '') {
+            return;
+        }
+
+        $makeDefault = $request->boolean('address_make_default');
+
+        $existing = $user->deliveryAddresses()->where('address', $address)->first();
+
+        if ($existing) {
+            // Дубликат: при необходимости лишь переназначаем «по умолчанию».
+            if ($makeDefault && ! $existing->is_default) {
+                DeliveryAddress::where('user_id', $user->id)->update(['is_default' => false]);
+                $existing->update(['is_default' => true]);
+            }
+
+            return;
+        }
+
+        if ($makeDefault) {
+            DeliveryAddress::where('user_id', $user->id)->update(['is_default' => false]);
+        }
+
+        $name = trim((string) $request->validated('address_name'));
+
+        $user->deliveryAddresses()->create([
+            'name' => $name !== '' ? $name : 'Адрес доставки',
+            'address' => $address,
+            'address_data' => $request->validated('address_data'),
+            'is_default' => $makeDefault,
+        ]);
     }
 
     /**

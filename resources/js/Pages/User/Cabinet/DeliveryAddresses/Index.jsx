@@ -1,16 +1,26 @@
 import { useState } from 'react';
 import {
-    Box, Flex, Text, Card, HStack, VStack, Button,
+    Box, Flex, Text, Card, HStack, VStack, Badge, Button,
     IconButton, Table, Dialog, Portal,
 } from '@chakra-ui/react';
 import { Head, Link, router } from '@inertiajs/react';
 import CabinetLayout from '../CabinetLayout';
 import { LuPlus, LuPencil, LuTrash2, LuMapPin } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
+import { Checkbox } from '@/components/ui/checkbox';
 import axios from 'axios';
 
 export default function Index({ addresses = [] }) {
+    const [addressesData, setAddressesData] = useState(addresses);
     const [deleteAddress, setDeleteAddress] = useState(null);
+
+    // Отразить серверную логику «единственный default»: у выбранного — val, у остальных — false.
+    const handleToggled = (id, val) => {
+        setAddressesData((prev) => prev.map((a) => ({
+            ...a,
+            is_default: a.id === id ? val : false,
+        })));
+    };
 
     const confirmDelete = async () => {
         if (!deleteAddress) return;
@@ -43,7 +53,7 @@ export default function Index({ addresses = [] }) {
         >
             <Head title="Адреса доставки — Pecado" />
 
-            {addresses.length === 0 ? (
+            {addressesData.length === 0 ? (
                 <Card.Root bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted">
                     <Card.Body p="8" textAlign="center">
                         <VStack gap="3">
@@ -76,17 +86,21 @@ export default function Index({ addresses = [] }) {
                                 <Table.Row>
                                     <Table.ColumnHeader>Название</Table.ColumnHeader>
                                     <Table.ColumnHeader>Адрес</Table.ColumnHeader>
+                                    <Table.ColumnHeader textAlign="center">По умолч.</Table.ColumnHeader>
                                     <Table.ColumnHeader textAlign="right">Действия</Table.ColumnHeader>
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {addresses.map((a) => (
+                                {addressesData.map((a) => (
                                     <Table.Row key={a.id}>
                                         <Table.Cell>
                                             <Text fontWeight="600" fontSize="sm">{a.name}</Text>
                                         </Table.Cell>
                                         <Table.Cell>
                                             <Text fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }} noOfLines={2}>{a.address}</Text>
+                                        </Table.Cell>
+                                        <Table.Cell textAlign="center">
+                                            <DefaultToggle address={a} onToggled={handleToggled} />
                                         </Table.Cell>
                                         <Table.Cell textAlign="right">
                                             <HStack gap="1" justify="flex-end">
@@ -119,11 +133,19 @@ export default function Index({ addresses = [] }) {
 
                     {/* Mobile Cards */}
                     <VStack display={{ base: 'flex', md: 'none' }} gap="0" align="stretch" separator={<Box borderTop="1px solid" borderColor="border.muted" />}>
-                        {addresses.map((a) => (
-                            <Flex key={a.id} p="4" align="center" justify="space-between">
+                        {addressesData.map((a) => (
+                            <Flex key={a.id} p="4" align="center" justify="space-between" gap="2">
                                 <Box flex="1" minW="0">
-                                    <Text fontWeight="600" fontSize="sm" noOfLines={1}>{a.name}</Text>
+                                    <HStack gap="2">
+                                        <Text fontWeight="600" fontSize="sm" noOfLines={1}>{a.name}</Text>
+                                        {a.is_default && (
+                                            <Badge colorPalette="pecado" variant="subtle" fontSize="xs">По умолч.</Badge>
+                                        )}
+                                    </HStack>
                                     <Text fontSize="xs" color="gray.400" noOfLines={2} mt="1">{a.address}</Text>
+                                    <Box mt="2">
+                                        <DefaultToggle address={a} onToggled={handleToggled} withLabel />
+                                    </Box>
                                 </Box>
                                 <HStack gap="1" flexShrink="0">
                                     <IconButton
@@ -175,5 +197,36 @@ export default function Index({ addresses = [] }) {
                 </Portal>
             </Dialog.Root>
         </CabinetLayout>
+    );
+}
+
+function DefaultToggle({ address, onToggled, withLabel = false }) {
+    const [loading, setLoading] = useState(false);
+
+    const handleToggle = async () => {
+        setLoading(true);
+        try {
+            const { data } = await axios.post(`/cabinet/delivery-addresses/${address.id}/toggle-default`);
+            onToggled(address.id, data.is_default);
+            toaster.create({
+                title: data.is_default ? 'Адрес по умолчанию установлен' : 'Адрес по умолчанию сброшен',
+                type: 'success',
+            });
+        } catch {
+            toaster.create({ title: 'Ошибка при изменении', type: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Checkbox
+            checked={!!address.is_default}
+            onChange={handleToggle}
+            disabled={loading}
+            aria-label="Адрес по умолчанию"
+        >
+            {withLabel ? 'По умолчанию' : undefined}
+        </Checkbox>
     );
 }
