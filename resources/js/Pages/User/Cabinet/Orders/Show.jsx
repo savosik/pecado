@@ -1,18 +1,22 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator, Stack,
     Card, HStack, VStack, SimpleGrid, Image, Collapsible,
+    Dialog, Portal, CloseButton,
 } from '@chakra-ui/react';
 import { Head, Link, usePage } from '@inertiajs/react';
+import axios from 'axios';
 import {
     LuArrowLeft, LuPackage, LuWarehouse,
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
-    LuSearch, LuStore,
+    LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
+import { useCartStore } from '@/stores/useCartStore';
+import { toastSuccess, toastError, toastInfo } from '@/utils/toast';
 import {
     ORDER_STATUS_LABELS as STATUS_LABELS,
     ORDER_STATUS_COLORS as STATUS_COLORS,
@@ -47,19 +51,84 @@ export default function OrderShow({ order }) {
     // Объединённый timeline
     const timelineEntries = buildTimeline(order.status_histories, order.change_logs);
 
+    // ─── Повторить заказ ───
+    const cartTotal = useCartStore((s) => s.cartTotals.total);
+    // Кол-во позиций заказа с привязкой к каталогу (только их можно повторить).
+    const repeatableCount = (order.items || []).filter(
+        (it) => it.product?.id && Number(it.quantity) > 0,
+    ).length;
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [repeating, setRepeating] = useState(false);
+
+    const doRepeat = useCallback(async (mode) => {
+        setRepeating(true);
+        try {
+            const { data } = await axios.post(`/cabinet/orders/${order.id}/repeat`, { mode });
+
+            // Синхронизируем стор корзины (бейджи в шапке, количества).
+            await useCartStore.getState()._serverSync();
+
+            const added = Number(data?.added_count ?? 0);
+            const skipped = Number(data?.skipped_count ?? 0);
+
+            if (added > 0) {
+                toastSuccess('Заказ повторён', data.message || `Позиции добавлены в корзину: ${added}.`);
+            } else {
+                toastInfo('Нечего добавить', data?.message || 'В заказе нет позиций, доступных для повтора.');
+            }
+            if (skipped > 0) {
+                toastInfo('Часть позиций пропущена', `Товаров вне каталога: ${skipped}.`);
+            }
+        } catch (err) {
+            toastError('Ошибка', err?.response?.data?.message || 'Не удалось повторить заказ.');
+        } finally {
+            setRepeating(false);
+            setConfirmOpen(false);
+        }
+    }, [order.id]);
+
+    const handleRepeatClick = useCallback(() => {
+        if (cartTotal > 0) {
+            setConfirmOpen(true);
+        } else {
+            doRepeat('merge');
+        }
+    }, [cartTotal, doRepeat]);
+
     return (
         <CabinetLayout
             title={`Заказ ${order.number}`}
             actions={
-                <Button asChild variant="outline" size="sm">
-                    <Link href="/cabinet/orders">
-                        <LuArrowLeft size={16} />
-                        К списку
-                    </Link>
-                </Button>
+                <HStack gap="2">
+                    {repeatableCount > 0 && (
+                        <Button
+                            colorPalette="pecado"
+                            size="sm"
+                            onClick={handleRepeatClick}
+                            loading={repeating}
+                        >
+                            <LuRepeat size={16} />
+                            Повторить заказ
+                        </Button>
+                    )}
+                    <Button asChild variant="outline" size="sm">
+                        <Link href="/cabinet/orders">
+                            <LuArrowLeft size={16} />
+                            К списку
+                        </Link>
+                    </Button>
+                </HStack>
             }
         >
             <Head title={`Заказ ${order.number} — Pecado`} />
+
+            <RepeatOrderDialog
+                open={confirmOpen}
+                onClose={() => !repeating && setConfirmOpen(false)}
+                busy={repeating}
+                onMerge={() => doRepeat('merge')}
+                onReplace={() => doRepeat('replace')}
+            />
 
             <Stack gap="5">
                 {/* ═══ Тип заказа + статус ═══ */}
@@ -448,6 +517,69 @@ function InfoRow({ label, value, bold }) {
             </Text>
             <Text fontSize="sm" fontWeight={bold ? '700' : '400'}>{value}</Text>
         </Flex>
+    );
+}
+
+/**
+ * Диалог выбора действия при повторе заказа, когда корзина не пуста.
+ */
+function RepeatOrderDialog({ open, onClose, busy, onMerge, onReplace }) {
+    return (
+        <Dialog.Root
+            open={open}
+            onOpenChange={({ open: isOpen }) => !isOpen && onClose?.()}
+            size="sm"
+        >
+            <Portal>
+                <Dialog.Backdrop />
+                <Dialog.Positioner>
+                    <Dialog.Content>
+                        <Dialog.Header>
+                            <Dialog.Title>
+                                <HStack gap="2">
+                                    <LuRepeat size={18} />
+                                    <Text>Повторить заказ</Text>
+                                </HStack>
+                            </Dialog.Title>
+                            <Dialog.CloseTrigger asChild>
+                                <CloseButton size="sm" onClick={onClose} disabled={busy} />
+                            </Dialog.CloseTrigger>
+                        </Dialog.Header>
+
+                        <Dialog.Body>
+                            <Text fontSize="sm" color="fg.muted">
+                                В корзине уже есть товары. Добавить позиции заказа к текущей корзине
+                                или сначала очистить её?
+                            </Text>
+                        </Dialog.Body>
+
+                        <Dialog.Footer>
+                            <Stack gap="2" w="full">
+                                <Button
+                                    colorPalette="pecado"
+                                    onClick={onMerge}
+                                    loading={busy}
+                                    w="full"
+                                >
+                                    <LuShoppingCart size={16} />
+                                    Добавить к текущей корзине
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    colorPalette="red"
+                                    onClick={onReplace}
+                                    disabled={busy}
+                                    w="full"
+                                >
+                                    <LuTrash2 size={16} />
+                                    Очистить и добавить
+                                </Button>
+                            </Stack>
+                        </Dialog.Footer>
+                    </Dialog.Content>
+                </Dialog.Positioner>
+            </Portal>
+        </Dialog.Root>
     );
 }
 

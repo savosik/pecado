@@ -158,6 +158,7 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/export', [OrderController::class, 'export'])->name('orders.export');
     Route::get('/orders/{order}/items/export', [OrderController::class, 'exportItems'])->name('orders.items.export');
+    Route::post('/orders/{order}/repeat', [OrderController::class, 'repeat'])->name('orders.repeat');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
 
     // Delivery Addresses

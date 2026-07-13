@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Contracts\Cart\CartServiceInterface;
 use App\Enums\OrderStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
@@ -15,6 +16,7 @@ use App\Support\Search\EmptyResultSuggestion;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -630,5 +632,78 @@ class OrderController extends Controller
         $filename = "order-{$orderNumber}-items";
 
         return $exporter->stream($filename, $headers, $rows, "Заказ {$orderNumber}");
+    }
+
+    /**
+     * Повторить заказ — добавить его позиции в активную корзину пользователя.
+     * POST /cabinet/orders/{order}/repeat
+     *
+     * Параметр mode:
+     *   - 'merge'   — добавить позиции к текущей корзине (аддитивно к количеству);
+     *   - 'replace' — очистить корзину, затем добавить позиции.
+     *
+     * Позиции без привязки к каталогу (product_id пустой — товар удалён из
+     * каталога) повторить нельзя, они возвращаются в skipped_count.
+     */
+    public function repeat(Request $request, Order $order, CartServiceInterface $cartService): JsonResponse
+    {
+        $user = $request->user();
+
+        abort_unless($order->user_id === $user->id, 403);
+
+        $validated = $request->validate([
+            'mode' => 'nullable|in:merge,replace',
+        ], [
+            'mode.in' => 'Недопустимый режим повтора заказа.',
+        ]);
+        $mode = $validated['mode'] ?? 'merge';
+
+        $order->load(['items:id,order_id,product_id,name,quantity']);
+
+        // Суммируем количество по товару; отсекаем позиции без привязки к каталогу.
+        $orderQuantities = [];
+        $skipped = 0;
+        foreach ($order->items as $item) {
+            $pid = (int) ($item->product_id ?? 0);
+            $qty = (int) $item->quantity;
+            if ($pid <= 0 || $qty <= 0) {
+                $skipped++;
+
+                continue;
+            }
+            $orderQuantities[$pid] = ($orderQuantities[$pid] ?? 0) + $qty;
+        }
+
+        $cart = $cartService->getOrCreateActiveCart($user);
+
+        if ($mode === 'replace') {
+            $cart->clear();
+        }
+
+        $cartTotals = null;
+        if (! empty($orderQuantities)) {
+            // Аддитивно: к текущему количеству каждого товара прибавляем количество из заказа.
+            $targets = [];
+            foreach ($orderQuantities as $pid => $qty) {
+                $current = (int) $cart->items()->where('product_id', $pid)->sum('quantity');
+                $targets[$pid] = $current + $qty;
+            }
+
+            $result = $cartService->setProductsQuantity($user, $cart, $targets);
+            $cartTotals = $result['cart_totals'] ?? null;
+        }
+
+        $addedCount = count($orderQuantities);
+
+        return response()->json([
+            'status' => $addedCount > 0 ? 'success' : 'warning',
+            'message' => $addedCount > 0
+                ? "Позиции добавлены в корзину: {$addedCount}."
+                : 'В заказе нет позиций, доступных для повтора.',
+            'mode' => $mode,
+            'added_count' => $addedCount,
+            'skipped_count' => $skipped,
+            'cart_totals' => $cartTotals,
+        ], $addedCount > 0 ? 200 : 422);
     }
 }
