@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\CurrencyService;
 use App\Services\SimpleCsvExporter;
@@ -16,6 +17,7 @@ use App\Support\Search\EmptyResultSuggestion;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -44,8 +46,12 @@ class OrderController extends Controller
         // Валюта пользователя для конвертации
         $currency = $this->getUserCurrency($request);
 
+        // Изменения товарного состава (added/removed) по всем заказам страницы —
+        // считаем заранее одним проходом, чтобы разрешить slug товаров без N+1.
+        $compositionByOrder = $this->buildCompositionChanges($orders->getCollection());
+
         // Трансформация данных
-        $orders->getCollection()->transform(function ($order) use ($currency, $search) {
+        $orders->getCollection()->transform(function ($order) use ($currency, $search, $compositionByOrder) {
             $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
             $originalTotalAmount = (float) ($order->original_total_amount ?? 0);
             $originalTotalConverted = $this->convertAmount($originalTotalAmount, $order->currency_code, $currency);
@@ -94,6 +100,7 @@ class OrderController extends Controller
                 'shipments_count' => $order->shipments_count,
                 'match_source' => $match['source'],
                 'match_snippet' => $match['snippet'],
+                'composition_changes' => $compositionByOrder[$order->id] ?? null,
             ];
         });
 
@@ -138,6 +145,147 @@ class OrderController extends Controller
             'exportEnabled' => (bool) config('search-cabinet.export'),
             'suggestion' => $suggestion,
         ]);
+    }
+
+    /**
+     * Свести изменения товарного состава заказов страницы к нетто-итогу
+     * added/removed. Товар, добавленный и позднее удалённый (или наоборот),
+     * взаимно гасится. Slug товаров разрешается пакетно, без N+1.
+     *
+     * @return array<int, array{count:int, added:array<int, array{name:string, slug:?string}>, removed:array<int, array{name:string, slug:?string}>}>
+     */
+    private function buildCompositionChanges(EloquentCollection $orders): array
+    {
+        if ($orders->isEmpty()) {
+            return [];
+        }
+
+        // Грузим только логи изменения состава (added/removed/modified).
+        $orders->load(['changeLogs' => fn ($q) => $q->where('type', 'items_updated')]);
+
+        $draft = [];          // order_id => ['added' => rows, 'removed' => rows]
+        $needProductIds = [];
+        $needNames = [];
+
+        foreach ($orders as $order) {
+            $logs = $order->changeLogs
+                ->sortBy(fn ($l) => $l->created_at)   // хронологически: старые → новые
+                ->values();
+
+            if ($logs->isEmpty()) {
+                continue;
+            }
+
+            $net = []; // identity => ['dir' => 'added'|'removed', 'entry' => [...]]
+
+            foreach ($logs as $log) {
+                $changes = $log->changes ?? [];
+                foreach (($changes['added'] ?? []) as $item) {
+                    $this->applyCompositionEntry($net, $item, 'added');
+                }
+                foreach (($changes['removed'] ?? []) as $item) {
+                    $this->applyCompositionEntry($net, $item, 'removed');
+                }
+            }
+
+            if (empty($net)) {
+                continue;
+            }
+
+            $added = [];
+            $removed = [];
+            foreach ($net as $state) {
+                $entry = $state['entry'];
+                $row = [
+                    'name' => $entry['product_name'] ?? '—',
+                    'slug' => $entry['slug'] ?? null,
+                    'product_id' => $entry['product_id'] ?? null,
+                ];
+
+                if ($row['slug'] === null) {
+                    if (! empty($row['product_id'])) {
+                        $needProductIds[$row['product_id']] = true;
+                    } elseif ($row['name'] !== '—') {
+                        $needNames[$row['name']] = true;
+                    }
+                }
+
+                if ($state['dir'] === 'added') {
+                    $added[] = $row;
+                } else {
+                    $removed[] = $row;
+                }
+            }
+
+            $draft[$order->id] = ['added' => $added, 'removed' => $removed];
+        }
+
+        if (empty($draft)) {
+            return [];
+        }
+
+        // Разрешаем недостающие slug'и пакетно (старые логи не хранят slug/product_id).
+        $slugById = ! empty($needProductIds)
+            ? Product::whereIn('id', array_keys($needProductIds))->pluck('slug', 'id')->all()
+            : [];
+        $slugByName = ! empty($needNames)
+            ? Product::whereIn('name', array_keys($needNames))->pluck('slug', 'name')->all()
+            : [];
+
+        $resolve = function (array $row) use ($slugById, $slugByName): array {
+            $slug = $row['slug'];
+            if ($slug === null && ! empty($row['product_id'])) {
+                $slug = $slugById[$row['product_id']] ?? null;
+            }
+            if ($slug === null) {
+                $slug = $slugByName[$row['name']] ?? null;
+            }
+
+            return ['name' => $row['name'], 'slug' => $slug];
+        };
+
+        $final = [];
+        foreach ($draft as $orderId => $groups) {
+            $added = array_map($resolve, $groups['added']);
+            $removed = array_map($resolve, $groups['removed']);
+            $count = count($added) + count($removed);
+
+            if ($count === 0) {
+                continue;
+            }
+
+            $final[$orderId] = [
+                'count' => $count,
+                'added' => array_values($added),
+                'removed' => array_values($removed),
+            ];
+        }
+
+        return $final;
+    }
+
+    /**
+     * Учесть одну позицию в нетто-карте изменений состава. Обратное действие
+     * (добавлен ↔ удалён) для того же товара гасит предыдущее.
+     *
+     * @param  array<string, array{dir:string, entry:array<string, mixed>}>  $net
+     * @param  array<string, mixed>  $item
+     */
+    private function applyCompositionEntry(array &$net, array $item, string $dir): void
+    {
+        $identity = ! empty($item['product_id'])
+            ? 'id:'.$item['product_id']
+            : 'name:'.($item['product_name'] ?? '');
+
+        $existing = $net[$identity] ?? null;
+
+        if ($existing !== null && $existing['dir'] !== $dir) {
+            unset($net[$identity]);
+
+            return;
+        }
+
+        $net[$identity] = ['dir' => $dir, 'entry' => $item];
     }
 
     /**

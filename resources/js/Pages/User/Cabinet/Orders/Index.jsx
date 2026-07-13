@@ -16,6 +16,7 @@ import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/me
 import { Tooltip } from '@/components/ui/tooltip';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
 import MatchBadge from '@/components/cabinet/MatchBadge';
+import OrderCompositionBadge from '@/components/cabinet/OrderCompositionBadge';
 import SavedSearches from '@/components/cabinet/SavedSearches';
 import ExportMenu from '@/components/cabinet/ExportMenu';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
@@ -512,6 +513,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                     >
                                                         {order.status_label}
                                                     </Badge>
+                                                    <OrderCompositionBadge changes={order.composition_changes} />
                                                     <Tooltip
                                                         content={`Обновлён: ${order.erp_updated_at || '—'}`}
                                                         positioning={{ placement: 'top' }}

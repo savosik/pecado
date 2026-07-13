@@ -58,6 +58,7 @@ class OrderChangeLogger
             $key = $item->product?->external_id ?? 'item_'.$item->id;
             $snapshot[$key] = [
                 'product_id' => $item->product_id,
+                'slug' => $item->product?->slug,
                 'name' => $item->product?->name ?? $item->name,
                 'quantity' => (int) $item->quantity,
                 'base_price' => (float) $item->base_price,
@@ -175,6 +176,8 @@ class OrderChangeLogger
         foreach ($new as $key => $item) {
             if (! isset($old[$key])) {
                 $diff['added'][] = [
+                    'product_id' => $item['product_id'] ?? null,
+                    'slug' => $item['slug'] ?? null,
                     'product_name' => $item['name'],
                     'quantity' => $item['quantity'],
                     'price' => $item['final_price'],
@@ -185,6 +188,8 @@ class OrderChangeLogger
         foreach ($old as $key => $item) {
             if (! isset($new[$key])) {
                 $diff['removed'][] = [
+                    'product_id' => $item['product_id'] ?? null,
+                    'slug' => $item['slug'] ?? null,
                     'product_name' => $item['name'],
                     'quantity' => $item['quantity'],
                     'price' => $item['final_price'],
