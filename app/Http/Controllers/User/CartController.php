@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductBarcode;
+use App\Services\Cart\OrderImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -606,5 +607,130 @@ class CartController extends Controller
             'cart_id' => $cart->id,
             ...$result,
         ]);
+    }
+
+    // ────────────────────────────────────────────
+    // API — Импорт заказа (список / файл)
+    // ────────────────────────────────────────────
+
+    /**
+     * Импорт позиций в корзину из списка (два столбца: идентификаторы + количества).
+     * POST /api/cart/import-order
+     */
+    public function importOrder(Request $request, OrderImportService $importer): JsonResponse
+    {
+        $validated = $request->validate([
+            'items' => 'required|array|min:1|max:1000',
+            'items.*.identifier' => 'required|string',
+            'items.*.quantity' => 'required',
+        ], [
+            'items.required' => 'Укажите список позиций.',
+            'items.array' => 'Список позиций должен быть массивом.',
+            'items.min' => 'Список позиций не может быть пустым.',
+            'items.max' => 'Слишком много позиций в одном импорте.',
+            'items.*.identifier.required' => 'Укажите идентификатор товара.',
+            'items.*.quantity.required' => 'Укажите количество.',
+        ]);
+
+        $resolution = $importer->resolve($validated['items']);
+
+        return $this->respondWithImport($request, $resolution);
+    }
+
+    /**
+     * Импорт позиций в корзину из загруженного файла (XLSX/CSV).
+     * POST /api/cart/import-order-file
+     */
+    public function importOrderFile(Request $request, OrderImportService $importer): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xlsx,csv,txt|max:5120',
+        ], [
+            'file.required' => 'Прикрепите файл.',
+            'file.file' => 'Некорректный файл.',
+            'file.mimes' => 'Поддерживаются форматы XLSX и CSV.',
+            'file.max' => 'Файл слишком большой (максимум 5 МБ).',
+        ]);
+
+        $rows = $importer->parseFile($request->file('file'));
+
+        if (empty($rows)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'В файле не найдено ни одной позиции.',
+            ], 422);
+        }
+
+        $resolution = $importer->resolve($rows);
+
+        return $this->respondWithImport($request, $resolution);
+    }
+
+    /**
+     * Скачать XLSX-шаблон для импорта заказа.
+     * GET /api/cart/import-order/template
+     */
+    public function importOrderTemplate(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $spreadsheet = new \PhpOffice\PhpSpreadsheet\Spreadsheet;
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('Импорт заказа');
+        $sheet->fromArray([
+            ['Идентификатор', 'Количество'],
+            ['ART-000123', 2],
+            ['4600000000000', 1],
+        ], null, 'A1');
+        $sheet->getColumnDimension('A')->setWidth(28);
+        $sheet->getColumnDimension('B')->setWidth(16);
+
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, 'shablon-importa-zakaza.xlsx', [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
+    }
+
+    /**
+     * Применяет разрешённые позиции к активной корзине (аддитивно) и формирует ответ.
+     *
+     * @param  array{resolved: array<int, array{product_id: int, identifier: string, name: string, quantity: int}>, unresolved: array<int, array{identifier: string, quantity: string, reason: string}>}  $resolution
+     */
+    private function respondWithImport(Request $request, array $resolution): JsonResponse
+    {
+        $user = $request->user();
+        $cart = $this->cartService->getOrCreateActiveCart($user);
+
+        $resolved = $resolution['resolved'];
+        $unresolved = $resolution['unresolved'];
+
+        $cartTotals = null;
+        if (! empty($resolved)) {
+            // Аддитивно: к текущему количеству каждого товара прибавляем импортируемое.
+            $targets = [];
+            foreach ($resolved as $row) {
+                $pid = (int) $row['product_id'];
+                $current = (int) $cart->items()->where('product_id', $pid)->sum('quantity');
+                $targets[$pid] = $current + (int) $row['quantity'];
+            }
+
+            $result = $this->cartService->setProductsQuantity($user, $cart, $targets);
+            $cartTotals = $result['cart_totals'] ?? null;
+        }
+
+        $addedCount = count($resolved);
+        $message = $addedCount > 0
+            ? "Импортировано позиций: {$addedCount}."
+            : 'Не удалось импортировать ни одной позиции.';
+
+        return response()->json([
+            'status' => $addedCount > 0 ? 'success' : 'warning',
+            'message' => $message,
+            'added_count' => $addedCount,
+            'resolved' => $resolved,
+            'unresolved' => $unresolved,
+            'cart_totals' => $cartTotals,
+        ], $addedCount > 0 ? 200 : 422);
     }
 }

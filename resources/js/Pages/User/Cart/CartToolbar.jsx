@@ -6,9 +6,11 @@ import {
 import {
     LuSearch, LuX, LuChevronDown, LuRefreshCw, LuTrash2,
     LuHash, LuFileSpreadsheet, LuListChecks, LuArrowRightLeft, LuScanBarcode,
+    LuFileUp,
 } from 'react-icons/lu';
 import MoveToCartDialog from './MoveToCartDialog';
 import BarcodeScannerDialog from './BarcodeScannerDialog';
+import ImportOrderDialog from './ImportOrderDialog';
 import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 /**
@@ -46,6 +48,7 @@ export default function CartToolbar({
     const [qtyValue, setQtyValue] = useState('');
     const [clearDialogOpen, setClearDialogOpen] = useState(false);
     const [moveDialogOpen, setMoveDialogOpen] = useState(false);
+    const [importOpen, setImportOpen] = useState(false);
 
     const bulkEnabled = bulkSelectedCount > 0;
     const hasOtherCarts = userCarts.filter((c) => c.id !== currentCartId).length > 0;
@@ -155,6 +158,14 @@ export default function CartToolbar({
                                 </Menu.Item>
                                 <Menu.Separator />
                                 <Menu.Item
+                                    value="import"
+                                    onClick={() => setImportOpen(true)}
+                                >
+                                    <LuFileUp size={14} />
+                                    Импорт заказа…
+                                </Menu.Item>
+                                <Menu.Separator />
+                                <Menu.Item
                                     value="clear"
                                     onClick={() => setClearDialogOpen(true)}
                                     color="fg.error"
@@ -254,6 +265,13 @@ export default function CartToolbar({
             <BarcodeScannerDialog
                 open={scannerOpen}
                 onClose={() => setScannerOpen(false)}
+                onSuccess={() => onRefresh?.()}
+            />
+
+            {/* Диалог импорта заказа */}
+            <ImportOrderDialog
+                open={importOpen}
+                onClose={() => setImportOpen(false)}
                 onSuccess={() => onRefresh?.()}
             />
         </Box>

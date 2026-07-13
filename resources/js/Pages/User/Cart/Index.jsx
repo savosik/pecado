@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
-import { Box } from '@chakra-ui/react';
-import { LuShoppingCart, LuScanBarcode } from 'react-icons/lu';
+import { Box, Flex, Button } from '@chakra-ui/react';
+import { LuShoppingCart, LuScanBarcode, LuFileUp } from 'react-icons/lu';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
 import EmptyState from '@/components/common/EmptyState';
@@ -12,6 +12,7 @@ import CartTable from './CartTable';
 import CartSummary from './CartSummary';
 import CartFlash from './CartFlash';
 import BarcodeScannerDialog from './BarcodeScannerDialog';
+import ImportOrderDialog from './ImportOrderDialog';
 import { useCartStore } from '@/stores/useCartStore';
 import { toastSuccess, toastInfo, toastError } from '@/utils/toast';
 
@@ -107,6 +108,13 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
 
     // ── Сканер для пустой корзины (внутри тулбара живёт собственный) ──
     const [emptyScannerOpen, setEmptyScannerOpen] = useState(false);
+    // ── Импорт заказа для пустой корзины ──
+    const [emptyImportOpen, setEmptyImportOpen] = useState(false);
+
+    const handleImportSuccess = useCallback(() => {
+        useCartStore.getState()._serverSync();
+        router.reload({ only: ['cartDetails'], preserveScroll: true });
+    }, []);
 
     // ── Inline-flash для нечастых уведомлений (вместо мобильных тостов) ──
     const [flash, setFlash] = useState(null);
@@ -381,12 +389,27 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
                             onClick: () => setEmptyScannerOpen(true),
                         }}
                     />
+                    <Flex justify="center" mt="-4" mb="8">
+                        <Button
+                            variant="outline"
+                            size="md"
+                            onClick={() => setEmptyImportOpen(true)}
+                        >
+                            <LuFileUp size={16} />
+                            Импорт заказа
+                        </Button>
+                    </Flex>
                     <BarcodeScannerDialog
                         open={emptyScannerOpen}
                         onClose={() => setEmptyScannerOpen(false)}
                         onSuccess={() => {
                             router.reload({ only: ['cartDetails'], preserveScroll: true });
                         }}
+                    />
+                    <ImportOrderDialog
+                        open={emptyImportOpen}
+                        onClose={() => setEmptyImportOpen(false)}
+                        onSuccess={handleImportSuccess}
                     />
                 </Box>
             )}

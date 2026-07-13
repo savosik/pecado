@@ -99,6 +99,11 @@ Route::prefix('api')->middleware('auth')->group(function () {
     Route::post('/cart/move-items', [CartController::class, 'moveItems']);
     Route::delete('/cart/clear', [CartController::class, 'clear']);
 
+    // Корзина — импорт заказа (список / файл)
+    Route::get('/cart/import-order/template', [CartController::class, 'importOrderTemplate']);
+    Route::post('/cart/import-order', [CartController::class, 'importOrder']);
+    Route::post('/cart/import-order-file', [CartController::class, 'importOrderFile']);
+
     // Корзина — управление (JSON, для header dropdown)
     Route::get('/cart/user-carts', [CartController::class, 'userCarts']);
     Route::post('/cart/carts', [CartController::class, 'apiStore']);
