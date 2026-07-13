@@ -148,11 +148,15 @@ class OrderController extends Controller
     }
 
     /**
-     * Свести изменения товарного состава заказов страницы к нетто-итогу
-     * added/removed. Товар, добавленный и позднее удалённый (или наоборот),
-     * взаимно гасится. Slug товаров разрешается пакетно, без N+1.
+     * Свести изменения товарного состава заказов страницы к итогу «было → стало»
+     * по каждому товару. Учитываются не только полностью добавленные/выбывшие
+     * позиции, но и частичное изменение количества (например, 7 → 6 шт). Итог:
+     *   - added   — товар появился в заказе (было 0);
+     *   - removed — товар выбыл полностью (стало 0);
+     *   - changed — количество изменилось (N → M, оба > 0).
+     * Slug товаров разрешается пакетно, без N+1.
      *
-     * @return array<int, array{count:int, added:array<int, array{name:string, slug:?string}>, removed:array<int, array{name:string, slug:?string}>}>
+     * @return array<int, array{count:int, added:array<int, array{name:string, slug:?string, qty:int}>, removed:array<int, array{name:string, slug:?string, qty:int}>, changed:array<int, array{name:string, slug:?string, from:int, to:int}>}>
      */
     private function buildCompositionChanges(EloquentCollection $orders): array
     {
@@ -163,7 +167,7 @@ class OrderController extends Controller
         // Грузим только логи изменения состава (added/removed/modified).
         $orders->load(['changeLogs' => fn ($q) => $q->where('type', 'items_updated')]);
 
-        $draft = [];          // order_id => ['added' => rows, 'removed' => rows]
+        $draft = [];          // order_id => ['added'|'removed'|'changed' => rows]
         $needProductIds = [];
         $needNames = [];
 
@@ -176,30 +180,45 @@ class OrderController extends Controller
                 continue;
             }
 
-            $net = []; // identity => ['dir' => 'added'|'removed', 'entry' => [...]]
+            // identity => ['name','slug','product_id','from','to'] — количество
+            // до первого и после последнего изменения по товару.
+            $net = [];
 
             foreach ($logs as $log) {
                 $changes = $log->changes ?? [];
+
                 foreach (($changes['added'] ?? []) as $item) {
-                    $this->applyCompositionEntry($net, $item, 'added');
+                    $this->foldQuantity($net, $item, 0, (int) ($item['quantity'] ?? 0));
                 }
                 foreach (($changes['removed'] ?? []) as $item) {
-                    $this->applyCompositionEntry($net, $item, 'removed');
+                    $this->foldQuantity($net, $item, (int) ($item['quantity'] ?? 0), 0);
                 }
-            }
-
-            if (empty($net)) {
-                continue;
+                foreach (($changes['modified'] ?? []) as $item) {
+                    $qty = $item['changes']['quantity'] ?? null;
+                    if ($qty === null) {
+                        continue; // изменения цены/скидки в значок не выносим
+                    }
+                    $this->foldQuantity($net, $item, (int) ($qty['old'] ?? 0), (int) ($qty['new'] ?? 0));
+                }
             }
 
             $added = [];
             $removed = [];
-            foreach ($net as $state) {
-                $entry = $state['entry'];
+            $changed = [];
+
+            foreach ($net as $rec) {
+                $from = $rec['from'];
+                $to = $rec['to'];
+                if ($from === $to) {
+                    continue; // нетто-итог нулевой — товар вернулся к исходному
+                }
+
                 $row = [
-                    'name' => $entry['product_name'] ?? '—',
-                    'slug' => $entry['slug'] ?? null,
-                    'product_id' => $entry['product_id'] ?? null,
+                    'name' => $rec['name'] ?? '—',
+                    'slug' => $rec['slug'],
+                    'product_id' => $rec['product_id'],
+                    'from' => $from,
+                    'to' => $to,
                 ];
 
                 if ($row['slug'] === null) {
@@ -210,14 +229,20 @@ class OrderController extends Controller
                     }
                 }
 
-                if ($state['dir'] === 'added') {
+                if ($from === 0) {
                     $added[] = $row;
-                } else {
+                } elseif ($to === 0) {
                     $removed[] = $row;
+                } else {
+                    $changed[] = $row;
                 }
             }
 
-            $draft[$order->id] = ['added' => $added, 'removed' => $removed];
+            if (! $added && ! $removed && ! $changed) {
+                continue;
+            }
+
+            $draft[$order->id] = ['added' => $added, 'removed' => $removed, 'changed' => $changed];
         }
 
         if (empty($draft)) {
@@ -232,7 +257,7 @@ class OrderController extends Controller
             ? Product::whereIn('name', array_keys($needNames))->pluck('slug', 'name')->all()
             : [];
 
-        $resolve = function (array $row) use ($slugById, $slugByName): array {
+        $slugOf = function (array $row) use ($slugById, $slugByName): ?string {
             $slug = $row['slug'];
             if ($slug === null && ! empty($row['product_id'])) {
                 $slug = $slugById[$row['product_id']] ?? null;
@@ -241,15 +266,22 @@ class OrderController extends Controller
                 $slug = $slugByName[$row['name']] ?? null;
             }
 
-            return ['name' => $row['name'], 'slug' => $slug];
+            return $slug;
         };
 
         $final = [];
         foreach ($draft as $orderId => $groups) {
-            $added = array_map($resolve, $groups['added']);
-            $removed = array_map($resolve, $groups['removed']);
-            $count = count($added) + count($removed);
+            $added = array_map(fn ($r) => [
+                'name' => $r['name'], 'slug' => $slugOf($r), 'qty' => $r['to'],
+            ], $groups['added']);
+            $removed = array_map(fn ($r) => [
+                'name' => $r['name'], 'slug' => $slugOf($r), 'qty' => $r['from'],
+            ], $groups['removed']);
+            $changed = array_map(fn ($r) => [
+                'name' => $r['name'], 'slug' => $slugOf($r), 'from' => $r['from'], 'to' => $r['to'],
+            ], $groups['changed']);
 
+            $count = count($added) + count($removed) + count($changed);
             if ($count === 0) {
                 continue;
             }
@@ -258,6 +290,7 @@ class OrderController extends Controller
                 'count' => $count,
                 'added' => array_values($added),
                 'removed' => array_values($removed),
+                'changed' => array_values($changed),
             ];
         }
 
@@ -265,27 +298,43 @@ class OrderController extends Controller
     }
 
     /**
-     * Учесть одну позицию в нетто-карте изменений состава. Обратное действие
-     * (добавлен ↔ удалён) для того же товара гасит предыдущее.
+     * Учесть одно изменение количества товара в нетто-карте «было → стало».
+     * Первое изменение задаёт `from` (количество до), каждое последующее
+     * обновляет `to` (количество после), сохраняя исходный `from`.
      *
-     * @param  array<string, array{dir:string, entry:array<string, mixed>}>  $net
+     * @param  array<string, array{name:?string, slug:?string, product_id:mixed, from:int, to:int}>  $net
      * @param  array<string, mixed>  $item
      */
-    private function applyCompositionEntry(array &$net, array $item, string $dir): void
+    private function foldQuantity(array &$net, array $item, int $before, int $after): void
     {
         $identity = ! empty($item['product_id'])
             ? 'id:'.$item['product_id']
             : 'name:'.($item['product_name'] ?? '');
 
-        $existing = $net[$identity] ?? null;
-
-        if ($existing !== null && $existing['dir'] !== $dir) {
-            unset($net[$identity]);
+        if (! isset($net[$identity])) {
+            $net[$identity] = [
+                'name' => $item['product_name'] ?? null,
+                'slug' => $item['slug'] ?? null,
+                'product_id' => $item['product_id'] ?? null,
+                'from' => $before,
+                'to' => $after,
+            ];
 
             return;
         }
 
-        $net[$identity] = ['dir' => $dir, 'entry' => $item];
+        $net[$identity]['to'] = $after;
+
+        // Дозаполняем метаданные, если поздний лог их содержит, а ранний — нет.
+        if (empty($net[$identity]['slug']) && ! empty($item['slug'])) {
+            $net[$identity]['slug'] = $item['slug'];
+        }
+        if (empty($net[$identity]['name']) && ! empty($item['product_name'])) {
+            $net[$identity]['name'] = $item['product_name'];
+        }
+        if (empty($net[$identity]['product_id']) && ! empty($item['product_id'])) {
+            $net[$identity]['product_id'] = $item['product_id'];
+        }
     }
 
     /**

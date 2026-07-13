@@ -104,6 +104,82 @@ class OrderCompositionChangesTest extends TestCase
     }
 
     #[Test]
+    public function it_reports_partial_quantity_change_in_changed_group(): void
+    {
+        $product = Product::factory()->create(['name' => 'Частичный', 'slug' => 'chastichnyy']);
+
+        $order = Order::factory()->create([
+            'user_id' => $this->user->id,
+            'company_id' => $this->company->id,
+        ]);
+
+        // Выбыла 1 штука из 7 — это не полное удаление, а изменение количества.
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'items_updated',
+            'summary' => '…',
+            'changes' => [
+                'added' => [],
+                'removed' => [],
+                'modified' => [[
+                    'product_id' => $product->id,
+                    'slug' => $product->slug,
+                    'product_name' => $product->name,
+                    'changes' => ['quantity' => ['old' => 7, 'new' => 6]],
+                ]],
+            ],
+            'source' => 'erp',
+        ]);
+
+        $row = $this->firstOrder();
+
+        $this->assertNotNull($row['composition_changes']);
+        $this->assertSame(1, $row['composition_changes']['count']);
+        $this->assertEmpty($row['composition_changes']['added']);
+        $this->assertEmpty($row['composition_changes']['removed']);
+
+        $changed = $row['composition_changes']['changed'];
+        $this->assertCount(1, $changed);
+        $this->assertSame('Частичный', $changed[0]['name']);
+        $this->assertSame('chastichnyy', $changed[0]['slug']);
+        $this->assertSame(7, $changed[0]['from']);
+        $this->assertSame(6, $changed[0]['to']);
+    }
+
+    #[Test]
+    public function price_only_modification_does_not_produce_a_change(): void
+    {
+        $product = Product::factory()->create(['slug' => 'price-only']);
+
+        $order = Order::factory()->create([
+            'user_id' => $this->user->id,
+            'company_id' => $this->company->id,
+        ]);
+
+        // Изменилась только цена — в значок такое не выносим.
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'items_updated',
+            'summary' => '…',
+            'changes' => [
+                'added' => [],
+                'removed' => [],
+                'modified' => [[
+                    'product_id' => $product->id,
+                    'slug' => $product->slug,
+                    'product_name' => 'X',
+                    'changes' => ['final_price' => ['old' => 100, 'new' => 90]],
+                ]],
+            ],
+            'source' => 'erp',
+        ]);
+
+        $row = $this->firstOrder();
+
+        $this->assertNull($row['composition_changes']);
+    }
+
+    #[Test]
     public function it_resolves_slug_by_name_for_legacy_logs(): void
     {
         $product = Product::factory()->create(['name' => 'Старый товар', 'slug' => 'stary-tovar']);

@@ -164,6 +164,8 @@ class OrderChangeLoggerTest extends TestCase
         $this->assertSame($product2->slug, $diff['added'][0]['slug']);
         $this->assertSame(2, $diff['modified'][0]['changes']['quantity']['old']);
         $this->assertSame(3, $diff['modified'][0]['changes']['quantity']['new']);
+        $this->assertSame($product1->id, $diff['modified'][0]['product_id']);
+        $this->assertSame($product1->slug, $diff['modified'][0]['slug']);
     }
 
     #[Test]

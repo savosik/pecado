@@ -220,6 +220,8 @@ class OrderChangeLogger
 
             if (! empty($changes)) {
                 $diff['modified'][] = [
+                    'product_id' => $newItem['product_id'] ?? null,
+                    'slug' => $newItem['slug'] ?? null,
                     'product_name' => $newItem['name'],
                     'changes' => $changes,
                 ];

@@ -1,5 +1,5 @@
 import { Box, Flex, HStack, Stack, Text } from '@chakra-ui/react';
-import { LuTriangleAlert, LuPlus, LuMinus } from 'react-icons/lu';
+import { LuTriangleAlert, LuPlus, LuMinus, LuArrowRight } from 'react-icons/lu';
 import {
     HoverCardRoot,
     HoverCardTrigger,
@@ -9,11 +9,12 @@ import {
 
 /**
  * Значок «внимание» с количеством изменений товарного состава заказа.
- * При наведении раскрывает карточку с перечнем добавленных и выбывших
- * позиций. Названия товаров, у которых есть slug, кликабельны — клик
- * перехватывается глобальным обработчиком в bootstrap.js и открывает
- * QuickView-диалог товара (карточка портируется в body, поэтому вложенный
- * <a> не конфликтует с внешней ссылкой-карточкой заказа).
+ * При наведении раскрывает карточку с перечнем изменений: добавленные,
+ * выбывшие и позиции с изменённым количеством (например, 7 → 6 шт).
+ * Названия товаров, у которых есть slug, кликабельны — клик перехватывается
+ * глобальным обработчиком в bootstrap.js и открывает QuickView-диалог товара
+ * (карточка портируется в body, поэтому вложенный <a> не конфликтует с внешней
+ * ссылкой-карточкой заказа).
  */
 export default function OrderCompositionBadge({ changes }) {
     const count = Number(changes?.count ?? 0);
@@ -21,6 +22,7 @@ export default function OrderCompositionBadge({ changes }) {
 
     const added = changes.added ?? [];
     const removed = changes.removed ?? [];
+    const changed = changes.changed ?? [];
 
     return (
         <HoverCardRoot size="sm" openDelay={150} closeDelay={100} positioning={{ placement: 'top' }}>
@@ -53,7 +55,7 @@ export default function OrderCompositionBadge({ changes }) {
                     </Text>
                 </Flex>
             </HoverCardTrigger>
-            <HoverCardContent maxW="340px">
+            <HoverCardContent maxW="360px">
                 <HoverCardArrow />
                 <Stack gap="2.5">
                     <HStack gap="1.5">
@@ -63,13 +65,11 @@ export default function OrderCompositionBadge({ changes }) {
 
                     {added.length > 0 && (
                         <Stack gap="1">
-                            <Text fontSize="2xs" fontWeight="600" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-                                Добавлены
-                            </Text>
+                            <SectionLabel>Добавлены</SectionLabel>
                             {added.map((item, i) => (
                                 <HStack key={`add-${i}`} gap="1.5" align="start">
                                     <Box color="green.500" mt="0.5" flexShrink="0"><LuPlus size={13} /></Box>
-                                    <CompositionItem item={item} />
+                                    <CompositionItem item={item} suffix={qtySuffix(item.qty)} />
                                 </HStack>
                             ))}
                         </Stack>
@@ -77,13 +77,39 @@ export default function OrderCompositionBadge({ changes }) {
 
                     {removed.length > 0 && (
                         <Stack gap="1">
-                            <Text fontSize="2xs" fontWeight="600" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
-                                Выбыли
-                            </Text>
+                            <SectionLabel>Выбыли</SectionLabel>
                             {removed.map((item, i) => (
                                 <HStack key={`rem-${i}`} gap="1.5" align="start">
                                     <Box color="red.500" mt="0.5" flexShrink="0"><LuMinus size={13} /></Box>
-                                    <CompositionItem item={item} strikethrough />
+                                    <CompositionItem item={item} strikethrough suffix={qtySuffix(item.qty, 'было ')} />
+                                </HStack>
+                            ))}
+                        </Stack>
+                    )}
+
+                    {changed.length > 0 && (
+                        <Stack gap="1">
+                            <SectionLabel>Изменено количество</SectionLabel>
+                            {changed.map((item, i) => (
+                                <HStack key={`chg-${i}`} gap="1.5" align="start">
+                                    <Box color="orange.500" mt="0.5" flexShrink="0"><LuArrowRight size={13} /></Box>
+                                    <CompositionItem
+                                        item={item}
+                                        suffix={
+                                            <Box as="span" whiteSpace="nowrap">
+                                                {item.from}&nbsp;→&nbsp;
+                                                <Box
+                                                    as="span"
+                                                    fontWeight="600"
+                                                    color={item.to < item.from ? 'red.500' : 'green.600'}
+                                                    _dark={{ color: item.to < item.from ? 'red.300' : 'green.300' }}
+                                                >
+                                                    {item.to}
+                                                </Box>
+                                                &nbsp;шт
+                                            </Box>
+                                        }
+                                    />
                                 </HStack>
                             ))}
                         </Stack>
@@ -98,26 +124,37 @@ export default function OrderCompositionBadge({ changes }) {
     );
 }
 
+function SectionLabel({ children }) {
+    return (
+        <Text fontSize="2xs" fontWeight="600" color="fg.muted" textTransform="uppercase" letterSpacing="wide">
+            {children}
+        </Text>
+    );
+}
+
+/** Хвост с количеством: «(2 шт)» или «(было 3 шт)». */
+function qtySuffix(qty, prefix = '') {
+    const n = Number(qty ?? 0);
+    if (n <= 0) return null;
+    return (
+        <Box as="span" color="fg.muted" whiteSpace="nowrap">
+            ({prefix}{n}&nbsp;шт)
+        </Box>
+    );
+}
+
 /**
- * Название позиции. При наличии slug — кликабельная ссылка на товар
- * (QuickView), иначе просто текст (товар отсутствует в каталоге).
+ * Название позиции + опциональный хвост (количество). При наличии slug —
+ * кликабельная ссылка на товар (QuickView), иначе просто текст (товар
+ * отсутствует в каталоге).
  */
-function CompositionItem({ item, strikethrough = false }) {
+function CompositionItem({ item, strikethrough = false, suffix = null }) {
     const name = item?.name || '—';
 
-    if (!item?.slug) {
-        return (
-            <Text fontSize="sm" color="fg.muted" textDecoration={strikethrough ? 'line-through' : undefined}>
-                {name}
-            </Text>
-        );
-    }
-
-    return (
+    const nameNode = item?.slug ? (
         <Box
             as="a"
             href={`/products/${item.slug}`}
-            fontSize="sm"
             fontWeight="500"
             color="pecado.600"
             textDecoration={strikethrough ? 'line-through' : undefined}
@@ -126,5 +163,16 @@ function CompositionItem({ item, strikethrough = false }) {
         >
             {name}
         </Box>
+    ) : (
+        <Box as="span" color="fg.muted" textDecoration={strikethrough ? 'line-through' : undefined}>
+            {name}
+        </Box>
+    );
+
+    return (
+        <Text fontSize="sm" lineHeight="1.35">
+            {nameNode}
+            {suffix ? <> {suffix}</> : null}
+        </Text>
     );
 }
