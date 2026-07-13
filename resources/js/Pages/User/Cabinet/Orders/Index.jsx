@@ -513,7 +513,6 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                     >
                                                         {order.status_label}
                                                     </Badge>
-                                                    <OrderCompositionBadge changes={order.composition_changes} />
                                                     <Tooltip
                                                         content={`Обновлён: ${order.erp_updated_at || '—'}`}
                                                         positioning={{ placement: 'top' }}
@@ -565,6 +564,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                         <LuPackage size={11} />
                                                         {order.items_count}&nbsp;{itemsLabel}
                                                     </Badge>
+                                                    <OrderCompositionBadge changes={order.composition_changes} />
                                                     {order.shipments_count > 0 && (
                                                         <Badge
                                                             variant="outline"
