@@ -10,7 +10,7 @@ import {
     LuPlus, LuCopy, LuCheck, LuTrash2, LuRefreshCw,
     LuShieldCheck, LuCode, LuArrowRight, LuPackage,
     LuDollarSign, LuWarehouse, LuShoppingCart, LuKey,
-    LuTriangleAlert, LuClock, LuGlobe,
+    LuTriangleAlert, LuClock, LuGlobe, LuArrowRightLeft,
 } from 'react-icons/lu';
 import { toaster } from '@/components/ui/toaster';
 import axios from 'axios';
@@ -177,7 +177,7 @@ const apiMethods = [
         method: 'POST',
         path: '/orders',
         title: 'Создать заказ',
-        description: 'Создаёт заказ из доступных позиций. Остатки автоматически делятся на заказ (в наличии) и предзаказ. Если части запрошенного нет — заказ всё равно принимается, а недоступные и частично отгруженные позиции возвращаются в блоке warnings. Заказ отклоняется (422) только когда недоступны все позиции.',
+        description: 'Создаёт заказ из доступных позиций. Остатки автоматически делятся на заказ (в наличии) и предзаказ. Если части запрошенного нет — заказ всё равно принимается, а не принятые и частично принятые позиции возвращаются в блоке warnings (not_accepted / partial). Каждая запись несёт line — номер строки запроса (для сопоставления при повторяющихся identifier). Заказ отклоняется (422) только когда недоступны все позиции.',
         icon: LuShoppingCart,
         color: 'blue',
         params: [
@@ -208,25 +208,47 @@ const apiMethods = [
             fully_fulfilled: false,
             warnings: {
                 message: "Заказ принят. Часть позиций недоступна или отгружена не в полном объёме.",
-                unavailable: [
-                    { identifier: "XYZ-999", requested: 3, reason: "not_found", message: "Товар не найден" },
-                    { identifier: "ART-007", name: "Товар 7", requested: 2, reason: "out_of_stock", message: "Нет в наличии" },
+                not_accepted: [
+                    { line: 3, identifier: "XYZ-999", product_id: null, slug: null, name: "XYZ-999", requested: 3, reason: "not_found", message: "Товар не найден" },
+                    { line: 4, identifier: "ART-007", product_id: 512, slug: "tovar-7", name: "Товар 7", requested: 2, reason: "out_of_stock", message: "Нет в наличии" },
                 ],
                 partial: [
-                    { identifier: "ART-001", name: "Товар 1", requested: 100, fulfilled: 25, shortfall: 75 },
+                    { line: 1, identifier: "ART-001", product_id: 101, slug: "tovar-1", name: "Товар 1", requested: 100, fulfilled: 25, shortfall: 75 },
                 ],
             },
         }, null, 2),
         errorExamples: [
             {
                 title: 'Все позиции недоступны (422)',
-                body: JSON.stringify({ error: "Ни одна из позиций недоступна для заказа", unavailable: [{ identifier: "XYZ-999", requested: 3, reason: "not_found", message: "Товар не найден" }] }, null, 2),
+                body: JSON.stringify({ error: "Ни одна из позиций недоступна для заказа", not_accepted: [{ line: 1, identifier: "XYZ-999", product_id: null, slug: null, name: "XYZ-999", requested: 3, reason: "not_found", message: "Товар не найден" }] }, null, 2),
             },
             {
                 title: 'ИНН не найден (422)',
                 body: JSON.stringify({ error: "Компания с указанным ИНН не найдена в вашем аккаунте", inn: "0000000000" }, null, 2),
             },
         ],
+    },
+    {
+        method: 'GET',
+        path: '/order-changes',
+        title: 'Изменения заказов',
+        description: 'Лента изменений товарного состава ваших заказов. Правки состава (kind = «edit») свёрнуты к итогу «было → стало» по товару: added (0→N), removed (N→0), changed (N→M) — разнонаправленные движения по одному товару взаимно сворачиваются. Недостача при приёме заказа по API (kind = «api») — «запрошено → принято»: not_accepted (N→0), partial (N→M). Поля from / to — количество до и после. Сортировка: новые изменения первыми.',
+        icon: LuArrowRightLeft,
+        color: 'purple',
+        params: [
+            { name: 'type', type: 'string', desc: 'Фильтр по типу: added, removed, changed, not_accepted, partial' },
+            { name: 'date_from', type: 'date', desc: 'С даты изменения включительно (YYYY-MM-DD)' },
+            { name: 'date_to', type: 'date', desc: 'По дату изменения включительно (YYYY-MM-DD)' },
+            { name: 'page', type: 'int', desc: 'Номер страницы (по умолчанию: 1)' },
+            { name: 'per_page', type: 'int', desc: 'Кол-во на стр. (по умолчанию: 500, макс: 1000)' },
+        ],
+        responseExample: JSON.stringify({
+            data: [
+                { order_number: "29УТ-010000", order_id: 3997, changed_at: "2026-07-14T12:30:00+03:00", kind: "api", type: "not_accepted", product_uuid: "00000001-...-000000000007", product_name: "Товар 7", from: 3, to: 0 },
+                { order_number: "29УТ-009999", order_id: 3996, changed_at: "2026-07-13T09:15:00+03:00", kind: "edit", type: "changed", product_uuid: "00000001-...-000000000001", product_name: "Товар 1", from: 7, to: 6 },
+            ],
+            meta: { current_page: 1, last_page: 3, per_page: 500, total: 1240 },
+        }, null, 2),
     },
 ];
 
