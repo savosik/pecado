@@ -253,19 +253,22 @@ class ClientApiController extends Controller
         // Резолвим товары и раскладываем на выполнимую часть.
         // Дружественная логика: заказ принимается даже если часть позиций
         // недоступна. Недостающее не блокирует заказ, а попадает в
-        // информационный ответ (unavailable — не попали в заказ вовсе,
-        // partial — отгружены не в полном объёме).
+        // информационный ответ (not_accepted — не попали в заказ вовсе,
+        // partial — приняты не в полном объёме). Каждая запись несёт `line`
+        // (номер строки запроса) для сопоставления при дублях identifier.
         $instockItems = [];
         $preorderItems = [];
-        $unavailable = [];
+        $notAccepted = [];
         $partial = [];
 
-        foreach ($validated['products'] as $item) {
+        foreach ($validated['products'] as $idx => $item) {
             $requestedQty = $item['quantity'];
+            $line = $idx + 1; // 1-based номер строки запроса — для сопоставления дублей identifier
 
             $product = $this->resolveProduct($item['identifier']);
             if (! $product) {
-                $unavailable[] = [
+                $notAccepted[] = [
+                    'line' => $line,
                     'identifier' => $item['identifier'],
                     'product_id' => null,
                     'slug' => null,
@@ -284,7 +287,8 @@ class ClientApiController extends Controller
             $totalAvailable = $available + $preorder;
 
             if ($totalAvailable <= 0) {
-                $unavailable[] = [
+                $notAccepted[] = [
+                    'line' => $line,
                     'identifier' => $item['identifier'],
                     'product_id' => $product->id,
                     'slug' => $product->slug,
@@ -311,6 +315,7 @@ class ClientApiController extends Controller
 
             if ($fulfillQty < $requestedQty) {
                 $partial[] = [
+                    'line' => $line,
                     'identifier' => $item['identifier'],
                     'product_id' => $product->id,
                     'slug' => $product->slug,
@@ -326,7 +331,7 @@ class ClientApiController extends Controller
         if (empty($instockItems) && empty($preorderItems)) {
             return response()->json([
                 'error' => 'Ни одна из позиций недоступна для заказа',
-                'unavailable' => $unavailable,
+                'not_accepted' => $notAccepted,
             ], 422);
         }
 
@@ -336,7 +341,7 @@ class ClientApiController extends Controller
         // Дополняем комментарий системной пометкой о недоступных/частичных
         // позициях, чтобы менеджер и 1С видели, что клиент запрашивал больше.
         $comment = $validated['comment'] ?? null;
-        if ($note = $this->buildFulfillmentNote($unavailable, $partial)) {
+        if ($note = $this->buildFulfillmentNote($notAccepted, $partial)) {
             $comment = $comment !== null && $comment !== '' ? ($comment."\n\n".$note) : $note;
         }
 
@@ -388,7 +393,7 @@ class ClientApiController extends Controller
         // Логируем недостачу при приёме как структурную запись в общий workflow
         // изменений (недостача видна в «Изменениях заказов», значке и API).
         // Текстовая пометка в комментарии сохраняется отдельно — её видит 1С.
-        if (! empty($unavailable) || ! empty($partial)) {
+        if (! empty($notAccepted) || ! empty($partial)) {
             $primaryOrder = $createdOrders[0];
             $this->changeLogger->logApiShortfall(
                 $primaryOrder,
@@ -399,7 +404,7 @@ class ClientApiController extends Controller
                     'requested' => $u['requested'],
                     'reason' => $u['reason'] ?? null,
                     'message' => $u['message'] ?? null,
-                ], $unavailable),
+                ], $notAccepted),
                 array_map(fn (array $p) => [
                     'product_id' => $p['product_id'] ?? null,
                     'slug' => $p['slug'] ?? null,
@@ -429,13 +434,13 @@ class ClientApiController extends Controller
         $response = [
             'orders' => $responseOrders,
             'total_orders' => count($createdOrders),
-            'fully_fulfilled' => empty($unavailable) && empty($partial),
+            'fully_fulfilled' => empty($notAccepted) && empty($partial),
         ];
 
-        if (! empty($unavailable) || ! empty($partial)) {
+        if (! empty($notAccepted) || ! empty($partial)) {
             $response['warnings'] = [
                 'message' => 'Заказ принят. Часть позиций недоступна или отгружена не в полном объёме.',
-                'unavailable' => $unavailable,
+                'not_accepted' => $notAccepted,
                 'partial' => $partial,
             ];
         }
@@ -447,18 +452,18 @@ class ClientApiController extends Controller
      * Собрать текстовую пометку о недоступных/частичных позициях для комментария заказа.
      * Возвращает null, если заказ выполнен полностью.
      *
-     * @param  array<int, array<string, mixed>>  $unavailable
+     * @param  array<int, array<string, mixed>>  $notAccepted
      * @param  array<int, array<string, mixed>>  $partial
      */
-    protected function buildFulfillmentNote(array $unavailable, array $partial): ?string
+    protected function buildFulfillmentNote(array $notAccepted, array $partial): ?string
     {
-        if (empty($unavailable) && empty($partial)) {
+        if (empty($notAccepted) && empty($partial)) {
             return null;
         }
 
         $lines = ['[API] Заказ принят не в полном объёме:'];
 
-        foreach ($unavailable as $u) {
+        foreach ($notAccepted as $u) {
             $label = $u['name'] ?? $u['identifier'];
             $lines[] = "— «{$label}» (запрошено {$u['requested']}): {$u['message']}";
         }

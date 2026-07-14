@@ -165,8 +165,9 @@ class ClientApiOrdersTest extends TestCase
 
         $res->assertStatus(201)
             ->assertJson(['fully_fulfilled' => false])
-            ->assertJsonPath('warnings.unavailable.0.identifier', 'ART-B')
-            ->assertJsonPath('warnings.unavailable.0.reason', 'out_of_stock');
+            ->assertJsonPath('warnings.not_accepted.0.identifier', 'ART-B')
+            ->assertJsonPath('warnings.not_accepted.0.reason', 'out_of_stock')
+            ->assertJsonPath('warnings.not_accepted.0.line', 2);
 
         $this->assertDatabaseHas('order_items', ['product_id' => $good->id, 'quantity' => 2]);
         $this->assertDatabaseCount('order_items', 1);
@@ -182,10 +183,30 @@ class ClientApiOrdersTest extends TestCase
         ]);
 
         $res->assertStatus(201)
-            ->assertJsonPath('warnings.unavailable.0.identifier', 'GHOST-999')
-            ->assertJsonPath('warnings.unavailable.0.reason', 'not_found');
+            ->assertJsonPath('warnings.not_accepted.0.identifier', 'GHOST-999')
+            ->assertJsonPath('warnings.not_accepted.0.reason', 'not_found')
+            ->assertJsonPath('warnings.not_accepted.0.line', 2);
 
         $this->assertDatabaseHas('order_items', ['product_id' => $good->id, 'quantity' => 2]);
+    }
+
+    public function test_line_index_disambiguates_duplicate_identifiers(): void
+    {
+        // Один и тот же несуществующий идентификатор в двух строках —
+        // сопоставить их можно только по номеру строки.
+        $this->product('ART-A', available: 5);
+
+        $res = $this->order([
+            ['identifier' => 'ART-A', 'quantity' => 2],
+            ['identifier' => 'GHOST', 'quantity' => 1],
+            ['identifier' => 'GHOST', 'quantity' => 4],
+        ]);
+
+        $res->assertStatus(201)
+            ->assertJsonPath('warnings.not_accepted.0.line', 2)
+            ->assertJsonPath('warnings.not_accepted.0.identifier', 'GHOST')
+            ->assertJsonPath('warnings.not_accepted.1.line', 3)
+            ->assertJsonPath('warnings.not_accepted.1.identifier', 'GHOST');
     }
 
     public function test_order_is_rejected_when_no_position_is_available(): void
@@ -199,7 +220,7 @@ class ClientApiOrdersTest extends TestCase
 
         $res->assertStatus(422)
             ->assertJsonPath('error', 'Ни одна из позиций недоступна для заказа')
-            ->assertJsonCount(2, 'unavailable');
+            ->assertJsonCount(2, 'not_accepted');
 
         $this->assertDatabaseCount('orders', 0);
     }
