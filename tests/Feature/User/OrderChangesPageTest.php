@@ -26,7 +26,7 @@ class OrderChangesPageTest extends TestCase
         $this->user = User::factory()->create();
     }
 
-    private function makeChange(Order $order, Product $product, string $type, int $from, int $to): void
+    private function makeChange(Order $order, Product $product, string $type, int $from, int $to, ?string $at = null): void
     {
         $item = ['product_id' => $product->id, 'slug' => $product->slug, 'product_name' => $product->name];
 
@@ -39,13 +39,18 @@ class OrderChangesPageTest extends TestCase
             $changes['modified'][] = $item + ['changes' => ['quantity' => ['old' => $from, 'new' => $to]]];
         }
 
-        OrderChangeLog::create([
+        $log = OrderChangeLog::create([
             'order_id' => $order->id,
             'type' => 'items_updated',
             'summary' => '…',
             'changes' => $changes,
             'source' => 'erp',
         ]);
+
+        if ($at !== null) {
+            $log->created_at = $at; // не входит в fillable
+            $log->save();
+        }
     }
 
     /** @return array<int, array<string, mixed>> */
@@ -91,6 +96,21 @@ class OrderChangesPageTest extends TestCase
 
         $this->assertCount(1, $rows);
         $this->assertSame('added', $rows[0]['type']);
+    }
+
+    #[Test]
+    public function period_hour_filter_excludes_older_changes(): void
+    {
+        $order = Order::factory()->create(['user_id' => $this->user->id]);
+        $this->makeChange($order, Product::factory()->create(['name' => 'Свежий', 'slug' => 'new']), 'added', 0, 1, now()->subMinutes(10)->toDateTimeString());
+        $this->makeChange($order, Product::factory()->create(['name' => 'Старый', 'slug' => 'old']), 'added', 0, 1, now()->subDays(2)->toDateTimeString());
+
+        $hour = collect($this->fetchRows('period=hour'))->pluck('product_name');
+        $this->assertContains('Свежий', $hour->all());
+        $this->assertNotContains('Старый', $hour->all());
+
+        // «Все» — обе записи.
+        $this->assertCount(2, $this->fetchRows('period=all'));
     }
 
     #[Test]

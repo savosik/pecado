@@ -115,6 +115,9 @@ class OrderChangeController extends Controller
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
+        $period = (string) $request->input('period', 'all');
+        [$periodFrom, $periodTo] = $this->periodBounds($period);
+
         $orders = Order::query()
             ->where('user_id', $user->id)
             ->whereHas('changeLogs', fn ($q) => $q->where('type', 'items_updated'))
@@ -125,7 +128,7 @@ class OrderChangeController extends Controller
 
         $searchLower = mb_strtolower($search);
 
-        $rows = array_values(array_filter($rows, function (array $r) use ($searchLower, $types, $dateFrom, $dateTo) {
+        $rows = array_values(array_filter($rows, function (array $r) use ($searchLower, $types, $dateFrom, $dateTo, $periodFrom, $periodTo) {
             if ($types && ! in_array($r['type'], $types, true)) {
                 return false;
             }
@@ -134,7 +137,19 @@ class OrderChangeController extends Controller
                 && mb_stripos($r['product_name'], $searchLower) === false) {
                 return false;
             }
-            $date = $r['changed_at']?->toDateString();
+
+            $changedAt = $r['changed_at'];
+
+            // Быстрый фильтр по периоду (с точностью до времени).
+            if ($periodFrom && (! $changedAt || $changedAt->lt($periodFrom))) {
+                return false;
+            }
+            if ($periodTo && (! $changedAt || $changedAt->gte($periodTo))) {
+                return false;
+            }
+
+            // Ручной диапазон дат (дополнительно к периоду).
+            $date = $changedAt?->toDateString();
             if ($dateFrom && (! $date || $date < $dateFrom)) {
                 return false;
             }
@@ -151,11 +166,30 @@ class OrderChangeController extends Controller
         $context = [
             'search' => $search,
             'type' => $types,
+            'period' => $period,
             'date_from' => $dateFrom ?: '',
             'date_to' => $dateTo ?: '',
         ];
 
         return [$rows, $context];
+    }
+
+    /**
+     * Границы быстрого фильтра по периоду. Возвращает [from, to] — Carbon или
+     * null. `to` эксклюзивен (используется для «вчера»).
+     *
+     * @return array{0: ?\Illuminate\Support\Carbon, 1: ?\Illuminate\Support\Carbon}
+     */
+    private function periodBounds(string $period): array
+    {
+        return match ($period) {
+            'hour' => [now()->subHour(), null],
+            'today' => [now()->startOfDay(), null],
+            'yesterday' => [now()->subDay()->startOfDay(), now()->startOfDay()],
+            'week' => [now()->subDays(7), null],
+            'month' => [now()->subDays(30), null],
+            default => [null, null], // 'all'
+        };
     }
 
     /**

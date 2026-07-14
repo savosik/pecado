@@ -20,6 +20,15 @@ const TYPE_META = {
     changed: { label: 'Изменено количество', color: 'orange', icon: LuArrowRight },
 };
 
+const PERIODS = [
+    { value: 'hour', label: 'Последний час' },
+    { value: 'today', label: 'Сегодня' },
+    { value: 'yesterday', label: 'Вчера' },
+    { value: 'week', label: 'Неделя' },
+    { value: 'month', label: 'Месяц' },
+    { value: 'all', label: 'Все' },
+];
+
 export default function OrderChangesIndex({ filters, types = [] }) {
     const { rows } = usePage().props;
     const [search, setSearch] = useState(filters?.search || '');
@@ -49,6 +58,7 @@ export default function OrderChangesIndex({ filters, types = [] }) {
     );
 
     const selectedTypes = Array.isArray(filters?.type) ? filters.type : (filters?.type ? [filters.type] : []);
+    const activePeriod = filters?.period || 'all';
 
     const handlePageChange = (page) => navigateWithParams({ page });
 
@@ -77,10 +87,10 @@ export default function OrderChangesIndex({ filters, types = [] }) {
     const handleResetAll = () => {
         setSearch('');
         lastSubmittedSearch.current = '';
-        navigateWithParams({ search: '', type: [], date_from: '', date_to: '', page: 1 });
+        navigateWithParams({ search: '', type: [], period: 'all', date_from: '', date_to: '', page: 1 });
     };
 
-    const hasActiveFilters = !!search || selectedTypes.length > 0 || filters?.date_from || filters?.date_to;
+    const hasActiveFilters = !!search || selectedTypes.length > 0 || activePeriod !== 'all' || filters?.date_from || filters?.date_to;
 
     return (
         <CabinetLayout title="Изменения заказов">
@@ -90,6 +100,24 @@ export default function OrderChangesIndex({ filters, types = [] }) {
                 Движения товарного состава по вашим заказам: добавленные и выбывшие позиции, изменения количества.
                 Разнонаправленные движения по одному товару свёрнуты в итоговое «было → стало».
             </Text>
+
+            {/* Быстрые фильтры по периоду */}
+            <Flex gap="2" mb="3" wrap="wrap">
+                {PERIODS.map((p) => {
+                    const active = activePeriod === p.value;
+                    return (
+                        <Button
+                            key={p.value}
+                            size="xs"
+                            variant={active ? 'solid' : 'outline'}
+                            colorPalette={active ? 'pecado' : 'gray'}
+                            onClick={() => navigateWithParams({ period: p.value, page: 1 })}
+                        >
+                            {p.label}
+                        </Button>
+                    );
+                })}
+            </Flex>
 
             {/* Панель фильтров */}
             <Flex gap="2" mb="4" align="end" wrap="wrap">
