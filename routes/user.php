@@ -15,6 +15,7 @@ use App\Http\Controllers\User\FavoriteController;
 use App\Http\Controllers\User\HomeController;
 use App\Http\Controllers\User\MediaController;
 use App\Http\Controllers\User\NewsController;
+use App\Http\Controllers\User\OrderChangeController;
 use App\Http\Controllers\User\OrderController;
 use App\Http\Controllers\User\PageController;
 use App\Http\Controllers\User\ProductController;
@@ -160,6 +161,10 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/orders/{order}/items/export', [OrderController::class, 'exportItems'])->name('orders.items.export');
     Route::post('/orders/{order}/repeat', [OrderController::class, 'repeat'])->name('orders.repeat');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+    // Изменения заказов (сводная лента)
+    Route::get('/order-changes/export', [OrderChangeController::class, 'export'])->name('order-changes.export');
+    Route::get('/order-changes', [OrderChangeController::class, 'index'])->name('order-changes.index');
 
     // Delivery Addresses
     Route::get('/delivery-addresses', [DeliveryAddressController::class, 'index'])->name('delivery-addresses.index');

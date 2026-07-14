@@ -8,16 +8,15 @@ use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Product;
 use App\Models\User;
 use App\Services\CurrencyService;
+use App\Services\Order\OrderChangeAggregator;
 use App\Services\SimpleCsvExporter;
 use App\Services\SimpleXlsxExporter;
 use App\Support\Search\EmptyResultSuggestion;
 use App\Support\Search\FuzzyDocumentMatcher;
 use App\Support\Search\MatchSourceResolver;
 use App\Support\Search\QueryRouter;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -27,7 +26,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class OrderController extends Controller
 {
     public function __construct(
-        protected CurrencyService $currencyService
+        protected CurrencyService $currencyService,
+        protected OrderChangeAggregator $changeAggregator,
     ) {}
 
     /**
@@ -48,7 +48,7 @@ class OrderController extends Controller
 
         // Изменения товарного состава (added/removed) по всем заказам страницы —
         // считаем заранее одним проходом, чтобы разрешить slug товаров без N+1.
-        $compositionByOrder = $this->buildCompositionChanges($orders->getCollection());
+        $compositionByOrder = $this->changeAggregator->groupedByOrder($orders->getCollection());
 
         // Трансформация данных
         $orders->getCollection()->transform(function ($order) use ($currency, $search, $compositionByOrder) {
@@ -145,196 +145,6 @@ class OrderController extends Controller
             'exportEnabled' => (bool) config('search-cabinet.export'),
             'suggestion' => $suggestion,
         ]);
-    }
-
-    /**
-     * Свести изменения товарного состава заказов страницы к итогу «было → стало»
-     * по каждому товару. Учитываются не только полностью добавленные/выбывшие
-     * позиции, но и частичное изменение количества (например, 7 → 6 шт). Итог:
-     *   - added   — товар появился в заказе (было 0);
-     *   - removed — товар выбыл полностью (стало 0);
-     *   - changed — количество изменилось (N → M, оба > 0).
-     * Slug товаров разрешается пакетно, без N+1.
-     *
-     * @return array<int, array{count:int, added:array<int, array{name:string, slug:?string, qty:int}>, removed:array<int, array{name:string, slug:?string, qty:int}>, changed:array<int, array{name:string, slug:?string, from:int, to:int}>}>
-     */
-    private function buildCompositionChanges(EloquentCollection $orders): array
-    {
-        if ($orders->isEmpty()) {
-            return [];
-        }
-
-        // Грузим только логи изменения состава (added/removed/modified).
-        $orders->load(['changeLogs' => fn ($q) => $q->where('type', 'items_updated')]);
-
-        $draft = [];          // order_id => ['added'|'removed'|'changed' => rows]
-        $needProductIds = [];
-        $needNames = [];
-
-        foreach ($orders as $order) {
-            $logs = $order->changeLogs
-                ->sortBy(fn ($l) => $l->created_at)   // хронологически: старые → новые
-                ->values();
-
-            if ($logs->isEmpty()) {
-                continue;
-            }
-
-            // identity => ['name','slug','product_id','from','to'] — количество
-            // до первого и после последнего изменения по товару.
-            $net = [];
-
-            foreach ($logs as $log) {
-                $changes = $log->changes ?? [];
-
-                foreach (($changes['added'] ?? []) as $item) {
-                    $this->foldQuantity($net, $item, 0, (int) ($item['quantity'] ?? 0));
-                }
-                foreach (($changes['removed'] ?? []) as $item) {
-                    $this->foldQuantity($net, $item, (int) ($item['quantity'] ?? 0), 0);
-                }
-                foreach (($changes['modified'] ?? []) as $item) {
-                    $qty = $item['changes']['quantity'] ?? null;
-                    if ($qty === null) {
-                        continue; // изменения цены/скидки в значок не выносим
-                    }
-                    $this->foldQuantity($net, $item, (int) ($qty['old'] ?? 0), (int) ($qty['new'] ?? 0));
-                }
-            }
-
-            $added = [];
-            $removed = [];
-            $changed = [];
-
-            foreach ($net as $rec) {
-                $from = $rec['from'];
-                $to = $rec['to'];
-                if ($from === $to) {
-                    continue; // нетто-итог нулевой — товар вернулся к исходному
-                }
-
-                $row = [
-                    'name' => $rec['name'] ?? '—',
-                    'slug' => $rec['slug'],
-                    'product_id' => $rec['product_id'],
-                    'from' => $from,
-                    'to' => $to,
-                ];
-
-                if ($row['slug'] === null) {
-                    if (! empty($row['product_id'])) {
-                        $needProductIds[$row['product_id']] = true;
-                    } elseif ($row['name'] !== '—') {
-                        $needNames[$row['name']] = true;
-                    }
-                }
-
-                if ($from === 0) {
-                    $added[] = $row;
-                } elseif ($to === 0) {
-                    $removed[] = $row;
-                } else {
-                    $changed[] = $row;
-                }
-            }
-
-            if (! $added && ! $removed && ! $changed) {
-                continue;
-            }
-
-            $draft[$order->id] = ['added' => $added, 'removed' => $removed, 'changed' => $changed];
-        }
-
-        if (empty($draft)) {
-            return [];
-        }
-
-        // Разрешаем недостающие slug'и пакетно (старые логи не хранят slug/product_id).
-        $slugById = ! empty($needProductIds)
-            ? Product::whereIn('id', array_keys($needProductIds))->pluck('slug', 'id')->all()
-            : [];
-        $slugByName = ! empty($needNames)
-            ? Product::whereIn('name', array_keys($needNames))->pluck('slug', 'name')->all()
-            : [];
-
-        $slugOf = function (array $row) use ($slugById, $slugByName): ?string {
-            $slug = $row['slug'];
-            if ($slug === null && ! empty($row['product_id'])) {
-                $slug = $slugById[$row['product_id']] ?? null;
-            }
-            if ($slug === null) {
-                $slug = $slugByName[$row['name']] ?? null;
-            }
-
-            return $slug;
-        };
-
-        $final = [];
-        foreach ($draft as $orderId => $groups) {
-            $added = array_map(fn ($r) => [
-                'name' => $r['name'], 'slug' => $slugOf($r), 'qty' => $r['to'],
-            ], $groups['added']);
-            $removed = array_map(fn ($r) => [
-                'name' => $r['name'], 'slug' => $slugOf($r), 'qty' => $r['from'],
-            ], $groups['removed']);
-            $changed = array_map(fn ($r) => [
-                'name' => $r['name'], 'slug' => $slugOf($r), 'from' => $r['from'], 'to' => $r['to'],
-            ], $groups['changed']);
-
-            $count = count($added) + count($removed) + count($changed);
-            if ($count === 0) {
-                continue;
-            }
-
-            $final[$orderId] = [
-                'count' => $count,
-                'added' => array_values($added),
-                'removed' => array_values($removed),
-                'changed' => array_values($changed),
-            ];
-        }
-
-        return $final;
-    }
-
-    /**
-     * Учесть одно изменение количества товара в нетто-карте «было → стало».
-     * Первое изменение задаёт `from` (количество до), каждое последующее
-     * обновляет `to` (количество после), сохраняя исходный `from`.
-     *
-     * @param  array<string, array{name:?string, slug:?string, product_id:mixed, from:int, to:int}>  $net
-     * @param  array<string, mixed>  $item
-     */
-    private function foldQuantity(array &$net, array $item, int $before, int $after): void
-    {
-        $identity = ! empty($item['product_id'])
-            ? 'id:'.$item['product_id']
-            : 'name:'.($item['product_name'] ?? '');
-
-        if (! isset($net[$identity])) {
-            $net[$identity] = [
-                'name' => $item['product_name'] ?? null,
-                'slug' => $item['slug'] ?? null,
-                'product_id' => $item['product_id'] ?? null,
-                'from' => $before,
-                'to' => $after,
-            ];
-
-            return;
-        }
-
-        $net[$identity]['to'] = $after;
-
-        // Дозаполняем метаданные, если поздний лог их содержит, а ранний — нет.
-        if (empty($net[$identity]['slug']) && ! empty($item['slug'])) {
-            $net[$identity]['slug'] = $item['slug'];
-        }
-        if (empty($net[$identity]['name']) && ! empty($item['product_name'])) {
-            $net[$identity]['name'] = $item['product_name'];
-        }
-        if (empty($net[$identity]['product_id']) && ! empty($item['product_id'])) {
-            $net[$identity]['product_id'] = $item['product_id'];
-        }
     }
 
     /**

@@ -126,5 +126,6 @@ Route::prefix('client-api/{token}')
     ->group(function () {
         Route::get('/prices', [\App\Http\Controllers\Api\ClientApiController::class, 'prices'])->name('prices');
         Route::get('/stocks', [\App\Http\Controllers\Api\ClientApiController::class, 'stocks'])->name('stocks');
+        Route::get('/order-changes', [\App\Http\Controllers\Api\ClientApiController::class, 'orderChanges'])->name('order-changes');
         Route::post('/orders', [\App\Http\Controllers\Api\ClientApiController::class, 'orders'])->name('orders');
     });

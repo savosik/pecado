@@ -14,6 +14,7 @@ use App\Models\ApiToken;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\Order\OrderChangeAggregator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,7 +24,8 @@ class ClientApiController extends Controller
     public function __construct(
         protected PriceServiceInterface $priceService,
         protected StockServiceInterface $stockService,
-        protected UserCurrencyResolverInterface $currencyResolver
+        protected UserCurrencyResolverInterface $currencyResolver,
+        protected OrderChangeAggregator $changeAggregator,
     ) {}
 
     /**
@@ -129,6 +131,81 @@ class ClientApiController extends Controller
                 'last_page' => $products->lastPage(),
                 'per_page' => $products->perPage(),
                 'total' => $products->total(),
+            ],
+        ]);
+    }
+
+    /**
+     * GET /api/client-api/{token}/order-changes
+     * Отслеживание изменений товарного состава заказов клиента.
+     *
+     * Возвращает движения по позициям, свёрнутые к итогу «было → стало» по
+     * каждому товару в заказе: added (0→N), removed (N→0), changed (N→M).
+     * Разнонаправленные движения по одному товару взаимно свёрнуты (например,
+     * сняли 5 и добавили 6 → одна запись changed 5→6); нетто-нулевые опущены.
+     *
+     * Фильтры (query): type=added|removed|changed, date_from / date_to
+     * (YYYY-MM-DD, по дате изменения), per_page (до 1000), page.
+     */
+    public function orderChanges(Request $request, string $token): JsonResponse
+    {
+        $apiToken = $this->resolveToken($token);
+        $user = $apiToken->user;
+
+        $type = $request->query('type');
+        $type = in_array($type, ['added', 'removed', 'changed'], true) ? $type : null;
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+
+        $orders = Order::query()
+            ->where('user_id', $user->id)
+            ->whereHas('changeLogs', fn ($q) => $q->where('type', 'items_updated'))
+            ->get();
+
+        $rows = $this->changeAggregator->flatten($orders);
+
+        $rows = array_values(array_filter($rows, function (array $r) use ($type, $dateFrom, $dateTo) {
+            if ($type && $r['type'] !== $type) {
+                return false;
+            }
+            $date = $r['changed_at']?->toDateString();
+            if ($dateFrom && (! $date || $date < $dateFrom)) {
+                return false;
+            }
+            if ($dateTo && (! $date || $date > $dateTo)) {
+                return false;
+            }
+
+            return true;
+        }));
+
+        // Новые изменения — первыми.
+        usort($rows, fn ($a, $b) => ($b['changed_at']?->getTimestamp() ?? 0) <=> ($a['changed_at']?->getTimestamp() ?? 0));
+
+        $perPage = min((int) $request->input('per_page', 500), 1000);
+        $perPage = max($perPage, 1);
+        $page = max((int) $request->input('page', 1), 1);
+        $total = count($rows);
+        $slice = array_slice($rows, ($page - 1) * $perPage, $perPage);
+
+        $data = array_map(fn (array $r) => [
+            'order_number' => $r['order_number'],
+            'order_id' => $r['order_id'],
+            'changed_at' => $r['changed_at']?->toIso8601String(),
+            'type' => $r['type'],
+            'product_uuid' => $r['external_id'],
+            'product_name' => $r['product_name'],
+            'from' => $r['from'],
+            'to' => $r['to'],
+        ], $slice);
+
+        return response()->json([
+            'data' => $data,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => (int) max(ceil($total / $perPage), 1),
+                'per_page' => $perPage,
+                'total' => $total,
             ],
         ]);
     }
