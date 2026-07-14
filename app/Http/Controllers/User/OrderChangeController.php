@@ -59,7 +59,6 @@ class OrderChangeController extends Controller
                 'value' => $value,
                 'label' => $label,
             ])->values(),
-            'exportEnabled' => (bool) config('search-cabinet.export'),
         ]);
     }
 
@@ -69,8 +68,8 @@ class OrderChangeController extends Controller
      */
     public function export(Request $request, SimpleCsvExporter $csv, SimpleXlsxExporter $xlsx): StreamedResponse
     {
-        abort_unless((bool) config('search-cabinet.export'), 404);
-
+        // Экспорт ленты изменений доступен всегда (в отличие от общего
+        // флага search-cabinet.export для Orders/Returns) — по требованию.
         $format = strtolower((string) $request->input('format', ''));
         abort_unless(in_array($format, ['csv', 'xlsx'], true), 422, 'Допустимые форматы: csv, xlsx.');
 

@@ -24,7 +24,6 @@ class OrderChangesPageTest extends TestCase
     {
         parent::setUp();
         $this->user = User::factory()->create();
-        config(['search-cabinet.export' => true]);
     }
 
     private function makeChange(Order $order, Product $product, string $type, int $from, int $to): void
@@ -116,12 +115,18 @@ class OrderChangesPageTest extends TestCase
     }
 
     #[Test]
-    public function export_is_404_when_feature_disabled(): void
+    public function export_respects_type_filter(): void
     {
-        config(['search-cabinet.export' => false]);
+        $order = Order::factory()->create(['user_id' => $this->user->id]);
+        $this->makeChange($order, Product::factory()->create(['name' => 'Добавленный', 'slug' => 'a']), 'added', 0, 2);
+        $this->makeChange($order, Product::factory()->create(['name' => 'Выбывший', 'slug' => 'b']), 'removed', 4, 0);
 
-        $this->actingAs($this->user)
-            ->get('/cabinet/order-changes/export?format=xlsx')
-            ->assertNotFound();
+        // CSV удобнее проверять на содержимое, чем бинарный XLSX.
+        $response = $this->actingAs($this->user)->get('/cabinet/order-changes/export?format=csv&type[]=added');
+        $response->assertOk();
+        $body = $response->streamedContent();
+
+        $this->assertStringContainsString('Добавленный', $body);
+        $this->assertStringNotContainsString('Выбывший', $body);
     }
 }

@@ -20,7 +20,7 @@ const TYPE_META = {
     changed: { label: 'Изменено количество', color: 'orange', icon: LuArrowRight },
 };
 
-export default function OrderChangesIndex({ filters, types = [], exportEnabled = false }) {
+export default function OrderChangesIndex({ filters, types = [] }) {
     const { rows } = usePage().props;
     const [search, setSearch] = useState(filters?.search || '');
 
@@ -142,9 +142,7 @@ export default function OrderChangesIndex({ filters, types = [], exportEnabled =
                     />
                 </Field>
 
-                {exportEnabled && (
-                    <ExportMenu basePath="/cabinet/order-changes/export" filters={{ ...filters, search }} />
-                )}
+                <ExportMenu basePath="/cabinet/order-changes/export" filters={{ ...filters, search }} />
             </Flex>
 
             <SelectedFilters
@@ -190,7 +188,7 @@ export default function OrderChangesIndex({ filters, types = [], exportEnabled =
                                             </Table.Cell>
                                             <Table.Cell whiteSpace="nowrap">
                                                 <Link href={`/cabinet/orders/${row.order_id}`}>
-                                                    <Text as="span" fontFamily="mono" fontWeight="600" color="pecado.600" _dark={{ color: 'pecado.300' }} _hover={{ textDecoration: 'underline' }}>
+                                                    <Text as="span" fontFamily="mono" fontWeight="500" _hover={{ color: 'pecado.500' }} transition="color 0.15s">
                                                         {row.order_number}
                                                     </Text>
                                                 </Link>
@@ -203,9 +201,8 @@ export default function OrderChangesIndex({ filters, types = [], exportEnabled =
                                             </Table.Cell>
                                             <Table.Cell>
                                                 {row.slug ? (
-                                                    <Box as="a" href={`/products/${row.slug}`} color="pecado.600" fontWeight="500"
-                                                        _hover={{ textDecoration: 'underline', color: 'pecado.700' }}
-                                                        _dark={{ color: 'pecado.300', _hover: { color: 'pecado.200' } }}>
+                                                    <Box as="a" href={`/products/${row.slug}`} fontWeight="500"
+                                                        _hover={{ color: 'pecado.500' }} transition="color 0.15s">
                                                         {row.product_name}
                                                     </Box>
                                                 ) : (
