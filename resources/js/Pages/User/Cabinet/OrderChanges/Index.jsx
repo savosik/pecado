@@ -192,7 +192,8 @@ export default function OrderChangesIndex({ filters, types = [] }) {
                 </Box>
             ) : (
                 <>
-                    <Box bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted" overflowX="auto">
+                    {/* Десктоп — таблица */}
+                    <Box display={{ base: 'none', md: 'block' }} bg="bg" borderRadius="xl" border="1px solid" borderColor="border.muted" overflowX="auto">
                         <Table.Root size="sm" stickyHeader interactive>
                             <Table.Header>
                                 <Table.Row bg="bg.muted">
@@ -205,52 +206,51 @@ export default function OrderChangesIndex({ filters, types = [] }) {
                                 </Table.Row>
                             </Table.Header>
                             <Table.Body>
-                                {rows.data.map((row, i) => {
-                                    const meta = TYPE_META[row.type] || {};
-                                    const Icon = meta.icon;
-                                    const grew = row.to > row.from;
-                                    return (
-                                        <Table.Row key={`${row.order_id}-${i}`}>
-                                            <Table.Cell whiteSpace="nowrap" color="gray.600" _dark={{ color: 'gray.400' }} fontSize="xs">
-                                                {row.changed_at || '—'}
-                                            </Table.Cell>
-                                            <Table.Cell whiteSpace="nowrap">
-                                                <Link href={`/cabinet/orders/${row.order_id}`}>
-                                                    <Text as="span" fontFamily="mono" fontWeight="500" _hover={{ color: 'pecado.500' }} transition="color 0.15s">
-                                                        {row.order_number}
-                                                    </Text>
-                                                </Link>
-                                            </Table.Cell>
-                                            <Table.Cell whiteSpace="nowrap">
-                                                <Badge colorPalette={meta.color || 'gray'} variant="subtle" borderRadius="full" gap="1" px="2">
-                                                    {Icon && <Icon size={11} />}
-                                                    {row.type_label}
-                                                </Badge>
-                                            </Table.Cell>
-                                            <Table.Cell>
-                                                {row.slug ? (
-                                                    <Box as="a" href={`/products/${row.slug}`} fontWeight="500"
-                                                        _hover={{ color: 'pecado.500' }} transition="color 0.15s">
-                                                        {row.product_name}
-                                                    </Box>
-                                                ) : (
-                                                    <Text as="span" color="fg.muted">{row.product_name}</Text>
-                                                )}
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="end" fontFamily="mono" color="gray.500">
-                                                {row.from}
-                                            </Table.Cell>
-                                            <Table.Cell textAlign="end" fontFamily="mono" fontWeight="700"
-                                                color={grew ? 'green.600' : 'red.600'}
-                                                _dark={{ color: grew ? 'green.300' : 'red.300' }}>
-                                                {row.to}
-                                            </Table.Cell>
-                                        </Table.Row>
-                                    );
-                                })}
+                                {rows.data.map((row, i) => (
+                                    <Table.Row key={`r-${row.order_id}-${i}`}>
+                                        <Table.Cell whiteSpace="nowrap" color="gray.600" _dark={{ color: 'gray.400' }} fontSize="xs">
+                                            {row.changed_at || '—'}
+                                        </Table.Cell>
+                                        <Table.Cell whiteSpace="nowrap"><OrderLink row={row} /></Table.Cell>
+                                        <Table.Cell whiteSpace="nowrap"><TypeBadge row={row} /></Table.Cell>
+                                        <Table.Cell><ProductName row={row} /></Table.Cell>
+                                        <Table.Cell textAlign="end" fontFamily="mono" color="gray.500">{row.from}</Table.Cell>
+                                        <Table.Cell textAlign="end" fontFamily="mono" fontWeight="700"
+                                            color={row.to > row.from ? 'green.600' : 'red.600'}
+                                            _dark={{ color: row.to > row.from ? 'green.300' : 'red.300' }}>
+                                            {row.to}
+                                        </Table.Cell>
+                                    </Table.Row>
+                                ))}
                             </Table.Body>
                         </Table.Root>
                     </Box>
+
+                    {/* Мобилка — карточки */}
+                    <VStack display={{ base: 'flex', md: 'none' }} align="stretch" gap="2">
+                        {rows.data.map((row, i) => {
+                            const grew = row.to > row.from;
+                            return (
+                                <Box key={`c-${row.order_id}-${i}`} bg="bg" borderRadius="lg" border="1px solid" borderColor="border.muted" p="3">
+                                    <Flex justify="space-between" align="center" gap="2" mb="2">
+                                        <OrderLink row={row} />
+                                        <Text fontSize="2xs" color="fg.muted" whiteSpace="nowrap">{row.changed_at || '—'}</Text>
+                                    </Flex>
+                                    <Flex justify="space-between" align="start" gap="2">
+                                        <Box minW="0" flex="1"><ProductName row={row} /></Box>
+                                        <TypeBadge row={row} />
+                                    </Flex>
+                                    <HStack gap="2" mt="2" fontFamily="mono" fontSize="sm">
+                                        <Text color="fg.muted">Было&nbsp;{row.from}</Text>
+                                        <Box color="fg.muted"><LuArrowRight size={13} /></Box>
+                                        <Text fontWeight="700" color={grew ? 'green.600' : 'red.600'} _dark={{ color: grew ? 'green.300' : 'red.300' }}>
+                                            Стало&nbsp;{row.to}
+                                        </Text>
+                                    </HStack>
+                                </Box>
+                            );
+                        })}
+                    </VStack>
 
                     {rows.last_page > 1 && (
                         <Flex justify="center" align="center" gap="2" mt="6">
@@ -269,4 +269,39 @@ export default function OrderChangesIndex({ filters, types = [] }) {
             )}
         </CabinetLayout>
     );
+}
+
+/** Ссылка на заказ — общая для таблицы и мобильных карточек. */
+function OrderLink({ row }) {
+    return (
+        <Link href={`/cabinet/orders/${row.order_id}`}>
+            <Text as="span" fontFamily="mono" fontWeight="500" _hover={{ color: 'pecado.500' }} transition="color 0.15s">
+                {row.order_number}
+            </Text>
+        </Link>
+    );
+}
+
+/** Бейдж типа изменения. */
+function TypeBadge({ row }) {
+    const meta = TYPE_META[row.type] || {};
+    const Icon = meta.icon;
+    return (
+        <Badge colorPalette={meta.color || 'gray'} variant="subtle" borderRadius="full" gap="1" px="2" flexShrink="0">
+            {Icon && <Icon size={11} />}
+            {row.type_label}
+        </Badge>
+    );
+}
+
+/** Название товара: ссылка (QuickView) при наличии slug, иначе текст. */
+function ProductName({ row }) {
+    if (row.slug) {
+        return (
+            <Box as="a" href={`/products/${row.slug}`} fontWeight="500" _hover={{ color: 'pecado.500' }} transition="color 0.15s">
+                {row.product_name}
+            </Box>
+        );
+    }
+    return <Text as="span" color="fg.muted">{row.product_name}</Text>;
 }
