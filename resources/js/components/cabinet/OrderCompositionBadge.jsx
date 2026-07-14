@@ -1,5 +1,5 @@
 import { Box, Flex, HStack, Stack, Text } from '@chakra-ui/react';
-import { LuTriangleAlert, LuPlus, LuMinus, LuArrowRight } from 'react-icons/lu';
+import { LuTriangleAlert, LuPlus, LuMinus, LuArrowRight, LuBan, LuArrowDown } from 'react-icons/lu';
 import {
     HoverCardRoot,
     HoverCardTrigger,
@@ -23,6 +23,8 @@ export default function OrderCompositionBadge({ changes }) {
     const added = changes.added ?? [];
     const removed = changes.removed ?? [];
     const changed = changes.changed ?? [];
+    const notAccepted = changes.not_accepted ?? [];
+    const partial = changes.partial ?? [];
 
     return (
         <HoverCardRoot size="sm" openDelay={150} closeDelay={100} positioning={{ placement: 'top' }}>
@@ -107,6 +109,40 @@ export default function OrderCompositionBadge({ changes }) {
                                                     {item.to}
                                                 </Box>
                                                 &nbsp;шт
+                                            </Box>
+                                        }
+                                    />
+                                </HStack>
+                            ))}
+                        </Stack>
+                    )}
+
+                    {notAccepted.length > 0 && (
+                        <Stack gap="1">
+                            <SectionLabel>Не приняты (заказ по API)</SectionLabel>
+                            {notAccepted.map((item, i) => (
+                                <HStack key={`na-${i}`} gap="1.5" align="start">
+                                    <Box color="purple.500" mt="0.5" flexShrink="0"><LuBan size={13} /></Box>
+                                    <CompositionItem item={item} strikethrough suffix={qtySuffix(item.qty, 'запрошено ')} />
+                                </HStack>
+                            ))}
+                        </Stack>
+                    )}
+
+                    {partial.length > 0 && (
+                        <Stack gap="1">
+                            <SectionLabel>Приняты частично (заказ по API)</SectionLabel>
+                            {partial.map((item, i) => (
+                                <HStack key={`pa-${i}`} gap="1.5" align="start">
+                                    <Box color="purple.500" mt="0.5" flexShrink="0"><LuArrowDown size={13} /></Box>
+                                    <CompositionItem
+                                        item={item}
+                                        suffix={
+                                            <Box as="span" whiteSpace="nowrap" color="fg.muted">
+                                                запрошено {item.from},&nbsp;принято{' '}
+                                                <Box as="span" fontWeight="600" color="purple.500" _dark={{ color: 'purple.300' }}>
+                                                    {item.to}
+                                                </Box>
                                             </Box>
                                         }
                                     />

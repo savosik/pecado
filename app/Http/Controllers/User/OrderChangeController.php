@@ -25,7 +25,12 @@ class OrderChangeController extends Controller
         'added' => 'Добавлен',
         'removed' => 'Выбыл',
         'changed' => 'Изменено количество',
+        'not_accepted' => 'Не принят (API)',
+        'partial' => 'Принят частично (API)',
     ];
+
+    /** Допустимые значения фильтра по типу. */
+    private const FILTERABLE_TYPES = ['added', 'removed', 'changed', 'not_accepted', 'partial'];
 
     public function __construct(
         protected OrderChangeAggregator $aggregator,
@@ -110,7 +115,7 @@ class OrderChangeController extends Controller
         $search = trim((string) $request->input('search', ''));
         $types = array_values(array_filter(
             (array) $request->input('type', []),
-            fn ($t) => in_array($t, ['added', 'removed', 'changed'], true),
+            fn ($t) => in_array($t, self::FILTERABLE_TYPES, true),
         ));
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
@@ -120,7 +125,7 @@ class OrderChangeController extends Controller
 
         $orders = Order::query()
             ->where('user_id', $user->id)
-            ->whereHas('changeLogs', fn ($q) => $q->where('type', 'items_updated'))
+            ->whereHas('changeLogs', fn ($q) => $q->whereIn('type', ['items_updated', 'api_shortfall']))
             ->with('company')
             ->get();
 
@@ -204,6 +209,7 @@ class OrderChangeController extends Controller
             'order_id' => $r['order_id'],
             'order_number' => $r['order_number'],
             'changed_at' => $r['changed_at']?->format('d.m.Y H:i'),
+            'kind' => $r['kind'],
             'type' => $r['type'],
             'type_label' => self::TYPE_LABELS[$r['type']] ?? $r['type'],
             'product_name' => $r['product_name'],

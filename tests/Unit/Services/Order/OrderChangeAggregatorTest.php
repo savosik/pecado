@@ -169,6 +169,80 @@ class OrderChangeAggregatorTest extends TestCase
     }
 
     #[Test]
+    public function flatten_surfaces_api_shortfall_as_separate_rows(): void
+    {
+        $na = Product::factory()->create(['name' => 'Не принят', 'slug' => 'na', 'external_id' => 'uuid-na']);
+        $pa = Product::factory()->create(['name' => 'Частично', 'slug' => 'pa', 'external_id' => 'uuid-pa']);
+        $order = $this->order();
+
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'api_shortfall',
+            'summary' => '…',
+            'changes' => [
+                'not_accepted' => [[
+                    'product_id' => $na->id, 'slug' => $na->slug, 'product_name' => 'Не принят',
+                    'requested' => 4, 'reason' => 'out_of_stock', 'message' => 'Нет в наличии',
+                ]],
+                'partial' => [[
+                    'product_id' => $pa->id, 'slug' => $pa->slug, 'product_name' => 'Частично',
+                    'requested' => 10, 'fulfilled' => 3,
+                ]],
+            ],
+            'source' => 'api',
+        ]);
+
+        $rows = collect($this->aggregator->flatten($this->userOrders()))->keyBy('type');
+
+        $this->assertSame('api', $rows['not_accepted']['kind']);
+        $this->assertSame(4, $rows['not_accepted']['from']);
+        $this->assertSame(0, $rows['not_accepted']['to']);
+        $this->assertSame('uuid-na', $rows['not_accepted']['external_id']);
+
+        $this->assertSame('api', $rows['partial']['kind']);
+        $this->assertSame(10, $rows['partial']['from']);
+        $this->assertSame(3, $rows['partial']['to']);
+
+        // В значке (groupedByOrder) недостача учтена отдельными группами.
+        $grouped = $this->aggregator->groupedByOrder($this->userOrders());
+        $this->assertSame(2, $grouped[$order->id]['count']);
+        $this->assertCount(1, $grouped[$order->id]['not_accepted']);
+        $this->assertCount(1, $grouped[$order->id]['partial']);
+    }
+
+    #[Test]
+    public function api_shortfall_is_not_folded_with_item_edits(): void
+    {
+        $p = Product::factory()->create(['name' => 'Товар', 'slug' => 't']);
+        $order = $this->order();
+
+        // Недостача при приёме: запрошено 5, принято 0.
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'api_shortfall',
+            'summary' => '…',
+            'changes' => ['not_accepted' => [[
+                'product_id' => $p->id, 'slug' => $p->slug, 'product_name' => 'Товар', 'requested' => 5,
+            ]], 'partial' => []],
+            'source' => 'api',
+        ]);
+        // Позже менеджер реально добавил тот же товар (edit).
+        $this->log($order, ['added' => [[
+            'product_id' => $p->id, 'slug' => $p->slug, 'product_name' => 'Товар', 'quantity' => 2, 'price' => 10,
+        ]]], '2026-07-11 10:00:00');
+
+        $rows = collect($this->aggregator->flatten($this->userOrders()));
+
+        // Две независимые строки: недостача (api) и правка (edit) — не смешаны.
+        $this->assertCount(2, $rows);
+        $this->assertEqualsCanonicalizing(['api', 'edit'], $rows->pluck('kind')->all());
+        $shortfall = $rows->firstWhere('kind', 'api');
+        $edit = $rows->firstWhere('kind', 'edit');
+        $this->assertSame([5, 0], [$shortfall['from'], $shortfall['to']]);
+        $this->assertSame([0, 2], [$edit['from'], $edit['to']]);
+    }
+
+    #[Test]
     public function flatten_covers_multiple_orders(): void
     {
         $p = Product::factory()->create(['name' => 'Товар', 'slug' => 't']);

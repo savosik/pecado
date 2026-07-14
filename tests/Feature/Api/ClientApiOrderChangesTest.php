@@ -79,6 +79,32 @@ class ClientApiOrderChangesTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_api_shortfall_rows_with_kind(): void
+    {
+        $order = Order::factory()->create(['user_id' => $this->user->id]);
+        $p = Product::factory()->create(['slug' => 'nd', 'external_id' => 'uuid-nd']);
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'api_shortfall',
+            'summary' => '…',
+            'changes' => [
+                'not_accepted' => [['product_id' => $p->id, 'slug' => $p->slug, 'product_name' => 'X', 'requested' => 3]],
+                'partial' => [],
+            ],
+            'source' => 'api',
+        ]);
+
+        $this->getJson("/api/client-api/{$this->token}/order-changes?type=not_accepted")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.kind', 'api')
+            ->assertJsonPath('data.0.type', 'not_accepted')
+            ->assertJsonPath('data.0.product_uuid', 'uuid-nd')
+            ->assertJsonPath('data.0.from', 3)
+            ->assertJsonPath('data.0.to', 0);
+    }
+
+    #[Test]
     public function it_filters_by_type(): void
     {
         $order = Order::factory()->create(['user_id' => $this->user->id]);

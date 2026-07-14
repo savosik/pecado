@@ -11,7 +11,7 @@ import {
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
-    LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2,
+    LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -659,7 +659,7 @@ function OrderTimeline({ entries = [] }) {
                                     bg={index === 0
                                         ? (entry.type === 'items_updated'
                                             ? 'orange.500'
-                                            : entry.type === 'attributes_updated'
+                                            : (entry.type === 'attributes_updated' || entry.type === 'api_shortfall')
                                                 ? 'purple.500'
                                                 : 'pecado.500')
                                         : 'gray.300'
@@ -673,6 +673,7 @@ function OrderTimeline({ entries = [] }) {
                                 {entry.type === 'status_changed' && <StatusEntry entry={entry} />}
                                 {entry.type === 'items_updated' && <ItemsChangedEntry entry={entry} />}
                                 {entry.type === 'attributes_updated' && <AttributesChangedEntry entry={entry} />}
+                                {entry.type === 'api_shortfall' && <ApiShortfallEntry entry={entry} />}
                             </Box>
                         ))}
                     </Stack>
@@ -862,8 +863,61 @@ function ItemsChangedEntry({ entry }) {
     );
 }
 
-const SOURCE_LABELS_MAP = { erp: '1С', admin: 'Админ', system: 'Система' };
-const SOURCE_COLORS_MAP = { erp: 'blue', admin: 'purple', system: 'gray' };
+/**
+ * Запись о недостаче при приёме заказа по API — позиции, которые клиент
+ * запросил, но которые не были приняты полностью из-за отсутствия остатков.
+ */
+function ApiShortfallEntry({ entry }) {
+    const c = entry.data;
+    const changes = c.changes || {};
+    const notAccepted = changes.not_accepted || [];
+    const partial = changes.partial || [];
+
+    return (
+        <Stack gap={1}>
+            <HStack gap="1.5">
+                <LuTriangleAlert size={14} style={{ color: 'var(--chakra-colors-purple-500)', flexShrink: 0 }} />
+                <Text fontWeight="600" fontSize="sm" color="purple.700" _dark={{ color: 'purple.300' }}>
+                    Заказ по API принят не в полном объёме
+                </Text>
+                <SourceBadge source={c.source} userName={c.user_name} />
+            </HStack>
+
+            <HStack fontSize="xs" color="fg.muted" gap="1">
+                <LuClock size={12} />
+                <Text>{c.created_at}</Text>
+                <Text>•</Text>
+                <Text>{c.created_at_human}</Text>
+            </HStack>
+
+            <Box mt={1} bg="gray.50" _dark={{ bg: 'gray.700' }} borderRadius="lg" p={3} fontSize="sm">
+                <Stack gap={2}>
+                    {notAccepted.map((item, i) => (
+                        <HStack key={`na-${i}`} gap="2" align="start">
+                            <Box color="purple.500" mt="1"><LuBan size={14} /></Box>
+                            <Text>
+                                <Box as="span" fontWeight="600" textDecoration="line-through">«{item.product_name}»</Box>
+                                {' — '}не принят (запрошено {item.requested})
+                            </Text>
+                        </HStack>
+                    ))}
+                    {partial.map((item, i) => (
+                        <HStack key={`pa-${i}`} gap="2" align="start">
+                            <Box color="purple.500" mt="1"><LuArrowRightLeft size={14} /></Box>
+                            <Text>
+                                <Box as="span" fontWeight="600">«{item.product_name}»</Box>
+                                {' — '}принят частично: запрошено {item.requested}, принято {item.fulfilled}
+                            </Text>
+                        </HStack>
+                    ))}
+                </Stack>
+            </Box>
+        </Stack>
+    );
+}
+
+const SOURCE_LABELS_MAP = { erp: '1С', admin: 'Админ', system: 'Система', api: 'API' };
+const SOURCE_COLORS_MAP = { erp: 'blue', admin: 'purple', system: 'gray', api: 'purple' };
 
 function SourceBadge({ source, userName }) {
     if (!source) return null;

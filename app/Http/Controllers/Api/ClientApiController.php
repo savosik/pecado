@@ -15,6 +15,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use App\Services\Order\OrderChangeAggregator;
+use App\Services\Order\OrderChangeLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -26,6 +27,7 @@ class ClientApiController extends Controller
         protected StockServiceInterface $stockService,
         protected UserCurrencyResolverInterface $currencyResolver,
         protected OrderChangeAggregator $changeAggregator,
+        protected OrderChangeLogger $changeLogger,
     ) {}
 
     /**
@@ -139,13 +141,14 @@ class ClientApiController extends Controller
      * GET /api/client-api/{token}/order-changes
      * Отслеживание изменений товарного состава заказов клиента.
      *
-     * Возвращает движения по позициям, свёрнутые к итогу «было → стало» по
-     * каждому товару в заказе: added (0→N), removed (N→0), changed (N→M).
-     * Разнонаправленные движения по одному товару взаимно свёрнуты (например,
-     * сняли 5 и добавили 6 → одна запись changed 5→6); нетто-нулевые опущены.
+     * Возвращает движения по позициям заказов. Правки состава (kind=edit)
+     * свёрнуты к итогу «было → стало» по товару: added (0→N), removed (N→0),
+     * changed (N→M); разнонаправленные движения взаимно свёрнуты, нетто-нулевые
+     * опущены. Недостача при приёме заказа по API (kind=api) — отдельные записи
+     * «запрошено → принято»: not_accepted (N→0), partial (N→M).
      *
-     * Фильтры (query): type=added|removed|changed, date_from / date_to
-     * (YYYY-MM-DD, по дате изменения), per_page (до 1000), page.
+     * Фильтры (query): type=added|removed|changed|not_accepted|partial,
+     * date_from / date_to (YYYY-MM-DD, по дате изменения), per_page (до 1000), page.
      */
     public function orderChanges(Request $request, string $token): JsonResponse
     {
@@ -153,13 +156,13 @@ class ClientApiController extends Controller
         $user = $apiToken->user;
 
         $type = $request->query('type');
-        $type = in_array($type, ['added', 'removed', 'changed'], true) ? $type : null;
+        $type = in_array($type, ['added', 'removed', 'changed', 'not_accepted', 'partial'], true) ? $type : null;
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
 
         $orders = Order::query()
             ->where('user_id', $user->id)
-            ->whereHas('changeLogs', fn ($q) => $q->where('type', 'items_updated'))
+            ->whereHas('changeLogs', fn ($q) => $q->whereIn('type', ['items_updated', 'api_shortfall']))
             ->get();
 
         $rows = $this->changeAggregator->flatten($orders);
@@ -192,6 +195,7 @@ class ClientApiController extends Controller
             'order_number' => $r['order_number'],
             'order_id' => $r['order_id'],
             'changed_at' => $r['changed_at']?->toIso8601String(),
+            'kind' => $r['kind'], // 'edit' — правка состава, 'api' — недостача при приёме
             'type' => $r['type'],
             'product_uuid' => $r['external_id'],
             'product_name' => $r['product_name'],
@@ -263,6 +267,9 @@ class ClientApiController extends Controller
             if (! $product) {
                 $unavailable[] = [
                     'identifier' => $item['identifier'],
+                    'product_id' => null,
+                    'slug' => null,
+                    'name' => $item['identifier'],
                     'requested' => $requestedQty,
                     'reason' => 'not_found',
                     'message' => 'Товар не найден',
@@ -279,6 +286,8 @@ class ClientApiController extends Controller
             if ($totalAvailable <= 0) {
                 $unavailable[] = [
                     'identifier' => $item['identifier'],
+                    'product_id' => $product->id,
+                    'slug' => $product->slug,
                     'name' => $product->name,
                     'requested' => $requestedQty,
                     'reason' => 'out_of_stock',
@@ -303,6 +312,8 @@ class ClientApiController extends Controller
             if ($fulfillQty < $requestedQty) {
                 $partial[] = [
                     'identifier' => $item['identifier'],
+                    'product_id' => $product->id,
+                    'slug' => $product->slug,
                     'name' => $product->name,
                     'requested' => $requestedQty,
                     'fulfilled' => $fulfillQty,
@@ -373,6 +384,31 @@ class ClientApiController extends Controller
 
             return $orders;
         });
+
+        // Логируем недостачу при приёме как структурную запись в общий workflow
+        // изменений (недостача видна в «Изменениях заказов», значке и API).
+        // Текстовая пометка в комментарии сохраняется отдельно — её видит 1С.
+        if (! empty($unavailable) || ! empty($partial)) {
+            $primaryOrder = $createdOrders[0];
+            $this->changeLogger->logApiShortfall(
+                $primaryOrder,
+                array_map(fn (array $u) => [
+                    'product_id' => $u['product_id'] ?? null,
+                    'slug' => $u['slug'] ?? null,
+                    'product_name' => $u['name'] ?? $u['identifier'],
+                    'requested' => $u['requested'],
+                    'reason' => $u['reason'] ?? null,
+                    'message' => $u['message'] ?? null,
+                ], $unavailable),
+                array_map(fn (array $p) => [
+                    'product_id' => $p['product_id'] ?? null,
+                    'slug' => $p['slug'] ?? null,
+                    'product_name' => $p['name'] ?? $p['identifier'],
+                    'requested' => $p['requested'],
+                    'fulfilled' => $p['fulfilled'],
+                ], $partial),
+            );
+        }
 
         // Dispatch events после коммита
         foreach ($createdOrders as $order) {

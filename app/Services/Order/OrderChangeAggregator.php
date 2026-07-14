@@ -42,6 +42,8 @@ class OrderChangeAggregator
             $added = [];
             $removed = [];
             $changed = [];
+            $notAccepted = [];
+            $partial = [];
 
             foreach ($entry['records'] as $rec) {
                 $meta = $resolver($rec);
@@ -56,7 +58,18 @@ class OrderChangeAggregator
                 }
             }
 
-            $count = count($added) + count($removed) + count($changed);
+            foreach ($entry['shortfall'] as $rec) {
+                $meta = $resolver($rec);
+                $name = $rec['name'] ?? '—';
+
+                if ($rec['type'] === 'not_accepted') {
+                    $notAccepted[] = ['name' => $name, 'slug' => $meta['slug'], 'qty' => $rec['from']];
+                } else {
+                    $partial[] = ['name' => $name, 'slug' => $meta['slug'], 'from' => $rec['from'], 'to' => $rec['to']];
+                }
+            }
+
+            $count = count($added) + count($removed) + count($changed) + count($notAccepted) + count($partial);
             if ($count === 0) {
                 continue;
             }
@@ -66,6 +79,8 @@ class OrderChangeAggregator
                 'added' => array_values($added),
                 'removed' => array_values($removed),
                 'changed' => array_values($changed),
+                'not_accepted' => array_values($notAccepted),
+                'partial' => array_values($partial),
             ];
         }
 
@@ -76,7 +91,10 @@ class OrderChangeAggregator
      * Плоский список движений — по одной строке на нетто-изменение товара
      * в заказе. Форма для сводной таблицы, экспорта и клиентского API.
      *
-     * @return array<int, array{order_id:int, order_number:string, order_type:?string, changed_at:\Illuminate\Support\Carbon, type:string, product_id:?int, product_name:string, slug:?string, external_id:?string, from:int, to:int}>
+     * `kind`: 'edit' — правка состава (added/removed/changed, свёрнуто);
+     * 'api' — недостача при приёме по API (not_accepted/partial, «запрошено→принято»).
+     *
+     * @return array<int, array{order_id:int, order_number:string, order_type:?string, changed_at:\Illuminate\Support\Carbon, kind:string, type:string, product_id:?int, product_name:string, slug:?string, external_id:?string, from:int, to:int}>
      */
     public function flatten(EloquentCollection $orders): array
     {
@@ -88,26 +106,31 @@ class OrderChangeAggregator
             $orderNumber = $order->erp_number ?? $order->number ?? ('#'.$order->id);
             $orderType = $order->type?->value;
 
-            foreach ($entry['records'] as $rec) {
+            $emit = function (array $rec, string $kind, string $type) use ($order, $orderNumber, $orderType, $resolver) {
                 $meta = $resolver($rec);
-                $from = $rec['from'];
-                $to = $rec['to'];
 
-                $type = $from === 0 ? 'added' : ($to === 0 ? 'removed' : 'changed');
-
-                $rows[] = [
+                return [
                     'order_id' => $order->id,
                     'order_number' => $orderNumber,
                     'order_type' => $orderType,
                     'changed_at' => $rec['changed_at'],
+                    'kind' => $kind,
                     'type' => $type,
                     'product_id' => $rec['product_id'],
                     'product_name' => $rec['name'] ?? '—',
                     'slug' => $meta['slug'],
                     'external_id' => $meta['external_id'],
-                    'from' => $from,
-                    'to' => $to,
+                    'from' => $rec['from'],
+                    'to' => $rec['to'],
                 ];
+            };
+
+            foreach ($entry['records'] as $rec) {
+                $type = $rec['from'] === 0 ? 'added' : ($rec['to'] === 0 ? 'removed' : 'changed');
+                $rows[] = $emit($rec, 'edit', $type);
+            }
+            foreach ($entry['shortfall'] as $rec) {
+                $rows[] = $emit($rec, 'api', $rec['type']);
             }
         }
 
@@ -118,11 +141,12 @@ class OrderChangeAggregator
      * Ядро: свернуть логи каждого заказа в нетто-записи по товарам и построить
      * пакетный резолвер slug/external_id. Возвращает [perOrder, resolver].
      *
-     * perOrder: order_id => ['order' => Order, 'records' => [identity => rec]],
-     * где rec = ['name','slug','product_id','from','to','changed_at'].
-     * Записи с нетто-нулём (from === to) уже отброшены.
+     * perOrder: order_id => ['order' => Order, 'records' => [identity => rec],
+     * 'shortfall' => [rec, ...]], где rec = ['name','slug','product_id','from',
+     * 'to','changed_at']. Правки состава свёрнуты по товару и без нетто-нуля;
+     * записи недостачи (shortfall) идут как есть, каждая со своим 'type'.
      *
-     * @return array{0: array<int, array{order:\App\Models\Order, records:array<string, array<string, mixed>>}>, 1: callable}
+     * @return array{0: array<int, array{order:\App\Models\Order, records:array<string, array<string, mixed>>, shortfall:array<int, array<string, mixed>>}>, 1: callable}
      */
     private function netPerOrder(EloquentCollection $orders): array
     {
@@ -132,17 +156,26 @@ class OrderChangeAggregator
             return [[], $noop];
         }
 
-        // Грузим только логи изменения состава и только нужные колонки
-        // (без summary/old_total/new_total) — чтобы большая история заказов
+        // Грузим логи изменения состава (items_updated) и недостачи при приёме
+        // по API (api_shortfall), только нужные колонки — чтобы большая история
         // не раздувала память. Индекс order_change_logs(order_id) покрывает выборку.
         $orders->load(['changeLogs' => fn ($q) => $q
-            ->where('type', 'items_updated')
-            ->select(['id', 'order_id', 'changes', 'created_at']),
+            ->whereIn('type', ['items_updated', 'api_shortfall'])
+            ->select(['id', 'order_id', 'type', 'changes', 'created_at']),
         ]);
 
         $perOrder = [];
         $needProductIds = [];
         $needNames = [];
+
+        // Собрать product_id/name для пакетного резолва slug/external_id.
+        $trackNeeds = function (array $row) use (&$needProductIds, &$needNames): void {
+            if (! empty($row['product_id'])) {
+                $needProductIds[$row['product_id']] = true;
+            } elseif (($row['slug'] ?? null) === null && ! empty($row['name'] ?? $row['product_name'] ?? null)) {
+                $needNames[$row['name'] ?? $row['product_name']] = true;
+            }
+        };
 
         foreach ($orders as $order) {
             $logs = $order->changeLogs
@@ -153,11 +186,23 @@ class OrderChangeAggregator
                 continue;
             }
 
-            $net = [];
+            $net = [];          // items_updated → нетто «было→стало»
+            $shortfall = [];     // api_shortfall → отдельные записи (не сворачиваются)
 
             foreach ($logs as $log) {
                 $changes = $log->changes ?? [];
                 $at = $log->created_at;
+
+                if ($log->type === 'api_shortfall') {
+                    foreach (($changes['not_accepted'] ?? []) as $item) {
+                        $shortfall[] = $this->shortfallRow($item, 'not_accepted', (int) ($item['requested'] ?? 0), 0, $at);
+                    }
+                    foreach (($changes['partial'] ?? []) as $item) {
+                        $shortfall[] = $this->shortfallRow($item, 'partial', (int) ($item['requested'] ?? 0), (int) ($item['fulfilled'] ?? 0), $at);
+                    }
+
+                    continue;
+                }
 
                 foreach (($changes['added'] ?? []) as $item) {
                     $this->fold($net, $item, 0, (int) ($item['quantity'] ?? 0), $at);
@@ -181,19 +226,17 @@ class OrderChangeAggregator
                     continue;
                 }
                 $records[$identity] = $rec;
-
-                if ($rec['product_id']) {
-                    $needProductIds[$rec['product_id']] = true;
-                } elseif ($rec['slug'] === null && $rec['name']) {
-                    $needNames[$rec['name']] = true;
-                }
+                $trackNeeds($rec);
+            }
+            foreach ($shortfall as $rec) {
+                $trackNeeds($rec);
             }
 
-            if (empty($records)) {
+            if (empty($records) && empty($shortfall)) {
                 continue;
             }
 
-            $perOrder[$order->id] = ['order' => $order, 'records' => $records];
+            $perOrder[$order->id] = ['order' => $order, 'records' => $records, 'shortfall' => $shortfall];
         }
 
         if (empty($perOrder)) {
@@ -239,6 +282,25 @@ class OrderChangeAggregator
      * @param  array<string, array<string, mixed>>  $net
      * @param  array<string, mixed>  $item
      */
+    /**
+     * Нормализовать запись недостачи при приёме по API в строку «запрошено→принято».
+     *
+     * @param  array<string, mixed>  $item
+     * @return array<string, mixed>
+     */
+    private function shortfallRow(array $item, string $type, int $from, int $to, ?Carbon $at): array
+    {
+        return [
+            'type' => $type,   // 'not_accepted' | 'partial'
+            'name' => $item['product_name'] ?? null,
+            'slug' => $item['slug'] ?? null,
+            'product_id' => $item['product_id'] ?? null,
+            'from' => $from,
+            'to' => $to,
+            'changed_at' => $at,
+        ];
+    }
+
     private function fold(array &$net, array $item, int $before, int $after, ?Carbon $changedAt): void
     {
         $identity = ! empty($item['product_id'])

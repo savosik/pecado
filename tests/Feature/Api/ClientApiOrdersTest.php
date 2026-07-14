@@ -11,6 +11,7 @@ use App\Events\OrderCreated;
 use App\Models\ApiToken;
 use App\Models\Company;
 use App\Models\Order;
+use App\Models\OrderChangeLog;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -106,6 +107,50 @@ class ClientApiOrdersTest extends TestCase
 
         // Заказ создан на доступное количество
         $this->assertDatabaseHas('order_items', ['product_id' => Product::first()->id, 'quantity' => 3]);
+    }
+
+    public function test_api_shortfall_is_logged_as_structured_change(): void
+    {
+        $good = $this->product('ART-A', available: 3);   // принят частично: 10 → 3
+        $oos = $this->product('ART-B', available: 0);    // не принят вовсе
+
+        $res = $this->order([
+            ['identifier' => 'ART-A', 'quantity' => 10],
+            ['identifier' => 'ART-B', 'quantity' => 4],
+        ]);
+        $res->assertStatus(201);
+
+        $orderId = $res->json('orders.0.order_id');
+        $log = OrderChangeLog::where('order_id', $orderId)->where('type', 'api_shortfall')->first();
+
+        $this->assertNotNull($log);
+        $this->assertSame('api', $log->source);
+
+        $notAccepted = $log->changes['not_accepted'];
+        $this->assertCount(1, $notAccepted);
+        $this->assertSame($oos->id, $notAccepted[0]['product_id']);
+        $this->assertSame(4, $notAccepted[0]['requested']);
+
+        $partial = $log->changes['partial'];
+        $this->assertCount(1, $partial);
+        $this->assertSame($good->id, $partial[0]['product_id']);
+        $this->assertSame(10, $partial[0]['requested']);
+        $this->assertSame(3, $partial[0]['fulfilled']);
+
+        // Текстовая пометка в комментарии сохраняется (её видит 1С).
+        $this->assertStringContainsString('не в полном объёме', (string) Order::find($orderId)->comment);
+    }
+
+    public function test_no_shortfall_log_when_fully_fulfilled(): void
+    {
+        $this->product('ART-A', available: 10);
+        $res = $this->order([['identifier' => 'ART-A', 'quantity' => 5]]);
+        $res->assertStatus(201);
+
+        $this->assertDatabaseMissing('order_change_logs', [
+            'order_id' => $res->json('orders.0.order_id'),
+            'type' => 'api_shortfall',
+        ]);
     }
 
     public function test_out_of_stock_item_is_skipped_but_rest_of_order_is_created(): void

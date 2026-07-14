@@ -6,7 +6,7 @@ import {
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     LuSearch, LuChevronLeft, LuChevronRight, LuArrowRightLeft,
-    LuPlus, LuMinus, LuArrowRight,
+    LuPlus, LuMinus, LuArrowRight, LuBan, LuArrowDown,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
@@ -18,6 +18,8 @@ const TYPE_META = {
     added: { label: 'Добавлен', color: 'green', icon: LuPlus },
     removed: { label: 'Выбыл', color: 'red', icon: LuMinus },
     changed: { label: 'Изменено количество', color: 'orange', icon: LuArrowRight },
+    not_accepted: { label: 'Не принят (API)', color: 'purple', icon: LuBan },
+    partial: { label: 'Принят частично (API)', color: 'purple', icon: LuArrowDown },
 };
 
 const PERIODS = [
@@ -241,10 +243,10 @@ export default function OrderChangesIndex({ filters, types = [] }) {
                                         <TypeBadge row={row} />
                                     </Flex>
                                     <HStack gap="2" mt="2" fontFamily="mono" fontSize="sm">
-                                        <Text color="fg.muted">Было&nbsp;{row.from}</Text>
+                                        <Text color="fg.muted">{row.kind === 'api' ? 'Запрошено' : 'Было'}&nbsp;{row.from}</Text>
                                         <Box color="fg.muted"><LuArrowRight size={13} /></Box>
                                         <Text fontWeight="700" color={grew ? 'green.600' : 'red.600'} _dark={{ color: grew ? 'green.300' : 'red.300' }}>
-                                            Стало&nbsp;{row.to}
+                                            {row.kind === 'api' ? 'Принято' : 'Стало'}&nbsp;{row.to}
                                         </Text>
                                     </HStack>
                                 </Box>

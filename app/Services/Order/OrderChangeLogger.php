@@ -129,6 +129,58 @@ class OrderChangeLogger
     }
 
     /**
+     * Записать недостачу при приёме заказа по API — позиции, которые клиент
+     * запросил, но которые не были приняты полностью из-за отсутствия остатков.
+     * Отдельный тип `api_shortfall` (source `api`): не сворачивается с
+     * последующими правками состава, показывается как «запрошено → принято».
+     *
+     * @param  array<int, array{product_id:?int, slug:?string, product_name:string, requested:int, reason?:string, message?:string}>  $notAccepted  запрошено, принято 0
+     * @param  array<int, array{product_id:?int, slug:?string, product_name:string, requested:int, fulfilled:int}>  $partial  принято меньше запрошенного
+     */
+    public function logApiShortfall(Order $order, array $notAccepted, array $partial): ?OrderChangeLog
+    {
+        if (empty($notAccepted) && empty($partial)) {
+            return null;
+        }
+
+        return OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'api_shortfall',
+            'summary' => $this->buildShortfallSummary($notAccepted, $partial),
+            'changes' => [
+                'not_accepted' => array_values($notAccepted),
+                'partial' => array_values($partial),
+            ],
+            'source' => 'api',
+            'user_id' => null,
+        ]);
+    }
+
+    /**
+     * Человекочитаемое описание недостачи при приёме по API.
+     *
+     * @param  array<int, array<string, mixed>>  $notAccepted
+     * @param  array<int, array<string, mixed>>  $partial
+     */
+    public function buildShortfallSummary(array $notAccepted, array $partial): string
+    {
+        $lines = ['Заказ по API принят не в полном объёме:'];
+
+        foreach ($notAccepted as $item) {
+            $name = $item['product_name'] ?? '—';
+            $reason = $item['message'] ?? 'Нет в наличии';
+            $lines[] = "Не принят: «{$name}» (запрошено {$item['requested']}) — {$reason}";
+        }
+
+        foreach ($partial as $item) {
+            $name = $item['product_name'] ?? '—';
+            $lines[] = "Принят частично: «{$name}» — запрошено {$item['requested']}, принято {$item['fulfilled']}";
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
      * Вычислить diff атрибутов заказа. Возвращает ассоциативный массив
      * field => ['old' => ..., 'new' => ..., 'label' => ..., опциональные
      * old_label/new_label для связей].

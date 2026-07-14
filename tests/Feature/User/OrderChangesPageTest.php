@@ -99,6 +99,34 @@ class OrderChangesPageTest extends TestCase
     }
 
     #[Test]
+    public function it_shows_api_shortfall_rows(): void
+    {
+        $order = Order::factory()->create(['user_id' => $this->user->id]);
+        $p = Product::factory()->create(['name' => 'Недостача', 'slug' => 'nd']);
+        OrderChangeLog::create([
+            'order_id' => $order->id,
+            'type' => 'api_shortfall',
+            'summary' => '…',
+            'changes' => [
+                'not_accepted' => [['product_id' => $p->id, 'slug' => $p->slug, 'product_name' => 'Недостача', 'requested' => 3]],
+                'partial' => [],
+            ],
+            'source' => 'api',
+        ]);
+
+        $rows = $this->fetchRows();
+        $this->assertCount(1, $rows);
+        $this->assertSame('not_accepted', $rows[0]['type']);
+        $this->assertSame('api', $rows[0]['kind']);
+        $this->assertSame('Не принят (API)', $rows[0]['type_label']);
+        $this->assertSame(3, $rows[0]['from']);
+        $this->assertSame(0, $rows[0]['to']);
+
+        $this->assertCount(1, $this->fetchRows('type[]=not_accepted'));
+        $this->assertCount(0, $this->fetchRows('type[]=added'));
+    }
+
+    #[Test]
     public function period_hour_filter_excludes_older_changes(): void
     {
         $order = Order::factory()->create(['user_id' => $this->user->id]);
