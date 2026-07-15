@@ -84,6 +84,8 @@ class OrderController extends Controller
                 'status' => $order->status?->value,
                 'status_label' => $this->getStatusLabel($order->status),
                 'type' => $order->type?->value,
+                'delivery_method' => $order->delivery_method?->value ?? 'delivery',
+                'delivery_method_label' => $order->delivery_method?->label() ?? 'Доставка',
                 'total_amount' => $order->total_amount,
                 'total_converted' => $totalConverted,
                 'original_total_amount' => $originalTotalAmount,

@@ -7,7 +7,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     LuFilter, LuX, LuArrowUpDown, LuArrowUp, LuArrowDown,
     LuChevronLeft, LuChevronRight, LuSearch, LuShoppingBag,
-    LuPackage, LuTruck, LuClock,
+    LuPackage, LuTruck, LuClock, LuMapPin, LuStore,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
@@ -469,6 +469,8 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                 : order.shipments_count < 5 ? 'отгрузки' : 'отгрузок';
                             const hasDiscount = Number(order.original_total_converted || 0) > Number(order.total_converted || 0);
                             const isForeignCurrency = order.currency_code && order.currency_code !== currency?.code;
+                            const isPreorder = order.type === 'preorder';
+                            const isPickup = order.delivery_method === 'pickup';
 
                             return (
                                 <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
@@ -490,30 +492,8 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                         >
                                             {/* Левая часть */}
                                             <Box flex="1" minW="0">
-                                                {/* Строка 1: номер + бейджи + дата */}
-                                                <Flex gap="2" align="center" flexWrap="wrap" mb="2">
-                                                    <Text
-                                                        fontWeight="700"
-                                                        fontSize="md"
-                                                        fontFamily="mono"
-                                                        whiteSpace="nowrap"
-                                                        color="gray.800"
-                                                        _dark={{ color: 'gray.100' }}
-                                                    >
-                                                        {order.number}
-                                                    </Text>
-                                                    <Badge
-                                                        colorPalette={order.type === 'preorder' ? 'orange' : 'teal'}
-                                                        variant="subtle" fontSize="2xs" px="2" borderRadius="full"
-                                                    >
-                                                        {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
-                                                    </Badge>
-                                                    <Badge
-                                                        colorPalette={STATUS_COLORS[order.status] || 'gray'}
-                                                        variant="subtle" fontSize="2xs" px="2" borderRadius="full"
-                                                    >
-                                                        {order.status_label}
-                                                    </Badge>
+                                                {/* Мета-строка: дата/время + тип (без бейджа) */}
+                                                <Flex gap="2" align="center" flexWrap="wrap" mb="1.5" fontSize="xs">
                                                     <Tooltip
                                                         content={`Обновлён: ${order.erp_updated_at || '—'}`}
                                                         positioning={{ placement: 'top' }}
@@ -522,15 +502,48 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                         <Flex
                                                             align="center"
                                                             gap="1"
-                                                            fontSize="sm"
-                                                            color="gray.600"
+                                                            color="gray.500"
                                                             _dark={{ color: 'gray.400' }}
                                                             fontWeight="500"
                                                         >
-                                                            <LuClock size={12} />
+                                                            <LuClock size={13} />
                                                             <Text whiteSpace="nowrap">{order.erp_created_at}</Text>
                                                         </Flex>
                                                     </Tooltip>
+                                                    <Text as="span" color="gray.300" _dark={{ color: 'gray.600' }}>•</Text>
+                                                    <Text
+                                                        as="span"
+                                                        whiteSpace="nowrap"
+                                                        fontWeight="600"
+                                                        color={isPreorder ? 'orange.600' : 'gray.500'}
+                                                        _dark={{ color: isPreorder ? 'orange.300' : 'gray.400' }}
+                                                    >
+                                                        {isPreorder ? 'Предзаказ' : 'Заказ'}
+                                                    </Text>
+                                                </Flex>
+
+                                                {/* Строка заголовка: номер + крупный статус */}
+                                                <Flex gap="2.5" align="center" flexWrap="wrap" mb="1.5">
+                                                    <Text
+                                                        fontWeight="700"
+                                                        fontSize="lg"
+                                                        fontFamily="mono"
+                                                        whiteSpace="nowrap"
+                                                        color="gray.800"
+                                                        _dark={{ color: 'gray.100' }}
+                                                    >
+                                                        {order.number}
+                                                    </Text>
+                                                    <Badge
+                                                        colorPalette={STATUS_COLORS[order.status] || 'gray'}
+                                                        variant="subtle"
+                                                        fontSize="xs"
+                                                        fontWeight="600"
+                                                        px="2.5" py="1"
+                                                        borderRadius="full"
+                                                    >
+                                                        {order.status_label}
+                                                    </Badge>
                                                 </Flex>
 
                                                 <MatchBadge
@@ -539,7 +552,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                     search={filters.search || ''}
                                                 />
 
-                                                {/* Строка 2: контрагент */}
+                                                {/* Контрагент */}
                                                 {order.company && (
                                                     <Text
                                                         fontSize="sm"
@@ -552,7 +565,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                     </Text>
                                                 )}
 
-                                                {/* Строка 3: бейджи количеств */}
+                                                {/* Нижняя строка: позиции + способ доставки + отгрузки */}
                                                 <Flex gap="2" align="center" flexWrap="wrap">
                                                     <Badge
                                                         variant="outline"
@@ -564,6 +577,17 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                                                     >
                                                         <LuPackage size={11} />
                                                         {order.items_count}&nbsp;{itemsLabel}
+                                                    </Badge>
+                                                    <Badge
+                                                        variant="outline"
+                                                        colorPalette="gray"
+                                                        fontSize="2xs"
+                                                        px="2" py="0.5"
+                                                        borderRadius="full"
+                                                        gap="1"
+                                                    >
+                                                        {isPickup ? <LuStore size={11} /> : <LuMapPin size={11} />}
+                                                        {order.delivery_method_label}
                                                     </Badge>
                                                     <OrderCompositionBadge changes={order.composition_changes} />
                                                     {order.shipments_count > 0 && (

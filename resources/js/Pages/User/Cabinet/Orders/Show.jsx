@@ -153,6 +153,18 @@ export default function OrderShow({ order }) {
                     >
                         {STATUS_LABELS[order.status] ?? order.status}
                     </Badge>
+                    <Badge
+                        colorPalette="gray"
+                        variant="outline"
+                        fontSize="sm"
+                        px="3"
+                        py="1"
+                        borderRadius="full"
+                        gap="1"
+                    >
+                        {order.delivery_method === 'pickup' ? <LuStore size={14} /> : <LuMapPin size={14} />}
+                        {order.delivery_method_label ?? (order.delivery_method === 'pickup' ? 'Самовывоз' : 'Доставка')}
+                    </Badge>
                     <Text fontSize="sm" color="fg.muted">
                         Заказ {order.number} от {createdAt.split(' ')[0]}
                     </Text>
