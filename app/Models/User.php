@@ -124,6 +124,15 @@ class User extends Authenticatable implements HasMedia
     use HasApiTokens, HasFactory, HasRoles, InteractsWithMedia, Notifiable;
 
     /**
+     * Префикс прав домена /crm/.
+     *
+     * По нему hasAdminAccess()/hasCrmAccess() отличают CRM-права от админских,
+     * поэтому имена CRM-ресурсов в RolesAndPermissionsSeeder обязаны его нести
+     * (страхует PermissionNamingTest).
+     */
+    public const CRM_PERMISSION_PREFIX = 'crm-';
+
+    /**
      * The accessors to append to the model's array form.
      *
      * @var list<string>
@@ -422,5 +431,86 @@ class User extends Authenticatable implements HasMedia
     public function personalManager(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(PersonalManager::class);
+    }
+
+    /**
+     * Карточка персонального менеджера, если этот пользователь — сотрудник отдела продаж.
+     *
+     * Обратная сторона personalManager(): там пользователь выступает клиентом,
+     * здесь — самим менеджером.
+     */
+    public function managerProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(PersonalManager::class);
+    }
+
+    /**
+     * Сотрудник — любой пользователь с ролью.
+     *
+     * Витрина по этому признаку показывает цены и корзину независимо от status,
+     * поэтому проверка намеренно широкая: доступа в панели она не даёт.
+     */
+    public function isStaff(): bool
+    {
+        return $this->loadMissing('roles')->roles->isNotEmpty();
+    }
+
+    /**
+     * Доступ в /admin — super-admin или хотя бы одно НЕ-CRM право.
+     *
+     * Сотрудник, у которого есть только права с префиксом CRM_PERMISSION_PREFIX,
+     * работает исключительно в /crm и в админку не попадает.
+     */
+    public function hasAdminAccess(): bool
+    {
+        if ($this->hasRole('super-admin')) {
+            return true;
+        }
+
+        return $this->getAllPermissions()->contains(
+            fn ($permission) => ! str_starts_with($permission->name, self::CRM_PERMISSION_PREFIX)
+        );
+    }
+
+    /**
+     * Доступ в /crm — super-admin или хотя бы одно CRM-право.
+     */
+    public function hasCrmAccess(): bool
+    {
+        if ($this->hasRole('super-admin')) {
+            return true;
+        }
+
+        return $this->getAllPermissions()->contains(
+            fn ($permission) => str_starts_with($permission->name, self::CRM_PERMISSION_PREFIX)
+        );
+    }
+
+    /**
+     * Клиенты, видимые пользователю в CRM.
+     *
+     * РОП и суперадмин (crm-clients-all.view) видят всех клиентов отдела,
+     * менеджер — только закреплённых за его карточкой, менеджер без карточки — никого.
+     *
+     * Порядок веток важен: право на весь отдел проверяется до managerProfile,
+     * иначе РОП без карточки менеджера увидел бы пустой список.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<self>  $query
+     * @return \Illuminate\Database\Eloquent\Builder<self>
+     */
+    public function scopeVisibleInCrm(\Illuminate\Database\Eloquent\Builder $query, self $actor): \Illuminate\Database\Eloquent\Builder
+    {
+        if ($actor->can('crm-clients-all.view')) {
+            // Клиент — пользователь с закреплённым менеджером; остальные это лиды.
+            return $query->whereNotNull('personal_manager_id');
+        }
+
+        $managerId = $actor->managerProfile?->id;
+
+        if ($managerId === null) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('personal_manager_id', $managerId);
     }
 }

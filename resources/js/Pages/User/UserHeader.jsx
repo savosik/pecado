@@ -17,7 +17,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     LuHeart, LuUser, LuMenu, LuShoppingCart,
     LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
-    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge, LuShieldCheck,
+    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge, LuShieldCheck, LuHeadset,
 } from 'react-icons/lu';
 
 // Маппинг имён иконок на компоненты
@@ -144,6 +144,17 @@ export default function UserHeader() {
                                         <Link href="/admin">
                                             <LuShieldCheck />
                                             <Text display={{ base: 'none', xl: 'inline' }}>Админка</Text>
+                                        </Link>
+                                    </Button>
+                                </Tooltip>
+                            )}
+
+                            {user?.is_crm && (
+                                <Tooltip content="Перейти в CRM" positioning={{ placement: 'bottom' }}>
+                                    <Button asChild variant="outline" colorPalette="pecado" size="sm">
+                                        <Link href="/crm">
+                                            <LuHeadset />
+                                            <Text display={{ base: 'none', xl: 'inline' }}>CRM</Text>
                                         </Link>
                                     </Button>
                                 </Tooltip>
@@ -438,6 +449,18 @@ export default function UserHeader() {
                                                 <HStack px="3" py="2.5" borderRadius="md" color="pecado.600" _hover={{ bg: 'pecado.50' }} _dark={{ color: 'pecado.300', _hover: { bg: 'pecado.900/20' } }}>
                                                     <LuShieldCheck size={18} />
                                                     <Text fontSize="sm" fontWeight="600">Админка</Text>
+                                                </HStack>
+                                            </Link>
+                                        </>
+                                    )}
+
+                                    {user?.is_crm && (
+                                        <>
+                                            {!user?.is_admin && <Separator />}
+                                            <Link href="/crm" onClick={() => setMobileMenuOpen(false)}>
+                                                <HStack px="3" py="2.5" borderRadius="md" color="pecado.600" _hover={{ bg: 'pecado.50' }} _dark={{ color: 'pecado.300', _hover: { bg: 'pecado.900/20' } }}>
+                                                    <LuHeadset size={18} />
+                                                    <Text fontSize="sm" fontWeight="600">CRM</Text>
                                                 </HStack>
                                             </Link>
                                         </>

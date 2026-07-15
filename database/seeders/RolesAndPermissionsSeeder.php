@@ -69,6 +69,13 @@ class RolesAndPermissionsSeeder extends Seeder
         // Теги
         'tags' => ['view', 'create', 'edit', 'delete'],
 
+        // CRM — права домена /crm/. Префикс `crm-` значим: по нему
+        // User::hasAdminAccess() отличает CRM-only сотрудника от админского.
+        'crm-dashboard' => ['view'],
+        'crm-clients' => ['view', 'edit'],
+        'crm-clients-all' => ['view'],
+        'crm-team' => ['view'],
+
         // Система
         'erp-bus' => ['view'],
         'media' => ['view', 'delete'],
@@ -120,6 +127,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'menu-items' => 'Меню',
         'user-questions' => 'Вопросы пользователей',
         'tags' => 'Теги',
+        'crm-dashboard' => 'CRM: Рабочий стол',
+        'crm-clients' => 'CRM: Мои клиенты',
+        'crm-clients-all' => 'CRM: Клиенты всего отдела',
+        'crm-team' => 'CRM: Команда',
         'erp-bus' => 'Шина ERP',
         'media' => 'Медиа',
         'settings' => 'Настройки',
@@ -147,6 +158,23 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 'orders', 'carts', 'returns', 'shipments',
                 'favorites', 'wishlist',
+                // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
+                'crm-dashboard', 'crm-clients',
+            ],
+        ],
+        'sales-manager-crm' => [
+            'label' => 'Менеджер продаж (только CRM)',
+            'resources' => [
+                // Только CRM: в /admin роль намеренно не пускает.
+                // Для менеджеров, которым нужны свои клиенты, но не нужна админка.
+                'crm-dashboard', 'crm-clients',
+            ],
+        ],
+        'sales-head' => [
+            'label' => 'Руководитель отдела продаж',
+            'resources' => [
+                // Только CRM: в /admin роль намеренно не пускает.
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team',
             ],
         ],
         'catalogist' => [

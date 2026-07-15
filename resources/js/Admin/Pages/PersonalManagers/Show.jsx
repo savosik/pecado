@@ -60,6 +60,10 @@ export default function Show() {
                                 <InfoRow label="Телефон" value={personalManager.phone} />
                                 <InfoRow label="Email" value={personalManager.email} />
                                 <InfoRow label="UUID в 1С (ERP)" value={personalManager.erp_uuid} />
+                                <InfoRow
+                                    label="Аккаунт в CRM"
+                                    value={personalManager.user ? `${personalManager.user.name} (${personalManager.user.email})` : null}
+                                />
                                 <InfoRow label="Кол-во клиентов" value={personalManager.users_count?.toString()} />
                                 <InfoRow label="Создан" value={personalManager.created_at} />
                                 <InfoRow label="Обновлён" value={personalManager.updated_at} />

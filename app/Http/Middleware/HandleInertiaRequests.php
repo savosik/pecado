@@ -38,20 +38,26 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user()?->loadMissing(['roles', 'clientStatus']);
+
         return [
             ...parent::share($request),
             'appName' => config('app.name'),
             'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'name' => $request->user()->name,
-                    'phone' => $request->user()->phone,
-                    'email' => $request->user()->email,
-                    'status' => $request->user()->status?->value,
-                    'is_admin' => $request->user()->loadMissing(['roles', 'clientStatus'])->roles->isNotEmpty(),
-                    'must_change_password' => (bool) $request->user()->must_change_password,
-                    'client_status_color' => $request->user()->clientStatus?->color,
-                    'client_status_name' => $request->user()->clientStatus?->name,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'phone' => $user->phone,
+                    'email' => $user->email,
+                    'status' => $user->status?->value,
+                    // is_staff — витрина показывает цены сотруднику независимо от status.
+                    // is_admin/is_crm — только ссылки на панели, у них разные условия.
+                    'is_staff' => $user->isStaff(),
+                    'is_admin' => $user->hasAdminAccess(),
+                    'is_crm' => $user->hasCrmAccess(),
+                    'must_change_password' => (bool) $user->must_change_password,
+                    'client_status_color' => $user->clientStatus?->color,
+                    'client_status_name' => $user->clientStatus?->name,
                 ] : null,
             ],
             'currency' => $request->user() ? fn () => [

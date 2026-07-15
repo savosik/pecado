@@ -4,15 +4,77 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\PersonalManager;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PersonalManagerController extends AdminController
 {
     use RedirectsAfterSave;
+
+    /**
+     * Пользователи, которых можно привязать к карточке менеджера:
+     * ещё не занятые другой карточкой, плюс уже привязанный к текущей.
+     *
+     * @return Collection<int, User>
+     */
+    private function accountCandidates(?PersonalManager $personalManager = null): Collection
+    {
+        return User::query()
+            ->where(function ($query) use ($personalManager) {
+                $query->whereDoesntHave('managerProfile');
+
+                if ($personalManager?->user_id) {
+                    $query->orWhere('id', $personalManager->user_id);
+                }
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+    }
+
+    /**
+     * Правила и русские сообщения валидации, общие для store() и update().
+     *
+     * @return array{0: array<string, mixed>, 1: array<string, string>}
+     */
+    private function validationRules(?PersonalManager $personalManager = null): array
+    {
+        $rules = [
+            'name' => 'required|string|max:255',
+            'phone' => 'nullable|string|max:50',
+            'email' => 'nullable|email|max:255',
+            'erp_uuid' => 'nullable|uuid|unique:personal_managers,erp_uuid'.($personalManager ? ','.$personalManager->id : ''),
+            // Проверяем занятость до БД: иначе unique-индекс даст 500 вместо русской ошибки формы.
+            'user_id' => [
+                'nullable',
+                'integer',
+                'exists:users,id',
+                Rule::unique('personal_managers', 'user_id')->ignore($personalManager?->id),
+            ],
+            'photo' => 'nullable|image|max:20480',
+        ];
+
+        $messages = [
+            'name.required' => 'Имя обязательно для заполнения.',
+            'name.max' => 'Имя не должно превышать 255 символов.',
+            'phone.max' => 'Телефон не должен превышать 50 символов.',
+            'email.email' => 'Введите корректный email.',
+            'email.max' => 'Email не должен превышать 255 символов.',
+            'erp_uuid.uuid' => 'UUID должен быть в формате xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.',
+            'erp_uuid.unique' => 'Этот UUID уже используется другим менеджером.',
+            'user_id.exists' => 'Выбранный пользователь не найден.',
+            'user_id.unique' => 'Этот пользователь уже привязан к другой карточке менеджера.',
+            'photo.image' => 'Файл должен быть изображением.',
+            'photo.max' => 'Максимальный размер фото — 20 МБ.',
+        ];
+
+        return [$rules, $messages];
+    }
 
     public function index(Request $request): Response
     {
@@ -54,28 +116,16 @@ class PersonalManagerController extends AdminController
 
     public function create(): Response
     {
-        return Inertia::render('Admin/Pages/PersonalManagers/Create');
+        return Inertia::render('Admin/Pages/PersonalManagers/Create', [
+            'users' => $this->accountCandidates(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'erp_uuid' => 'nullable|uuid|unique:personal_managers,erp_uuid',
-            'photo' => 'nullable|image|max:20480',
-        ], [
-            'name.required' => 'Имя обязательно для заполнения.',
-            'name.max' => 'Имя не должно превышать 255 символов.',
-            'phone.max' => 'Телефон не должен превышать 50 символов.',
-            'email.email' => 'Введите корректный email.',
-            'email.max' => 'Email не должен превышать 255 символов.',
-            'erp_uuid.uuid' => 'UUID должен быть в формате xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.',
-            'erp_uuid.unique' => 'Этот UUID уже используется другим менеджером.',
-            'photo.image' => 'Файл должен быть изображением.',
-            'photo.max' => 'Максимальный размер фото — 20 МБ.',
-        ]);
+        [$rules, $messages] = $this->validationRules();
+
+        $validated = $request->validate($rules, $messages);
 
         unset($validated['photo']);
 
@@ -97,7 +147,7 @@ class PersonalManagerController extends AdminController
 
     public function show(PersonalManager $personalManager): Response
     {
-        $personalManager->load('media');
+        $personalManager->load(['media', 'user']);
         $personalManager->loadCount('users');
 
         return Inertia::render('Admin/Pages/PersonalManagers/Show', [
@@ -109,6 +159,11 @@ class PersonalManagerController extends AdminController
                 'email' => $personalManager->email,
                 'photo_url' => $personalManager->getFirstMediaUrl('photo'),
                 'users_count' => $personalManager->users_count,
+                'user' => $personalManager->user ? [
+                    'id' => $personalManager->user->id,
+                    'name' => $personalManager->user->name,
+                    'email' => $personalManager->user->email,
+                ] : null,
                 'created_at' => $personalManager->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $personalManager->updated_at?->format('d.m.Y H:i'),
             ],
@@ -123,34 +178,22 @@ class PersonalManagerController extends AdminController
             'personalManager' => [
                 'id' => $personalManager->id,
                 'erp_uuid' => $personalManager->erp_uuid,
+                'user_id' => $personalManager->user_id,
                 'name' => $personalManager->name,
                 'phone' => $personalManager->phone,
                 'email' => $personalManager->email,
                 'photo_url' => $personalManager->getFirstMediaUrl('photo'),
                 'photo_id' => $personalManager->getFirstMedia('photo')?->id,
             ],
+            'users' => $this->accountCandidates($personalManager),
         ]);
     }
 
     public function update(Request $request, PersonalManager $personalManager): RedirectResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'phone' => 'nullable|string|max:50',
-            'email' => 'nullable|email|max:255',
-            'erp_uuid' => 'nullable|uuid|unique:personal_managers,erp_uuid,'.$personalManager->id,
-            'photo' => 'nullable|image|max:20480',
-        ], [
-            'name.required' => 'Имя обязательно для заполнения.',
-            'name.max' => 'Имя не должно превышать 255 символов.',
-            'phone.max' => 'Телефон не должен превышать 50 символов.',
-            'email.email' => 'Введите корректный email.',
-            'email.max' => 'Email не должен превышать 255 символов.',
-            'erp_uuid.uuid' => 'UUID должен быть в формате xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.',
-            'erp_uuid.unique' => 'Этот UUID уже используется другим менеджером.',
-            'photo.image' => 'Файл должен быть изображением.',
-            'photo.max' => 'Максимальный размер фото — 20 МБ.',
-        ]);
+        [$rules, $messages] = $this->validationRules($personalManager);
+
+        $validated = $request->validate($rules, $messages);
 
         unset($validated['photo']);
 

@@ -5,12 +5,13 @@ import { PageHeader, FormField, FormActions, ImageUploader, PhoneInput } from '@
 import { Box, Card, SimpleGrid, Input, Stack } from '@chakra-ui/react';
 import { toaster } from '@/components/ui/toaster';
 
-export default function Edit({ personalManager }) {
+export default function Edit({ personalManager, users = [] }) {
     const { data, setData, post, processing, errors, transform } = useForm({
         name: personalManager.name || '',
         phone: personalManager.phone || '',
         email: personalManager.email || '',
         erp_uuid: personalManager.erp_uuid || '',
+        user_id: personalManager.user_id || '',
         photo: null,
         _method: 'PUT',
     });
@@ -121,6 +122,25 @@ export default function Edit({ personalManager }) {
                                     placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                                     fontFamily="mono"
                                 />
+                            </FormField>
+
+                            <FormField
+                                label="Аккаунт в CRM"
+                                error={errors.user_id}
+                                helpText="Пользователь сайта, под которым менеджер входит в CRM и видит своих клиентов. Оставьте пустым, если у менеджера нет доступа."
+                            >
+                                <select
+                                    value={data.user_id}
+                                    onChange={(e) => setData('user_id', e.target.value || '')}
+                                    style={{ width: '100%', padding: '0.5rem', borderRadius: '0.375rem', border: '1px solid var(--chakra-colors-border)' }}
+                                >
+                                    <option value="">Без аккаунта</option>
+                                    {users?.map((u) => (
+                                        <option key={u.id} value={u.id}>
+                                            {u.name} ({u.email})
+                                        </option>
+                                    ))}
+                                </select>
                             </FormField>
 
                             <Box>

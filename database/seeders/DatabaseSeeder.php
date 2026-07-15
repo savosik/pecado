@@ -30,8 +30,10 @@ class DatabaseSeeder extends Seeder
             ['email' => 'savosik@pecado.ru',          'name' => 'Savosik (Dev Admin)',  'password' => 'Savosik2024!',   'role' => 'super-admin'],
             // Контент-менеджер — статьи, новости, баннеры, страницы
             ['email' => 'content@pecado.ru',          'name' => 'Контент-менеджер',     'password' => 'Content2024!',   'role' => 'content-manager'],
-            // Менеджер продаж — заказы, клиенты, возвраты
+            // Менеджер продаж — заказы, клиенты, возвраты + CRM
             ['email' => 'sales@pecado.ru',            'name' => 'Менеджер продаж',      'password' => 'Sales2024!',     'role' => 'sales-manager'],
+            // РОП — только CRM: в админку намеренно не пускает (см. EnsureUserIsAdmin)
+            ['email' => 'rop@pecado.ru',              'name' => 'Медведев Сергей (РОП)', 'password' => 'Rop2024!',      'role' => 'sales-head'],
             // Каталоговед — товары, категории, бренды, атрибуты
             ['email' => 'catalog@pecado.ru',          'name' => 'Каталоговед',          'password' => 'Catalog2024!',   'role' => 'catalogist'],
         ];

@@ -33,11 +33,14 @@ createInertiaApp({
     resolve: async (name) => {
         const pages = import.meta.glob('./Pages/**/*.jsx');
         const adminPages = import.meta.glob('./Admin/**/*.jsx');
+        const crmPages = import.meta.glob('./Crm/**/*.jsx');
 
         // Пытаемся найти страницу в соответствующей директории
         let page;
         if (name.startsWith('Admin/')) {
             page = await resolvePageComponent(`./${name}.jsx`, adminPages);
+        } else if (name.startsWith('Crm/')) {
+            page = await resolvePageComponent(`./${name}.jsx`, crmPages);
         } else {
             page = await resolvePageComponent(`./Pages/${name}.jsx`, pages);
         }

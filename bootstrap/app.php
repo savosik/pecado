@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
         then: function () {
             Route::group([], base_path('routes/admin.php'));
+            Route::group([], base_path('routes/crm.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -36,6 +37,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->group('admin', [
             \App\Http\Middleware\EnsureUserIsAdmin::class,
             \App\Http\Middleware\HandleAdminInertiaRequests::class,
+        ]);
+
+        $middleware->group('crm', [
+            \App\Http\Middleware\EnsureUserIsCrm::class,
+            \App\Http\Middleware\HandleCrmInertiaRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

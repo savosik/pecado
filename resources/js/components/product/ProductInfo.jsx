@@ -37,7 +37,7 @@ export default function ProductInfo({
     headingAs = 'h1',
 }) {
     const { auth } = usePage().props;
-    const user = auth?.user && (auth.user.status === 'active' || auth.user.is_admin) ? auth.user : null;
+    const user = auth?.user && (auth.user.status === 'active' || auth.user.is_staff) ? auth.user : null;
     const [isFav, setIsFav] = useState(false);
     const [copiedField, setCopiedField] = useState(null);
     const [barcodesExpanded, setBarcodesExpanded] = useState(false);

@@ -40,7 +40,7 @@ function MultiCartQuantityControl({
     fullWidth = false,
 }) {
     const { auth } = usePage().props;
-    const user = auth?.user && (auth.user.status === 'active' || auth.user.is_admin) ? auth.user : null;
+    const user = auth?.user && (auth.user.status === 'active' || auth.user.is_staff) ? auth.user : null;
 
     const [open, setOpen] = useState(false);
     // Список корзин с количеством этого товара в каждой.

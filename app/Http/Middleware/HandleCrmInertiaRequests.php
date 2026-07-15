@@ -6,11 +6,11 @@ use App\Http\Middleware\Concerns\SharesPanelAuth;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
-class HandleAdminInertiaRequests extends Middleware
+class HandleCrmInertiaRequests extends Middleware
 {
     use SharesPanelAuth;
 
-    protected $rootView = 'admin';
+    protected $rootView = 'crm';
 
     public function version(Request $request): ?string
     {

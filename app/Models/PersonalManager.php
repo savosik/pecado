@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
@@ -11,6 +12,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 /**
  * @property int $id
  * @property string|null $erp_uuid
+ * @property int|null $user_id
  * @property string $name
  * @property string|null $phone
  * @property string|null $email
@@ -20,6 +22,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @property-read int|null $media_count
  * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\User> $users
  * @property-read int|null $users_count
+ * @property-read \App\Models\User|null $user
  *
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PersonalManager newModelQuery()
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PersonalManager newQuery()
@@ -30,6 +33,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PersonalManager whereName($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PersonalManager wherePhone($value)
  * @method static \Illuminate\Database\Eloquent\Builder<static>|PersonalManager whereUpdatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder<static>|PersonalManager whereUserId($value)
  *
  * @mixin \Eloquent
  */
@@ -39,14 +43,30 @@ class PersonalManager extends Model implements HasMedia
 
     protected $fillable = [
         'erp_uuid',
+        'user_id',
         'name',
         'phone',
         'email',
     ];
 
+    /**
+     * Клиенты, закреплённые за этим менеджером (users.personal_manager_id).
+     *
+     * Не путать с user() — это разные связи.
+     */
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    /**
+     * Аккаунт сотрудника, под которым менеджер входит в CRM (personal_managers.user_id).
+     *
+     * Не путать с users() — это разные связи.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function registerMediaCollections(): void
