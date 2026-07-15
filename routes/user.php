@@ -24,6 +24,7 @@ use App\Http\Controllers\User\PromotionController;
 use App\Http\Controllers\User\ReturnController;
 use App\Http\Controllers\User\SearchController;
 use App\Http\Controllers\User\ShipmentController;
+use App\Http\Controllers\User\SubscriptionController;
 use App\Http\Controllers\User\UserQuestionController;
 use Illuminate\Support\Facades\Route;
 
@@ -125,6 +126,10 @@ Route::prefix('api')->middleware('auth')->group(function () {
 // ──────────────────────────────────────────────
 // User Cabinet Routes (authenticated)
 // ──────────────────────────────────────────────
+// Публичная отписка по токену из письма (без авторизации).
+Route::get('/subscriptions/unsubscribe/{token}', [SubscriptionController::class, 'unsubscribe'])
+    ->name('subscriptions.unsubscribe');
+
 Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function () {
     Route::get('/dashboard', [CabinetController::class, 'dashboard'])->name('dashboard');
     Route::get('/profile', [CabinetController::class, 'profile'])->name('profile');
@@ -228,6 +233,11 @@ Route::middleware(['auth'])->prefix('cabinet')->name('cabinet.')->group(function
     Route::get('/media/api', [MediaController::class, 'api'])->name('media.api');
     Route::get('/media/{media}/download', [MediaController::class, 'download'])->name('media.download');
     Route::post('/media/download-batch', [MediaController::class, 'downloadBatch'])->name('media.download-batch');
+
+    // Подписки на изменения сущностей раздела (email; универсальный CRUD).
+    Route::get('/subscriptions/{section}', [SubscriptionController::class, 'index'])->name('subscriptions.index');
+    Route::post('/subscriptions/{section}', [SubscriptionController::class, 'store'])->name('subscriptions.store');
+    Route::delete('/subscriptions/{subscription}', [SubscriptionController::class, 'destroy'])->name('subscriptions.destroy');
 
     // Сохранённые поиски (PR 5.1, за флагом `search-cabinet.presets`).
     // Внутри контроллера выключенный флаг даёт 404 — маршруты остаются

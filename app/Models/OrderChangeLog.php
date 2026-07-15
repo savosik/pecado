@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Events\EntityChanged;
+use App\Subscriptions\EntityChangeNotice;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -57,6 +59,31 @@ class OrderChangeLog extends Model
             'old_total' => 'decimal:2',
             'new_total' => 'decimal:2',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        // Единая точка триггера уведомлений подписчикам раздела «Заказы»:
+        // сюда попадают изменения из всех источников (ERP / админка / API),
+        // т.к. все они создают OrderChangeLog через OrderChangeLogger.
+        static::created(function (self $log): void {
+            $order = $log->order;
+
+            if (! $order || blank($order->user_id)) {
+                return;
+            }
+
+            $number = $order->erp_number ?: $order->number;
+
+            EntityChanged::dispatch(new EntityChangeNotice(
+                section: 'orders',
+                ownerUserId: (int) $order->user_id,
+                title: sprintf('Изменение по заказу %s — Pecado.ru', $number),
+                body: (string) $log->summary,
+                url: url(route('cabinet.orders.show', $order, false)),
+                entityLabel: "Заказ {$number}",
+            ));
+        });
     }
 
     public function order(): BelongsTo

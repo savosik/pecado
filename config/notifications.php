@@ -50,6 +50,13 @@ return [
             'manager_new_order' => filter_var(env('MAIL_FEATURE_MANAGER_ORDER', false), FILTER_VALIDATE_BOOLEAN),
             'return_created' => filter_var(env('MAIL_FEATURE_RETURN_CREATED', false), FILTER_VALIDATE_BOOLEAN),
             'return_status_changes' => filter_var(env('MAIL_FEATURE_RETURN_STATUS', false), FILTER_VALIDATE_BOOLEAN),
+
+            /*
+            | Универсальные подписки на изменения сущностей разделов кабинета
+            | (email). Общий гейт рассылки — см. config/subscriptions.php для
+            | пофазного включения отдельных разделов.
+            */
+            'entity_subscriptions' => filter_var(env('MAIL_FEATURE_ENTITY_SUBSCRIPTIONS', false), FILTER_VALIDATE_BOOLEAN),
         ],
 
     ],

@@ -19,6 +19,7 @@ import MatchBadge from '@/components/cabinet/MatchBadge';
 import OrderCompositionBadge from '@/components/cabinet/OrderCompositionBadge';
 import SavedSearches from '@/components/cabinet/SavedSearches';
 import ExportMenu from '@/components/cabinet/ExportMenu';
+import SubscriptionPanel from '@/components/cabinet/SubscriptionPanel';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { ORDER_STATUS_COLORS as STATUS_COLORS } from '@/constants/orderStatus';
 
@@ -681,6 +682,12 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                     )}
                 </>
             )}
+
+            <SubscriptionPanel
+                section="orders"
+                title="Подписка на изменения заказов"
+                description="Добавьте email-адреса, которые будут получать письма при любом изменении ваших заказов (состав, количество, суммы). Удобно подключить бухгалтера или менеджера."
+            />
         </CabinetLayout>
     );
 }

@@ -344,6 +344,15 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Подписки пользователя на изменения сущностей разделов кабинета
+     * (email/telegram). См. App\Models\EntitySubscription.
+     */
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(EntitySubscription::class);
+    }
+
+    /**
      * Балансы контрагентов пользователя (по ИНН).
      */
     public function contractorBalances(): HasMany

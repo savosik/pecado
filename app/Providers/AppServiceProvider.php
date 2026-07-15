@@ -175,6 +175,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SendOrderStatusChangedEmail::class,
         );
 
+        // Универсальные подписки на изменения сущностей разделов кабинета
+        \Illuminate\Support\Facades\Event::listen(
+            \App\Events\EntityChanged::class,
+            \App\Listeners\SendEntitySubscriptionNotifications::class,
+        );
+
         // Rate limiter для Content API (ИИ-агент)
         RateLimiter::for('content-api', function (Request $request) {
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
