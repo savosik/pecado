@@ -285,6 +285,11 @@ jobs:
           cd /srv/pecado
           DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 
+          echo "==> [0.0/9] Флаг экспорта кабинета (CSV/XLSX)..."
+          if ! grep -q "CABINET_SEARCH_EXPORT" /srv/pecado/.env; then
+            echo "CABINET_SEARCH_EXPORT=true" >> /srv/pecado/.env
+          fi
+
           echo "==> [0/9] Maintenance mode ON..."
           sg docker -c "$DC exec -T app php artisan down --retry=30 --refresh=5" || true
 

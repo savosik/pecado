@@ -333,6 +333,11 @@ jobs:
             } >> /srv/pecado/.env
           fi
 
+          echo "==> [0.5/7] Флаг экспорта кабинета (CSV/XLSX)..."
+          if ! grep -q "CABINET_SEARCH_EXPORT" /srv/pecado/.env; then
+            echo "CABINET_SEARCH_EXPORT=true" >> /srv/pecado/.env
+          fi
+
           echo "==> [1/7] Установка PHP зависимостей..."
           sg docker -c 'docker compose exec -T app composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader'
 

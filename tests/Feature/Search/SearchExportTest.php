@@ -33,11 +33,18 @@ class SearchExportTest extends TestCase
         config(['search-cabinet.export' => true]);
     }
 
+    private function disableExport(): void
+    {
+        config(['search-cabinet.export' => false]);
+    }
+
     // ---------- Off-flag ----------
 
     #[Test]
     public function orders_export_returns_404_when_flag_disabled(): void
     {
+        $this->disableExport();
+
         $this->actingAs($this->user)
             ->get('/cabinet/orders/export?format=csv')
             ->assertNotFound();
@@ -46,6 +53,8 @@ class SearchExportTest extends TestCase
     #[Test]
     public function returns_export_returns_404_when_flag_disabled(): void
     {
+        $this->disableExport();
+
         $this->actingAs($this->user)
             ->get('/cabinet/returns/export?format=csv')
             ->assertNotFound();
@@ -54,6 +63,8 @@ class SearchExportTest extends TestCase
     #[Test]
     public function shipments_export_returns_404_when_flag_disabled(): void
     {
+        $this->disableExport();
+
         $this->actingAs($this->user)
             ->get('/cabinet/shipments/export?format=csv')
             ->assertNotFound();
