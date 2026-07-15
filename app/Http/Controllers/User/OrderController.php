@@ -111,6 +111,8 @@ class OrderController extends Controller
             ->get(['id', 'name'])
             ->map(fn ($c) => ['value' => (string) $c->id, 'label' => $c->name]);
 
+        $statusCounts = $this->statusCounts($request, $user);
+
         $suggestion = $orders->total() === 0
             ? EmptyResultSuggestion::build($search, $this->activeFiltersForSuggestion($context, $companies))
             : null;
@@ -137,7 +139,9 @@ class OrderController extends Controller
             'statuses' => collect(OrderStatus::cases())->map(fn ($case) => [
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
+                'count' => $statusCounts[$case->value] ?? 0,
             ]),
+            'statusTotal' => array_sum($statusCounts),
             'types' => [
                 ['value' => 'order',    'label' => 'Заказ со склада'],
                 ['value' => 'preorder', 'label' => 'Предзаказ'],
@@ -147,6 +151,32 @@ class OrderController extends Controller
             'exportEnabled' => (bool) config('search-cabinet.export'),
             'suggestion' => $suggestion,
         ]);
+    }
+
+    /**
+     * Количество заказов по каждому статусу — для быстрых фильтров над списком.
+     *
+     * Считается по тем же условиям, что и выдача, но **без** фильтра по статусу:
+     * иначе выбор одного статуса обнулил бы счётчики всех остальных и по ним
+     * нельзя было бы кликнуть.
+     *
+     * @return array<string, int>
+     */
+    private function statusCounts(Request $request, User $user): array
+    {
+        [$query] = $this->buildIndexQuery($request, $user, applyStatusFilter: false);
+
+        // select() сбрасывает колонки и их bindings, снимая подзапросы
+        // withCount/withShipmentsCount; reorder() убирает сортировку,
+        // недопустимую при GROUP BY в режиме ONLY_FULL_GROUP_BY.
+        return $query
+            ->reorder()
+            ->select('orders.status')
+            ->selectRaw('COUNT(*) as total')
+            ->groupBy('orders.status')
+            ->pluck('total', 'status')
+            ->map(fn ($count) => (int) $count)
+            ->all();
     }
 
     /**
@@ -243,8 +273,13 @@ class OrderController extends Controller
      * Конструктор query для списка заказов: поиск + фильтры + сортировка.
      * Используется и в `index` (с пагинацией + transform), и в `export`
      * (через cursor без пагинации). Контракт сохраняется идентичным.
+     *
+     * @param  bool  $applyStatusFilter  false — не применять фильтр по статусу
+     *                                   (нужно для подсчёта заказов по статусам,
+     *                                   см. `statusCounts`); в `selected_statuses`
+     *                                   выбранные статусы возвращаются в любом случае.
      */
-    private function buildIndexQuery(Request $request, User $user): array
+    private function buildIndexQuery(Request $request, User $user, bool $applyStatusFilter = true): array
     {
         $search = trim((string) $request->input('search', ''));
 
@@ -326,13 +361,15 @@ class OrderController extends Controller
         }
 
         $statusInput = $request->input('status');
-        if (is_array($statusInput)) {
-            $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
-            if (count($statuses) > 0) {
-                $query->whereIn('status', $statuses);
+        if ($applyStatusFilter) {
+            if (is_array($statusInput)) {
+                $statuses = array_values(array_filter($statusInput, fn ($v) => $v !== null && $v !== ''));
+                if (count($statuses) > 0) {
+                    $query->whereIn('status', $statuses);
+                }
+            } elseif ($statusInput) {
+                $query->where('status', $statusInput);
             }
-        } elseif ($statusInput) {
-            $query->where('status', $statusInput);
         }
 
         $companyId = $request->input('company_id');

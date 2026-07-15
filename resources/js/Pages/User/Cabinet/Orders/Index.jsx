@@ -15,6 +15,7 @@ import { Select } from '@/components/ui/select';
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
 import SelectedFilters from '@/components/cabinet/SelectedFilters';
+import StatusQuickFilters from '@/components/cabinet/StatusQuickFilters';
 import MatchBadge from '@/components/cabinet/MatchBadge';
 import OrderCompositionBadge from '@/components/cabinet/OrderCompositionBadge';
 import SavedSearches from '@/components/cabinet/SavedSearches';
@@ -23,16 +24,18 @@ import SubscriptionPanel from '@/components/cabinet/SubscriptionPanel';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { ORDER_STATUS_COLORS as STATUS_COLORS } from '@/constants/orderStatus';
 
-export default function OrdersIndex({ filters, statuses, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
+export default function OrdersIndex({ filters, statuses, statusTotal = 0, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
     const { orders, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
     const [search, setSearch] = useState(filters?.search || '');
-    const initialStatus = Array.isArray(filters?.status)
+    // Статусы, выбранные на сервере (истина для быстрых фильтров), — в отличие от
+    // localFilters.status, который меняется до нажатия «Применить».
+    const selectedStatuses = Array.isArray(filters?.status)
         ? filters.status
         : (filters?.status ? [filters.status] : []);
     const [localFilters, setLocalFilters] = useState({
-        status: initialStatus,
+        status: selectedStatuses,
         type: filters?.type || '',
         company_id: filters?.company_id || '',
         date_from: filters?.date_from || '',
@@ -100,6 +103,21 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
         navigateWithParams({ page });
     };
 
+    // Быстрые фильтры по статусу: применяются сразу, множественный выбор (ИЛИ).
+    const handleToggleStatus = (value) => {
+        const next = selectedStatuses.includes(value)
+            ? selectedStatuses.filter((v) => v !== value)
+            : [...selectedStatuses, value];
+        setLocalFilters((prev) => ({ ...prev, status: next }));
+        navigateWithParams({ status: next, page: 1 });
+    };
+
+    const handleResetStatus = () => {
+        if (selectedStatuses.length === 0) return;
+        setLocalFilters((prev) => ({ ...prev, status: [] }));
+        navigateWithParams({ status: [], page: 1 });
+    };
+
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const sortFields = [
@@ -124,6 +142,16 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
         return count;
     })();
 
+    const quickStatusItems = useMemo(
+        () => (statuses ?? []).map((s) => ({
+            value: s.value,
+            label: s.label,
+            count: s.count ?? 0,
+            colorPalette: STATUS_COLORS[s.value] || 'gray',
+        })),
+        [statuses]
+    );
+
     // Chakra UI v3 Select требует collection — без неё клики по опциям
     // не регистрируются. Собираем коллекции из props сервера.
     const statusCollection = useMemo(
@@ -145,7 +173,8 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
 
     const filterFields = useMemo(() => [
         { key: 'search', label: 'Поиск', formatter: (v) => `«${v}»` },
-        { key: 'status', label: 'Статус', formatter: (v) => statuses?.find((s) => s.value === v)?.label || v },
+        // Статус намеренно отсутствует: выбранные статусы и так видны в быстрых
+        // фильтрах над списком, снимаются там же — дублировать их чипами не нужно.
         { key: 'type', label: 'Тип', formatter: (v) => types?.find((t) => t.value === v)?.label || v },
         { key: 'company_id', label: 'Контрагент', formatter: (v) => companies?.find((c) => String(c.value) === String(v))?.label || `#${v}` },
         { key: 'date_from', label: 'Дата от' },
@@ -156,7 +185,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
         { key: 'items_count_to', label: 'Позиций до' },
         { key: 'brand_ids', label: 'Бренд', formatter: (v) => `#${v}` },
         { key: 'product_id', label: 'Товар', formatter: (v) => `#${v}` },
-    ], [statuses, types, companies]);
+    ], [types, companies]);
 
     const handleRemoveFilter = (key, value) => {
         const current = filters?.[key];
@@ -166,9 +195,7 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
         } else {
             nextValue = '';
         }
-        if (key === 'status') {
-            setLocalFilters({ ...localFilters, status: Array.isArray(nextValue) ? nextValue : [] });
-        } else if (key === 'search') {
+        if (key === 'search') {
             setSearch('');
             lastSubmittedSearch.current = '';
         } else if (Object.prototype.hasOwnProperty.call(localFilters, key)) {
@@ -278,6 +305,15 @@ export default function OrdersIndex({ filters, statuses, types, companies = [], 
                     </MenuContent>
                 </MenuRoot>
             </Flex>
+
+            {/* Быстрые фильтры по статусу */}
+            <StatusQuickFilters
+                items={quickStatusItems}
+                selected={selectedStatuses}
+                total={statusTotal}
+                onToggle={handleToggleStatus}
+                onReset={handleResetStatus}
+            />
 
             {/* Расширенные фильтры */}
             {showFilters && (
