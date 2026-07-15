@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
     Box, Flex, VStack, Text, HStack, Heading,
-    Accordion, Span, Button, IconButton, Drawer, Portal, CloseButton,
+    Button, Drawer, Portal, CloseButton,
 } from '@chakra-ui/react';
 import { Link, usePage } from '@inertiajs/react';
 import UserLayout from '../UserLayout';
+import CollapsibleFilterCard from '../Products/filters/CollapsibleFilterCard';
 import {
     LuLayoutDashboard, LuShoppingBag, LuShoppingCart,
     LuUser, LuLogOut, LuLock, LuBuilding2, LuMenu, LuMapPin,
@@ -68,61 +69,79 @@ const menuGroups = [
 
 const allMenuItems = menuGroups.flatMap(g => g.items);
 
+function MenuItemRow({ item, isActive }) {
+    return (
+        <Link href={item.href}>
+            <HStack
+                gap="2"
+                px="1"
+                py="1.5"
+                borderRadius="md"
+                bg={isActive ? 'pecado.50' : 'transparent'}
+                color={isActive ? 'pecado.600' : 'gray.700'}
+                _hover={{ bg: isActive ? 'pecado.100' : 'gray.50' }}
+                _dark={{
+                    bg: isActive ? 'pecado.900/30' : 'transparent',
+                    color: isActive ? 'pecado.300' : 'gray.300',
+                    _hover: { bg: isActive ? 'pecado.900/40' : 'gray.700' },
+                }}
+                transition="all 0.15s"
+            >
+                <item.icon size={16} />
+                <Text fontSize="sm" fontWeight={isActive ? '600' : '400'}>{item.label}</Text>
+            </HStack>
+        </Link>
+    );
+}
+
 function SidebarContent({ currentPath }) {
     return (
-        <VStack align="stretch" gap="1">
-            <Accordion.Root collapsible multiple defaultValue={menuGroups.map((_, i) => `group-${i}`)}>
-                {menuGroups.map((group, gi) => (
-                    <Accordion.Item key={gi} value={`group-${gi}`}>
-                        <Accordion.ItemTrigger py="2" px="1">
-                            <Span flex="1" fontSize="xs" fontWeight="700" textTransform="uppercase" letterSpacing="0.05em" color="gray.400">
-                                {group.title}
-                            </Span>
-                            <Accordion.ItemIndicator />
-                        </Accordion.ItemTrigger>
-                        <Accordion.ItemContent>
-                            <Accordion.ItemBody px="0" pb="2">
-                                <VStack align="stretch" gap="0.5">
-                                    {group.items.map((item) => {
-                                        const isActive = currentPath === item.href
-                                            || (item.href !== '/' && currentPath.startsWith(item.href));
-                                        return (
-                                            <Link key={item.href} href={item.href}>
-                                                <HStack
-                                                    gap="2"
-                                                    px="1"
-                                                    py="1.5"
-                                                    borderRadius="md"
-                                                    bg={isActive ? 'pecado.50' : 'transparent'}
-                                                    color={isActive ? 'pecado.600' : 'gray.700'}
-                                                    _hover={{ bg: isActive ? 'pecado.100' : 'gray.50' }}
-                                                    _dark={{
-                                                        bg: isActive ? 'pecado.900/30' : 'transparent',
-                                                        color: isActive ? 'pecado.300' : 'gray.300',
-                                                        _hover: { bg: isActive ? 'pecado.900/40' : 'gray.700' },
-                                                    }}
-                                                    transition="all 0.15s"
-                                                >
-                                                    <item.icon size={16} />
-                                                    <Text fontSize="sm" fontWeight={isActive ? '600' : '400'}>{item.label}</Text>
-                                                </HStack>
-                                            </Link>
-                                        );
-                                    })}
-                                </VStack>
-                            </Accordion.ItemBody>
-                        </Accordion.ItemContent>
-                    </Accordion.Item>
-                ))}
-            </Accordion.Root>
+        <Flex direction="column" gap="2">
+            {menuGroups.map((group, gi) => {
+                return (
+                    <CollapsibleFilterCard
+                        key={gi}
+                        title={group.title}
+                        storageKey={`cabinet_menu_group_${gi}_open`}
+                        defaultOpen
+                        bodyPx="2"
+                        bodyPy="2"
+                    >
+                        <VStack align="stretch" gap="0.5">
+                            {group.items.map((item) => {
+                                const isActive = currentPath === item.href
+                                    || (item.href !== '/' && currentPath.startsWith(item.href));
+                                return <MenuItemRow key={item.href} item={item} isActive={isActive} />;
+                            })}
+                        </VStack>
+                    </CollapsibleFilterCard>
+                );
+            })}
 
-            <Link href="/logout" method="post" as="button" style={{ width: '100%' }}>
-                <HStack gap="2" px="1" py="1.5" borderRadius="md" _hover={{ bg: 'red.50' }} _dark={{ _hover: { bg: 'red.900/20' } }} color="red.500">
-                    <LuLogOut size={16} />
-                    <Text fontSize="sm" fontWeight="400">Выйти</Text>
-                </HStack>
-            </Link>
-        </VStack>
+            <Box
+                bg="bg"
+                borderRadius="md"
+                border="1px solid"
+                borderColor="gray.200"
+                _dark={{ borderColor: 'gray.700' }}
+                overflow="hidden"
+            >
+                <Link href="/logout" method="post" as="button" style={{ width: '100%' }}>
+                    <HStack
+                        gap="2"
+                        px="3"
+                        py="2.5"
+                        color="red.500"
+                        _hover={{ bg: 'red.50' }}
+                        _dark={{ _hover: { bg: 'red.900/20' } }}
+                        transition="background 0.15s"
+                    >
+                        <LuLogOut size={16} />
+                        <Text fontSize="sm" fontWeight="500">Выйти</Text>
+                    </HStack>
+                </Link>
+            </Box>
+        </Flex>
     );
 }
 
@@ -168,15 +187,7 @@ export default function CabinetLayout({ title, children, actions }) {
                     w="260px"
                     flexShrink="0"
                 >
-                    <Box
-                        position="sticky"
-                        top="80px"
-                        bg="bg"
-                        borderRadius="xl"
-                        border="1px solid"
-                        borderColor="border.muted"
-                        p="2"
-                    >
+                    <Box position="sticky" top="80px">
                         <SidebarContent currentPath={currentPath} />
                     </Box>
                 </Box>
