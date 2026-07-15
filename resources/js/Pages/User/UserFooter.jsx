@@ -6,6 +6,9 @@ import { ColorModeButton } from '@/components/ui/color-mode';
 import EffectsToggleButton from '@/components/common/EffectsToggleButton';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
 
+// Футер всегда чёрный вне зависимости от темы, поэтому цвета заданы явно, без _dark.
+const HOVER_ACCENT = 'pecado.500';
+
 export default function UserFooter() {
     const { footerCategories = [], footerMenuItems = [] } = usePage().props;
     const year = new Date().getFullYear();
@@ -24,10 +27,9 @@ export default function UserFooter() {
             <HStack gap="1.5">
                 <Text
                     fontSize="sm"
-                    color="gray.600"
-                    _dark={{ color: 'gray.400' }}
-                    _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
-                    transition="colors 0.2s"
+                    color="white"
+                    _hover={{ color: HOVER_ACCENT }}
+                    transition="color 0.2s"
                 >
                     {item.title}
                 </Text>
@@ -50,13 +52,21 @@ export default function UserFooter() {
 
     return (
         <Box as="footer" mt="auto">
+            {/* Рваный край: чёрная кромка футера, наезжает на контент выше */}
             <Box
-                bg="bg"
-                borderTop="1px solid"
-                borderColor="border"
-                color="gray.700"
-                _dark={{ bg: 'gray.900', borderColor: 'gray.800', color: 'gray.300' }}
-            >
+                aria-hidden="true"
+                h={{ base: '8px', lg: '14px' }}
+                mt={{ base: '-8px', lg: '-14px' }}
+                transform="translateY(1px)"
+                bgImage="url('/images/torn-border-top.svg')"
+                bgRepeat="repeat-x"
+                bgSize="auto 100%"
+                bgPosition="bottom"
+                pointerEvents="none"
+                position="relative"
+            />
+
+            <Box bg="#000" color="white">
                 <Box maxW="1360px" mx="auto" px={{ base: '3', md: '6' }} py={{ base: '8', md: '10' }}>
                     {/* Columns */}
                     <Grid
@@ -67,14 +77,14 @@ export default function UserFooter() {
                         {/* Logo & Description */}
                         <GridItem>
                             <Box as="img" src="/images/logo.png" alt="Pecado" h="12" objectFit="contain" mb="4" />
-                            <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }} lineHeight="relaxed">
+                            <Text fontSize="sm" color="white" lineHeight="relaxed">
                                 Зарабатывать на удовольствии — это не грех, это Pecado. Мы отобрали товары, перед которыми не устоит ваш клиент, и создали условия, от которых невозможно отказаться партнеру.
                             </Text>
                         </GridItem>
 
                         {/* Company */}
                         <GridItem>
-                            <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
+                            <Text fontSize="sm" fontWeight="600" mb="4" color="white">
                                 О компании
                             </Text>
                             <VStack align="start" gap="2">
@@ -84,7 +94,7 @@ export default function UserFooter() {
 
                         {/* For Buyers */}
                         <GridItem>
-                            <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
+                            <Text fontSize="sm" fontWeight="600" mb="4" color="white">
                                 Покупателям
                             </Text>
                             <VStack align="start" gap="2">
@@ -94,7 +104,7 @@ export default function UserFooter() {
 
                         {/* Categories */}
                         <GridItem>
-                            <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
+                            <Text fontSize="sm" fontWeight="600" mb="4" color="white">
                                 Категории
                             </Text>
                             <VStack align="start" gap="2">
@@ -102,10 +112,9 @@ export default function UserFooter() {
                                     <Link key={item.id} href={`/categories/${item.slug}`}>
                                         <Text
                                             fontSize="sm"
-                                            color="gray.600"
-                                            _dark={{ color: 'gray.400' }}
-                                            _hover={{ color: 'pecado.600', _dark: { color: 'pecado.400' } }}
-                                            transition="colors 0.2s"
+                                            color="white"
+                                            _hover={{ color: HOVER_ACCENT }}
+                                            transition="color 0.2s"
                                         >
                                             {item.name}
                                         </Text>
@@ -117,7 +126,7 @@ export default function UserFooter() {
                         {/* Legal */}
                         {legalLinks.length > 0 && (
                             <GridItem>
-                                <Text fontSize="sm" fontWeight="600" mb="4" color="gray.900" _dark={{ color: 'white' }}>
+                                <Text fontSize="sm" fontWeight="600" mb="4" color="white">
                                     Правовая информация
                                 </Text>
                                 <VStack align="start" gap="2">
@@ -136,19 +145,25 @@ export default function UserFooter() {
                     <Flex
                         pt="6"
                         borderTop="1px solid"
-                        borderColor="border"
-
+                        borderColor="whiteAlpha.300"
                         align="center"
                         justify={{ base: 'center', sm: 'space-between' }}
                         direction={{ base: 'column-reverse', sm: 'row' }}
                         gap="4"
                     >
-                        <Text fontSize="sm" color="gray.500" _dark={{ color: 'gray.400' }}>
+                        <Text fontSize="sm" color="white">
                             © {year} Pecado. Все права защищены. v0.1.1
                         </Text>
                         <HStack gap="1">
-                            <EffectsToggleButton />
-                            <ColorModeButton aria-label="Переключить тему" />
+                            <EffectsToggleButton
+                                inactiveColor="white"
+                                _hover={{ color: HOVER_ACCENT, bg: 'whiteAlpha.200', _dark: { color: HOVER_ACCENT } }}
+                            />
+                            <ColorModeButton
+                                aria-label="Переключить тему"
+                                color="white"
+                                _hover={{ color: HOVER_ACCENT, bg: 'whiteAlpha.200' }}
+                            />
                         </HStack>
                     </Flex>
                 </Box>
