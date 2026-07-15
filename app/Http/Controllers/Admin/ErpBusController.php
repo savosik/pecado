@@ -115,6 +115,21 @@ class ErpBusController extends AdminController
         $busMessagesCount = ErpBusMessage::count();
         $busLoggingEnabled = (bool) config('erp.bus_logging_enabled', false);
 
+        // 8. v15.4: ошибки обработки — сообщение валидно по схеме, но обработать
+        //    его не удалось (например, order.updated по заказу, которого нет,
+        //    и данных для восстановления не хватает).
+        $processingErrors = ErpBusMessage::query()
+            ->where('status', 'failed')
+            ->orderByDesc('created_at')
+            ->paginate(15, ['id', 'direction', 'routing_key', 'event', 'message_id', 'error_message', 'created_at'], 'processing_page')
+            ->withQueryString();
+
+        $processingErrorsCount = ErpBusMessage::where('status', 'failed')->count();
+
+        // 9. v15.4: восстановленные сущности — обработано, но 1С потеряла событие
+        //    создания. Не ошибка сайта, но повод разбираться на стороне 1С.
+        $recoveredCount = ErpBusMessage::where('status', 'recovered')->count();
+
         return Inertia::render('Admin/Pages/ErpBus/Index', [
             'queues' => Inertia::defer(fn () => $this->fetchQueuesFromApi()),
             'processed' => $processed,
@@ -123,6 +138,9 @@ class ErpBusController extends AdminController
             'eventTypes' => $eventTypes,
             'validationErrors' => $validationErrors,
             'validationErrorsCount' => $validationErrorsCount,
+            'processingErrors' => $processingErrors,
+            'processingErrorsCount' => $processingErrorsCount,
+            'recoveredCount' => $recoveredCount,
             'busMessagesCount' => $busMessagesCount,
             'busLoggingEnabled' => $busLoggingEnabled,
             'filters' => [

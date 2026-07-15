@@ -54,6 +54,11 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\OrderRepository::class
         );
 
+        // v15.4: исход обработки входящего ERP-сообщения. Singleton — handler
+        // помечает исход, ErpIncomingJob читает его после handle() и сбрасывает
+        // перед следующим сообщением.
+        $this->app->singleton(\App\Services\Erp\ErpHandlerOutcome::class);
+
         $this->app->singleton(\App\Services\Product\RichContent\BlockSchemaProvider::class, function () {
             return new \App\Services\Product\RichContent\BlockSchemaProvider(
                 (string) config('rich_content.schema_path', base_path('docs/content-blocks-schema.json'))

@@ -5,6 +5,7 @@ namespace Tests\Feature\Erp;
 use App\Enums\UserStatus;
 use App\Models\Company;
 use App\Models\ContractorBalance;
+use App\Models\ErpBusMessage;
 use App\Models\ErpProcessedMessage;
 use App\Models\ErpPromotion;
 use App\Models\Order;
@@ -1109,8 +1110,15 @@ class ErpIncomingJobTest extends TestCase
         $this->assertEquals('pending_approval', $order->status->value);
     }
 
+    /**
+     * v15.4: раньше order.updated по неизвестному заказу считался успешно
+     * обработанным и попадал в erp_processed_messages. Так за 1–15 июля 2026
+     * незаметно потерялось 40 заказов. Теперь такое сообщение не считается
+     * обработанным, но и не роняет воркер: job ловит ошибку и снимает сообщение
+     * с очереди — повтор всё равно не помог бы.
+     */
     #[Test]
-    public function order_updated_for_unknown_order_completes_without_error(): void
+    public function order_updated_for_unknown_order_is_not_marked_processed_and_does_not_crash(): void
     {
         $job = $this->makeJob([
             'event' => 'order.updated',
@@ -1122,9 +1130,11 @@ class ErpIncomingJobTest extends TestCase
 
         $job->fire();
 
-        $this->assertDatabaseHas('erp_processed_messages', [
+        $this->assertDatabaseMissing('erp_processed_messages', [
             'message_id' => 'msg-order-unknown',
-            'event' => 'order.updated',
+        ]);
+        $this->assertDatabaseMissing('orders', [
+            'uuid' => '00000000-0000-4000-a000-00000000001d',
         ]);
     }
 
@@ -2836,5 +2846,70 @@ class ErpIncomingJobTest extends TestCase
 
         $this->assertEquals(0, ErpPromotion::count());
         $this->assertFalse((bool) $product->fresh()->is_new);
+    }
+
+    /**
+     * v15.4: order.updated по заказу, которого нет, но данных хватает —
+     * заказ достраивается, сообщение помечается `recovered`.
+     */
+    #[Test]
+    public function order_updated_for_missing_order_recovers_it_and_logs_recovered(): void
+    {
+        config(['erp.bus_logging_enabled' => true]);
+
+        $user = User::factory()->create(['erp_id' => '00000000-0000-4000-b000-0000000000e1']);
+        $product = Product::factory()->create(['external_id' => '00000000-0000-4000-b000-0000000000e2']);
+
+        $job = $this->makeJob([
+            'event' => 'order.updated',
+            'uuid' => '00000000-0000-4000-b000-0000000000e3',
+            'number' => '29УТ-010318',
+            'status' => 'ready_for_shipment',
+            'partner_uuid' => $user->erp_id,
+            'contractor' => ['uuid' => '00000000-0000-4000-b000-0000000000e4', 'tax_id' => '780528446072'],
+            'message_id' => 'msg-order-recover',
+            'items' => [
+                ['product_uuid' => $product->external_id, 'quantity' => 2, 'base_price' => 100, 'final_price' => 80],
+            ],
+        ]);
+        $job->fire();
+
+        $order = Order::where('uuid', '00000000-0000-4000-b000-0000000000e3')->first();
+        $this->assertNotNull($order, 'Заказ должен быть восстановлен');
+        $this->assertSame('29УТ-010318', $order->erp_number);
+        $this->assertEqualsWithDelta(160.0, (float) $order->total_amount, 0.01);
+
+        $logged = ErpBusMessage::where('message_id', 'msg-order-recover')->first();
+        $this->assertNotNull($logged);
+        $this->assertSame('recovered', $logged->status, 'Восстановление — не рядовой success');
+        $this->assertStringContainsString('29УТ-010318', (string) $logged->error_message);
+    }
+
+    /**
+     * v15.4: восстановить нечем — сообщение помечается `failed` с причиной,
+     * чтобы ошибка была видна в админке, а не терялась молча.
+     */
+    #[Test]
+    public function order_updated_for_missing_order_without_data_is_logged_as_failed(): void
+    {
+        config(['erp.bus_logging_enabled' => true]);
+
+        $job = $this->makeJob([
+            'event' => 'order.updated',
+            'uuid' => '00000000-0000-4000-b000-0000000000e5',
+            'number' => '29УТ-009892',
+            'status' => 'ready_for_closure',
+            'message_id' => 'msg-order-unrecoverable',
+            'items' => [],
+        ]);
+        $job->fire();
+
+        $this->assertDatabaseMissing('orders', ['uuid' => '00000000-0000-4000-b000-0000000000e5']);
+
+        $logged = ErpBusMessage::where('message_id', 'msg-order-unrecoverable')->first();
+        $this->assertNotNull($logged, 'Сообщение обязано попасть в лог шины');
+        $this->assertSame('failed', $logged->status);
+        $this->assertStringContainsString('29УТ-009892', (string) $logged->error_message);
+        $this->assertStringContainsString('order.created', (string) $logged->error_message);
     }
 }

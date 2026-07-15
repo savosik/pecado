@@ -35,6 +35,36 @@
                 "closed"
             ]
         },
+        "partner_uuid": {
+            "type": "string",
+            "format": "uuid",
+            "description": "UUID партнёра (User.erp_id). Опционально. Добавлено в v15.4: 1С присылает поле фактически с самого начала, но в спецификации оно описано не было. Требуется для самовосстановления заказа (см. rules/orders.md, «Самовосстановление»)."
+        },
+        "contractor": {
+            "type": "object",
+            "description": "Контрагент заказа. Опционально. Добавлено в v15.4 — см. partner_uuid. Используется только при самовосстановлении заказа; для существующего заказа контрагент не переназначается.",
+            "properties": {
+                "uuid": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "UUID контрагента в 1С (Company.erp_id на сайте)."
+                },
+                "tax_id": {
+                    "type": "string",
+                    "description": "Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.)."
+                },
+                "tax_code": {
+                    "type": ["string", "null"]
+                },
+                "name": {
+                    "type": ["string", "null"]
+                },
+                "legal_name": {
+                    "type": ["string", "null"]
+                }
+            },
+            "additionalProperties": true
+        },
         "delivery_address": {
             "type": ["string", "null"],
             "description": "Адрес доставки (строка). Сайт создаёт или находит запись в delivery_addresses."

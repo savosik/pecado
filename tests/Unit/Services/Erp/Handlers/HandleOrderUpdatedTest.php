@@ -2,10 +2,14 @@
 
 namespace Tests\Unit\Services\Erp\Handlers;
 
+use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderChangeLog;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\User;
+use App\Services\Erp\ErpHandlerOutcome;
+use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Handlers\HandleOrderUpdated;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
@@ -34,15 +38,208 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertDatabaseCount('order_change_logs', 0);
     }
 
+    /**
+     * v15.4: заказа нет и достроить его не из чего — сообщение должно стать
+     * видимой ошибкой, а не раствориться (до v15.4 здесь был молчаливый return).
+     */
     #[Test]
-    public function it_does_nothing_when_order_not_found(): void
+    public function it_throws_when_order_not_found_and_payload_has_no_data_to_recover(): void
     {
-        Log::shouldReceive('info')->once();
+        Log::shouldReceive('info')->zeroOrMoreTimes();
         Log::shouldReceive('warning')->zeroOrMoreTimes();
 
-        $this->handler->handle(['uuid' => 'non-existing-uuid']);
+        $this->expectException(ErpUnprocessableMessageException::class);
+        $this->expectExceptionMessageMatches('/partner_uuid/');
 
-        $this->assertDatabaseCount('order_change_logs', 0);
+        $this->handler->handle(['uuid' => 'non-existing-uuid']);
+    }
+
+    /**
+     * v15.4: заказ есть в 1С, но order.created потерялся — достраиваем из payload.
+     */
+    #[Test]
+    public function it_recovers_missing_order_from_update_payload(): void
+    {
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-recover']);
+        $product = Product::factory()->create(['external_id' => 'product-uuid-recover']);
+
+        $this->handler->handle([
+            'event' => 'order.updated',
+            'uuid' => 'lost-order-uuid',
+            'number' => '29УТ-010318',
+            'status' => 'ready_for_shipment',
+            'partner_uuid' => 'partner-uuid-recover',
+            'contractor' => ['uuid' => 'contractor-uuid-recover', 'tax_id' => '780528446072'],
+            'erp_created_at' => '2026-07-13T14:07:53+03:00',
+            'items' => [
+                ['product_uuid' => 'product-uuid-recover', 'quantity' => 3, 'base_price' => 100, 'discount_percent' => 10, 'final_price' => 90],
+            ],
+        ]);
+
+        $order = Order::where('uuid', 'lost-order-uuid')->first();
+
+        $this->assertNotNull($order, 'Заказ должен быть восстановлен из order.updated');
+        $this->assertSame('29УТ-010318', $order->erp_number);
+        $this->assertSame('ready_for_shipment', $order->status->value ?? $order->status);
+        $this->assertSame($user->id, $order->user_id);
+        $this->assertEqualsWithDelta(270.0, (float) $order->total_amount, 0.01);
+        $this->assertSame($product->id, $order->items()->first()->product_id);
+    }
+
+    /**
+     * Восстановление помечается отдельным исходом: это сигнал о сбое в 1С,
+     * а не рядовой успех.
+     */
+    #[Test]
+    public function it_marks_outcome_as_recovered(): void
+    {
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        User::factory()->create(['erp_id' => 'partner-uuid-outcome']);
+
+        $outcome = app(ErpHandlerOutcome::class);
+        $outcome->reset();
+
+        $this->handler->handle([
+            'uuid' => 'lost-order-outcome',
+            'number' => '29УТ-010319',
+            'partner_uuid' => 'partner-uuid-outcome',
+            'items' => [
+                ['product_uuid' => 'unknown-product', 'quantity' => 1, 'base_price' => 10, 'final_price' => 10],
+            ],
+        ]);
+
+        $this->assertSame(ErpHandlerOutcome::STATUS_RECOVERED, $outcome->status());
+        $this->assertStringContainsString('29УТ-010319', (string) $outcome->message());
+    }
+
+    /**
+     * 1С в order.updated шлёт контрагента без названия, а companies.name — NOT NULL.
+     * Если контрагент новый, восстановление не должно падать на этом.
+     */
+    #[Test]
+    public function it_recovers_order_with_unknown_contractor_without_name(): void
+    {
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        User::factory()->create(['erp_id' => 'partner-uuid-newco']);
+
+        $this->handler->handle([
+            'uuid' => 'lost-order-newco',
+            'number' => '29УТ-010334',
+            'partner_uuid' => 'partner-uuid-newco',
+            'contractor' => ['uuid' => 'brand-new-contractor', 'tax_id' => '7805284460'],
+            'items' => [
+                ['product_uuid' => 'unknown-product', 'quantity' => 1, 'base_price' => 10, 'final_price' => 10],
+            ],
+        ]);
+
+        $order = Order::where('uuid', 'lost-order-newco')->first();
+
+        $this->assertNotNull($order);
+        $this->assertNotNull($order->company_id, 'Контрагент должен быть создан, а не потерян');
+        $this->assertDatabaseHas('companies', [
+            'erp_id' => 'brand-new-contractor',
+            'name' => 'Контрагент ИНН 7805284460',
+        ]);
+    }
+
+    /**
+     * Существующего контрагента заглушка не трогает — он находится по uuid.
+     */
+    #[Test]
+    public function it_does_not_rename_existing_contractor_on_recovery(): void
+    {
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $user = User::factory()->create(['erp_id' => 'partner-uuid-existing']);
+        $company = Company::factory()->create([
+            'user_id' => $user->id,
+            'erp_id' => 'existing-contractor-uuid',
+            'name' => 'ООО «Ромашка»',
+            'tax_id' => '7805284461',
+        ]);
+
+        $this->handler->handle([
+            'uuid' => 'lost-order-existing-co',
+            'number' => '29УТ-010382',
+            'partner_uuid' => 'partner-uuid-existing',
+            'contractor' => ['uuid' => 'existing-contractor-uuid', 'tax_id' => '7805284461'],
+            'items' => [
+                ['product_uuid' => 'unknown-product', 'quantity' => 1, 'base_price' => 10, 'final_price' => 10],
+            ],
+        ]);
+
+        $order = Order::where('uuid', 'lost-order-existing-co')->first();
+
+        $this->assertSame($company->id, $order->company_id);
+        $this->assertSame('ООО «Ромашка»', $company->fresh()->name, 'Название существующего контрагента неприкосновенно');
+        $this->assertSame(1, Company::where('tax_id', '7805284461')->count(), 'Дубля контрагента быть не должно');
+    }
+
+    /**
+     * Заказ без позиций восстанавливать нечем — получился бы пустой заказ-мусор.
+     */
+    #[Test]
+    public function it_throws_when_items_are_empty(): void
+    {
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        $this->expectException(ErpUnprocessableMessageException::class);
+        $this->expectExceptionMessageMatches('/items/');
+
+        $this->handler->handle([
+            'uuid' => 'lost-order-no-items',
+            'number' => '29УТ-009892',
+            'status' => 'ready_for_closure',
+            'partner_uuid' => 'partner-uuid-x',
+            'items' => [],
+        ]);
+
+        $this->assertDatabaseMissing('orders', ['uuid' => 'lost-order-no-items']);
+    }
+
+    /**
+     * Повторный order.updated по восстановленному заказу — обычное обновление,
+     * а не повторное восстановление.
+     */
+    #[Test]
+    public function recovery_is_idempotent(): void
+    {
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        User::factory()->create(['erp_id' => 'partner-uuid-idem']);
+
+        $payload = [
+            'uuid' => 'lost-order-idem',
+            'number' => '29УТ-010320',
+            'status' => 'ready_for_shipment',
+            'partner_uuid' => 'partner-uuid-idem',
+            'items' => [
+                ['product_uuid' => 'unknown-product', 'quantity' => 1, 'base_price' => 10, 'final_price' => 10],
+            ],
+        ];
+
+        $this->handler->handle($payload);
+
+        $outcome = app(ErpHandlerOutcome::class);
+        $outcome->reset();
+
+        $this->handler->handle(array_merge($payload, ['status' => 'closed']));
+
+        $this->assertSame(1, Order::where('uuid', 'lost-order-idem')->count(), 'Дубля быть не должно');
+        $this->assertSame(ErpHandlerOutcome::STATUS_SUCCESS, $outcome->status(), 'Второй раз — обычное обновление');
+
+        $order = Order::where('uuid', 'lost-order-idem')->first();
+        $this->assertSame('closed', $order->status->value ?? $order->status);
     }
 
     #[Test]

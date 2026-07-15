@@ -173,7 +173,7 @@ const Pagination = ({ data, paramName = 'page' }) => {
     );
 };
 
-export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, busMessagesCount, busLoggingEnabled }) {
+export default function Index({ queues, processed, failedJobs, eventStats, eventTypes, filters, validationErrors, validationErrorsCount, processingErrors, processingErrorsCount, recoveredCount, busMessagesCount, busLoggingEnabled }) {
     const [search, setSearch] = useState(filters.search || '');
     const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
     const [deleteAllProcessing, setDeleteAllProcessing] = useState(false);
@@ -500,6 +500,97 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                             </Table.Root>
                         </Box>
                         <Pagination data={validationErrors} paramName="validation_page" />
+                    </>
+                )}
+            </Box>
+
+            <Separator mb={6} />
+
+            {/* Ошибки обработки (v15.4): payload валиден, но обработать сообщение не удалось */}
+            <Box mb={8}>
+                <HStack justify="space-between" mb={3}>
+                    <HStack gap={2}>
+                        <LuCircleAlert size={18} color="var(--chakra-colors-red-500)" />
+                        <Text fontWeight="bold" fontSize="md">
+                            Ошибки обработки
+                        </Text>
+                        {processingErrorsCount > 0 && (
+                            <Badge colorPalette="red" variant="solid" size="sm">
+                                {processingErrorsCount}
+                            </Badge>
+                        )}
+                    </HStack>
+                    {recoveredCount > 0 && (
+                        <Link href={route('admin.erp-bus.messages', { status: 'recovered' })}>
+                            <Badge colorPalette="purple" variant="subtle" size="sm" cursor="pointer">
+                                Восстановлено сущностей: {recoveredCount}
+                            </Badge>
+                        </Link>
+                    )}
+                </HStack>
+
+                <Text fontSize="xs" color="fg.muted" mb={3}>
+                    Сообщение прошло проверку по схеме, но обработать его не удалось, и повтор не поможет.
+                    Требует разбирательства на стороне 1С.
+                </Text>
+
+                {(!processingErrors || processingErrors.data.length === 0) ? (
+                    <Box textAlign="center" py={6} color="fg.muted">
+                        <Text color="green.500" fontWeight="medium">Ошибок обработки нет! ✅</Text>
+                    </Box>
+                ) : (
+                    <>
+                        <Box overflowX="auto">
+                            <Table.Root size="sm">
+                                <Table.Header>
+                                    <Table.Row>
+                                        <Table.ColumnHeader>Направление</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Событие</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Message ID</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Причина</Table.ColumnHeader>
+                                        <Table.ColumnHeader>Дата</Table.ColumnHeader>
+                                    </Table.Row>
+                                </Table.Header>
+                                <Table.Body>
+                                    {processingErrors.data.map((err) => (
+                                        <Table.Row key={err.id}>
+                                            <Table.Cell>
+                                                <Badge
+                                                    colorPalette={err.direction === 'incoming' ? 'yellow' : 'blue'}
+                                                    size="sm"
+                                                    variant="subtle"
+                                                >
+                                                    {err.direction === 'incoming' ? '1С → Сайт' : 'Сайт → 1С'}
+                                                </Badge>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Badge colorPalette="red" size="sm" variant="subtle">
+                                                    {err.event}
+                                                </Badge>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Text fontFamily="mono" fontSize="xs" truncate maxW="200px">
+                                                    {err.message_id || '—'}
+                                                </Text>
+                                            </Table.Cell>
+                                            <Table.Cell maxW="480px">
+                                                <Text fontSize="xs" color="red.600" _dark={{ color: 'red.300' }}>
+                                                    {err.error_message || '—'}
+                                                </Text>
+                                            </Table.Cell>
+                                            <Table.Cell>
+                                                <Text fontSize="sm" color="fg.muted" whiteSpace="nowrap">
+                                                    {err.created_at
+                                                        ? new Date(err.created_at).toLocaleString('ru-RU')
+                                                        : '—'}
+                                                </Text>
+                                            </Table.Cell>
+                                        </Table.Row>
+                                    ))}
+                                </Table.Body>
+                            </Table.Root>
+                        </Box>
+                        <Pagination data={processingErrors} paramName="processing_page" />
                     </>
                 )}
             </Box>

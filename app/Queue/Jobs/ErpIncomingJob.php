@@ -4,7 +4,9 @@ namespace App\Queue\Jobs;
 
 use App\Models\ErpProcessedMessage;
 use App\Services\Erp\ErpBusLogger;
+use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\ErpMessageValidator;
+use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Handlers\HandleBalanceUpdated;
 use App\Services\Erp\Handlers\HandleCategoryCreated;
 use App\Services\Erp\Handlers\HandleCategoryUpdated;
@@ -173,6 +175,12 @@ class ErpIncomingJob extends BaseJob
                 return;
             }
 
+            // v15.4: сбрасываем исход перед обработкой — воркер долгоживущий,
+            // иначе пометка от предыдущего сообщения протечёт в это.
+            /** @var ErpHandlerOutcome $outcome */
+            $outcome = app(ErpHandlerOutcome::class);
+            $outcome->reset();
+
             /** @var object $handler */
             $handler = app($handlerClass);
             $handler->handle($payload);
@@ -182,8 +190,34 @@ class ErpIncomingJob extends BaseJob
                 $this->markAsProcessed($messageId, $event);
             }
 
-            // Логируем успешную обработку в шину ERP
-            ErpBusLogger::logIncoming($event, $payload, 'success', null, $this->getQueue());
+            // Логируем обработку в шину ERP. Обычно 'success'; 'recovered' —
+            // если handler достроил сущность, потерянную на стороне 1С.
+            ErpBusLogger::logIncoming(
+                $event,
+                $payload,
+                $outcome->status(),
+                $outcome->message(),
+                $this->getQueue(),
+            );
+
+            $this->delete();
+        } catch (ErpUnprocessableMessageException $e) {
+            // v15.4: сообщение валидно, но обработать его нельзя, и повтор не поможет.
+            // Не возвращаем в очередь — помечаем failed, чтобы ошибка была видна
+            // в админке, и удаляем.
+            Log::warning('ERP incoming: сообщение невозможно обработать', [
+                'event' => $payload['event'] ?? 'unknown',
+                'message_id' => $payload['message_id'] ?? null,
+                'reason' => $e->getMessage(),
+            ]);
+
+            ErpBusLogger::logIncoming(
+                $payload['event'] ?? 'unknown',
+                $payload ?? [],
+                'failed',
+                $e->getMessage(),
+                $this->getQueue(),
+            );
 
             $this->delete();
         } catch (\Throwable $e) {

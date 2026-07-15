@@ -22,9 +22,20 @@ import {
     LuSend,
     LuCircleCheck,
     LuCircleX,
+    LuWrench,
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
 import { toaster } from '@/components/ui/toaster';
+
+/**
+ * Оформление статуса обработки сообщения.
+ * recovered (v15.4) — сущность достроена сайтом, потому что 1С потеряла событие создания.
+ */
+const STATUS_META = {
+    success: { palette: 'green', label: 'Успешно', icon: LuCircleCheck },
+    recovered: { palette: 'purple', label: 'Восстановлено', icon: LuWrench },
+    failed: { palette: 'red', label: 'Ошибка', icon: LuCircleX },
+};
 
 /**
  * Пагинатор.
@@ -240,6 +251,7 @@ export default function Messages({ messages, eventTypes, filters }) {
                 >
                     <option value="">Все статусы</option>
                     <option value="success">Успешно</option>
+                    <option value="recovered">Восстановлено</option>
                     <option value="failed">Ошибка</option>
                 </Box>
                 <Input
@@ -326,16 +338,13 @@ export default function Messages({ messages, eventTypes, filters }) {
                                         </Table.Cell>
                                         <Table.Cell>
                                             <Badge
-                                                colorPalette={msg.status === 'success' ? 'green' : 'red'}
+                                                colorPalette={STATUS_META[msg.status]?.palette ?? 'red'}
                                                 size="sm"
                                                 variant="subtle"
                                             >
                                                 <HStack gap={1}>
-                                                    {msg.status === 'success'
-                                                        ? <LuCircleCheck size={12} />
-                                                        : <LuCircleX size={12} />
-                                                    }
-                                                    <Text>{msg.status === 'success' ? 'Успешно' : 'Ошибка'}</Text>
+                                                    {(STATUS_META[msg.status]?.icon ?? LuCircleX)({ size: 12 })}
+                                                    <Text>{STATUS_META[msg.status]?.label ?? 'Ошибка'}</Text>
                                                 </HStack>
                                             </Badge>
                                         </Table.Cell>

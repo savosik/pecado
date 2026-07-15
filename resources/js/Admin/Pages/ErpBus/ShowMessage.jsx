@@ -19,9 +19,20 @@ import {
     LuCircleCheck,
     LuCircleX,
     LuCopy,
+    LuWrench,
 } from 'react-icons/lu';
 import { useState, useCallback } from 'react';
 import { toaster } from '@/components/ui/toaster';
+
+/**
+ * Оформление статуса обработки сообщения.
+ * recovered (v15.4) — сущность достроена сайтом, потому что 1С потеряла событие создания.
+ */
+const STATUS_META = {
+    success: { palette: 'green', label: 'Успешно', icon: LuCircleCheck },
+    recovered: { palette: 'purple', label: 'Восстановлено', icon: LuWrench },
+    failed: { palette: 'red', label: 'Ошибка', icon: LuCircleX },
+};
 
 /**
  * Рекурсивный рендер JSON с красивым форматированием и подсветкой.
@@ -197,16 +208,13 @@ export default function ShowMessage({ message }) {
                         </InfoRow>
                         <InfoRow label="Статус">
                             <Badge
-                                colorPalette={message.status === 'success' ? 'green' : 'red'}
+                                colorPalette={STATUS_META[message.status]?.palette ?? 'red'}
                                 size="sm"
                                 variant="subtle"
                             >
                                 <HStack gap={1}>
-                                    {message.status === 'success'
-                                        ? <LuCircleCheck size={12} />
-                                        : <LuCircleX size={12} />
-                                    }
-                                    <Text>{message.status === 'success' ? 'Успешно' : 'Ошибка'}</Text>
+                                    {(STATUS_META[message.status]?.icon ?? LuCircleX)({ size: 12 })}
+                                    <Text>{STATUS_META[message.status]?.label ?? 'Ошибка'}</Text>
                                 </HStack>
                             </Badge>
                         </InfoRow>

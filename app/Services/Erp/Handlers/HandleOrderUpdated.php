@@ -4,6 +4,8 @@ namespace App\Services\Erp\Handlers;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Services\Erp\ErpHandlerOutcome;
+use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Order\OrderChangeLogger;
 use Illuminate\Support\Facades\Log;
@@ -15,11 +17,14 @@ use Illuminate\Support\Facades\Log;
  * v11: Записывает журнал изменений (diff) для прозрачности клиенту.
  * v12.1: Обновляет адрес доставки, если передан delivery_address.
  * v13: Логирует также атрибутные изменения (адрес, комментарий и т.д.).
+ * v15.4: Если заказа нет — восстанавливает его из payload (1С теряет order.created).
  */
 class HandleOrderUpdated
 {
     public function __construct(
         private readonly OrderChangeLogger $changeLogger,
+        private readonly HandleOrderCreated $orderCreated,
+        private readonly ErpHandlerOutcome $outcome,
     ) {}
 
     public function handle(array $payload): void
@@ -38,7 +43,7 @@ class HandleOrderUpdated
         $order = Order::withTrashed()->where('uuid', $uuid)->first();
 
         if (! $order) {
-            Log::info('HandleOrderUpdated: заказ не найден', ['uuid' => $uuid]);
+            $this->recoverMissingOrder($payload, $uuid);
 
             return;
         }
@@ -128,6 +133,96 @@ class HandleOrderUpdated
             'delivery_address' => isset($payload['delivery_address']) ? 'обновлён' : 'не изменён',
             'delivery_method' => ! empty($payload['delivery_method']) ? $payload['delivery_method'] : 'не изменён',
         ]);
+    }
+
+    /**
+     * v15.4: заказа с таким uuid на сайте нет — 1С потеряла order.created.
+     *
+     * Достраиваем заказ из этого payload по правилам order.created, если данных
+     * хватает. Если нет — бросаем ErpUnprocessableMessageException, чтобы сообщение
+     * попало в админку как ошибка, а не растворилось (до v15.4 здесь был молчаливый
+     * return, из-за которого за 1–15 июля 2026 потерялось 40 заказов).
+     *
+     * @throws ErpUnprocessableMessageException когда данных для восстановления не хватает
+     */
+    private function recoverMissingOrder(array $payload, string $uuid): void
+    {
+        $number = $payload['number'] ?? null;
+        $missing = [];
+
+        if (empty($payload['partner_uuid'])) {
+            $missing[] = 'partner_uuid';
+        }
+
+        if (empty($payload['items'])) {
+            $missing[] = 'непустой items';
+        }
+
+        if ($missing !== []) {
+            throw new ErpUnprocessableMessageException(sprintf(
+                'order.updated по несуществующему заказу %s (uuid %s): 1С не прислала order.created, '
+                .'а восстановить заказ из этого payload нельзя — нет %s. Заказ нужно завести из 1С повторно.',
+                $number ?? 'без номера',
+                $uuid,
+                implode(' и ', $missing),
+            ));
+        }
+
+        // event подменяем, чтобы payload соответствовал тому, что обрабатывает
+        // HandleOrderCreated. Он делает upsert по uuid и сам создаёт контрагента,
+        // позиции и связь с партнёром — дублировать эту логику здесь не нужно.
+        $this->orderCreated->handle(array_merge($payload, [
+            'event' => 'order.created',
+            'contractor' => $this->contractorForRecovery($payload),
+        ]));
+
+        Log::warning('HandleOrderUpdated: заказ восстановлен из order.updated — 1С не прислала order.created', [
+            'uuid' => $uuid,
+            'number' => $number,
+            'status' => $payload['status'] ?? null,
+            'items_count' => count($payload['items']),
+        ]);
+
+        $this->outcome->markRecovered(sprintf(
+            'Заказ %s (uuid %s) восстановлен из order.updated: 1С не прислала order.created. '
+            .'Проверьте на стороне 1С, почему потерялось событие создания.',
+            $number ?? 'без номера',
+            $uuid,
+        ));
+    }
+
+    /**
+     * v15.4: контрагент для восстановления заказа.
+     *
+     * В order.updated 1С шлёт контрагента без названия — только uuid и tax_id.
+     * Обычно этого хватает: контрагент уже заведён, и HandleOrderCreated находит
+     * его по uuid либо tax_id. Но если это новый контрагент, он будет создан, а
+     * companies.name — NOT NULL. Поэтому подставляем название-заглушку: она
+     * переживёт лишь до ближайшего contractor.updated из 1С.
+     *
+     * Заглушка живёт только здесь, на пути восстановления. В штатном order.created
+     * 1С обязана присылать название, и подменять его молча нельзя.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function contractorForRecovery(array $payload): array
+    {
+        $contractor = $payload['contractor'] ?? [];
+
+        if (! is_array($contractor) || $contractor === []) {
+            return [];
+        }
+
+        if (! empty($contractor['name'])) {
+            return $contractor;
+        }
+
+        $contractor['name'] = ! empty($contractor['legal_name'])
+            ? $contractor['legal_name']
+            : sprintf('Контрагент ИНН %s', $contractor['tax_id'] ?? 'неизвестен');
+
+        return $contractor;
     }
 
     /**

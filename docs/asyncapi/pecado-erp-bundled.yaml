@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 15.3.0
+  version: 15.4.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -1364,6 +1364,64 @@ channels:
                 - awaiting_payment
                 - ready_for_closure
                 - closed
+            partner_uuid:
+              allOf:
+                - type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+              description: >
+                UUID партнёра (`User.erp_id`). Опционально, добавлено в v15.4.
+
+
+                1С присылает это поле фактически с самого начала, но в
+                спецификации
+
+                оно описано не было. Требуется для **самовосстановления**
+                заказа:
+
+                если `order.updated` пришёл по заказу, которого на сайте нет,
+
+                сайт создаёт его из этого payload. Без `partner_uuid` и непустых
+
+                `items` восстановление невозможно — см. rules/orders.md.
+            contractor:
+              type: object
+              description: >
+                Контрагент заказа. Опционально, добавлено в v15.4 — см.
+                `partner_uuid`.
+
+
+                Используется **только** при самовосстановлении заказа. Для уже
+
+                существующего заказа контрагент не переназначается.
+              properties:
+                uuid:
+                  allOf:
+                    - type: string
+                      format: uuid
+                      description: UUID строка
+                      examples:
+                        - 550e8400-e29b-41d4-a716-446655440000
+                  description: UUID контрагента в 1С (`Company.erp_id` на сайте).
+                tax_id:
+                  type: string
+                  description: >-
+                    Налоговый идентификатор контрагента (ИНН / УНП / БИН и
+                    т.д.).
+                tax_code:
+                  type:
+                    - string
+                    - 'null'
+                name:
+                  type:
+                    - string
+                    - 'null'
+                legal_name:
+                  type:
+                    - string
+                    - 'null'
             delivery_address:
               type:
                 - string
@@ -6461,6 +6519,61 @@ components:
               - awaiting_payment
               - ready_for_closure
               - closed
+          partner_uuid:
+            allOf:
+              - type: string
+                format: uuid
+                description: UUID строка
+                examples:
+                  - 550e8400-e29b-41d4-a716-446655440000
+            description: >
+              UUID партнёра (`User.erp_id`). Опционально, добавлено в v15.4.
+
+
+              1С присылает это поле фактически с самого начала, но в
+              спецификации
+
+              оно описано не было. Требуется для **самовосстановления** заказа:
+
+              если `order.updated` пришёл по заказу, которого на сайте нет,
+
+              сайт создаёт его из этого payload. Без `partner_uuid` и непустых
+
+              `items` восстановление невозможно — см. rules/orders.md.
+          contractor:
+            type: object
+            description: >
+              Контрагент заказа. Опционально, добавлено в v15.4 — см.
+              `partner_uuid`.
+
+
+              Используется **только** при самовосстановлении заказа. Для уже
+
+              существующего заказа контрагент не переназначается.
+            properties:
+              uuid:
+                allOf:
+                  - type: string
+                    format: uuid
+                    description: UUID строка
+                    examples:
+                      - 550e8400-e29b-41d4-a716-446655440000
+                description: UUID контрагента в 1С (`Company.erp_id` на сайте).
+              tax_id:
+                type: string
+                description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.).
+              tax_code:
+                type:
+                  - string
+                  - 'null'
+              name:
+                type:
+                  - string
+                  - 'null'
+              legal_name:
+                type:
+                  - string
+                  - 'null'
           delivery_address:
             type:
               - string
@@ -9721,6 +9834,55 @@ components:
             - awaiting_payment
             - ready_for_closure
             - closed
+        partner_uuid:
+          allOf:
+            - type: string
+              format: uuid
+              description: UUID строка
+              examples:
+                - 550e8400-e29b-41d4-a716-446655440000
+          description: |
+            UUID партнёра (`User.erp_id`). Опционально, добавлено в v15.4.
+
+            1С присылает это поле фактически с самого начала, но в спецификации
+            оно описано не было. Требуется для **самовосстановления** заказа:
+            если `order.updated` пришёл по заказу, которого на сайте нет,
+            сайт создаёт его из этого payload. Без `partner_uuid` и непустых
+            `items` восстановление невозможно — см. rules/orders.md.
+        contractor:
+          type: object
+          description: >
+            Контрагент заказа. Опционально, добавлено в v15.4 — см.
+            `partner_uuid`.
+
+
+            Используется **только** при самовосстановлении заказа. Для уже
+
+            существующего заказа контрагент не переназначается.
+          properties:
+            uuid:
+              allOf:
+                - type: string
+                  format: uuid
+                  description: UUID строка
+                  examples:
+                    - 550e8400-e29b-41d4-a716-446655440000
+              description: UUID контрагента в 1С (`Company.erp_id` на сайте).
+            tax_id:
+              type: string
+              description: Налоговый идентификатор контрагента (ИНН / УНП / БИН и т.д.).
+            tax_code:
+              type:
+                - string
+                - 'null'
+            name:
+              type:
+                - string
+                - 'null'
+            legal_name:
+              type:
+                - string
+                - 'null'
         delivery_address:
           type:
             - string
