@@ -52,6 +52,7 @@ class EntityChangedNotification extends Notification implements ShouldQueue
                 'sectionLabel' => $sectionLabel,
                 'title' => $this->notice->title,
                 'body' => $this->notice->body,
+                'rows' => $this->notice->rows,
                 'url' => $this->notice->url,
                 'entityLabel' => $this->notice->entityLabel,
                 'unsubscribeUrl' => url(route('subscriptions.unsubscribe', $this->subscription->unsubscribe_token, false)),

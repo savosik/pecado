@@ -19,6 +19,12 @@ class EntityChangeNotice
      * @param  string  $body  тело — готовый человекочитаемый текст изменения
      * @param  string|null  $url  абсолютная ссылка на сущность в кабинете
      * @param  string|null  $entityLabel  краткая метка сущности (напр. номер заказа)
+     * @param  array<int, array<string, mixed>>  $rows  структурированные блоки изменения
+     *                                                  для красивой вёрстки письма. Каждый элемент — один из:
+     *                                                  ['type'=>'diff', 'label'=>, 'old'=>, 'new'=>] — параметр «было → стало»;
+     *                                                  ['type'=>'action', 'kind'=>'added|removed|modified|shortfall|partial', 'label'=>, 'text'=>];
+     *                                                  ['type'=>'note', 'text'=>] — вводная строка/подзаголовок.
+     *                                                  Если пусто — шаблон откатывается на построчный вывод $body.
      */
     public function __construct(
         public string $section,
@@ -27,5 +33,6 @@ class EntityChangeNotice
         public string $body,
         public ?string $url = null,
         public ?string $entityLabel = null,
+        public array $rows = [],
     ) {}
 }

@@ -82,8 +82,91 @@ class OrderChangeLog extends Model
                 body: (string) $log->summary,
                 url: url(route('cabinet.orders.show', $order, false)),
                 entityLabel: "Заказ {$number}",
+                rows: self::buildNoticeRows($log),
             ));
         });
+    }
+
+    /**
+     * Структурированные блоки изменения для вёрстки письма подписки —
+     * строятся из type + changes лога. Формат см. в EntityChangeNotice::$rows.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function buildNoticeRows(self $log): array
+    {
+        $rows = [];
+        $c = $log->changes ?? [];
+
+        switch ($log->type) {
+            case 'attributes_updated':
+                foreach (($c['attributes'] ?? []) as $field => $entry) {
+                    $rows[] = [
+                        'type' => 'diff',
+                        'label' => $entry['label'] ?? $field,
+                        'old' => self::fmtNoticeValue($entry['old_label'] ?? $entry['old'] ?? null),
+                        'new' => self::fmtNoticeValue($entry['new_label'] ?? $entry['new'] ?? null),
+                    ];
+                }
+                break;
+
+            case 'items_updated':
+                foreach (($c['added'] ?? []) as $i) {
+                    $rows[] = ['type' => 'action', 'kind' => 'added', 'label' => 'Добавлен',
+                        'text' => "«{$i['product_name']}» (кол-во: {$i['quantity']}, цена: ".self::money($i['price'] ?? 0).' ₽)'];
+                }
+                foreach (($c['removed'] ?? []) as $i) {
+                    $rows[] = ['type' => 'action', 'kind' => 'removed', 'label' => 'Удалён',
+                        'text' => "«{$i['product_name']}»"];
+                }
+                foreach (($c['modified'] ?? []) as $i) {
+                    $parts = [];
+                    $ch = $i['changes'] ?? [];
+                    if (isset($ch['quantity'])) {
+                        $parts[] = "кол-во: {$ch['quantity']['old']} → {$ch['quantity']['new']}";
+                    }
+                    if (isset($ch['discount_percent'])) {
+                        $parts[] = "корректировка цены: {$ch['discount_percent']['old']}% → {$ch['discount_percent']['new']}%";
+                    }
+                    if (isset($ch['final_price'])) {
+                        $parts[] = 'цена: '.self::money($ch['final_price']['old']).' → '.self::money($ch['final_price']['new']).' ₽';
+                    }
+                    $rows[] = ['type' => 'action', 'kind' => 'modified', 'label' => 'Изменён',
+                        'text' => "«{$i['product_name']}» — ".implode(', ', $parts)];
+                }
+                if ($log->old_total !== null && $log->new_total !== null
+                    && abs((float) $log->old_total - (float) $log->new_total) > 0.01) {
+                    $rows[] = ['type' => 'diff', 'label' => 'Сумма заказа',
+                        'old' => self::money($log->old_total).' ₽',
+                        'new' => self::money($log->new_total).' ₽'];
+                }
+                break;
+
+            case 'api_shortfall':
+                $rows[] = ['type' => 'note', 'text' => 'Заказ по API принят не в полном объёме'];
+                foreach (($c['not_accepted'] ?? []) as $i) {
+                    $reason = $i['message'] ?? $i['reason'] ?? 'нет в наличии';
+                    $rows[] = ['type' => 'action', 'kind' => 'shortfall', 'label' => 'Не принят',
+                        'text' => "«{$i['product_name']}» — запрошено {$i['requested']} ({$reason})"];
+                }
+                foreach (($c['partial'] ?? []) as $i) {
+                    $rows[] = ['type' => 'action', 'kind' => 'partial', 'label' => 'Частично',
+                        'text' => "«{$i['product_name']}» — запрошено {$i['requested']}, принято {$i['fulfilled']}"];
+                }
+                break;
+        }
+
+        return $rows;
+    }
+
+    private static function fmtNoticeValue(mixed $value): string
+    {
+        return ($value === null || $value === '') ? '—' : (string) $value;
+    }
+
+    private static function money(mixed $value): string
+    {
+        return number_format((float) $value, 2, '.', ' ');
     }
 
     public function order(): BelongsTo
