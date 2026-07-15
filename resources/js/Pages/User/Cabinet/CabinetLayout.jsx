@@ -175,8 +175,7 @@ export default function CabinetLayout({ title, children, actions }) {
                         borderRadius="xl"
                         border="1px solid"
                         borderColor="border.muted"
-                        p="4"
-
+                        p="2"
                     >
                         <SidebarContent currentPath={currentPath} />
                     </Box>
