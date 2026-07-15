@@ -63,8 +63,10 @@ class ErpBusController extends AdminController
      */
     public function index(Request $request): Response
     {
-        // 1. Статус очередей из RabbitMQ Management API
-        $queues = $this->fetchQueuesFromApi();
+        // 1. Статус очередей из RabbitMQ Management API — отложенная загрузка
+        //    (Inertia::defer): страница отдаётся сразу, а обращение к RabbitMQ
+        //    Management API (таймаут до 5с) выполняется отдельным запросом, не
+        //    блокируя первичный рендер.
 
         // 2. Обработанные сообщения с пагинацией и фильтрами
         $processedQuery = ErpProcessedMessage::query()
@@ -114,7 +116,7 @@ class ErpBusController extends AdminController
         $busLoggingEnabled = (bool) config('erp.bus_logging_enabled', false);
 
         return Inertia::render('Admin/Pages/ErpBus/Index', [
-            'queues' => $queues,
+            'queues' => Inertia::defer(fn () => $this->fetchQueuesFromApi()),
             'processed' => $processed,
             'failedJobs' => $failedJobs,
             'eventStats' => $eventStats,

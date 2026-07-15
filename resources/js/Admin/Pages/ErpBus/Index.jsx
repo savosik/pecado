@@ -1,4 +1,4 @@
-import { router, Link } from '@inertiajs/react';
+import { router, Link, Deferred } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, DeleteAllButton } from '@/Admin/Components';
 import {
@@ -112,6 +112,28 @@ const QueueSection = ({ title, icon: SectionIcon, queues, colorPalette }) => {
         </Box>
     );
 };
+
+/**
+ * Заглушка на время отложенной загрузки статуса очередей.
+ */
+const QueuesLoading = () => (
+    <VStack gap={6} align="stretch" mb={8}>
+        {['Входящие (1С → Сайт)', 'DLQ (Мёртвые)', 'Исходящие (Сайт → 1С)', 'Внешние (через shovel)'].map((title) => (
+            <Box key={title}>
+                <HStack gap={2} mb={3} color="fg.muted">
+                    <LuRefreshCw size={16} />
+                    <Text fontSize="sm" fontWeight="medium">{title}</Text>
+                    <Text fontSize="xs">— загрузка статуса…</Text>
+                </HStack>
+                <SimpleGrid columns={{ base: 1, md: 2, lg: 3 }} gap={3}>
+                    {[0, 1, 2].map((i) => (
+                        <Box key={i} h="72px" borderRadius="md" borderWidth="1px" borderColor="border" bg="bg.muted/40" />
+                    ))}
+                </SimpleGrid>
+            </Box>
+        ))}
+    </VStack>
+);
 
 /**
  * Пагинатор.
@@ -281,56 +303,63 @@ export default function Index({ queues, processed, failedJobs, eventStats, event
                 </IconButton>
             </Flex>
 
-            {/* Ошибка подключения */}
-            {hasError && (
-                <Box
-                    bg="red.50"
-                    _dark={{ bg: 'red.900/30' }}
-                    borderWidth="1px"
-                    borderColor="red.200"
-                    _darkBorder={{ borderColor: 'red.700' }}
-                    borderRadius="md"
-                    p={4}
-                    mb={6}
-                >
-                    <HStack gap={2}>
-                        <LuTriangleAlert size={20} color="var(--chakra-colors-red-500)" />
-                        <Text color="red.600" _dark={{ color: 'red.300' }} fontWeight="medium">
-                            {queues.error}
-                        </Text>
-                    </HStack>
-                </Box>
-            )}
+            {/* Статус очередей — отложенная загрузка (Inertia::defer):
+                страница открывается сразу, статус из RabbitMQ подтягивается отдельным
+                запросом, поэтому обращение к Management API не блокирует рендер. */}
+            <Deferred data="queues" fallback={<QueuesLoading />}>
+                <>
+                    {/* Ошибка подключения */}
+                    {hasError && (
+                        <Box
+                            bg="red.50"
+                            _dark={{ bg: 'red.900/30' }}
+                            borderWidth="1px"
+                            borderColor="red.200"
+                            _darkBorder={{ borderColor: 'red.700' }}
+                            borderRadius="md"
+                            p={4}
+                            mb={6}
+                        >
+                            <HStack gap={2}>
+                                <LuTriangleAlert size={20} color="var(--chakra-colors-red-500)" />
+                                <Text color="red.600" _dark={{ color: 'red.300' }} fontWeight="medium">
+                                    {queues?.error}
+                                </Text>
+                            </HStack>
+                        </Box>
+                    )}
 
-            {/* Статус очередей */}
-            {!hasError && queues && (
-                <VStack gap={6} align="stretch" mb={8}>
-                    <QueueSection
-                        title="Входящие (1С → Сайт)"
-                        icon={LuInbox}
-                        queues={queues.incoming || []}
-                        colorPalette="yellow"
-                    />
-                    <QueueSection
-                        title="DLQ (Мёртвые)"
-                        icon={LuSkull}
-                        queues={queues.dlq || []}
-                        colorPalette="red"
-                    />
-                    <QueueSection
-                        title="Исходящие (Сайт → 1С)"
-                        icon={LuSend}
-                        queues={queues.outgoing || []}
-                        colorPalette="blue"
-                    />
-                    <QueueSection
-                        title="Внешние (через shovel)"
-                        icon={LuArrowDownToLine}
-                        queues={queues.external || []}
-                        colorPalette="cyan"
-                    />
-                </VStack>
-            )}
+                    {/* Статус очередей */}
+                    {!hasError && queues && (
+                        <VStack gap={6} align="stretch" mb={8}>
+                            <QueueSection
+                                title="Входящие (1С → Сайт)"
+                                icon={LuInbox}
+                                queues={queues.incoming || []}
+                                colorPalette="yellow"
+                            />
+                            <QueueSection
+                                title="DLQ (Мёртвые)"
+                                icon={LuSkull}
+                                queues={queues.dlq || []}
+                                colorPalette="red"
+                            />
+                            <QueueSection
+                                title="Исходящие (Сайт → 1С)"
+                                icon={LuSend}
+                                queues={queues.outgoing || []}
+                                colorPalette="blue"
+                            />
+                            <QueueSection
+                                title="Внешние (через shovel)"
+                                icon={LuArrowDownToLine}
+                                queues={queues.external || []}
+                                colorPalette="cyan"
+                            />
+                        </VStack>
+                    )}
+                </>
+            </Deferred>
 
             {/* Лог сообщений */}
             <Card.Root mb={6} borderWidth="1px" borderColor="purple.200" _dark={{ borderColor: 'purple.800' }}>
