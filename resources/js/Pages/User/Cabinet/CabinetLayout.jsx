@@ -74,7 +74,7 @@ function SidebarContent({ currentPath }) {
             <Accordion.Root collapsible multiple defaultValue={menuGroups.map((_, i) => `group-${i}`)}>
                 {menuGroups.map((group, gi) => (
                     <Accordion.Item key={gi} value={`group-${gi}`}>
-                        <Accordion.ItemTrigger py="2" px="2">
+                        <Accordion.ItemTrigger py="2" px="1">
                             <Span flex="1" fontSize="xs" fontWeight="700" textTransform="uppercase" letterSpacing="0.05em" color="gray.400">
                                 {group.title}
                             </Span>
@@ -89,20 +89,22 @@ function SidebarContent({ currentPath }) {
                                         return (
                                             <Link key={item.href} href={item.href}>
                                                 <HStack
-                                                    px="3"
-                                                    py="2"
-                                                    borderRadius="lg"
+                                                    gap="2"
+                                                    px="1"
+                                                    py="1.5"
+                                                    borderRadius="md"
                                                     bg={isActive ? 'pecado.50' : 'transparent'}
-                                                    color={isActive ? 'pecado.600' : undefined}
-                                                    _hover={{ bg: isActive ? 'pecado.50' : 'gray.50' }}
+                                                    color={isActive ? 'pecado.600' : 'gray.700'}
+                                                    _hover={{ bg: isActive ? 'pecado.100' : 'gray.50' }}
                                                     _dark={{
-                                                        bg: isActive ? 'pecado.900/20' : 'transparent',
-                                                        _hover: { bg: isActive ? 'pecado.900/20' : 'gray.800' },
+                                                        bg: isActive ? 'pecado.900/30' : 'transparent',
+                                                        color: isActive ? 'pecado.300' : 'gray.300',
+                                                        _hover: { bg: isActive ? 'pecado.900/40' : 'gray.700' },
                                                     }}
                                                     transition="all 0.15s"
                                                 >
                                                     <item.icon size={16} />
-                                                    <Text fontSize="sm" fontWeight={isActive ? '600' : '500'}>{item.label}</Text>
+                                                    <Text fontSize="sm" fontWeight={isActive ? '600' : '400'}>{item.label}</Text>
                                                 </HStack>
                                             </Link>
                                         );
@@ -115,9 +117,9 @@ function SidebarContent({ currentPath }) {
             </Accordion.Root>
 
             <Link href="/logout" method="post" as="button" style={{ width: '100%' }}>
-                <HStack px="3" py="2" borderRadius="lg" _hover={{ bg: 'red.50' }} _dark={{ _hover: { bg: 'red.900/20' } }} color="red.500">
+                <HStack gap="2" px="1" py="1.5" borderRadius="md" _hover={{ bg: 'red.50' }} _dark={{ _hover: { bg: 'red.900/20' } }} color="red.500">
                     <LuLogOut size={16} />
-                    <Text fontSize="sm" fontWeight="500">Выйти</Text>
+                    <Text fontSize="sm" fontWeight="400">Выйти</Text>
                 </HStack>
             </Link>
         </VStack>
