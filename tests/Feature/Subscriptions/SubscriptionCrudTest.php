@@ -67,10 +67,54 @@ class SubscriptionCrudTest extends TestCase
             ->postJson('/cabinet/subscriptions/orders', ['email' => 'dup@example.ru'])
             ->assertCreated();
 
+        // Повторное добавление уже активного адреса — 200, без новой строки.
         $this->actingAs($this->user)
             ->postJson('/cabinet/subscriptions/orders', ['email' => 'dup@example.ru'])
-            ->assertCreated();
+            ->assertOk();
 
+        $this->assertDatabaseCount('entity_subscriptions', 1);
+    }
+
+    #[Test]
+    public function index_excludes_inactive_subscriptions_and_exposes_max(): void
+    {
+        EntitySubscription::create(['user_id' => $this->user->id, 'section' => 'orders', 'channel' => 'email', 'destination' => 'active@example.ru', 'is_active' => true]);
+        EntitySubscription::create(['user_id' => $this->user->id, 'section' => 'orders', 'channel' => 'email', 'destination' => 'off@example.ru', 'is_active' => false]);
+
+        $this->actingAs($this->user)
+            ->getJson('/cabinet/subscriptions/orders')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.destination', 'active@example.ru')
+            ->assertJsonPath('max', 5);
+    }
+
+    #[Test]
+    public function store_rejects_when_limit_of_five_reached(): void
+    {
+        foreach (['a', 'b', 'c', 'd', 'e'] as $p) {
+            EntitySubscription::create(['user_id' => $this->user->id, 'section' => 'orders', 'channel' => 'email', 'destination' => "$p@example.ru", 'is_active' => true]);
+        }
+
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', ['email' => 'sixth@example.ru'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrorFor('email');
+
+        $this->assertDatabaseMissing('entity_subscriptions', ['destination' => 'sixth@example.ru']);
+    }
+
+    #[Test]
+    public function inactive_subscription_can_be_reactivated_within_limit(): void
+    {
+        $sub = EntitySubscription::create(['user_id' => $this->user->id, 'section' => 'orders', 'channel' => 'email', 'destination' => 'back@example.ru', 'is_active' => false]);
+
+        $this->actingAs($this->user)
+            ->postJson('/cabinet/subscriptions/orders', ['email' => 'back@example.ru'])
+            ->assertCreated()
+            ->assertJsonPath('data.is_active', true);
+
+        $this->assertTrue($sub->fresh()->is_active);
         $this->assertDatabaseCount('entity_subscriptions', 1);
     }
 

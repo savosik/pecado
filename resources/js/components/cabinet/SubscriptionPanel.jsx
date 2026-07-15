@@ -22,12 +22,14 @@ export default function SubscriptionPanel({ section, title = 'Подписка �
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
+    const [max, setMax] = useState(5);
 
     const reload = useCallback(async () => {
         setLoading(true);
         try {
             const { data } = await axios.get(`/cabinet/subscriptions/${section}`);
             setSubscriptions((data.data || []).filter((s) => s.channel === 'email'));
+            if (data.max) setMax(data.max);
         } catch (e) {
             console.error('Не удалось загрузить подписки:', e);
             setSubscriptions([]);
@@ -35,6 +37,8 @@ export default function SubscriptionPanel({ section, title = 'Подписка �
             setLoading(false);
         }
     }, [section]);
+
+    const limitReached = subscriptions.length >= max;
 
     useEffect(() => {
         reload();
@@ -81,6 +85,9 @@ export default function SubscriptionPanel({ section, title = 'Подписка �
             <HStack gap="2" mb="1">
                 <Box color="pecado.500"><LuBell size={18} /></Box>
                 <Heading size="md" fontWeight="700">{title}</Heading>
+                <Text fontSize="sm" color="gray.500" fontWeight="500">
+                    {subscriptions.length} из {max}
+                </Text>
             </HStack>
             <Text color="gray.600" _dark={{ color: 'gray.400' }} fontSize="sm" mb="4">
                 {description
@@ -127,6 +134,11 @@ export default function SubscriptionPanel({ section, title = 'Подписка �
             )}
 
             {/* Форма добавления */}
+            {limitReached ? (
+                <Text fontSize="sm" color="gray.500">
+                    Достигнут лимит в {max} адресов. Чтобы добавить новый, удалите один из существующих.
+                </Text>
+            ) : (
             <Box as="form" onSubmit={add}>
                 <Flex gap="2" align="start" direction={{ base: 'column', sm: 'row' }}>
                     <Field flex="1" w="full" invalid={!!error} errorText={error || undefined}>
@@ -154,6 +166,7 @@ export default function SubscriptionPanel({ section, title = 'Подписка �
                     </Button>
                 </Flex>
             </Box>
+            )}
 
             {subscriptions.length === 0 && !loading && (
                 <Text mt="3" fontSize="xs" color="gray.500">
