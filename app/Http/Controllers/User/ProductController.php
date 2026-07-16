@@ -615,7 +615,9 @@ class ProductController extends Controller
             return [
                 'id' => $cert->id,
                 'name' => $cert->name,
-                'url' => $file ? $file->getUrl() : null,
+                // отдаём через контроллер: корректное имя файла с расширением в Content-Disposition
+                'url' => $file ? route('certificates.download', ['certificate' => $cert->id, 'media' => $file->id]) : null,
+                'download_name' => $file ? \App\Support\CertificateFilename::for($cert->name, $file) : null,
             ];
         })->values()->toArray();
 

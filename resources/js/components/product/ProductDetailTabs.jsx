@@ -39,7 +39,7 @@ function isValidSpecValue(val) {
  *   specificationGroups: Array<{name: string, items: Array<{name: string, value: string}>}>,
  *   description: string,
  *   media: Array<{url: string, type: string}>,
- *   certificates: Array<{id: number, name: string, url: string}>,
+ *   certificates: Array<{id: number, name: string, url: string, download_name?: string}>,
  *   sizeChart: {name: string, values: Array<Array<string>>} | null,
  *   similarProducts: Array<Object>
  * }} props
@@ -369,7 +369,7 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
                                 {cert.url && (
                                     <Button
                                         size="sm" variant="outline" w={{ base: '100%', sm: 'auto' }}
-                                        onClick={() => handleDownload(cert.url, cert.name)}
+                                        onClick={() => handleDownload(cert.url, cert.download_name || cert.name)}
                                     >
                                         <LuDownload size={16} />
                                         Скачать
