@@ -12,15 +12,15 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Агрегации по реализациям (отгрузкам) для дашборда «Аналитика»
- * в личном кабинете партнёра.
+ * Агрегации по реализациям (отгрузкам) для дашбордов «Аналитика».
  *
- * Все запросы стартуют с базового скоупа shipments.user_id = $user->id —
- * это единственный источник изоляции данных по пользователю.
+ * Скоуп данных задаётся через AnalyticsContext:
+ *  - кабинет партнёра — один пользователь (shipments.user_id = id, дата отгрузки);
+ *  - CRM менеджер/РОП — набор клиентов (shipments.user_id IN (...), дата документа 1С).
  *
  * Все агрегации идут по shipment_items.total в валюте, конвертированной
- * в RUB через currencies.exchange_rate, далее в PHP конвертируются
- * в валюту региона пользователя через CurrencyService.
+ * в RUB через currencies.exchange_rate, далее в PHP при необходимости
+ * конвертируются в валюту контекста через CurrencyService (в CRM — рубли).
  */
 class ShipmentAnalyticsService
 {
@@ -33,9 +33,9 @@ class ShipmentAnalyticsService
      *
      * @return array<string, int|float>
      */
-    public function metrics(User $user, AnalyticsFilters $filters): array
+    public function metrics(AnalyticsContext $ctx, AnalyticsFilters $filters): array
     {
-        $row = (array) $this->itemsBaseQuery($user, $filters)
+        $row = (array) $this->itemsBaseQuery($ctx, $filters)
             ->selectRaw('
                 COUNT(DISTINCT shipments.id)      AS shipments_count,
                 COALESCE(SUM(shipment_items.quantity), 0) AS items_total_qty,
@@ -46,7 +46,7 @@ class ShipmentAnalyticsService
 
         $totalRub = (float) ($row['total_in_rub'] ?? 0);
         $shipmentsCount = (int) ($row['shipments_count'] ?? 0);
-        $totalConverted = $this->convertFromRub($totalRub, $user);
+        $totalConverted = $this->convertFromRub($totalRub, $ctx);
 
         return [
             'shipments_count' => $shipmentsCount,
@@ -62,9 +62,9 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byBrand(User $user, AnalyticsFilters $filters, int $limit = 50): Collection
+    public function byBrand(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
     {
-        $rows = $this->itemsBaseQuery($user, $filters)
+        $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('products as products_brand', 'products_brand.id', '=', 'shipment_items.product_id')
             ->selectRaw("
                 COALESCE(NULLIF(shipment_items.brand_name_snapshot, ''), 'Без бренда') AS label,
@@ -83,7 +83,7 @@ class ShipmentAnalyticsService
             'key' => (string) $row->label,
             'label' => (string) $row->label,
             'brand_id' => $row->brand_id ? (int) $row->brand_id : null,
-            'amount' => round($this->convertFromRub((float) $row->total_in_rub, $user), 2),
+            'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
             'qty' => (int) $row->qty,
             'shipments_count' => (int) $row->shipments_count,
             'contractors_count' => (int) $row->contractors_count,
@@ -95,9 +95,9 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byCategory(User $user, AnalyticsFilters $filters, int $limit = 50): Collection
+    public function byCategory(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
     {
-        $rows = $this->itemsBaseQuery($user, $filters)
+        $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
             ->selectRaw('
                 products.category_id AS category_id,
@@ -114,7 +114,7 @@ class ShipmentAnalyticsService
         $categoryIds = $rows->pluck('category_id')->filter()->unique()->values()->all();
         $pathById = $this->buildCategoryPaths($categoryIds);
 
-        return $rows->map(function ($row) use ($pathById, $user) {
+        return $rows->map(function ($row) use ($pathById, $ctx) {
             $categoryId = $row->category_id ? (int) $row->category_id : null;
             $label = $categoryId !== null
                 ? ($pathById[$categoryId] ?? ('Категория #'.$categoryId))
@@ -123,7 +123,7 @@ class ShipmentAnalyticsService
             return [
                 'key' => $categoryId !== null ? (string) $categoryId : 'none',
                 'label' => $label,
-                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $user), 2),
+                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
                 'qty' => (int) $row->qty,
                 'shipments_count' => (int) $row->shipments_count,
                 'contractors_count' => (int) $row->contractors_count,
@@ -132,13 +132,13 @@ class ShipmentAnalyticsService
     }
 
     /**
-     * Топ-N контрагентов (юрлиц пользователя).
+     * Топ-N контрагентов (юрлиц).
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byContractor(User $user, AnalyticsFilters $filters, int $limit = 50): Collection
+    public function byContractor(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
     {
-        $rows = $this->itemsBaseQuery($user, $filters)
+        $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('companies', 'companies.id', '=', 'shipments.company_id')
             ->selectRaw('
                 shipments.company_id AS company_id,
@@ -154,7 +154,7 @@ class ShipmentAnalyticsService
             ->limit($limit)
             ->get();
 
-        return $rows->map(function ($row) use ($user) {
+        return $rows->map(function ($row) use ($ctx) {
             $companyId = $row->company_id ? (int) $row->company_id : null;
             $taxId = $row->tax_id ?: null;
 
@@ -169,7 +169,7 @@ class ShipmentAnalyticsService
                 'company_id' => $companyId,
                 'tax_id' => $taxId,
                 'label' => $label,
-                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $user), 2),
+                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
                 'qty' => (int) $row->qty,
                 'shipments_count' => (int) $row->shipments_count,
             ];
@@ -181,9 +181,9 @@ class ShipmentAnalyticsService
      *
      * @return Collection<int, array<string, mixed>>
      */
-    public function byProduct(User $user, AnalyticsFilters $filters, int $limit = 100): Collection
+    public function byProduct(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
     {
-        $rows = $this->itemsBaseQuery($user, $filters)
+        $rows = $this->itemsBaseQuery($ctx, $filters)
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
             ->selectRaw("
                 shipment_items.product_id AS product_id,
@@ -200,14 +200,14 @@ class ShipmentAnalyticsService
             ->limit($limit)
             ->get();
 
-        return $rows->map(function ($row) use ($user) {
+        return $rows->map(function ($row) use ($ctx) {
             return [
                 'key' => $row->product_id ? (string) $row->product_id : 'none',
                 'product_id' => $row->product_id ? (int) $row->product_id : null,
                 'sku' => $row->sku,
                 'slug' => $row->slug,
                 'label' => $row->product_name ?: 'Товар не указан',
-                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $user), 2),
+                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
                 'qty' => (int) $row->qty,
                 'shipments_count' => (int) $row->shipments_count,
                 'contractors_count' => (int) $row->contractors_count,
@@ -216,15 +216,53 @@ class ShipmentAnalyticsService
     }
 
     /**
+     * Топ-N менеджеров по сумме отгрузок их клиентов.
+     * Разрез доступен только в CRM (РОП) — менеджер клиента берётся
+     * через users.personal_manager_id закреплённого за отгрузкой пользователя.
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function byManager(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 100): Collection
+    {
+        $rows = $this->itemsBaseQuery($ctx, $filters)
+            ->join('users as buyer', 'buyer.id', '=', 'shipments.user_id')
+            ->leftJoin('personal_managers as pm', 'pm.id', '=', 'buyer.personal_manager_id')
+            ->selectRaw("
+                COALESCE(pm.id, 0) AS manager_id,
+                COALESCE(NULLIF(pm.name, ''), 'Без менеджера') AS label,
+                COALESCE(SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)), 0) AS total_in_rub,
+                COALESCE(SUM(shipment_items.quantity), 0) AS qty,
+                COUNT(DISTINCT shipments.id) AS shipments_count,
+                COUNT(DISTINCT COALESCE(CAST(shipments.company_id AS CHAR), shipments.tax_id)) AS contractors_count,
+                COUNT(DISTINCT shipments.user_id) AS clients_count
+            ")
+            ->groupBy('manager_id', 'label')
+            ->orderByDesc('total_in_rub')
+            ->limit($limit)
+            ->get();
+
+        return collect($rows)->map(fn ($row) => [
+            'key' => (string) $row->manager_id,
+            'manager_id' => $row->manager_id ? (int) $row->manager_id : null,
+            'label' => (string) $row->label,
+            'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
+            'qty' => (int) $row->qty,
+            'shipments_count' => (int) $row->shipments_count,
+            'contractors_count' => (int) $row->contractors_count,
+            'clients_count' => (int) $row->clients_count,
+        ]);
+    }
+
+    /**
      * Динамика суммы и количества по периоду. Bucket выбирается автоматически.
      *
      * @return array{bucket: string, points: array<int, array<string, mixed>>}
      */
-    public function timeSeries(User $user, AnalyticsFilters $filters): array
+    public function timeSeries(AnalyticsContext $ctx, AnalyticsFilters $filters): array
     {
-        $rowsByDay = $this->itemsBaseQuery($user, $filters)
+        $rowsByDay = $this->itemsBaseQuery($ctx, $filters)
             ->selectRaw('
-                DATE(shipments.date) AS day,
+                DATE('.$ctx->dateColumn.') AS day,
                 COALESCE(SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)), 0) AS total_in_rub,
                 COALESCE(SUM(shipment_items.quantity), 0) AS qty,
                 COUNT(DISTINCT shipments.id) AS shipments_count
@@ -262,10 +300,10 @@ class ShipmentAnalyticsService
 
         ksort($accumulated);
 
-        $points = array_map(function (array $bucketRow) use ($user) {
+        $points = array_map(function (array $bucketRow) use ($ctx) {
             return [
                 'period' => $bucketRow['period'],
-                'amount' => round($this->convertFromRub($bucketRow['amount_rub'], $user), 2),
+                'amount' => round($this->convertFromRub($bucketRow['amount_rub'], $ctx), 2),
                 'qty' => $bucketRow['qty'],
                 'shipments_count' => $bucketRow['shipments_count'],
             ];
@@ -278,7 +316,7 @@ class ShipmentAnalyticsService
     }
 
     /**
-     * Опции для фильтров: компании пользователя, бренды и категории
+     * Опции для фильтров кабинета: компании пользователя, бренды и категории
      * из его реальных отгрузок (без сторонних).
      *
      * @return array{companies: array<int, array<string, mixed>>, brands: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
@@ -333,20 +371,93 @@ class ShipmentAnalyticsService
     }
 
     /**
-     * Базовый JOIN-запрос: shipment_items + shipments + currencies + фильтры пользователя.
+     * Опции для фильтров CRM: бренды, категории и контрагенты из отгрузок
+     * в пределах скоупа (клиентов менеджера/отдела). Менеджеры отдаются отдельно
+     * контроллером (только для РОП).
+     *
+     * @return array{companies: array<int, array<string, mixed>>, brands: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
      */
-    private function itemsBaseQuery(User $user, AnalyticsFilters $filters): Builder
+    public function filterOptionsForScope(AnalyticsContext $ctx): array
+    {
+        if ($ctx->isEmpty()) {
+            return ['companies' => [], 'brands' => [], 'categories' => []];
+        }
+
+        $companies = DB::table('shipments')
+            ->leftJoin('companies', 'companies.id', '=', 'shipments.company_id')
+            ->whereNull('shipments.deleted_at')
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->whereNotNull('shipments.company_id')
+            ->select('companies.id', 'companies.name', 'companies.legal_name', 'companies.tax_id')
+            ->distinct()
+            ->get()
+            ->map(fn ($c) => [
+                'id' => (int) $c->id,
+                'name' => $c->name ?: $c->legal_name ?: ('ИНН '.$c->tax_id),
+                'tax_id' => $c->tax_id,
+            ])
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        $brands = DB::table('shipments')
+            ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
+            ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
+            ->leftJoin('brands', 'brands.id', '=', 'products.brand_id')
+            ->whereNull('shipments.deleted_at')
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->whereNotNull('brands.id')
+            ->select('brands.id', 'brands.name')
+            ->distinct()
+            ->orderBy('brands.name')
+            ->get()
+            ->map(fn ($b) => ['id' => (int) $b->id, 'name' => (string) $b->name])
+            ->all();
+
+        $categoryIds = DB::table('shipments')
+            ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
+            ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
+            ->whereNull('shipments.deleted_at')
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->whereNotNull('products.category_id')
+            ->distinct()
+            ->pluck('products.category_id')
+            ->filter()
+            ->all();
+
+        $pathById = $this->buildCategoryPaths($categoryIds);
+        $categories = collect($pathById)
+            ->map(fn ($path, $id) => ['id' => (int) $id, 'name' => $path])
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        return [
+            'companies' => $companies,
+            'brands' => $brands,
+            'categories' => $categories,
+        ];
+    }
+
+    /**
+     * Базовый JOIN-запрос: shipment_items + shipments + currencies + фильтры.
+     */
+    private function itemsBaseQuery(AnalyticsContext $ctx, AnalyticsFilters $filters): Builder
     {
         $query = DB::table('shipment_items')
             ->join('shipments', 'shipments.id', '=', 'shipment_items.shipment_id')
             ->leftJoin('currencies', 'currencies.code', '=', 'shipments.currency_code')
             ->whereNull('shipments.deleted_at')
-            ->where('shipments.user_id', $user->id)
-            ->where('shipments.date', '>=', $filters->dateFrom->format('Y-m-d H:i:s'))
-            ->where('shipments.date', '<=', $filters->dateTo->format('Y-m-d H:i:s'));
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->where($ctx->dateColumn, '>=', $filters->dateFrom->format('Y-m-d H:i:s'))
+            ->where($ctx->dateColumn, '<=', $filters->dateTo->format('Y-m-d H:i:s'));
 
         if ($filters->companyIds !== []) {
             $query->whereIn('shipments.company_id', $filters->companyIds);
+        }
+
+        if ($filters->productIds !== []) {
+            $query->whereIn('shipment_items.product_id', $filters->productIds);
         }
 
         if ($filters->brandIds !== [] || $filters->categoryIds !== [] || $filters->sku !== null) {
@@ -364,23 +475,6 @@ class ShipmentAnalyticsService
         }
 
         return $query;
-    }
-
-    /**
-     * @param  iterable<object>  $rows
-     */
-    private function formatBreakdown(iterable $rows, User $user): Collection
-    {
-        return collect($rows)->map(function ($row) use ($user) {
-            return [
-                'key' => (string) $row->label,
-                'label' => (string) $row->label,
-                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $user), 2),
-                'qty' => (int) $row->qty,
-                'shipments_count' => (int) $row->shipments_count,
-                'contractors_count' => (int) $row->contractors_count,
-            ];
-        });
     }
 
     /**
@@ -413,9 +507,9 @@ class ShipmentAnalyticsService
         return $result;
     }
 
-    private function convertFromRub(float $amountInRub, User $user): float
+    private function convertFromRub(float $amountInRub, AnalyticsContext $ctx): float
     {
-        $currency = $user->region?->currency;
+        $currency = $ctx->currency;
 
         if (! $currency || $currency->is_base) {
             return $amountInRub;
@@ -437,7 +531,7 @@ class ShipmentAnalyticsService
      *   X ≤25%, Y ≤50%, Z >50% (или активность <3 мес из 12).
      *
      * Период из $filters игнорируется (всегда 12 месяцев — иначе нечего усреднять),
-     * остальные фильтры (компания/бренд/категория/артикул) применяются.
+     * остальные фильтры (компания/бренд/категория/артикул/товары) применяются.
      *
      * @param  'brand'|'category'|'product'  $dimension
      * @return array{
@@ -447,7 +541,7 @@ class ShipmentAnalyticsService
      *   rows: array<int, array<string, mixed>>
      * }
      */
-    public function abcXyz(User $user, string $dimension, ?AnalyticsFilters $filters = null): array
+    public function abcXyz(AnalyticsContext $ctx, string $dimension, ?AnalyticsFilters $filters = null): array
     {
         $end = CarbonImmutable::now()->endOfMonth();
         $start = $end->subMonths(11)->startOfMonth();
@@ -458,7 +552,7 @@ class ShipmentAnalyticsService
         }
 
         // Подменяем период фильтра на фиксированные 12 месяцев,
-        // остальные фильтры (компания/бренд/категория/артикул) сохраняем.
+        // остальные фильтры (компания/бренд/категория/артикул/товары) сохраняем.
         $effectiveFilters = new AnalyticsFilters(
             dateFrom: $start->startOfDay(),
             dateTo: $end->endOfDay(),
@@ -466,11 +560,12 @@ class ShipmentAnalyticsService
             brandIds: $filters?->brandIds ?? [],
             categoryIds: $filters?->categoryIds ?? [],
             sku: $filters?->sku,
+            productIds: $filters?->productIds ?? [],
         );
 
-        $rows = $this->fetchDimensionMonthly($user, $dimension, $effectiveFilters);
+        $rows = $this->fetchDimensionMonthly($ctx, $dimension, $effectiveFilters);
 
-        // Конвертация суммы в валюту пользователя выполняется уже в этом методе
+        // Конвертация суммы в валюту контекста выполняется уже в этом методе
         // через JOIN на currencies (см. fetchDimensionMonthly).
 
         $totalAll = array_sum(array_column($rows, 'total_amount'));
@@ -478,8 +573,8 @@ class ShipmentAnalyticsService
             return [
                 'dimension' => $dimension,
                 'currency' => [
-                    'code' => $this->userCurrency($user)?->code ?? 'RUB',
-                    'symbol' => $this->userCurrency($user)?->symbol ?? '₽',
+                    'code' => $ctx->currency?->code ?? 'RUB',
+                    'symbol' => $ctx->currency?->symbol ?? '₽',
                 ],
                 'matrix' => [],
                 'rows' => [],
@@ -539,8 +634,8 @@ class ShipmentAnalyticsService
         return [
             'dimension' => $dimension,
             'currency' => [
-                'code' => $this->userCurrency($user)?->code ?? 'RUB',
-                'symbol' => $this->userCurrency($user)?->symbol ?? '₽',
+                'code' => $ctx->currency?->code ?? 'RUB',
+                'symbol' => $ctx->currency?->symbol ?? '₽',
             ],
             'matrix' => $matrix,
             'months' => $monthsTimeline,
@@ -554,11 +649,12 @@ class ShipmentAnalyticsService
      * @return array<int, array<string, mixed>>
      */
     private function fetchDimensionMonthly(
-        User $user,
+        AnalyticsContext $ctx,
         string $dimension,
         AnalyticsFilters $filters,
     ): array {
-        $base = $this->itemsBaseQuery($user, $filters);
+        $base = $this->itemsBaseQuery($ctx, $filters);
+        $dateExpr = 'DATE('.$ctx->dateColumn.')';
 
         // Группировка по day, чтобы кросс-DB (SQLite + MySQL) — потом сворачиваем в месяцы в PHP.
         switch ($dimension) {
@@ -568,7 +664,7 @@ class ShipmentAnalyticsService
                     ->selectRaw("
                         COALESCE(NULLIF(shipment_items.brand_name_snapshot, ''), 'Без бренда') AS dim_key,
                         MAX(products_brand.brand_id) AS dim_extra_id,
-                        DATE(shipments.date) AS day,
+                        {$dateExpr} AS day,
                         SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)) AS total_in_rub,
                         SUM(shipment_items.quantity) AS qty
                     ")
@@ -579,12 +675,12 @@ class ShipmentAnalyticsService
             case 'category':
                 $rawRows = $base
                     ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
-                    ->selectRaw('
+                    ->selectRaw("
                         products.category_id AS dim_key,
-                        DATE(shipments.date) AS day,
+                        {$dateExpr} AS day,
                         SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)) AS total_in_rub,
                         SUM(shipment_items.quantity) AS qty
-                    ')
+                    ")
                     ->groupBy('products.category_id', 'day')
                     ->get();
                 break;
@@ -597,7 +693,7 @@ class ShipmentAnalyticsService
                         COALESCE(NULLIF(shipment_items.product_name_snapshot, ''), MAX(products.name)) AS dim_label,
                         MAX(products.sku) AS sku,
                         MAX(products.slug) AS slug,
-                        DATE(shipments.date) AS day,
+                        {$dateExpr} AS day,
                         SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)) AS total_in_rub,
                         SUM(shipment_items.quantity) AS qty
                     ")
@@ -617,7 +713,7 @@ class ShipmentAnalyticsService
             if (! $monthKey) {
                 continue;
             }
-            $amount = $this->convertFromRub((float) $r->total_in_rub, $user);
+            $amount = $this->convertFromRub((float) $r->total_in_rub, $ctx);
             $qty = (int) $r->qty;
 
             if (! isset($byKey[$key])) {
@@ -702,13 +798,13 @@ class ShipmentAnalyticsService
      *
      * @return array<string, mixed>
      */
-    public function insights(User $user, AnalyticsFilters $filters): array
+    public function insights(AnalyticsContext $ctx, AnalyticsFilters $filters): array
     {
         return [
-            'pareto' => $this->paretoProducts($user, $filters),
-            'rising' => $this->trendBrands($user, $filters, 'up'),
-            'falling' => $this->trendBrands($user, $filters, 'down'),
-            'reorder' => $this->reorderSuggestions($user, $filters),
+            'pareto' => $this->paretoProducts($ctx, $filters),
+            'rising' => $this->trendBrands($ctx, $filters, 'up'),
+            'falling' => $this->trendBrands($ctx, $filters, 'down'),
+            'reorder' => $this->reorderSuggestions($ctx, $filters),
         ];
     }
 
@@ -717,9 +813,9 @@ class ShipmentAnalyticsService
      *
      * @return array<int, array<string, mixed>>
      */
-    private function paretoProducts(User $user, AnalyticsFilters $filters): array
+    private function paretoProducts(AnalyticsContext $ctx, AnalyticsFilters $filters): array
     {
-        $products = $this->byProduct($user, $filters, 200);
+        $products = $this->byProduct($ctx, $filters, 200);
         $total = $products->sum('amount');
         if ($total <= 0) {
             return [];
@@ -755,22 +851,12 @@ class ShipmentAnalyticsService
      * @param  'up'|'down'  $direction
      * @return array<int, array<string, mixed>>
      */
-    private function trendBrands(User $user, AnalyticsFilters $filters, string $direction, int $limit = 5): array
+    private function trendBrands(AnalyticsContext $ctx, AnalyticsFilters $filters, string $direction, int $limit = 5): array
     {
-        $current = $this->byBrand($user, $filters, 100)->keyBy('label');
+        $current = $this->byBrand($ctx, $filters, 100)->keyBy('label');
 
-        $periodDays = (int) $filters->dateFrom->diffInDays($filters->dateTo) + 1;
-        $prevTo = $filters->dateFrom->subSecond();
-        $prevFrom = $prevTo->subDays($periodDays - 1)->startOfDay();
-        $prevFilters = new AnalyticsFilters(
-            dateFrom: $prevFrom,
-            dateTo: $prevTo,
-            companyIds: $filters->companyIds,
-            brandIds: $filters->brandIds,
-            categoryIds: $filters->categoryIds,
-            sku: $filters->sku,
-        );
-        $previous = $this->byBrand($user, $prevFilters, 100)->keyBy('label');
+        $prevFilters = $filters->previousPeriod();
+        $previous = $this->byBrand($ctx, $prevFilters, 100)->keyBy('label');
 
         $totalCurrent = (float) $current->sum('amount');
         $minBaseline = max(1.0, $totalCurrent * 0.005); // отсекаем шум: бренд должен давать ≥0.5% оборота
@@ -828,8 +914,12 @@ class ShipmentAnalyticsService
      *
      * @return array<int, array<string, mixed>>
      */
-    private function reorderSuggestions(User $user, AnalyticsFilters $filters, int $limit = 10): array
+    private function reorderSuggestions(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 10): array
     {
+        if ($ctx->isEmpty()) {
+            return [];
+        }
+
         // Анализируем годовой горизонт независимо от выбранного периода —
         // блок про общую регулярность закупа, а не про текущий месяц.
         $since = CarbonImmutable::now()->subYear()->toDateString();
@@ -838,16 +928,16 @@ class ShipmentAnalyticsService
             ->join('shipment_items', 'shipment_items.shipment_id', '=', 'shipments.id')
             ->leftJoin('products', 'products.id', '=', 'shipment_items.product_id')
             ->whereNull('shipments.deleted_at')
-            ->where('shipments.user_id', $user->id)
-            ->where('shipments.date', '>=', $since)
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->where($ctx->dateColumn, '>=', $since)
             ->whereNotNull('shipment_items.product_id')
             ->selectRaw('
                 shipment_items.product_id              AS product_id,
                 MAX(products.name)                     AS product_name,
                 MAX(products.sku)                      AS sku,
                 MAX(products.slug)                     AS slug,
-                MIN(shipments.date)                    AS first_date,
-                MAX(shipments.date)                    AS last_date,
+                MIN('.$ctx->dateColumn.')              AS first_date,
+                MAX('.$ctx->dateColumn.')              AS last_date,
                 COUNT(DISTINCT shipments.id)           AS shipments_count,
                 SUM(shipment_items.quantity)           AS total_qty
             ')
@@ -859,6 +949,9 @@ class ShipmentAnalyticsService
         $candidates = [];
 
         foreach ($rows as $r) {
+            if (! $r->first_date || ! $r->last_date) {
+                continue;
+            }
             $first = CarbonImmutable::parse($r->first_date);
             $last = CarbonImmutable::parse($r->last_date);
             $daysSpan = max(1, (int) $first->diffInDays($last));

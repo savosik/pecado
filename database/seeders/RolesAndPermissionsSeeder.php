@@ -75,6 +75,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-clients' => ['view', 'edit'],
         'crm-clients-all' => ['view'],
         'crm-team' => ['view'],
+        'crm-analytics' => ['view'],
 
         // Система
         'erp-bus' => ['view'],
@@ -131,6 +132,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-clients' => 'CRM: Мои клиенты',
         'crm-clients-all' => 'CRM: Клиенты всего отдела',
         'crm-team' => 'CRM: Команда',
+        'crm-analytics' => 'CRM: Отчёты продаж',
         'erp-bus' => 'Шина ERP',
         'media' => 'Медиа',
         'settings' => 'Настройки',
@@ -159,7 +161,7 @@ class RolesAndPermissionsSeeder extends Seeder
                 'orders', 'carts', 'returns', 'shipments',
                 'favorites', 'wishlist',
                 // CRM: свои клиенты (те, что закреплены за его карточкой менеджера)
-                'crm-dashboard', 'crm-clients',
+                'crm-dashboard', 'crm-clients', 'crm-analytics',
             ],
         ],
         'sales-manager-crm' => [
@@ -167,14 +169,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
                 // Для менеджеров, которым нужны свои клиенты, но не нужна админка.
-                'crm-dashboard', 'crm-clients',
+                'crm-dashboard', 'crm-clients', 'crm-analytics',
             ],
         ],
         'sales-head' => [
             'label' => 'Руководитель отдела продаж',
             'resources' => [
                 // Только CRM: в /admin роль намеренно не пускает.
-                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team',
+                'crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics',
             ],
         ],
         'catalogist' => [

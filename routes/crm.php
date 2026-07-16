@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Crm\AnalyticsController;
 use App\Http\Controllers\Crm\ClientController;
 use App\Http\Controllers\Crm\DashboardController;
 use App\Http\Controllers\Crm\TeamController;
@@ -33,5 +34,12 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
 
     Route::middleware('permission:crm-team.view')->group(function () {
         Route::get('/team', [TeamController::class, 'index'])->name('team.index');
+    });
+
+    Route::middleware('permission:crm-analytics.view')->group(function () {
+        Route::get('/analytics', [AnalyticsController::class, 'index'])->name('analytics.index');
+        Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
+        Route::get('/analytics/abc-xyz', [AnalyticsController::class, 'abcXyz'])->name('analytics.abc-xyz');
+        Route::get('/analytics/export', [AnalyticsController::class, 'export'])->name('analytics.export');
     });
 });

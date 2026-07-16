@@ -16,6 +16,7 @@ class AnalyticsFilters
      * @param  array<int, int>  $companyIds
      * @param  array<int, int>  $brandIds
      * @param  array<int, int>  $categoryIds
+     * @param  array<int, int>  $productIds
      */
     public function __construct(
         public readonly CarbonImmutable $dateFrom,
@@ -24,9 +25,74 @@ class AnalyticsFilters
         public readonly array $brandIds = [],
         public readonly array $categoryIds = [],
         public readonly ?string $sku = null,
+        public readonly array $productIds = [],
     ) {}
 
+    /**
+     * Фильтры кабинета: company_ids валидируются по принадлежности пользователю.
+     */
     public static function fromRequest(Request $request, User $user): self
+    {
+        [$dateFrom, $dateTo] = self::resolveRange($request);
+        $userCompanyIds = $user->companies()->pluck('id')->all();
+
+        return new self(
+            dateFrom: $dateFrom,
+            dateTo: $dateTo,
+            companyIds: self::intersectIds($request->input('company_ids', []), $userCompanyIds),
+            brandIds: self::sanitizeIds($request->input('brand_ids', [])),
+            categoryIds: self::sanitizeIds($request->input('category_ids', [])),
+            sku: self::sanitizeSku($request->input('sku')),
+            productIds: self::sanitizeIds($request->input('product_ids', [])),
+        );
+    }
+
+    /**
+     * Фильтры CRM: изоляция обеспечивается скоупом клиентов (AnalyticsContext),
+     * поэтому company_ids не пересекаются с чьими-либо юрлицами — id вне скоупа
+     * просто не дадут строк. Разрез по менеджерам ограничивает состав скоупа
+     * на стороне контроллера, здесь его нет.
+     */
+    public static function fromScopeRequest(Request $request): self
+    {
+        [$dateFrom, $dateTo] = self::resolveRange($request);
+
+        return new self(
+            dateFrom: $dateFrom,
+            dateTo: $dateTo,
+            companyIds: self::sanitizeIds($request->input('company_ids', [])),
+            brandIds: self::sanitizeIds($request->input('brand_ids', [])),
+            categoryIds: self::sanitizeIds($request->input('category_ids', [])),
+            sku: self::sanitizeSku($request->input('sku')),
+            productIds: self::sanitizeIds($request->input('product_ids', [])),
+        );
+    }
+
+    /**
+     * Предыдущий период такой же длины, вплотную до начала текущего
+     * (стандартное «предыдущий период» аналитических дашбордов).
+     */
+    public function previousPeriod(): self
+    {
+        $days = $this->periodDays();
+        $prevTo = $this->dateFrom->subSecond();
+        $prevFrom = $prevTo->subDays($days - 1)->startOfDay();
+
+        return new self(
+            dateFrom: $prevFrom,
+            dateTo: $prevTo,
+            companyIds: $this->companyIds,
+            brandIds: $this->brandIds,
+            categoryIds: $this->categoryIds,
+            sku: $this->sku,
+            productIds: $this->productIds,
+        );
+    }
+
+    /**
+     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
+     */
+    private static function resolveRange(Request $request): array
     {
         $dateFrom = self::parseDate($request->input('date_from'))
             ?? CarbonImmutable::now()->startOfMonth();
@@ -37,16 +103,7 @@ class AnalyticsFilters
             [$dateFrom, $dateTo] = [$dateTo, $dateFrom];
         }
 
-        $userCompanyIds = $user->companies()->pluck('id')->all();
-
-        return new self(
-            dateFrom: $dateFrom->startOfDay(),
-            dateTo: $dateTo->endOfDay(),
-            companyIds: self::intersectIds($request->input('company_ids', []), $userCompanyIds),
-            brandIds: self::sanitizeIds($request->input('brand_ids', [])),
-            categoryIds: self::sanitizeIds($request->input('category_ids', [])),
-            sku: self::sanitizeSku($request->input('sku')),
-        );
+        return [$dateFrom->startOfDay(), $dateTo->endOfDay()];
     }
 
     public function periodDays(): int
@@ -81,6 +138,7 @@ class AnalyticsFilters
             'brand_ids' => $this->brandIds,
             'category_ids' => $this->categoryIds,
             'sku' => $this->sku,
+            'product_ids' => $this->productIds,
         ];
     }
 

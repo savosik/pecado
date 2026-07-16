@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Services\Analytics\AnalyticsContext;
 use App\Services\Analytics\AnalyticsFilters;
 use App\Services\Analytics\ShipmentAnalyticsService;
 use App\Services\SimpleXlsxExporter;
@@ -25,9 +26,10 @@ class AnalyticsController extends Controller
     public function index(Request $request): InertiaResponse
     {
         $user = $request->user();
+        $ctx = AnalyticsContext::forUser($user);
         $filters = AnalyticsFilters::fromRequest($request, $user);
 
-        $payload = $this->buildPayload($user, $filters);
+        $payload = $this->buildPayload($ctx, $filters);
 
         return Inertia::render('User/Cabinet/Analytics/Index', [
             'initial' => $payload,
@@ -42,9 +44,10 @@ class AnalyticsController extends Controller
     public function data(Request $request): JsonResponse
     {
         $user = $request->user();
+        $ctx = AnalyticsContext::forUser($user);
         $filters = AnalyticsFilters::fromRequest($request, $user);
 
-        return response()->json($this->buildPayload($user, $filters));
+        return response()->json($this->buildPayload($ctx, $filters));
     }
 
     /**
@@ -54,6 +57,7 @@ class AnalyticsController extends Controller
     public function abcXyz(Request $request): JsonResponse
     {
         $user = $request->user();
+        $ctx = AnalyticsContext::forUser($user);
         $dimension = (string) $request->input('dimension', 'brand');
         if (! in_array($dimension, ['brand', 'category', 'product'], true)) {
             $dimension = 'brand';
@@ -61,7 +65,7 @@ class AnalyticsController extends Controller
 
         $filters = AnalyticsFilters::fromRequest($request, $user);
 
-        return response()->json($this->analytics->abcXyz($user, $dimension, $filters));
+        return response()->json($this->analytics->abcXyz($ctx, $dimension, $filters));
     }
 
     /**
@@ -73,27 +77,28 @@ class AnalyticsController extends Controller
     public function export(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
     {
         $user = $request->user();
+        $ctx = AnalyticsContext::forUser($user);
         $filters = AnalyticsFilters::fromRequest($request, $user);
         $currencyCode = $this->analytics->userCurrency($user)?->code ?? 'RUB';
         $section = (string) $request->input('section', '');
 
         if ($section === '') {
-            return $this->exportAll($user, $filters, $currencyCode, $exporter);
+            return $this->exportAll($ctx, $filters, $currencyCode, $exporter);
         }
 
-        return $this->exportSection($user, $filters, $currencyCode, $section, $exporter);
+        return $this->exportSection($ctx, $filters, $currencyCode, $section, $exporter);
     }
 
-    private function exportAll($user, AnalyticsFilters $filters, string $currencyCode, SimpleXlsxExporter $exporter): StreamedResponse
+    private function exportAll(AnalyticsContext $ctx, AnalyticsFilters $filters, string $currencyCode, SimpleXlsxExporter $exporter): StreamedResponse
     {
         $headers = ['Группировка', 'Значение', 'Сумма', 'Штук', 'Поставок', 'Контрагентов', 'Валюта'];
         $rows = [];
 
         $sections = [
-            'Бренд' => $this->analytics->byBrand($user, $filters),
-            'Категория' => $this->analytics->byCategory($user, $filters),
-            'Контрагент' => $this->analytics->byContractor($user, $filters),
-            'Товар' => $this->analytics->byProduct($user, $filters),
+            'Бренд' => $this->analytics->byBrand($ctx, $filters),
+            'Категория' => $this->analytics->byCategory($ctx, $filters),
+            'Контрагент' => $this->analytics->byContractor($ctx, $filters),
+            'Товар' => $this->analytics->byProduct($ctx, $filters),
         ];
 
         foreach ($sections as $sectionLabel => $items) {
@@ -113,12 +118,12 @@ class AnalyticsController extends Controller
         return $exporter->stream('analytics-'.now()->format('Y-m-d-His'), $headers, $rows, 'Аналитика');
     }
 
-    private function exportSection($user, AnalyticsFilters $filters, string $currencyCode, string $section, SimpleXlsxExporter $exporter): StreamedResponse
+    private function exportSection(AnalyticsContext $ctx, AnalyticsFilters $filters, string $currencyCode, string $section, SimpleXlsxExporter $exporter): StreamedResponse
     {
         [$title, $items, $headers, $mapper] = match ($section) {
             'brands' => [
                 'Бренды',
-                $this->analytics->byBrand($user, $filters),
+                $this->analytics->byBrand($ctx, $filters),
                 ['Бренд', 'Поставок', 'Контрагентов', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -131,7 +136,7 @@ class AnalyticsController extends Controller
             ],
             'categories' => [
                 'Категории',
-                $this->analytics->byCategory($user, $filters),
+                $this->analytics->byCategory($ctx, $filters),
                 ['Категория', 'Поставок', 'Контрагентов', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -144,7 +149,7 @@ class AnalyticsController extends Controller
             ],
             'contractors' => [
                 'Контрагенты',
-                $this->analytics->byContractor($user, $filters),
+                $this->analytics->byContractor($ctx, $filters),
                 ['Контрагент', 'ИНН', 'Поставок', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -157,7 +162,7 @@ class AnalyticsController extends Controller
             ],
             'products' => [
                 'Товары',
-                $this->analytics->byProduct($user, $filters),
+                $this->analytics->byProduct($ctx, $filters),
                 ['Товар', 'Артикул', 'Поставок', 'Контрагентов', 'Штук', 'Сумма', 'Валюта'],
                 fn ($r) => [
                     $r['label'] ?? '',
@@ -181,9 +186,9 @@ class AnalyticsController extends Controller
     /**
      * @return array<string, mixed>
      */
-    private function buildPayload($user, AnalyticsFilters $filters): array
+    private function buildPayload(AnalyticsContext $ctx, AnalyticsFilters $filters): array
     {
-        $currency = $this->analytics->userCurrency($user);
+        $currency = $ctx->currency;
 
         return [
             'filters' => $filters->toArray(),
@@ -191,13 +196,13 @@ class AnalyticsController extends Controller
                 'code' => $currency?->code ?? 'RUB',
                 'symbol' => $currency?->symbol ?? '₽',
             ],
-            'metrics' => $this->analytics->metrics($user, $filters),
-            'insights' => $this->analytics->insights($user, $filters),
-            'time_series' => $this->analytics->timeSeries($user, $filters),
-            'by_brand' => $this->analytics->byBrand($user, $filters),
-            'by_category' => $this->analytics->byCategory($user, $filters),
-            'by_contractor' => $this->analytics->byContractor($user, $filters),
-            'by_product' => $this->analytics->byProduct($user, $filters),
+            'metrics' => $this->analytics->metrics($ctx, $filters),
+            'insights' => $this->analytics->insights($ctx, $filters),
+            'time_series' => $this->analytics->timeSeries($ctx, $filters),
+            'by_brand' => $this->analytics->byBrand($ctx, $filters),
+            'by_category' => $this->analytics->byCategory($ctx, $filters),
+            'by_contractor' => $this->analytics->byContractor($ctx, $filters),
+            'by_product' => $this->analytics->byProduct($ctx, $filters),
         ];
     }
 }

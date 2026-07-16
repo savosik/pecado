@@ -160,7 +160,7 @@ function ClickableLabel({ row, dimension, onApplyFilter }) {
     );
 }
 
-export default function AbcXyzPanel({ filters = {}, onApplyFilter }) {
+export default function AbcXyzPanel({ filters = {}, onApplyFilter, endpoint = '/cabinet/analytics/abc-xyz' }) {
     const [dimension, setDimension] = useState('brand');
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -175,15 +175,17 @@ export default function AbcXyzPanel({ filters = {}, onApplyFilter }) {
         if (filters.company_ids?.length) p['company_ids'] = filters.company_ids;
         if (filters.brand_ids?.length) p['brand_ids'] = filters.brand_ids;
         if (filters.category_ids?.length) p['category_ids'] = filters.category_ids;
+        if (filters.product_ids?.length) p['product_ids'] = filters.product_ids;
+        if (filters.manager_ids?.length) p['manager_ids'] = filters.manager_ids;
         if (filters.sku) p.sku = filters.sku;
         return p;
-    }, [dimension, filters.company_ids, filters.brand_ids, filters.category_ids, filters.sku]);
+    }, [dimension, filters.company_ids, filters.brand_ids, filters.category_ids, filters.product_ids, filters.manager_ids, filters.sku]);
 
     const load = useCallback(async (params) => {
         setLoading(true);
         setError(null);
         try {
-            const res = await axios.get('/cabinet/analytics/abc-xyz', { params });
+            const res = await axios.get(endpoint, { params });
             setData(res.data);
             setCellFilter(null);
         } catch (e) {
@@ -191,7 +193,7 @@ export default function AbcXyzPanel({ filters = {}, onApplyFilter }) {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [endpoint]);
 
     useEffect(() => {
         load(requestParams);
