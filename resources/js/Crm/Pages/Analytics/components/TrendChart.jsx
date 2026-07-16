@@ -1,12 +1,9 @@
-import { Box, HStack, Text, Badge } from '@chakra-ui/react';
+import { Box, HStack, Text, Badge, VStack } from '@chakra-ui/react';
 import {
     AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 
-const fmtMoney = (v) => Number(v ?? 0).toLocaleString('ru-RU', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-});
+const fmtMoney = (v) => Number(v ?? 0).toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 const fmtInt = (v) => Number(v ?? 0).toLocaleString('ru-RU');
 const fmtCompact = (v) => {
     const n = Number(v ?? 0);
@@ -24,36 +21,83 @@ const bucketLabel = { day: 'по дням', week: 'по неделям', month: 
 function formatPeriodTick(period, bucket) {
     const d = new Date(period);
     if (Number.isNaN(d.getTime())) return period;
-    if (bucket === 'month') {
-        return d.toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' });
-    }
+    if (bucket === 'month') return d.toLocaleDateString('ru-RU', { month: 'short', year: '2-digit' });
     return d.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
 }
 
-function CustomTooltip({ active, payload, label, bucket, currencySymbol }) {
-    if (!active || !payload || payload.length === 0) return null;
-    const date = formatPeriodTick(label, bucket);
+function makeTooltip(bucket, kind, symbol) {
+    return function CustomTooltip({ active, payload, label }) {
+        if (!active || !payload || payload.length === 0) return null;
+        return (
+            <Box bg="bg" borderWidth="1px" borderColor="border" borderRadius="md" p={2} boxShadow="md">
+                <Text fontSize="xs" color="fg.muted" mb={1}>{formatPeriodTick(label, bucket)}</Text>
+                {payload.map((p) => (
+                    <HStack key={p.dataKey} gap={2} fontSize="sm">
+                        <Box w="8px" h="8px" borderRadius="full" bg={p.color} />
+                        <Text fontWeight="600">{p.name}:</Text>
+                        <Text>{kind === 'money' ? `${fmtMoney(p.value)} ${symbol}` : fmtInt(p.value)}</Text>
+                    </HStack>
+                ))}
+            </Box>
+        );
+    };
+}
+
+function SingleChart({ title, data, kind, color, gradientId, currencySymbol, bucket, hasPrev }) {
+    const dataKey = kind === 'money' ? 'amount' : 'qty';
+    const prevKey = kind === 'money' ? 'prevAmount' : 'prevQty';
+    const Tip = makeTooltip(bucket, kind, currencySymbol);
+
     return (
-        <Box bg="bg" borderWidth="1px" borderColor="border" borderRadius="md" p={2} boxShadow="md">
-            <Text fontSize="xs" color="fg.muted" mb={1}>{date}</Text>
-            {payload.map((p) => (
-                <HStack key={p.dataKey} gap={2} fontSize="sm">
-                    <Box w="8px" h="8px" borderRadius="full" bg={p.color} />
-                    <Text fontWeight="600">{p.name}:</Text>
-                    <Text>
-                        {p.dataKey === 'qty'
-                            ? fmtInt(p.value)
-                            : `${fmtMoney(p.value)} ${currencySymbol}`}
-                    </Text>
-                </HStack>
-            ))}
+        <Box bg="bg.panel" borderRadius="xl" borderWidth="1px" borderColor="border" p={4}>
+            <HStack justify="space-between" mb={3}>
+                <Text fontWeight="600">{title} ({bucketLabel[bucket] || ''})</Text>
+                {hasPrev && <Badge colorPalette="gray" variant="subtle">сравнение с прошлым периодом</Badge>}
+            </HStack>
+            <Box w="100%" h="240px">
+                <ResponsiveContainer>
+                    <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
+                        <defs>
+                            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                                <stop offset="100%" stopColor={color} stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="period" tickFormatter={(v) => formatPeriodTick(v, bucket)} fontSize={11} />
+                        <YAxis tickFormatter={fmtCompact} fontSize={11} width={70} />
+                        <Tooltip content={<Tip />} />
+                        <Legend />
+                        <Area
+                            type="monotone"
+                            dataKey={dataKey}
+                            name={kind === 'money' ? 'Сумма' : 'Штук'}
+                            stroke={color}
+                            strokeWidth={2}
+                            fill={`url(#${gradientId})`}
+                        />
+                        {hasPrev && (
+                            <Line
+                                type="monotone"
+                                dataKey={prevKey}
+                                name="Прошлый период"
+                                stroke="#9ca3af"
+                                strokeWidth={2}
+                                strokeDasharray="5 4"
+                                dot={false}
+                                connectNulls
+                            />
+                        )}
+                    </AreaChart>
+                </ResponsiveContainer>
+            </Box>
         </Box>
     );
 }
 
 /**
- * Динамика отгрузок. При наличии previousSeries накладывает пунктиром
- * сумму за предыдущий сопоставимый период (выравнивание по позиции точки).
+ * Два отдельных графика динамики (сумма и штук), один под другим.
+ * previousSeries (при наличии) накладывается пунктиром на каждый.
  */
 export default function TrendChart({ timeSeries, currency, previousSeries = null }) {
     const points = timeSeries?.points ?? [];
@@ -70,75 +114,35 @@ export default function TrendChart({ timeSeries, currency, previousSeries = null
         );
     }
 
-    // Выравниваем прошлый период по позиции точки (даты разные, сопоставляем по порядку).
+    // Прошлый период выравниваем по позиции точки (даты разные, сопоставляем по порядку).
     const data = points.map((pt, i) => ({
         ...pt,
         prevAmount: hasPrev ? (prevPoints[i]?.amount ?? null) : null,
+        prevQty: hasPrev ? (prevPoints[i]?.qty ?? null) : null,
     }));
 
     return (
-        <Box bg="bg.panel" borderRadius="xl" borderWidth="1px" borderColor="border" p={4}>
-            <HStack justify="space-between" mb={3}>
-                <Text fontWeight="600">Динамика отгрузок ({bucketLabel[bucket] || ''})</Text>
-                {hasPrev && <Badge colorPalette="gray" variant="subtle">сравнение с прошлым периодом</Badge>}
-            </HStack>
-            <Box w="100%" h="280px">
-                <ResponsiveContainer>
-                    <AreaChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                        <defs>
-                            <linearGradient id="crmAmountFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#9e1b32" stopOpacity={0.4} />
-                                <stop offset="100%" stopColor="#9e1b32" stopOpacity={0} />
-                            </linearGradient>
-                            <linearGradient id="crmQtyFill" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                            </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                        <XAxis
-                            dataKey="period"
-                            tickFormatter={(v) => formatPeriodTick(v, bucket)}
-                            fontSize={11}
-                        />
-                        <YAxis yAxisId="left" tickFormatter={fmtCompact} fontSize={11} width={70} />
-                        <YAxis yAxisId="right" orientation="right" tickFormatter={fmtCompact} fontSize={11} width={60} />
-                        <Tooltip content={<CustomTooltip bucket={bucket} currencySymbol={symbol} />} />
-                        <Legend />
-                        <Area
-                            yAxisId="left"
-                            type="monotone"
-                            dataKey="amount"
-                            name="Сумма"
-                            stroke="#9e1b32"
-                            strokeWidth={2}
-                            fill="url(#crmAmountFill)"
-                        />
-                        {hasPrev && (
-                            <Line
-                                yAxisId="left"
-                                type="monotone"
-                                dataKey="prevAmount"
-                                name="Сумма (прошлый период)"
-                                stroke="#9ca3af"
-                                strokeWidth={2}
-                                strokeDasharray="5 4"
-                                dot={false}
-                                connectNulls
-                            />
-                        )}
-                        <Area
-                            yAxisId="right"
-                            type="monotone"
-                            dataKey="qty"
-                            name="Штук"
-                            stroke="#3b82f6"
-                            strokeWidth={2}
-                            fill="url(#crmQtyFill)"
-                        />
-                    </AreaChart>
-                </ResponsiveContainer>
-            </Box>
-        </Box>
+        <VStack align="stretch" gap={4}>
+            <SingleChart
+                title="Динамика по сумме"
+                data={data}
+                kind="money"
+                color="#9e1b32"
+                gradientId="crmTrendAmount"
+                currencySymbol={symbol}
+                bucket={bucket}
+                hasPrev={hasPrev}
+            />
+            <SingleChart
+                title="Динамика по количеству"
+                data={data}
+                kind="qty"
+                color="#3b82f6"
+                gradientId="crmTrendQty"
+                currencySymbol={symbol}
+                bucket={bucket}
+                hasPrev={hasPrev}
+            />
+        </VStack>
     );
 }

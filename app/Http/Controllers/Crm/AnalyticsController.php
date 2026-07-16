@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Crm;
 
 use App\Models\PersonalManager;
+use App\Models\Product;
 use App\Models\User;
 use App\Services\Analytics\AnalyticsContext;
 use App\Services\Analytics\AnalyticsFilters;
@@ -119,6 +120,34 @@ class AnalyticsController extends CrmController
         }
 
         return $exporter->stream('crm-analytics-'.now()->format('Y-m-d-His'), $headers, $rows, 'Отчёт продаж');
+    }
+
+    /**
+     * Поиск товаров для фильтра отчёта (CRM-доступный аналог admin.products.search).
+     * GET /crm/products/search?query=...
+     */
+    public function searchProducts(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->input('query', ''));
+
+        if ($query === '') {
+            return response()->json([]);
+        }
+
+        $products = Product::search($query)
+            ->query(fn ($q) => $q->with(['media', 'brand'])->limit(20))
+            ->get()
+            ->map(fn ($product) => [
+                'id' => $product->id,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'image_url' => $product->getFirstMediaUrl('main'),
+                'price' => $product->base_price,
+                'barcode' => $product->barcode,
+                'brand_name' => $product->brand?->name,
+            ]);
+
+        return response()->json($products);
     }
 
     /**

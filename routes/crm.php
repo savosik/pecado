@@ -41,5 +41,6 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
         Route::get('/analytics/abc-xyz', [AnalyticsController::class, 'abcXyz'])->name('analytics.abc-xyz');
         Route::get('/analytics/export', [AnalyticsController::class, 'export'])->name('analytics.export');
+        Route::get('/products/search', [AnalyticsController::class, 'searchProducts'])->name('products.search');
     });
 });

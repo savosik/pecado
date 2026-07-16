@@ -1,12 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Input, Button, Wrap, WrapItem,
     Popover, Portal,
 } from '@chakra-ui/react';
-import { LuFilter, LuRotateCcw, LuChevronDown, LuDownload } from 'react-icons/lu';
+import { LuFilter, LuRotateCcw, LuChevronDown, LuDownload, LuSearch, LuPackageSearch } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { ProductSelector } from '@/Admin/Components/ProductSelector';
+import CategoryTreeSelect from './CategoryTreeSelect';
 
 const PRESETS = [
     { key: 'this-month', label: 'Текущий месяц' },
@@ -52,7 +53,14 @@ function presetRange(key) {
 }
 
 function MultiSelect({ label, options, selectedIds, onChange, idKey = 'id', labelKey = 'name' }) {
+    const [query, setQuery] = useState('');
     const selectedSet = useMemo(() => new Set(selectedIds.map(String)), [selectedIds]);
+    const filtered = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        if (!q) return options;
+        return options.filter((o) => String(o[labelKey] ?? '').toLowerCase().includes(q));
+    }, [options, query, labelKey]);
+
     const summary = selectedIds.length === 0
         ? 'Все'
         : selectedIds.length === 1
@@ -80,25 +88,42 @@ function MultiSelect({ label, options, selectedIds, onChange, idKey = 'id', labe
                 <Portal>
                     <Popover.Positioner>
                         <Popover.Content>
-                            <Popover.Body p={2} maxH="320px" overflowY="auto">
+                            <Popover.Body p={2}>
                                 {options.length === 0 ? (
                                     <Text fontSize="sm" color="fg.muted" p={2}>Нет вариантов</Text>
                                 ) : (
-                                    <VStack align="stretch" gap={1}>
+                                    <VStack align="stretch" gap={2}>
+                                        <HStack gap={2} px={1}>
+                                            <LuSearch size={14} />
+                                            <Input
+                                                size="xs"
+                                                variant="flushed"
+                                                placeholder="Поиск…"
+                                                value={query}
+                                                onChange={(e) => setQuery(e.target.value)}
+                                            />
+                                        </HStack>
                                         {selectedIds.length > 0 && (
                                             <Button size="xs" variant="ghost" onClick={() => onChange([])} justifyContent="flex-start">
                                                 Сбросить выбор
                                             </Button>
                                         )}
-                                        {options.map((opt) => (
-                                            <Checkbox
-                                                key={opt[idKey]}
-                                                checked={selectedSet.has(String(opt[idKey]))}
-                                                onCheckedChange={() => toggle(opt[idKey])}
-                                            >
-                                                <Text fontSize="sm" lineClamp={2}>{opt[labelKey]}</Text>
-                                            </Checkbox>
-                                        ))}
+                                        <Box maxH="300px" overflowY="auto">
+                                            <VStack align="stretch" gap={1}>
+                                                {filtered.length === 0 ? (
+                                                    <Text fontSize="sm" color="fg.muted" p={2}>Ничего не найдено</Text>
+                                                ) : filtered.map((opt) => (
+                                                    <Checkbox
+                                                        key={opt[idKey]}
+                                                        checked={selectedSet.has(String(opt[idKey]))}
+                                                        onCheckedChange={() => toggle(opt[idKey])}
+                                                        size="sm"
+                                                    >
+                                                        <Text fontSize="sm" lineClamp={2}>{opt[labelKey]}</Text>
+                                                    </Checkbox>
+                                                ))}
+                                            </VStack>
+                                        </Box>
                                     </VStack>
                                 )}
                             </Popover.Body>
@@ -191,18 +216,31 @@ export default function FiltersBar({
                         selectedIds={filters.brand_ids || []}
                         onChange={(ids) => update({ brand_ids: ids })}
                     />
-                    <MultiSelect
-                        label="Категория"
-                        options={filterOptions.categories || []}
+                    <CategoryTreeSelect
+                        tree={filterOptions.categories || []}
                         selectedIds={filters.category_ids || []}
                         onChange={(ids) => update({ category_ids: ids })}
                     />
                 </Flex>
 
-                <VStack align="stretch" gap={1}>
-                    <Text fontSize="xs" color="fg.muted" fontWeight="500">Товары</Text>
-                    <ProductSelector mode="multi" value={products} onChange={onProductsChange} />
-                </VStack>
+                <Box borderTopWidth="1px" borderColor="border" pt={3}>
+                    <HStack gap={2} mb={2} color="fg.muted">
+                        <LuPackageSearch size={16} />
+                        <Text fontSize="sm" fontWeight="500">Товары</Text>
+                        {products.length > 0 && (
+                            <Text fontSize="xs">— выбрано {products.length}</Text>
+                        )}
+                    </HStack>
+                    <ProductSelector
+                        mode="multi"
+                        value={products}
+                        onChange={onProductsChange}
+                        searchRoute="crm.products.search"
+                    />
+                    <Text fontSize="xs" color="fg.muted" mt={1}>
+                        Начните вводить название или артикул и выберите товары — отчёт отфильтруется по ним.
+                    </Text>
+                </Box>
             </VStack>
         </Box>
     );

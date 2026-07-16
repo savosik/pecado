@@ -425,18 +425,74 @@ class ShipmentAnalyticsService
             ->filter()
             ->all();
 
-        $pathById = $this->buildCategoryPaths($categoryIds);
-        $categories = collect($pathById)
-            ->map(fn ($path, $id) => ['id' => (int) $id, 'name' => $path])
-            ->sortBy('name')
-            ->values()
-            ->all();
-
         return [
             'companies' => $companies,
             'brands' => $brands,
-            'categories' => $categories,
+            'categories' => $this->buildCategoryTree($categoryIds),
         ];
+    }
+
+    /**
+     * Дерево категорий (только присутствующие в скоупе + их предки для связности).
+     * Для чекбокс-фильтра во фронтенде.
+     *
+     * @param  array<int, int>  $categoryIds
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildCategoryTree(array $categoryIds): array
+    {
+        if ($categoryIds === []) {
+            return [];
+        }
+
+        $categories = Category::query()
+            ->whereIn('id', $categoryIds)
+            ->with(['ancestors' => fn ($q) => $q->orderBy('_lft')])
+            ->get(['id', 'name', '_lft', 'parent_id']);
+
+        // Собираем сами категории и всех их предков в плоскую карту id → узел.
+        $map = [];
+        $put = function ($cat) use (&$map) {
+            $map[(int) $cat->id] = [
+                'id' => (int) $cat->id,
+                'name' => (string) $cat->name,
+                'parent_id' => $cat->parent_id !== null ? (int) $cat->parent_id : null,
+                '_lft' => (int) $cat->_lft,
+            ];
+        };
+        foreach ($categories as $cat) {
+            foreach ($cat->ancestors as $anc) {
+                $put($anc);
+            }
+            $put($cat);
+        }
+
+        // Индекс детей + корни поддерева (предок вне карты = корень).
+        $childrenOf = [];
+        $roots = [];
+        foreach ($map as $id => $node) {
+            $pid = $node['parent_id'];
+            if ($pid !== null && isset($map[$pid])) {
+                $childrenOf[$pid][] = $id;
+            } else {
+                $roots[] = $id;
+            }
+        }
+
+        $build = function (int $id) use (&$build, $map, $childrenOf) {
+            $kids = $childrenOf[$id] ?? [];
+            usort($kids, fn ($a, $b) => $map[$a]['_lft'] <=> $map[$b]['_lft']);
+
+            return [
+                'id' => $id,
+                'name' => $map[$id]['name'],
+                'children' => array_map($build, $kids),
+            ];
+        };
+
+        usort($roots, fn ($a, $b) => $map[$a]['_lft'] <=> $map[$b]['_lft']);
+
+        return array_map($build, $roots);
     }
 
     /**

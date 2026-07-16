@@ -72,7 +72,7 @@ export default function CrmAnalyticsIndex() {
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
             reload(filters, compare);
-        }, 300);
+        }, 500);
         return () => debounceRef.current && clearTimeout(debounceRef.current);
     }, [filters, compare, reload]);
 
