@@ -37,6 +37,12 @@ services:
 
   mysql:
     ports: !reset []
+    # zz-prod.cnf читается после custom.cnf (conf.d разбирается по алфавиту)
+    # и перекрывает buffer pool на прод-значение.
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
+      - ./docker/mysql/prod.cnf:/etc/mysql/conf.d/zz-prod.cnf:ro
     environment:
       MYSQL_DATABASE: pecado
       MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?DB_ROOT_PASSWORD must be set in .env}

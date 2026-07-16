@@ -1,0 +1,14 @@
+[mysqld]
+# Прод-специфичные настройки основной БД. Монтируется только через
+# docker-compose.prod.yml как conf.d/zz-prod.cnf — читается после custom.cnf
+# (MySQL разбирает conf.d по алфавиту, побеждает последний) и перекрывает его.
+
+# === Buffer Pool ===
+# Замер на проде 2026-07-16: данные pecado — 1.45 GB, buffer pool — 128 MB
+# (дефолт образа), то есть в памяти держалось 9% базы. На хосте 15 GB RAM,
+# свободно 7.4 GB.
+#
+# 2G кладёт базу в память целиком с запасом на рост. Больше не берём: на том же
+# хосте живут mysql-prices (256M), redis, meilisearch, rabbitmq, php-fpm и nginx.
+innodb_buffer_pool_size         = 2G
+innodb_buffer_pool_instances    = 8
