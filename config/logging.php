@@ -73,6 +73,22 @@ return [
             'replace_placeholders' => true,
         ],
 
+        /*
+         * SQL, который ИИ-агент выполняет в БД под bi_agent (ReadOnlySqlRunner).
+         *
+         * Отдельным каналом, а не в общий лог: запросы агента — единственный след
+         * того, что именно он спрашивал у базы, и в потоке обычных записей он
+         * потеряется. Агент читает ПДн клиентов, поэтому «кто и о чём спросил»
+         * должно восстанавливаться постфактум, а не предполагаться.
+         */
+        'bi' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/bi-queries.log'),
+            'level' => 'info',
+            'days' => env('LOG_BI_DAYS', 90),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

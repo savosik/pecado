@@ -88,6 +88,60 @@ return [
             ]) : [],
         ],
 
+        /*
+         * Read-only коннекты для BI и ИИ-агента отчётов.
+         *
+         * Ходят под bi_agent: у него только SELECT, и писать он не может физически —
+         * это гарантия движка, а не договорённость. Права пересобираются из схемы
+         * командой `bi:sync-grants`, секретные колонки (пароли, OAuth-токены) выдаются
+         * не напрямую, а через вьюхи схемы analytics, где их просто нет.
+         *
+         * Коннекты отдельные, а не переиспользование mysql/prices, именно чтобы агент
+         * ни при каком стечении обстоятельств не получил боевые креды приложения.
+         *
+         * ВАЖНО: max_execution_time здесь не задать — это сессионная переменная, и её
+         * выставляет слой, который владеет коннектом (ReadOnlySqlRunner) перед каждым
+         * запросом. Прописывать её в конфиг бессмысленно: PDO применит её один раз,
+         * а нам нужно на каждый запрос.
+         */
+        'analytics' => [
+            'driver' => 'mysql',
+            'host' => env('DB_HOST', '127.0.0.1'),
+            'port' => env('DB_PORT', '3306'),
+            'database' => env('DB_DATABASE', 'pecado'),
+            'username' => env('DB_ANALYTICS_USERNAME', 'bi_agent'),
+            'password' => env('DB_ANALYTICS_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'timezone' => env('DB_TIMEZONE', '+03:00'),
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
+        'analytics_prices' => [
+            'driver' => 'mysql',
+            'host' => env('DB_PRICES_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_PRICES_PORT', env('DB_PORT', '3306')),
+            'database' => env('DB_PRICES_DATABASE', 'pecado_prices'),
+            'username' => env('DB_ANALYTICS_USERNAME', 'bi_agent'),
+            'password' => env('DB_ANALYTICS_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'timezone' => env('DB_TIMEZONE', '+03:00'),
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                (PHP_VERSION_ID >= 80500 ? \Pdo\Mysql::ATTR_SSL_CA : \PDO::MYSQL_ATTR_SSL_CA) => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),
