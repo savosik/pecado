@@ -42,9 +42,6 @@ class BiSyncGrants extends Command
 
     protected $description = 'Сгенерировать SQL прав read-only пользователя для BI/ИИ-агента';
 
-    /** Схема, где живут вьюхи, скрывающие секретные колонки. */
-    private const VIEW_SCHEMA = 'analytics';
-
     /** Колонка, похожая на секрет, в BI не попадает. */
     private const SECRET_COLUMN_PATTERN = '/password|token|secret|hash|salt|private_key/i';
 
@@ -111,14 +108,11 @@ class BiSyncGrants extends Command
 
         $lines = $this->header($database, $account);
 
-        // Вьюхи нужны только там, где есть что прятать: если секретных колонок в БД
-        // нет вовсе (как в pecado_prices), схема analytics не создаётся.
-        $needsViews = $this->tablesWithSecrets($columns) !== [];
-        if ($needsViews) {
-            $lines[] = 'CREATE DATABASE IF NOT EXISTS `'.self::VIEW_SCHEMA.'`;';
-            $lines[] = '';
-        }
-
+        // Вьюхи-заглушки для секретных таблиц живут в ТОЙ ЖЕ БД, что и обычные
+        // таблицы (не в отдельной схеме). Иначе агент видел бы orders в pecado без
+        // префикса, а v_users в другой схеме — и промахивался бы: FROM v_users →
+        // ERROR 1142, потому что дефолтная БД коннекта = pecado, а вьюхи не там.
+        // В одной БД `FROM orders` и `FROM v_users` работают одинаково.
         $lines = array_merge($lines, $this->viewStatements($connection, $database, $columns));
         $lines = array_merge($lines, $this->grantStatements($database, $columns, $account));
 
@@ -221,9 +215,10 @@ class BiSyncGrants extends Command
 
             // Список колонок разворачиваем явно: SELECT * раскрывается в момент
             // создания вьюхи, и новая колонка базовой таблицы в неё бы не попала.
+            // Вьюха — в той же БД, что и таблица (v_users рядом с users).
             $lines[] = sprintf(
                 'CREATE OR REPLACE VIEW `%s`.`%s` AS SELECT %s FROM `%s`.`%s`;',
-                self::VIEW_SCHEMA,
+                $database,
                 $view,
                 implode(', ', array_map(fn ($c) => "`{$c}`", $safeColumns)),
                 $database,
@@ -233,9 +228,9 @@ class BiSyncGrants extends Command
 
         // Вьюхи, потерявшие смысл (таблица удалена или секретных колонок больше нет),
         // иначе они остались бы висеть с правами DEFINER и доступом для bi_agent.
-        foreach ($this->existingViews($connection) as $stale) {
+        foreach ($this->existingViews($connection, $database) as $stale) {
             if (! in_array($stale, $expected, true)) {
-                $lines[] = sprintf('DROP VIEW IF EXISTS `%s`.`%s`; -- больше не нужна', self::VIEW_SCHEMA, $stale);
+                $lines[] = sprintf('DROP VIEW IF EXISTS `%s`.`%s`; -- больше не нужна', $database, $stale);
             }
         }
 
@@ -247,16 +242,17 @@ class BiSyncGrants extends Command
     /**
      * @return list<string>
      */
-    private function existingViews(\Illuminate\Database\Connection $connection): array
+    private function existingViews(\Illuminate\Database\Connection $connection, string $database): array
     {
         try {
+            // Только наши вьюхи-заглушки (префикс v_), чтобы не зацепить чужие
+            // вьюхи, если они появятся в этой БД.
             return $connection->table('information_schema.views')
-                ->where('table_schema', self::VIEW_SCHEMA)
+                ->where('table_schema', $database)
+                ->where('table_name', 'like', 'v\_%')
                 ->pluck('table_name as tbl')
                 ->all();
         } catch (\Throwable) {
-            // Схемы ещё нет либо у пользователя приложения нет к ней доступа —
-            // на первом прогоне это норма, вычищать всё равно нечего.
             return [];
         }
     }
@@ -291,7 +287,7 @@ class BiSyncGrants extends Command
         }
 
         foreach (array_keys($withSecrets) as $table) {
-            $lines[] = sprintf('GRANT SELECT ON `%s`.`%s` TO %s;', self::VIEW_SCHEMA, 'v_'.$table, $account);
+            $lines[] = sprintf('GRANT SELECT ON `%s`.`%s` TO %s;', $database, 'v_'.$table, $account);
             $granted++;
         }
 

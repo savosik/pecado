@@ -57,7 +57,7 @@ class DescribeTable extends Tool
             SELECT column_name AS col, column_type AS type, is_nullable AS nullable,
                    column_key AS keyed, column_comment AS descr
             FROM information_schema.columns
-            WHERE table_schema IN (DATABASE(), 'analytics') AND table_name = ?
+            WHERE table_schema = DATABASE() AND table_name = ?
             ORDER BY ordinal_position
         SQL, [$table]);
 
@@ -70,7 +70,7 @@ class DescribeTable extends Tool
         $indexes = $connection->select(<<<'SQL'
             SELECT index_name AS name, GROUP_CONCAT(column_name ORDER BY seq_in_index) AS cols, non_unique AS non_uniq
             FROM information_schema.statistics
-            WHERE table_schema IN (DATABASE(), 'analytics') AND table_name = ?
+            WHERE table_schema = DATABASE() AND table_name = ?
             GROUP BY index_name, non_unique
         SQL, [$table]);
 

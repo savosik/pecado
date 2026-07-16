@@ -53,8 +53,8 @@ class ListTables extends Tool
         $rows = $connection->select(<<<'SQL'
             SELECT table_name AS tbl, table_type AS kind, table_comment AS descr, table_rows AS approx_rows
             FROM information_schema.tables
-            WHERE table_schema IN (DATABASE(), 'analytics')
-            ORDER BY table_schema, table_name
+            WHERE table_schema = DATABASE()
+            ORDER BY table_name
         SQL);
 
         $viewDescriptions = $this->descriptionsForViews($database, $rows);
@@ -69,7 +69,7 @@ class ListTables extends Tool
             'database' => $database,
             'note' => $database === 'prices'
                 ? 'Прайс живёт на отдельном сервере MySQL: JOIN с таблицами main невозможен, связывать данные нужно двумя запросами.'
-                : 'Таблицы с префиксом v_ — вьюхи схемы analytics: то же содержимое без секретных колонок (пароли, токены).',
+                : 'Таблицы с префиксом v_ — вьюхи без секретных колонок (пароли, токены). Обращаться к ним как к обычным таблицам, без указания схемы: FROM v_users.',
             'tables' => $tables,
         ]);
     }
