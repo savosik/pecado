@@ -38,7 +38,7 @@
 | `cancel-in-progress` | `true` | **`false`** (прод-деплой не отменяется на лету) |
 | Health check | `http://localhost:8085/up` | `https://pecado.ru/up` |
 | Rollback | Не нужен | **Обязательно** (revert + auto-redeploy) |
-| Бэкапы БД | Нет | **Ежедневно** (cron) |
+| Бэкапы БД | Нет | **Ежедневно** (cron) + перед деплоем, offsite-копия в Yandex Object Storage |
 
 ---
 
@@ -937,45 +937,39 @@ curl -k https://pecado.ru/up
 
 ### Шаг 5: Бэкапы базы данных
 
-Создать скрипт `/srv/scripts/backup-db.sh`:
+> **Статус:** ✅ настроено и работает. Ежедневный cron + offsite-копия в Yandex Object Storage (с 2026-07-16).
+
+Бэкап делается в два места, потому что копия на том же сервере не спасает от потери самого сервера:
+
+| Куда | Что | Retention |
+|---|---|---|
+| Локально `/media/backups/mysql/daily/` | обе БД, ежедневно в 03:00 | основная — 30 дней, цены — 5 архивов |
+| Локально `/media/backups/mysql/pre-deploy/` | обе БД, перед каждым деплоем ([deploy-prod.yml](../.github/workflows/deploy-prod.yml)) | основная — 10, цены — 5 |
+| **Облако** `yandex:pecado-backup/daily/` | обе БД, ежедневно | 30 дней |
+| **Облако** `yandex:pecado-backup/monthly/` | обе БД, 1-го числа | 365 дней |
+
+Offsite-копия льётся через `rclone` (бинарник `/srv/scripts/bin/rclone`, конфиг `~ladmin/.config/rclone/rclone.conf`, режим `600`). Бакет создан с классом **ICE**, объекты наследуют его автоматически — `storage_class` в конфиге указывать не нужно. Креды — в [PROD_SERVER_CREDENTIALS.md](./PROD_SERVER_CREDENTIALS.md) §17.
+
+Скрипт `/srv/scripts/backup-db.sh` (снимает дампы → проверяет `gzip -t` → отгружает в S3 → чистит по retention). Живёт вне `/srv/pecado`, поэтому `rsync --delete` при деплое его не трогает — но и CI его туда **не доставляет**. Эталонная копия для ревью — [scripts/prod-backup-db.sh](../scripts/prod-backup-db.sh), правки нужно копировать на сервер руками (инструкция в шапке скрипта). Ключевые решения:
+
+- **`gzip -t` перед отгрузкой** — битый архив в облаке хуже, чем его отсутствие: даёт ложное чувство защиты.
+- **Сбой S3 не роняет локальный бэкап** — ошибка логируется, скрипт завершается кодом 1 (виден в логе), но дампы на диске остаются.
+- **Retention в облаке чистится только при успешной загрузке** — иначе можно срезать историю, не получив взамен свежую копию.
+- **30 дней = минимальный срок хранения класса ICE.** Удалять раньше бессмысленно: оплата всё равно списывается за 30 суток.
+- **Pre-deploy бэкапы в облако не льются** — их по несколько в день, они нужны для быстрого отката на живом сервере; катастрофу закрывает daily.
 
 ```bash
-#!/bin/bash
-# Ежедневный бэкап обеих БД prod в /media/backups/mysql/daily/
-# Хранилище — на отдельном диске /dev/sdb (/media), чтобы не забивать системный sda2.
-set -euo pipefail
-
-BACKUP_DIR="/media/backups/mysql/daily"
-DATE=$(date +%Y-%m-%d_%H%M)
-mkdir -p "$BACKUP_DIR"
-
-cd /srv/pecado
-DC="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
-
-# Main DB
-$DC exec -T mysql sh -c "exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" --single-transaction --quick pecado" \
-  | gzip > "$BACKUP_DIR/pecado_${DATE}.sql.gz"
-
-# Prices DB
-$DC exec -T mysql-prices sh -c "exec mysqldump -uroot -p\"\$MYSQL_ROOT_PASSWORD\" --single-transaction --quick pecado_prices" \
-  | gzip > "$BACKUP_DIR/pecado_prices_${DATE}.sql.gz"
-
-# Retention основной БД: 30 дней (mtime-based)
-find "$BACKUP_DIR" -type f -name "pecado_*.sql.gz" ! -name "pecado_prices_*" -mtime +30 -delete
-
-# Retention БД цен: только последние 5 архивов (count-based — таблицы цен большие)
-ls -1t "$BACKUP_DIR"/pecado_prices_*.sql.gz 2>/dev/null | tail -n +6 | xargs -r rm -f
-
-echo "[$(date +%Y-%m-%dT%H:%M:%S%z)] Backup OK: ${DATE}"
+# Cron: ежедневно в 3:00 от пользователя ladmin (отдельного deploy-пользователя не делали)
+crontab -l -u ladmin
+0 3 * * * /srv/scripts/backup-db.sh >> /var/log/pecado-backup.log 2>&1
 ```
 
-```bash
-sudo chmod +x /srv/scripts/backup-db.sh
-sudo mkdir -p /var/log
+Проверка, что всё живо:
 
-# Cron: ежедневно в 3:00 от пользователя deploy
-crontab -e -u deploy
-0 3 * * * /srv/scripts/backup-db.sh >> /var/log/backup.log 2>&1
+```bash
+tail -5 /var/log/pecado-backup.log                          # последний прогон — "Backup OK"
+/srv/scripts/bin/rclone ls yandex:pecado-backup             # свежие архивы в облаке
+/srv/scripts/bin/rclone size yandex:pecado-backup           # объём
 ```
 
 ---
@@ -1032,6 +1026,23 @@ gunzip < /media/backups/mysql/pre-deploy/pecado_<DATE>.sql.gz | \
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec app php artisan up
 ```
 
+Если локальные бэкапы недоступны (потеря диска `/dev/sdb`, переезд на новый сервер) — тянем из облака. Класс ICE отдаёт данные сразу, процедуры разморозки как у AWS Glacier здесь нет:
+
+```bash
+R=/srv/scripts/bin/rclone
+
+$R ls yandex:pecado-backup/daily/                    # выбрать нужную дату
+$R copy yandex:pecado-backup/daily/pecado_<DATE>.sql.gz /tmp/restore/
+gzip -t /tmp/restore/pecado_<DATE>.sql.gz            # убедиться, что архив целый
+
+gunzip < /tmp/restore/pecado_<DATE>.sql.gz | \
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T mysql \
+  sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" pecado'
+```
+
+> На чистом сервере rclone ставится одним бинарником, без root:
+> `curl -sSfL https://downloads.rclone.org/rclone-current-linux-amd64.zip -o /tmp/r.zip` → распаковать (`unzip` в базовой Ubuntu 24.04 нет, можно `python3 -m zipfile -e /tmp/r.zip /tmp/r/`) → положить в `/srv/scripts/bin/rclone` → воссоздать конфиг из §17 credentials.
+
 ### Способ 3: Чрезвычайный — git checkout прошлой версии
 
 ```bash
@@ -1062,7 +1073,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml restart app work
 | 🟡 P1 | `deploy-prod.yml` | GitHub Actions workflow |
 | 🟡 P1 | GitHub Environment `production` | Ручной approve |
 | 🟡 P1 | Self-hosted runner prod | Лейбл `prod-server` |
-| 🟢 P2 | Бэкапы БД | Ежедневный cron + retention 30 дней |
+| ✅ P2 | Бэкапы БД | Ежедневный cron + retention 30 дней. Offsite в Yandex Object Storage (ICE) с 2026-07-16 |
 | 🟢 P2 | Telegram уведомления | Оповещения о деплое |
 | 🟢 P2 | Мониторинг (UptimeRobot/Healthchecks.io) | Мониторинг доступности + алертинг |
 | 🟢 P2 | Rate limiting | Laravel throttle middleware |
