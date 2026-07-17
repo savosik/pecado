@@ -41,6 +41,9 @@ Route::middleware(['web', 'auth', 'crm'])->prefix('crm')->name('crm.')->group(fu
         Route::get('/analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data');
         Route::get('/analytics/abc-xyz', [AnalyticsController::class, 'abcXyz'])->name('analytics.abc-xyz');
         Route::get('/analytics/export', [AnalyticsController::class, 'export'])->name('analytics.export');
+        Route::post('/analytics/presets', [AnalyticsController::class, 'storePreset'])->name('analytics.presets.store');
+        Route::delete('/analytics/presets/{preset}', [AnalyticsController::class, 'destroyPreset'])
+            ->whereNumber('preset')->name('analytics.presets.destroy');
         Route::get('/products/search', [AnalyticsController::class, 'searchProducts'])->name('products.search');
     });
 });

@@ -362,6 +362,14 @@ class User extends Authenticatable implements HasMedia
     }
 
     /**
+     * Личные пресеты фильтров отчёта продаж CRM.
+     */
+    public function crmAnalyticsFilterPresets(): HasMany
+    {
+        return $this->hasMany(CrmAnalyticsFilterPreset::class);
+    }
+
+    /**
      * Балансы контрагентов пользователя (по ИНН).
      */
     public function contractorBalances(): HasMany

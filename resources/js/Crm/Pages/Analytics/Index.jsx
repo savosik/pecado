@@ -13,6 +13,7 @@ import AbcXyzPanel from '@/Pages/User/Cabinet/Analytics/components/AbcXyzPanel';
 import KpiGrid from './components/KpiGrid';
 import TrendChart from './components/TrendChart';
 import FiltersBar from './components/FiltersBar';
+import PresetsBar from './components/PresetsBar';
 
 const DEFAULT_FILTERS = {
     date_from: '',
@@ -55,12 +56,13 @@ function buildParams(filters, compareMode, compareOffset) {
 }
 
 export default function CrmAnalyticsIndex() {
-    const { initial, filterOptions, seesAll } = usePage().props;
+    const { initial, filterOptions, seesAll, presets: initialPresets } = usePage().props;
 
     const [filters, setFilters] = useState({ ...DEFAULT_FILTERS, ...(initial?.filters ?? {}) });
     const [products, setProducts] = useState([]);
     const [compareMode, setCompareMode] = useState('none');
     const [compareOffset, setCompareOffset] = useState(1);
+    const [presets, setPresets] = useState(initialPresets ?? []);
     const [data, setData] = useState(initial);
     const [loading, setLoading] = useState(false);
     const [panelOpen, setPanelOpen] = useState(() => {
@@ -111,6 +113,32 @@ export default function CrmAnalyticsIndex() {
     const handleProductsChange = (nextProducts) => {
         setProducts(nextProducts);
         setFilters((prev) => ({ ...prev, product_ids: nextProducts.map((p) => p.id) }));
+    };
+
+    // Пресеты фильтров (персональные, бэкенд)
+    const handleSavePreset = async (name) => {
+        try {
+            const payload = { filters, products, compareMode, compareOffset };
+            const res = await axios.post('/crm/analytics/presets', { name, payload });
+            setPresets((prev) => [res.data, ...prev]);
+        } catch (e) {
+            console.error('Не удалось сохранить пресет', e);
+        }
+    };
+    const handleApplyPreset = (preset) => {
+        const p = preset?.payload ?? {};
+        setProducts(Array.isArray(p.products) ? p.products : []);
+        setFilters({ ...DEFAULT_FILTERS, ...(p.filters ?? {}) });
+        setCompareMode(p.compareMode ?? 'none');
+        setCompareOffset(p.compareOffset ?? 1);
+    };
+    const handleDeletePreset = async (id) => {
+        try {
+            await axios.delete(`/crm/analytics/presets/${id}`);
+            setPresets((prev) => prev.filter((x) => x.id !== id));
+        } catch (e) {
+            console.error('Не удалось удалить пресет', e);
+        }
     };
 
     const buildExportUrl = () => {
@@ -316,6 +344,14 @@ export default function CrmAnalyticsIndex() {
                     <PageHeader
                         title="Отчёты продаж"
                         description={seesAll ? 'Продажи всего отдела по данным отгрузок 1С' : 'Продажи ваших клиентов по данным отгрузок 1С'}
+                    />
+
+                    <PresetsBar
+                        presets={presets}
+                        onApply={handleApplyPreset}
+                        onDelete={handleDeletePreset}
+                        onSave={handleSavePreset}
+                        loading={loading}
                     />
 
                     <VStack align="stretch" gap={5}>

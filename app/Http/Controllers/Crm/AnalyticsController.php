@@ -46,7 +46,65 @@ class AnalyticsController extends CrmController
             'initial' => $this->buildPayload($ctx, $filters, $seesAll, ...$this->resolveComparison($request)),
             'filterOptions' => $this->filterOptions($ctx, $seesAll),
             'seesAll' => $seesAll,
+            'presets' => $this->presetList($actor),
         ]);
+    }
+
+    /**
+     * Личные пресеты фильтров сотрудника, новые сверху.
+     *
+     * @return array<int, array{id: int, name: string, payload: array<string, mixed>}>
+     */
+    private function presetList(User $actor): array
+    {
+        return $actor->crmAnalyticsFilterPresets()
+            ->latest()
+            ->get()
+            ->map(fn ($p) => [
+                'id' => $p->id,
+                'name' => $p->name,
+                'payload' => $p->payload ?? [],
+            ])
+            ->all();
+    }
+
+    /**
+     * Сохранить текущий набор фильтров как личный пресет. POST /crm/analytics/presets
+     */
+    public function storePreset(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+            'payload' => ['required', 'array'],
+        ]);
+
+        $actor = $this->crmActor($request);
+
+        $preset = $actor->crmAnalyticsFilterPresets()->create([
+            'name' => trim($data['name']),
+            'payload' => $data['payload'],
+        ]);
+
+        return response()->json([
+            'id' => $preset->id,
+            'name' => $preset->name,
+            'payload' => $preset->payload ?? [],
+        ], 201);
+    }
+
+    /**
+     * Удалить личный пресет. DELETE /crm/analytics/presets/{preset}
+     *
+     * Пресет ищем в рамках владельца, чтобы чужой отдавал 404, а не 403.
+     */
+    public function destroyPreset(Request $request, int $preset): JsonResponse
+    {
+        $this->crmActor($request)
+            ->crmAnalyticsFilterPresets()
+            ->findOrFail($preset)
+            ->delete();
+
+        return response()->json(null, 204);
     }
 
     /**
