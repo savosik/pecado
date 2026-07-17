@@ -31,6 +31,7 @@ export const ProductSelector = ({
     searchRoute: customSearchRoute = null,
     searchParams: customSearchParams = {},
     renderItemActions = null,
+    compactSelected = false,
 }) => {
     const [query, setQuery] = useState('');
     const [suggestions, setSuggestions] = useState([]);
@@ -248,10 +249,10 @@ export const ProductSelector = ({
             {mode !== 'search' && (
                 <VStack align="stretch" gap={2}>
                     {mode === 'multi' && Array.isArray(value) && value.map((product) => (
-                        <SelectedItem key={product.id} product={product} onRemove={() => handleRemove(product.id)} renderItemActions={renderItemActions} />
+                        <SelectedItem key={product.id} product={product} onRemove={() => handleRemove(product.id)} renderItemActions={renderItemActions} compact={compactSelected} />
                     ))}
                     {mode === 'single' && value && (
-                        <SelectedItem product={value} onRemove={() => handleRemove(value.id)} renderItemActions={renderItemActions} />
+                        <SelectedItem product={value} onRemove={() => handleRemove(value.id)} renderItemActions={renderItemActions} compact={compactSelected} />
                     )}
                 </VStack>
             )}
@@ -259,25 +260,29 @@ export const ProductSelector = ({
     );
 };
 
-const SelectedItem = ({ product, onRemove, renderItemActions }) => (
+const SelectedItem = ({ product, onRemove, renderItemActions, compact = false }) => (
     <HStack
-        p={3}
+        p={compact ? 2 : 3}
         borderWidth="1px"
         borderColor="border"
         borderRadius="md"
         bg="bg"
         justify="space-between"
+        align="start"
     >
         <HStack gap={3} flex={1} minW={0}>
-            <Image
-                src={product.image_url || null}
-                boxSize="40px"
-                objectFit="cover"
-                borderRadius="sm"
-                fallbackSrc="https://via.placeholder.com/40"
-            />
+            {!compact && (
+                <Image
+                    src={product.image_url || null}
+                    boxSize="40px"
+                    objectFit="cover"
+                    borderRadius="sm"
+                    fallbackSrc="https://via.placeholder.com/40"
+                />
+            )}
             <Box minW={0}>
-                <Text fontSize="sm" fontWeight="medium" lineClamp={1}>
+                {/* compact: без картинки, мелкий шрифт, название не обрезается */}
+                <Text fontSize={compact ? 'xs' : 'sm'} fontWeight="medium" lineClamp={compact ? undefined : 1}>
                     {product.name}
                 </Text>
                 <Text fontSize="xs" color="gray.500">
@@ -289,7 +294,7 @@ const SelectedItem = ({ product, onRemove, renderItemActions }) => (
             {renderItemActions && renderItemActions(product)}
             <IconButton
                 aria-label="Удалить"
-                size="sm"
+                size={compact ? 'xs' : 'sm'}
                 variant="ghost"
                 colorPalette="red"
                 onClick={onRemove}

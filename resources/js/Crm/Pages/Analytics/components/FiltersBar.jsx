@@ -323,6 +323,7 @@ export default function FiltersBar({
                             value={products}
                             onChange={onProductsChange}
                             searchRoute="crm.products.search"
+                            compactSelected
                         />
                     </VStack>
                 </VStack>
