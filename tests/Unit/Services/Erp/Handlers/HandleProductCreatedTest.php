@@ -462,6 +462,51 @@ class HandleProductCreatedTest extends TestCase
     }
 
     #[Test]
+    public function ignore_incoming_does_not_set_model_id_for_new_product(): void
+    {
+        config()->set('erp.product_models.ignore_incoming', true);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-ignore-001',
+            'name' => 'Новый товар без модели',
+            'model' => ['uuid' => 'erp-model-uuid', 'name' => 'Модель из 1С'],
+        ]);
+
+        $product = Product::where('external_id', 'prod-ignore-001')->first();
+        $this->assertNotNull($product);
+        $this->assertNull($product->model_id, 'при заглушке новый товар остаётся без модели');
+        $this->assertNull(
+            \App\Models\ProductModel::where('external_id', 'erp-model-uuid')->first(),
+            'модель из 1С не создаётся при заглушке'
+        );
+    }
+
+    #[Test]
+    public function ignore_incoming_keeps_existing_model_id_on_repeated_product_created(): void
+    {
+        config()->set('erp.product_models.ignore_incoming', true);
+
+        $manual = \App\Models\ProductModel::create([
+            'name' => 'Ручная модель (заглушка)',
+        ]);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-ignore-002',
+            'model_id' => $manual->id,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.created',
+            'uuid' => 'prod-ignore-002',
+            'name' => 'Тот же товар',
+            'model' => ['uuid' => 'erp-model-uuid', 'name' => 'Модель из 1С'],
+        ]);
+
+        $product->refresh();
+        $this->assertEquals($manual->id, $product->model_id, 'при заглушке привязка сохраняется');
+    }
+
+    #[Test]
     public function retries_product_created_on_deadlock_and_finishes_on_third_attempt(): void
     {
         $handler = \Mockery::mock(HandleProductCreated::class)

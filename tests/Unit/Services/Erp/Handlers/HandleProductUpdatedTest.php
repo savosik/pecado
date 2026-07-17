@@ -1051,4 +1051,51 @@ class HandleProductUpdatedTest extends TestCase
         $model = \App\Models\ProductModel::find($product->model_id);
         $this->assertEquals('erp-model-uuid', $model->external_id);
     }
+
+    #[Test]
+    public function ignore_incoming_keeps_existing_model_id_on_product_updated(): void
+    {
+        config()->set('erp.product_models.ignore_incoming', true);
+
+        $manual = \App\Models\ProductModel::create([
+            'name' => 'Ручная модель (заглушка)',
+        ]);
+        $product = Product::factory()->create([
+            'external_id' => 'prod-ignore-upd-001',
+            'model_id' => $manual->id,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-ignore-upd-001',
+            'model' => ['uuid' => 'erp-model-uuid', 'name' => 'Модель из 1С'],
+        ]);
+
+        $product->refresh();
+        $this->assertEquals($manual->id, $product->model_id, 'при заглушке model_id не меняется');
+        $this->assertNull(
+            \App\Models\ProductModel::where('external_id', 'erp-model-uuid')->first(),
+            'модель из 1С не должна создаваться при заглушке'
+        );
+    }
+
+    #[Test]
+    public function ignore_incoming_does_not_set_model_id_when_product_has_none(): void
+    {
+        config()->set('erp.product_models.ignore_incoming', true);
+
+        $product = Product::factory()->create([
+            'external_id' => 'prod-ignore-upd-002',
+            'model_id' => null,
+        ]);
+
+        $this->handler->handle([
+            'event' => 'product.updated',
+            'uuid' => 'prod-ignore-upd-002',
+            'model' => ['uuid' => 'erp-model-uuid-2', 'name' => 'Модель из 1С'],
+        ]);
+
+        $product->refresh();
+        $this->assertNull($product->model_id, 'при заглушке пустой model_id остаётся пустым');
+    }
 }

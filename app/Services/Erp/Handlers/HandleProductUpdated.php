@@ -121,8 +121,15 @@ class HandleProductUpdated
             }
 
             if (array_key_exists('model', $payload)) {
+                $ignoreIncoming = (bool) config('erp.product_models.ignore_incoming', false);
                 $preserveExisting = (bool) config('erp.product_models.preserve_existing', true);
-                if ($preserveExisting && $product->model_id !== null) {
+                if ($ignoreIncoming) {
+                    // Заглушка: модель из 1С не принимаем — model_id не трогаем.
+                    Log::info('product.updated: модель из 1С проигнорирована (ignore_incoming)', [
+                        'product_uuid' => $uuid,
+                        'current_model_id' => $product->model_id,
+                    ]);
+                } elseif ($preserveExisting && $product->model_id !== null) {
                     Log::info('product.updated: model_id сохранён (preserve_existing)', [
                         'product_uuid' => $uuid,
                         'current_model_id' => $product->model_id,

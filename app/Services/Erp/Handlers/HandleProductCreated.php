@@ -124,8 +124,16 @@ class HandleProductCreated
             // Если включён preserve_existing и у товара уже есть model_id — сохраняем его
             // и не вызываем resolveModelId (иначе побочный эффект: ручная ProductModel,
             // совпавшая по name, получила бы external_id 1С).
+            $ignoreIncomingModel = (bool) config('erp.product_models.ignore_incoming', false);
             $preserveExistingModel = (bool) config('erp.product_models.preserve_existing', true);
-            if ($preserveExistingModel && $existing?->model_id) {
+            if ($ignoreIncomingModel) {
+                // Заглушка: модель из 1С не принимаем вовсе (у новых товаров останется null).
+                $modelId = $existing?->model_id;
+                Log::info('product.created: модель из 1С проигнорирована (ignore_incoming)', [
+                    'product_uuid' => $uuid,
+                    'current_model_id' => $modelId,
+                ]);
+            } elseif ($preserveExistingModel && $existing?->model_id) {
                 $modelId = $existing->model_id;
                 Log::info('product.created: model_id сохранён (preserve_existing)', [
                     'product_uuid' => $uuid,

@@ -133,6 +133,19 @@ return [
     */
     'product_models' => [
         'preserve_existing' => env('ERP_PRESERVE_PRODUCT_MODEL', true),
+
+        /*
+         | Полная заглушка приёма моделей из 1С (временный тумблер).
+         |
+         | При true обработчики product.created/product.updated ВООБЩЕ не
+         | принимают данные о модели из payload:
+         |   - существующим товарам Product.model_id не трогается;
+         |   - новым товарам model_id остаётся null (карточка-одиночка).
+         | Используется, пока привязки к ProductModel ведём вручную на сайте
+         | и не хотим, чтобы 1С пересобирала связки по generic-«модели».
+         | Сильнее, чем preserve_existing (тот защищает лишь непустой model_id).
+         */
+        'ignore_incoming' => env('ERP_IGNORE_INCOMING_PRODUCT_MODEL', false),
     ],
 
     /*
