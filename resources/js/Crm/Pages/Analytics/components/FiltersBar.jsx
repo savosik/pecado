@@ -3,7 +3,7 @@ import {
     Box, Flex, HStack, VStack, Text, Input, Button, Wrap, WrapItem,
     Popover, Portal,
 } from '@chakra-ui/react';
-import { LuFilter, LuRotateCcw, LuChevronDown, LuDownload, LuSearch, LuPackageSearch } from 'react-icons/lu';
+import { LuRotateCcw, LuChevronDown, LuDownload, LuSearch } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import CategoryTreeSelect from './CategoryTreeSelect';
@@ -215,7 +215,6 @@ export default function FiltersBar({
     compareOffset,
     onCompareModeChange,
     onCompareOffsetChange,
-    embedded = false,
 }) {
     const update = (patch) => onChange({ ...filters, ...patch });
 
@@ -224,48 +223,49 @@ export default function FiltersBar({
         update({ date_from: from, date_to: to });
     };
 
-    // В шторке (embedded) внешний бордер и собственный заголовок с действиями
-    // не нужны — их даёт заголовок Drawer и липкая полоса-сводка над отчётом.
-    const wrapperProps = embedded
-        ? {}
-        : { bg: 'bg.panel', borderRadius: 'xl', borderWidth: '1px', borderColor: 'border', p: 4 };
-
+    // Компактная всегда-видимая панель, прилипающая под шапкой CRM: контролы
+    // фильтров остаются на виду при прокрутке отчёта — менять их можно без
+    // скролла к началу и без открытия отдельной шторки.
     return (
-        <Box {...wrapperProps}>
-            <VStack align="stretch" gap={3}>
-                {!embedded && (
-                    <HStack justify="space-between" wrap="wrap" gap={2}>
-                        <HStack gap={2}>
-                            <LuFilter size={16} />
-                            <Text fontWeight="600">Фильтры</Text>
-                        </HStack>
-                        <HStack gap={2} wrap="wrap">
-                            <Button size="xs" variant="ghost" onClick={onReset} disabled={loading}>
-                                <LuRotateCcw /> Сбросить
-                            </Button>
-                            <Button size="xs" variant="outline" onClick={onExport} disabled={loading}>
-                                <LuDownload /> XLSX
-                            </Button>
-                        </HStack>
+        <Box
+            position="sticky"
+            top={{ base: '56px', md: '60px' }}
+            zIndex={4}
+            bg="bg.panel"
+            borderRadius="xl"
+            borderWidth="1px"
+            borderColor="border"
+            px={3}
+            py={3}
+            boxShadow="xs"
+        >
+            <VStack align="stretch" gap={2}>
+                <HStack justify="space-between" wrap="wrap" gap={2}>
+                    <Wrap gap={1}>
+                        {PRESETS.map((p) => (
+                            <WrapItem key={p.key}>
+                                <Button size="xs" variant="surface" onClick={() => applyPreset(p.key)} disabled={loading}>
+                                    {p.label}
+                                </Button>
+                            </WrapItem>
+                        ))}
+                    </Wrap>
+                    <HStack gap={2}>
+                        <Button size="xs" variant="ghost" onClick={onReset} disabled={loading}>
+                            <LuRotateCcw /> Сбросить
+                        </Button>
+                        <Button size="xs" variant="outline" onClick={onExport} disabled={loading}>
+                            <LuDownload /> XLSX
+                        </Button>
                     </HStack>
-                )}
+                </HStack>
 
-                <Wrap gap={2}>
-                    {PRESETS.map((p) => (
-                        <WrapItem key={p.key}>
-                            <Button size="xs" variant="surface" onClick={() => applyPreset(p.key)} disabled={loading}>
-                                {p.label}
-                            </Button>
-                        </WrapItem>
-                    ))}
-                </Wrap>
-
-                <Flex gap={3} wrap="wrap">
-                    <VStack align="stretch" gap={1} flex="1" minW="150px">
+                <Flex gap={2} wrap="wrap" align="end">
+                    <VStack align="stretch" gap={1} minW="130px">
                         <Text fontSize="xs" color="fg.muted" fontWeight="500">С</Text>
                         <Input type="date" size="sm" value={filters.date_from || ''} onChange={(e) => update({ date_from: e.target.value })} bg="bg" />
                     </VStack>
-                    <VStack align="stretch" gap={1} flex="1" minW="150px">
+                    <VStack align="stretch" gap={1} minW="130px">
                         <Text fontSize="xs" color="fg.muted" fontWeight="500">По</Text>
                         <Input type="date" size="sm" value={filters.date_to || ''} onChange={(e) => update({ date_to: e.target.value })} bg="bg" />
                     </VStack>
@@ -302,26 +302,18 @@ export default function FiltersBar({
                         onOffsetChange={onCompareOffsetChange}
                         loading={loading}
                     />
+                    <VStack align="stretch" gap={1} flex="1" minW="240px">
+                        <Text fontSize="xs" color="fg.muted" fontWeight="500">
+                            Товары{products.length > 0 ? ` — выбрано ${products.length}` : ''}
+                        </Text>
+                        <ProductSelector
+                            mode="multi"
+                            value={products}
+                            onChange={onProductsChange}
+                            searchRoute="crm.products.search"
+                        />
+                    </VStack>
                 </Flex>
-
-                <Box borderTopWidth="1px" borderColor="border" pt={3}>
-                    <HStack gap={2} mb={2} color="fg.muted">
-                        <LuPackageSearch size={16} />
-                        <Text fontSize="sm" fontWeight="500">Товары</Text>
-                        {products.length > 0 && (
-                            <Text fontSize="xs">— выбрано {products.length}</Text>
-                        )}
-                    </HStack>
-                    <ProductSelector
-                        mode="multi"
-                        value={products}
-                        onChange={onProductsChange}
-                        searchRoute="crm.products.search"
-                    />
-                    <Text fontSize="xs" color="fg.muted" mt={1}>
-                        Начните вводить название или артикул и выберите товары — отчёт отфильтруется по ним.
-                    </Text>
-                </Box>
             </VStack>
         </Box>
     );

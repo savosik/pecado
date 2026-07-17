@@ -10,13 +10,9 @@ import { PageHeader } from '@/Admin/Components/PageHeader';
 import BreakdownSection from '@/Pages/User/Cabinet/Analytics/components/BreakdownSection';
 import InsightsPanel from '@/Pages/User/Cabinet/Analytics/components/InsightsPanel';
 import AbcXyzPanel from '@/Pages/User/Cabinet/Analytics/components/AbcXyzPanel';
-import {
-    DrawerRoot, DrawerBackdrop, DrawerContent, DrawerHeader, DrawerBody, DrawerTitle, DrawerCloseTrigger,
-} from '@/components/ui/drawer';
 import KpiGrid from './components/KpiGrid';
 import TrendChart from './components/TrendChart';
 import FiltersBar from './components/FiltersBar';
-import FilterSummaryBar from './components/FilterSummaryBar';
 
 const DEFAULT_FILTERS = {
     date_from: '',
@@ -67,7 +63,6 @@ export default function CrmAnalyticsIndex() {
     const [compareOffset, setCompareOffset] = useState(1);
     const [data, setData] = useState(initial);
     const [loading, setLoading] = useState(false);
-    const [filtersOpen, setFiltersOpen] = useState(false);
     const debounceRef = useRef(null);
     const isFirstRender = useRef(true);
 
@@ -270,52 +265,21 @@ export default function CrmAnalyticsIndex() {
             />
 
             <VStack align="stretch" gap={5}>
-                <FilterSummaryBar
+                <FiltersBar
                     filters={filters}
                     filterOptions={filterOptions}
-                    products={products}
-                    comparisonLabel={compareMode !== 'none' ? compareLabel(compareMode, compareOffset) : null}
-                    loading={loading}
-                    onOpen={() => setFiltersOpen(true)}
+                    onChange={setFilters}
                     onReset={handleReset}
                     onExport={handleExport}
-                    onClear={applyFilter}
-                    onProductsClear={() => handleProductsChange([])}
-                    onComparisonClear={() => setCompareMode('none')}
+                    loading={loading}
+                    seesAll={seesAll}
+                    products={products}
+                    onProductsChange={handleProductsChange}
+                    compareMode={compareMode}
+                    compareOffset={compareOffset}
+                    onCompareModeChange={setCompareMode}
+                    onCompareOffsetChange={setCompareOffset}
                 />
-
-                <DrawerRoot
-                    open={filtersOpen}
-                    onOpenChange={(e) => setFiltersOpen(e.open)}
-                    placement="end"
-                    size="md"
-                >
-                    <DrawerBackdrop />
-                    <DrawerContent>
-                        <DrawerHeader>
-                            <DrawerTitle>Фильтры отчёта</DrawerTitle>
-                            <DrawerCloseTrigger />
-                        </DrawerHeader>
-                        <DrawerBody>
-                            <FiltersBar
-                                embedded
-                                filters={filters}
-                                filterOptions={filterOptions}
-                                onChange={setFilters}
-                                onReset={handleReset}
-                                onExport={handleExport}
-                                loading={loading}
-                                seesAll={seesAll}
-                                products={products}
-                                onProductsChange={handleProductsChange}
-                                compareMode={compareMode}
-                                compareOffset={compareOffset}
-                                onCompareModeChange={setCompareMode}
-                                onCompareOffsetChange={setCompareOffset}
-                            />
-                        </DrawerBody>
-                    </DrawerContent>
-                </DrawerRoot>
 
                 {loading && (
                     <HStack gap={2} color="fg.muted">
