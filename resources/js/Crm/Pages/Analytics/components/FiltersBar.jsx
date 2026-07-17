@@ -86,7 +86,9 @@ const PRESETS = [
 
 function presetRange(key) {
     const today = new Date();
-    const fmt = (d) => d.toISOString().slice(0, 10);
+    // Локальное YYYY-MM-DD: toISOString() переводит в UTC и в поясах впереди
+    // Гринвича сдвигает дату на день назад (полночь 1-го числа → 21:00 предыдущего).
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     switch (key) {
         case 'this-month': {
             const from = new Date(today.getFullYear(), today.getMonth(), 1);
