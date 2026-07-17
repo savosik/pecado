@@ -215,6 +215,7 @@ export default function FiltersBar({
     compareOffset,
     onCompareModeChange,
     onCompareOffsetChange,
+    embedded = false,
 }) {
     const update = (patch) => onChange({ ...filters, ...patch });
 
@@ -223,23 +224,31 @@ export default function FiltersBar({
         update({ date_from: from, date_to: to });
     };
 
+    // В шторке (embedded) внешний бордер и собственный заголовок с действиями
+    // не нужны — их даёт заголовок Drawer и липкая полоса-сводка над отчётом.
+    const wrapperProps = embedded
+        ? {}
+        : { bg: 'bg.panel', borderRadius: 'xl', borderWidth: '1px', borderColor: 'border', p: 4 };
+
     return (
-        <Box bg="bg.panel" borderRadius="xl" borderWidth="1px" borderColor="border" p={4}>
+        <Box {...wrapperProps}>
             <VStack align="stretch" gap={3}>
-                <HStack justify="space-between" wrap="wrap" gap={2}>
-                    <HStack gap={2}>
-                        <LuFilter size={16} />
-                        <Text fontWeight="600">Фильтры</Text>
+                {!embedded && (
+                    <HStack justify="space-between" wrap="wrap" gap={2}>
+                        <HStack gap={2}>
+                            <LuFilter size={16} />
+                            <Text fontWeight="600">Фильтры</Text>
+                        </HStack>
+                        <HStack gap={2} wrap="wrap">
+                            <Button size="xs" variant="ghost" onClick={onReset} disabled={loading}>
+                                <LuRotateCcw /> Сбросить
+                            </Button>
+                            <Button size="xs" variant="outline" onClick={onExport} disabled={loading}>
+                                <LuDownload /> XLSX
+                            </Button>
+                        </HStack>
                     </HStack>
-                    <HStack gap={2} wrap="wrap">
-                        <Button size="xs" variant="ghost" onClick={onReset} disabled={loading}>
-                            <LuRotateCcw /> Сбросить
-                        </Button>
-                        <Button size="xs" variant="outline" onClick={onExport} disabled={loading}>
-                            <LuDownload /> XLSX
-                        </Button>
-                    </HStack>
-                </HStack>
+                )}
 
                 <Wrap gap={2}>
                     {PRESETS.map((p) => (
