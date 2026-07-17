@@ -120,7 +120,11 @@ export default function CrmAnalyticsIndex() {
     };
     const contractorLabelClick = (r) => (r.company_id ? () => applyFilter({ company_ids: [r.company_id] }) : null);
     const managerLabelClick = (r) => (r.manager_id ? () => applyFilter({ manager_ids: [r.manager_id] }) : null);
-    const productLabelHref = (r) => (r.slug ? `/products/${r.slug}` : null);
+    // Клик по товару ставит его единственным фильтром по товарам (как бренд/категория),
+    // а не уводит на карточку.
+    const productLabelClick = (r) => (r.product_id
+        ? () => handleProductsChange([{ id: r.product_id, name: r.label, sku: r.sku }])
+        : null);
 
     const currency = data?.currency ?? { code: 'RUB', symbol: '₽' };
     const comparison = data?.comparison ?? null;
@@ -209,7 +213,7 @@ export default function CrmAnalyticsIndex() {
                         { key: 'sku', label: 'Артикул', render: (r) => r.sku || '—' },
                         { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                     ]}
-                    getLabelHref={productLabelHref}
+                    getLabelClick={productLabelClick}
                 />
             ),
         },
