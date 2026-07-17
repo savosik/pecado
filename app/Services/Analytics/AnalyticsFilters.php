@@ -69,24 +69,62 @@ class AnalyticsFilters
     }
 
     /**
-     * Предыдущий период такой же длины, вплотную до начала текущего
-     * (стандартное «предыдущий период» аналитических дашбордов).
+     * Допустимые режимы базы сравнения.
      */
-    public function previousPeriod(): self
+    public const COMPARE_MODES = ['prev_period', 'month', 'quarter', 'year'];
+
+    /**
+     * Диапазон для сравнения — сдвиг текущего окна назад по выбранной базе.
+     * Длина окна сохраняется, поэтому наложение на графике идёт по позиции точки.
+     *
+     * @param  string  $mode  prev_period|month|quarter|year (иначе — null)
+     * @param  int  $offset  сколько единиц назад (1..12)
+     */
+    public function comparisonPeriod(string $mode, int $offset = 1): ?self
     {
-        $days = $this->periodDays();
-        $prevTo = $this->dateFrom->subSecond();
-        $prevFrom = $prevTo->subDays($days - 1)->startOfDay();
+        if (! in_array($mode, self::COMPARE_MODES, true)) {
+            return null;
+        }
+
+        $offset = max(1, min(12, $offset));
+
+        [$from, $to] = match ($mode) {
+            'prev_period' => [
+                $this->dateFrom->subDays($offset * $this->periodDays()),
+                $this->dateTo->subDays($offset * $this->periodDays()),
+            ],
+            'month' => [
+                $this->dateFrom->subMonthsNoOverflow($offset),
+                $this->dateTo->subMonthsNoOverflow($offset),
+            ],
+            'quarter' => [
+                $this->dateFrom->subMonthsNoOverflow($offset * 3),
+                $this->dateTo->subMonthsNoOverflow($offset * 3),
+            ],
+            'year' => [
+                $this->dateFrom->subYearsNoOverflow($offset),
+                $this->dateTo->subYearsNoOverflow($offset),
+            ],
+        };
 
         return new self(
-            dateFrom: $prevFrom,
-            dateTo: $prevTo,
+            dateFrom: $from,
+            dateTo: $to,
             companyIds: $this->companyIds,
             brandIds: $this->brandIds,
             categoryIds: $this->categoryIds,
             sku: $this->sku,
             productIds: $this->productIds,
         );
+    }
+
+    /**
+     * Предыдущий период такой же длины, вплотную до начала текущего.
+     * Используется во внутренних инсайтах (trendBrands).
+     */
+    public function previousPeriod(): self
+    {
+        return $this->comparisonPeriod('prev_period', 1) ?? $this;
     }
 
     /**

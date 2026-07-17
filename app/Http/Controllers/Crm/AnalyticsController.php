@@ -43,7 +43,7 @@ class AnalyticsController extends CrmController
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         return Inertia::render('Crm/Pages/Analytics/Index', [
-            'initial' => $this->buildPayload($ctx, $filters, $seesAll, $this->wantsComparison($request)),
+            'initial' => $this->buildPayload($ctx, $filters, $seesAll, ...$this->resolveComparison($request)),
             'filterOptions' => $this->filterOptions($ctx, $seesAll),
             'seesAll' => $seesAll,
         ]);
@@ -60,7 +60,7 @@ class AnalyticsController extends CrmController
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         return response()->json(
-            $this->buildPayload($ctx, $filters, $seesAll, $this->wantsComparison($request))
+            $this->buildPayload($ctx, $filters, $seesAll, ...$this->resolveComparison($request))
         );
     }
 
@@ -174,7 +174,7 @@ class AnalyticsController extends CrmController
     /**
      * @return array<string, mixed>
      */
-    private function buildPayload(AnalyticsContext $ctx, AnalyticsFilters $filters, bool $seesAll, bool $compare): array
+    private function buildPayload(AnalyticsContext $ctx, AnalyticsFilters $filters, bool $seesAll, string $compareMode, int $compareOffset): array
     {
         $metrics = $this->analytics->metrics($ctx, $filters);
         $timeSeries = $this->analytics->timeSeries($ctx, $filters);
@@ -193,11 +193,14 @@ class AnalyticsController extends CrmController
             'comparison' => null,
         ];
 
-        if ($compare) {
-            $prevFilters = $filters->previousPeriod();
+        $prevFilters = $filters->comparisonPeriod($compareMode, $compareOffset);
+
+        if ($prevFilters !== null) {
             $prevMetrics = $this->analytics->metrics($ctx, $prevFilters);
 
             $payload['comparison'] = [
+                'mode' => $compareMode,
+                'offset' => $compareOffset,
                 'period' => [
                     'date_from' => $prevFilters->dateFrom->toDateString(),
                     'date_to' => $prevFilters->dateTo->toDateString(),
@@ -256,9 +259,26 @@ class AnalyticsController extends CrmController
         return $options;
     }
 
-    private function wantsComparison(Request $request): bool
+    /**
+     * Режим и смещение базы сравнения из запроса.
+     * Легаси-параметр compare=1 трактуется как предыдущий период.
+     *
+     * @return array{0: string, 1: int}
+     */
+    private function resolveComparison(Request $request): array
     {
-        return filter_var($request->input('compare', false), FILTER_VALIDATE_BOOLEAN);
+        $mode = (string) $request->input('compare_mode', 'none');
+
+        if (! in_array($mode, AnalyticsFilters::COMPARE_MODES, true)) {
+            $mode = filter_var($request->input('compare', false), FILTER_VALIDATE_BOOLEAN)
+                ? 'prev_period'
+                : 'none';
+        }
+
+        $offset = (int) $request->input('compare_offset', 1);
+        $offset = max(1, min(12, $offset));
+
+        return [$mode, $offset];
     }
 
     /**

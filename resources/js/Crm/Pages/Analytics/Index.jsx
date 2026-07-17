@@ -25,7 +25,19 @@ const DEFAULT_FILTERS = {
     sku: '',
 };
 
-function buildParams(filters, compare) {
+const COMPARE_LABELS = {
+    prev_period: 'Предыдущий период',
+    month: 'Прошлый месяц',
+    quarter: 'Прошлый квартал',
+    year: 'Прошлый год',
+};
+
+function compareLabel(mode, offset) {
+    const base = COMPARE_LABELS[mode] || 'Сравнение';
+    return offset > 1 ? `${base} × ${offset}` : base;
+}
+
+function buildParams(filters, compareMode, compareOffset) {
     const params = {};
     if (filters.date_from) params.date_from = filters.date_from;
     if (filters.date_to) params.date_to = filters.date_to;
@@ -35,7 +47,10 @@ function buildParams(filters, compare) {
     if (filters.category_ids?.length) params['category_ids'] = filters.category_ids;
     if (filters.product_ids?.length) params['product_ids'] = filters.product_ids;
     if (filters.sku) params.sku = filters.sku;
-    if (compare) params.compare = 1;
+    if (compareMode && compareMode !== 'none') {
+        params.compare_mode = compareMode;
+        params.compare_offset = compareOffset;
+    }
     return params;
 }
 
@@ -44,17 +59,18 @@ export default function CrmAnalyticsIndex() {
 
     const [filters, setFilters] = useState({ ...DEFAULT_FILTERS, ...(initial?.filters ?? {}) });
     const [products, setProducts] = useState([]);
-    const [compare, setCompare] = useState(false);
+    const [compareMode, setCompareMode] = useState('none');
+    const [compareOffset, setCompareOffset] = useState(1);
     const [data, setData] = useState(initial);
     const [loading, setLoading] = useState(false);
     const debounceRef = useRef(null);
     const isFirstRender = useRef(true);
 
-    const reload = useCallback(async (nextFilters, nextCompare) => {
+    const reload = useCallback(async (nextFilters, mode, offset) => {
         setLoading(true);
         try {
             const res = await axios.get('/crm/analytics/data', {
-                params: buildParams(nextFilters, nextCompare),
+                params: buildParams(nextFilters, mode, offset),
             });
             setData(res.data);
         } catch (e) {
@@ -71,14 +87,15 @@ export default function CrmAnalyticsIndex() {
         }
         if (debounceRef.current) clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-            reload(filters, compare);
+            reload(filters, compareMode, compareOffset);
         }, 500);
         return () => debounceRef.current && clearTimeout(debounceRef.current);
-    }, [filters, compare, reload]);
+    }, [filters, compareMode, compareOffset, reload]);
 
     const handleReset = () => {
         setProducts([]);
-        setCompare(false);
+        setCompareMode('none');
+        setCompareOffset(1);
         setFilters(DEFAULT_FILTERS);
     };
 
@@ -88,7 +105,7 @@ export default function CrmAnalyticsIndex() {
     };
 
     const buildExportUrl = () => {
-        const base = Object.entries(buildParams(filters, false)).flatMap(([k, v]) =>
+        const base = Object.entries(buildParams(filters, 'none', 1)).flatMap(([k, v]) =>
             Array.isArray(v) ? v.map((x) => [`${k}[]`, x]) : [[k, v]]
         );
         return '/crm/analytics/export?' + new URLSearchParams(base).toString();
@@ -219,8 +236,10 @@ export default function CrmAnalyticsIndex() {
                     seesAll={seesAll}
                     products={products}
                     onProductsChange={handleProductsChange}
-                    compare={compare}
-                    onCompareChange={setCompare}
+                    compareMode={compareMode}
+                    compareOffset={compareOffset}
+                    onCompareModeChange={setCompareMode}
+                    onCompareOffsetChange={setCompareOffset}
                 />
 
                 {loading && (
@@ -249,7 +268,7 @@ export default function CrmAnalyticsIndex() {
 
                             {comparison && (
                                 <Text fontSize="xs" color="fg.muted">
-                                    Сравнение с периодом {comparison.period.date_from} — {comparison.period.date_to}
+                                    Сравнение: {compareLabel(comparison.mode, comparison.offset)} ({comparison.period.date_from} — {comparison.period.date_to})
                                 </Text>
                             )}
 

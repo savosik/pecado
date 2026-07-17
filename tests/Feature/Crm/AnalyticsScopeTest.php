@@ -199,14 +199,69 @@ class AnalyticsScopeTest extends TestCase
         $payload = $this->fetchData($actor, [
             'date_from' => Carbon::today()->toDateString(),
             'date_to' => Carbon::today()->toDateString(),
-            'compare' => 1,
+            'compare_mode' => 'prev_period',
         ]);
 
         $this->assertEquals(1000, $payload['metrics']['total_amount']);
         $this->assertNotNull($payload['comparison']);
+        $this->assertSame('prev_period', $payload['comparison']['mode']);
         $this->assertEquals(400, $payload['comparison']['metrics']['total_amount']);
         $this->assertEquals(600, $payload['comparison']['deltas']['total_amount']['abs']);
         $this->assertEquals(150.0, $payload['comparison']['deltas']['total_amount']['pct']);
+    }
+
+    #[Test]
+    public function comparison_same_dates_previous_month(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $client = $this->makeClient($card);
+
+        $anchor = Carbon::create(2026, 6, 15);
+        Carbon::setTestNow($anchor);
+
+        // Текущий период — 10–15 июня; сравнение «прошлый месяц» → 10–15 мая.
+        $this->makeShipmentFor($client, ['erp_created_at' => Carbon::create(2026, 6, 12)], [['quantity' => 1, 'price' => 1000, 'total' => 1000]]);
+        $this->makeShipmentFor($client, ['erp_created_at' => Carbon::create(2026, 5, 12)], [['quantity' => 1, 'price' => 700, 'total' => 700]]);
+        // Май, но вне окна 10–15 — не должно попасть в сравнение.
+        $this->makeShipmentFor($client, ['erp_created_at' => Carbon::create(2026, 5, 2)], [['quantity' => 1, 'price' => 9999, 'total' => 9999]]);
+
+        $payload = $this->fetchData($actor, [
+            'date_from' => '2026-06-10',
+            'date_to' => '2026-06-15',
+            'compare_mode' => 'month',
+        ]);
+
+        Carbon::setTestNow();
+
+        $this->assertEquals(1000, $payload['metrics']['total_amount']);
+        $this->assertSame('month', $payload['comparison']['mode']);
+        $this->assertSame('2026-05-10', $payload['comparison']['period']['date_from']);
+        $this->assertSame('2026-05-15', $payload['comparison']['period']['date_to']);
+        $this->assertEquals(700, $payload['comparison']['metrics']['total_amount']);
+    }
+
+    #[Test]
+    public function comparison_two_years_back(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $client = $this->makeClient($card);
+
+        $this->makeShipmentFor($client, ['erp_created_at' => Carbon::create(2026, 3, 10)], [['quantity' => 1, 'price' => 500, 'total' => 500]]);
+        $this->makeShipmentFor($client, ['erp_created_at' => Carbon::create(2024, 3, 10)], [['quantity' => 1, 'price' => 300, 'total' => 300]]);
+
+        $payload = $this->fetchData($actor, [
+            'date_from' => '2026-03-01',
+            'date_to' => '2026-03-31',
+            'compare_mode' => 'year',
+            'compare_offset' => 2,
+        ]);
+
+        $this->assertEquals(500, $payload['metrics']['total_amount']);
+        $this->assertSame('year', $payload['comparison']['mode']);
+        $this->assertSame(2, $payload['comparison']['offset']);
+        $this->assertSame('2024-03-01', $payload['comparison']['period']['date_from']);
+        $this->assertSame('2024-03-31', $payload['comparison']['period']['date_to']);
+        $this->assertEquals(300, $payload['comparison']['metrics']['total_amount']);
     }
 
     #[Test]

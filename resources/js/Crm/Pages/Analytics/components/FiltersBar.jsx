@@ -5,9 +5,75 @@ import {
 } from '@chakra-ui/react';
 import { LuFilter, LuRotateCcw, LuChevronDown, LuDownload, LuSearch, LuPackageSearch } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
 import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import CategoryTreeSelect from './CategoryTreeSelect';
+
+const COMPARE_MODES = [
+    { value: 'none', label: 'Не сравнивать' },
+    { value: 'prev_period', label: 'Предыдущий период' },
+    { value: 'month', label: 'Прошлый месяц (те же даты)' },
+    { value: 'quarter', label: 'Прошлый квартал' },
+    { value: 'year', label: 'Прошлый год' },
+];
+
+function CompareControl({ mode, offset, onModeChange, onOffsetChange, loading }) {
+    const current = COMPARE_MODES.find((m) => m.value === mode) ?? COMPARE_MODES[0];
+
+    return (
+        <HStack gap={2} align="end">
+            <VStack align="stretch" gap={1} minW="210px">
+                <Text fontSize="xs" color="fg.muted" fontWeight="500">Сравнение</Text>
+                <Popover.Root positioning={{ sameWidth: true, placement: 'bottom-start' }}>
+                    <Popover.Trigger asChild>
+                        <Button variant="outline" size="sm" justifyContent="space-between" fontWeight="500" bg="bg" disabled={loading}>
+                            <Text lineClamp={1}>{current.label}</Text>
+                            <LuChevronDown />
+                        </Button>
+                    </Popover.Trigger>
+                    <Portal>
+                        <Popover.Positioner>
+                            <Popover.Content>
+                                <Popover.Body p={1}>
+                                    <VStack align="stretch" gap={0}>
+                                        {COMPARE_MODES.map((m) => (
+                                            <Popover.CloseTrigger asChild key={m.value}>
+                                                <Button
+                                                    size="sm"
+                                                    variant={m.value === mode ? 'subtle' : 'ghost'}
+                                                    justifyContent="flex-start"
+                                                    onClick={() => onModeChange(m.value)}
+                                                >
+                                                    {m.label}
+                                                </Button>
+                                            </Popover.CloseTrigger>
+                                        ))}
+                                    </VStack>
+                                </Popover.Body>
+                            </Popover.Content>
+                        </Popover.Positioner>
+                    </Portal>
+                </Popover.Root>
+            </VStack>
+            {mode !== 'none' && (
+                <VStack align="stretch" gap={1} w="92px">
+                    <Text fontSize="xs" color="fg.muted" fontWeight="500">Назад</Text>
+                    <Input
+                        type="number"
+                        size="sm"
+                        min={1}
+                        max={12}
+                        value={offset}
+                        onChange={(e) => {
+                            const v = parseInt(e.target.value || '1', 10);
+                            onOffsetChange(Number.isFinite(v) ? Math.max(1, Math.min(12, v)) : 1);
+                        }}
+                        bg="bg"
+                    />
+                </VStack>
+            )}
+        </HStack>
+    );
+}
 
 const PRESETS = [
     { key: 'this-month', label: 'Текущий месяц' },
@@ -145,8 +211,10 @@ export default function FiltersBar({
     seesAll,
     products,
     onProductsChange,
-    compare,
-    onCompareChange,
+    compareMode,
+    compareOffset,
+    onCompareModeChange,
+    onCompareOffsetChange,
 }) {
     const update = (patch) => onChange({ ...filters, ...patch });
 
@@ -163,10 +231,7 @@ export default function FiltersBar({
                         <LuFilter size={16} />
                         <Text fontWeight="600">Фильтры</Text>
                     </HStack>
-                    <HStack gap={3} wrap="wrap">
-                        <Switch checked={compare} onCheckedChange={(e) => onCompareChange(e.checked)} disabled={loading}>
-                            <Text fontSize="sm">Сравнить с прошлым периодом</Text>
-                        </Switch>
+                    <HStack gap={2} wrap="wrap">
                         <Button size="xs" variant="ghost" onClick={onReset} disabled={loading}>
                             <LuRotateCcw /> Сбросить
                         </Button>
@@ -220,6 +285,13 @@ export default function FiltersBar({
                         tree={filterOptions.categories || []}
                         selectedIds={filters.category_ids || []}
                         onChange={(ids) => update({ category_ids: ids })}
+                    />
+                    <CompareControl
+                        mode={compareMode}
+                        offset={compareOffset}
+                        onModeChange={onCompareModeChange}
+                        onOffsetChange={onCompareOffsetChange}
+                        loading={loading}
                     />
                 </Flex>
 
