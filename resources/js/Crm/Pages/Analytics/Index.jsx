@@ -131,6 +131,36 @@ export default function CrmAnalyticsIndex() {
         ? () => handleProductsChange([{ id: r.product_id, name: r.label, sku: r.sku }])
         : null);
 
+    // Теги активного фильтра у заголовка каждой таблицы — крестик убирает
+    // одно значение из соответствующего фильтра.
+    const removeId = (key, id) => applyFilter({
+        [key]: (filters[key] || []).filter((x) => String(x) !== String(id)),
+    });
+    const idTags = (ids, opts, key) => (ids || []).map((id) => ({
+        key: `${key}:${id}`,
+        label: (opts || []).find((o) => String(o.id) === String(id))?.name || `#${id}`,
+        onRemove: () => removeId(key, id),
+    }));
+    const flatCategoryNames = (() => {
+        const map = {};
+        const walk = (nodes) => (nodes || []).forEach((n) => { map[n.id] = n.name; walk(n.children); });
+        walk(filterOptions?.categories);
+        return map;
+    })();
+    const managerTags = idTags(filters.manager_ids, filterOptions?.managers, 'manager_ids');
+    const brandTags = idTags(filters.brand_ids, filterOptions?.brands, 'brand_ids');
+    const contractorTags = idTags(filters.company_ids, filterOptions?.companies, 'company_ids');
+    const categoryTags = (filters.category_ids || []).map((id) => ({
+        key: `category:${id}`,
+        label: flatCategoryNames[id] || `#${id}`,
+        onRemove: () => removeId('category_ids', id),
+    }));
+    const productTags = products.map((p) => ({
+        key: `product:${p.id}`,
+        label: p.name || p.label || `#${p.id}`,
+        onRemove: () => handleProductsChange(products.filter((x) => x.id !== p.id)),
+    }));
+
     const currency = data?.currency ?? { code: 'RUB', symbol: '₽' };
     const comparison = data?.comparison ?? null;
 
@@ -149,6 +179,7 @@ export default function CrmAnalyticsIndex() {
                     { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                 ]}
                 getLabelClick={managerLabelClick}
+                selectedTags={managerTags}
             />
         ),
     }] : [];
@@ -169,6 +200,7 @@ export default function CrmAnalyticsIndex() {
                         { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                     ]}
                     getLabelClick={brandLabelClick}
+                    selectedTags={brandTags}
                 />
             ),
         },
@@ -186,6 +218,7 @@ export default function CrmAnalyticsIndex() {
                         { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                     ]}
                     getLabelClick={categoryLabelClick}
+                    selectedTags={categoryTags}
                 />
             ),
         },
@@ -202,6 +235,7 @@ export default function CrmAnalyticsIndex() {
                         { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
                     ]}
                     getLabelClick={contractorLabelClick}
+                    selectedTags={contractorTags}
                 />
             ),
         },
@@ -219,6 +253,7 @@ export default function CrmAnalyticsIndex() {
                         { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
                     ]}
                     getLabelClick={productLabelClick}
+                    selectedTags={productTags}
                 />
             ),
         },
