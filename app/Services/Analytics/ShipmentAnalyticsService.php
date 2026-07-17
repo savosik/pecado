@@ -272,7 +272,31 @@ class ShipmentAnalyticsService
             ->get();
 
         $bucket = $filters->bucket();
+
+        // Каркас из всех бакетов выбранного диапазона с нулями. Без него дни без
+        // отгрузок выпадали бы из ряда, и recharts соединял бы редкие точки
+        // сглаженной кривой — график выглядел как плавный «взлёт» вместо реальных
+        // всплесков и провалов, а ось X сжималась до первого–последнего дня с данными.
         $accumulated = [];
+        $cursor = match ($bucket) {
+            'week' => $filters->dateFrom->startOfWeek(),
+            'month' => $filters->dateFrom->startOfMonth(),
+            default => $filters->dateFrom->startOfDay(),
+        };
+        while ($cursor->lessThanOrEqualTo($filters->dateTo)) {
+            $key = $cursor->toDateString();
+            $accumulated[$key] = [
+                'period' => $key,
+                'amount_rub' => 0.0,
+                'qty' => 0,
+                'shipments_count' => 0,
+            ];
+            $cursor = match ($bucket) {
+                'week' => $cursor->addWeek(),
+                'month' => $cursor->addMonth(),
+                default => $cursor->addDay(),
+            };
+        }
 
         foreach ($rowsByDay as $row) {
             if (! $row->day) {

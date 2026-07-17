@@ -285,4 +285,41 @@ class AnalyticsControllerTest extends TestCase
         ]);
         $this->assertSame('month', $monthResp['time_series']['bucket']);
     }
+
+    #[Test]
+    public function time_series_fills_gaps_with_zero_days_across_full_range(): void
+    {
+        $product = Product::factory()->create();
+        $from = Carbon::parse('2026-06-01');
+        $to = Carbon::parse('2026-06-10');
+
+        // Отгрузки только в двух днях диапазона — между ними и по краям пусто.
+        $this->makeShipment(
+            ['date' => Carbon::parse('2026-06-03')],
+            [['product' => $product, 'quantity' => 1, 'price' => 100, 'total' => 100]]
+        );
+        $this->makeShipment(
+            ['date' => Carbon::parse('2026-06-07')],
+            [['product' => $product, 'quantity' => 2, 'price' => 100, 'total' => 200]]
+        );
+
+        $resp = $this->fetchData([
+            'date_from' => $from->toDateString(),
+            'date_to' => $to->toDateString(),
+        ]);
+
+        $points = $resp['time_series']['points'];
+
+        // Ряд покрывает каждый день диапазона (10 дней), а не только дни с данными.
+        $this->assertCount(10, $points);
+        $this->assertSame('2026-06-01', $points[0]['period']);
+        $this->assertSame('2026-06-10', $points[9]['period']);
+
+        $byPeriod = collect($points)->keyBy('period');
+        $this->assertEqualsWithDelta(100, $byPeriod['2026-06-03']['amount'], 0.01);
+        $this->assertEqualsWithDelta(200, $byPeriod['2026-06-07']['amount'], 0.01);
+        // День без отгрузок — честный ноль, а не пропуск.
+        $this->assertSame(0.0, (float) $byPeriod['2026-06-05']['amount']);
+        $this->assertSame(0, (int) $byPeriod['2026-06-05']['qty']);
+    }
 }
