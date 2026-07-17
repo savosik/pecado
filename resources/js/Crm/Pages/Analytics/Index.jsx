@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import {
-    Box, VStack, Text, Spinner, HStack, Accordion, Span, Badge, Tabs,
+    Box, Flex, VStack, Text, Spinner, HStack, IconButton, Accordion, Span, Badge, Tabs,
 } from '@chakra-ui/react';
-import { LuChartLine, LuLightbulb, LuLayoutGrid } from 'react-icons/lu';
+import { LuChartLine, LuLightbulb, LuLayoutGrid, LuFilter, LuChevronRight } from 'react-icons/lu';
 import axios from 'axios';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -63,6 +63,15 @@ export default function CrmAnalyticsIndex() {
     const [compareOffset, setCompareOffset] = useState(1);
     const [data, setData] = useState(initial);
     const [loading, setLoading] = useState(false);
+    const [panelOpen, setPanelOpen] = useState(() => {
+        if (typeof window === 'undefined') return true;
+        return window.localStorage.getItem('crmAnalyticsFiltersOpen') !== '0';
+    });
+    useEffect(() => {
+        try {
+            window.localStorage.setItem('crmAnalyticsFiltersOpen', panelOpen ? '1' : '0');
+        } catch { /* localStorage может быть недоступен */ }
+    }, [panelOpen]);
     const debounceRef = useRef(null);
     const isFirstRender = useRef(true);
 
@@ -259,36 +268,65 @@ export default function CrmAnalyticsIndex() {
     return (
         <>
             <Head title="Отчёты продаж — CRM" />
-            <PageHeader
-                title="Отчёты продаж"
-                description={seesAll ? 'Продажи всего отдела по данным отгрузок 1С' : 'Продажи ваших клиентов по данным отгрузок 1С'}
-            />
 
-            <VStack align="stretch" gap={5}>
-                <FiltersBar
-                    filters={filters}
-                    filterOptions={filterOptions}
-                    onChange={setFilters}
-                    onReset={handleReset}
-                    onExport={handleExport}
-                    loading={loading}
-                    seesAll={seesAll}
-                    products={products}
-                    onProductsChange={handleProductsChange}
-                    compareMode={compareMode}
-                    compareOffset={compareOffset}
-                    onCompareModeChange={setCompareMode}
-                    onCompareOffsetChange={setCompareOffset}
-                />
-
-                {loading && (
-                    <HStack gap={2} color="fg.muted">
-                        <Spinner size="sm" />
-                        <Text fontSize="sm">Обновление…</Text>
-                    </HStack>
+            <Flex direction={{ base: 'column', md: 'row' }} align="flex-start" gap={4}>
+                {panelOpen ? (
+                    <Box
+                        as="aside"
+                        flexShrink={0}
+                        w={{ base: '100%', md: '300px' }}
+                        position={{ md: 'sticky' }}
+                        top={{ md: '72px' }}
+                        h={{ md: 'calc(100dvh - 88px)' }}
+                        zIndex={3}
+                    >
+                        <FiltersBar
+                            filters={filters}
+                            filterOptions={filterOptions}
+                            onChange={setFilters}
+                            onReset={handleReset}
+                            onExport={handleExport}
+                            loading={loading}
+                            seesAll={seesAll}
+                            products={products}
+                            onProductsChange={handleProductsChange}
+                            compareMode={compareMode}
+                            compareOffset={compareOffset}
+                            onCompareModeChange={setCompareMode}
+                            onCompareOffsetChange={setCompareOffset}
+                            onCollapse={() => setPanelOpen(false)}
+                        />
+                    </Box>
+                ) : (
+                    <Box flexShrink={0} position={{ md: 'sticky' }} top={{ md: '72px' }} zIndex={3}>
+                        <IconButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPanelOpen(true)}
+                            aria-label="Показать фильтры"
+                            title="Показать фильтры"
+                        >
+                            <LuFilter />
+                            <LuChevronRight />
+                        </IconButton>
+                    </Box>
                 )}
 
-                <Tabs.Root defaultValue="figures" variant="enclosed" size="md">
+                <Box flex="1" minW="0" w={{ base: '100%', md: 'auto' }}>
+                    <PageHeader
+                        title="Отчёты продаж"
+                        description={seesAll ? 'Продажи всего отдела по данным отгрузок 1С' : 'Продажи ваших клиентов по данным отгрузок 1С'}
+                    />
+
+                    <VStack align="stretch" gap={5}>
+                        {loading && (
+                            <HStack gap={2} color="fg.muted">
+                                <Spinner size="sm" />
+                                <Text fontSize="sm">Обновление…</Text>
+                            </HStack>
+                        )}
+
+                        <Tabs.Root defaultValue="figures" variant="enclosed" size="md">
                     <Tabs.List>
                         <Tabs.Trigger value="figures">
                             <LuChartLine /> Цифры и графики
@@ -347,12 +385,14 @@ export default function CrmAnalyticsIndex() {
                     </Tabs.Content>
                 </Tabs.Root>
 
-                <Box pb={4}>
-                    <Text fontSize="xs" color="fg.muted" textAlign="center">
-                        Отчёт построен по реализациям (отгрузкам) из 1С. Даты — по дате документа 1С. Суммы в рублях. Возвраты не учитываются.
-                    </Text>
+                        <Box pb={4}>
+                            <Text fontSize="xs" color="fg.muted" textAlign="center">
+                                Отчёт построен по реализациям (отгрузкам) из 1С. Даты — по дате документа 1С. Суммы в рублях. Возвраты не учитываются.
+                            </Text>
+                        </Box>
+                    </VStack>
                 </Box>
-            </VStack>
+            </Flex>
         </>
     );
 }

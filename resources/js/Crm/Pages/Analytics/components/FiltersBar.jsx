@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import {
-    Box, Flex, HStack, VStack, Text, Input, Button, Wrap, WrapItem,
+    Box, Flex, HStack, VStack, Text, Input, Button, IconButton, Wrap, WrapItem,
     Popover, Portal,
 } from '@chakra-ui/react';
-import { LuRotateCcw, LuChevronDown, LuDownload, LuSearch } from 'react-icons/lu';
+import { LuRotateCcw, LuChevronDown, LuChevronLeft, LuDownload, LuSearch, LuFilter } from 'react-icons/lu';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProductSelector } from '@/Admin/Components/ProductSelector';
 import CategoryTreeSelect from './CategoryTreeSelect';
@@ -215,6 +215,7 @@ export default function FiltersBar({
     compareOffset,
     onCompareModeChange,
     onCompareOffsetChange,
+    onCollapse,
 }) {
     const update = (patch) => onChange({ ...filters, ...patch });
 
@@ -223,24 +224,41 @@ export default function FiltersBar({
         update({ date_from: from, date_to: to });
     };
 
-    // Компактная всегда-видимая панель, прилипающая под шапкой CRM: контролы
-    // фильтров остаются на виду при прокрутке отчёта — менять их можно без
-    // скролла к началу и без открытия отдельной шторки.
+    // Вертикальная панель фильтров для постоянной левой колонки: шапка со
+    // сворачиванием, прокручиваемое тело с контролами и закреплённый низ с
+    // действиями. Позиционирование (sticky/высоту) задаёт родитель в Index.
     return (
         <Box
-            position="sticky"
-            top={{ base: '56px', md: '60px' }}
-            zIndex={4}
+            h="100%"
+            display="flex"
+            flexDirection="column"
             bg="bg.panel"
             borderRadius="xl"
             borderWidth="1px"
             borderColor="border"
-            px={3}
-            py={3}
-            boxShadow="xs"
+            overflow="hidden"
         >
-            <VStack align="stretch" gap={2}>
-                <HStack justify="space-between" wrap="wrap" gap={2}>
+            <HStack
+                justify="space-between"
+                px={3}
+                py={2}
+                borderBottomWidth="1px"
+                borderColor="border"
+                flexShrink={0}
+            >
+                <HStack gap={2}>
+                    <LuFilter size={16} />
+                    <Text fontWeight="600">Фильтры</Text>
+                </HStack>
+                {onCollapse && (
+                    <IconButton size="xs" variant="ghost" onClick={onCollapse} aria-label="Свернуть фильтры">
+                        <LuChevronLeft />
+                    </IconButton>
+                )}
+            </HStack>
+
+            <Box flex="1" overflowY="auto" px={3} py={3}>
+                <VStack align="stretch" gap={3}>
                     <Wrap gap={1}>
                         {PRESETS.map((p) => (
                             <WrapItem key={p.key}>
@@ -250,25 +268,17 @@ export default function FiltersBar({
                             </WrapItem>
                         ))}
                     </Wrap>
-                    <HStack gap={2}>
-                        <Button size="xs" variant="ghost" onClick={onReset} disabled={loading}>
-                            <LuRotateCcw /> Сбросить
-                        </Button>
-                        <Button size="xs" variant="outline" onClick={onExport} disabled={loading}>
-                            <LuDownload /> XLSX
-                        </Button>
-                    </HStack>
-                </HStack>
 
-                <Flex gap={2} wrap="wrap" align="end">
-                    <VStack align="stretch" gap={1} minW="130px">
-                        <Text fontSize="xs" color="fg.muted" fontWeight="500">С</Text>
-                        <Input type="date" size="sm" value={filters.date_from || ''} onChange={(e) => update({ date_from: e.target.value })} bg="bg" />
-                    </VStack>
-                    <VStack align="stretch" gap={1} minW="130px">
-                        <Text fontSize="xs" color="fg.muted" fontWeight="500">По</Text>
-                        <Input type="date" size="sm" value={filters.date_to || ''} onChange={(e) => update({ date_to: e.target.value })} bg="bg" />
-                    </VStack>
+                    <Flex gap={2} wrap="wrap">
+                        <VStack align="stretch" gap={1} flex="1" minW="120px">
+                            <Text fontSize="xs" color="fg.muted" fontWeight="500">С</Text>
+                            <Input type="date" size="sm" value={filters.date_from || ''} onChange={(e) => update({ date_from: e.target.value })} bg="bg" />
+                        </VStack>
+                        <VStack align="stretch" gap={1} flex="1" minW="120px">
+                            <Text fontSize="xs" color="fg.muted" fontWeight="500">По</Text>
+                            <Input type="date" size="sm" value={filters.date_to || ''} onChange={(e) => update({ date_to: e.target.value })} bg="bg" />
+                        </VStack>
+                    </Flex>
 
                     {seesAll && (
                         <MultiSelect
@@ -302,7 +312,7 @@ export default function FiltersBar({
                         onOffsetChange={onCompareOffsetChange}
                         loading={loading}
                     />
-                    <VStack align="stretch" gap={1} flex="1" minW="240px">
+                    <VStack align="stretch" gap={1}>
                         <Text fontSize="xs" color="fg.muted" fontWeight="500">
                             Товары{products.length > 0 ? ` — выбрано ${products.length}` : ''}
                         </Text>
@@ -313,8 +323,24 @@ export default function FiltersBar({
                             searchRoute="crm.products.search"
                         />
                     </VStack>
-                </Flex>
-            </VStack>
+                </VStack>
+            </Box>
+
+            <HStack
+                justify="space-between"
+                px={3}
+                py={2}
+                borderTopWidth="1px"
+                borderColor="border"
+                flexShrink={0}
+            >
+                <Button size="xs" variant="ghost" onClick={onReset} disabled={loading}>
+                    <LuRotateCcw /> Сбросить
+                </Button>
+                <Button size="xs" variant="outline" onClick={onExport} disabled={loading}>
+                    <LuDownload /> XLSX
+                </Button>
+            </HStack>
         </Box>
     );
 }
