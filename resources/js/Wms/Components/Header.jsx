@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, HStack, IconButton, Text, Breadcrumb, Menu, Button } from "@chakra-ui/react";
 import { usePage, router, Link } from "@inertiajs/react";
-import { LuMenu, LuUser, LuLogOut, LuStore, LuShieldCheck, LuWarehouse } from "react-icons/lu";
+import { LuMenu, LuUser, LuLogOut, LuStore, LuShieldCheck, LuHeadset } from "react-icons/lu";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ColorModeButton } from "@/components/ui/color-mode";
 import { menuConfig } from "../config/menuConfig";
@@ -10,7 +10,7 @@ import { menuConfig } from "../config/menuConfig";
 const labelMap = {};
 menuConfig.forEach((group) => {
     group.items.forEach((item) => {
-        const segment = item.path.replace('/crm/', '').replace('/crm', '');
+        const segment = item.path.replace('/wms/', '').replace('/wms', '');
         if (segment) {
             labelMap[segment] = item.label;
         }
@@ -29,11 +29,11 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
         const cleanUrl = page.url.split('?')[0];
         const parts = cleanUrl.split('/').filter(Boolean);
 
-        if (parts.length === 1 && parts[0] === 'crm') {
-            return [{ label: 'Рабочий стол', href: '/crm' }];
+        if (parts.length === 1 && parts[0] === 'wms') {
+            return [{ label: 'Рабочий стол', href: '/wms' }];
         }
 
-        const crumbs = [{ label: 'Рабочий стол', href: '/crm' }];
+        const crumbs = [{ label: 'Рабочий стол', href: '/wms' }];
 
         if (parts.length > 1) {
             crumbs.push({
@@ -105,12 +105,12 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                         </Tooltip>
                     )}
 
-                    {auth?.user?.is_wms && (
-                        <Tooltip content="Перейти в кабинет склада" positioning={{ placement: "bottom" }}>
+                    {auth?.user?.is_crm && (
+                        <Tooltip content="Перейти в CRM" positioning={{ placement: "bottom" }}>
                             <Button asChild variant="outline" size="sm" colorPalette="gray">
-                                <Link href="/wms">
-                                    <LuWarehouse />
-                                    <Text display={{ base: "none", md: "inline" }}>Склад</Text>
+                                <Link href="/crm">
+                                    <LuHeadset />
+                                    <Text display={{ base: "none", md: "inline" }}>CRM</Text>
                                 </Link>
                             </Button>
                         </Tooltip>

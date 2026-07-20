@@ -32,6 +32,7 @@ trait SharesPanelAuth
                 'roles' => $user->getRoleNames()->toArray(),
                 'is_admin' => $user->hasAdminAccess(),
                 'is_crm' => $user->hasCrmAccess(),
+                'is_wms' => $user->hasWmsAccess(),
             ] : null,
         ];
     }

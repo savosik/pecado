@@ -77,6 +77,10 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-team' => ['view'],
         'crm-analytics' => ['view'],
 
+        // WMS — права домена /wms/ (кабинет склада). Префикс `wms-` значим:
+        // он в User::PANEL_PERMISSION_PREFIXES, поэтому не даёт входа в /admin.
+        'wms-dashboard' => ['view'],
+
         // Система
         'erp-bus' => ['view'],
         'media' => ['view', 'delete'],
@@ -133,6 +137,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-clients-all' => 'CRM: Клиенты всего отдела',
         'crm-team' => 'CRM: Команда',
         'crm-analytics' => 'CRM: Отчёты продаж',
+        'wms-dashboard' => 'Склад: Рабочий стол',
         'erp-bus' => 'Шина ERP',
         'media' => 'Медиа',
         'settings' => 'Настройки',
@@ -185,6 +190,23 @@ class RolesAndPermissionsSeeder extends Seeder
                 'products', 'categories', 'brands', 'product-models',
                 'attributes', 'attribute-groups', 'size-charts',
                 'product-barcodes', 'certificates', 'product-exports',
+            ],
+        ],
+        // Склад. Обе роли пока с одинаковым набором прав — разводить нечем,
+        // пока в /wms только дашборд. Разграничение появится вместе с разделами
+        // (инвентаризация и списание — начальнику, отбор — кладовщику).
+        'warehouse-head' => [
+            'label' => 'Начальник склада',
+            'resources' => [
+                // Только WMS: в /admin роль намеренно не пускает.
+                'wms-dashboard',
+            ],
+        ],
+        'storekeeper' => [
+            'label' => 'Кладовщик',
+            'resources' => [
+                // Только WMS: в /admin роль намеренно не пускает.
+                'wms-dashboard',
             ],
         ],
     ];

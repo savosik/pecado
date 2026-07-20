@@ -133,6 +133,23 @@ class User extends Authenticatable implements HasMedia
     public const CRM_PERMISSION_PREFIX = 'crm-';
 
     /**
+     * Префикс прав домена /wms/ (кабинет склада).
+     */
+    public const WMS_PERMISSION_PREFIX = 'wms-';
+
+    /**
+     * Префиксы прав, принадлежащих отдельным панелям.
+     *
+     * Такие права НЕ дают входа в /admin: сотрудник только с ними работает
+     * исключительно в своей панели. Каждый новый домен обязан попасть в этот
+     * список, иначе его сотрудники молча получат доступ в админку.
+     */
+    public const PANEL_PERMISSION_PREFIXES = [
+        self::CRM_PERMISSION_PREFIX,
+        self::WMS_PERMISSION_PREFIX,
+    ];
+
+    /**
      * The accessors to append to the model's array form.
      *
      * @var list<string>
@@ -476,7 +493,7 @@ class User extends Authenticatable implements HasMedia
         }
 
         return $this->getAllPermissions()->contains(
-            fn ($permission) => ! str_starts_with($permission->name, self::CRM_PERMISSION_PREFIX)
+            fn ($permission) => ! self::isPanelPermission($permission->name)
         );
     }
 
@@ -485,13 +502,43 @@ class User extends Authenticatable implements HasMedia
      */
     public function hasCrmAccess(): bool
     {
+        return $this->hasPanelAccess(self::CRM_PERMISSION_PREFIX);
+    }
+
+    /**
+     * Доступ в /wms — super-admin или хотя бы одно складское право.
+     */
+    public function hasWmsAccess(): bool
+    {
+        return $this->hasPanelAccess(self::WMS_PERMISSION_PREFIX);
+    }
+
+    /**
+     * Есть ли у пользователя хотя бы одно право с указанным панельным префиксом.
+     */
+    private function hasPanelAccess(string $prefix): bool
+    {
         if ($this->hasRole('super-admin')) {
             return true;
         }
 
         return $this->getAllPermissions()->contains(
-            fn ($permission) => str_starts_with($permission->name, self::CRM_PERMISSION_PREFIX)
+            fn ($permission) => str_starts_with($permission->name, $prefix)
         );
+    }
+
+    /**
+     * Принадлежит ли право одной из панелей (/crm, /wms), а не админке.
+     */
+    private static function isPanelPermission(string $permissionName): bool
+    {
+        foreach (self::PANEL_PERMISSION_PREFIXES as $prefix) {
+            if (str_starts_with($permissionName, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

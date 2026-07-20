@@ -43,6 +43,43 @@ class AdminAccessHardeningTest extends TestCase
     }
 
     #[Test]
+    public function warehouse_roles_cannot_enter_admin(): void
+    {
+        // Ключевой кейс третьего домена: до обобщения hasAdminAccess() на
+        // PANEL_PERMISSION_PREFIXES складские права открывали админку,
+        // потому что «wms-*» не начинается с «crm-».
+        foreach (['warehouse-head', 'storekeeper'] as $role) {
+            $this->actingAs($this->userWithRole($role))
+                ->get('/admin')
+                ->assertRedirect('/');
+        }
+    }
+
+    #[Test]
+    public function storefront_flags_for_storekeeper(): void
+    {
+        $this->actingAs($this->userWithRole('storekeeper'))
+            ->get('/')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('auth.user.is_staff', true)
+                ->where('auth.user.is_admin', false)
+                ->where('auth.user.is_crm', false)
+                ->where('auth.user.is_wms', true)
+            );
+    }
+
+    #[Test]
+    public function storefront_does_not_offer_warehouse_to_sales_head(): void
+    {
+        $this->actingAs($this->userWithRole('sales-head'))
+            ->get('/')
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->where('auth.user.is_crm', true)
+                ->where('auth.user.is_wms', false)
+            );
+    }
+
+    #[Test]
     public function role_without_any_permissions_cannot_enter_admin(): void
     {
         Role::create(['name' => 'empty-role', 'guard_name' => 'web']);

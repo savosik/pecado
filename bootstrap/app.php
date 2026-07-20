@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         then: function () {
             Route::group([], base_path('routes/admin.php'));
             Route::group([], base_path('routes/crm.php'));
+            Route::group([], base_path('routes/wms.php'));
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -42,6 +43,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->group('crm', [
             \App\Http\Middleware\EnsureUserIsCrm::class,
             \App\Http\Middleware\HandleCrmInertiaRequests::class,
+        ]);
+
+        $middleware->group('wms', [
+            \App\Http\Middleware\EnsureUserIsWms::class,
+            \App\Http\Middleware\HandleWmsInertiaRequests::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

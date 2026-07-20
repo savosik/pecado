@@ -55,6 +55,7 @@ class HandleInertiaRequests extends Middleware
                     'is_staff' => $user->isStaff(),
                     'is_admin' => $user->hasAdminAccess(),
                     'is_crm' => $user->hasCrmAccess(),
+                    'is_wms' => $user->hasWmsAccess(),
                     'must_change_password' => (bool) $user->must_change_password,
                     'client_status_color' => $user->clientStatus?->color,
                     'client_status_name' => $user->clientStatus?->name,

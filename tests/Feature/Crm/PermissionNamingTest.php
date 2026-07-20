@@ -44,38 +44,76 @@ class PermissionNamingTest extends TestCase
         return $property->getValue(new RoleController);
     }
 
-    #[Test]
-    #[TestDox('Все ресурсы группы CRM несут префикс crm-')]
-    public function crm_group_resources_carry_the_prefix(): void
+    /**
+     * Группы RoleController, относящиеся к панелям, и их префиксы.
+     *
+     * @return array<string, string>
+     */
+    private function panelGroups(): array
     {
-        $crmGroup = $this->controllerGroups()['CRM'] ?? null;
+        return [
+            'CRM' => User::CRM_PERMISSION_PREFIX,
+            'Склад (WMS)' => User::WMS_PERMISSION_PREFIX,
+        ];
+    }
 
-        $this->assertNotNull($crmGroup, 'В RoleController нет группы «CRM».');
+    #[Test]
+    #[TestDox('Все ресурсы панельных групп несут свой префикс')]
+    public function panel_group_resources_carry_their_prefix(): void
+    {
+        foreach ($this->panelGroups() as $group => $prefix) {
+            $resources = $this->controllerGroups()[$group] ?? null;
 
-        foreach ($crmGroup as $resource) {
-            $this->assertStringStartsWith(
-                User::CRM_PERMISSION_PREFIX,
-                $resource,
-                "Ресурс «{$resource}» в группе CRM обязан начинаться с префикса."
-            );
+            $this->assertNotNull($resources, "В RoleController нет группы «{$group}».");
+
+            foreach ($resources as $resource) {
+                $this->assertStringStartsWith(
+                    $prefix,
+                    $resource,
+                    "Ресурс «{$resource}» в группе «{$group}» обязан начинаться с префикса «{$prefix}»."
+                );
+            }
         }
     }
 
     #[Test]
-    #[TestDox('Ни один не-CRM ресурс не начинается с crm-')]
-    public function non_crm_resources_do_not_use_the_prefix(): void
+    #[TestDox('Ни один непанельный ресурс не носит панельный префикс')]
+    public function non_panel_resources_do_not_use_panel_prefixes(): void
     {
-        $crmGroup = $this->controllerGroups()['CRM'] ?? [];
+        // Ресурсы всех панельных групп разом — они законно носят префиксы.
+        $panelResources = array_merge(
+            ...array_map(
+                fn (string $group) => $this->controllerGroups()[$group] ?? [],
+                array_keys($this->panelGroups())
+            )
+        );
 
         foreach (array_keys($this->seederResources()) as $resource) {
-            if (in_array($resource, $crmGroup, true)) {
+            if (in_array($resource, $panelResources, true)) {
                 continue;
             }
 
-            $this->assertStringStartsNotWith(
-                User::CRM_PERMISSION_PREFIX,
-                $resource,
-                "Ресурс «{$resource}» не относится к CRM, но носит её префикс — hasAdminAccess() перестанет пускать в админку."
+            foreach (User::PANEL_PERMISSION_PREFIXES as $prefix) {
+                $this->assertStringStartsNotWith(
+                    $prefix,
+                    $resource,
+                    "Ресурс «{$resource}» не относится к панелям, но носит префикс «{$prefix}» — hasAdminAccess() перестанет пускать его владельцев в админку."
+                );
+            }
+        }
+    }
+
+    #[Test]
+    #[TestDox('Каждый панельный префикс объявлен в PANEL_PERMISSION_PREFIXES')]
+    public function every_panel_prefix_is_registered(): void
+    {
+        // Забыть префикс в константе — значит открыть владельцам этих прав
+        // доступ в /admin, и ни один тест доступа этого бы не заметил.
+        foreach ($this->panelGroups() as $group => $prefix) {
+            $this->assertContains(
+                $prefix,
+                User::PANEL_PERMISSION_PREFIXES,
+                "Префикс «{$prefix}» группы «{$group}» не объявлен в User::PANEL_PERMISSION_PREFIXES."
             );
         }
     }
@@ -137,5 +175,21 @@ class PermissionNamingTest extends TestCase
         // Клиентов всего отдела не видит — только своих.
         $this->assertFalse($manager->can('crm-clients-all.view'));
         $this->assertFalse($manager->can('crm-team.view'));
+    }
+
+    #[Test]
+    #[TestDox('Складские роли получают только WMS-права')]
+    public function warehouse_roles_are_wms_only(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        foreach (['warehouse-head', 'storekeeper'] as $role) {
+            $user = User::factory()->create();
+            $user->assignRole($role);
+
+            $this->assertTrue($user->hasWmsAccess(), "Роль «{$role}» должна давать доступ в /wms.");
+            $this->assertFalse($user->hasAdminAccess(), "Роль «{$role}» не должна пускать в /admin.");
+            $this->assertFalse($user->hasCrmAccess(), "Роль «{$role}» не должна пускать в /crm.");
+        }
     }
 }

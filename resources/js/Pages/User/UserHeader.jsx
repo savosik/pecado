@@ -17,7 +17,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     LuHeart, LuUser, LuMenu, LuShoppingCart,
     LuHouse, LuGrid2X2, LuNewspaper, LuFileText, LuCircleHelp, LuMapPin,
-    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge, LuShieldCheck, LuHeadset,
+    LuLayoutDashboard, LuShoppingBag, LuLogOut, LuLock, LuBadge, LuShieldCheck, LuHeadset, LuWarehouse,
 } from 'react-icons/lu';
 
 // Маппинг имён иконок на компоненты
@@ -155,6 +155,17 @@ export default function UserHeader() {
                                         <Link href="/crm">
                                             <LuHeadset />
                                             <Text display={{ base: 'none', xl: 'inline' }}>CRM</Text>
+                                        </Link>
+                                    </Button>
+                                </Tooltip>
+                            )}
+
+                            {user?.is_wms && (
+                                <Tooltip content="Перейти в кабинет склада" positioning={{ placement: 'bottom' }}>
+                                    <Button asChild variant="outline" colorPalette="pecado" size="sm">
+                                        <Link href="/wms">
+                                            <LuWarehouse />
+                                            <Text display={{ base: 'none', xl: 'inline' }}>Склад</Text>
                                         </Link>
                                     </Button>
                                 </Tooltip>
@@ -461,6 +472,18 @@ export default function UserHeader() {
                                                 <HStack px="3" py="2.5" borderRadius="md" color="pecado.600" _hover={{ bg: 'pecado.50' }} _dark={{ color: 'pecado.300', _hover: { bg: 'pecado.900/20' } }}>
                                                     <LuHeadset size={18} />
                                                     <Text fontSize="sm" fontWeight="600">CRM</Text>
+                                                </HStack>
+                                            </Link>
+                                        </>
+                                    )}
+
+                                    {user?.is_wms && (
+                                        <>
+                                            {!user?.is_admin && !user?.is_crm && <Separator />}
+                                            <Link href="/wms" onClick={() => setMobileMenuOpen(false)}>
+                                                <HStack px="3" py="2.5" borderRadius="md" color="pecado.600" _hover={{ bg: 'pecado.50' }} _dark={{ color: 'pecado.300', _hover: { bg: 'pecado.900/20' } }}>
+                                                    <LuWarehouse size={18} />
+                                                    <Text fontSize="sm" fontWeight="600">Склад</Text>
                                                 </HStack>
                                             </Link>
                                         </>

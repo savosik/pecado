@@ -1,0 +1,26 @@
+import { Drawer, Box, HStack, Badge } from "@chakra-ui/react";
+import { NavigationMenu } from "./NavigationMenu";
+
+export const MobileSidebar = ({ isOpen, onClose }) => {
+    return (
+        <Drawer.Root open={isOpen} onOpenChange={(e) => !e.open && onClose()} placement="start">
+            <Drawer.Backdrop />
+            <Drawer.Positioner>
+                <Drawer.Content>
+                    <Drawer.Header>
+                        <Drawer.Title>
+                            <HStack gap={2}>
+                                <Box as="img" src="/images/logo.png" alt="Pecado Склад" h="10" objectFit="contain" />
+                                <Badge colorPalette="pecado" variant="subtle">Склад</Badge>
+                            </HStack>
+                        </Drawer.Title>
+                        <Drawer.CloseTrigger />
+                    </Drawer.Header>
+                    <Drawer.Body>
+                        <NavigationMenu onItemClick={onClose} />
+                    </Drawer.Body>
+                </Drawer.Content>
+            </Drawer.Positioner>
+        </Drawer.Root>
+    );
+};
