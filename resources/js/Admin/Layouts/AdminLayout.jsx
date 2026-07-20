@@ -1,43 +1,25 @@
-import { useState } from "react";
-import { Box } from "@chakra-ui/react";
-import { Sidebar } from "../Components/Sidebar";
-import { MobileSidebar } from "../Components/MobileSidebar";
-import { Header } from "../Components/Header";
-import { Toaster } from "@/components/ui/toaster";
-import BugReportWidget from "@/Components/BugReportWidget";
+import { PanelLayout } from '@/shared/Panel/PanelLayout';
+import BugReportWidget from '@/Components/BugReportWidget';
+import { menuConfig } from '../config/menuConfig';
 
-export const AdminLayout = ({ children, breadcrumbs = [] }) => {
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-    return (
-        <Box minH="100vh" bg="bg.subtle">
-            {/* Desktop Sidebar */}
-            <Sidebar />
-
-            {/* Mobile Sidebar (Drawer) */}
-            <MobileSidebar
-                isOpen={isMobileMenuOpen}
-                onClose={() => setIsMobileMenuOpen(false)}
-            />
-
-            {/* Main Content */}
-            <Box ml={{ base: 0, md: 64 }}>
-                {/* Header */}
-                <Header
-                    onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
-                    breadcrumbs={breadcrumbs}
-                />
-
-                {/* Page Content */}
-                <Box as="main" p={{ base: 4, md: 6 }}>
-                    {children}
-                </Box>
-            </Box>
-
-            <Toaster />
-            <BugReportWidget />
-        </Box>
-    );
+const panel = {
+    key: 'admin',
+    basePath: '/admin',
+    menuConfig,
+    homeLabel: 'Главная',
+    logoAlt: 'Pecado Admin',
+    // Бейджа нет: админка — панель по умолчанию.
+    logoHeight: 'full',
+    // Страницы создания/редактирования есть только в админке,
+    // поэтому крошка «Создание»/«Редактирование» нужна лишь здесь.
+    actionBreadcrumbs: true,
+    profileHref: '/admin/profile',
 };
+
+export const AdminLayout = ({ children, breadcrumbs = [] }) => (
+    <PanelLayout panel={panel} breadcrumbs={breadcrumbs} extras={<BugReportWidget />}>
+        {children}
+    </PanelLayout>
+);
 
 export default AdminLayout;

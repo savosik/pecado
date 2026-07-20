@@ -1,7 +1,10 @@
-import { Drawer, Box } from "@chakra-ui/react";
-import { NavigationMenu } from "./NavigationMenu";
+import { Drawer, Box, HStack, Badge } from '@chakra-ui/react';
+import { usePanel } from './PanelContext';
+import { NavigationMenu } from './NavigationMenu';
 
 export const MobileSidebar = ({ isOpen, onClose }) => {
+    const { logoAlt, badge } = usePanel();
+
     return (
         <Drawer.Root open={isOpen} onOpenChange={(e) => !e.open && onClose()} placement="start">
             <Drawer.Backdrop />
@@ -9,7 +12,10 @@ export const MobileSidebar = ({ isOpen, onClose }) => {
                 <Drawer.Content>
                     <Drawer.Header>
                         <Drawer.Title>
-                            <Box as="img" src="/images/logo.png" alt="Pecado Admin" h="12" objectFit="contain" />
+                            <HStack gap={2}>
+                                <Box as="img" src="/images/logo.png" alt={logoAlt} h="10" objectFit="contain" />
+                                {badge && <Badge colorPalette="pecado" variant="subtle">{badge}</Badge>}
+                            </HStack>
                         </Drawer.Title>
                         <Drawer.CloseTrigger />
                     </Drawer.Header>

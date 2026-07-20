@@ -1,25 +1,41 @@
-import React from "react";
-import { Box, HStack, IconButton, Text, Breadcrumb, Menu, Button } from "@chakra-ui/react";
-import { usePage, router, Link } from "@inertiajs/react";
-import { LuMenu, LuUser, LuLogOut, LuStore, LuShieldCheck, LuHeadset } from "react-icons/lu";
-import { Tooltip } from "@/components/ui/tooltip";
-import { ColorModeButton } from "@/components/ui/color-mode";
-import { menuConfig } from "../config/menuConfig";
+import React, { useMemo } from 'react';
+import { Box, HStack, IconButton, Text, Breadcrumb, Menu, Button } from '@chakra-ui/react';
+import { usePage, router, Link } from '@inertiajs/react';
+import { LuMenu, LuUser, LuLogOut, LuStore } from 'react-icons/lu';
+import { Tooltip } from '@/components/ui/tooltip';
+import { ColorModeButton } from '@/components/ui/color-mode';
+import { usePanel } from './PanelContext';
+import { PANELS } from './panels';
 
-// Карта «сегмент пути → русская подпись» для хлебных крошек.
-const labelMap = {};
-menuConfig.forEach((group) => {
-    group.items.forEach((item) => {
-        const segment = item.path.replace('/wms/', '').replace('/wms', '');
-        if (segment) {
-            labelMap[segment] = item.label;
-        }
-    });
-});
+const ACTION_LABELS = {
+    create: 'Создание',
+    edit: 'Редактирование',
+};
 
 export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
     const page = usePage();
     const { auth } = page.props;
+    const panel = usePanel();
+    const { key, basePath, menuConfig, homeLabel, actionBreadcrumbs = false, profileHref } = panel;
+
+    // Карта «сегмент пути → русская подпись» для хлебных крошек.
+    const labelMap = useMemo(() => {
+        const map = {};
+
+        menuConfig.forEach((group) => {
+            group.items.forEach((item) => {
+                const segment = item.path.replace(`${basePath}/`, '').replace(basePath, '');
+                if (segment) {
+                    map[segment] = item.label;
+                }
+            });
+        });
+
+        return map;
+    }, [menuConfig, basePath]);
+
+    // Ссылки на остальные панели, доступные пользователю.
+    const otherPanels = PANELS.filter((p) => p.key !== key && auth?.user?.[p.flag]);
 
     const handleLogout = () => {
         router.post('/logout');
@@ -28,18 +44,27 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
     const autoGenerateBreadcrumbs = () => {
         const cleanUrl = page.url.split('?')[0];
         const parts = cleanUrl.split('/').filter(Boolean);
+        const rootSegment = basePath.replace('/', '');
 
-        if (parts.length === 1 && parts[0] === 'wms') {
-            return [{ label: 'Рабочий стол', href: '/wms' }];
+        if (parts.length === 1 && parts[0] === rootSegment) {
+            return [{ label: homeLabel, href: basePath }];
         }
 
-        const crumbs = [{ label: 'Рабочий стол', href: '/wms' }];
+        const crumbs = [{ label: homeLabel, href: basePath }];
 
         if (parts.length > 1) {
             crumbs.push({
                 label: labelMap[parts[1]] || parts[1],
                 href: `/${parts.slice(0, 2).join('/')}`,
             });
+        }
+
+        if (actionBreadcrumbs && parts.length > 2) {
+            const action = ACTION_LABELS[parts[parts.length - 1]];
+
+            if (action) {
+                crumbs.push({ label: action, href: cleanUrl });
+            }
         }
 
         return crumbs;
@@ -60,9 +85,10 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
             zIndex={5}
         >
             <HStack justify="space-between">
+                {/* Слева: кнопка мобильного меню + хлебные крошки */}
                 <HStack gap={4}>
                     <IconButton
-                        display={{ base: "flex", md: "none" }}
+                        display={{ base: 'flex', md: 'none' }}
                         variant="ghost"
                         onClick={onMobileMenuOpen}
                         aria-label="Открыть меню"
@@ -78,8 +104,8 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                                         <Breadcrumb.Link
                                             href={crumb.href}
                                             fontSize="sm"
-                                            color={index === finalBreadcrumbs.length - 1 ? "fg" : "fg.muted"}
-                                            fontWeight={index === finalBreadcrumbs.length - 1 ? "medium" : "normal"}
+                                            color={index === finalBreadcrumbs.length - 1 ? 'fg' : 'fg.muted'}
+                                            fontWeight={index === finalBreadcrumbs.length - 1 ? 'medium' : 'normal'}
                                         >
                                             {crumb.label}
                                         </Breadcrumb.Link>
@@ -93,34 +119,28 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                     </Breadcrumb.Root>
                 </HStack>
 
+                {/* Справа: переходы между панелями, тема, меню пользователя */}
                 <HStack gap={2}>
-                    {auth?.user?.is_admin && (
-                        <Tooltip content="Перейти в админку" positioning={{ placement: "bottom" }}>
+                    {otherPanels.map((target) => (
+                        <Tooltip
+                            key={target.key}
+                            content={`Перейти в раздел «${target.label}»`}
+                            positioning={{ placement: 'bottom' }}
+                        >
                             <Button asChild variant="outline" size="sm" colorPalette="gray">
-                                <Link href="/admin">
-                                    <LuShieldCheck />
-                                    <Text display={{ base: "none", md: "inline" }}>Админка</Text>
+                                <Link href={target.basePath}>
+                                    <target.icon />
+                                    <Text display={{ base: 'none', md: 'inline' }}>{target.label}</Text>
                                 </Link>
                             </Button>
                         </Tooltip>
-                    )}
+                    ))}
 
-                    {auth?.user?.is_crm && (
-                        <Tooltip content="Перейти в CRM" positioning={{ placement: "bottom" }}>
-                            <Button asChild variant="outline" size="sm" colorPalette="gray">
-                                <Link href="/crm">
-                                    <LuHeadset />
-                                    <Text display={{ base: "none", md: "inline" }}>CRM</Text>
-                                </Link>
-                            </Button>
-                        </Tooltip>
-                    )}
-
-                    <Tooltip content="Перейти на витрину" positioning={{ placement: "bottom" }}>
+                    <Tooltip content="Перейти на витрину" positioning={{ placement: 'bottom' }}>
                         <Button asChild variant="outline" size="sm" colorPalette="gray">
                             <Link href="/">
                                 <LuStore />
-                                <Text display={{ base: "none", sm: "inline" }}>На витрину</Text>
+                                <Text display={{ base: 'none', sm: 'inline' }}>На витрину</Text>
                             </Link>
                         </Button>
                     </Tooltip>
@@ -134,7 +154,7 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                                 py={2}
                                 borderRadius="md"
                                 cursor="pointer"
-                                _hover={{ bg: "bg.muted" }}
+                                _hover={{ bg: 'bg.muted' }}
                                 transition="background 0.2s"
                             >
                                 <HStack gap={2}>
@@ -146,6 +166,15 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                             </Box>
                         </Menu.Trigger>
                         <Menu.Content>
+                            {profileHref && (
+                                <>
+                                    <Menu.Item value="profile" onClick={() => router.visit(profileHref)}>
+                                        <LuUser />
+                                        Профиль
+                                    </Menu.Item>
+                                    <Menu.Separator />
+                                </>
+                            )}
                             <Menu.Item value="logout" onClick={handleLogout} color="fg.error">
                                 <LuLogOut />
                                 Выйти

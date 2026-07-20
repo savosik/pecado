@@ -1,23 +1,22 @@
-import { Accordion, HStack, Text, Icon, VStack } from "@chakra-ui/react";
-import { Link } from "@inertiajs/react";
-import { menuConfig } from "../config/menuConfig";
-import { useNavigation } from "../hooks/useNavigation";
-import { usePermission } from "@/Admin/hooks/usePermission";
+import { Accordion, HStack, Text, Icon, VStack } from '@chakra-ui/react';
+import { Link } from '@inertiajs/react';
+import { usePanel } from './PanelContext';
+import { useNavigation } from './useNavigation';
+import { usePermission } from './usePermission';
 
 /**
- * NavigationMenu — навигация кабинета склада. Фильтрует пункты по правам пользователя.
- *
- * usePermission переиспользуем из Admin: он доменно-нейтрален и читает
- * auth.user, который обе панели собирают через SharesPanelAuth.
+ * NavigationMenu — навигация панели. Фильтрует пункты по правам пользователя:
+ * пункт без права виден всем, группа без доступных пунктов скрывается целиком.
  */
 export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
+    const { menuConfig } = usePanel();
     const { isActive, getActiveGroups } = useNavigation();
     const { can } = usePermission();
 
     const filteredGroups = menuConfig
         .map((group) => ({
             ...group,
-            items: group.items.filter(item => !item.permission || can(item.permission)),
+            items: group.items.filter((item) => !item.permission || can(item.permission)),
         }))
         .filter((group) => group.items.length > 0);
 
@@ -28,7 +27,7 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
                     <Accordion.ItemTrigger
                         px={2}
                         py={2}
-                        _hover={{ bg: "bg.muted" }}
+                        _hover={{ bg: 'bg.muted' }}
                         cursor="pointer"
                     >
                         <HStack flex="1" gap={3}>
@@ -46,25 +45,19 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
                         <Accordion.ItemBody>
                             <VStack align="stretch" gap={0} pl={isCollapsed ? 0 : 4}>
                                 {group.items.map((item) => (
-                                    <Link
-                                        key={item.path}
-                                        href={item.path}
-                                        onClick={onItemClick}
-                                    >
+                                    <Link key={item.path} href={item.path} onClick={onItemClick}>
                                         <HStack
                                             px={4}
                                             py={2}
                                             gap={3}
-                                            bg={isActive(item.path) ? "bg.emphasized" : "transparent"}
-                                            color={isActive(item.path) ? "fg" : "fg.muted"}
+                                            bg={isActive(item.path) ? 'bg.emphasized' : 'transparent'}
+                                            color={isActive(item.path) ? 'fg' : 'fg.muted'}
                                             borderRadius="md"
-                                            _hover={{ bg: "bg.muted", color: "fg" }}
+                                            _hover={{ bg: 'bg.muted', color: 'fg' }}
                                             transition="all 0.2s"
                                         >
                                             <Icon as={item.icon} boxSize={4} />
-                                            {!isCollapsed && (
-                                                <Text fontSize="sm">{item.label}</Text>
-                                            )}
+                                            {!isCollapsed && <Text fontSize="sm">{item.label}</Text>}
                                         </HStack>
                                     </Link>
                                 ))}

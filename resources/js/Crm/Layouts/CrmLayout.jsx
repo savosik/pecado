@@ -1,36 +1,20 @@
-import { useState } from "react";
-import { Box } from "@chakra-ui/react";
-import { Sidebar } from "../Components/Sidebar";
-import { MobileSidebar } from "../Components/MobileSidebar";
-import { Header } from "../Components/Header";
-import { Toaster } from "@/components/ui/toaster";
+import { PanelLayout } from '@/shared/Panel/PanelLayout';
+import { menuConfig } from '../config/menuConfig';
 
-export const CrmLayout = ({ children, breadcrumbs = [] }) => {
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-    return (
-        <Box minH="100vh" bg="bg.subtle">
-            <Sidebar />
-
-            <MobileSidebar
-                isOpen={isMobileMenuOpen}
-                onClose={() => setIsMobileMenuOpen(false)}
-            />
-
-            <Box ml={{ base: 0, md: 64 }}>
-                <Header
-                    onMobileMenuOpen={() => setIsMobileMenuOpen(true)}
-                    breadcrumbs={breadcrumbs}
-                />
-
-                <Box as="main" p={{ base: 4, md: 6 }}>
-                    {children}
-                </Box>
-            </Box>
-
-            <Toaster />
-        </Box>
-    );
+const panel = {
+    key: 'crm',
+    basePath: '/crm',
+    menuConfig,
+    homeLabel: 'Рабочий стол',
+    logoAlt: 'Pecado CRM',
+    badge: 'CRM',
+    logoHeight: '8',
 };
+
+export const CrmLayout = ({ children, breadcrumbs = [] }) => (
+    <PanelLayout panel={panel} breadcrumbs={breadcrumbs}>
+        {children}
+    </PanelLayout>
+);
 
 export default CrmLayout;
