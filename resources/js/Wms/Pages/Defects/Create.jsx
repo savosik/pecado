@@ -50,9 +50,12 @@ export default function DefectsCreate() {
                     <Card.Root>
                         <Card.Body>
                             <VStack gap={4} align="stretch">
+                                {/* Без Field required: Chakra навесил бы HTML required
+                                    на внутренний input поиска ProductSelector, а он после
+                                    выбора товара пустеет — браузер блокировал бы отправку,
+                                    хотя товар выбран. Обязательность держит бэк + guard ниже. */}
                                 <Field
-                                    label="Товар"
-                                    required
+                                    label={<>Товар <Text as="span" color="red.500">*</Text></>}
                                     invalid={!!errors.product_id}
                                     errorText={errors.product_id}
                                     helperText="Найдите по названию, артикулу или отсканируйте штрихкод"
