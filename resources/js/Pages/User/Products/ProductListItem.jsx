@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Flex, Text, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX, LuClock3 } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3, LuBadgePercent } from 'react-icons/lu';
 import ProductMiniGallery from '@/components/product/ProductMiniGallery';
 import TagList from '@/components/product/TagList';
 import CartQuantityControl from '@/components/product/CartQuantityControl';
@@ -115,6 +115,20 @@ export default function ProductListItem({ product, loading = false }) {
                             isHovered={isImageHovered}
                         />
                     </Link>
+
+                    {/* Значок уценки — тот же лиловый, что в сетке */}
+                    {product.has_defects && (
+                        <Box
+                            position="absolute"
+                            top="2"
+                            right="2"
+                            color="purple.500"
+                            pointerEvents="none"
+                            title="Есть уценённые экземпляры с дефектами"
+                        >
+                            <LuBadgePercent size={18} />
+                        </Box>
+                    )}
                 </Box>
 
             </Flex>

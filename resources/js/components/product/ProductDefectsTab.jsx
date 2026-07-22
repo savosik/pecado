@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Badge, Box, HStack, Image, Input, SimpleGrid, Stack, Text, VStack } from '@chakra-ui/react';
-import { LuImageOff, LuShoppingCart } from 'react-icons/lu';
+import { Badge, Box, HStack, Image, SimpleGrid, Stack, Text, VStack } from '@chakra-ui/react';
+import { LuImageOff } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { toaster } from '@/components/ui/toaster';
+import QuantityControl from '@/components/common/QuantityControl';
+import ImageLightbox from '@/components/common/ImageLightbox';
 
 const formatPrice = (value, currency) => {
     const symbol = currency?.symbol ?? '₽';
@@ -11,16 +13,17 @@ const formatPrice = (value, currency) => {
 };
 
 /**
- * Миниатюры фото партии с простым лайтбоксом по клику.
+ * Фото партии в пропорции 1:1.5 (как товарные превью). Клик открывает то же
+ * полноэкранное увеличение, что и основное фото товара (ImageLightbox).
  */
 function DefectPhotos({ photos, alt }) {
-    const [active, setActive] = useState(null);
+    const [lightboxIndex, setLightboxIndex] = useState(null);
 
     if (!photos || photos.length === 0) {
         return (
             <Box
-                w="72px"
-                h="72px"
+                w="90px"
+                aspectRatio={2 / 3}
                 borderRadius="md"
                 borderWidth="1px"
                 borderColor="border"
@@ -38,48 +41,40 @@ function DefectPhotos({ photos, alt }) {
     return (
         <>
             <HStack gap={2} flexWrap="wrap">
-                {photos.map((photo) => (
+                {photos.map((photo, i) => (
                     <Image
                         key={photo.id}
                         src={photo.thumb_url}
                         alt={alt}
-                        w="72px"
-                        h="72px"
+                        w="90px"
+                        aspectRatio={2 / 3}
                         objectFit="cover"
                         borderRadius="md"
-                        cursor="pointer"
+                        cursor="zoom-in"
                         borderWidth="1px"
                         borderColor="border"
-                        onClick={() => setActive(photo.url)}
+                        onClick={() => setLightboxIndex(i)}
                     />
                 ))}
             </HStack>
 
-            {active && (
-                <Box
-                    position="fixed"
-                    inset="0"
-                    bg="blackAlpha.800"
-                    zIndex={2000}
-                    display="flex"
-                    alignItems="center"
-                    justifyContent="center"
-                    p="4"
-                    onClick={() => setActive(null)}
-                >
-                    <Image src={active} alt={alt} maxH="90vh" maxW="90vw" objectFit="contain" borderRadius="md" />
-                </Box>
-            )}
+            <ImageLightbox
+                images={photos.map((p) => ({ url: p.url, alt }))}
+                initialIndex={lightboxIndex ?? 0}
+                open={lightboxIndex !== null}
+                onClose={() => setLightboxIndex(null)}
+                title={alt}
+            />
         </>
     );
 }
 
 /**
- * Одна партия: остаток, количество и кнопка «В корзину».
+ * Одна партия: количество (стандартный контрол [−] N [+]) и кнопка «В корзину».
  *
  * Уценка — отдельная строка корзины на партию; добавляем адресно по defect_id,
  * серверный лимит совпадает с available. Только для активных пользователей
- * (кнопку показываем, если есть кому — данные с ценами приходят только им).
+ * (данные с ценами приходят только им).
  */
 function DefectAddToCart({ defect }) {
     const { auth } = usePage().props;
@@ -119,18 +114,16 @@ function DefectAddToCart({ defect }) {
 
     return (
         <HStack gap={2}>
-            <Input
-                type="number"
-                size="sm"
+            <QuantityControl
+                value={qty}
+                onChange={setQty}
                 min={1}
                 max={max}
-                value={qty}
-                onChange={(event) => setQty(event.target.value)}
-                width="70px"
+                size="sm"
                 disabled={disabled}
             />
             <Button size="sm" onClick={add} loading={loading} disabled={disabled}>
-                <LuShoppingCart /> В корзину
+                В корзину
             </Button>
         </HStack>
     );
@@ -167,10 +160,10 @@ export default function ProductDefectsTab({ defects = [], currency = null }) {
                     p="4"
                 >
                     <SimpleGrid columns={{ base: 1, md: 2 }} gap="4" alignItems="start">
-                        <VStack align="start" gap="2">
+                        <HStack align="start" gap="3">
                             <DefectPhotos photos={defect.photos} alt={defect.defect_description} />
                             <Text fontSize="sm">{defect.defect_description}</Text>
-                        </VStack>
+                        </HStack>
 
                         <VStack align={{ base: 'start', md: 'end' }} gap="2">
                             <Text fontSize="xl" fontWeight="bold">

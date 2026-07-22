@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Heading } from '@chakra-ui/react';
 import { Tooltip } from '@/components/ui/tooltip';
-import { LuHash, LuCode, LuBarcode, LuCopy, LuHeart, LuCheck, LuClock3, LuCircleX, LuChevronDown, LuChevronUp } from 'react-icons/lu';
+import { LuHash, LuCode, LuBarcode, LuCopy, LuHeart, LuCheck, LuClock3, LuCircleX, LuChevronDown, LuChevronUp, LuBadgePercent } from 'react-icons/lu';
 import { Link, usePage } from '@inertiajs/react';
 import TagList from './TagList';
 import MultiCartQuantityControl from './MultiCartQuantityControl';
@@ -173,7 +173,8 @@ export default function ProductInfo({
                             </Badge>
                         )}
                         {hasDefects && (
-                            <Badge colorPalette="purple" variant="subtle" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" title="Есть уценённые экземпляры с дефектами — см. вкладку «Уценка»">
+                            <Badge colorPalette="purple" variant="subtle" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" display="inline-flex" alignItems="center" gap="1" title="Есть уценённые экземпляры с дефектами — см. вкладку «Уценка»">
+                                <LuBadgePercent size={12} />
                                 Есть товары с уценкой
                             </Badge>
                         )}

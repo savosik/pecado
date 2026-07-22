@@ -156,19 +156,18 @@ function ProductCard({ product, loading = false }) {
                     )}
                 </Box>
 
-                {/* Уценка — намеренно очень маленький и еле заметный значок (по ТЗ).
-                    Не бейдж в общей стопке слева, а приглушённая иконка в углу. */}
+                {/* Уценка — небольшой лиловый значок в углу (в цвет бейджа «Есть
+                    товары с уценкой» в карточке товара). Не в общей стопке слева. */}
                 {product.has_defects && (
                     <Box
                         position="absolute"
                         top="2"
                         right="2"
-                        color="fg.muted"
-                        opacity={0.55}
+                        color="purple.500"
                         pointerEvents="none"
                         title="Есть уценённые экземпляры с дефектами"
                     >
-                        <LuBadgePercent size={14} />
+                        <LuBadgePercent size={18} />
                     </Box>
                 )}
             </Box>

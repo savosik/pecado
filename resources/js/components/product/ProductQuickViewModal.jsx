@@ -56,6 +56,7 @@ export default function ProductQuickViewModal() {
     const sizeChart = data?.sizeChart ?? null;
     const similarProducts = data?.similarProducts ?? [];
     const promotions = data?.promotions ?? [];
+    const defects = data?.defects ?? [];
 
     const productInfoProps = product ? buildProductInfoProps(product, currencySymbol) : {};
 
@@ -229,6 +230,8 @@ export default function ProductQuickViewModal() {
                                             certificates={certificates}
                                             sizeChart={sizeChart}
                                             similarProducts={similarProducts}
+                                            defects={defects}
+                                            currency={currency}
                                         />
                                     </Box>
 
@@ -259,6 +262,8 @@ export default function ProductQuickViewModal() {
                                                 certificates={certificates}
                                                 sizeChart={sizeChart}
                                                 similarProducts={similarProducts}
+                                                defects={defects}
+                                                currency={currency}
                                             />
                                         </GridItem>
                                     </Grid>
