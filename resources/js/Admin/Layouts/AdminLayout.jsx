@@ -7,9 +7,9 @@ const panel = {
     basePath: '/admin',
     menuConfig,
     homeLabel: 'Главная',
-    logoAlt: 'Pecado Admin',
-    // Бейджа нет: админка — панель по умолчанию.
-    logoHeight: 'full',
+    logoAlt: 'Pecado Админка',
+    badge: 'Админка',
+    logoHeight: '8',
     // Страницы создания/редактирования есть только в админке,
     // поэтому крошка «Создание»/«Редактирование» нужна лишь здесь.
     actionBreadcrumbs: true,
