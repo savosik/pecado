@@ -83,18 +83,25 @@ class SimilarProductsService
             return [];
         }
 
+        // Ограничиваем кандидатов той же категорией: иначе гибридный поиск
+        // по полному названию цепляется за общие слова («Портативная», «мини»)
+        // и подтягивает товары из чужих категорий (зарядки, контейнеры и т.п.).
+        $category = trim((string) $product->category?->name);
+
+        // Версия в ключе — чтобы после добавления фильтра по категории сбросить
+        // старый кеш с «мусорной» кросс-категорийной выдачей.
         return Cache::remember(
-            "similar_products:ids:{$product->id}",
+            "similar_products:ids:v2:{$product->id}",
             self::CACHE_TTL,
-            function () use ($product, $name) {
+            function () use ($product, $name, $category) {
                 $hybrid = $this->getHybridSearchOptions();
 
-                $ids = $this->scoutKeys($name, $hybrid);
+                $ids = $this->scoutKeys($name, $category, $hybrid);
 
                 // Fallback: если гибридный поиск недоступен (например, на dev
                 // нет embedder-а в Meilisearch), пробуем без опций.
                 if ($ids === null && $hybrid !== null) {
-                    $ids = $this->scoutKeys($name, null);
+                    $ids = $this->scoutKeys($name, $category, null);
                 }
 
                 if ($ids === null) {
@@ -111,14 +118,19 @@ class SimilarProductsService
 
     /**
      * Получить ID-ы товаров от Scout по запросу.
+     * При непустой категории ограничиваем выдачу той же категорией.
      * Возвращает null при ошибке (для fallback-сценария).
      *
      * @return array<int, int>|null
      */
-    private function scoutKeys(string $name, ?array $options): ?array
+    private function scoutKeys(string $name, string $category, ?array $options): ?array
     {
         try {
             $builder = Product::search($name);
+
+            if ($category !== '') {
+                $builder->where('category', $category);
+            }
 
             if ($options) {
                 $builder->options($options);
