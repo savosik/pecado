@@ -57,7 +57,7 @@ export default function Index({ articles, filters }) {
             label: 'Статус',
             render: (_, row) => (
                 <Badge colorPalette={row.is_published ? 'green' : 'gray'} variant="subtle">
-                    {row.is_published ? 'Опубликован' : 'Скрыт'}
+                    {row.is_published ? 'Активна' : 'Скрыта'}
                 </Badge>
             ),
         },

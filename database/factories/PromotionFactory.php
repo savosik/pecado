@@ -18,6 +18,7 @@ class PromotionFactory extends Factory
     {
         return [
             'name' => $this->faker->word,
+            'is_active' => true,
             'meta_title' => $this->faker->sentence,
             'meta_description' => $this->faker->paragraph,
             'description' => $this->faker->paragraph,

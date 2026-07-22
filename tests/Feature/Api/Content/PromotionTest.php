@@ -87,6 +87,36 @@ class PromotionTest extends TestCase
             ->assertJsonCount(2, 'data.products');
     }
 
+    public function test_store_persists_is_active_flag(): void
+    {
+        $this->withHeaders($this->authHeaders())
+            ->postJson('/api/content/promotions', [
+                'name' => 'Скрытая акция',
+                'is_active' => false,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.is_active', false);
+
+        $this->assertDatabaseHas('promotions', [
+            'name' => 'Скрытая акция',
+            'is_active' => false,
+        ]);
+    }
+
+    public function test_update_toggles_is_active_flag(): void
+    {
+        $promotion = Promotion::factory()->create(['is_active' => true]);
+
+        $this->withHeaders($this->authHeaders())
+            ->putJson("/api/content/promotions/{$promotion->id}", [
+                'is_active' => false,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.is_active', false);
+
+        $this->assertFalse($promotion->fresh()->is_active);
+    }
+
     public function test_destroy_deletes_promotion(): void
     {
         $promotion = Promotion::factory()->create();

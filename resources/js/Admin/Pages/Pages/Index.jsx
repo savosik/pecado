@@ -1,7 +1,7 @@
 import { router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { DataTable, PageHeader, SearchInput, ConfirmDialog, DeleteAllButton } from '@/Admin/Components';
-import { Text, Image, Box } from '@chakra-ui/react';
+import { Text, Image, Box, Badge } from '@chakra-ui/react';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 
@@ -52,6 +52,15 @@ export default function Index({ pages, filters }) {
             label: 'Slug',
             sortable: true,
             render: (_, row) => <Text fontFamily="mono" fontSize="sm" color="gray.600" _dark={{ color: 'gray.400' }}>{row.slug}</Text>,
+        },
+        {
+            key: 'is_published',
+            label: 'Статус',
+            render: (_, row) => (
+                <Badge colorPalette={row.is_published ? 'green' : 'gray'} variant="subtle">
+                    {row.is_published ? 'Активна' : 'Скрыта'}
+                </Badge>
+            ),
         },
         {
             key: 'created_at',

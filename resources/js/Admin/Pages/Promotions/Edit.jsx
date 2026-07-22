@@ -3,12 +3,14 @@ import { useForm, router } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUploader, ProductSelector, EditorJsEditor, RegionSelector } from '@/Admin/Components';
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
+import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ promotion, regions = [] }) {
     const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
         name: promotion.name || '',
+        is_active: promotion.is_active ?? true,
         meta_title: promotion.meta_title || '',
         meta_description: promotion.meta_description || '',
         description: promotion.description || '',
@@ -33,6 +35,7 @@ export default function Edit({ promotion, regions = [] }) {
         formData.append('_method', 'PUT');
         formData.append('_close', shouldClose ? '1' : '0');
         formData.append('name', data.name);
+        formData.append('is_active', data.is_active ? '1' : '0');
         if (data.meta_title) formData.append('meta_title', data.meta_title);
         if (data.meta_description) formData.append('meta_description', data.meta_description);
         if (data.description) formData.append('description', data.description);
@@ -135,6 +138,13 @@ export default function Edit({ promotion, regions = [] }) {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField label="Активность" error={errors.is_active} helperText="Выключенная акция скрыта на сайте">
+                                <Switch
+                                    checked={data.is_active}
+                                    onCheckedChange={(e) => setData('is_active', e.checked)}
+                                />
+                            </FormField>
 
                             <FormField label="Meta описание" error={errors.meta_description}>
                                 <Textarea

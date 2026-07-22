@@ -243,6 +243,8 @@ class ProductController extends Controller
      */
     public function bySelection(ProductSelection $selection): Response
     {
+        abort_unless($selection->is_active, 404);
+
         $appName = config('app.name');
 
         $canonical = route('products.selection', $selection);

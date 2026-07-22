@@ -45,7 +45,7 @@ export default function Show() {
                             <InfoRow label="Заголовок" value={news.title} />
                             <InfoRow label="Slug" value={news.slug} />
                             <Box>
-                                <Text fontSize="xs" color="gray.500" mb="0.5">Опубликована</Text>
+                                <Text fontSize="xs" color="gray.500" mb="0.5">Активность</Text>
                                 <Badge colorPalette={news.is_published ? 'green' : 'gray'} variant="subtle">
                                     {news.is_published ? 'Да' : 'Нет'}
                                 </Badge>

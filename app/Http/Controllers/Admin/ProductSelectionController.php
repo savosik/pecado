@@ -87,6 +87,7 @@ class ProductSelectionController extends AdminController
             'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'is_active' => 'nullable|boolean',
             'show_on_home' => 'nullable|boolean',
             'product_ids' => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
@@ -107,6 +108,7 @@ class ProductSelectionController extends AdminController
                 'description' => $validated['description'] ?? null,
                 'meta_title' => $validated['meta_title'] ?? null,
                 'meta_description' => $validated['meta_description'] ?? null,
+                'is_active' => $validated['is_active'] ?? true,
                 'show_on_home' => $validated['show_on_home'] ?? false,
             ]);
 
@@ -200,6 +202,7 @@ class ProductSelectionController extends AdminController
                 'description' => $productSelection->description,
                 'meta_title' => $productSelection->meta_title,
                 'meta_description' => $productSelection->meta_description,
+                'is_active' => (bool) $productSelection->is_active,
                 'show_on_home' => $productSelection->show_on_home,
                 'products' => $productSelection->products->map(fn ($p) => [
                     'id' => $p->id,
@@ -229,6 +232,7 @@ class ProductSelectionController extends AdminController
             'description' => 'nullable|string',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
+            'is_active' => 'nullable|boolean',
             'show_on_home' => 'nullable|boolean',
             'product_ids' => 'nullable|array',
             'product_ids.*' => 'exists:products,id',
@@ -250,6 +254,7 @@ class ProductSelectionController extends AdminController
                 'description' => $validated['description'] ?? null,
                 'meta_title' => $validated['meta_title'] ?? null,
                 'meta_description' => $validated['meta_description'] ?? null,
+                'is_active' => $validated['is_active'] ?? false,
                 'show_on_home' => $validated['show_on_home'] ?? false,
             ]);
 

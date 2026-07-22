@@ -10,6 +10,7 @@ use Spatie\MediaLibrary\HasMedia;
  * @property int $id
  * @property string $name
  * @property string $slug
+ * @property bool $is_active
  * @property string|null $meta_title
  * @property string|null $meta_description
  * @property string|null $description
@@ -47,10 +48,23 @@ class Promotion extends Model implements HasMedia
     protected $fillable = [
         'name',
         'slug',
+        'is_active',
         'meta_title',
         'meta_description',
         'description',
     ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    /**
+     * Scope: только активные акции.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
 
     protected static function booted(): void
     {

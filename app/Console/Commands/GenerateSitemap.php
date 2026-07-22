@@ -130,6 +130,7 @@ class GenerateSitemap extends Command
     private function addPromotions(Sitemap $sitemap): void
     {
         Promotion::query()
+            ->active()
             ->whereNotNull('slug')
             ->select(['slug', 'updated_at'])
             ->each(function (Promotion $promotion) use ($sitemap) {

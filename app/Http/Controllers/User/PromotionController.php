@@ -19,6 +19,7 @@ class PromotionController extends Controller
     public function index(Request $request)
     {
         $promotions = Promotion::query()
+            ->active()
             ->orderByDesc('created_at')
             ->forRegion(Auth::user()?->region_id)
             ->paginate(12)
@@ -56,6 +57,7 @@ class PromotionController extends Controller
     public function show(Request $request, string $slug)
     {
         $promotion = Promotion::query()
+            ->active()
             ->where('slug', $slug)
             ->forRegion(Auth::user()?->region_id)
             ->firstOrFail();

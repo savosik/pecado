@@ -81,6 +81,15 @@ export default function Index({ product_selections, filters }) {
             ),
         },
         {
+            key: 'is_active',
+            label: 'Статус',
+            render: (value) => (
+                <Badge colorPalette={value ? 'green' : 'gray'} variant="subtle">
+                    {value ? 'Активна' : 'Скрыта'}
+                </Badge>
+            ),
+        },
+        {
             key: 'created_at',
             label: 'Создано',
             sortable: true,

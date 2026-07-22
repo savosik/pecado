@@ -85,7 +85,7 @@ export default function Edit({ news, regions = [] }) {
                             </SimpleGrid>
 
                             <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                <FormField label="Опубликован" error={errors.is_published}>
+                                <FormField label="Активность" error={errors.is_published}>
                                     <Switch
                                         checked={data.is_published}
                                         onCheckedChange={(e) => setData('is_published', e.checked)}

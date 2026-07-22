@@ -14,6 +14,7 @@ export default function Edit({ product_selection, regions = [] }) {
         meta_title: product_selection.meta_title || '',
         meta_description: product_selection.meta_description || '',
         description: product_selection.description || '',
+        is_active: product_selection.is_active ?? true,
         show_on_home: product_selection.show_on_home || false,
         products: product_selection.products || [],
         featured_ids: (product_selection.products || []).filter(p => p.featured).map(p => p.id),
@@ -34,6 +35,7 @@ export default function Edit({ product_selection, regions = [] }) {
         formData.append('_method', 'PUT');
         formData.append('_close', shouldClose ? '1' : '0');
         formData.append('name', data.name);
+        formData.append('is_active', data.is_active ? '1' : '0');
         formData.append('show_on_home', data.show_on_home ? '1' : '0');
         if (data.meta_title) formData.append('meta_title', data.meta_title);
         if (data.meta_description) formData.append('meta_description', data.meta_description);
@@ -152,6 +154,13 @@ export default function Edit({ product_selection, regions = [] }) {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <Switch
+                                checked={data.is_active}
+                                onCheckedChange={(e) => setData('is_active', e.checked)}
+                            >
+                                Активность
+                            </Switch>
 
                             <Switch
                                 checked={data.show_on_home}

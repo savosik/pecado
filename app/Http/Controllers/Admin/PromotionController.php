@@ -48,6 +48,7 @@ class PromotionController extends AdminController
         $promotions->getCollection()->transform(function ($promotion) {
             $promotion->list_image = $promotion->getFirstMediaUrl('list-item');
             $promotion->region_names = $promotion->regions->pluck('name')->toArray();
+            $promotion->is_active = (bool) $promotion->is_active;
 
             return $promotion;
         });
@@ -80,6 +81,7 @@ class PromotionController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'is_active' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'description' => 'nullable|string',
@@ -98,6 +100,7 @@ class PromotionController extends AdminController
         try {
             $promotion = Promotion::create([
                 'name' => $validated['name'],
+                'is_active' => $validated['is_active'] ?? true,
                 'meta_title' => $validated['meta_title'] ?? null,
                 'meta_description' => $validated['meta_description'] ?? null,
                 'description' => $validated['description'] ?? null,
@@ -154,6 +157,7 @@ class PromotionController extends AdminController
             'promotion' => [
                 'id' => $promotion->id,
                 'name' => $promotion->name,
+                'is_active' => (bool) $promotion->is_active,
                 'meta_title' => $promotion->meta_title,
                 'meta_description' => $promotion->meta_description,
                 'description' => $promotion->description,
@@ -186,6 +190,7 @@ class PromotionController extends AdminController
             'promotion' => [
                 'id' => $promotion->id,
                 'name' => $promotion->name,
+                'is_active' => (bool) $promotion->is_active,
                 'meta_title' => $promotion->meta_title,
                 'meta_description' => $promotion->meta_description,
                 'description' => $promotion->description,
@@ -219,6 +224,7 @@ class PromotionController extends AdminController
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'is_active' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'description' => 'nullable|string',
@@ -239,6 +245,7 @@ class PromotionController extends AdminController
         try {
             $promotion->update([
                 'name' => $validated['name'],
+                'is_active' => $validated['is_active'] ?? false,
                 'meta_title' => $validated['meta_title'] ?? null,
                 'meta_description' => $validated['meta_description'] ?? null,
                 'description' => $validated['description'] ?? null,

@@ -64,6 +64,15 @@ export default function Index({ promotions, filters }) {
             ),
         },
         {
+            key: 'is_active',
+            label: 'Статус',
+            render: (_, row) => (
+                <Badge colorPalette={row.is_active ? 'green' : 'gray'} variant="subtle">
+                    {row.is_active ? 'Активна' : 'Скрыта'}
+                </Badge>
+            ),
+        },
+        {
             key: 'created_at',
             label: 'Создано',
             sortable: true,

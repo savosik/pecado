@@ -91,6 +91,7 @@ class PromotionController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'is_active' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'description' => 'nullable|string',
@@ -112,6 +113,7 @@ class PromotionController extends Controller
         try {
             $promotion = Promotion::create([
                 'name' => $validated['name'],
+                'is_active' => $validated['is_active'] ?? true,
                 'meta_title' => $validated['meta_title'] ?? null,
                 'meta_description' => $validated['meta_description'] ?? null,
                 'description' => $validated['description'] ?? null,
@@ -146,6 +148,7 @@ class PromotionController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
+            'is_active' => 'boolean',
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string',
             'description' => 'nullable|string',
@@ -167,7 +170,7 @@ class PromotionController extends Controller
 
         DB::beginTransaction();
         try {
-            $promotion->update(collect($validated)->only(['name', 'meta_title', 'meta_description', 'description'])->toArray());
+            $promotion->update(collect($validated)->only(['name', 'is_active', 'meta_title', 'meta_description', 'description'])->toArray());
 
             if (array_key_exists('product_ids', $validated)) {
                 $promotion->products()->sync($validated['product_ids'] ?? []);
@@ -231,6 +234,7 @@ class PromotionController extends Controller
         return [
             'id' => $promotion->id,
             'name' => $promotion->name,
+            'is_active' => (bool) $promotion->is_active,
             'meta_title' => $promotion->meta_title,
             'meta_description' => $promotion->meta_description,
             'description' => $promotion->description,

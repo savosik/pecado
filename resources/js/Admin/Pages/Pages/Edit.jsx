@@ -4,6 +4,7 @@ import { useSlugField } from '@/Admin/hooks/useSlugField';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader, FormField, FormActions, ContentMediaFields, EditorJsEditor, RegionSelector } from '@/Admin/Components';
 import { Card, Input, Stack, SimpleGrid, Textarea } from '@chakra-ui/react';
+import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
 
 export default function Edit({ page, regions = [] }) {
@@ -11,6 +12,7 @@ export default function Edit({ page, regions = [] }) {
         title: page.title || '',
         slug: page.slug || '',
         content: page.content || '',
+        is_published: page.is_published ?? true,
         meta_title: page.meta_title || '',
         meta_description: page.meta_description || '',
         list_item: null,
@@ -108,6 +110,13 @@ export default function Edit({ page, regions = [] }) {
                                     />
                                 </FormField>
                             </SimpleGrid>
+
+                            <FormField label="Активность" error={errors.is_published} helperText="Выключенная страница недоступна на сайте">
+                                <Switch
+                                    checked={data.is_published}
+                                    onCheckedChange={(e) => setData('is_published', e.checked)}
+                                />
+                            </FormField>
 
                             <FormField label="Регионы" error={errors.region_ids} helperText="Если не выбран ни один регион — контент показывается всем">
                                 <RegionSelector
