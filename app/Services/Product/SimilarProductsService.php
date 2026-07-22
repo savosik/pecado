@@ -3,6 +3,7 @@
 namespace App\Services\Product;
 
 use App\Models\Product;
+use App\Support\Search\HybridSearchOptions;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -94,7 +95,7 @@ class SimilarProductsService
             "similar_products:ids:v2:{$product->id}",
             self::CACHE_TTL,
             function () use ($product, $name, $category) {
-                $hybrid = $this->getHybridSearchOptions();
+                $hybrid = HybridSearchOptions::forProducts();
 
                 $ids = $this->scoutKeys($name, $category, $hybrid);
 
@@ -146,19 +147,5 @@ class SimilarProductsService
 
             return null;
         }
-    }
-
-    private function getHybridSearchOptions(): ?array
-    {
-        if (! config('search.hybrid.enabled')) {
-            return null;
-        }
-
-        return [
-            'hybrid' => [
-                'embedder' => config('search.hybrid.embedder'),
-                'semanticRatio' => config('search.hybrid.semantic_ratio'),
-            ],
-        ];
     }
 }

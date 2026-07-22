@@ -12,6 +12,7 @@ Schedule::command('app:clean-price-dumps')->dailyAt('04:00');
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
 Schedule::command('health:check')->everyMinute();
 Schedule::command('search:sync')->cron('0 3 */3 * *'); // каждые 3 дня в 03:00
+Schedule::command('search:repair-embeddings --reindex-missing')->dailyAt('03:20')->withoutOverlapping(); // досчёт векторов у товаров без эмбеддинга (упавших по 402/после сброса индекса)
 Schedule::command('media:clean-temp')->hourly();
 Schedule::command('exports:warm')->everyFifteenMinutes()->withoutOverlapping(); // прогрев кэша стандартных пресетных выгрузок
 Schedule::command('exports:cleanup')->dailyAt('04:30')->withoutOverlapping(); // удаление orphaned/stale файлов кеша выгрузок

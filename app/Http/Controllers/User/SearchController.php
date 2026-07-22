@@ -12,6 +12,7 @@ use App\Models\Product;
 use App\Models\SearchHistory;
 use App\Services\Product\ProductQueryService;
 use App\Services\Search\ExactProductMatcher;
+use App\Support\Search\HybridSearchOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -136,15 +137,13 @@ class SearchController extends Controller
         }
 
         try {
-            $searchBuilder = Product::search($validated['q'])
-                ->query(fn ($q) => $q->with(['brand', 'media']));
+            // Keyword-first: сначала чистый полнотекст; семантику подмешиваем
+            // только если keyword дал мало результатов (опечатки/синонимы).
+            $products = $this->suggestionResults($validated['q'], semantic: false);
 
-            // Гибридный поиск (полнотекст + семантика)
-            if ($hybridOptions = $this->getHybridSearchOptions()) {
-                $searchBuilder->options($hybridOptions);
+            if (HybridSearchOptions::shouldFallback($products->count())) {
+                $products = $this->suggestionResults($validated['q'], semantic: true);
             }
-
-            $products = $searchBuilder->take(8)->get();
         } catch (\Throwable) {
             $products = collect();
         }
@@ -241,19 +240,16 @@ class SearchController extends Controller
             }
 
             try {
-                $searchBuilder = Product::search($query)
-                    ->query(function ($q) {
-                        $q->select('products.*');
-                        $q->with(ProductQueryService::productEagerLoads());
-                        ProductQueryService::withRegionStockSums($q);
-                    });
+                // Keyword-first: сначала чистый полнотекстовый поиск, чтобы точные
+                // совпадения не тонули среди семантических «соседей». Семантику
+                // (hybrid) подмешиваем повтором запроса только при слабой выдаче.
+                $paginated = $this->productSearchBuilder($query, semantic: false)
+                    ->paginate($perPage, 'page', $page);
 
-                // Гибридный поиск (полнотекст + семантика)
-                if ($hybridOptions = $this->getHybridSearchOptions()) {
-                    $searchBuilder->options($hybridOptions);
+                if (HybridSearchOptions::shouldFallback($paginated->total())) {
+                    $paginated = $this->productSearchBuilder($query, semantic: true)
+                        ->paginate($perPage, 'page', $page);
                 }
-
-                $paginated = $searchBuilder->paginate($perPage, 'page', $page);
 
                 $products = $paginated->getCollection();
 
@@ -440,19 +436,41 @@ class SearchController extends Controller
     }
 
     /**
-     * Получить опции гибридного поиска для Meilisearch.
+     * Scout-builder товарного поиска. `$semantic = true` навешивает hybrid-опции
+     * (keyword + семантика); иначе — чистый полнотекстовый поиск.
+     *
+     * @return \Laravel\Scout\Builder
      */
-    private function getHybridSearchOptions(): ?array
+    private function productSearchBuilder(string $query, bool $semantic)
     {
-        if (! config('search.hybrid.enabled')) {
-            return null;
+        $builder = Product::search($query)
+            ->query(function ($q) {
+                $q->select('products.*');
+                $q->with(ProductQueryService::productEagerLoads());
+                ProductQueryService::withRegionStockSums($q);
+            });
+
+        if ($semantic && $options = HybridSearchOptions::forProducts()) {
+            $builder->options($options);
         }
 
-        return [
-            'hybrid' => [
-                'embedder' => config('search.hybrid.embedder'),
-                'semanticRatio' => config('search.hybrid.semantic_ratio'),
-            ],
-        ];
+        return $builder;
+    }
+
+    /**
+     * Товарные подсказки (до 8 шт) для дропдауна. `$semantic` включает hybrid.
+     *
+     * @return \Illuminate\Support\Collection<int, Product>
+     */
+    private function suggestionResults(string $query, bool $semantic): \Illuminate\Support\Collection
+    {
+        $builder = Product::search($query)
+            ->query(fn ($q) => $q->with(['brand', 'media']));
+
+        if ($semantic && $options = HybridSearchOptions::forProducts()) {
+            $builder->options($options);
+        }
+
+        return $builder->take(8)->get();
     }
 }

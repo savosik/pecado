@@ -8,6 +8,7 @@ use App\Http\Requests\User\ProductFilterRequest;
 use App\Models\Product;
 use App\Services\Product\CatalogFacetService;
 use App\Services\Product\ProductQueryService;
+use App\Support\Search\HybridSearchOptions;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -161,18 +162,15 @@ class ProductController extends Controller
         // Товары
         if ($type === 'all' || $type === 'products') {
             try {
-                $searchBuilder = Product::search($query)
-                    ->query(function ($q) {
-                        $q->select('products.*');
-                        $q->with(ProductQueryService::productEagerLoads());
-                        ProductQueryService::withRegionStockSums($q);
-                    });
+                // Keyword-first: сначала чистый полнотекст; семантику подмешиваем
+                // повтором запроса только при слабой выдаче (опечатки/синонимы).
+                $paginated = $this->productSearchBuilder($query, semantic: false)
+                    ->paginate($limit, 'page', $page);
 
-                if ($hybridOptions = $this->getHybridSearchOptions()) {
-                    $searchBuilder->options($hybridOptions);
+                if (HybridSearchOptions::shouldFallback($paginated->total())) {
+                    $paginated = $this->productSearchBuilder($query, semantic: true)
+                        ->paginate($limit, 'page', $page);
                 }
-
-                $paginated = $searchBuilder->paginate($limit, 'page', $page);
                 $products = $paginated->getCollection()
                     ->map(fn (Product $p) => ProductQueryService::productToArray($p))
                     ->values()->toArray();
@@ -372,17 +370,24 @@ class ProductController extends Controller
         return $query;
     }
 
-    private function getHybridSearchOptions(): ?array
+    /**
+     * Scout-builder товарного поиска. `$semantic = true` навешивает hybrid-опции.
+     *
+     * @return \Laravel\Scout\Builder
+     */
+    private function productSearchBuilder(string $query, bool $semantic)
     {
-        if (! config('search.hybrid.enabled')) {
-            return null;
+        $builder = Product::search($query)
+            ->query(function ($q) {
+                $q->select('products.*');
+                $q->with(ProductQueryService::productEagerLoads());
+                ProductQueryService::withRegionStockSums($q);
+            });
+
+        if ($semantic && $options = HybridSearchOptions::forProducts()) {
+            $builder->options($options);
         }
 
-        return [
-            'hybrid' => [
-                'embedder' => config('search.hybrid.embedder'),
-                'semanticRatio' => config('search.hybrid.semantic_ratio'),
-            ],
-        ];
+        return $builder;
     }
 }
