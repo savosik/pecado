@@ -8,6 +8,7 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
 use App\Models\ProductBarcode;
+use App\Models\ProductDefect;
 use App\Services\Cart\OrderImportService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -272,6 +273,54 @@ class CartController extends Controller
     }
 
     /**
+     * Добавить уценённую партию в корзину.
+     * POST /api/cart/add-defect
+     */
+    public function addDefect(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'defect_id' => 'required|exists:product_defects,id',
+            'quantity' => 'integer|min:1',
+        ], [
+            'defect_id.required' => 'Укажите позицию уценки.',
+            'defect_id.exists' => 'Позиция уценки не найдена.',
+            'quantity.integer' => 'Количество должно быть целым числом.',
+            'quantity.min' => 'Количество должно быть не менее 1.',
+        ]);
+
+        $defect = ProductDefect::findOrFail($validated['defect_id']);
+
+        // Партия должна быть допущена в продажу — иначе устаревшая вкладка
+        // не должна протащить в корзину снятую с продажи уценку.
+        if (! $defect->is_published || $defect->price === null || $defect->isClosed()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Эта позиция уценки больше не доступна.',
+            ], 422);
+        }
+
+        $user = $request->user();
+        $cart = $this->cartService->getOrCreateActiveCart($user);
+        $qty = $validated['quantity'] ?? 1;
+
+        $result = $this->cartService->addDefect($user, $cart, $defect, $qty);
+
+        if ($result['quantity'] <= 0) {
+            return response()->json([
+                'status' => 'warning',
+                'message' => 'Эта позиция уценки уже разобрана.',
+                ...$result,
+            ], 200);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Уценённый товар добавлен в корзину.',
+            ...$result,
+        ], 201);
+    }
+
+    /**
      * Add product by barcode.
      * POST /api/cart/add-by-barcode
      */
@@ -361,6 +410,22 @@ class CartController extends Controller
             'quantity.integer' => 'Количество должно быть целым числом.',
             'quantity.min' => 'Количество должно быть не менее 1.',
         ]);
+
+        // Уценка меняется по своим правилам (лимит и цена — от партии), не через spillover.
+        if ($item->isDefect()) {
+            $defect = $item->productDefect;
+            if (! $defect) {
+                abort(422, 'Позиция уценки не найдена.');
+            }
+
+            $result = $this->cartService->setDefectQuantity($request->user(), $cart, $defect, $validated['quantity']);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Количество обновлено.',
+                ...$result,
+            ]);
+        }
 
         $result = $this->cartService->updateItemQuantity($request->user(), $item, $validated['quantity']);
 

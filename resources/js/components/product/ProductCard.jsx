@@ -1,7 +1,7 @@
 import { memo, useCallback, useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy, LuTag } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy, LuTag, LuBadgePercent } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
@@ -155,6 +155,22 @@ function ProductCard({ product, loading = false }) {
                         </Badge>
                     )}
                 </Box>
+
+                {/* Уценка — намеренно очень маленький и еле заметный значок (по ТЗ).
+                    Не бейдж в общей стопке слева, а приглушённая иконка в углу. */}
+                {product.has_defects && (
+                    <Box
+                        position="absolute"
+                        top="2"
+                        right="2"
+                        color="fg.muted"
+                        opacity={0.55}
+                        pointerEvents="none"
+                        title="Есть уценённые экземпляры с дефектами"
+                    >
+                        <LuBadgePercent size={14} />
+                    </Box>
+                )}
             </Box>
 
             {/* Информация */}

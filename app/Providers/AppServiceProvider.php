@@ -40,6 +40,11 @@ class AppServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            \App\Contracts\Defect\DefectStockServiceInterface::class,
+            \App\Services\Defect\DefectStockService::class
+        );
+
+        $this->app->bind(
             \App\Contracts\Cart\CartServiceInterface::class,
             \App\Services\Cart\CartService::class
         );

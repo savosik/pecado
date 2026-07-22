@@ -3,6 +3,7 @@
 namespace App\Services\Order;
 
 use App\Contracts\Currency\UserCurrencyResolverInterface;
+use App\Contracts\Defect\DefectStockServiceInterface;
 use App\Contracts\Order\CheckoutServiceInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
@@ -21,7 +22,8 @@ class CheckoutService implements CheckoutServiceInterface
     public function __construct(
         protected PriceServiceInterface $priceService,
         protected UserCurrencyResolverInterface $currencyResolver,
-        protected StockServiceInterface $stockService
+        protected StockServiceInterface $stockService,
+        protected DefectStockServiceInterface $defectStockService
     ) {}
 
     /**
@@ -63,6 +65,29 @@ class CheckoutService implements CheckoutServiceInterface
             // Validate stock availability before proceeding
             $insufficientStockItems = [];
             foreach ($cart->items as $item) {
+                if ($item->item_type === 'defect') {
+                    // Уценка: лимит — свободный остаток конкретной партии, не остаток товара.
+                    $defect = $item->productDefect;
+                    $available = ($defect && $defect->is_published && $defect->price !== null && ! $defect->isClosed())
+                        ? $this->defectStockService->available($defect)
+                        : 0;
+
+                    if ($item->quantity > $available) {
+                        $insufficientStockItems[] = [
+                            'cart_item_id' => $item->id,
+                            'product_id' => $item->product->id,
+                            'product' => $item->product->name,
+                            'name' => $item->product->name,
+                            'sku' => $item->product->sku,
+                            'item_type' => 'defect',
+                            'requested' => $item->quantity,
+                            'available' => $available,
+                        ];
+                    }
+
+                    continue;
+                }
+
                 $stock = $this->stockService->getStock($item->product, $user);
                 $totalAvailable = $stock['available'] + $stock['preorder'];
 
@@ -90,6 +115,7 @@ class CheckoutService implements CheckoutServiceInterface
             // Separate cart items by item_type (already split by CartService at add-to-cart time)
             $inStockCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'instock')->values();
             $preorderCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'preorder')->values();
+            $defectCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'defect')->values();
 
             $orders = collect();
 
@@ -117,6 +143,21 @@ class CheckoutService implements CheckoutServiceInterface
                 $orders->push($preorderOrder);
             }
 
+            // Create defect (уценка) order — отдельный заказ со складом некондиции.
+            // Остаток партии проверен выше в этой же транзакции. Параллельный
+            // checkout той же партии может дать небольшой овербукинг — как и для
+            // обычных товаров, окончательный остаток подтверждает 1С реализацией.
+            if ($defectCartItems->isNotEmpty()) {
+                $defectOrder = Order::create(array_merge($baseOrderData, [
+                    'type' => OrderType::DEFECT,
+                ]));
+                $total = $this->createDefectOrderItems($defectOrder, $defectCartItems);
+                $defectOrder->total_amount = $total;
+                $defectOrder->saveQuietly();
+                OrderCreated::dispatch($defectOrder);
+                $orders->push($defectOrder);
+            }
+
             return $orders;
         });
     }
@@ -141,6 +182,39 @@ class CheckoutService implements CheckoutServiceInterface
                 'base_price' => $priceResult->basePrice,
                 'discount_percent' => $priceResult->discountPercent,
                 'final_price' => $displayPrice,
+                'quantity' => $item->quantity,
+                'subtotal' => $subtotal,
+            ]);
+        }
+
+        return $total;
+    }
+
+    /**
+     * Позиции заказа уценки.
+     *
+     * Цена фиксирована в строке корзины (= цена партии), скидки и индивидуальные
+     * цены к ней не применяются. Дублируем описание дефекта снапшотом: партию
+     * могут отредактировать позже, а в заказе должно остаться то, что видел клиент.
+     */
+    protected function createDefectOrderItems(Order $order, Collection $cartItems): float
+    {
+        $total = 0;
+        foreach ($cartItems as $item) {
+            $price = (float) ($item->price ?? 0);
+            $subtotal = $price * $item->quantity;
+            $total += $subtotal;
+
+            OrderItem::create([
+                'order_id' => $order->id,
+                'product_id' => $item->product_id,
+                'product_defect_id' => $item->product_defect_id,
+                'defect_description' => $item->productDefect?->defect_description,
+                'name' => $item->product->name,
+                'price' => $price,
+                'base_price' => $price,
+                'discount_percent' => 0,
+                'final_price' => $price,
                 'quantity' => $item->quantity,
                 'subtotal' => $subtotal,
             ]);

@@ -37,7 +37,26 @@ class Warehouse extends Model
     protected $fillable = [
         'name',
         'external_id',
+        'is_defect',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_defect' => 'boolean',
+        ];
+    }
+
+    /**
+     * Склад некондиции — с него отгружаются заказы уценки.
+     *
+     * Такой склад не входит в регионы, поэтому его остатки не попадают
+     * в наличие и предзаказ на витрине (см. StockService).
+     */
+    public function scopeDefect(\Illuminate\Database\Eloquent\Builder $query): \Illuminate\Database\Eloquent\Builder
+    {
+        return $query->where('is_defect', true);
+    }
 
     /**
      * Get the products with stock in the warehouse.

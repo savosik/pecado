@@ -31,6 +31,10 @@ class HandleShipmentDeleted
 
         $shipment->delete();
 
+        // v15.5: реализация отменена — вернуть партии некондиции, закрытые ею,
+        // в продажу (пересчёт по оставшимся неотменённым реализациям).
+        app(\App\Services\Defect\DefectShipmentService::class)->reconcileForShipment($shipment);
+
         Log::info('HandleShipmentDeleted: реализация удалена (soft-delete)', ['uuid' => $uuid]);
     }
 }

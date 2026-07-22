@@ -4,7 +4,7 @@ import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
     Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent } from 'react-icons/lu';
 import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -31,8 +31,10 @@ export default function CheckoutIndex({
     cart,
     instockItems = [],
     preorderItems = [],
+    defectItems = [],
     instockTotals = {},
     preorderTotals = {},
+    defectTotals = {},
     grandTotal = {},
     companies: initialCompanies = [],
     addresses = [],
@@ -83,7 +85,7 @@ export default function CheckoutIndex({
     const stockConflictsFromFlash = flash?.stock_conflicts ?? [];
 
     const conflictItems = useMemo(() => {
-        const fromItems = [...instockItems, ...preorderItems]
+        const fromItems = [...instockItems, ...preorderItems, ...defectItems]
             .filter((it) => it.stock_status && it.stock_status !== 'ok')
             .map((it) => ({
                 cart_item_id: it.id,
@@ -106,7 +108,7 @@ export default function CheckoutIndex({
             available: Number(c.available || 0),
             status: Number(c.available || 0) <= 0 ? 'unavailable' : 'partial',
         }));
-    }, [instockItems, preorderItems, stockConflictsFromFlash]);
+    }, [instockItems, preorderItems, defectItems, stockConflictsFromFlash]);
 
     const hasConflicts = conflictItems.length > 0;
 
@@ -184,8 +186,21 @@ export default function CheckoutIndex({
                             />
                         )}
 
-                        {/* ═══ Общий итог — только если есть обе группы товаров ═══ */}
-                        {instockItems.length > 0 && preorderItems.length > 0 && (
+                        {/* ═══ Таблица: Товары с уценкой ═══ */}
+                        {defectItems.length > 0 && (
+                            <ItemTable
+                                title="Товары с уценкой"
+                                icon={<LuBadgePercent size={20} />}
+                                items={defectItems}
+                                totals={defectTotals}
+                                currencySymbol={currencySymbol}
+                                colorPalette="purple"
+                                fmt={fmt}
+                            />
+                        )}
+
+                        {/* ═══ Общий итог — только если непустых групп больше одной ═══ */}
+                        {[instockItems, preorderItems, defectItems].filter((g) => g.length > 0).length > 1 && (
                         <Box
                             bg="bg"
                             borderWidth="1px"
@@ -932,7 +947,6 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
             {/* Мобильная раскладка — карточки товаров вместо таблицы */}
             <Stack gap="3" display={{ base: 'flex', md: 'none' }}>
                 {items.map((it) => {
-                    const pid = it.product?.id || it.id;
                     const qty = Number(it.quantity || 0);
                     const priceDisc = Number(it.price_discounted ?? it.price ?? 0);
                     const priceReg = Number(it.price_regular ?? priceDisc);
@@ -940,7 +954,7 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
 
                     return (
                         <Box
-                            key={pid}
+                            key={it.id}
                             borderWidth="1px"
                             borderColor="border"
                             rounded="md"
@@ -962,6 +976,11 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                                         </Text>
                                     )}
                                 </Flex>
+                            )}
+                            {it.defect?.description && (
+                                <Text fontSize="xs" color="purple.500" mt="1">
+                                    Дефект: {it.defect.description}
+                                </Text>
                             )}
                             <StockBadge it={it} mt="2" />
                             <Flex justify="space-between" align="flex-end" gap="3" mt="2">
@@ -999,7 +1018,6 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                     </Table.Header>
                     <Table.Body>
                         {items.map((it) => {
-                            const pid = it.product?.id || it.id;
                             const qty = Number(it.quantity || 0);
                             const priceDisc = Number(it.price_discounted ?? it.price ?? 0);
                             const priceReg = Number(it.price_regular ?? priceDisc);
@@ -1009,7 +1027,7 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                                 : 0;
 
                             return (
-                                <Table.Row key={pid}>
+                                <Table.Row key={it.id}>
                                     <Table.Cell>
                                         <Text fontWeight="medium" lineClamp={1}>
                                             {it.product?.name || 'Товар'}
@@ -1026,6 +1044,11 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                                                 </Text>
                                             )}
                                         </Flex>
+                                        {it.defect?.description && (
+                                            <Text fontSize="xs" color="purple.500" mt="0.5">
+                                                Дефект: {it.defect.description}
+                                            </Text>
+                                        )}
                                     </Table.Cell>
                                     <Table.Cell textAlign="center">
                                         {qty}

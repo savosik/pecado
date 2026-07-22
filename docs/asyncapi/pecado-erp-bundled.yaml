@@ -1,7 +1,7 @@
 asyncapi: 3.0.0
 info:
   title: Pecado ERP Integration API
-  version: 15.4.0
+  version: 15.5.0
   description: >
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)**
     и **сайтом Pecado**.
@@ -1041,6 +1041,17 @@ channels:
 
                 При получении из 1С, если поле отсутствует, используется
                 значение по умолчанию "order".
+
+
+                Значения:
+                  - `order` — обычный заказ, комплектуется со складов наличия;
+                  - `preorder` — предзаказ, комплектуется со складов предзаказа;
+                  - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
+                    а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+              examples:
+                - order
+                - preorder
+                - defect
             partner_uuid:
               type: string
               format: uuid
@@ -1049,7 +1060,9 @@ channels:
                 - 550e8400-e29b-41d4-a716-446655440000
             warehouse_uuids:
               type: array
-              description: UUID складов (1С выбирает первый найденный)
+              description: |
+                UUID складов (1С выбирает первый найденный).
+                Для `type=defect` — UUID склада некондиции.
               items:
                 type: string
                 format: uuid
@@ -3133,6 +3146,17 @@ channels:
 
                 При получении из 1С, если поле отсутствует, используется
                 значение по умолчанию "order".
+
+
+                Значения:
+                  - `order` — обычный заказ, комплектуется со складов наличия;
+                  - `preorder` — предзаказ, комплектуется со складов предзаказа;
+                  - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
+                    а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+              examples:
+                - order
+                - preorder
+                - defect
             partner_uuid:
               type: string
               format: uuid
@@ -3141,7 +3165,9 @@ channels:
                 - 550e8400-e29b-41d4-a716-446655440000
             warehouse_uuids:
               type: array
-              description: UUID складов (1С выбирает первый найденный)
+              description: |
+                UUID складов (1С выбирает первый найденный).
+                Для `type=defect` — UUID склада некондиции.
               items:
                 type: string
                 format: uuid
@@ -5895,6 +5921,17 @@ components:
 
               При получении из 1С, если поле отсутствует, используется значение
               по умолчанию "order".
+
+
+              Значения:
+                - `order` — обычный заказ, комплектуется со складов наличия;
+                - `preorder` — предзаказ, комплектуется со складов предзаказа;
+                - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
+                  а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+            examples:
+              - order
+              - preorder
+              - defect
           partner_uuid:
             type: string
             format: uuid
@@ -5903,7 +5940,9 @@ components:
               - 550e8400-e29b-41d4-a716-446655440000
           warehouse_uuids:
             type: array
-            description: UUID складов (1С выбирает первый найденный)
+            description: |
+              UUID складов (1С выбирает первый найденный).
+              Для `type=defect` — UUID склада некондиции.
             items:
               type: string
               format: uuid
@@ -6198,6 +6237,17 @@ components:
 
               При получении из 1С, если поле отсутствует, используется значение
               по умолчанию "order".
+
+
+              Значения:
+                - `order` — обычный заказ, комплектуется со складов наличия;
+                - `preorder` — предзаказ, комплектуется со складов предзаказа;
+                - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
+                  а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+            examples:
+              - order
+              - preorder
+              - defect
           partner_uuid:
             type: string
             format: uuid
@@ -6206,7 +6256,9 @@ components:
               - 550e8400-e29b-41d4-a716-446655440000
           warehouse_uuids:
             type: array
-            description: UUID складов (1С выбирает первый найденный)
+            description: |
+              UUID складов (1С выбирает первый найденный).
+              Для `type=defect` — UUID склада некондиции.
             items:
               type: string
               format: uuid
@@ -9529,6 +9581,17 @@ components:
 
             При получении из 1С, если поле отсутствует, используется значение по
             умолчанию "order".
+
+
+            Значения:
+              - `order` — обычный заказ, комплектуется со складов наличия;
+              - `preorder` — предзаказ, комплектуется со складов предзаказа;
+              - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
+                а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+          examples:
+            - order
+            - preorder
+            - defect
         partner_uuid:
           type: string
           format: uuid
@@ -9537,7 +9600,9 @@ components:
             - 550e8400-e29b-41d4-a716-446655440000
         warehouse_uuids:
           type: array
-          description: UUID складов (1С выбирает первый найденный)
+          description: |
+            UUID складов (1С выбирает первый найденный).
+            Для `type=defect` — UUID склада некондиции.
           items:
             type: string
             format: uuid

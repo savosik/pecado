@@ -5,6 +5,7 @@ namespace App\Contracts\Cart;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Models\ProductDefect;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -76,6 +77,20 @@ interface CartServiceInterface
      * }
      */
     public function setProductsQuantity(User $user, Cart $cart, array $quantities): array;
+
+    /**
+     * Добавить уценённую партию в корзину (текущее количество + qty).
+     *
+     * @return array{quantity: int, available: int, cart_totals: array}
+     */
+    public function addDefect(User $user, Cart $cart, ProductDefect $defect, int $qty): array;
+
+    /**
+     * Задать точное количество уценённой партии в корзине (qty<=0 удаляет строку).
+     *
+     * @return array{quantity: int, available: int, cart_totals: array}
+     */
+    public function setDefectQuantity(User $user, Cart $cart, ProductDefect $defect, int $qty): array;
 
     /**
      * Create a new cart for a user (deactivates other carts).

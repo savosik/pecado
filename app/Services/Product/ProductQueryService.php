@@ -174,6 +174,40 @@ class ProductQueryService
     }
 
     /**
+     * Проставить товарам флаг has_defects — есть ли у товара уценка в продаже.
+     *
+     * Одним запросом на всю пачку (см. DefectStockService::hasSellableDefectsMap):
+     * true только если есть опубликованная партия с ценой и свободным остатком.
+     * Флаг булев, не ценовой, поэтому отдаётся всем — в том числе гостям (значок
+     * «уценка» в списке видят все, покупают только авторизованные).
+     */
+    public static function enrichProductsWithDefects(array $products): array
+    {
+        if (empty($products)) {
+            return $products;
+        }
+
+        $ids = collect($products)
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (empty($ids)) {
+            return $products;
+        }
+
+        $map = app(\App\Contracts\Defect\DefectStockServiceInterface::class)
+            ->hasSellableDefectsMap($ids);
+
+        return array_map(function ($product) use ($map) {
+            $product['has_defects'] = $map[$product['id']] ?? false;
+
+            return $product;
+        }, $products);
+    }
+
+    /**
      * Обогатить подборки остатками по региону текущего пользователя.
      */
     public static function enrichSelectionsWithStock(array $selections): array

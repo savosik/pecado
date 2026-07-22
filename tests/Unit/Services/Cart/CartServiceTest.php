@@ -21,12 +21,15 @@ class CartServiceTest extends TestCase
 
     private StockServiceInterface $stockService;
 
+    private \App\Contracts\Defect\DefectStockServiceInterface $defectStockService;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->priceService = $this->createMock(PriceServiceInterface::class);
         $this->stockService = $this->createMock(StockServiceInterface::class);
-        $this->service = new CartService($this->priceService, $this->stockService);
+        $this->defectStockService = $this->createMock(\App\Contracts\Defect\DefectStockServiceInterface::class);
+        $this->service = new CartService($this->priceService, $this->stockService, $this->defectStockService);
     }
 
     #[Test]
@@ -101,6 +104,8 @@ class CartServiceTest extends TestCase
             default => null
         });
         $instockItem->method('isInstock')->willReturn(true);
+        $instockItem->method('isPreorder')->willReturn(false);
+        $instockItem->method('isDefect')->willReturn(false);
 
         $preorderItem = $this->createMock(CartItem::class);
         $preorderItem->method('__get')->willReturnCallback(fn ($key) => match ($key) {
@@ -110,6 +115,8 @@ class CartServiceTest extends TestCase
             default => null
         });
         $preorderItem->method('isInstock')->willReturn(false);
+        $preorderItem->method('isPreorder')->willReturn(true);
+        $preorderItem->method('isDefect')->willReturn(false);
 
         $items = new Collection([$instockItem, $preorderItem]);
 

@@ -74,6 +74,9 @@ class HandleShipmentCreated
             $this->syncItems($shipment, $payload['items']);
         }
 
+        // v15.5: списание партий некондиции, если реализация относится к заказу уценки.
+        app(\App\Services\Defect\DefectShipmentService::class)->reconcileForShipment($shipment);
+
         Log::info('HandleShipmentCreated: реализация создана/обновлена', [
             'uuid' => $uuid,
             'company_id' => $companyId,

@@ -598,6 +598,59 @@ class PublishOrderToErpTest extends TestCase
     }
 
     #[Test]
+    public function defect_order_uses_defect_warehouse_uuid(): void
+    {
+        Queue::fake();
+
+        // Склад некондиции не привязан к региону — регион здесь не участвует.
+        Warehouse::factory()->create(['external_id' => 'defect-wh-uuid', 'is_defect' => true]);
+        Warehouse::factory()->create(['external_id' => 'primary-wh-uuid', 'is_defect' => false]);
+
+        $user = User::factory()->create(['erp_id' => 'defect-erp', 'region_id' => null]);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::DEFECT,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertPushed(PublishOrderToErpJob::class, function ($job) {
+            $uuids = $job->payload['warehouse_uuids'] ?? [];
+
+            return ($job->payload['type'] ?? null) === 'defect'
+                && in_array('defect-wh-uuid', $uuids, true)
+                && ! in_array('primary-wh-uuid', $uuids, true);
+        });
+    }
+
+    #[Test]
+    public function defect_order_is_not_published_without_defect_warehouse_uuid(): void
+    {
+        // ⚠️ Блокер: склад некондиции без external_id — заказ не уходит в 1С.
+        Queue::fake();
+
+        Warehouse::factory()->create(['external_id' => null, 'is_defect' => true]);
+
+        $user = User::factory()->create(['erp_id' => 'defect-noext-erp']);
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $order = Order::factory()->create([
+            'user_id' => $user->id,
+            'company_id' => $company->id,
+            'type' => \App\Enums\OrderType::DEFECT,
+        ]);
+
+        Queue::fake();
+
+        (new \App\Listeners\PublishOrderToErp)->handle(new OrderCreated($order));
+
+        Queue::assertNotPushed(PublishOrderToErpJob::class);
+    }
+
+    #[Test]
     public function order_created_payload_warehouse_uuids_empty_when_no_region(): void
     {
         Queue::fake();

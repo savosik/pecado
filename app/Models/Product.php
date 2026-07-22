@@ -429,6 +429,16 @@ class Product extends Model implements HasMedia
     }
 
     /**
+     * Партии некондиции (уценки) по этому товару.
+     *
+     * У одного артикула может быть несколько партий с разными дефектами и ценами.
+     */
+    public function defects(): HasMany
+    {
+        return $this->hasMany(ProductDefect::class);
+    }
+
+    /**
      * Get the users who have favorited this product.
      */
     public function favoritedByUsers(): BelongsToMany

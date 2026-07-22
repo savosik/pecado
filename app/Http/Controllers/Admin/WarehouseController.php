@@ -55,6 +55,7 @@ class WarehouseController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'external_id' => 'nullable|string|max:255|unique:warehouses,external_id',
+            'is_defect' => 'boolean',
         ]);
 
         $warehouse = Warehouse::create($validated);
@@ -72,6 +73,7 @@ class WarehouseController extends Controller
                 'id' => $warehouse->id,
                 'name' => $warehouse->name,
                 'external_id' => $warehouse->external_id,
+                'is_defect' => $warehouse->is_defect,
                 'created_at' => $warehouse->created_at?->format('d.m.Y H:i'),
                 'updated_at' => $warehouse->updated_at?->format('d.m.Y H:i'),
             ],
@@ -96,6 +98,7 @@ class WarehouseController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'external_id' => 'nullable|string|max:255|unique:warehouses,external_id,'.$warehouse->id,
+            'is_defect' => 'boolean',
         ]);
 
         $warehouse->update($validated);

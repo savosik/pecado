@@ -6,6 +6,7 @@ import { LuDownload, LuFileText } from 'react-icons/lu';
 import ContentRenderer from '@/components/content/ContentRenderer';
 import SimilarProductItem from '@/components/product/SimilarProductItem';
 import ProductListItem from '@/Pages/User/Products/ProductListItem';
+import ProductDefectsTab from '@/components/product/ProductDefectsTab';
 
 const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
 
@@ -44,7 +45,7 @@ function isValidSpecValue(val) {
  *   similarProducts: Array<Object>
  * }} props
  */
-export default function ProductDetailTabs({ specifications = {}, specificationGroups = [], description = '', media = [], certificates = [], sizeChart = null, similarProducts = [] }) {
+export default function ProductDetailTabs({ specifications = {}, specificationGroups = [], description = '', media = [], certificates = [], sizeChart = null, similarProducts = [], defects = [], currency = null }) {
     const sanitizedDescription = useMemo(() => DOMPurify.sanitize(description ?? ''), [description]);
 
     const validSpecifications = useMemo(() => {
@@ -134,11 +135,13 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
 
     const hasSizeChart = normalizedSizeChart && normalizedSizeChart.values.length > 1;
     const hasSimilar = Array.isArray(similarProducts) && similarProducts.length > 0;
+    const hasDefects = Array.isArray(defects) && defects.length > 0;
 
     // Собираем доступные табы
     const tabs = [];
     if (hasSpecs) tabs.push({ key: 'specs', label: 'Характеристики' });
     if (hasDesc) tabs.push({ key: 'description', label: 'Описание' });
+    if (hasDefects) tabs.push({ key: 'defects', label: 'Уценка' });
     if (hasSizeChart) tabs.push({ key: 'sizeChart', label: 'Размерная сетка' });
     if (hasCerts) tabs.push({ key: 'certificates', label: 'Сертификаты' });
     if (hasMedia) tabs.push({ key: 'media', label: 'Медиа' });
@@ -443,6 +446,13 @@ export default function ProductDetailTabs({ specifications = {}, specificationGr
                             </Box>
                         )}
                     </Box>
+                </Tabs.Content>
+            )}
+
+            {/* Уценка (некондиция) */}
+            {hasDefects && (
+                <Tabs.Content value="defects" pt="4">
+                    <ProductDefectsTab defects={defects} currency={currency} />
                 </Tabs.Content>
             )}
 

@@ -25,6 +25,20 @@ class PublishOrderToErp
         // Load relationships to include in the payload
         $order->load(['items.product', 'user', 'company.bankAccounts', 'user.region']);
 
+        // ⚠️ БЛОКЕР: заказ уценки нельзя публиковать, пока склад некондиции не получил
+        // external_id от 1С — иначе warehouse_uuids уйдёт пустым и 1С не поймёт, откуда
+        // отгружать. Не отправляем и пишем warning; заказ на сайте остаётся, менеджер
+        // увидит его в кабинете склада. Снять гейт — как только UUID прописан.
+        $isDefectOrder = ($order->type?->value ?? $order->type) === 'defect';
+        if ($isDefectOrder && $this->defectWarehouseUuids() === []) {
+            \Illuminate\Support\Facades\Log::warning(
+                'Заказ уценки не опубликован в 1С: у склада некондиции нет external_id',
+                ['order_uuid' => $order->uuid, 'order_number' => $order->number]
+            );
+
+            return;
+        }
+
         $eventName = match (class_basename($event)) {
             'OrderCreated' => 'order.created',
             'OrderUpdated' => 'order.updated',
@@ -109,13 +123,19 @@ class PublishOrderToErp
      */
     private function resolveWarehouseUuids(\App\Models\Order $order): array
     {
+        $type = $order->type?->value ?? $order->type ?? 'order';
+
+        // Уценка отгружается со склада некондиции — он один и в регионы не входит,
+        // поэтому регион здесь не участвует (в отличие от order/preorder).
+        if ($type === 'defect') {
+            return $this->defectWarehouseUuids();
+        }
+
         $region = $order->user?->region;
 
         if (! $region) {
             return [];
         }
-
-        $type = $order->type?->value ?? $order->type ?? 'order';
 
         $warehouses = match ($type) {
             'preorder' => $region->preorderWarehouses()->get(),
@@ -136,6 +156,21 @@ class PublishOrderToErp
         }
 
         return $uuids;
+    }
+
+    /**
+     * UUID склада(ов) некондиции — источник отгрузки заказов уценки.
+     *
+     * @return string[]
+     */
+    private function defectWarehouseUuids(): array
+    {
+        return \App\Models\Warehouse::query()
+            ->where('is_defect', true)
+            ->pluck('external_id')
+            ->filter()
+            ->values()
+            ->toArray();
     }
 
     /**

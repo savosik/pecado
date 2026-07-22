@@ -92,6 +92,9 @@ class HandleShipmentUpdated
             $this->syncItems($shipment, $payload['items']);
         }
 
+        // v15.5: пересчёт списания партий некондиции (количество могло измениться).
+        app(\App\Services\Defect\DefectShipmentService::class)->reconcileForShipment($shipment);
+
         Log::info('HandleShipmentUpdated: реализация обновлена', [
             'uuid' => $uuid,
             'status' => $payload['status'] ?? 'не изменён',

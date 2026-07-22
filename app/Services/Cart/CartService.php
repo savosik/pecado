@@ -3,11 +3,13 @@
 namespace App\Services\Cart;
 
 use App\Contracts\Cart\CartServiceInterface;
+use App\Contracts\Defect\DefectStockServiceInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
+use App\Models\ProductDefect;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,7 +18,8 @@ class CartService implements CartServiceInterface
 {
     public function __construct(
         protected PriceServiceInterface $priceService,
-        protected StockServiceInterface $stockService
+        protected StockServiceInterface $stockService,
+        protected DefectStockServiceInterface $defectStockService
     ) {}
 
     /**
@@ -68,6 +71,8 @@ class CartService implements CartServiceInterface
                 ->where('product_id', $item->product_id)
                 ->where('item_type', $item->item_type)
                 ->where('warehouse_id', $item->warehouse_id)
+                // Уценка — разные партии одного товара нельзя сливать в одну строку.
+                ->where('product_defect_id', $item->product_defect_id)
                 ->first();
 
             if ($existingItem) {
@@ -108,8 +113,10 @@ class CartService implements CartServiceInterface
      */
     public function addProduct(User $user, Cart $cart, Product $product, int $qty): array
     {
+        // Уценку не учитываем: её количество считается по партии, не по товару.
         $currentQty = $cart->items()
             ->where('product_id', $product->id)
+            ->excludingDefect()
             ->sum('quantity');
 
         $newTotalQty = $currentQty + $qty;
@@ -133,6 +140,12 @@ class CartService implements CartServiceInterface
             throw new \LogicException('Доступ запрещён.');
         }
 
+        // Уценка живёт по своим правилам (цена и лимит — от партии), spillover
+        // instock/preorder к ней неприменим. Меняют её через setDefectQuantity.
+        if ($item->isDefect()) {
+            throw new \LogicException('Количество уценки меняется через отдельный метод.');
+        }
+
         $cart = $item->cart;
         $product = $item->product;
 
@@ -144,6 +157,7 @@ class CartService implements CartServiceInterface
         $otherItem = $cart->items()
             ->where('product_id', $product->id)
             ->where('id', '!=', $item->id)
+            ->excludingDefect()
             ->first();
         $otherQty = (int) ($otherItem?->quantity ?? 0);
 
@@ -221,9 +235,10 @@ class CartService implements CartServiceInterface
         $stock = $this->stockService->getStock($product, $user);
         $maxTotal = $stock['available'] + $stock['preorder'];
 
-        // If qty is 0, remove all items for this product
+        // If qty is 0, remove all items for this product (кроме уценки —
+        // у неё отдельная строка на партию, её удаляют через setDefectQuantity)
         if ($qty <= 0) {
-            $cart->items()->where('product_id', $product->id)->delete();
+            $cart->items()->where('product_id', $product->id)->excludingDefect()->delete();
 
             return [
                 'instock' => 0,
@@ -241,9 +256,9 @@ class CartService implements CartServiceInterface
         $price = $this->priceService->getUserPrice($product, $user);
 
         DB::transaction(function () use ($cart, $product, $instockQty, $preorderQty, $price) {
-            // Lock existing rows to prevent race conditions
-            $cart->items()->where('product_id', $product->id)->lockForUpdate()->get();
-            $cart->items()->where('product_id', $product->id)->delete();
+            // Lock existing rows to prevent race conditions (уценку не трогаем)
+            $cart->items()->where('product_id', $product->id)->excludingDefect()->lockForUpdate()->get();
+            $cart->items()->where('product_id', $product->id)->excludingDefect()->delete();
 
             if ($instockQty > 0) {
                 $cart->items()->create([
@@ -335,11 +350,12 @@ class CartService implements CartServiceInterface
                 // ждали друг друга, а не пересекались по разным product_id.
                 $cart->items()
                     ->whereIn('product_id', $pids)
+                    ->excludingDefect()
                     ->orderBy('id')
                     ->lockForUpdate()
                     ->get();
 
-                $cart->items()->whereIn('product_id', $pids)->delete();
+                $cart->items()->whereIn('product_id', $pids)->excludingDefect()->delete();
 
                 $rows = [];
                 $now = now();
@@ -391,6 +407,67 @@ class CartService implements CartServiceInterface
 
         return [
             'items' => $items,
+            'cart_totals' => $this->buildCartTotals($cart, $user),
+        ];
+    }
+
+    /**
+     * Добавить уценённую партию в корзину (текущее количество + qty).
+     *
+     * @return array{quantity: int, available: int, cart_totals: array}
+     */
+    public function addDefect(User $user, Cart $cart, ProductDefect $defect, int $qty): array
+    {
+        $current = (int) $cart->items()
+            ->where('product_defect_id', $defect->id)
+            ->sum('quantity');
+
+        return $this->setDefectQuantity($user, $cart, $defect, $current + $qty);
+    }
+
+    /**
+     * Задать точное количество уценённой партии в корзине.
+     *
+     * Уценка автономна: отдельная строка на партию, фиксированная цена из партии
+     * (индивидуальные цены и скидки к ней не применяются), лимит — свободный
+     * остаток партии. Резерв возникает только при оформлении заказа, поэтому
+     * здесь ограничиваемся текущим available; финальную гонку разрешает checkout.
+     *
+     * @return array{quantity: int, available: int, cart_totals: array}
+     */
+    public function setDefectQuantity(User $user, Cart $cart, ProductDefect $defect, int $qty): array
+    {
+        // Партия должна быть допущена в продажу; закрытую/снятую с публикации —
+        // молча приравниваем к недоступной (0), чтобы устаревшая вкладка не добавляла.
+        $available = $defect->loadMissing('product')->price !== null
+            && $defect->is_published
+            && ! $defect->isClosed()
+            ? $this->defectStockService->available($defect)
+            : 0;
+
+        $clamped = max(0, min($qty, $available));
+
+        DB::transaction(function () use ($cart, $defect, $clamped) {
+            $cart->items()->where('product_defect_id', $defect->id)->lockForUpdate()->get();
+            $cart->items()->where('product_defect_id', $defect->id)->delete();
+
+            if ($clamped > 0) {
+                $cart->items()->create([
+                    'product_id' => $defect->product_id,
+                    'product_defect_id' => $defect->id,
+                    'quantity' => $clamped,
+                    'price' => $defect->price,
+                    'item_type' => 'defect',
+                    'warehouse_id' => null,
+                ]);
+            }
+        }, 3);
+
+        $cart->load('items.product');
+
+        return [
+            'quantity' => $clamped,
+            'available' => $available,
             'cart_totals' => $this->buildCartTotals($cart, $user),
         ];
     }
@@ -570,13 +647,22 @@ class CartService implements CartServiceInterface
      */
     public function getCartDetails(Cart $cart, User $user): array
     {
-        $cart->loadMissing('items.product.brand', 'items.product.barcodes', 'items.product.media');
+        $cart->loadMissing(
+            'items.product.brand',
+            'items.product.barcodes',
+            'items.product.media',
+            'items.productDefect.media',
+        );
 
         $items = $cart->items->map(function (CartItem $item) use ($user) {
             $product = $item->product;
 
             if (! $product) {
                 return null;
+            }
+
+            if ($item->isDefect()) {
+                return $this->defectItemDetails($item, $product);
             }
 
             $basePrice = $this->priceService->getBasePriceForUser($product, $user);
@@ -635,6 +721,64 @@ class CartService implements CartServiceInterface
     // ────────────────────────────────────────────
 
     /**
+     * Данные строки корзины для позиции уценки.
+     *
+     * Форма совместима с обычной строкой (те же ключи), но цена берётся из партии,
+     * а лимит — свободный остаток партии + уже лежащее в этой строке (иначе своя же
+     * позиция «съела» бы весь остаток и потолок оказался бы ниже текущего qty).
+     */
+    private function defectItemDetails(CartItem $item, Product $product): array
+    {
+        $defect = $item->productDefect;
+        $sellable = $defect && $defect->is_published && $defect->price !== null && ! $defect->isClosed();
+        $available = ($defect && $sellable) ? $this->defectStockService->available($defect) : 0;
+        $maxTotal = $available + ($sellable ? $item->quantity : 0);
+        $price = (float) ($item->price ?? 0);
+
+        return [
+            'id' => $item->id,
+            'quantity' => $item->quantity,
+            'product' => [
+                'id' => $product->id,
+                'slug' => $product->slug,
+                'name' => $product->name,
+                'sku' => $product->sku,
+                'code' => $product->code,
+                'thumbnail_url' => $product->getFirstMediaUrl('main', 'thumb') ?: null,
+                'main_image_url' => $product->getFirstMediaUrl('main') ?: null,
+                'brand' => $product->brand ? [
+                    'id' => $product->brand->id,
+                    'name' => $product->brand->name,
+                    'slug' => $product->brand->slug,
+                ] : null,
+                'barcodes' => $product->barcodes->pluck('barcode')->toArray(),
+            ],
+            'price' => $price,
+            'price_regular' => $price,
+            'price_discounted' => $price,
+            'item_type' => 'defect',
+            'defect' => $defect ? [
+                'id' => $defect->id,
+                'description' => $defect->defect_description,
+                'photo_url' => $defect->getFirstMediaUrl(ProductDefect::MEDIA_COLLECTION, 'thumb')
+                    ?: $defect->getFirstMediaUrl(ProductDefect::MEDIA_COLLECTION) ?: null,
+            ] : null,
+            'is_unavailable' => ! $sellable || $maxTotal <= 0,
+            'available_quantity' => $available,
+            'preorder_quantity' => 0,
+            'max_total' => $maxTotal,
+            'stock_status' => match (true) {
+                ! $sellable || $maxTotal <= 0 => 'unavailable',
+                $item->quantity > $maxTotal => 'partial',
+                default => 'ok',
+            },
+            'total_amount' => round($item->quantity * $price, 2),
+            'total_amount_regular' => round($item->quantity * $price, 2),
+            'total_amount_discounted' => round($item->quantity * $price, 2),
+        ];
+    }
+
+    /**
      * Compute all cart aggregates in a single pass.
      * Used by getCartSummary and buildCartTotals to avoid duplication.
      */
@@ -659,12 +803,20 @@ class CartService implements CartServiceInterface
 
             if ($item->isInstock()) {
                 $availableCount += $qty;
-            } else {
+            } elseif ($item->isPreorder()) {
                 $preorderCount += $qty;
             }
+            // Уценку не относим ни к available, ни к preorder — это отдельный поток.
 
-            $totalAmountRegular += $qty * $this->priceService->getBasePriceForUser($product, $user);
-            $totalAmountDiscounted += $qty * $this->priceService->getUserPrice($product, $user);
+            if ($item->isDefect()) {
+                // Цена уценки фиксирована в строке; скидки/индивидуальные цены к ней не применяются.
+                $defectPrice = (float) ($item->price ?? 0);
+                $totalAmountRegular += $qty * $defectPrice;
+                $totalAmountDiscounted += $qty * $defectPrice;
+            } else {
+                $totalAmountRegular += $qty * $this->priceService->getBasePriceForUser($product, $user);
+                $totalAmountDiscounted += $qty * $this->priceService->getUserPrice($product, $user);
+            }
         }
 
         return [

@@ -17,9 +17,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $warehouse_id
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property int|null $product_defect_id
  * @property-read \App\Models\Cart $cart
  * @property-read float $total_amount
  * @property-read \App\Models\Product $product
+ * @property-read \App\Models\ProductDefect|null $productDefect
  * @property-read \App\Models\Warehouse|null $warehouse
  *
  * @method static \Database\Factories\CartItemFactory factory($count = null, $state = [])
@@ -47,6 +49,7 @@ class CartItem extends Model
     protected $fillable = [
         'cart_id',
         'product_id',
+        'product_defect_id',
         'quantity',
         'price',
         'item_type',
@@ -83,6 +86,14 @@ class CartItem extends Model
         return $this->belongsTo(Warehouse::class);
     }
 
+    /**
+     * Партия некондиции — только у позиций с item_type = defect.
+     */
+    public function productDefect(): BelongsTo
+    {
+        return $this->belongsTo(ProductDefect::class);
+    }
+
     // ────────────────────────────────────────────
     // Scopes
     // ────────────────────────────────────────────
@@ -103,6 +114,26 @@ class CartItem extends Model
         return $query->where('item_type', 'preorder');
     }
 
+    /**
+     * Scope a query to only include defect (уценка) items.
+     */
+    public function scopeDefect(Builder $query): Builder
+    {
+        return $query->where('item_type', 'defect');
+    }
+
+    /**
+     * Scope: всё, кроме уценки — обычные instock/preorder позиции.
+     *
+     * Spillover-логика (setProductQuantity и родня) удаляет и пересоздаёт строки
+     * товара пачкой; уценка привязана к конкретной партии и живёт отдельно,
+     * поэтому её нужно исключать из таких операций.
+     */
+    public function scopeExcludingDefect(Builder $query): Builder
+    {
+        return $query->where('item_type', '!=', 'defect');
+    }
+
     // ────────────────────────────────────────────
     // Methods
     // ────────────────────────────────────────────
@@ -121,6 +152,14 @@ class CartItem extends Model
     public function isPreorder(): bool
     {
         return $this->item_type === 'preorder';
+    }
+
+    /**
+     * Позиция уценки: цена берётся из партии, spillover instock/preorder её не касается.
+     */
+    public function isDefect(): bool
+    {
+        return $this->item_type === 'defect';
     }
 
     // ────────────────────────────────────────────

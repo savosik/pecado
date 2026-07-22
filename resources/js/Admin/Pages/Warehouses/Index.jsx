@@ -1,5 +1,5 @@
 import React from "react";
-import { Button } from "@chakra-ui/react";
+import { Button, Badge } from "@chakra-ui/react";
 import { Head, Link, usePage, router } from "@inertiajs/react";
 import { LuPlus } from "react-icons/lu";
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
@@ -49,6 +49,13 @@ const WarehousesIndex = ({ filters }) => {
         { label: "ID", key: "id", sortable: true },
         { label: "Название", key: "name", sortable: true },
         { label: "Внешний ID", key: "external_id", sortable: true },
+        {
+            label: "Тип",
+            key: "is_defect",
+            render: (value) => value
+                ? <Badge colorPalette="purple" variant="subtle">Некондиция</Badge>
+                : <Badge colorPalette="gray" variant="subtle">Обычный</Badge>,
+        },
         createActionsColumn('admin.warehouses', (warehouse) => setDeleteId(warehouse.id), { permissionPrefix: 'warehouses', showView: true }),
     ];
 

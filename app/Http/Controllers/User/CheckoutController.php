@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Contracts\Cart\CartServiceInterface;
+use App\Contracts\Defect\DefectStockServiceInterface;
 use App\Contracts\Order\CheckoutServiceInterface;
 use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
@@ -23,7 +24,8 @@ class CheckoutController extends Controller
         protected CartServiceInterface $cartService,
         protected CheckoutServiceInterface $checkoutService,
         protected PriceServiceInterface $priceService,
-        protected StockServiceInterface $stockService
+        protected StockServiceInterface $stockService,
+        protected DefectStockServiceInterface $defectStockService
     ) {}
 
     /**
@@ -42,10 +44,11 @@ class CheckoutController extends Controller
 
         $cartDetails = $this->cartService->getCartDetails($cart, $user);
 
-        // Разделить товары на instock и preorder
+        // Разделить товары на instock, preorder и defect (уценка)
         $items = $cartDetails['items'] ?? [];
         $instockItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'instock'));
         $preorderItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'preorder'));
+        $defectItems = array_values(array_filter($items, fn ($it) => ($it['item_type'] ?? '') === 'defect'));
 
         // Подытоги
         $instockTotals = [
@@ -57,6 +60,11 @@ class CheckoutController extends Controller
             'quantity' => array_sum(array_column($preorderItems, 'quantity')),
             'amount_regular' => array_sum(array_column($preorderItems, 'total_amount_regular')),
             'amount_discounted' => array_sum(array_column($preorderItems, 'total_amount_discounted')),
+        ];
+        $defectTotals = [
+            'quantity' => array_sum(array_column($defectItems, 'quantity')),
+            'amount_regular' => array_sum(array_column($defectItems, 'total_amount_regular')),
+            'amount_discounted' => array_sum(array_column($defectItems, 'total_amount_discounted')),
         ];
 
         // Компании и адреса пользователя
@@ -74,8 +82,10 @@ class CheckoutController extends Controller
             ],
             'instockItems' => $instockItems,
             'preorderItems' => $preorderItems,
+            'defectItems' => $defectItems,
             'instockTotals' => $instockTotals,
             'preorderTotals' => $preorderTotals,
+            'defectTotals' => $defectTotals,
             'grandTotal' => [
                 'quantity' => $cartDetails['total_quantity'] ?? 0,
                 'amount_regular' => $cartDetails['total_amount_regular'] ?? 0,
@@ -131,7 +141,8 @@ class CheckoutController extends Controller
             // Очистить корзину после успешного заказа
             $cart->items()->delete();
 
-            // Если создано два заказа (обычный + предзаказ) — редиректим в список заказов
+            // Если создано несколько заказов (обычный / предзаказ / уценка) —
+            // редиректим в список заказов
             if ($orders->count() > 1) {
                 return redirect()
                     ->route('cabinet.orders.index')
@@ -208,15 +219,23 @@ class CheckoutController extends Controller
         $adjusted = 0;
         $removed = 0;
 
-        $cart->loadMissing('items.product');
+        $cart->loadMissing('items.product', 'items.productDefect');
 
         foreach ($cart->items as $item) {
             if (! $item->product) {
                 continue;
             }
 
-            $stock = $this->stockService->getStock($item->product, $user);
-            $totalAvailable = (int) ($stock['available'] + $stock['preorder']);
+            if ($item->isDefect()) {
+                // Уценка: лимит — свободный остаток партии; закрытую/снятую считаем недоступной.
+                $defect = $item->productDefect;
+                $totalAvailable = ($defect && $defect->is_published && $defect->price !== null && ! $defect->isClosed())
+                    ? $this->defectStockService->available($defect)
+                    : 0;
+            } else {
+                $stock = $this->stockService->getStock($item->product, $user);
+                $totalAvailable = (int) ($stock['available'] + $stock['preorder']);
+            }
 
             if ($item->quantity <= $totalAvailable) {
                 continue;

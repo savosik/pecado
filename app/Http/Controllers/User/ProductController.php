@@ -574,9 +574,7 @@ class ProductController extends Controller
 
             // Гость и неактивные пользователи не должны видеть цены — даже в Inertia props.
             // Фронт уже скрывает их через user-проверку, но цена всё равно «утекает» в HTML.
-            $user = auth()->user();
-            $canViewPrices = $user && ($user->loadMissing('roles')->roles->isNotEmpty() || $user->status === UserStatus::ACTIVE);
-            if (! $canViewPrices) {
+            if (! $this->canViewPrices(auth()->user())) {
                 foreach ($variantArrays as &$va) {
                     unset(
                         $va['base_price'],
@@ -764,6 +762,31 @@ class ProductController extends Controller
         ] : null;
         $productData['model_name'] = $product->model?->name;
 
+        // Уценка (некондиция): бейдж «есть товары с уценкой» + отдельный таб.
+        // Цены партий видят только те, кто видит цены товара (гость/неактивный — нет);
+        // сам факт наличия уценки (для бейджа) виден всем.
+        $canViewPrices = $this->canViewPrices(auth()->user());
+        $sellableDefects = app(\App\Contracts\Defect\DefectStockServiceInterface::class)
+            ->sellableForProduct($product);
+        $productData['has_defects'] = $sellableDefects->isNotEmpty();
+        $defects = $canViewPrices
+            ? $sellableDefects->map(fn (\App\Models\ProductDefect $defect) => [
+                'id' => $defect->id,
+                'uuid' => $defect->uuid,
+                'defect_description' => $defect->defect_description,
+                'price' => (float) $defect->price,
+                'available_quantity' => $defect->available_quantity,
+                'photos' => $defect->getMedia(\App\Models\ProductDefect::MEDIA_COLLECTION)
+                    ->map(fn ($media) => [
+                        'id' => $media->id,
+                        'url' => $media->getUrl(),
+                        'thumb_url' => $media->hasGeneratedConversion('thumb')
+                            ? $media->getUrl('thumb')
+                            : $media->getUrl(),
+                    ])->values(),
+            ])->values()->all()
+            : [];
+
         // Размерная сетка
         $sizeChart = null;
         if ($product->sizeChart) {
@@ -803,8 +826,21 @@ class ProductController extends Controller
             'sizeChart' => $sizeChart,
             'similarProducts' => $similarProducts,
             'promotions' => $promotions,
+            'defects' => $defects,
             'seo' => $this->buildProductSeo($product),
         ];
+    }
+
+    /**
+     * Может ли пользователь видеть цены товара.
+     *
+     * Тот же критерий, что для вырезания цен из вариантов: гость и неактивный
+     * клиент цен не видят даже в Inertia-props. Сотрудники (с ролями) видят.
+     */
+    private function canViewPrices(?\App\Models\User $user): bool
+    {
+        return $user !== null
+            && ($user->loadMissing('roles')->roles->isNotEmpty() || $user->status === UserStatus::ACTIVE);
     }
 
     /**

@@ -401,6 +401,29 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     });
     Route::delete('/warehouses/{warehouse}', [\App\Http\Controllers\Admin\WarehouseController::class, 'destroy'])->name('warehouses.destroy')->middleware('permission:warehouses.delete');
 
+    // =====================================================================
+    // Уценка (некондиция) — закупщик назначает цену и включает публикацию.
+    // Партии заводит кладовщик в /wms; здесь только цена и видимость.
+    // =====================================================================
+    Route::middleware('permission:defects.view')->group(function () {
+        Route::get('/defects', [\App\Http\Controllers\Admin\DefectController::class, 'index'])->name('defects.index');
+    });
+    Route::put('/defects/{defect}/price', [\App\Http\Controllers\Admin\DefectController::class, 'updatePrice'])
+        ->name('defects.price')->middleware('permission:defects.price');
+    Route::put('/defects/{defect}/publish', [\App\Http\Controllers\Admin\DefectController::class, 'togglePublish'])
+        ->name('defects.publish')->middleware('permission:defects.publish');
+
+    // Справочник типовых дефектов (чипы для кладовщика).
+    Route::middleware('permission:defect-types.view')->group(function () {
+        Route::get('/defect-types', [\App\Http\Controllers\Admin\DefectTypeController::class, 'index'])->name('defect-types.index');
+    });
+    Route::post('/defect-types', [\App\Http\Controllers\Admin\DefectTypeController::class, 'store'])
+        ->name('defect-types.store')->middleware('permission:defect-types.create');
+    Route::put('/defect-types/{defectType}', [\App\Http\Controllers\Admin\DefectTypeController::class, 'update'])
+        ->name('defect-types.update')->middleware('permission:defect-types.edit');
+    Route::delete('/defect-types/{defectType}', [\App\Http\Controllers\Admin\DefectTypeController::class, 'destroy'])
+        ->name('defect-types.destroy')->middleware('permission:defect-types.delete');
+
     // Регионы
     Route::middleware('permission:regions.view')->group(function () {
         Route::get('/regions', [\App\Http\Controllers\Admin\RegionController::class, 'index'])->name('regions.index');

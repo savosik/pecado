@@ -24,6 +24,7 @@ import { LuUpload, LuX, LuImage } from 'react-icons/lu';
  * @param {number} maxFiles - Максимальное количество файлов
  * @param {number} maxSize - Максимальный размер в MB
  * @param {string[]} acceptedTypes - Допустимые типы файлов
+ * @param {string|null} capture - 'environment'/'user' — на телефоне открывает камеру; на десктопе игнорируется
  */
 export const MultipleImageUploader = ({
     name,
@@ -36,6 +37,9 @@ export const MultipleImageUploader = ({
     maxFiles = 10,
     maxSize = 10,
     acceptedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    // capture: на телефоне открывает сразу камеру ('environment' — задняя).
+    // На десктопе браузером игнорируется. По умолчанию не задан — обычный выбор файла.
+    capture = null,
 }) => {
     const [previews, setPreviews] = useState([]);
     const [uploadError, setUploadError] = useState(null);
@@ -139,6 +143,7 @@ export const MultipleImageUploader = ({
                 type="file"
                 name={name}
                 accept={acceptedTypes.join(',')}
+                {...(capture ? { capture } : {})}
                 onChange={handleInputChange}
                 display="none"
                 multiple

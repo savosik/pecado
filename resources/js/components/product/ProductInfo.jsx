@@ -32,6 +32,7 @@ export default function ProductInfo({
     preorderQuantity = 0,
     tags = [],
     discountPct = null,
+    hasDefects = false,
     variantsSlot = null,
     promotionsSlot = null,
     headingAs = 'h1',
@@ -120,7 +121,7 @@ export default function ProductInfo({
         );
     };
 
-    const hasStatusBadges = isNew || isBestseller || isMarked || !!shelfLife;
+    const hasStatusBadges = isNew || isBestseller || isMarked || !!shelfLife || hasDefects;
 
     return (
         <Box spaceY="4">
@@ -169,6 +170,11 @@ export default function ProductInfo({
                         {shelfLife && (
                             <Badge colorPalette="gray" variant="outline" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" title="Срок годности">
                                 {shelfLife}
+                            </Badge>
+                        )}
+                        {hasDefects && (
+                            <Badge colorPalette="purple" variant="subtle" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" title="Есть уценённые экземпляры с дефектами — см. вкладку «Уценка»">
+                                Есть товары с уценкой
                             </Badge>
                         )}
                     </Flex>

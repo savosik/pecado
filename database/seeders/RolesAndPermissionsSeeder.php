@@ -80,6 +80,13 @@ class RolesAndPermissionsSeeder extends Seeder
         // WMS — права домена /wms/ (кабинет склада). Префикс `wms-` значим:
         // он в User::PANEL_PERMISSION_PREFIXES, поэтому не даёт входа в /admin.
         'wms-dashboard' => ['view'],
+        'wms-defects' => ['view', 'create', 'edit', 'delete'],
+
+        // Уценка глазами закупщика — админский ресурс (без `wms-` префикса):
+        // цену и публикацию задаёт buyer-manager в /admin, а не кладовщик.
+        'defects' => ['view', 'price', 'publish'],
+        // Справочник типовых дефектов (быстрый выбор для кладовщика).
+        'defect-types' => ['view', 'create', 'edit', 'delete'],
 
         // Система
         'erp-bus' => ['view'],
@@ -138,6 +145,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'crm-team' => 'CRM: Команда',
         'crm-analytics' => 'CRM: Отчёты продаж',
         'wms-dashboard' => 'Склад: Рабочий стол',
+        'wms-defects' => 'Склад: Некондиция',
+        'defects' => 'Уценка (цены и публикация)',
+        'defect-types' => 'Справочник дефектов',
         'erp-bus' => 'Шина ERP',
         'media' => 'Медиа',
         'settings' => 'Настройки',
@@ -192,23 +202,27 @@ class RolesAndPermissionsSeeder extends Seeder
                 'product-barcodes', 'certificates', 'product-exports',
             ],
         ],
-        // Склад. Обе роли пока с одинаковым набором прав — разводить нечем,
-        // пока в /wms только дашборд. Разграничение появится вместе с разделами
-        // (инвентаризация и списание — начальнику, отбор — кладовщику).
+        // Склад. Обе роли пока с одинаковым набором прав — разводить нечем.
+        // Разграничение появится вместе с разделами (инвентаризация и списание —
+        // начальнику, отбор — кладовщику).
         'warehouse-head' => [
             'label' => 'Начальник склада',
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
-                'wms-dashboard',
+                'wms-dashboard', 'wms-defects',
             ],
         ],
         'storekeeper' => [
             'label' => 'Кладовщик',
             'resources' => [
                 // Только WMS: в /admin роль намеренно не пускает.
-                'wms-dashboard',
+                'wms-dashboard', 'wms-defects',
             ],
         ],
+        // Роль buyer-manager (закупщик) намеренно не описана здесь: она заведена
+        // вручную на prod со своим набором админских прав, а syncPermissions выше
+        // этот набор бы перезаписал. Права defects.* ей доназначает миграция
+        // 2026_07_20_100400_grant_defect_permissions.
     ];
 
     public function run(): void

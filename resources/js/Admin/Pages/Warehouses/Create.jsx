@@ -5,12 +5,15 @@ import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from "@/Admin/Components/PageHeader";
 import { FormField } from "@/Admin/Components/FormField";
 import { FormActions } from "@/Admin/Components/FormActions";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Text } from "@chakra-ui/react";
 import { toaster } from "@/components/ui/toaster";
 
 const WarehousesCreate = () => {
     const { data, setData, post, processing, errors , transform } = useForm({
         name: "",
         external_id: "",
+        is_defect: false,
     });
 
     const closeAfterSaveRef = useRef(false);
@@ -61,6 +64,18 @@ const WarehousesCreate = () => {
                                     onChange={(e) => setData("external_id", e.target.value)}
                                     placeholder="ID во внешней системе (опционально)"
                                 />
+                            </FormField>
+
+                            <FormField label="Склад некондиции" error={errors.is_defect}>
+                                <Checkbox
+                                    checked={data.is_defect}
+                                    onCheckedChange={(e) => setData("is_defect", !!e.checked)}
+                                >
+                                    С этого склада отгружаются заказы уценки
+                                </Checkbox>
+                                <Text fontSize="xs" color="fg.muted" mt={1}>
+                                    Остатки такого склада не показываются на витрине; уценённые товары ведёт кабинет склада.
+                                </Text>
                             </FormField>
 
                             <FormActions

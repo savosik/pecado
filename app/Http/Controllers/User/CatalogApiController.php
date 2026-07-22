@@ -83,6 +83,10 @@ class CatalogApiController extends Controller
             return $product;
         }, $products);
 
+        // Маркер уценки (некондиции) — еле заметный значок в карточке каталога.
+        // Булев флаг, не ценовой: отдаётся и гостям.
+        $products = ProductQueryService::enrichProductsWithDefects($products);
+
         // Добавляем is_favorited для авторизованных пользователей
         if ($user) {
             $productIds = collect($products)->pluck('id')->toArray();

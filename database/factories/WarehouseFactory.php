@@ -23,6 +23,18 @@ class WarehouseFactory extends Factory
         return [
             'name' => fake()->company().' — Склад',
             'external_id' => (string) Str::uuid(),
+            'is_defect' => false,
         ];
+    }
+
+    /**
+     * Склад некондиции — с него отгружаются заказы уценки.
+     */
+    public function defect(): static
+    {
+        return $this->state(fn () => [
+            'name' => 'Москва некондиция',
+            'is_defect' => true,
+        ]);
     }
 }

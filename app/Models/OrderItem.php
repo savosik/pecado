@@ -11,6 +11,8 @@ use Laravel\Scout\Searchable;
  * @property int $id
  * @property int $order_id
  * @property int|null $product_id
+ * @property int|null $product_defect_id
+ * @property string|null $defect_description
  * @property string $name
  * @property string|null $brand_name_snapshot Имя бренда товара на момент создания строки. Используется для fuzzy-поиска без JOIN.
  * @property numeric $price
@@ -23,6 +25,7 @@ use Laravel\Scout\Searchable;
  * @property \Illuminate\Support\Carbon|null $updated_at
  * @property-read \App\Models\Order|null $order
  * @property-read \App\Models\Product|null $product
+ * @property-read \App\Models\ProductDefect|null $productDefect
  *
  * @method static \Database\Factories\OrderItemFactory factory($count = null, $state = [])
  * @method static \Illuminate\Database\Eloquent\Builder<static>|OrderItem newModelQuery()
@@ -51,6 +54,8 @@ class OrderItem extends Model
     protected $fillable = [
         'order_id',
         'product_id',
+        'product_defect_id',
+        'defect_description',
         'name',
         'brand_name_snapshot',
         'price',
@@ -109,6 +114,16 @@ class OrderItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Партия некондиции — только у позиций заказов type = defect.
+     *
+     * Резерв партии считается именно по этим строкам, см. DefectStockService.
+     */
+    public function productDefect(): BelongsTo
+    {
+        return $this->belongsTo(ProductDefect::class);
     }
 
     /**

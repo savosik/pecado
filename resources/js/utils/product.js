@@ -49,6 +49,7 @@ export function buildProductInfoProps(product, currencySymbol = '₽') {
         preorderQuantity: preorderQty,
         tags: product.tags || [],
         discountPct: product.discount_percentage,
+        hasDefects: !!product.has_defects,
     };
 }
 

@@ -44,7 +44,8 @@
             ]
         },
         "type": {
-            "type": "string"
+            "type": "string",
+            "description": "Тип заказа: 'order' — обычный (склады наличия), 'preorder' — предзаказ (склады предзаказа), 'defect' — уценка/некондиция (склад некондиции). Для 'defect' в warehouse_uuids передаётся UUID склада некондиции, а final_price позиций — цена уценки."
         },
         "partner_uuid": {
             "type": [
@@ -54,6 +55,7 @@
         },
         "warehouse_uuids": {
             "type": "array",
+            "description": "UUID складов, с которых комплектуется заказ. Для type='defect' — склад некондиции.",
             "items": {
                 "type": "string"
             }

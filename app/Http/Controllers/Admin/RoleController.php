@@ -19,9 +19,9 @@ class RoleController extends Controller
     protected array $permissionGroups = [
         'Каталог' => ['products', 'categories', 'brands', 'product-models', 'attributes', 'attribute-groups', 'size-charts', 'product-barcodes', 'certificates', 'product-exports'],
         'Склады' => ['warehouses', 'regions'],
-        'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'favorites', 'wishlist'],
+        'Продажи' => ['orders', 'carts', 'returns', 'shipments', 'favorites', 'wishlist', 'defects', 'defect-types'],
         'CRM' => ['crm-dashboard', 'crm-clients', 'crm-clients-all', 'crm-team', 'crm-analytics'],
-        'Склад (WMS)' => ['wms-dashboard'],
+        'Склад (WMS)' => ['wms-dashboard', 'wms-defects'],
         'Маркетинг' => ['promotions', 'product-selections'],
         'Пользователи' => ['users', 'user-questionnaires', 'client-statuses', 'personal-managers', 'companies', 'company-bank-accounts', 'delivery-addresses'],
         'Финансы' => ['currencies', 'contractor-balances', 'individual-prices'],
@@ -42,7 +42,8 @@ class RoleController extends Controller
         'crm-dashboard' => 'CRM: Рабочий стол', 'crm-clients' => 'CRM: Мои клиенты',
         'crm-clients-all' => 'CRM: Клиенты всего отдела', 'crm-team' => 'CRM: Команда',
         'crm-analytics' => 'CRM: Отчёты продаж',
-        'wms-dashboard' => 'Склад: Рабочий стол',
+        'wms-dashboard' => 'Склад: Рабочий стол', 'wms-defects' => 'Склад: Некондиция',
+        'defects' => 'Уценка', 'defect-types' => 'Справочник дефектов',
         'users' => 'Пользователи', 'user-questionnaires' => 'Анкеты',
         'client-statuses' => 'Статусы клиентов', 'personal-managers' => 'Персональные менеджеры',
         'menu-items' => 'Меню', 'user-questions' => 'Вопросы пользователей',
@@ -58,6 +59,7 @@ class RoleController extends Controller
     protected array $actionLabels = [
         'view' => 'Просмотр', 'create' => 'Создание',
         'edit' => 'Редактирование', 'delete' => 'Удаление',
+        'price' => 'Установка цены', 'publish' => 'Публикация',
     ];
 
     public function index(Request $request)

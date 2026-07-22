@@ -9,6 +9,7 @@ import EmptyState from '@/components/common/EmptyState';
 import CartHeader from './CartHeader';
 import CartToolbar from './CartToolbar';
 import CartTable from './CartTable';
+import CartDefectSection from './CartDefectSection';
 import CartSummary from './CartSummary';
 import CartFlash from './CartFlash';
 import BarcodeScannerDialog from './BarcodeScannerDialog';
@@ -26,7 +27,11 @@ import { toastSuccess, toastInfo, toastError } from '@/utils/toast';
  */
 export default function CartIndex({ cart, cartDetails, userCarts }) {
     const { auth } = usePage().props;
-    const items = cartDetails?.items ?? [];
+    const allItems = cartDetails?.items ?? [];
+    // Уценка живёт отдельной секцией: она привязана к партии, а основная таблица
+    // построена на product_id-агрегации со spillover instock/preorder.
+    const items = allItems.filter((it) => it.item_type !== 'defect');
+    const defectItems = allItems.filter((it) => it.item_type === 'defect');
     const hasPreorderItems = (cartDetails?.preorder_quantity ?? 0) > 0;
 
     // ── Search (client-side filtering) ──
@@ -336,9 +341,10 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
                 </Box>
             </Box>
 
-            {items.length > 0 ? (
+            {allItems.length > 0 ? (
                 <Box spaceY="3" mt="3">
                     {/* Единая карточка: тулбар + таблица. На base — full-bleed без рамки и скруглений */}
+                    {items.length > 0 && (
                     <Box
                         borderWidth={{ base: '0', lg: '1px' }}
                         borderColor="border"
@@ -373,8 +379,13 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
                             hasPreorderItems={hasPreorderItems}
                         />
                     </Box>
+                    )}
 
-                    <CartSummary cartDetails={cartDetails} hasItems={items.length > 0} />
+                    {defectItems.length > 0 && (
+                        <CartDefectSection items={defectItems} onChanged={handleRefresh} />
+                    )}
+
+                    <CartSummary cartDetails={cartDetails} hasItems={allItems.length > 0} />
                 </Box>
             ) : (
                 <Box px={{ base: '3', md: '0' }}>
