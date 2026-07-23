@@ -19,6 +19,7 @@ const DEFAULT_FILTERS = {
     date_from: '',
     date_to: '',
     manager_ids: [],
+    partner_ids: [],
     company_ids: [],
     brand_ids: [],
     category_ids: [],
@@ -43,6 +44,7 @@ function buildParams(filters, compareMode, compareOffset) {
     if (filters.date_from) params.date_from = filters.date_from;
     if (filters.date_to) params.date_to = filters.date_to;
     if (filters.manager_ids?.length) params['manager_ids'] = filters.manager_ids;
+    if (filters.partner_ids?.length) params['partner_ids'] = filters.partner_ids;
     if (filters.company_ids?.length) params['company_ids'] = filters.company_ids;
     if (filters.brand_ids?.length) params['brand_ids'] = filters.brand_ids;
     if (filters.category_ids?.length) params['category_ids'] = filters.category_ids;
@@ -156,6 +158,7 @@ export default function CrmAnalyticsIndex() {
         return Number.isFinite(id) && id > 0 ? () => applyFilter({ category_ids: [id] }) : null;
     };
     const contractorLabelClick = (r) => (r.company_id ? () => applyFilter({ company_ids: [r.company_id] }) : null);
+    const partnerLabelClick = (r) => (r.partner_id ? () => applyFilter({ partner_ids: [r.partner_id] }) : null);
     const managerLabelClick = (r) => (r.manager_id ? () => applyFilter({ manager_ids: [r.manager_id] }) : null);
     // Клик по товару ставит его единственным фильтром по товарам (как бренд/категория),
     // а не уводит на карточку.
@@ -180,6 +183,7 @@ export default function CrmAnalyticsIndex() {
         return map;
     })();
     const managerTags = idTags(filters.manager_ids, filterOptions?.managers, 'manager_ids');
+    const partnerTags = idTags(filters.partner_ids, filterOptions?.partners, 'partner_ids');
     const brandTags = idTags(filters.brand_ids, filterOptions?.brands, 'brand_ids');
     const contractorTags = idTags(filters.company_ids, filterOptions?.companies, 'company_ids');
     const categoryTags = (filters.category_ids || []).map((id) => ({
@@ -251,6 +255,24 @@ export default function CrmAnalyticsIndex() {
                     ]}
                     getLabelClick={categoryLabelClick}
                     selectedTags={categoryTags}
+                />
+            ),
+        },
+        {
+            value: 'partners',
+            title: 'По партнёрам',
+            count: data?.by_partner?.length ?? 0,
+            section: (
+                <BreakdownSection
+                    title="Партнёр"
+                    rows={data?.by_partner ?? []}
+                    currency={currency}
+                    extraColumns={[
+                        { key: 'shipments', label: 'Поставок', render: (r) => r.shipments_count },
+                        { key: 'contractors', label: 'Контрагентов', render: (r) => r.contractors_count },
+                    ]}
+                    getLabelClick={partnerLabelClick}
+                    selectedTags={partnerTags}
                 />
             ),
         },

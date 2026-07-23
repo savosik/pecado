@@ -132,6 +132,48 @@ class ShipmentAnalyticsService
     }
 
     /**
+     * Топ-N партнёров (клиентов — пользователей, за которыми закреплены отгрузки).
+     * У одного партнёра может быть несколько контрагентов (юрлиц).
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function byPartner(AnalyticsContext $ctx, AnalyticsFilters $filters, int $limit = 50): Collection
+    {
+        $rows = $this->itemsBaseQuery($ctx, $filters)
+            ->leftJoin('users as partner', 'partner.id', '=', 'shipments.user_id')
+            ->selectRaw('
+                shipments.user_id AS partner_id,
+                MAX(partner.name)  AS partner_name,
+                MAX(partner.email) AS partner_email,
+                COALESCE(SUM(shipment_items.total * COALESCE(currencies.exchange_rate, 1)), 0) AS total_in_rub,
+                COALESCE(SUM(shipment_items.quantity), 0) AS qty,
+                COUNT(DISTINCT shipments.id) AS shipments_count,
+                COUNT(DISTINCT COALESCE(CAST(shipments.company_id AS CHAR), shipments.tax_id)) AS contractors_count
+            ')
+            ->groupBy('shipments.user_id')
+            ->orderByDesc('total_in_rub')
+            ->limit($limit)
+            ->get();
+
+        return $rows->map(function ($row) use ($ctx) {
+            $partnerId = $row->partner_id ? (int) $row->partner_id : null;
+            $label = $row->partner_name
+                ?: ($row->partner_email
+                    ?: ($partnerId ? "Партнёр #{$partnerId}" : 'Партнёр не указан'));
+
+            return [
+                'key' => $partnerId !== null ? (string) $partnerId : 'none',
+                'partner_id' => $partnerId,
+                'label' => $label,
+                'amount' => round($this->convertFromRub((float) $row->total_in_rub, $ctx), 2),
+                'qty' => (int) $row->qty,
+                'shipments_count' => (int) $row->shipments_count,
+                'contractors_count' => (int) $row->contractors_count,
+            ];
+        });
+    }
+
+    /**
      * Топ-N контрагентов (юрлиц).
      *
      * @return Collection<int, array<string, mixed>>
@@ -399,13 +441,28 @@ class ShipmentAnalyticsService
      * в пределах скоупа (клиентов менеджера/отдела). Менеджеры отдаются отдельно
      * контроллером (только для РОП).
      *
-     * @return array{companies: array<int, array<string, mixed>>, brands: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
+     * @return array{partners: array<int, array<string, mixed>>, companies: array<int, array<string, mixed>>, brands: array<int, array<string, mixed>>, categories: array<int, array<string, mixed>>}
      */
     public function filterOptionsForScope(AnalyticsContext $ctx): array
     {
         if ($ctx->isEmpty()) {
-            return ['companies' => [], 'brands' => [], 'categories' => []];
+            return ['partners' => [], 'companies' => [], 'brands' => [], 'categories' => []];
         }
+
+        $partners = DB::table('shipments')
+            ->leftJoin('users', 'users.id', '=', 'shipments.user_id')
+            ->whereNull('shipments.deleted_at')
+            ->whereIn('shipments.user_id', $ctx->userIds)
+            ->select('users.id', 'users.name', 'users.email')
+            ->distinct()
+            ->get()
+            ->map(fn ($u) => [
+                'id' => (int) $u->id,
+                'name' => $u->name ?: ($u->email ?: ('Партнёр #'.$u->id)),
+            ])
+            ->sortBy('name')
+            ->values()
+            ->all();
 
         $companies = DB::table('shipments')
             ->leftJoin('companies', 'companies.id', '=', 'shipments.company_id')
@@ -450,6 +507,7 @@ class ShipmentAnalyticsService
             ->all();
 
         return [
+            'partners' => $partners,
             'companies' => $companies,
             'brands' => $brands,
             'categories' => $this->buildCategoryTree($categoryIds),
@@ -534,6 +592,10 @@ class ShipmentAnalyticsService
 
         if ($filters->companyIds !== []) {
             $query->whereIn('shipments.company_id', $filters->companyIds);
+        }
+
+        if ($filters->partnerIds !== []) {
+            $query->whereIn('shipments.user_id', $filters->partnerIds);
         }
 
         if ($filters->productIds !== []) {

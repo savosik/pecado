@@ -157,6 +157,7 @@ class AnalyticsController extends CrmController
         $sections = [
             'Бренд' => $this->analytics->byBrand($ctx, $filters),
             'Категория' => $this->analytics->byCategory($ctx, $filters),
+            'Партнёр' => $this->analytics->byPartner($ctx, $filters),
             'Контрагент' => $this->analytics->byContractor($ctx, $filters),
             'Товар' => $this->analytics->byProduct($ctx, $filters),
         ];
@@ -245,6 +246,7 @@ class AnalyticsController extends CrmController
             'time_series' => $timeSeries,
             'by_brand' => $this->analytics->byBrand($ctx, $filters),
             'by_category' => $this->analytics->byCategory($ctx, $filters),
+            'by_partner' => $this->analytics->byPartner($ctx, $filters),
             'by_contractor' => $this->analytics->byContractor($ctx, $filters),
             'by_product' => $this->analytics->byProduct($ctx, $filters),
             'by_manager' => $seesAll ? $this->analytics->byManager($ctx, $filters) : [],

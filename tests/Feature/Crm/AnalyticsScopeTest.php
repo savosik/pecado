@@ -311,6 +311,75 @@ class AnalyticsScopeTest extends TestCase
     }
 
     #[Test]
+    public function partner_breakdown_groups_by_client(): void
+    {
+        [$head] = $this->makeManagerActor(head: true);
+
+        [, $card] = $this->makeManagerActor();
+        $clientA = $this->makeClient($card);
+        $clientB = $this->makeClient($card);
+
+        $this->makeShipmentFor($clientA, [], [['quantity' => 1, 'price' => 3000, 'total' => 3000]]);
+        $this->makeShipmentFor($clientA, [], [['quantity' => 1, 'price' => 500, 'total' => 500]]);
+        $this->makeShipmentFor($clientB, [], [['quantity' => 1, 'price' => 1000, 'total' => 1000]]);
+
+        $payload = $this->fetchData($head, [
+            'date_from' => Carbon::today()->toDateString(),
+            'date_to' => Carbon::today()->toDateString(),
+        ]);
+
+        $byPartner = collect($payload['by_partner']);
+        $this->assertEquals(3500, $byPartner->firstWhere('partner_id', $clientA->id)['amount']);
+        $this->assertEquals(2, $byPartner->firstWhere('partner_id', $clientA->id)['shipments_count']);
+        $this->assertEquals(1000, $byPartner->firstWhere('partner_id', $clientB->id)['amount']);
+    }
+
+    #[Test]
+    public function partner_filter_limits_aggregates(): void
+    {
+        [$head] = $this->makeManagerActor(head: true);
+
+        [, $card] = $this->makeManagerActor();
+        $clientA = $this->makeClient($card);
+        $clientB = $this->makeClient($card);
+
+        $this->makeShipmentFor($clientA, [], [['quantity' => 1, 'price' => 3000, 'total' => 3000]]);
+        $this->makeShipmentFor($clientB, [], [['quantity' => 1, 'price' => 1000, 'total' => 1000]]);
+
+        $payload = $this->fetchData($head, [
+            'date_from' => Carbon::today()->toDateString(),
+            'date_to' => Carbon::today()->toDateString(),
+            'partner_ids' => [$clientA->id],
+        ]);
+
+        $this->assertSame(1, $payload['metrics']['shipments_count']);
+        $this->assertEquals(3000, $payload['metrics']['total_amount']);
+    }
+
+    #[Test]
+    public function partner_filter_cannot_escape_scope(): void
+    {
+        [$actor, $card] = $this->makeManagerActor();
+        $myClient = $this->makeClient($card);
+
+        [, $otherCard] = $this->makeManagerActor();
+        $foreignClient = $this->makeClient($otherCard);
+
+        $this->makeShipmentFor($myClient, [], [['quantity' => 1, 'price' => 500, 'total' => 500]]);
+        $this->makeShipmentFor($foreignClient, [], [['quantity' => 1, 'price' => 9000, 'total' => 9000]]);
+
+        // Менеджер пытается отфильтроваться по чужому партнёру — скоуп клиентов
+        // отсекает его, строк не будет.
+        $payload = $this->fetchData($actor, [
+            'date_from' => Carbon::today()->toDateString(),
+            'date_to' => Carbon::today()->toDateString(),
+            'partner_ids' => [$foreignClient->id],
+        ]);
+
+        $this->assertSame(0, $payload['metrics']['shipments_count']);
+    }
+
+    #[Test]
     public function index_requires_analytics_permission(): void
     {
         // Есть доступ в CRM (crm-dashboard), но нет права на отчёты → 403 от гейта.

@@ -291,6 +291,12 @@ export default function FiltersBar({
                         />
                     )}
                     <MultiSelect
+                        label="Партнёр"
+                        options={filterOptions.partners || []}
+                        selectedIds={filters.partner_ids || []}
+                        onChange={(ids) => update({ partner_ids: ids })}
+                    />
+                    <MultiSelect
                         label="Контрагент"
                         options={filterOptions.companies || []}
                         selectedIds={filters.company_ids || []}

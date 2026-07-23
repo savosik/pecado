@@ -17,6 +17,7 @@ class AnalyticsFilters
      * @param  array<int, int>  $brandIds
      * @param  array<int, int>  $categoryIds
      * @param  array<int, int>  $productIds
+     * @param  array<int, int>  $partnerIds  клиенты-партнёры (shipments.user_id)
      */
     public function __construct(
         public readonly CarbonImmutable $dateFrom,
@@ -26,6 +27,7 @@ class AnalyticsFilters
         public readonly array $categoryIds = [],
         public readonly ?string $sku = null,
         public readonly array $productIds = [],
+        public readonly array $partnerIds = [],
     ) {}
 
     /**
@@ -65,6 +67,7 @@ class AnalyticsFilters
             categoryIds: self::sanitizeIds($request->input('category_ids', [])),
             sku: self::sanitizeSku($request->input('sku')),
             productIds: self::sanitizeIds($request->input('product_ids', [])),
+            partnerIds: self::sanitizeIds($request->input('partner_ids', [])),
         );
     }
 
@@ -115,6 +118,7 @@ class AnalyticsFilters
             categoryIds: $this->categoryIds,
             sku: $this->sku,
             productIds: $this->productIds,
+            partnerIds: $this->partnerIds,
         );
     }
 
@@ -177,6 +181,7 @@ class AnalyticsFilters
             'category_ids' => $this->categoryIds,
             'sku' => $this->sku,
             'product_ids' => $this->productIds,
+            'partner_ids' => $this->partnerIds,
         ];
     }
 
