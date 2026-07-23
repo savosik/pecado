@@ -169,9 +169,16 @@ class DefectController extends WmsController
             return $defect;
         });
 
+        $warning = $this->stockWarning(
+            (int) $defect->product_id,
+            (int) $defect->warehouse_id,
+            (int) $defect->quantity
+        );
+
         return redirect()
             ->route('wms.defects.edit', $defect)
-            ->with('success', 'Партия некондиции заведена. Цену назначит закупщик.');
+            ->with('success', 'Партия некондиции заведена. Цену назначит закупщик.')
+            ->with('warning', $warning);
     }
 
     /**
@@ -214,6 +221,7 @@ class DefectController extends WmsController
                 'name' => $product->name,
                 'sku' => $product->sku,
                 'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
+                'defect_stock' => (object) ($this->defectStockMap([(int) $product->id])[(int) $product->id] ?? []),
             ],
         ]);
     }
@@ -242,6 +250,11 @@ class DefectController extends WmsController
             'success' => true,
             'message' => 'Партия принята.',
             'defect_id' => $defect->id,
+            'warning' => $this->stockWarning(
+                (int) $defect->product_id,
+                (int) $defect->warehouse_id,
+                (int) $defect->quantity
+            ),
         ], 201);
     }
 
@@ -345,20 +358,86 @@ class DefectController extends WmsController
             ->with(['brand:id,name', 'media', 'barcodes'])
             ->orderByRaw('CASE WHEN sku = ? THEN 0 ELSE 1 END', [$query])
             ->limit(15)
-            ->get()
-            ->map(fn (Product $product) => [
-                'id' => $product->id,
-                'name' => $product->name,
-                'sku' => $product->sku,
-                'brand_name' => $product->brand?->name,
-                'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
-                // barcode/barcodes нужны ProductSelector для автовыбора по сканеру:
-                // кладовщик пикает штрихкод и сразу получает выбранный товар.
-                'barcode' => $product->barcode,
-                'barcodes' => $product->barcodes->pluck('barcode')->all(),
-            ]);
+            ->get();
+
+        $stock = $this->defectStockMap($products->pluck('id')->map(fn ($id) => (int) $id)->all());
+
+        $products = $products->map(fn (Product $product) => [
+            'id' => $product->id,
+            'name' => $product->name,
+            'sku' => $product->sku,
+            'brand_name' => $product->brand?->name,
+            'image_url' => $product->getFirstMediaUrl('main', 'thumb') ?: $product->getFirstMediaUrl('main'),
+            // barcode/barcodes нужны ProductSelector для автовыбора по сканеру:
+            // кладовщик пикает штрихкод и сразу получает выбранный товар.
+            'barcode' => $product->barcode,
+            'barcodes' => $product->barcodes->pluck('barcode')->all(),
+            // Остаток по складам некондиции — форма предупреждает, если товара там нет.
+            // Объект, а не число: складов некондиции может быть несколько.
+            'defect_stock' => (object) ($stock[(int) $product->id] ?? []),
+        ]);
 
         return response()->json($products);
+    }
+
+    /**
+     * Остатки товаров на складах некондиции по данным 1С.
+     *
+     * Нужны для предупреждения кладовщику: если брак ещё не оприходован на склад
+     * некондиции, партию заводить рано — на витрине она встанет поверх нулевого
+     * остатка, а 1С при отгрузке заказ не подтвердит.
+     *
+     * @param  array<int, int>  $productIds
+     * @return array<int, array<int, int>> [product_id => [warehouse_id => quantity]]
+     */
+    private function defectStockMap(array $productIds): array
+    {
+        if ($productIds === []) {
+            return [];
+        }
+
+        $rows = DB::table('product_warehouse')
+            ->whereIn('product_id', $productIds)
+            ->whereIn('warehouse_id', Warehouse::query()->defect()->select('id'))
+            ->get(['product_id', 'warehouse_id', 'quantity']);
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(int) $row->product_id][(int) $row->warehouse_id] = (int) $row->quantity;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Текст предупреждения о нехватке остатка под заводимую партию — или null,
+     * если остатка хватает.
+     *
+     * Дублирует подсказку формы намеренно: форма предупреждает до сохранения,
+     * этот флеш — после, чтобы предупреждение не потерялось, если кладовщик
+     * заполнял партию до выбора склада.
+     */
+    private function stockWarning(int $productId, int $warehouseId, int $quantity): ?string
+    {
+        $warehouse = Warehouse::query()->defect()->find($warehouseId);
+
+        if (! $warehouse) {
+            return null;
+        }
+
+        $available = $this->defectStockMap([$productId])[$productId][$warehouseId] ?? 0;
+
+        if ($available <= 0) {
+            return "Внимание: на складе «{$warehouse->name}» этого товара нет в остатках. "
+                .'Проверьте, оприходован ли брак на склад некондиции в 1С.';
+        }
+
+        if ($available < $quantity) {
+            return "Внимание: на складе «{$warehouse->name}» числится {$available} шт., "
+                ."а в партии {$quantity} шт. Проверьте остатки в 1С.";
+        }
+
+        return null;
     }
 
     /**

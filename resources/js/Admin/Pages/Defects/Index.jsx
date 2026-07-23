@@ -11,11 +11,12 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuImageOff, LuPackageX } from 'react-icons/lu';
+import { LuImageOff, LuPackageX, LuTrash2 } from 'react-icons/lu';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { SearchInput } from '@/Admin/Components/SearchInput';
 import { Pagination } from '@/Admin/Components/Pagination';
+import { ConfirmDialog } from '@/Admin/Components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { usePermission } from '@/Admin/hooks/usePermission';
@@ -150,16 +151,27 @@ function PublishToggle({ defect, canPublish }) {
 export default function DefectsIndex() {
     const { defects, filters, stats } = usePage().props;
     const { can } = usePermission();
+    const [confirmTarget, setConfirmTarget] = useState(null);
 
     useFlashToast();
 
     const canPrice = can('defects.price');
     const canPublish = can('defects.publish');
+    const canDelete = can('defects.delete');
 
     const applyFilters = (next) => {
         router.get('/admin/defects', { ...filters, ...next }, {
             preserveState: true,
             replace: true,
+        });
+    };
+
+    const handleDelete = () => {
+        if (!confirmTarget) return;
+
+        router.delete(`/admin/defects/${confirmTarget.id}`, {
+            preserveScroll: true,
+            onFinish: () => setConfirmTarget(null),
         });
     };
 
@@ -221,6 +233,7 @@ export default function DefectsIndex() {
                                                 <Table.ColumnHeader textAlign="end">Свободно</Table.ColumnHeader>
                                                 <Table.ColumnHeader>Цена уценки</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="center">На сайте</Table.ColumnHeader>
+                                                {canDelete && <Table.ColumnHeader />}
                                             </Table.Row>
                                         </Table.Header>
                                         <Table.Body>
@@ -259,6 +272,24 @@ export default function DefectsIndex() {
                                                     <Table.Cell textAlign="center">
                                                         <PublishToggle defect={defect} canPublish={canPublish} />
                                                     </Table.Cell>
+                                                    {canDelete && (
+                                                        <Table.Cell textAlign="end">
+                                                            <Button
+                                                                size="xs"
+                                                                variant="ghost"
+                                                                colorPalette="red"
+                                                                disabled={defect.reserved_quantity > 0}
+                                                                title={
+                                                                    defect.reserved_quantity > 0
+                                                                        ? 'По партии есть заказы — удалить нельзя'
+                                                                        : 'Удалить партию'
+                                                                }
+                                                                onClick={() => setConfirmTarget(defect)}
+                                                            >
+                                                                <LuTrash2 />
+                                                            </Button>
+                                                        </Table.Cell>
+                                                    )}
                                                 </Table.Row>
                                             ))}
                                         </Table.Body>
@@ -274,6 +305,19 @@ export default function DefectsIndex() {
                     </Card.Body>
                 </Card.Root>
             </VStack>
+
+            <ConfirmDialog
+                open={confirmTarget !== null}
+                onClose={() => setConfirmTarget(null)}
+                onConfirm={handleDelete}
+                title="Удалить партию?"
+                description={
+                    confirmTarget
+                        ? `Партия «${confirmTarget.defect_description}» (${confirmTarget.product.name}) будет удалена вместе с фотографиями. Действие необратимо.`
+                        : ''
+                }
+                confirmLabel="Удалить"
+            />
         </>
     );
 }

@@ -16,6 +16,7 @@ import { MultipleImageUploader } from '@/Admin/Components/MultipleImageUploader'
 import { Field } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
+import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
 
 export default function DefectsCreate() {
     const { warehouses, defectTypes = [] } = usePage().props;
@@ -138,6 +139,12 @@ export default function DefectsCreate() {
                                         maxW="200px"
                                     />
                                 </Field>
+
+                                <DefectStockWarning
+                                    product={selectedProduct}
+                                    warehouseId={data.warehouse_id}
+                                    quantity={data.quantity}
+                                />
                             </VStack>
                         </Card.Body>
                     </Card.Root>

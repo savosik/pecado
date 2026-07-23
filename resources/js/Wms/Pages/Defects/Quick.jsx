@@ -20,6 +20,7 @@ import { Button } from '@/components/ui/button';
 import { toaster } from '@/components/ui/toaster';
 import BarcodeCameraView from '@/components/common/BarcodeCameraView';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
+import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
 
 const emptyDraft = () => ({ product: null, quantity: 1, description: '', photos: [] });
 
@@ -112,11 +113,16 @@ export default function DefectsQuick() {
         draft.photos.forEach((file) => form.append('photos[]', file));
 
         try {
-            await window.axios.post('/wms/defects/quick', form, {
+            const { data } = await window.axios.post('/wms/defects/quick', form, {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
             setAccepted((n) => n + 1);
             toaster.create({ description: `Партия принята: ${draft.product.name} ×${draft.quantity}`, type: 'success' });
+
+            // Остаток мог измениться, пока черновик заполняли, — предупреждаем по факту записи.
+            if (data?.warning) {
+                toaster.create({ description: data.warning, type: 'warning', duration: 8000 });
+            }
             setDraft(emptyDraft());
         } catch (error) {
             const bag = error?.response?.data?.errors;
@@ -254,6 +260,12 @@ export default function DefectsQuick() {
                                             </IconButton>
                                         </HStack>
                                     </HStack>
+
+                                    <DefectStockWarning
+                                        product={draft.product}
+                                        warehouseId={warehouseId}
+                                        quantity={draft.quantity}
+                                    />
 
                                     <Box>
                                         <Text fontSize="sm" color="fg.muted" mb={1}>Дефект</Text>

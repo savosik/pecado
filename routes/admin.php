@@ -412,6 +412,8 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         ->name('defects.price')->middleware('permission:defects.price');
     Route::put('/defects/{defect}/publish', [\App\Http\Controllers\Admin\DefectController::class, 'togglePublish'])
         ->name('defects.publish')->middleware('permission:defects.publish');
+    Route::delete('/defects/{defect}', [\App\Http\Controllers\Admin\DefectController::class, 'destroy'])
+        ->name('defects.destroy')->middleware('permission:defects.delete');
 
     // Справочник типовых дефектов (чипы для кладовщика).
     Route::middleware('permission:defect-types.view')->group(function () {

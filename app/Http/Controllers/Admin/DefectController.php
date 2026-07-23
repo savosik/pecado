@@ -112,6 +112,28 @@ class DefectController extends Controller
     }
 
     /**
+     * Удалить партию (мягко — модель под SoftDeletes).
+     *
+     * Партию с заказами удалять нельзя: резерв считается по order_items, и
+     * удаление увело бы из-под заказа его позицию. Закрытую партию удалить
+     * можно — это история склада, а не продаж.
+     */
+    public function destroy(Request $request, ProductDefect $defect): RedirectResponse
+    {
+        if (! $request->user()->can('defects.delete')) {
+            abort(403);
+        }
+
+        if ($this->defectStock->reserved($defect) > 0) {
+            return back()->with('error', 'Партию нельзя удалить: по ней есть заказы. Сначала отмените их.');
+        }
+
+        $defect->delete();
+
+        return back()->with('success', 'Партия удалена.');
+    }
+
+    /**
      * @return array{total: int, unpriced: int, unpublished: int, published: int}
      */
     private function stats(): array
