@@ -213,19 +213,22 @@ export const useCartStore = create((set, get) => ({
     },
 
     /**
-     * Общее количество товаров в корзине.
+     * Общее количество товаров в корзине (обычные + уценка).
      * @returns {number}
      */
     getTotalQuantity: () => {
-        return Object.values(get().quantities).reduce((sum, qty) => sum + qty, 0);
+        const state = get();
+        const products = Object.values(state.quantities).reduce((sum, qty) => sum + qty, 0);
+        const defects = Object.values(state.defectQuantities).reduce((sum, qty) => sum + qty, 0);
+        return products + defects;
     },
 
     /**
-     * Общее количество позиций (уникальных товаров) в корзине.
+     * Общее количество позиций (уникальных товаров + партий уценки) в корзине.
      * @returns {number}
      */
     getTotalItems: () => {
-        return Object.keys(get().quantities).length;
+        return Object.keys(get().quantities).length + Object.keys(get().defectQuantities).length;
     },
 
     /**
