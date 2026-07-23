@@ -1,11 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePage } from '@inertiajs/react';
-import { Badge, Box, HStack, Image, SimpleGrid, Stack, Text, VStack } from '@chakra-ui/react';
+import { Badge, Box, HStack, Image, SimpleGrid, Spinner, Stack, Text, VStack } from '@chakra-ui/react';
 import { LuImageOff } from 'react-icons/lu';
-import { Button } from '@/components/ui/button';
-import { toaster } from '@/components/ui/toaster';
 import QuantityControl from '@/components/common/QuantityControl';
 import ImageLightbox from '@/components/common/ImageLightbox';
+import { useCartStore } from '@/stores/useCartStore';
 
 const formatPrice = (value, currency) => {
     const symbol = currency?.symbol ?? '₽';
@@ -70,62 +69,60 @@ function DefectPhotos({ photos, alt }) {
 }
 
 /**
- * Одна партия: количество (стандартный контрол [−] N [+]) и кнопка «В корзину».
- *
- * Уценка — отдельная строка корзины на партию; добавляем адресно по defect_id,
- * серверный лимит совпадает с available. Только для активных пользователей
- * (данные с ценами приходят только им).
+ * Контрол уценки в корзине — идентичен товарному (CartQuantityControl):
+ * счётчик [−] N [+], привязанный к стору корзины. Изменение сразу оптимистично
+ * применяется и дебаунсом синкается на сервер (0 = удалить), без отдельной
+ * кнопки «В корзину». N = количество ЭТОЙ партии, уже лежащее в корзине.
+ * Только для активных пользователей (данные с ценами приходят только им).
  */
-function DefectAddToCart({ defect }) {
+function DefectCartControl({ defect }) {
     const { auth } = usePage().props;
-    const canBuy = auth?.user && (auth.user.status === 'active' || auth.user.is_staff);
-    const [qty, setQty] = useState(1);
-    const [loading, setLoading] = useState(false);
+    const user = auth?.user && (auth.user.status === 'active' || auth.user.is_staff) ? auth.user : null;
 
-    if (!canBuy) {
-        return null;
-    }
+    const [qty, setQty] = useState(0);
+    const [syncing, setSyncing] = useState(false);
+    const initRef = useRef(false);
 
-    const max = defect.available_quantity;
-    const disabled = loading || max <= 0;
+    useEffect(() => {
+        if (!user) return undefined;
 
-    const add = async () => {
-        const amount = Math.max(1, Math.min(Number(qty) || 1, max));
-        setLoading(true);
-        try {
-            const { data } = await window.axios.post('/api/cart/add-defect', {
-                defect_id: defect.id,
-                quantity: amount,
-            });
-
-            if (data.status === 'success') {
-                toaster.create({ description: 'Уценённый товар добавлен в корзину.', type: 'success' });
-                window.dispatchEvent(new CustomEvent('cart:changed'));
-            } else {
-                toaster.create({ description: data.message || 'Позиция недоступна.', type: 'warning' });
-            }
-        } catch (error) {
-            const message = error?.response?.data?.message || 'Не удалось добавить в корзину.';
-            toaster.create({ description: message, type: 'error' });
-        } finally {
-            setLoading(false);
+        const store = useCartStore.getState();
+        if (!initRef.current) {
+            store.init(user);
+            initRef.current = true;
         }
-    };
+
+        const did = Number(defect.id);
+        setQty(store.getDefectQuantity(did));
+        setSyncing(store.isSyncingDefect(did));
+
+        return useCartStore.subscribe((state) => {
+            setQty(state.defectQuantities[did] || 0);
+            setSyncing(state.syncingDefects.has(did));
+        });
+    }, [defect.id, user]);
+
+    if (!user) return null;
+
+    // Потолок — свободный остаток партии + уже лежащее в корзине (иначе своя же
+    // позиция «съела» бы остаток и потолок оказался бы ниже текущего qty).
+    const max = Math.max(0, Number(defect.available_quantity || 0)) + qty;
 
     return (
-        <HStack gap={2}>
+        <Box position="relative" display="inline-block">
             <QuantityControl
                 value={qty}
-                onChange={setQty}
-                min={1}
-                max={max}
+                onChange={(value) => useCartStore.getState().setDefectQuantity(defect.id, value)}
+                min={0}
+                max={max > 0 ? max : undefined}
                 size="sm"
-                disabled={disabled}
             />
-            <Button size="sm" onClick={add} loading={loading} disabled={disabled}>
-                В корзину
-            </Button>
-        </HStack>
+            {syncing && (
+                <Box position="absolute" top="50%" right="-6" transform="translateY(-50%)" pointerEvents="none" aria-hidden="true">
+                    <Spinner size="xs" color="pecado.500" />
+                </Box>
+            )}
+        </Box>
     );
 }
 
@@ -174,7 +171,7 @@ export default function ProductDefectsTab({ defects = [], currency = null }) {
                                     ? `Осталось: ${defect.available_quantity} шт`
                                     : 'Нет в наличии'}
                             </Badge>
-                            {defect.available_quantity > 0 && <DefectAddToCart defect={defect} />}
+                            <DefectCartControl defect={defect} />
                         </VStack>
                     </SimpleGrid>
                 </Box>

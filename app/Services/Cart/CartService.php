@@ -555,9 +555,21 @@ class CartService implements CartServiceInterface
 
         $quantities = [];
         $splits = [];
-        foreach ($cart->items()->select('product_id', 'item_type', 'quantity')->get() as $item) {
-            $pid = (int) $item->product_id;
+        $defectQuantities = [];
+        foreach ($cart->items()->select('product_id', 'product_defect_id', 'item_type', 'quantity')->get() as $item) {
             $qty = (int) $item->quantity;
+
+            // Уценка учитывается по партии (product_defect_id), а не по товару —
+            // у неё отдельный контрол в корзине, вне spillover instock/preorder.
+            if ($item->item_type === 'defect') {
+                if ($item->product_defect_id) {
+                    $defectQuantities[(int) $item->product_defect_id] = $qty;
+                }
+
+                continue;
+            }
+
+            $pid = (int) $item->product_id;
             $quantities[$pid] = ($quantities[$pid] ?? 0) + $qty;
             $splits[$pid] = $splits[$pid] ?? ['instock' => 0, 'preorder' => 0];
             if ($item->item_type === 'instock') {
@@ -570,6 +582,7 @@ class CartService implements CartServiceInterface
         return [
             'quantities' => $quantities,
             'splits' => $splits,
+            'defect_quantities' => $defectQuantities,
             'totals' => $this->buildCartTotals($cart, $user),
         ];
     }

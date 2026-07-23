@@ -321,6 +321,34 @@ class CartController extends Controller
     }
 
     /**
+     * Задать точное количество уценённой партии в корзине (0 = удалить).
+     * Аналог set-product-quantity, но для партии некондиции.
+     * POST /api/cart/set-defect-quantity
+     */
+    public function setDefectQuantity(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'defect_id' => 'required|exists:product_defects,id',
+            'quantity' => 'required|integer|min:0',
+        ], [
+            'defect_id.required' => 'Укажите позицию уценки.',
+            'defect_id.exists' => 'Позиция уценки не найдена.',
+        ]);
+
+        $defect = ProductDefect::findOrFail($validated['defect_id']);
+        $user = $request->user();
+        $cart = $this->cartService->getOrCreateActiveCart($user);
+
+        $result = $this->cartService->setDefectQuantity($user, $cart, $defect, (int) $validated['quantity']);
+
+        return response()->json([
+            'status' => 'success',
+            'defect_id' => $defect->id,
+            ...$result,
+        ]);
+    }
+
+    /**
      * Add product by barcode.
      * POST /api/cart/add-by-barcode
      */

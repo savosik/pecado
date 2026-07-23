@@ -157,6 +157,60 @@ class DefectCartCheckoutTest extends TestCase
     }
 
     // ────────────────────────────────────────────
+    // Эндпоинт set-defect-quantity + снапшот (store)
+    // ────────────────────────────────────────────
+
+    #[Test]
+    public function set_defect_quantity_endpoint_sets_and_removes(): void
+    {
+        $user = User::factory()->create(['status' => \App\Enums\UserStatus::ACTIVE]);
+        $defect = $this->sellableDefect(5, 300);
+
+        $this->actingAs($user)
+            ->postJson('/api/cart/set-defect-quantity', ['defect_id' => $defect->id, 'quantity' => 3])
+            ->assertOk()
+            ->assertJson(['status' => 'success', 'quantity' => 3]);
+
+        $cart = $user->carts()->active()->first();
+        $this->assertSame(3, (int) $cart->items()->defect()->first()->quantity);
+
+        // 0 = удалить позицию.
+        $this->actingAs($user)
+            ->postJson('/api/cart/set-defect-quantity', ['defect_id' => $defect->id, 'quantity' => 0])
+            ->assertOk()
+            ->assertJson(['quantity' => 0]);
+
+        $this->assertSame(0, $cart->items()->defect()->count());
+    }
+
+    #[Test]
+    public function set_defect_quantity_is_clamped_to_available(): void
+    {
+        $user = User::factory()->create(['status' => \App\Enums\UserStatus::ACTIVE]);
+        $defect = $this->sellableDefect(2, 300);
+
+        $this->actingAs($user)
+            ->postJson('/api/cart/set-defect-quantity', ['defect_id' => $defect->id, 'quantity' => 9])
+            ->assertOk()
+            ->assertJson(['quantity' => 2]);
+    }
+
+    #[Test]
+    public function active_quantities_snapshot_exposes_defect_quantities(): void
+    {
+        $user = User::factory()->create(['status' => \App\Enums\UserStatus::ACTIVE]);
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $defect = $this->sellableDefect(5, 300);
+
+        $this->cartService()->setDefectQuantity($user, $cart, $defect, 2);
+
+        $this->actingAs($user)
+            ->getJson('/api/cart/active-quantities')
+            ->assertOk()
+            ->assertJsonPath("defect_quantities.{$defect->id}", 2);
+    }
+
+    // ────────────────────────────────────────────
     // Checkout
     // ────────────────────────────────────────────
 

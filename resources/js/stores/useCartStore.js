@@ -30,6 +30,7 @@ const DEBOUNCE_MS = 800;
 
 /** Таймеры debounce для каждого product_id */
 const debounceTimers = {};
+const defectDebounceTimers = {};
 
 // ────────────────────────────────────────────
 // localStorage helpers
@@ -79,12 +80,14 @@ function parseSnapshot(data) {
             quantities: parseQuantitiesMap(data.quantities),
             splits: parseSplits(data.splits),
             totals: parseTotals(data.totals),
+            defectQuantities: parseQuantitiesMap(data.defect_quantities),
         };
     }
     return {
         quantities: parseQuantitiesMap(data),
         splits: {},
         totals: { total: 0, instock: 0, preorder: 0 },
+        defectQuantities: {},
     };
 }
 
@@ -153,6 +156,20 @@ export const useCartStore = create((set, get) => ({
     syncing: new Set(),
 
     /**
+     * Количества уценённых партий в корзине: { [defectId]: qty }.
+     * Уценка живёт параллельно с обычными товарами — свой контрол,
+     * свой endpoint (set-defect-quantity), но та же UX-механика.
+     * @type {Object<number, number>}
+     */
+    defectQuantities: {},
+
+    /**
+     * Set product_defect_id, для которых идёт API-запрос.
+     * @type {Set<number>}
+     */
+    syncingDefects: new Set(),
+
+    /**
      * Инициализация корзины.
      * 1. Мгновенно загружает из localStorage
      * 2. Запрашивает сервер (GET /api/cart/active-quantities)
@@ -176,9 +193,9 @@ export const useCartStore = create((set, get) => ({
 
         try {
             const { data } = await window.axios.get('/api/cart/active-quantities');
-            const { quantities, splits, totals } = parseSnapshot(data);
+            const { quantities, splits, totals, defectQuantities } = parseSnapshot(data);
 
-            set({ quantities, productSplits: splits, cartTotals: totals, loaded: true, loading: false });
+            set({ quantities, productSplits: splits, cartTotals: totals, defectQuantities, loaded: true, loading: false });
             saveToCache(quantities);
         } catch {
             // При ошибке оставляем кешированные данные
@@ -354,6 +371,104 @@ export const useCartStore = create((set, get) => ({
     },
 
     /**
+     * Количество уценённой партии в корзине.
+     * @param {number} defectId
+     * @returns {number}
+     */
+    getDefectQuantity: (defectId) => {
+        return get().defectQuantities[Number(defectId)] || 0;
+    },
+
+    /**
+     * Идёт ли синхронизация партии с сервером.
+     * @param {number} defectId
+     * @returns {boolean}
+     */
+    isSyncingDefect: (defectId) => {
+        return get().syncingDefects.has(Number(defectId));
+    },
+
+    /**
+     * Установить количество уценённой партии в корзине с debounced sync.
+     * Полный аналог setQuantity, но по product_defect_id и через
+     * POST /api/cart/set-defect-quantity. 0 = удалить позицию.
+     *
+     * @param {number} defectId
+     * @param {number} qty
+     */
+    setDefectQuantity: (defectId, qty) => {
+        const did = Number(defectId);
+        const quantity = Math.max(0, Math.floor(qty));
+
+        // Optimistic update
+        set((state) => {
+            const next = { ...state.defectQuantities };
+            if (quantity <= 0) {
+                delete next[did];
+            } else {
+                next[did] = quantity;
+            }
+            return { defectQuantities: next };
+        });
+
+        window.dispatchEvent(new CustomEvent('cart:changed'));
+
+        if (defectDebounceTimers[did]) {
+            clearTimeout(defectDebounceTimers[did]);
+        }
+
+        defectDebounceTimers[did] = setTimeout(async () => {
+            delete defectDebounceTimers[did];
+
+            set((state) => {
+                const next = new Set(state.syncingDefects);
+                next.add(did);
+                return { syncingDefects: next };
+            });
+
+            try {
+                const { data } = await window.axios.post('/api/cart/set-defect-quantity', {
+                    defect_id: did,
+                    quantity,
+                });
+
+                // Race guard: не перетираем, если пользователь уже наклацал новое.
+                const stillCurrent = () => (useCartStore.getState().defectQuantities[did] || 0) === quantity;
+
+                // Сервер мог срезать до available — синхронизируем.
+                if (data && typeof data.quantity === 'number' && stillCurrent()) {
+                    const clamped = data.quantity;
+                    set((state) => {
+                        const next = { ...state.defectQuantities };
+                        if (clamped <= 0) {
+                            delete next[did];
+                        } else {
+                            next[did] = clamped;
+                        }
+                        return { defectQuantities: next };
+                    });
+                }
+
+                if (data && data.cart_totals) {
+                    set({ cartTotals: parseTotals(data.cart_totals) });
+                }
+
+                window.dispatchEvent(new CustomEvent('cart:changed'));
+                window.dispatchEvent(new CustomEvent('cart:server-synced'));
+            } catch {
+                toastError('Ошибка синхронизации', 'Не удалось сохранить изменения. Данные обновлены с сервера.');
+                get()._serverSync();
+            } finally {
+                set((state) => {
+                    const next = new Set(state.syncingDefects);
+                    next.delete(did);
+                    return { syncingDefects: next };
+                });
+            }
+        }, DEBOUNCE_MS);
+    },
+
+    /**
      * Bulk-установка количеств для набора товаров. Один POST вместо N
      * параллельных запросов — на бэке всё в одной транзакции, поэтому нет
      * шанса упереться в дедлок InnoDB на cart_items одной корзины.
@@ -506,13 +621,19 @@ export const useCartStore = create((set, get) => ({
             clearTimeout(debounceTimers[key]);
             delete debounceTimers[key];
         });
+        Object.keys(defectDebounceTimers).forEach((key) => {
+            clearTimeout(defectDebounceTimers[key]);
+            delete defectDebounceTimers[key];
+        });
         set({
             quantities: {},
             productSplits: {},
             cartTotals: { total: 0, instock: 0, preorder: 0 },
+            defectQuantities: {},
             loaded: false,
             loading: false,
             syncing: new Set(),
+            syncingDefects: new Set(),
         });
         try {
             localStorage.removeItem(STORAGE_KEY);
@@ -528,9 +649,9 @@ export const useCartStore = create((set, get) => ({
     _serverSync: async () => {
         try {
             const { data } = await window.axios.get('/api/cart/active-quantities');
-            const { quantities, splits, totals } = parseSnapshot(data);
+            const { quantities, splits, totals, defectQuantities } = parseSnapshot(data);
 
-            set({ quantities, productSplits: splits, cartTotals: totals, loaded: true });
+            set({ quantities, productSplits: splits, cartTotals: totals, defectQuantities, loaded: true });
             saveToCache(quantities);
             window.dispatchEvent(new CustomEvent('cart:changed'));
         } catch {
