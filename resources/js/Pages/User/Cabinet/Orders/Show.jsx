@@ -7,7 +7,7 @@ import {
 import { Head, Link, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import {
-    LuArrowLeft, LuPackage, LuWarehouse,
+    LuArrowLeft, LuPackage, LuWarehouse, LuBadgePercent,
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
@@ -41,10 +41,11 @@ export default function OrderShow({ order }) {
     const fmt = (v) => Number(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     const isPreorder = order.type === 'preorder';
-    const typeLabel  = isPreorder ? 'Предзаказ' : 'Заказ со склада';
-    const typeIcon   = isPreorder ? <LuPackage size={20} /> : <LuWarehouse size={20} />;
-    const typeColor  = isPreorder ? 'orange' : 'green';
-    const typeBadgeScheme = isPreorder ? 'purple' : 'teal';
+    const isDefect   = order.type === 'defect';
+    const typeLabel  = isDefect ? 'Уценка' : isPreorder ? 'Предзаказ' : 'Заказ со склада';
+    const typeIcon   = isDefect ? <LuBadgePercent size={20} /> : isPreorder ? <LuPackage size={20} /> : <LuWarehouse size={20} />;
+    const typeColor  = isDefect ? 'red' : isPreorder ? 'orange' : 'green';
+    const typeBadgeScheme = isDefect ? 'red' : isPreorder ? 'purple' : 'teal';
 
     const createdAt = order.created_at_formatted || '—';
 

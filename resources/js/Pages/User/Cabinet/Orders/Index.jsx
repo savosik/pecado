@@ -506,6 +506,9 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                             const hasDiscount = Number(order.original_total_converted || 0) > Number(order.total_converted || 0);
                             const isForeignCurrency = order.currency_code && order.currency_code !== currency?.code;
                             const isPreorder = order.type === 'preorder';
+                            const isDefect = order.type === 'defect';
+                            const typeText = isDefect ? 'Уценка' : isPreorder ? 'Предзаказ' : 'Заказ';
+                            const typeTone = isDefect ? 'red' : isPreorder ? 'orange' : null;
                             const isPickup = order.delivery_method === 'pickup';
 
                             return (
@@ -551,10 +554,10 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                                                         as="span"
                                                         whiteSpace="nowrap"
                                                         fontWeight="600"
-                                                        color={isPreorder ? 'orange.600' : 'gray.500'}
-                                                        _dark={{ color: isPreorder ? 'orange.300' : 'gray.400' }}
+                                                        color={typeTone ? `${typeTone}.600` : 'gray.500'}
+                                                        _dark={{ color: typeTone ? `${typeTone}.300` : 'gray.400' }}
                                                     >
-                                                        {isPreorder ? 'Предзаказ' : 'Заказ'}
+                                                        {typeText}
                                                     </Text>
                                                 </Flex>
 

@@ -145,6 +145,7 @@ class OrderController extends Controller
             'types' => [
                 ['value' => 'order',    'label' => 'Заказ со склада'],
                 ['value' => 'preorder', 'label' => 'Предзаказ'],
+                ['value' => 'defect',   'label' => 'Уценка'],
             ],
             'companies' => $companies,
             'presetsEnabled' => (bool) config('search-cabinet.presets'),
@@ -249,7 +250,7 @@ class OrderController extends Controller
                 $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
                 yield [
                     $order->erp_number ?? $order->number ?? ('#'.$order->id),
-                    $order->type?->value === 'preorder' ? 'Предзаказ' : 'Заказ',
+                    $order->type?->value === 'defect' ? 'Уценка' : ($order->type?->value === 'preorder' ? 'Предзаказ' : 'Заказ'),
                     $this->getStatusLabel($order->status),
                     ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
                     $order->company?->name ?? '',
