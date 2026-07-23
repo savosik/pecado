@@ -6,6 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useCartStore } from '@/stores/useCartStore';
 import CartTableRow from './CartTableRow';
 import CartMobileCard from './CartMobileCard';
+import CartDefectTableRow from './CartDefectTableRow';
+import CartDefectMobileCard from './CartDefectMobileCard';
 
 // Единый стиль для всех заголовков колонок
 const HEAD_STYLE = {
@@ -144,6 +146,10 @@ export default function CartTable({
     onSetProductQuantity,
     onRemove,
     hasPreorderItems,
+    defectItems = [],
+    defectQuantities = {},
+    onDefectSetQty,
+    defectTotals = { qty: 0, amount: 0 },
 }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
@@ -182,8 +188,15 @@ export default function CartTable({
             totalAmountRegular += r.priceRegular * qty;
             totalAmountDiscounted += r.priceDiscounted * qty;
         }
-        return { totalInstock, totalPreorder, totalAmountRegular, totalAmountDiscounted };
-    }, [productRows, quantities]);
+        // Уценка идёт вне store-агрегации: количество в наличии (партия на складе
+        // некондиции), скидки нет — regular и discounted растут на одну сумму.
+        return {
+            totalInstock: totalInstock + defectTotals.qty,
+            totalPreorder,
+            totalAmountRegular: totalAmountRegular + defectTotals.amount,
+            totalAmountDiscounted: totalAmountDiscounted + defectTotals.amount,
+        };
+    }, [productRows, quantities, defectTotals]);
 
     const handleToggleAll = useCallback((checked) => onToggleAll(checked), [onToggleAll]);
 
@@ -202,7 +215,7 @@ export default function CartTable({
     // Пересчёт теней после ре-рендера (при добавлении/удалении строк).
     useEffect(() => {
         handleScroll();
-    }, [sortedRows.length, handleScroll]);
+    }, [sortedRows.length, defectItems.length, handleScroll]);
 
     return (
         <Box>
@@ -275,6 +288,15 @@ export default function CartTable({
                                 onToggle={onToggleOne}
                             />
                         ))}
+                        {defectItems.map((item) => (
+                            <CartDefectTableRow
+                                key={`d:${item.id}`}
+                                item={item}
+                                qty={defectQuantities[item.id] ?? Number(item.quantity || 0)}
+                                hasPreorderItems={hasPreorderItems}
+                                onSetQty={onDefectSetQty}
+                            />
+                        ))}
                     </Table.Body>
                     <Table.Footer
                         position="sticky"
@@ -327,6 +349,15 @@ export default function CartTable({
                         onSetQty={onSetProductQuantity}
                         onRemove={onRemove}
                         onToggle={onToggleOne}
+                    />
+                ))}
+                {defectItems.map((item) => (
+                    <CartDefectMobileCard
+                        key={`dm:${item.id}`}
+                        item={item}
+                        qty={defectQuantities[item.id] ?? Number(item.quantity || 0)}
+                        currencySymbol={currencySymbol}
+                        onSetQty={onDefectSetQty}
                     />
                 ))}
             </Box>

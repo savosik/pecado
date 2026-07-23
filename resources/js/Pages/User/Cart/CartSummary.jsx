@@ -10,7 +10,7 @@ import { useCartStore } from '@/stores/useCartStore';
  * Считает суммы оптимистично от стора + цен из cartDetails.items
  * (цены не меняются между reload, qty актуальный — мгновенный апдейт).
  */
-export default function CartSummary({ cartDetails, hasItems }) {
+export default function CartSummary({ cartDetails, hasItems, defectTotals = { qty: 0, amount: 0 } }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -42,8 +42,13 @@ export default function CartSummary({ cartDetails, hasItems }) {
             totalDiscounted += p.priceD * qty;
         }
 
+        // Уценка (партии) не живёт в store-агрегации — добавляем её сумму
+        // напрямую. Скидки у уценки нет, поэтому regular и discounted равны.
+        totalRegular += defectTotals.amount;
+        totalDiscounted += defectTotals.amount;
+
         return { totalRegular, totalDiscounted };
-    }, [cartDetails?.items, quantities]);
+    }, [cartDetails?.items, quantities, defectTotals]);
 
     if (!hasItems) return null;
 

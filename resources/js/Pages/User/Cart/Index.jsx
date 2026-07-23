@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Head, router, usePage } from '@inertiajs/react';
 import axios from 'axios';
 import { Box, Flex, Button } from '@chakra-ui/react';
@@ -9,7 +9,6 @@ import EmptyState from '@/components/common/EmptyState';
 import CartHeader from './CartHeader';
 import CartToolbar from './CartToolbar';
 import CartTable from './CartTable';
-import CartDefectSection from './CartDefectSection';
 import CartSummary from './CartSummary';
 import CartFlash from './CartFlash';
 import BarcodeScannerDialog from './BarcodeScannerDialog';
@@ -28,8 +27,9 @@ import { toastSuccess, toastInfo, toastError } from '@/utils/toast';
 export default function CartIndex({ cart, cartDetails, userCarts }) {
     const { auth } = usePage().props;
     const allItems = cartDetails?.items ?? [];
-    // Уценка живёт отдельной секцией: она привязана к партии, а основная таблица
-    // построена на product_id-агрегации со spillover instock/preorder.
+    // Уценка привязана к партии (cart_item.id), а основная таблица построена на
+    // product_id-агрегации со spillover instock/preorder. Товарные строки идут
+    // через store, уценка — отдельными controlled-строками той же таблицы.
     const items = allItems.filter((it) => it.item_type !== 'defect');
     const defectItems = allItems.filter((it) => it.item_type === 'defect');
     const hasPreorderItems = (cartDetails?.preorder_quantity ?? 0) > 0;
@@ -53,6 +53,55 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
             );
         });
     }, [items, normalizedQuery]);
+
+    const filteredDefectItems = useMemo(() => {
+        if (!normalizedQuery) return defectItems;
+        return defectItems.filter((it) => {
+            const name = String(it.product?.name || '').toLowerCase();
+            const brand = String(it.product?.brand?.name || '').toLowerCase();
+            const sku = String(it.product?.sku || '').toLowerCase();
+            return (
+                name.includes(normalizedQuery) ||
+                brand.includes(normalizedQuery) ||
+                sku.includes(normalizedQuery)
+            );
+        });
+    }, [defectItems, normalizedQuery]);
+
+    // ── Уценка: controlled-количества вне store (привязка к партии) ──
+    // Оптимистичное состояние по item.id; ресинк с сервером через подпись
+    // (id:серверный_qty). Сеть — дебаунсим, чтобы long-press не молотил API.
+    const defectSignature = defectItems.map((it) => `${it.id}:${it.quantity}`).join('|');
+    const [defectQuantities, setDefectQuantities] = useState({});
+    useEffect(() => {
+        setDefectQuantities(
+            Object.fromEntries(defectItems.map((it) => [it.id, Number(it.quantity || 0)])),
+        );
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [defectSignature]);
+
+    const computeDefectTotals = useCallback((list) => {
+        let qty = 0;
+        let amount = 0;
+        for (const it of list) {
+            const q = defectQuantities[it.id] ?? Number(it.quantity || 0);
+            if (q <= 0) continue;
+            qty += q;
+            amount += Number(it.price ?? 0) * q;
+        }
+        return { qty, amount };
+    }, [defectQuantities]);
+
+    // Полные итоги (для сводки — как и товарные, не зависят от поиска)…
+    const defectTotals = useMemo(
+        () => computeDefectTotals(defectItems),
+        [computeDefectTotals, defectItems],
+    );
+    // …и отфильтрованные (для футера таблицы — совпадает с товарной логикой).
+    const defectTotalsFiltered = useMemo(
+        () => computeDefectTotals(filteredDefectItems),
+        [computeDefectTotals, filteredDefectItems],
+    );
 
     // ── Sorting ──
     const [sortKey, setSortKey] = useState('name');
@@ -322,6 +371,35 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
         router.reload({ only: ['cartDetails'], preserveScroll: true });
     }, []);
 
+    // ── Уценка: сеть с дебаунсом (item.id → таймер) ──
+    const defectTimersRef = useRef({});
+    const syncDefect = useCallback(async (item, qty) => {
+        try {
+            if (qty <= 0) {
+                await axios.delete(`/api/cart/items/${item.id}`);
+            } else {
+                await axios.patch(`/api/cart/items/${item.id}`, { quantity: qty });
+            }
+            window.dispatchEvent(new CustomEvent('cart:changed'));
+            router.reload({ only: ['cartDetails'], preserveScroll: true });
+        } catch (error) {
+            const message = error?.response?.data?.message || 'Не удалось обновить позицию.';
+            toastError('Ошибка', message);
+            router.reload({ only: ['cartDetails'], preserveScroll: true });
+        }
+    }, []);
+
+    const handleDefectSetQty = useCallback((item, nextQty) => {
+        const max = Number(item.max_total ?? item.available_quantity ?? 999);
+        const clamped = Math.max(0, Math.min(Math.floor(Number(nextQty) || 0), max));
+        // Оптимистично — сразу (счётчик и итоги летят), сеть — дебаунсом.
+        setDefectQuantities((prev) => ({ ...prev, [item.id]: clamped }));
+        clearTimeout(defectTimersRef.current[item.id]);
+        defectTimersRef.current[item.id] = setTimeout(() => {
+            syncDefect(item, clamped);
+        }, 300);
+    }, [syncDefect]);
+
     // Breadcrumbs
     const breadcrumbs = [
         { label: 'Главная', url: '/' },
@@ -344,7 +422,6 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
             {allItems.length > 0 ? (
                 <Box spaceY="3" mt="3">
                     {/* Единая карточка: тулбар + таблица. На base — full-bleed без рамки и скруглений */}
-                    {items.length > 0 && (
                     <Box
                         borderWidth={{ base: '0', lg: '1px' }}
                         borderColor="border"
@@ -377,15 +454,18 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
                             onSetProductQuantity={handleSetProductQuantity}
                             onRemove={handleRemoveItem}
                             hasPreorderItems={hasPreorderItems}
+                            defectItems={filteredDefectItems}
+                            defectQuantities={defectQuantities}
+                            onDefectSetQty={handleDefectSetQty}
+                            defectTotals={defectTotalsFiltered}
                         />
                     </Box>
-                    )}
 
-                    {defectItems.length > 0 && (
-                        <CartDefectSection items={defectItems} onChanged={handleRefresh} />
-                    )}
-
-                    <CartSummary cartDetails={cartDetails} hasItems={allItems.length > 0} />
+                    <CartSummary
+                        cartDetails={cartDetails}
+                        hasItems={allItems.length > 0}
+                        defectTotals={defectTotals}
+                    />
                 </Box>
             ) : (
                 <Box px={{ base: '3', md: '0' }}>
