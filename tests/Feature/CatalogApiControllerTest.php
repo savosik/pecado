@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Enums\OrderType;
 use App\Models\Attribute;
 use App\Models\AttributeValue;
 use App\Models\Brand;
 use App\Models\Category;
+use App\Models\Order;
+use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\ProductDefect;
 use App\Models\Region;
 use App\Models\User;
 use App\Models\Warehouse;
@@ -356,6 +360,61 @@ class CatalogApiControllerTest extends TestCase
 
         $this->assertContains($inStock->id, $ids, 'Товар с остатком должен быть в выдаче гостя');
         $this->assertNotContains($outOfStock->id, $ids, 'Товар без остатков должен быть отфильтрован дефолтным регионом');
+    }
+
+    // ─── наличие: некондиция (уценка) ───────────────────────
+
+    public function test_products_filters_by_defect_availability(): void
+    {
+        // Товар с партией уценки в продаже — попадает в выдачу даже без
+        // складских остатков (у уценки свой склад некондиции).
+        $withDefect = Product::factory()->create(['hidden' => false]);
+        ProductDefect::factory()->for($withDefect)->sellable(500)->create(['quantity' => 3]);
+
+        // Товар без партий — не попадает.
+        $withoutDefect = Product::factory()->create(['hidden' => false]);
+
+        // Партия без цены/публикации (черновик) — не считается продаваемой.
+        $draft = Product::factory()->create(['hidden' => false]);
+        ProductDefect::factory()->for($draft)->create(['quantity' => 3]);
+
+        // Партия целиком зарезервирована заказом уценки — товара в выдаче нет.
+        $reserved = Product::factory()->create(['hidden' => false]);
+        $reservedDefect = ProductDefect::factory()->for($reserved)->sellable(400)->create(['quantity' => 1]);
+        $this->reserveDefect($reservedDefect, 1);
+
+        $response = $this->actingAs($this->user)
+            ->getJson('/api/catalog/products?in_stock_mode=defect')
+            ->assertOk();
+
+        $ids = collect($response->json('data'))->pluck('id')->all();
+
+        $this->assertContains($withDefect->id, $ids);
+        $this->assertNotContains($withoutDefect->id, $ids);
+        $this->assertNotContains($draft->id, $ids, 'Черновая партия без цены не даёт товару попасть в уценку');
+        $this->assertNotContains($reserved->id, $ids, 'Полностью зарезервированная партия не даёт товару попасть в уценку');
+    }
+
+    /**
+     * Создаёт заказ уценки на партию — так возникает резерв остатка.
+     */
+    private function reserveDefect(ProductDefect $defect, int $quantity): void
+    {
+        $order = Order::factory()->create(['type' => OrderType::DEFECT]);
+
+        OrderItem::create([
+            'order_id' => $order->id,
+            'product_id' => $defect->product_id,
+            'product_defect_id' => $defect->id,
+            'defect_description' => $defect->defect_description,
+            'name' => 'Позиция уценки',
+            'price' => 100,
+            'base_price' => 100,
+            'discount_percent' => 0,
+            'final_price' => 100,
+            'quantity' => $quantity,
+            'subtotal' => 100 * $quantity,
+        ]);
     }
 
     public function test_guest_response_hides_prices_and_stock(): void

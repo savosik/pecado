@@ -2,6 +2,7 @@
 
 namespace App\Models\Traits;
 
+use App\Enums\OrderType;
 use App\Models\Category;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -218,6 +219,35 @@ trait ProductQueryScopes
                 ->whereColumn('product_warehouse.product_id', 'products.id')
                 ->where('product_warehouse.quantity', '>', 0)
                 ->whereIn('product_warehouse.warehouse_id', $allWarehouseIds);
+        });
+    }
+
+    /**
+     * Товары с партиями некондиции (уценки), допущенными в продажу.
+     *
+     * Партия участвует, когда одновременно: sellable() (открыта, с ценой,
+     * опубликована) и свободный остаток за вычетом резерва по заказам
+     * type = defect больше нуля — та же логика, что в
+     * App\Services\Defect\DefectStockService::hasSellableDefectsMap().
+     *
+     * Складские остатки региона здесь намеренно не учитываются: уценка
+     * отгружается с отдельного склада некондиции.
+     */
+    public function scopeWithSellableDefects(Builder $query): Builder
+    {
+        return $query->whereHas('defects', function (Builder $q) {
+            $q->sellable()
+                ->whereRaw(
+                    'product_defects.quantity > COALESCE((
+                        select sum(order_items.quantity)
+                        from order_items
+                        inner join orders on orders.id = order_items.order_id
+                        where order_items.product_defect_id = product_defects.id
+                          and orders.type = ?
+                          and orders.deleted_at is null
+                    ), 0)',
+                    [OrderType::DEFECT->value]
+                );
         });
     }
 

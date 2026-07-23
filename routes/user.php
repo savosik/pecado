@@ -37,6 +37,7 @@ Route::get('/search', [SearchController::class, 'index'])->name('search');
 Route::get('/products', [ProductController::class, 'index'])->name('products.index');
 Route::get('/products/novinki', [ProductController::class, 'novelties'])->name('products.novelties');
 Route::get('/products/bestsellery', [ProductController::class, 'bestsellers'])->name('products.bestsellers');
+Route::get('/products/utsenka', [ProductController::class, 'liquidation'])->name('products.liquidation');
 Route::get('/products/favorites', [ProductController::class, 'favorites'])->middleware('auth')->name('products.favorites');
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 Route::get('/certificates/{certificate}/files/{media}/download', [CertificateController::class, 'download'])

@@ -5,6 +5,7 @@ const STOCK_LABELS = {
     instock: 'В наличии',
     preorder: 'Предзаказ',
     notavailable: 'Нет в наличии',
+    defect: 'Некондиция',
 };
 
 /**
@@ -131,8 +132,13 @@ function buildChips(filters, facets, lockedFilters = {}, currencySymbol = '₽')
         });
     }
 
-    // Наличие
-    if (filters.in_stock_mode && STOCK_LABELS[filters.in_stock_mode]) {
+    // Наличие. Если режим задан контекстом страницы (напр. раздел «Уценка»
+    // фиксирует defect) — чип не показываем, снять его нельзя.
+    if (
+        filters.in_stock_mode
+        && STOCK_LABELS[filters.in_stock_mode]
+        && lockedFilters.in_stock_mode !== filters.in_stock_mode
+    ) {
         chips.push({
             key: 'in_stock_mode',
             filterKey: 'in_stock_mode',

@@ -159,7 +159,7 @@ class ProductFilterRequestTest extends TestCase
 
     public function test_valid_in_stock_mode(): void
     {
-        foreach (['instock', 'preorder', 'notavailable'] as $mode) {
+        foreach (['instock', 'preorder', 'notavailable', 'defect'] as $mode) {
             $this->filterRequest(['in_stock_mode' => $mode])->assertOk();
         }
     }

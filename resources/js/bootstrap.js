@@ -62,7 +62,7 @@ if (typeof document !== 'undefined') {
             if (!match) return;
 
             // Служебные разделы каталога — не перехватываем (обычная навигация)
-            const CATALOG_SECTIONS = ['novinki', 'bestsellery', 'favorites'];
+            const CATALOG_SECTIONS = ['novinki', 'bestsellery', 'utsenka', 'favorites'];
             if (CATALOG_SECTIONS.includes(match[1])) return;
 
             // На детальной странице товара — обычная навигация (флаг ставит Pages/User/Products/Show.jsx)
@@ -98,7 +98,7 @@ if (typeof document !== 'undefined') {
             const match = url.pathname.match(/^\/products\/([^/]+)$/);
             if (!match) return;
             // Служебные разделы каталога — не делаем prefetch
-            const CATALOG_SECTIONS = ['novinki', 'bestsellery', 'favorites'];
+            const CATALOG_SECTIONS = ['novinki', 'bestsellery', 'utsenka', 'favorites'];
             if (CATALOG_SECTIONS.includes(match[1])) return;
             const slug = decodeURIComponent(match[1]);
             if (window.__prefetchProductQuickView) {

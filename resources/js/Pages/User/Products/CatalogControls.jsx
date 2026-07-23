@@ -21,6 +21,7 @@ const STOCK_OPTIONS = [
     { value: 'instock', label: 'В наличии' },
     { value: 'preorder', label: 'Предзаказ' },
     { value: 'notavailable', label: 'Нет в наличии' },
+    { value: 'defect', label: 'Некондиция' },
 ];
 
 

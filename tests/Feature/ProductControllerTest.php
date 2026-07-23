@@ -56,6 +56,21 @@ class ProductControllerTest extends TestCase
         );
     }
 
+    public function test_liquidation_renders_with_defect_preset(): void
+    {
+        $response = $this->get('/products/utsenka');
+
+        $response->assertOk();
+        $response->assertInertia(fn (AssertableInertia $page) => $page->component('User/Products/Index')
+            ->has('seo')
+            ->where('seo.h1', 'Уценка')
+            ->has('initialFilters')
+            ->where('initialFilters.in_stock_mode', 'defect')
+            ->has('breadcrumbs')
+            ->where('seo.canonical', route('products.liquidation'))
+        );
+    }
+
     public function test_by_brand_404_for_unknown_slug(): void
     {
         $response = $this->get('/brands/unknown-brand-slug');

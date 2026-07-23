@@ -282,8 +282,13 @@ class CatalogApiController extends Controller
         }
 
         // Наличие
-        if (! empty($validated['in_stock_mode'])) {
-            $query->inStock($validated['in_stock_mode'], $regionId);
+        $stockMode = $validated['in_stock_mode'] ?? null;
+        if ($stockMode === 'defect') {
+            // «Некондиция»: товары с партиями уценки в продаже. Складские
+            // остатки региона не учитываем — у уценки свой склад некондиции.
+            $query->withSellableDefects();
+        } elseif (! empty($stockMode)) {
+            $query->inStock($stockMode, $regionId);
         } elseif (! empty($validated['in_stock'])) {
             $query->inStock('instock', $regionId);
         } else {

@@ -354,6 +354,38 @@ class ProductController extends Controller
     }
 
     /**
+     * Каталог уценки (некондиции).
+     * GET /products/utsenka
+     *
+     * По аналогии с бестселлерами: тот же каталог, но предустановлен фильтр
+     * наличия «Некондиция» (in_stock_mode=defect) — выводятся только товары
+     * с партиями уценки в продаже.
+     */
+    public function liquidation(): Response
+    {
+        $appName = config('app.name');
+
+        $canonical = route('products.liquidation');
+
+        return $this->renderCatalog([
+            'seo' => [
+                'title' => "Уценка | {$appName}",
+                'description' => "Товары с уценкой (некондиция) в интернет-магазине {$appName}",
+                'h1' => 'Уценка',
+                'canonical' => $canonical,
+                'url' => $canonical,
+            ],
+            'initialFilters' => [
+                'in_stock_mode' => 'defect',
+            ],
+            'breadcrumbs' => [
+                ['label' => 'Каталог', 'url' => route('products.index')],
+                ['label' => 'Уценка', 'url' => null],
+            ],
+        ]);
+    }
+
+    /**
      * Карточка товара.
      * GET /products/{product:slug}
      */
