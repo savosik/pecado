@@ -26,7 +26,8 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
                 <Accordion.Item key={group.title} value={group.title}>
                     <Accordion.ItemTrigger
                         px={2}
-                        py={2}
+                        // На телефоне пункты выше: в 32px пальцем не попасть.
+                        py={{ base: 3, md: 2 }}
                         _hover={{ bg: 'bg.muted' }}
                         cursor="pointer"
                     >
@@ -48,7 +49,7 @@ export const NavigationMenu = ({ onItemClick, isCollapsed = false }) => {
                                     <Link key={item.path} href={item.path} onClick={onItemClick}>
                                         <HStack
                                             px={4}
-                                            py={2}
+                                            py={{ base: 3, md: 2 }}
                                             gap={3}
                                             bg={isActive(item.path) ? 'bg.emphasized' : 'transparent'}
                                             color={isActive(item.path) ? 'fg' : 'fg.muted'}

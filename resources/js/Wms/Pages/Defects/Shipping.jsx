@@ -101,7 +101,35 @@ function OrderCard({ order }) {
                 )}
             </Card.Header>
             <Card.Body pt={0}>
-                <Box overflowX="auto">
+                {/* Телефон: позиция карточкой — комплектовщик смотрит с телефона
+                    и должен видеть фото дефекта крупно, без горизонтального скролла. */}
+                <VStack gap={3} align="stretch" display={{ base: 'flex', lg: 'none' }}>
+                    {order.items.map((item) => (
+                        <Box
+                            key={item.id}
+                            borderWidth="1px"
+                            borderColor="border"
+                            borderRadius="md"
+                            p={3}
+                        >
+                            <VStack align="stretch" gap={2}>
+                                <HStack justify="space-between" gap={2} align="start">
+                                    <Box minW={0}>
+                                        <Text fontSize="sm" fontWeight="medium">{item.product_name}</Text>
+                                        <Text fontSize="xs" color="fg.muted">{item.sku || '—'}</Text>
+                                    </Box>
+                                    <Badge colorPalette="blue" variant="subtle" flexShrink={0}>
+                                        {item.quantity} шт.
+                                    </Badge>
+                                </HStack>
+                                <Text fontSize="sm">{item.defect_description || '—'}</Text>
+                                <ItemPhotos photos={item.photos} alt={item.defect_description} />
+                            </VStack>
+                        </Box>
+                    ))}
+                </VStack>
+
+                <Box overflowX="auto" display={{ base: 'none', lg: 'block' }}>
                     <Table.Root size="sm" variant="line">
                         <Table.Header>
                             <Table.Row>

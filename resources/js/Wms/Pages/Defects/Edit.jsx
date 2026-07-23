@@ -3,7 +3,7 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import {
     Box,
     Card,
-    HStack,
+    Stack,
     Input,
     SimpleGrid,
     Text,
@@ -171,21 +171,31 @@ export default function DefectsEdit() {
                                 </Card.Body>
                             </Card.Root>
 
-                            <HStack gap={2} justify="space-between" flexWrap="wrap">
-                                <HStack gap={2}>
-                                    <Button type="submit" loading={processing}>
+                            <Stack
+                                direction={{ base: 'column', md: 'row' }}
+                                gap={2}
+                                justify="space-between"
+                            >
+                                <Stack direction={{ base: 'column', sm: 'row' }} gap={2}>
+                                    <Button type="submit" h="48px" loading={processing}>
                                         Сохранить
                                     </Button>
-                                    <Button variant="outline" type="button" onClick={() => router.get('/wms/defects')}>
+                                    <Button
+                                        variant="outline"
+                                        type="button"
+                                        h="48px"
+                                        onClick={() => router.get('/wms/defects')}
+                                    >
                                         К списку
                                     </Button>
-                                </HStack>
+                                </Stack>
 
                                 {can('wms-defects.delete') && (
                                     <Button
                                         type="button"
                                         variant="outline"
                                         colorPalette="red"
+                                        h="48px"
                                         disabled={reserved > 0}
                                         title={reserved > 0 ? 'По партии есть заказы — списать нельзя' : undefined}
                                         onClick={() => setWriteOffOpen(true)}
@@ -193,7 +203,7 @@ export default function DefectsEdit() {
                                         <LuBan /> Списать партию
                                     </Button>
                                 )}
-                            </HStack>
+                            </Stack>
                         </VStack>
                     </form>
                 )}

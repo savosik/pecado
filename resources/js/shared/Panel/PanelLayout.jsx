@@ -31,7 +31,7 @@ export const PanelLayout = ({ panel, children, breadcrumbs = [], extras = null }
                         breadcrumbs={breadcrumbs}
                     />
 
-                    <Box as="main" p={{ base: 4, md: 6 }}>
+                    <Box as="main" p={{ base: 3, md: 6 }}>
                         {children}
                     </Box>
                 </Box>

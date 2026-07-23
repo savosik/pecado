@@ -78,6 +78,80 @@ function DefectPhoto({ defect }) {
     );
 }
 
+/**
+ * Партия одной карточкой — мобильный вариант строки таблицы.
+ *
+ * Действия крупные (44px): попадать пальцем в иконку размера xs на складе
+ * невозможно.
+ */
+function DefectMobileCard({ defect, can, onDelete }) {
+    const reserved = defect.reserved_quantity > 0;
+
+    return (
+        <Box borderWidth="1px" borderColor="border" borderRadius="md" p={3}>
+            <VStack align="stretch" gap={3}>
+                <HStack gap={3} align="start">
+                    <DefectPhoto defect={defect} />
+                    <Box flex="1" minW={0}>
+                        <Text fontSize="sm" fontWeight="medium" lineClamp={2}>
+                            {defect.product.name}
+                        </Text>
+                        <Text fontSize="xs" color="fg.muted">
+                            {defect.product.sku || '—'}
+                        </Text>
+                    </Box>
+                    <DefectStatusBadge defect={defect} />
+                </HStack>
+
+                <Text fontSize="sm" color="fg.muted" lineClamp={3}>
+                    {defect.defect_description}
+                </Text>
+
+                <HStack gap={4} flexWrap="wrap" fontSize="sm">
+                    <Text>
+                        <Text as="span" color="fg.muted">Кол-во: </Text>
+                        {defect.quantity}
+                    </Text>
+                    <Text>
+                        <Text as="span" color="fg.muted">Свободно: </Text>
+                        {defect.available_quantity}
+                    </Text>
+                    <Text>
+                        <Text as="span" color="fg.muted">Цена: </Text>
+                        {formatPrice(defect.price)}
+                    </Text>
+                </HStack>
+
+                {(can('wms-defects.edit') || can('wms-defects.delete')) && (
+                    <HStack gap={2}>
+                        {can('wms-defects.edit') && (
+                            <Button asChild size="sm" variant="outline" flex="1" h="44px">
+                                <Link href={`/wms/defects/${defect.id}/edit`}>
+                                    <LuPencil /> Изменить
+                                </Link>
+                            </Button>
+                        )}
+                        {can('wms-defects.delete') && (
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                colorPalette="red"
+                                h="44px"
+                                minW="44px"
+                                disabled={reserved}
+                                title={reserved ? 'По партии есть заказы — удалить нельзя' : 'Удалить партию'}
+                                onClick={onDelete}
+                            >
+                                <LuTrash2 />
+                            </Button>
+                        )}
+                    </HStack>
+                )}
+            </VStack>
+        </Box>
+    );
+}
+
 export default function DefectsIndex() {
     const { defects, filters, stats } = usePage().props;
     const { can } = usePermission();
@@ -124,7 +198,7 @@ export default function DefectsIndex() {
                     <Card.Body>
                         <VStack gap={3} align="stretch">
                             <HStack gap={2} flexWrap="wrap">
-                                <Box flex="1" minW="240px">
+                                <Box flex="1" minW={{ base: '100%', md: '240px' }}>
                                     <SearchInput
                                         value={filters.search || ''}
                                         onChange={(value) => applyFilters({ search: value, page: 1 })}
@@ -135,7 +209,7 @@ export default function DefectsIndex() {
                                     {FILTERS.map((item) => (
                                         <Button
                                             key={item.value || 'all'}
-                                            size="xs"
+                                            size={{ base: 'sm', md: 'xs' }}
                                             variant={(filters.filter || '') === item.value ? 'solid' : 'outline'}
                                             onClick={() => applyFilters({ filter: item.value, page: 1 })}
                                         >
@@ -153,7 +227,22 @@ export default function DefectsIndex() {
                                     </Text>
                                 </HStack>
                             ) : (
-                                <Box overflowX="auto">
+                                <>
+                                {/* Телефон: карточки. Таблица из семи колонок в 360px
+                                    не помещается, а горизонтальный скролл на складе
+                                    одной рукой не листают. */}
+                                <VStack gap={2} align="stretch" display={{ base: 'flex', lg: 'none' }}>
+                                    {defects.data.map((defect) => (
+                                        <DefectMobileCard
+                                            key={defect.id}
+                                            defect={defect}
+                                            can={can}
+                                            onDelete={() => setConfirmTarget(defect)}
+                                        />
+                                    ))}
+                                </VStack>
+
+                                <Box overflowX="auto" display={{ base: 'none', lg: 'block' }}>
                                     <Table.Root size="sm" variant="line">
                                         <Table.Header>
                                             <Table.Row>
@@ -232,6 +321,7 @@ export default function DefectsIndex() {
                                         </Table.Body>
                                     </Table.Root>
                                 </Box>
+                                </>
                             )}
 
                             <Pagination

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Heading, Text, Button, HStack, VStack } from '@chakra-ui/react';
+import { Box, Heading, Text, Button, Stack, VStack } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuPlus } from 'react-icons/lu';
 import { usePermission } from '@/Admin/hooks/usePermission';
@@ -29,10 +29,17 @@ export const PageHeader = ({
     const showCreate = (onCreate || createHref) && (!createPermission || can(createPermission));
 
     return (
-        <Box mb={6}>
-            <HStack justifyContent="space-between" alignItems="flex-start">
-                <VStack align="flex-start" gap={2}>
-                    <Heading size="lg">{title}</Heading>
+        <Box mb={{ base: 4, md: 6 }}>
+            {/* На телефоне заголовок и действия идут колонкой: в строку они не
+                помещаются и заголовок переносится по буквам. */}
+            <Stack
+                direction={{ base: 'column', md: 'row' }}
+                justifyContent="space-between"
+                alignItems={{ base: 'stretch', md: 'flex-start' }}
+                gap={3}
+            >
+                <VStack align="flex-start" gap={2} minW={0}>
+                    <Heading size={{ base: 'md', md: 'lg' }}>{title}</Heading>
                     {description && (
                         <Text color="fg.muted" fontSize="sm">
                             {description}
@@ -40,7 +47,12 @@ export const PageHeader = ({
                     )}
                 </VStack>
 
-                <HStack gap={3}>
+                <Stack
+                    direction={{ base: 'column', sm: 'row' }}
+                    gap={3}
+                    flexShrink={0}
+                    align={{ base: 'stretch', sm: 'center' }}
+                >
                     {actions}
 
                     {showCreate && (
@@ -63,8 +75,8 @@ export const PageHeader = ({
                             </Button>
                         )
                     )}
-                </HStack>
-            </HStack>
+                </Stack>
+            </Stack>
         </Box>
     );
 };

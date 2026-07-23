@@ -32,7 +32,7 @@ function WarehouseCard({ warehouse }) {
                 </HStack>
             </Card.Header>
             <Card.Body pt={0}>
-                <SimpleGrid columns={3} gap={3}>
+                <SimpleGrid columns={{ base: 2, sm: 3 }} gap={3}>
                     <Box>
                         <Text fontSize="xs" color="fg.muted">Позиций в наличии</Text>
                         <Text fontSize="lg" fontWeight="bold">{formatNumber(warehouse.positions_in_stock)}</Text>
@@ -65,7 +65,7 @@ export default function Dashboard() {
             />
 
             <VStack gap={4} align="stretch">
-                <SimpleGrid columns={{ base: 1, md: 3 }} gap={4}>
+                <SimpleGrid columns={{ base: 2, md: 3 }} gap={{ base: 3, md: 4 }}>
                     <StatCard label="Складов" value={totals.warehouses} icon={LuWarehouse} />
                     <StatCard label="Позиций в наличии" value={totals.positions_in_stock} icon={LuPackage} />
                     <StatCard label="Всего единиц товара" value={totals.units_total} icon={LuLayers} />

@@ -84,63 +84,94 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
             py={3}
             zIndex={5}
         >
-            <HStack justify="space-between">
-                {/* Слева: кнопка мобильного меню + хлебные крошки */}
-                <HStack gap={4}>
+            <HStack justify="space-between" gap={2}>
+                {/* Слева: кнопка мобильного меню + хлебные крошки.
+                    minW=0 обязателен: без него длинная крошка не даёт flex-контейнеру
+                    сжаться и текст ломается по одной букве в строку (телефон). */}
+                <HStack gap={{ base: 2, md: 4 }} minW={0} flex="1">
                     <IconButton
                         display={{ base: 'flex', md: 'none' }}
                         variant="ghost"
                         onClick={onMobileMenuOpen}
                         aria-label="Открыть меню"
+                        flexShrink={0}
+                        minW="44px"
+                        h="44px"
                     >
                         <LuMenu />
                     </IconButton>
 
-                    <Breadcrumb.Root>
-                        <Breadcrumb.List>
-                            {finalBreadcrumbs.map((crumb, index) => (
-                                <React.Fragment key={index}>
-                                    <Breadcrumb.Item>
-                                        <Breadcrumb.Link
-                                            href={crumb.href}
-                                            fontSize="sm"
-                                            color={index === finalBreadcrumbs.length - 1 ? 'fg' : 'fg.muted'}
-                                            fontWeight={index === finalBreadcrumbs.length - 1 ? 'medium' : 'normal'}
+                    <Breadcrumb.Root minW={0} overflow="hidden">
+                        <Breadcrumb.List flexWrap="nowrap" whiteSpace="nowrap">
+                            {finalBreadcrumbs.map((crumb, index) => {
+                                const isLast = index === finalBreadcrumbs.length - 1;
+
+                                return (
+                                    <React.Fragment key={index}>
+                                        {/* На телефоне оставляем только текущий раздел —
+                                            путь целиком туда не помещается. */}
+                                        <Breadcrumb.Item
+                                            display={{ base: isLast ? 'inline-flex' : 'none', md: 'inline-flex' }}
+                                            minW={0}
                                         >
-                                            {crumb.label}
-                                        </Breadcrumb.Link>
-                                    </Breadcrumb.Item>
-                                    {index < finalBreadcrumbs.length - 1 && (
-                                        <Breadcrumb.Separator>/</Breadcrumb.Separator>
-                                    )}
-                                </React.Fragment>
-                            ))}
+                                            <Breadcrumb.Link
+                                                href={crumb.href}
+                                                fontSize="sm"
+                                                color={isLast ? 'fg' : 'fg.muted'}
+                                                fontWeight={isLast ? 'medium' : 'normal'}
+                                                truncate
+                                            >
+                                                {crumb.label}
+                                            </Breadcrumb.Link>
+                                        </Breadcrumb.Item>
+                                        {!isLast && (
+                                            <Breadcrumb.Separator display={{ base: 'none', md: 'inline-flex' }}>
+                                                /
+                                            </Breadcrumb.Separator>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })}
                         </Breadcrumb.List>
                     </Breadcrumb.Root>
                 </HStack>
 
-                {/* Справа: переходы между панелями, тема, меню пользователя */}
-                <HStack gap={2}>
+                {/* Справа: переходы между панелями, тема, меню пользователя.
+                    На телефоне переходы и имя убраны в меню пользователя — иначе
+                    правая группа съедает всю ширину строки. */}
+                <HStack gap={{ base: 1, md: 2 }} flexShrink={0}>
                     {otherPanels.map((target) => (
                         <Tooltip
                             key={target.key}
                             content={`Перейти в раздел «${target.label}»`}
                             positioning={{ placement: 'bottom' }}
                         >
-                            <Button asChild variant="outline" size="sm" colorPalette="gray">
+                            <Button
+                                asChild
+                                variant="outline"
+                                size="sm"
+                                colorPalette="gray"
+                                display={{ base: 'none', md: 'inline-flex' }}
+                            >
                                 <Link href={target.basePath}>
                                     <target.icon />
-                                    <Text display={{ base: 'none', md: 'inline' }}>{target.label}</Text>
+                                    <Text>{target.label}</Text>
                                 </Link>
                             </Button>
                         </Tooltip>
                     ))}
 
                     <Tooltip content="Перейти на витрину" positioning={{ placement: 'bottom' }}>
-                        <Button asChild variant="outline" size="sm" colorPalette="gray">
+                        <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            colorPalette="gray"
+                            display={{ base: 'none', md: 'inline-flex' }}
+                        >
                             <Link href="/">
                                 <LuStore />
-                                <Text display={{ base: 'none', sm: 'inline' }}>На витрину</Text>
+                                <Text>На витрину</Text>
                             </Link>
                         </Button>
                     </Tooltip>
@@ -150,22 +181,58 @@ export const Header = ({ onMobileMenuOpen, breadcrumbs = [] }) => {
                     <Menu.Root>
                         <Menu.Trigger asChild>
                             <Box
-                                px={3}
+                                px={{ base: 2, md: 3 }}
                                 py={2}
+                                minW="44px"
+                                minH="44px"
+                                display="flex"
+                                alignItems="center"
+                                justifyContent="center"
                                 borderRadius="md"
                                 cursor="pointer"
                                 _hover={{ bg: 'bg.muted' }}
                                 transition="background 0.2s"
+                                aria-label="Меню пользователя"
                             >
                                 <HStack gap={2}>
                                     <LuUser />
-                                    <Text fontSize="sm" fontWeight="medium">
+                                    <Text
+                                        fontSize="sm"
+                                        fontWeight="medium"
+                                        display={{ base: 'none', md: 'inline' }}
+                                    >
                                         {auth?.user?.name || 'Пользователь'}
                                     </Text>
                                 </HStack>
                             </Box>
                         </Menu.Trigger>
                         <Menu.Content>
+                            <Menu.ItemGroup>
+                                <Menu.ItemGroupLabel>
+                                    {auth?.user?.name || 'Пользователь'}
+                                </Menu.ItemGroupLabel>
+                            </Menu.ItemGroup>
+                            <Menu.Separator />
+
+                            {/* Дубли кнопок, скрытых на телефоне. hideFrom вместо
+                                обёртки в Box: обёртка ломает клавиатурную навигацию меню. */}
+                            {otherPanels.map((target) => (
+                                <Menu.Item
+                                    key={target.key}
+                                    value={`panel-${target.key}`}
+                                    hideFrom="md"
+                                    onClick={() => router.visit(target.basePath)}
+                                >
+                                    <target.icon />
+                                    {target.label}
+                                </Menu.Item>
+                            ))}
+                            <Menu.Item value="storefront" hideFrom="md" onClick={() => router.visit('/')}>
+                                <LuStore />
+                                На витрину
+                            </Menu.Item>
+                            <Menu.Separator hideFrom="md" />
+
                             {profileHref && (
                                 <>
                                     <Menu.Item value="profile" onClick={() => router.visit(profileHref)}>

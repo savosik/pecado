@@ -3,7 +3,7 @@ import { Head, useForm, usePage } from '@inertiajs/react';
 import {
     Box,
     Card,
-    HStack,
+    Stack,
     Input,
     NativeSelect,
     Text,
@@ -167,14 +167,25 @@ export default function DefectsCreate() {
                         </Card.Body>
                     </Card.Root>
 
-                    <HStack gap={2}>
-                        <Button type="submit" loading={processing} disabled={warehouses.length === 0}>
-                            Завести партию
-                        </Button>
-                        <Button variant="outline" type="button" onClick={() => window.history.back()}>
+                    <Stack direction={{ base: 'column-reverse', sm: 'row' }} gap={2}>
+                        <Button
+                            variant="outline"
+                            type="button"
+                            h="48px"
+                            onClick={() => window.history.back()}
+                        >
                             Отмена
                         </Button>
-                    </HStack>
+                        <Button
+                            type="submit"
+                            h="48px"
+                            flex={{ base: 'none', sm: '0 0 auto' }}
+                            loading={processing}
+                            disabled={warehouses.length === 0}
+                        >
+                            Завести партию
+                        </Button>
+                    </Stack>
                 </VStack>
             </form>
         </>

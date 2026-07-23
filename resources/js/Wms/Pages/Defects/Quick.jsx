@@ -197,10 +197,17 @@ export default function DefectsQuick() {
                                     <Input
                                         value={manualBarcode}
                                         onChange={(e) => setManualBarcode(e.target.value)}
-                                        placeholder="Или введите/отсканируйте штрихкод вручную"
-                                        size="sm"
+                                        placeholder="Штрихкод вручную"
+                                        inputMode="numeric"
+                                        h="44px"
                                     />
-                                    <Button type="submit" size="sm" variant="outline" disabled={!manualBarcode.trim()}>
+                                    <Button
+                                        type="submit"
+                                        variant="outline"
+                                        h="44px"
+                                        flexShrink={0}
+                                        disabled={!manualBarcode.trim()}
+                                    >
                                         Найти
                                     </Button>
                                 </HStack>
@@ -238,22 +245,24 @@ export default function DefectsQuick() {
                                     <HStack gap={3} justify="space-between">
                                         <Text fontSize="sm" color="fg.muted">Количество</Text>
                                         <HStack gap={2}>
+                                            {/* 48px — минимальная кнопка, в которую уверенно
+                                                попадают пальцем на складе. */}
                                             <IconButton
                                                 aria-label="минус"
-                                                size="sm"
                                                 variant="outline"
+                                                boxSize="48px"
                                                 onClick={() => setDraft((d) => ({ ...d, quantity: Math.max(1, d.quantity - 1) }))}
                                                 disabled={draft.quantity <= 1}
                                             >
                                                 <LuMinus />
                                             </IconButton>
-                                            <Text minW="32px" textAlign="center" fontWeight="bold" fontSize="lg">
+                                            <Text minW="44px" textAlign="center" fontWeight="bold" fontSize="xl">
                                                 {draft.quantity}
                                             </Text>
                                             <IconButton
                                                 aria-label="плюс"
-                                                size="sm"
                                                 variant="outline"
+                                                boxSize="48px"
                                                 onClick={() => setDraft((d) => ({ ...d, quantity: d.quantity + 1 }))}
                                             >
                                                 <LuPlus />
@@ -291,7 +300,7 @@ export default function DefectsQuick() {
                                         />
                                     </Box>
 
-                                    <Button size="lg" onClick={save} loading={saving} disabled={!canSave}>
+                                    <Button size="lg" h="56px" onClick={save} loading={saving} disabled={!canSave}>
                                         <LuCheck /> Сохранить и дальше
                                     </Button>
                                     {!canSave && !saving && (
