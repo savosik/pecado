@@ -140,7 +140,19 @@ function valueId(dimension, value) {
     return Number(value || 0);
 }
 
-export default function GapPanel({ filterOptions, seesAll, period }) {
+// Клик по наименованию добавляет субъект в общий фильтр отчёта — единый паттерн
+// со всеми разбивками (бренд/категория/контрагент и т.п.).
+const labelLinkSx = {
+    cursor: 'pointer',
+    textAlign: 'left',
+    textDecoration: 'underline',
+    textDecorationStyle: 'dotted',
+    textUnderlineOffset: '3px',
+    textDecorationColor: 'var(--chakra-colors-border)',
+    _hover: { textDecorationStyle: 'solid', textDecorationColor: 'currentColor' },
+};
+
+export default function GapPanel({ filterOptions, seesAll, period, onApplyFilter }) {
     const brands = filterOptions?.brands || [];
     const categories = filterOptions?.categories || [];
 
@@ -205,6 +217,13 @@ export default function GapPanel({ filterOptions, seesAll, period }) {
 
     const subjectLabel = subject === 'partner' ? 'Партнёр' : 'Контрагент';
     const rows = data?.rows ?? [];
+
+    // Клик по наименованию ставит субъект фильтром отчёта (партнёр → partner_ids,
+    // контрагент → company_ids). Контрагенты без company_id (только ИНН) — не кликабельны.
+    const labelClick = (r) => {
+        if (!onApplyFilter || !r.id) return null;
+        return () => onApplyFilter(subject === 'partner' ? { partner_ids: [r.id] } : { company_ids: [r.id] });
+    };
 
     return (
         <VStack align="stretch" gap={4}>
@@ -345,11 +364,13 @@ export default function GapPanel({ filterOptions, seesAll, period }) {
                                     </Table.Row>
                                 </Table.Header>
                                 <Table.Body>
-                                    {rows.map((r) => (
+                                    {rows.map((r) => {
+                                        const click = labelClick(r);
+                                        return (
                                         <Table.Row key={r.key}>
                                             <Table.Cell>
-                                                {subject === 'partner' && r.id ? (
-                                                    <Box as="a" href={`/crm/clients/${r.id}`} textDecoration="underline" textUnderlineOffset="3px">
+                                                {click ? (
+                                                    <Box as="button" type="button" onClick={click} {...labelLinkSx}>
                                                         <Text lineClamp={2}>{r.label}</Text>
                                                     </Box>
                                                 ) : (
@@ -361,7 +382,8 @@ export default function GapPanel({ filterOptions, seesAll, period }) {
                                             <Table.Cell textAlign="right">{fmtInt(r.shipments_count)}</Table.Cell>
                                             <Table.Cell textAlign="right" color="fg.muted">{fmtDate(r.last_purchase_at)}</Table.Cell>
                                         </Table.Row>
-                                    ))}
+                                        );
+                                    })}
                                 </Table.Body>
                             </Table.Root>
                         </Box>

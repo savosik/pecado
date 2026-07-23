@@ -451,6 +451,7 @@ export default function CrmAnalyticsIndex() {
                             filterOptions={filterOptions}
                             seesAll={seesAll}
                             period={{ date_from: filters.date_from, date_to: filters.date_to }}
+                            onApplyFilter={applyFilter}
                         />
                     </Tabs.Content>
                 </Tabs.Root>
