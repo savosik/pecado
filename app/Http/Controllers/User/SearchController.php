@@ -129,11 +129,14 @@ class SearchController extends Controller
             'q.min' => 'Минимум 2 символа для поиска.',
         ]);
 
-        // Точное совпадение по артикулу / коду 1С / штрихкоду → единственная
-        // подсказка. Meilisearch не трогаем, чтобы не подмешивать фаззи-соседей.
-        $exactMatch = $this->exactMatcher->match($validated['q']);
-        if ($exactMatch !== null) {
-            return response()->json([$this->formatProductCompact($exactMatch)]);
+        // Точное совпадение по артикулу / коду 1С / штрихкоду → отдаём ТОЛЬКО
+        // товары с идентичным кодом (обычно один, изредка несколько). Meilisearch
+        // не трогаем, чтобы не подмешивать фаззи-соседей.
+        $exactMatches = $this->exactMatcher->matchAll($validated['q']);
+        if ($exactMatches->isNotEmpty()) {
+            return response()->json(
+                $exactMatches->map(fn (Product $product) => $this->formatProductCompact($product))->values()
+            );
         }
 
         try {
@@ -216,23 +219,27 @@ class SearchController extends Controller
 
             // Fast-path: точное совпадение по sku/code/barcode (только на первой странице).
             // Если запрос 100% совпал с артикулом / кодом 1С / штрихкодом — отдаём
-            // ЕДИНСТВЕННЫЙ товар и не обращаемся к Meilisearch (иначе он подмешает
-            // фаззи-соседей). Прочие сущности (категории, бренды, статьи) тоже
-            // пропускаем — пользователь искал конкретный код.
-            $exactMatch = $page === 1 ? $this->exactMatcher->match($query) : null;
-            if ($exactMatch !== null) {
-                $exactArray = [ProductQueryService::productToArray($exactMatch)];
+            // ТОЛЬКО товары с идентичным кодом (обычно один, изредка несколько) и не
+            // обращаемся к Meilisearch (иначе он подмешает фаззи-соседей). Прочие
+            // сущности (категории, бренды, статьи) тоже пропускаем — искали код.
+            $exactMatches = $page === 1 ? $this->exactMatcher->matchAll($query) : collect();
+            if ($exactMatches->isNotEmpty()) {
+                $exactArray = $exactMatches
+                    ->map(fn (Product $product) => ProductQueryService::productToArray($product))
+                    ->values()
+                    ->toArray();
                 $exactArray = ProductQueryService::enrichProductsWithDiscounts($exactArray);
                 $exactArray = ProductQueryService::convertProductsPrices($exactArray);
 
+                $count = count($exactArray);
                 $results['products'] = $exactArray;
                 $results['_products_meta'] = [
                     'current_page' => 1,
                     'last_page' => 1,
                     'per_page' => $perPage,
-                    'total' => 1,
+                    'total' => $count,
                     'from' => 1,
-                    'to' => 1,
+                    'to' => $count,
                     'no_exact_match' => false,
                 ];
 

@@ -22,15 +22,24 @@ class ExactProductMatcher
     private const MAX_LEN = 64;
 
     /**
-     * Найти товар точным совпадением по sku/code/barcode/product_barcodes.barcode.
-     *
-     * Возвращает null, если запрос не похож на код (есть пробелы, слишком короткий/длинный)
-     * или ничего не нашлось.
+     * Предохранитель на число возвращаемых точных совпадений. Реально это
+     * 1 товар (уникальный sku/штрихкод), изредка несколько (общий код 1С),
+     * но ограничиваем на случай «мусорного» кода у сотен товаров.
      */
-    public function match(string $query): ?Product
+    private const MAX_MATCHES = 50;
+
+    /**
+     * Все товары, у которых sku / code / barcode ТОЧНО равны запросу.
+     *
+     * Возвращает пустую коллекцию, если запрос не похож на код (есть пробелы,
+     * слишком короткий/длинный) или совпадений нет.
+     *
+     * @return Collection<int, Product>
+     */
+    public function matchAll(string $query): Collection
     {
         if (! $this->isCodeLikeQuery($query)) {
-            return null;
+            return collect();
         }
 
         $q = trim($query);
@@ -44,11 +53,22 @@ class ExactProductMatcher
                     ->orWhereHas('barcodes', fn ($b) => $b->where('barcode', $q));
             })
             ->with(ProductQueryService::productEagerLoads())
-            ->limit(2);
+            ->limit(self::MAX_MATCHES);
 
         ProductQueryService::withRegionStockSums($builder);
 
-        $matches = $builder->get();
+        return $builder->get();
+    }
+
+    /**
+     * Первый товар точным совпадением по sku/code/barcode/product_barcodes.barcode.
+     *
+     * Возвращает null, если запрос не похож на код или ничего не нашлось.
+     * Тонкая обёртка над matchAll() для сценариев, где нужен один товар.
+     */
+    public function match(string $query): ?Product
+    {
+        $matches = $this->matchAll($query);
 
         if ($matches->isEmpty()) {
             return null;
@@ -56,7 +76,7 @@ class ExactProductMatcher
 
         if ($matches->count() > 1) {
             Log::warning('ExactProductMatcher: несколько товаров совпадают по точному коду', [
-                'query' => $q,
+                'query' => trim($query),
                 'product_ids' => $matches->pluck('id')->all(),
             ]);
         }

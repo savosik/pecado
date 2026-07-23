@@ -618,6 +618,44 @@ class SearchControllerTest extends TestCase
         $this->assertSame(1, $occurrences, 'Точный матч не должен дублироваться в выдаче');
     }
 
+    public function test_exact_code_match_returns_all_products_sharing_code(): void
+    {
+        // Несколько товаров с ОДНИМ кодом 1С → возвращаются все, и только они.
+        $codeA = Product::factory()->create(['name' => 'Вариант A', 'code' => 'SHARED-CODE-777']);
+        $codeB = Product::factory()->create(['name' => 'Вариант B', 'code' => 'SHARED-CODE-777']);
+        $this->addStock($codeA);
+        $this->addStock($codeB);
+
+        // Посторонний товар с другим кодом — не должен попасть в выдачу.
+        Product::factory()->create(['name' => 'Посторонний', 'code' => 'OTHER-CODE-000']);
+
+        $response = $this->getJson('/search?q=SHARED-CODE-777&type=products');
+
+        $response->assertOk();
+        $meta = $response->json('productsMeta');
+        $ids = collect($response->json('results.products'))->pluck('id')->all();
+
+        $this->assertEqualsCanonicalizing([$codeA->id, $codeB->id], $ids, 'Должны вернуться оба товара с идентичным кодом');
+        $this->assertSame(2, $meta['total']);
+        $this->assertFalse($meta['no_exact_match']);
+    }
+
+    public function test_suggestions_return_all_products_sharing_barcode(): void
+    {
+        // Несколько товаров с одним штрихкодом → в подсказках все они.
+        $one = Product::factory()->create(['name' => 'Товар 1', 'barcode' => '4600000000011']);
+        $two = Product::factory()->create(['name' => 'Товар 2', 'barcode' => '4600000000011']);
+        $this->addStock($one);
+        $this->addStock($two);
+
+        $response = $this->getJson('/api/search/suggestions?q=4600000000011');
+
+        $response->assertOk();
+        $ids = collect($response->json())->pluck('id')->all();
+
+        $this->assertEqualsCanonicalizing([$one->id, $two->id], $ids);
+    }
+
     // ─── Сортировка по наличию (задача #67) ─────────────────
 
     /**
