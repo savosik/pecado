@@ -87,6 +87,10 @@ class DefectController extends WmsController
                 'user:id,name',
                 'items' => fn ($q) => $q->whereNotNull('product_defect_id'),
                 'items.product:id,name,sku',
+                // Партию грузим вместе с мягко удалёнными: если её удалили после
+                // формирования заказа, позиция всё равно должна остаться видимой
+                // (на фронте — серой/disabled), а не превратиться в пустую строку.
+                'items.productDefect' => fn ($q) => $q->withTrashed(),
                 'items.productDefect.media',
             ])
             ->latest('id')
@@ -115,6 +119,10 @@ class DefectController extends WmsController
                 'product_name' => $item->product?->name,
                 'sku' => $item->product?->sku,
                 'quantity' => $item->quantity,
+                // Партия уценки мягко удалена (или удалена совсем) — позицию
+                // показываем, но помечаем как неактивную.
+                'defect_deleted' => $item->productDefect === null
+                    || $item->productDefect->trashed(),
                 // Снапшот дефекта на момент заказа — приоритетнее текущего описания партии.
                 'defect_description' => $item->defect_description
                     ?: $item->productDefect?->defect_description,

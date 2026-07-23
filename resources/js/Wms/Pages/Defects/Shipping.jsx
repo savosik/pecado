@@ -111,6 +111,8 @@ function OrderCard({ order }) {
                             borderColor="border"
                             borderRadius="md"
                             p={3}
+                            opacity={item.defect_deleted ? 0.55 : 1}
+                            bg={item.defect_deleted ? 'bg.muted' : undefined}
                         >
                             <VStack align="stretch" gap={2}>
                                 <HStack justify="space-between" gap={2} align="start">
@@ -118,10 +120,15 @@ function OrderCard({ order }) {
                                         <Text fontSize="sm" fontWeight="medium">{item.product_name}</Text>
                                         <Text fontSize="xs" color="fg.muted">{item.sku || '—'}</Text>
                                     </Box>
-                                    <Badge colorPalette="blue" variant="subtle" flexShrink={0}>
+                                    <Badge colorPalette={item.defect_deleted ? 'gray' : 'blue'} variant="subtle" flexShrink={0}>
                                         {item.quantity} шт.
                                     </Badge>
                                 </HStack>
+                                {item.defect_deleted && (
+                                    <Badge colorPalette="gray" variant="surface" alignSelf="start">
+                                        Партия удалена
+                                    </Badge>
+                                )}
                                 <Text fontSize="sm">{item.defect_description || '—'}</Text>
                                 <ItemPhotos photos={item.photos} alt={item.defect_description} />
                             </VStack>
@@ -141,7 +148,11 @@ function OrderCard({ order }) {
                         </Table.Header>
                         <Table.Body>
                             {order.items.map((item) => (
-                                <Table.Row key={item.id}>
+                                <Table.Row
+                                    key={item.id}
+                                    opacity={item.defect_deleted ? 0.55 : 1}
+                                    bg={item.defect_deleted ? 'bg.muted' : undefined}
+                                >
                                     <Table.Cell>
                                         <ItemPhotos photos={item.photos} alt={item.defect_description} />
                                     </Table.Cell>
@@ -152,7 +163,14 @@ function OrderCard({ order }) {
                                         </VStack>
                                     </Table.Cell>
                                     <Table.Cell maxW="320px">
-                                        <Text fontSize="sm">{item.defect_description || '—'}</Text>
+                                        <VStack align="start" gap={1}>
+                                            <Text fontSize="sm">{item.defect_description || '—'}</Text>
+                                            {item.defect_deleted && (
+                                                <Badge colorPalette="gray" variant="surface">
+                                                    Партия удалена
+                                                </Badge>
+                                            )}
+                                        </VStack>
                                     </Table.Cell>
                                     <Table.Cell textAlign="end" fontWeight="semibold">
                                         {item.quantity}

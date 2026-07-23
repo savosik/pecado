@@ -455,6 +455,30 @@ class WmsDefectControllerTest extends TestCase
                 ->has('orders.data', 1)
                 ->where('orders.data.0.items.0.quantity', 2)
                 ->where('orders.data.0.items.0.defect_description', $ready->defect_description)
+                ->where('orders.data.0.items.0.defect_deleted', false)
+            );
+    }
+
+    #[Test]
+    public function shipping_shows_soft_deleted_defect_as_inactive(): void
+    {
+        // Партию мягко удаляют уже после формирования заказа — позиция должна
+        // остаться в списке к отгрузке, но с флагом defect_deleted = true
+        // (на фронте рисуется серой/disabled).
+        $defect = ProductDefect::factory()->sellable(100)->create(['quantity' => 5]);
+        $this->defectOrder($defect, 2, \App\Enums\OrderStatus::READY_FOR_SHIPMENT);
+
+        $defect->delete();
+
+        $this->actingAs($this->storekeeper())
+            ->get('/wms/defects/shipping')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Wms/Pages/Defects/Shipping')
+                ->has('orders.data', 1)
+                ->has('orders.data.0.items', 1)
+                ->where('orders.data.0.items.0.quantity', 2)
+                ->where('orders.data.0.items.0.defect_deleted', true)
             );
     }
 
