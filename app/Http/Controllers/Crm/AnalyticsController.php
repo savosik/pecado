@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\Analytics\AnalyticsContext;
 use App\Services\Analytics\AnalyticsFilters;
+use App\Services\Analytics\GapAnalysisService;
 use App\Services\Analytics\ShipmentAnalyticsService;
 use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\JsonResponse;
@@ -30,6 +31,7 @@ class AnalyticsController extends CrmController
 {
     public function __construct(
         private readonly ShipmentAnalyticsService $analytics,
+        private readonly GapAnalysisService $gap,
     ) {}
 
     /**
@@ -139,6 +141,93 @@ class AnalyticsController extends CrmController
         $filters = AnalyticsFilters::fromScopeRequest($request);
 
         return response()->json($this->analytics->abcXyz($ctx, $dimension, $filters));
+    }
+
+    /**
+     * Gap-анализ (кросс-продажи): партнёры/контрагенты без покупок бренда/
+     * категории/товара. GET /crm/analytics/gap
+     */
+    public function gap(Request $request): JsonResponse
+    {
+        $actor = $this->crmActor($request);
+        $seesAll = $this->seesAllClients($request);
+        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $filters = AnalyticsFilters::fromScopeRequest($request);
+
+        return response()->json(
+            $this->gap->analyze($ctx, $this->gapParams($request), $filters->dateFrom, $filters->dateTo)
+        );
+    }
+
+    /**
+     * XLSX-выгрузка gap-анализа по текущим условиям. GET /crm/analytics/gap/export
+     */
+    public function gapExport(Request $request, SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        $actor = $this->crmActor($request);
+        $seesAll = $this->seesAllClients($request);
+        $ctx = $this->resolveContext($request, $actor, $seesAll);
+        $filters = AnalyticsFilters::fromScopeRequest($request);
+
+        $result = $this->gap->analyze($ctx, $this->gapParams($request), $filters->dateFrom, $filters->dateTo);
+        $isPartner = ($result['subject'] ?? 'partner') === 'partner';
+
+        $headers = [$isPartner ? 'Партнёр' : 'Контрагент', 'Менеджер', 'Оборот за период, ₽', 'Поставок за период', 'Последняя покупка'];
+        $rows = [];
+        foreach ($result['rows'] as $row) {
+            $rows[] = [
+                $row['label'] ?? '',
+                $row['manager'] ?? '—',
+                round((float) ($row['amount'] ?? 0), 2),
+                (int) ($row['shipments_count'] ?? 0),
+                $row['last_purchase_at'] ?? '—',
+            ];
+        }
+
+        return $exporter->stream('crm-gap-'.now()->format('Y-m-d-His'), $headers, $rows, 'Возможности');
+    }
+
+    /**
+     * Валидирует и нормализует параметры gap-анализа из запроса.
+     *
+     * @return array{
+     *   subject: string, exclude_dimension: string, exclude_value: int,
+     *   exclude_window: string, exclude_months: int,
+     *   include_dimension: ?string, include_value: ?int, include_dormant: bool
+     * }
+     */
+    private function gapParams(Request $request): array
+    {
+        $dimensions = ['brand', 'category', 'product'];
+
+        $subject = (string) $request->input('subject', 'partner');
+        if (! in_array($subject, ['partner', 'contractor'], true)) {
+            $subject = 'partner';
+        }
+
+        $excludeDimension = (string) $request->input('exclude_dimension', 'brand');
+        if (! in_array($excludeDimension, $dimensions, true)) {
+            $excludeDimension = 'brand';
+        }
+
+        $excludeWindow = (string) $request->input('exclude_window', 'all');
+        if (! in_array($excludeWindow, ['all', 'months', 'period'], true)) {
+            $excludeWindow = 'all';
+        }
+
+        $includeDimension = $request->input('include_dimension');
+        $includeDimension = in_array($includeDimension, $dimensions, true) ? $includeDimension : null;
+
+        return [
+            'subject' => $subject,
+            'exclude_dimension' => $excludeDimension,
+            'exclude_value' => max(0, (int) $request->input('exclude_value', 0)),
+            'exclude_window' => $excludeWindow,
+            'exclude_months' => max(1, min(60, (int) $request->input('exclude_months', 6))),
+            'include_dimension' => $includeDimension,
+            'include_value' => $includeDimension !== null ? max(0, (int) $request->input('include_value', 0)) : null,
+            'include_dormant' => filter_var($request->input('include_dormant', false), FILTER_VALIDATE_BOOLEAN),
+        ];
     }
 
     /**

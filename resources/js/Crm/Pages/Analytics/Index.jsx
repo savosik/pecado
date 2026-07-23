@@ -3,7 +3,7 @@ import { Head, usePage } from '@inertiajs/react';
 import {
     Box, Flex, VStack, Text, Spinner, HStack, IconButton, Accordion, Span, Badge, Tabs,
 } from '@chakra-ui/react';
-import { LuChartLine, LuLightbulb, LuLayoutGrid, LuFilter, LuChevronRight } from 'react-icons/lu';
+import { LuChartLine, LuLightbulb, LuLayoutGrid, LuFilter, LuChevronRight, LuTarget } from 'react-icons/lu';
 import axios from 'axios';
 import CrmLayout from '@/Crm/Layouts/CrmLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
@@ -14,6 +14,7 @@ import KpiGrid from './components/KpiGrid';
 import TrendChart from './components/TrendChart';
 import FiltersBar from './components/FiltersBar';
 import PresetsBar from './components/PresetsBar';
+import GapPanel from './components/GapPanel';
 
 const DEFAULT_FILTERS = {
     date_from: '',
@@ -395,6 +396,9 @@ export default function CrmAnalyticsIndex() {
                         <Tabs.Trigger value="abc-xyz">
                             <LuLayoutGrid /> ABC/XYZ
                         </Tabs.Trigger>
+                        <Tabs.Trigger value="gap">
+                            <LuTarget /> Возможности
+                        </Tabs.Trigger>
                     </Tabs.List>
 
                     <Tabs.Content value="figures" px={0} pt={4}>
@@ -440,6 +444,14 @@ export default function CrmAnalyticsIndex() {
 
                     <Tabs.Content value="abc-xyz" px={0} pt={4}>
                         <AbcXyzPanel filters={filters} onApplyFilter={applyFilter} endpoint="/crm/analytics/abc-xyz" />
+                    </Tabs.Content>
+
+                    <Tabs.Content value="gap" px={0} pt={4}>
+                        <GapPanel
+                            filterOptions={filterOptions}
+                            seesAll={seesAll}
+                            period={{ date_from: filters.date_from, date_to: filters.date_to }}
+                        />
                     </Tabs.Content>
                 </Tabs.Root>
 
