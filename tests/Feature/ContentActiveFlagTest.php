@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Page;
+use App\Models\Product;
 use App\Models\ProductSelection;
 use App\Models\Promotion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -56,5 +57,19 @@ class ContentActiveFlagTest extends TestCase
         ProductSelection::factory()->create(['is_active' => false]);
 
         $this->assertSame(1, ProductSelection::query()->active()->count());
+    }
+
+    public function test_product_card_hides_inactive_promotions(): void
+    {
+        $product = Product::factory()->create();
+        $active = Promotion::factory()->create(['name' => 'Живая акция', 'is_active' => true]);
+        $inactive = Promotion::factory()->create(['name' => 'Отключённая акция', 'is_active' => false]);
+        $product->promotions()->attach([$active->id, $inactive->id]);
+
+        $response = $this->getJson(route('api.products.show', $product->slug))->assertOk();
+
+        $names = collect($response->json('promotions'))->pluck('name');
+        $this->assertContains('Живая акция', $names);
+        $this->assertNotContains('Отключённая акция', $names);
     }
 }

@@ -803,6 +803,7 @@ class ProductController extends Controller
         // Акции, в которых участвует товар. Фильтруем по региону пользователя
         // (как в PromotionController) — чтобы не показывать чужие региональные акции.
         $promotions = $product->promotions()
+            ->active()
             ->forRegion(auth()->user()?->region_id)
             ->orderByDesc('promotions.created_at')
             ->get()
