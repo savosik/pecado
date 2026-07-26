@@ -11,9 +11,15 @@ const formatPrice = (value, currency) => {
     return `${new Intl.NumberFormat('ru-RU').format(value)} ${symbol}`;
 };
 
+/** Сколько превью показываем; на последнем — «+N», если фото больше. */
+const MAX_VISIBLE_PHOTOS = 4;
+const THUMB_SIZE = '56px';
+
 /**
- * Фото партии в пропорции 1:1.5 (как товарные превью). Клик открывает то же
- * полноэкранное увеличение, что и основное фото товара (ImageLightbox).
+ * Компактные одинаковые превью дефекта (квадрат), чтобы много фото не
+ * распухали в карточке. Если фотографий больше MAX_VISIBLE_PHOTOS, последняя
+ * плитка показывает «+N». Клик по любой открывает полный набор в галерее
+ * (ImageLightbox) — там пользователь и рассматривает дефекты крупно.
  */
 function DefectPhotos({ photos, alt }) {
     const [lightboxIndex, setLightboxIndex] = useState(null);
@@ -21,8 +27,7 @@ function DefectPhotos({ photos, alt }) {
     if (!photos || photos.length === 0) {
         return (
             <Box
-                w="90px"
-                aspectRatio={2 / 3}
+                boxSize={THUMB_SIZE}
                 borderRadius="md"
                 borderWidth="1px"
                 borderColor="border"
@@ -32,21 +37,25 @@ function DefectPhotos({ photos, alt }) {
                 color="fg.muted"
                 flexShrink={0}
             >
-                <LuImageOff size={20} />
+                <LuImageOff size={18} />
             </Box>
         );
     }
 
+    const hasOverflow = photos.length > MAX_VISIBLE_PHOTOS;
+    // При переполнении оставляем место под плитку «+N».
+    const visible = hasOverflow ? photos.slice(0, MAX_VISIBLE_PHOTOS - 1) : photos;
+    const overflowCount = photos.length - visible.length;
+
     return (
         <>
             <HStack gap={2} flexWrap="wrap">
-                {photos.map((photo, i) => (
+                {visible.map((photo, i) => (
                     <Image
                         key={photo.id}
                         src={photo.thumb_url}
                         alt={alt}
-                        w="90px"
-                        aspectRatio={2 / 3}
+                        boxSize={THUMB_SIZE}
                         objectFit="cover"
                         borderRadius="md"
                         cursor="zoom-in"
@@ -55,6 +64,39 @@ function DefectPhotos({ photos, alt }) {
                         onClick={() => setLightboxIndex(i)}
                     />
                 ))}
+
+                {hasOverflow && (
+                    <Box
+                        position="relative"
+                        boxSize={THUMB_SIZE}
+                        borderRadius="md"
+                        borderWidth="1px"
+                        borderColor="border"
+                        overflow="hidden"
+                        cursor="zoom-in"
+                        flexShrink={0}
+                        onClick={() => setLightboxIndex(visible.length)}
+                    >
+                        <Image
+                            src={photos[visible.length].thumb_url}
+                            alt={alt}
+                            boxSize="full"
+                            objectFit="cover"
+                        />
+                        <Box
+                            position="absolute"
+                            inset="0"
+                            bg="blackAlpha.600"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                        >
+                            <Text color="white" fontWeight="bold" fontSize="sm">
+                                +{overflowCount}
+                            </Text>
+                        </Box>
+                    </Box>
+                )}
             </HStack>
 
             <ImageLightbox
