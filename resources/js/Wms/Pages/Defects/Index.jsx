@@ -97,7 +97,7 @@ function DefectMobileCard({ defect, can, onDelete }) {
                             {defect.product.name}
                         </Text>
                         <Text fontSize="xs" color="fg.muted">
-                            {defect.product.sku || '—'}
+                            Партия #{defect.id} · {defect.product.sku || '—'}
                         </Text>
                     </Box>
                     <DefectStatusBadge defect={defect} />
@@ -246,6 +246,7 @@ export default function DefectsIndex() {
                                     <Table.Root size="sm" variant="line">
                                         <Table.Header>
                                             <Table.Row>
+                                                <Table.ColumnHeader w="72px">Партия</Table.ColumnHeader>
                                                 <Table.ColumnHeader>Товар</Table.ColumnHeader>
                                                 <Table.ColumnHeader>Дефект</Table.ColumnHeader>
                                                 <Table.ColumnHeader textAlign="end">Кол-во</Table.ColumnHeader>
@@ -258,6 +259,11 @@ export default function DefectsIndex() {
                                         <Table.Body>
                                             {defects.data.map((defect) => (
                                                 <Table.Row key={defect.id}>
+                                                    <Table.Cell>
+                                                        <Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">
+                                                            #{defect.id}
+                                                        </Text>
+                                                    </Table.Cell>
                                                     <Table.Cell>
                                                         <HStack gap={3}>
                                                             <DefectPhoto defect={defect} />

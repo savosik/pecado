@@ -118,7 +118,9 @@ function OrderCard({ order }) {
                                 <HStack justify="space-between" gap={2} align="start">
                                     <Box minW={0}>
                                         <Text fontSize="sm" fontWeight="medium">{item.product_name}</Text>
-                                        <Text fontSize="xs" color="fg.muted">{item.sku || '—'}</Text>
+                                        <Text fontSize="xs" color="fg.muted">
+                                            {item.product_defect_id ? `Партия #${item.product_defect_id} · ` : ''}{item.sku || '—'}
+                                        </Text>
                                     </Box>
                                     <Badge colorPalette={item.defect_deleted ? 'gray' : 'blue'} variant="subtle" flexShrink={0}>
                                         {item.quantity} шт.
@@ -159,7 +161,9 @@ function OrderCard({ order }) {
                                     <Table.Cell>
                                         <VStack align="start" gap={0}>
                                             <Text fontSize="sm">{item.product_name}</Text>
-                                            <Text fontSize="xs" color="fg.muted">{item.sku || '—'}</Text>
+                                            <Text fontSize="xs" color="fg.muted">
+                                                {item.product_defect_id ? `Партия #${item.product_defect_id} · ` : ''}{item.sku || '—'}
+                                            </Text>
                                         </VStack>
                                     </Table.Cell>
                                     <Table.Cell maxW="320px">

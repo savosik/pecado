@@ -4,7 +4,6 @@ import {
     Box,
     Card,
     Stack,
-    Input,
     NativeSelect,
     Text,
     VStack,
@@ -17,6 +16,7 @@ import { Field } from '@/components/ui/field';
 import { Button } from '@/components/ui/button';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
 import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
+import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
 
 export default function DefectsCreate() {
     const { warehouses, defectTypes = [] } = usePage().props;
@@ -130,13 +130,11 @@ export default function DefectsCreate() {
                                     errorText={errors.quantity}
                                     helperText="Столько единиц с этим же дефектом"
                                 >
-                                    <Input
-                                        type="number"
+                                    <QuantityStepper
+                                        value={data.quantity}
+                                        onChange={(next) => setData('quantity', next)}
                                         min={1}
                                         max={10000}
-                                        value={data.quantity}
-                                        onChange={(event) => setData('quantity', event.target.value)}
-                                        maxW="200px"
                                     />
                                 </Field>
 

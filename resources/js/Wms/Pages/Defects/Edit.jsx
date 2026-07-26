@@ -4,7 +4,6 @@ import {
     Box,
     Card,
     Stack,
-    Input,
     SimpleGrid,
     Text,
     VStack,
@@ -20,6 +19,7 @@ import { usePermission } from '@/Admin/hooks/usePermission';
 import { useFlashToast } from '@/hooks/useFlashToast';
 import { DefectStatusBadge } from '@/Wms/Components/DefectStatusBadge';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
+import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
 
 const formatPrice = (value) =>
     value === null ? 'не назначена' : `${new Intl.NumberFormat('ru-RU').format(value)} ₽`;
@@ -67,7 +67,7 @@ export default function DefectsEdit() {
             <Head title={`Партия некондиции — ${defect.product.name}`} />
             <PageHeader
                 title={defect.product.name}
-                description={`Артикул ${defect.product.sku || '—'} · склад «${defect.warehouse.name}»`}
+                description={`Партия #${defect.id} · Артикул ${defect.product.sku || '—'} · склад «${defect.warehouse.name}»`}
             />
 
             <VStack gap={4} align="stretch" maxW="4xl">
@@ -136,13 +136,11 @@ export default function DefectsEdit() {
                                                     : 'Товар и склад изменить нельзя: партию могли уже заказать'
                                             }
                                         >
-                                            <Input
-                                                type="number"
+                                            <QuantityStepper
+                                                value={data.quantity}
+                                                onChange={(next) => setData('quantity', next)}
                                                 min={Math.max(1, reserved)}
                                                 max={10000}
-                                                value={data.quantity}
-                                                onChange={(event) => setData('quantity', event.target.value)}
-                                                maxW="200px"
                                             />
                                         </Field>
                                     </VStack>

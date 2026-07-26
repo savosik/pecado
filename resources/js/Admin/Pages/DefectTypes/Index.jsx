@@ -84,6 +84,7 @@ export default function DefectTypesIndex() {
                             <Table.Root size="sm" variant="line">
                                 <Table.Header>
                                     <Table.Row>
+                                        <Table.ColumnHeader w="64px">ID</Table.ColumnHeader>
                                         <Table.ColumnHeader>Дефект</Table.ColumnHeader>
                                         <Table.ColumnHeader w="120px" textAlign="center">Активен</Table.ColumnHeader>
                                         <Table.ColumnHeader w="60px" />
@@ -92,6 +93,11 @@ export default function DefectTypesIndex() {
                                 <Table.Body>
                                     {types.map((type) => (
                                         <Table.Row key={type.id}>
+                                            <Table.Cell>
+                                                <Text fontSize="sm" color="fg.muted" fontVariantNumeric="tabular-nums">
+                                                    {type.id}
+                                                </Text>
+                                            </Table.Cell>
                                             <Table.Cell>
                                                 <Text fontSize="sm" color={type.is_active ? undefined : 'fg.muted'}>
                                                     {type.name}

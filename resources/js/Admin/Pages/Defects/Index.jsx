@@ -247,7 +247,7 @@ export default function DefectsIndex() {
                                                                     {defect.product.name}
                                                                 </Text>
                                                                 <Text fontSize="xs" color="fg.muted">
-                                                                    {defect.product.sku || '—'} · заведено{' '}
+                                                                    Партия #{defect.id} · {defect.product.sku || '—'} · заведено{' '}
                                                                     {defect.created_by_name || '—'}
                                                                 </Text>
                                                             </VStack>

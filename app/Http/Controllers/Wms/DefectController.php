@@ -6,15 +6,18 @@ use App\Contracts\Defect\DefectStockServiceInterface;
 use App\Enums\DefectClosedReason;
 use App\Http\Requests\Wms\StoreProductDefectRequest;
 use App\Http\Requests\Wms\UpdateProductDefectRequest;
+use App\Models\DefectType;
 use App\Models\Product;
 use App\Models\ProductDefect;
 use App\Models\Warehouse;
+use App\Services\SimpleXlsxExporter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
  * Учёт некондиции кладовщиком.
@@ -116,6 +119,7 @@ class DefectController extends WmsController
             'warehouse_comment' => $order->warehouse_comment,
             'items' => $order->items->map(fn (\App\Models\OrderItem $item) => [
                 'id' => $item->id,
+                'product_defect_id' => $item->product_defect_id,
                 'product_name' => $item->product?->name,
                 'sku' => $item->product?->sku,
                 'quantity' => $item->quantity,
@@ -139,6 +143,59 @@ class DefectController extends WmsController
         ];
     }
 
+    /**
+     * Справочник кодов дефектов (read-only) для комплектовщика.
+     *
+     * В печатном документе 1С дефекты перечислены кодами (id типа дефекта) —
+     * эта таблица служит легендой: код → формулировка. Выгружается в Excel,
+     * чтобы комплектовщик держал её под рукой при отборе некондиции.
+     */
+    public function codes(): Response
+    {
+        return Inertia::render('Wms/Pages/Defects/Codes', [
+            'codes' => $this->defectCodeRows(),
+        ]);
+    }
+
+    /**
+     * Выгрузка справочника кодов дефектов в XLSX.
+     */
+    public function codesExport(SimpleXlsxExporter $exporter): StreamedResponse
+    {
+        $rows = collect($this->defectCodeRows())->map(fn (array $row) => [
+            $row['id'],
+            $row['name'],
+            $row['is_active'] ? 'да' : 'нет',
+        ]);
+
+        return $exporter->stream(
+            'defect-codes-'.now()->format('Y-m-d'),
+            ['Код', 'Дефект', 'Активен'],
+            $rows,
+            'Коды дефектов',
+        );
+    }
+
+    /**
+     * Все типы дефектов легендой: код (id) → формулировка. Отсортированы по
+     * коду — чтобы «[5]» из документа было легко найти. Неактивные включены:
+     * старые партии могут ссылаться на них, документ всё равно нужно расшифровать.
+     *
+     * @return array<int, array{id: int, name: string, is_active: bool}>
+     */
+    private function defectCodeRows(): array
+    {
+        return DefectType::query()
+            ->orderBy('id')
+            ->get(['id', 'name', 'is_active'])
+            ->map(fn (DefectType $type) => [
+                'id' => $type->id,
+                'name' => $type->name,
+                'is_active' => (bool) $type->is_active,
+            ])
+            ->all();
+    }
+
     public function create(): Response
     {
         return Inertia::render('Wms/Pages/Defects/Create', [
@@ -150,14 +207,21 @@ class DefectController extends WmsController
     /**
      * Активные типы дефектов для чипов быстрого выбора.
      *
-     * @return array<int, string>
+     * Отдаём id вместе с именем: id типа дефекта показываем на чипах для сверки
+     * с печатным документом 1С (там дефекты перечислены через id).
+     *
+     * @return array<int, array{id: int, name: string}>
      */
     private function defectTypeChips(): array
     {
         return \App\Models\DefectType::query()
             ->active()
             ->ordered()
-            ->pluck('name')
+            ->get(['id', 'name'])
+            ->map(fn (\App\Models\DefectType $type) => [
+                'id' => $type->id,
+                'name' => $type->name,
+            ])
             ->all();
     }
 

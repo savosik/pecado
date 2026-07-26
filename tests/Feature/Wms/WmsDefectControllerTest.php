@@ -91,6 +91,52 @@ class WmsDefectControllerTest extends TestCase
     }
 
     #[Test]
+    public function storekeeper_sees_defect_codes_legend(): void
+    {
+        // Уникальные имена: базовый справочник дефектов уже засеян.
+        $active = \App\Models\DefectType::create(['name' => 'Зедефект-Альфа', 'is_active' => true, 'sort_order' => 100]);
+        \App\Models\DefectType::create(['name' => 'Зедефект-Бета', 'is_active' => false, 'sort_order' => 101]);
+        $total = \App\Models\DefectType::count();
+
+        $this->actingAs($this->storekeeper())
+            ->get('/wms/defects/codes')
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Wms/Pages/Defects/Codes')
+                ->has('codes', $total)
+                // Отсортировано по коду (id) — мои новые записи последние.
+                ->where('codes.'.($total - 2).'.id', $active->id)
+                ->where('codes.'.($total - 2).'.name', 'Зедефект-Альфа')
+                ->where('codes.'.($total - 2).'.is_active', true)
+                // Неактивные типы тоже в легенде.
+                ->where('codes.'.($total - 1).'.is_active', false)
+            );
+    }
+
+    #[Test]
+    public function defect_codes_export_returns_xlsx(): void
+    {
+        \App\Models\DefectType::create(['name' => 'Зедефект-Экспорт', 'is_active' => true, 'sort_order' => 100]);
+
+        $response = $this->actingAs($this->storekeeper())->get('/wms/defects/codes/export');
+
+        $response->assertOk();
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            $response->headers->get('Content-Type')
+        );
+        $this->assertStringContainsString('.xlsx', $response->headers->get('Content-Disposition'));
+    }
+
+    #[Test]
+    public function client_without_wms_permissions_cannot_open_defect_codes(): void
+    {
+        $this->actingAs(User::factory()->create())
+            ->get('/wms/defects/codes')
+            ->assertRedirect('/');
+    }
+
+    #[Test]
     public function defect_permissions_do_not_open_admin_panel(): void
     {
         // Префикс wms- обязан оставаться панельным, иначе кладовщик попадёт в /admin.

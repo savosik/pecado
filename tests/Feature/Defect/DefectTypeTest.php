@@ -102,7 +102,7 @@ class DefectTypeTest extends TestCase
     #[Test]
     public function wms_create_form_exposes_active_types_only(): void
     {
-        DefectType::create(['name' => 'Активный', 'is_active' => true, 'sort_order' => 1]);
+        $active = DefectType::create(['name' => 'Активный', 'is_active' => true, 'sort_order' => 1]);
         DefectType::create(['name' => 'Скрытый', 'is_active' => false, 'sort_order' => 2]);
         Warehouse::factory()->defect()->create();
 
@@ -110,19 +110,22 @@ class DefectTypeTest extends TestCase
             ->get('/wms/defects/create')
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Wms/Pages/Defects/Create')
-                ->where('defectTypes', ['Активный'])
+                ->where('defectTypes', [['id' => $active->id, 'name' => 'Активный']])
             );
     }
 
     #[Test]
     public function types_are_ordered_by_sort_order(): void
     {
-        DefectType::create(['name' => 'Второй', 'is_active' => true, 'sort_order' => 2]);
-        DefectType::create(['name' => 'Первый', 'is_active' => true, 'sort_order' => 1]);
+        $second = DefectType::create(['name' => 'Второй', 'is_active' => true, 'sort_order' => 2]);
+        $first = DefectType::create(['name' => 'Первый', 'is_active' => true, 'sort_order' => 1]);
         Warehouse::factory()->defect()->create();
 
         $this->actingAs($this->storekeeper())
             ->get('/wms/defects/create')
-            ->assertInertia(fn (AssertableInertia $page) => $page->where('defectTypes', ['Первый', 'Второй']));
+            ->assertInertia(fn (AssertableInertia $page) => $page->where('defectTypes', [
+                ['id' => $first->id, 'name' => 'Первый'],
+                ['id' => $second->id, 'name' => 'Второй'],
+            ]));
     }
 }

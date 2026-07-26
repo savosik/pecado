@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Head, usePage } from '@inertiajs/react';
 import {
     Badge,
@@ -12,7 +12,7 @@ import {
     Text,
     VStack,
 } from '@chakra-ui/react';
-import { LuCheck, LuImageOff, LuMinus, LuPlus, LuScanBarcode, LuX } from 'react-icons/lu';
+import { LuCheck, LuImageOff, LuScanBarcode, LuX } from 'react-icons/lu';
 import WmsLayout from '@/Wms/Layouts/WmsLayout';
 import { PageHeader } from '@/Admin/Components/PageHeader';
 import { MultipleImageUploader } from '@/Admin/Components/MultipleImageUploader';
@@ -21,6 +21,7 @@ import { toaster } from '@/components/ui/toaster';
 import BarcodeCameraView from '@/components/common/BarcodeCameraView';
 import { DefectDescriptionField } from '@/Wms/Components/DefectDescriptionField';
 import { DefectStockWarning } from '@/Wms/Components/DefectStockWarning';
+import { QuantityStepper } from '@/Wms/Components/QuantityStepper';
 
 const emptyDraft = () => ({ product: null, quantity: 1, description: '', photos: [] });
 
@@ -40,6 +41,32 @@ export default function DefectsQuick() {
     // «новый товар / +1 / не терять начатое» зависит от актуального состояния.
     const draftRef = useRef(draft);
     draftRef.current = draft;
+
+    // Поле ручного ввода держим в фокусе: проводной/Bluetooth-сканер печатает
+    // как клавиатура в активное поле и жмёт Enter — так серия сканов идёт без
+    // ручного тапа. Возвращаем фокус, только если он не в другом поле ввода,
+    // чтобы не мешать печатать дефект или количество.
+    const barcodeInputRef = useRef(null);
+
+    const focusBarcode = useCallback(() => {
+        const active = document.activeElement;
+        const tag = active?.tagName;
+        const busyElsewhere =
+            active &&
+            active !== barcodeInputRef.current &&
+            (tag === 'INPUT' || tag === 'TEXTAREA' || active.isContentEditable);
+
+        if (busyElsewhere) {
+            return;
+        }
+
+        barcodeInputRef.current?.focus();
+    }, []);
+
+    // Фокус на старте и после каждого скана/сохранения — покрывает поток сканов.
+    useEffect(() => {
+        focusBarcode();
+    }, [focusBarcode]);
 
     const canSave =
         !!draft.product &&
@@ -90,8 +117,10 @@ export default function DefectsQuick() {
             toaster.create({ description: 'Не удалось определить товар.', type: 'error' });
         } finally {
             setResolving(false);
+            // Готовы к следующему скану сразу.
+            focusBarcode();
         }
-    }, [resolving]);
+    }, [resolving, focusBarcode]);
 
     const submitManual = (e) => {
         e.preventDefault();
@@ -130,6 +159,8 @@ export default function DefectsQuick() {
             toaster.create({ description: first || 'Не удалось сохранить партию.', type: 'error' });
         } finally {
             setSaving(false);
+            // Черновик сброшен — снова готовы принимать сканы.
+            focusBarcode();
         }
     };
 
@@ -195,10 +226,14 @@ export default function DefectsQuick() {
                             <form onSubmit={submitManual}>
                                 <HStack gap={2}>
                                     <Input
+                                        ref={barcodeInputRef}
                                         value={manualBarcode}
                                         onChange={(e) => setManualBarcode(e.target.value)}
-                                        placeholder="Штрихкод вручную"
+                                        placeholder="Штрихкод: скан или ввод"
                                         inputMode="numeric"
+                                        autoFocus
+                                        // Не даём полю «залипнуть» пустым фокусом при
+                                        // потере — фокус вернём осознанно после действий.
                                         h="44px"
                                     />
                                     <Button
@@ -244,30 +279,11 @@ export default function DefectsQuick() {
 
                                     <HStack gap={3} justify="space-between">
                                         <Text fontSize="sm" color="fg.muted">Количество</Text>
-                                        <HStack gap={2}>
-                                            {/* 48px — минимальная кнопка, в которую уверенно
-                                                попадают пальцем на складе. */}
-                                            <IconButton
-                                                aria-label="минус"
-                                                variant="outline"
-                                                boxSize="48px"
-                                                onClick={() => setDraft((d) => ({ ...d, quantity: Math.max(1, d.quantity - 1) }))}
-                                                disabled={draft.quantity <= 1}
-                                            >
-                                                <LuMinus />
-                                            </IconButton>
-                                            <Text minW="44px" textAlign="center" fontWeight="bold" fontSize="xl">
-                                                {draft.quantity}
-                                            </Text>
-                                            <IconButton
-                                                aria-label="плюс"
-                                                variant="outline"
-                                                boxSize="48px"
-                                                onClick={() => setDraft((d) => ({ ...d, quantity: d.quantity + 1 }))}
-                                            >
-                                                <LuPlus />
-                                            </IconButton>
-                                        </HStack>
+                                        <QuantityStepper
+                                            value={draft.quantity}
+                                            onChange={(next) => setDraft((d) => ({ ...d, quantity: next }))}
+                                            min={1}
+                                        />
                                     </HStack>
 
                                     <DefectStockWarning

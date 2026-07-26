@@ -3,6 +3,7 @@ import {
     LuPackageX,
     LuTruck,
     LuScanBarcode,
+    LuListOrdered,
 } from "react-icons/lu";
 
 export interface MenuItem {
@@ -33,6 +34,7 @@ export const menuConfig: MenuGroup[] = [
             { label: "Быстрый приём", icon: LuScanBarcode, path: "/wms/defects/quick", permission: "wms-defects.create" },
             { label: "Партии брака", icon: LuPackageX, path: "/wms/defects", permission: "wms-defects.view" },
             { label: "К отгрузке", icon: LuTruck, path: "/wms/defects/shipping", permission: "wms-defects.view" },
+            { label: "Коды дефектов", icon: LuListOrdered, path: "/wms/defects/codes", permission: "wms-defects.view" },
         ],
     },
     // Разделы приёмки, отбора и инвентаризации добавятся сюда позже.

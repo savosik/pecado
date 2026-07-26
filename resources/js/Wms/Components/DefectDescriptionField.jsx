@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
  *
  * @param {string} value - текущий текст описания
  * @param {Function} onChange - (string) новый текст
- * @param {string[]} types - активные типы дефектов из справочника
+ * @param {Array<{id: number, name: string}>} types - активные типы дефектов из справочника
  * @param {string} error - текст ошибки валидации
  */
 export function DefectDescriptionField({ value = '', onChange, types = [], error = null }) {
@@ -30,15 +30,17 @@ export function DefectDescriptionField({ value = '', onChange, types = [], error
         <Box>
             {types.length > 0 && (
                 <Wrap gap={2} mb={2}>
-                    {types.map((name) => (
+                    {types.map((type) => (
                         <Button
-                            key={name}
+                            key={type.id}
                             size="xs"
                             variant="outline"
                             type="button"
-                            onClick={() => addChip(name)}
+                            onClick={() => addChip(type.name)}
                         >
-                            <LuPlus /> {name}
+                            <LuPlus />
+                            <Text as="span" color="fg.muted" fontVariantNumeric="tabular-nums">#{type.id}</Text>
+                            {type.name}
                         </Button>
                     ))}
                 </Wrap>
