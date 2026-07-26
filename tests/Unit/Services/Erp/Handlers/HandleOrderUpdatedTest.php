@@ -322,6 +322,59 @@ class HandleOrderUpdatedTest extends TestCase
         $this->assertEquals(3, $order->fresh()->items->first()->quantity);
     }
 
+    /**
+     * Регрессия: заказ уценки, оформленный на сайте по конкретной партии брака,
+     * при возврате из 1С (order.updated) не должен терять product_defect_id и
+     * defect_description — 1С их не присылает, но сайт обязан сохранить.
+     */
+    #[Test]
+    public function it_preserves_defect_link_on_item_resync(): void
+    {
+        $order = Order::factory()->create(['uuid' => 'test-uuid-defect', 'type' => 'defect']);
+        $product = Product::factory()->create(['external_id' => 'prod-uuid-defect']);
+        $defect = \App\Models\ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'defect_description' => 'Порвана упаковка',
+        ]);
+
+        OrderItem::factory()->create([
+            'order_id' => $order->id,
+            'product_id' => $product->id,
+            'name' => $product->name,
+            'quantity' => 1,
+            'price' => 100,
+            'base_price' => 100,
+            'final_price' => 100,
+            'discount_percent' => 0,
+            'subtotal' => 100,
+            'product_defect_id' => $defect->id,
+            'defect_description' => 'Порвана упаковка',
+        ]);
+
+        Log::shouldReceive('info')->zeroOrMoreTimes();
+        Log::shouldReceive('warning')->zeroOrMoreTimes();
+
+        // 1С возвращает заказ со статусом и позициями, но без складских полей.
+        $this->handler->handle([
+            'uuid' => 'test-uuid-defect',
+            'status' => 'ready_for_shipment',
+            'items' => [
+                [
+                    'product_uuid' => 'prod-uuid-defect',
+                    'quantity' => 1,
+                    'base_price' => 100,
+                    'final_price' => 100,
+                    'discount_percent' => 0,
+                ],
+            ],
+        ]);
+
+        $item = $order->fresh()->items->first();
+        $this->assertNotNull($item);
+        $this->assertSame($defect->id, $item->product_defect_id, 'Привязка к партии брака должна сохраниться');
+        $this->assertSame('Порвана упаковка', $item->defect_description, 'Снапшот описания дефекта должен сохраниться');
+    }
+
     #[Test]
     public function it_logs_item_added(): void
     {

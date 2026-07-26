@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\Erp\Support\OrderStatusMapper;
+use App\Services\Erp\Support\PreservesDefectItemLinks;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Log;
  */
 class HandleOrderCreated
 {
+    use PreservesDefectItemLinks;
+
     public function handle(array $payload): void
     {
         $uuid = $payload['uuid'] ?? null;
@@ -201,6 +204,11 @@ class HandleOrderCreated
             });
 
             // --- Позиции заказа (полная замена при upsert) ---
+            // Складские привязки уценки (product_defect_id, defect_description)
+            // держит сайт — 1С их не присылает. Снимаем до удаления, чтобы
+            // перенести на пересозданные позиции и не потерять партию брака.
+            $defectLinks = $existingOrder ? $this->captureDefectLinks($order) : [];
+
             if ($existingOrder) {
                 $order->items()->delete();
             }
@@ -224,6 +232,8 @@ class HandleOrderCreated
                     ? $product->name
                     : ($item['name'] ?? $productUuid ?? 'Неизвестный товар');
 
+                $link = $this->pullDefectLink($defectLinks, $product?->id);
+
                 $order->items()->create([
                     'product_id' => $product?->id,
                     'name' => $name,
@@ -233,6 +243,8 @@ class HandleOrderCreated
                     'discount_percent' => $discountPercent,
                     'final_price' => $finalPrice,
                     'subtotal' => $subtotal,
+                    'product_defect_id' => $link['product_defect_id'],
+                    'defect_description' => $link['defect_description'],
                 ]);
 
                 $totalAmount += $subtotal;

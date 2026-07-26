@@ -175,6 +175,62 @@ class HandleOrderCreatedTest extends TestCase
         $this->assertEquals(0, Order::count());
     }
 
+    /**
+     * Регрессия: при upsert заказа уценки складская привязка позиции
+     * (product_defect_id, defect_description) не должна теряться — 1С её не
+     * присылает, но сайт обязан перенести со старой позиции на новую.
+     */
+    #[Test]
+    public function it_preserves_defect_link_on_upsert(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['external_id' => 'prod-uuid-defect']);
+        $defect = \App\Models\ProductDefect::factory()->create([
+            'product_id' => $product->id,
+            'defect_description' => 'Вскрыта упаковка',
+        ]);
+
+        Order::withoutEvents(function () use ($user, $product, $defect) {
+            $order = Order::create([
+                'uuid' => 'defect-order-upsert',
+                'number' => 'ORD-DEFECT',
+                'user_id' => $user->id,
+                'type' => 'defect',
+                'status' => 'ready_for_shipment',
+                'total_amount' => 100,
+            ]);
+
+            $order->items()->create([
+                'product_id' => $product->id,
+                'name' => $product->name,
+                'quantity' => 1,
+                'price' => 100,
+                'base_price' => 100,
+                'final_price' => 100,
+                'discount_percent' => 0,
+                'subtotal' => 100,
+                'product_defect_id' => $defect->id,
+                'defect_description' => 'Вскрыта упаковка',
+            ]);
+        });
+
+        // 1С возвращает заказ (тот же UUID), позиции без складских полей.
+        $this->handler->handle([
+            'event' => 'order.created',
+            'uuid' => 'defect-order-upsert',
+            'number' => '29УТ-011016',
+            'status' => 'ready_for_shipment',
+            'type' => 'defect',
+            'items' => [
+                ['product_uuid' => 'prod-uuid-defect', 'quantity' => 1, 'base_price' => 100, 'final_price' => 100, 'discount_percent' => 0],
+            ],
+        ]);
+
+        $item = Order::where('uuid', 'defect-order-upsert')->first()->items->first();
+        $this->assertSame($defect->id, $item->product_defect_id, 'Привязка к партии брака должна сохраниться');
+        $this->assertSame('Вскрыта упаковка', $item->defect_description, 'Снапшот описания дефекта должен сохраниться');
+    }
+
     #[Test]
     public function upserts_existing_order_on_duplicate_uuid(): void
     {

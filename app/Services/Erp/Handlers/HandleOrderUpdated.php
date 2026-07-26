@@ -7,6 +7,7 @@ use App\Models\Product;
 use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Support\OrderStatusMapper;
+use App\Services\Erp\Support\PreservesDefectItemLinks;
 use App\Services\Order\OrderChangeLogger;
 use Illuminate\Support\Facades\Log;
 
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\Log;
  */
 class HandleOrderUpdated
 {
+    use PreservesDefectItemLinks;
+
     public function __construct(
         private readonly OrderChangeLogger $changeLogger,
         private readonly HandleOrderCreated $orderCreated,
@@ -235,9 +238,16 @@ class HandleOrderUpdated
 
         $parsedItems = $this->parseNewItems($newItems);
 
+        // Складские привязки уценки (product_defect_id, defect_description)
+        // держит сайт — 1С их не присылает. Снимаем до удаления, чтобы
+        // перенести на пересозданные позиции и не потерять партию брака.
+        $defectLinks = $this->captureDefectLinks($order);
+
         $order->items()->delete();
 
         foreach ($parsedItems as $item) {
+            $link = $this->pullDefectLink($defectLinks, $item['product_id']);
+
             $order->items()->create([
                 'product_id' => $item['product_id'],
                 'name' => $item['name'],
@@ -247,6 +257,8 @@ class HandleOrderUpdated
                 'discount_percent' => $item['discount_percent'],
                 'final_price' => $item['final_price'],
                 'subtotal' => $item['quantity'] * $item['final_price'],
+                'product_defect_id' => $link['product_defect_id'],
+                'defect_description' => $link['defect_description'],
             ]);
         }
 
