@@ -14,6 +14,7 @@ use App\Models\Cart;
 use App\Models\Company;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\Defect\DefectPickListFormatter;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +24,8 @@ class CheckoutService implements CheckoutServiceInterface
         protected PriceServiceInterface $priceService,
         protected UserCurrencyResolverInterface $currencyResolver,
         protected StockServiceInterface $stockService,
-        protected DefectStockServiceInterface $defectStockService
+        protected DefectStockServiceInterface $defectStockService,
+        protected DefectPickListFormatter $defectPickListFormatter
     ) {}
 
     /**
@@ -148,8 +150,18 @@ class CheckoutService implements CheckoutServiceInterface
             // checkout той же партии может дать небольшой овербукинг — как и для
             // обычных товаров, окончательный остаток подтверждает 1С реализацией.
             if ($defectCartItems->isNotEmpty()) {
+                // Кладовщик собирает по печатному документу 1С и в WMS заходит
+                // редко — дописываем в комментарий склада конкретику по каждой
+                // партии брака (артикул, id партии, дефекты, количество).
+                $defectCartItems->load('product', 'productDefect');
+                $pickList = $this->defectPickListFormatter->format($defectCartItems);
+                $defectWarehouseComment = trim(
+                    ($warehouseComment ? $warehouseComment."\n\n" : '').$pickList
+                );
+
                 $defectOrder = Order::create(array_merge($baseOrderData, [
                     'type' => OrderType::DEFECT,
+                    'warehouse_comment' => $defectWarehouseComment ?: null,
                 ]));
                 $total = $this->createDefectOrderItems($defectOrder, $defectCartItems);
                 $defectOrder->total_amount = $total;

@@ -249,6 +249,59 @@ class DefectCartCheckoutTest extends TestCase
     }
 
     #[Test]
+    public function defect_order_comment_lists_pick_details_for_warehouse(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $product = Product::factory()->create(['sku' => 'МН-777']);
+
+        // Тип дефекта известен → его id попадёт в скобки; «трещина» — свободный
+        // текст без совпадения, остаётся только текстом.
+        $type = \App\Models\DefectType::firstOrCreate(['name' => 'Вскрыта упаковка'], ['is_active' => true, 'sort_order' => 1]);
+
+        $defect = ProductDefect::factory()->for($product)->sellable(499)
+            ->create(['quantity' => 5, 'defect_description' => 'Вскрыта упаковка; трещина']);
+
+        $this->cartService()->setDefectQuantity($user, $cart, $defect, 3);
+        $cart->load('items.product', 'items.productDefect', 'user');
+
+        $orders = $this->app->make(CheckoutServiceInterface::class)
+            ->checkout($cart, $company, 'г. Москва', warehouseComment: 'Позвонить перед отгрузкой');
+
+        $defectOrder = $orders->firstWhere('type', OrderType::DEFECT);
+        $comment = $defectOrder->warehouse_comment;
+
+        // Ручной комментарий сохранён, блок отбора дописан.
+        $this->assertStringContainsString('Позвонить перед отгрузкой', $comment);
+        $this->assertStringContainsString(\App\Services\Defect\DefectPickListFormatter::HEADING, $comment);
+        $this->assertStringContainsString("арт. МН-777 — партия #{$defect->id}", $comment);
+        $this->assertStringContainsString("дефекты [{$type->id}]: Вскрыта упаковка, трещина", $comment);
+        $this->assertStringContainsString('— 3 шт.', $comment);
+    }
+
+    #[Test]
+    public function defect_order_comment_is_added_even_without_manual_comment(): void
+    {
+        $user = User::factory()->create();
+        $company = Company::factory()->create(['user_id' => $user->id]);
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+        $product = Product::factory()->create(['sku' => 'МН-555']);
+        $defect = ProductDefect::factory()->for($product)->sellable(300)
+            ->create(['quantity' => 5, 'defect_description' => 'Помята коробка']);
+
+        $this->cartService()->setDefectQuantity($user, $cart, $defect, 1);
+        $cart->load('items.product', 'items.productDefect', 'user');
+
+        $orders = $this->app->make(CheckoutServiceInterface::class)
+            ->checkout($cart, $company, 'г. Москва');
+
+        $comment = $orders->firstWhere('type', OrderType::DEFECT)->warehouse_comment;
+        $this->assertStringStartsWith(\App\Services\Defect\DefectPickListFormatter::HEADING, $comment);
+        $this->assertStringContainsString('дефекты: Помята коробка', $comment);
+    }
+
+    #[Test]
     public function defect_order_reserves_the_batch(): void
     {
         $user = User::factory()->create();
