@@ -11,6 +11,8 @@ import CartToolbar from './CartToolbar';
 import CartTable from './CartTable';
 import CartSummary from './CartSummary';
 import CartFlash from './CartFlash';
+import CartPromotions from './CartPromotions';
+import useCartPromotions from './hooks/useCartPromotions';
 import BarcodeScannerDialog from './BarcodeScannerDialog';
 import ImportOrderDialog from './ImportOrderDialog';
 import { useCartStore } from '@/stores/useCartStore';
@@ -26,6 +28,9 @@ import { toastSuccess, toastInfo, toastError } from '@/utils/toast';
  */
 export default function CartIndex({ cart, cartDetails, userCarts }) {
     const { auth } = usePage().props;
+    // Прогресс акций — движок считает по серверной корзине, поэтому блок
+    // обновляется дебаунсом после серии изменений количества, а не мгновенно.
+    const { promotions, loading: promotionsLoading } = useCartPromotions(cart?.id ?? null);
     const allItems = cartDetails?.items ?? [];
     // Уценка привязана к партии (cart_item.id), а основная таблица построена на
     // product_id-агрегации со spillover instock/preorder. Товарные строки идут
@@ -422,6 +427,8 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
             {allItems.length > 0 ? (
                 <Box spaceY="3" mt="3">
                     {/* Единая карточка: тулбар + таблица. На base — full-bleed без рамки и скруглений */}
+                    <CartPromotions promotions={promotions} loading={promotionsLoading} />
+
                     <Box
                         borderWidth={{ base: '0', lg: '1px' }}
                         borderColor="border"

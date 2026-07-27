@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Promotion;
+use App\Models\PromotionRule;
 use App\Models\Region;
+use App\Services\Promotion\PromotionRuleDescriber;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -176,6 +178,7 @@ class PromotionController extends AdminController
                     ];
                 }),
             ],
+            'rules' => $this->ruleSummaries($promotion),
         ]);
     }
 
@@ -214,7 +217,40 @@ class PromotionController extends AdminController
                 }),
             ],
             'regions' => Region::orderBy('name')->get(['id', 'name']),
+            'rules' => $this->ruleSummaries($promotion),
         ]);
+    }
+
+    /**
+     * Правила акции для блока «Правила акции».
+     *
+     * Блок рендерится вне формы с картинками: любая ошибка валидации механики
+     * не должна ронять загрузку изображений (см. карточку promo-03).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function ruleSummaries(Promotion $promotion): array
+    {
+        $describer = app(PromotionRuleDescriber::class);
+
+        /** @var \Illuminate\Database\Eloquent\Collection<int, PromotionRule> $rules */
+        $rules = $promotion->rules()->orderByDesc('priority')->orderBy('id')->get();
+
+        $describer->warmUp($rules);
+
+        return $rules->map(function (PromotionRule $rule) use ($describer) {
+            $status = $describer->status($rule);
+
+            return [
+                'id' => $rule->id,
+                'name' => $rule->name,
+                'mode_label' => $rule->mode->label(),
+                'status' => $status['value'],
+                'status_label' => $status['label'],
+                'condition_summary' => $describer->conditionSummary($rule),
+                'reward_summary' => $describer->rewardSummary($rule),
+            ];
+        })->all();
     }
 
     /**

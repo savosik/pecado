@@ -88,6 +88,7 @@ class FavoriteController extends Controller
 
         $products = ProductQueryService::enrichProductsWithDiscounts($products);
         $products = ProductQueryService::convertProductsPrices($products);
+        $products = ProductQueryService::enrichProductsWithPromotions($products);
 
         return Inertia::render('User/Favorites/Index', [
             'favorites' => [

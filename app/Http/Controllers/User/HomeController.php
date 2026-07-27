@@ -38,6 +38,12 @@ class HomeController extends Controller
         $newProducts = ProductQueryService::convertProductsPrices($newProducts);
         $bestsellers = ProductQueryService::convertProductsPrices($bestsellers);
 
+        // Маркеры акции — после кеша: флаг меняется при каждом включении правила,
+        // в кешированный снимок его класть нельзя
+        $selections = ProductQueryService::enrichSelectionsWithPromotions($selections);
+        $newProducts = ProductQueryService::enrichProductsWithPromotions($newProducts);
+        $bestsellers = ProductQueryService::enrichProductsWithPromotions($bestsellers);
+
         return Inertia::render('User/Home', [
             'banners' => BannerController::getCachedBanners($regionId),
             'stories' => StoryController::getCachedStories($regionId),

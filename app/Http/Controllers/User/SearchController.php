@@ -230,6 +230,7 @@ class SearchController extends Controller
                     ->toArray();
                 $exactArray = ProductQueryService::enrichProductsWithDiscounts($exactArray);
                 $exactArray = ProductQueryService::convertProductsPrices($exactArray);
+                $exactArray = ProductQueryService::enrichProductsWithPromotions($exactArray);
 
                 $count = count($exactArray);
                 $results['products'] = $exactArray;
@@ -299,6 +300,7 @@ class SearchController extends Controller
                 // Обогащение скидками и конвертация валют
                 $productArray = ProductQueryService::enrichProductsWithDiscounts($productArray);
                 $productArray = ProductQueryService::convertProductsPrices($productArray);
+                $productArray = ProductQueryService::enrichProductsWithPromotions($productArray);
 
                 $results['products'] = $productArray;
 

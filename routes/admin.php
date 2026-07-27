@@ -580,6 +580,26 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
         Route::delete('/promotions/{promotion}/media', [\App\Http\Controllers\Admin\PromotionController::class, 'deleteMedia'])->name('promotions.media.delete');
     });
 
+    // Правила акций (конструктор промо)
+    Route::middleware('permission:promotion-rules.view')->group(function () {
+        Route::get('/promotion-rules', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'index'])->name('promotion-rules.index');
+        Route::post('/promotion-rules/match-count', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'matchCount'])->name('promotion-rules.match-count');
+        Route::post('/promotion-rules/{promotion_rule}/preview', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'preview'])->name('promotion-rules.preview')->whereNumber('promotion_rule');
+    });
+    Route::middleware('permission:promotion-rules.create')->group(function () {
+        Route::get('/promotion-rules/create', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'create'])->name('promotion-rules.create');
+        Route::post('/promotion-rules', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'store'])->name('promotion-rules.store');
+    });
+    Route::middleware('permission:promotion-rules.edit')->group(function () {
+        Route::get('/promotion-rules/{promotion_rule}/edit', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'edit'])->name('promotion-rules.edit')->whereNumber('promotion_rule');
+        Route::put('/promotion-rules/{promotion_rule}', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'update'])->name('promotion-rules.update')->whereNumber('promotion_rule');
+        Route::post('/promotion-rules/{promotion_rule}/rebuild', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'rebuild'])->name('promotion-rules.rebuild')->whereNumber('promotion_rule');
+    });
+    Route::delete('/promotion-rules/{promotion_rule}', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'destroy'])
+        ->name('promotion-rules.destroy')
+        ->whereNumber('promotion_rule')
+        ->middleware('permission:promotion-rules.delete');
+
     // Подборки товаров
     Route::middleware('permission:product-selections.view')->group(function () {
         Route::get('/product-selections', [\App\Http\Controllers\Admin\ProductSelectionController::class, 'index'])->name('product-selections.index');

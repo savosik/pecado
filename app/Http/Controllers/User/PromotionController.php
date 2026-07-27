@@ -80,6 +80,7 @@ class PromotionController extends Controller
 
             $productItems = ProductQueryService::enrichProductsWithDiscounts($productItems);
             $productItems = ProductQueryService::convertProductsPrices($productItems);
+            $productItems = ProductQueryService::enrichProductsWithPromotions($productItems);
         }
 
         // JSON-контент передаём как есть, HTML — санитизируем

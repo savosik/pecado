@@ -77,6 +77,7 @@ class ProductFilterRequest extends FormRequest
             'in_favourites' => 'nullable|boolean',
             'is_new' => 'nullable|boolean',
             'is_bestseller' => 'nullable|boolean',
+            'in_promotion' => 'nullable|boolean',
             'attribute_value_ids' => 'nullable|array',
             'attribute_value_ids.*' => 'integer|exists:attribute_values,id',
             'attribute_inline_filters' => 'nullable|array',
@@ -124,7 +125,7 @@ class ProductFilterRequest extends FormRequest
         $filterKeys = [
             'q', 'category_id', 'category_ids', 'brand_ids',
             'collection_ids', 'price_min', 'price_max', 'in_stock',
-            'in_stock_mode', 'in_sale', 'in_favourites', 'is_new', 'is_bestseller',
+            'in_stock_mode', 'in_sale', 'in_favourites', 'is_new', 'is_bestseller', 'in_promotion',
             'attribute_value_ids', 'attribute_inline_filters', 'attribute_any',
         ];
 

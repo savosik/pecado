@@ -155,6 +155,15 @@ function buildChips(filters, facets, lockedFilters = {}, currencySymbol = '₽')
         });
     }
 
+    // Участие в акции
+    if (filters.in_promotion === '1' || filters.in_promotion === 1 || filters.in_promotion === true) {
+        chips.push({
+            key: 'in_promotion',
+            filterKey: 'in_promotion',
+            label: 'Участвует в акции',
+        });
+    }
+
     // Бренды (пропускаем заблокированные — заданные контекстом страницы)
     if (Array.isArray(filters.brand_ids) && filters.brand_ids.length > 0) {
         filters.brand_ids.forEach((brandId) => {

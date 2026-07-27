@@ -19,6 +19,7 @@ use App\Services\Promotion\DTO\NearMiss;
 use App\Services\Promotion\DTO\PromoContext;
 use App\Services\Promotion\DTO\PromoContextLine;
 use App\Services\Promotion\DTO\PromotionEvaluation;
+use App\Services\Promotion\DTO\RulePreview;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -116,6 +117,73 @@ class PromotionEngine
         }
 
         return new PromotionEvaluation($applied, $nearMiss, $blocked);
+    }
+
+    /**
+     * Прогон одного правила по контексту — для админского предпросмотра.
+     *
+     * В отличие от evaluate(), правило берётся напрямую, а не из кэша активных:
+     * маркетологу нужно проверить настройку до включения. Гейты (выключено,
+     * не начато, не тот канал, аудитория) не отбрасывают правило, а возвращаются
+     * рядом с результатом — это и есть ответ на вопрос «почему не сработало».
+     */
+    public function explain(PromotionRule $rule, PromoContext $context): RulePreview
+    {
+        $lines = $context->countableLines();
+        $totals = $lines === [] ? [] : $this->lineTotals($lines, $context);
+        $conditionSets = $this->conditionProductSets(collect([$rule]), array_keys($totals));
+
+        $outcome = $this->evaluateConditions($rule, $totals, $conditionSets);
+
+        $conditions = [];
+        foreach ($outcome['items'] as $index => $item) {
+            $conditions[] = [
+                'index' => (int) $index,
+                'aggregate' => $item['aggregate'],
+                'operator' => $item['operator'],
+                'value' => $item['value'],
+                'target' => $item['target'],
+                'satisfied' => $item['satisfied'],
+                'remaining' => round(max(0, $item['target'] - $item['value']), 2),
+            ];
+        }
+
+        $applied = [];
+        $blocked = [];
+
+        if ($outcome['fired']) {
+            [$applied, $blocked] = $this->buildRewards($rule, $outcome, $context);
+        }
+
+        return new RulePreview(
+            ruleId: $rule->id,
+            ruleName: $rule->name,
+            fired: $outcome['fired'],
+            conditionsMode: ($rule->conditions['mode'] ?? 'all') === 'any' ? 'any' : 'all',
+            conditions: $conditions,
+            applied: $applied,
+            blocked: $blocked,
+            ruleBlock: $this->ruleBlockReason($rule, $context),
+            audienceMatches: $this->matchesAudience($rule, $context),
+            isActive: (bool) $rule->is_active,
+            inPeriod: $this->inPeriod($rule),
+            appliesToChannel: $rule->appliesToChannel($context->channel),
+            lineCount: count($lines),
+        );
+    }
+
+    /**
+     * Попадает ли текущий момент в период действия правила (без учёта is_active).
+     */
+    private function inPeriod(PromotionRule $rule): bool
+    {
+        $now = now();
+
+        if ($rule->starts_at && $rule->starts_at->greaterThan($now)) {
+            return false;
+        }
+
+        return ! ($rule->ends_at && $rule->ends_at->lessThan($now));
     }
 
     // ────────────────────────────────────────────

@@ -5,6 +5,7 @@ import { Box, Badge, Card, HStack, Image, SimpleGrid, Text, VStack } from '@chak
 import { LuPencil } from 'react-icons/lu';
 import { Button } from '@/components/ui/button';
 import { usePermission } from '@/Admin/hooks/usePermission';
+import PromotionRulesBlock from './Components/PromotionRulesBlock';
 
 function InfoRow({ label, value }) {
     return (
@@ -16,7 +17,7 @@ function InfoRow({ label, value }) {
 }
 
 export default function Show() {
-    const { promotion } = usePage().props;
+    const { promotion, rules = [] } = usePage().props;
     const { can } = usePermission();
 
     return (
@@ -107,6 +108,8 @@ export default function Show() {
                         </Card.Body>
                     </Card.Root>
                 )}
+
+                <PromotionRulesBlock promotionId={promotion.id} rules={rules} />
             </VStack>
         </>
     );

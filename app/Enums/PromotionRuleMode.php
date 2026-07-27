@@ -24,4 +24,13 @@ enum PromotionRuleMode: string
             self::ISSUE => 'Выдача промо-позиций',
         };
     }
+
+    /**
+     * Доступен ли режим выдачи. Пока волна 2 не завершена — нет:
+     * правило в режиме issue без складского учёта промо ничего не выдаст.
+     */
+    public static function issueAvailable(): bool
+    {
+        return (bool) config('promotions.issue_enabled', false);
+    }
 }

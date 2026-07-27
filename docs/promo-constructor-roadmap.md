@@ -1,7 +1,7 @@
 # Конструктор акций и промо-позиции — дорожная карта
 
 **Создано:** 2026-07-27
-**Статус:** проектирование завершено, реализация не начата
+**Статус:** волна 1 реализована (карточки 01–05 в `review/`), волны 2–4 в бэклоге
 
 ## Зачем
 
@@ -75,7 +75,7 @@
 
 ## Волны и зависимости
 
-### Волна 1 — движок в режиме информирования (`todo/`)
+### Волна 1 — движок в режиме информирования (`review/`)
 
 Ничего не выдаётся, промо-позиции только показываются. Обкатка корректности срабатывания
 на реальных корзинах с нулевым риском. Не зависит ни от 1С, ни от нового склада.
@@ -84,9 +84,9 @@
 |---|---|
 | [promo-01-foundation](tasks/review/2026-07-27_promo-01-foundation.md) — модели, миграции, схема правила ✅ | — |
 | [promo-02-engine](tasks/review/2026-07-27_promo-02-engine.md) — `PromotionEngine` ✅ | 01 |
-| [promo-03-admin-constructor](tasks/todo/2026-07-27_promo-03-admin-constructor.md) — конструктор в админке | 01, 02 |
-| [promo-04-catalog-badges](tasks/todo/2026-07-27_promo-04-catalog-badges.md) — бейджи участников | 01 |
-| [promo-05-cart-progress](tasks/todo/2026-07-27_promo-05-cart-progress.md) — прогресс «доберите на X» | 02 |
+| [promo-03-admin-constructor](tasks/review/2026-07-27_promo-03-admin-constructor.md) — конструктор в админке ✅ | 01, 02 |
+| [promo-04-catalog-badges](tasks/review/2026-07-27_promo-04-catalog-badges.md) — бейджи участников ✅ | 01 |
+| [promo-05-cart-progress](tasks/review/2026-07-27_promo-05-cart-progress.md) — прогресс «доберите на X» ✅ | 02 |
 
 ### Волна 2 — выдача подотчётных промо-позиций (`backlog/`)
 

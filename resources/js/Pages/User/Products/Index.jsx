@@ -23,6 +23,7 @@ import CollapsibleFilterCard from './filters/CollapsibleFilterCard';
 import PriceFilter from './filters/PriceFilter';
 import CategoryFilter from './filters/CategoryFilter';
 import BrandFilter from './filters/BrandFilter';
+import PromotionFilter from './filters/PromotionFilter';
 import AttributeFilters from './filters/AttributeFilters';
 
 const DEFAULT_PER_PAGE = 20;
@@ -141,6 +142,10 @@ export default function Index() {
         updateFilter('brand_ids', ids.length > 0 ? ids : undefined);
     }, [updateFilter]);
 
+    const handlePromotionChange = useCallback((checked) => {
+        updateFilter('in_promotion', checked ? 1 : undefined);
+    }, [updateFilter]);
+
     const handleAttributeValuesChange = useCallback((ids) => {
         updateFilter('attribute_value_ids', ids.length > 0 ? ids : undefined);
     }, [updateFilter]);
@@ -217,6 +222,13 @@ export default function Index() {
                 </CollapsibleFilterCard>
             )}
 
+            <CollapsibleFilterCard title="Акции" storageKey="catalog_filter_promotion_open" defaultOpen>
+                <PromotionFilter
+                    value={Boolean(filters.in_promotion)}
+                    onChange={handlePromotionChange}
+                />
+            </CollapsibleFilterCard>
+
             {facets?.attributes && facets.attributes.length > 0 && (
                 <CollapsibleFilterCard title="Характеристики" storageKey={LS_ATTRIBUTES_OPEN_KEY}>
                     <AttributeFilters
@@ -229,7 +241,7 @@ export default function Index() {
                 </CollapsibleFilterCard>
             )}
         </Flex>
-    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleCategoriesChange, handleBrandsChange, handlePriceChange, handleAttributeValuesChange, handleInlineAttributeChange]);
+    ), [filters, facets, priceData, isAuthenticated, isBrandPage, isCategoryPage, currencySymbol, handleCategoriesChange, handleBrandsChange, handlePriceChange, handlePromotionChange, handleAttributeValuesChange, handleInlineAttributeChange]);
 
     // ─── Динамический SEO (поисковый запрос → title, noindex для фильтров) ───
     const dynamicSeo = useMemo(() => {

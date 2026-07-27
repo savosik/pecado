@@ -4,6 +4,9 @@ namespace App\Models\Traits;
 
 use App\Enums\OrderType;
 use App\Models\Category;
+use App\Models\Promotion;
+use App\Models\PromotionRule;
+use App\Services\Promotion\ActivePromotionRuleCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -248,6 +251,75 @@ trait ProductQueryScopes
                     ), 0)',
                     [OrderType::DEFECT->value]
                 );
+        });
+    }
+
+    /**
+     * Товары, участвующие в акции.
+     *
+     * Два источника, объединяются по ИЛИ — ровно как в маркере карточки
+     * (App\Services\Product\ProductQueryService::enrichProductsWithPromotions):
+     *  - контентная привязка к активной акции (`product_promotion`);
+     *  - условие активного правила (`promotion_rule_product`, role = condition).
+     *
+     * Регион учитывается той же логикой, что и scope forRegion: контент без
+     * привязки к регионам виден всем, с привязкой — только своим. Список
+     * активных правил берётся из кэша движка, поэтому фильтр не разбирает
+     * JSON-условия в SQL.
+     */
+    public function scopeInPromotion(Builder $query, ?int $regionId = null): Builder
+    {
+        $morphClass = (new Promotion)->getMorphClass();
+
+        $ruleIds = app(ActivePromotionRuleCache::class)
+            ->activeAt()
+            ->filter(function (PromotionRule $rule) use ($regionId) {
+                $regions = array_values(array_filter(array_map(
+                    'intval',
+                    (array) ($rule->audience['region_ids'] ?? []),
+                )));
+
+                return $regions === [] || ($regionId !== null && in_array($regionId, $regions, true));
+            })
+            ->pluck('id')
+            ->all();
+
+        return $query->where(function (Builder $outer) use ($morphClass, $regionId, $ruleIds) {
+            $outer->whereExists(function ($sub) use ($morphClass, $regionId) {
+                $sub->select(DB::raw(1))
+                    ->from('product_promotion')
+                    ->join('promotions', 'promotions.id', '=', 'product_promotion.promotion_id')
+                    ->whereColumn('product_promotion.product_id', 'products.id')
+                    ->where('promotions.is_active', true)
+                    ->where(function ($regionScope) use ($morphClass, $regionId) {
+                        $regionScope->whereNotExists(function ($regionSub) use ($morphClass) {
+                            $regionSub->select(DB::raw(1))
+                                ->from('regionables')
+                                ->whereColumn('regionables.regionable_id', 'promotions.id')
+                                ->where('regionables.regionable_type', $morphClass);
+                        });
+
+                        if ($regionId) {
+                            $regionScope->orWhereExists(function ($regionSub) use ($morphClass, $regionId) {
+                                $regionSub->select(DB::raw(1))
+                                    ->from('regionables')
+                                    ->whereColumn('regionables.regionable_id', 'promotions.id')
+                                    ->where('regionables.regionable_type', $morphClass)
+                                    ->where('regionables.region_id', $regionId);
+                            });
+                        }
+                    });
+            });
+
+            if ($ruleIds !== []) {
+                $outer->orWhereExists(function ($sub) use ($ruleIds) {
+                    $sub->select(DB::raw(1))
+                        ->from('promotion_rule_product')
+                        ->whereColumn('promotion_rule_product.product_id', 'products.id')
+                        ->whereIn('promotion_rule_product.promotion_rule_id', $ruleIds)
+                        ->where('promotion_rule_product.role', PromotionRule::ROLE_CONDITION);
+                });
+            }
         });
     }
 

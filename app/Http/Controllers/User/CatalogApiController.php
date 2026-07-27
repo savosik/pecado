@@ -64,24 +64,11 @@ class CatalogApiController extends Controller
         $products = ProductQueryService::enrichProductsWithDiscounts($products);
         $products = ProductQueryService::convertProductsPrices($products);
 
-        // Флаг участия в акции (region-aware) — маркер «Акция» в карточке каталога.
-        // Учитываем регион пользователя тем же scope forRegion, что и карточка товара,
-        // чтобы бейдж в сетке совпадал с тем, что видно на детальной странице.
+        // Маркеры акции (region-aware): участие в акции и «выдаётся как промо-позиция».
+        // Обогатитель общий для каталога, карточки товара, подборок, избранного и поиска —
+        // бейдж в сетке обязан совпадать с тем, что видно на детальной странице.
         $user = Auth::user();
-        $productIds = collect($products)->pluck('id')->all();
-        $promoProductIds = [];
-        if (! empty($productIds)) {
-            $promoProductIds = Product::whereIn('id', $productIds)
-                ->whereHas('promotions', fn ($q) => $q->forRegion($user?->region_id))
-                ->pluck('id')
-                ->flip()
-                ->toArray();
-        }
-        $products = array_map(function ($product) use ($promoProductIds) {
-            $product['has_promotion'] = isset($promoProductIds[$product['id']]);
-
-            return $product;
-        }, $products);
+        $products = ProductQueryService::enrichProductsWithPromotions($products);
 
         // Маркер уценки (некондиции) — еле заметный значок в карточке каталога.
         // Булев флаг, не ценовой: отдаётся и гостям.
@@ -315,6 +302,11 @@ class CatalogApiController extends Controller
         // Бестселлеры
         if (! empty($validated['is_bestseller'])) {
             $query->where('is_bestseller', true);
+        }
+
+        // Участие в акции — тот же источник, что и бейдж «Акция» в карточке
+        if (! empty($validated['in_promotion'])) {
+            $query->inPromotion($regionId);
         }
 
         // Атрибуты (select — через attribute_values)

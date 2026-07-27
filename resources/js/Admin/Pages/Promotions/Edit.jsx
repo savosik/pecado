@@ -5,8 +5,9 @@ import { PageHeader, FormField, FormActions, ContentMediaFields, MultipleImageUp
 import { Box, Card, Input, Textarea, Stack, SimpleGrid } from '@chakra-ui/react';
 import { Switch } from '@/components/ui/switch';
 import { toaster } from '@/components/ui/toaster';
+import PromotionRulesBlock from './Components/PromotionRulesBlock';
 
-export default function Edit({ promotion, regions = [] }) {
+export default function Edit({ promotion, regions = [], rules = [] }) {
     const { data, setData, post, processing, errors } = useForm({
         _method: 'PUT',
         name: promotion.name || '',
@@ -215,6 +216,9 @@ export default function Edit({ promotion, regions = [] }) {
                     </Card.Footer>
                 </Card.Root>
             </form>
+
+            {/* Вне <form>: механика правил не должна влиять на загрузку картинок */}
+            <PromotionRulesBlock promotionId={promotion.id} rules={rules} />
         </>
     );
 }

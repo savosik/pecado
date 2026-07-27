@@ -1,7 +1,7 @@
 import { memo, useCallback, useState } from 'react';
 import { Box, Flex, Text, Badge, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy, LuTag, LuBadgePercent } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3, LuWarehouse, LuTruck, LuPackageX, LuCopy, LuTag, LuBadgePercent, LuGift } from 'react-icons/lu';
 import ProductMiniGallery from './ProductMiniGallery';
 import TagList from './TagList';
 import CartQuantityControl from './CartQuantityControl';
@@ -124,7 +124,17 @@ function ProductCard({ product, loading = false }) {
                 {/* Бейджи */}
                 <Box position="absolute" top="2" left="2" display="flex" flexDirection="column" gap="1" pointerEvents="none">
                     {product.has_promotion && (
-                        <Badge colorPalette="purple" fontSize="2xs" fontWeight="700" borderRadius="md" px="2" display="inline-flex" alignItems="center" gap="1">
+                        <Badge
+                            colorPalette="purple"
+                            fontSize="2xs"
+                            fontWeight="700"
+                            borderRadius="md"
+                            px="2"
+                            display="inline-flex"
+                            alignItems="center"
+                            gap="1"
+                            title={product.promotion_name || 'Товар участвует в акции'}
+                        >
                             <LuTag size={10} />
                             Акция
                         </Badge>
@@ -156,18 +166,31 @@ function ProductCard({ product, loading = false }) {
                     )}
                 </Box>
 
-                {/* Уценка — небольшой лиловый значок в углу (в цвет бейджа «Есть
-                    товары с уценкой» в карточке товара). Не в общей стопке слева. */}
-                {product.has_defects && (
+                {/* Значки в правом углу — не в общей стопке слева: там уже до шести
+                    бейджей, седьмой её переполнит. Уценка и промо-позиция стоят
+                    колонкой, чтобы не перекрывать друг друга. */}
+                {(product.has_defects || product.is_promo_reward) && (
                     <Box
                         position="absolute"
                         top="2"
                         right="2"
-                        color="purple.500"
+                        display="flex"
+                        flexDirection="column"
+                        alignItems="flex-end"
+                        gap="1"
                         pointerEvents="none"
-                        title="Есть уценённые экземпляры с дефектами"
                     >
-                        <LuBadgePercent size={18} />
+                        {product.has_defects && (
+                            <Box color="purple.500" title="Есть уценённые экземпляры с дефектами">
+                                <LuBadgePercent size={18} />
+                            </Box>
+                        )}
+                        {/* Товар не «продаётся по акции», а выдаётся как промо-позиция */}
+                        {product.is_promo_reward && (
+                            <Box color="pink.500" title="Этот товар можно получить по акции">
+                                <LuGift size={18} />
+                            </Box>
+                        )}
                     </Box>
                 )}
             </Box>

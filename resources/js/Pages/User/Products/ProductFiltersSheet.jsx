@@ -14,6 +14,7 @@ export function countActiveFilters(filters) {
     if (hasPrice) count++;
     if (filters.in_stock_mode) count++;
     if (filters.in_sale === '1' || filters.in_sale === 1) count++;
+    if (filters.in_promotion === '1' || filters.in_promotion === 1 || filters.in_promotion === true) count++;
     if (Array.isArray(filters.brand_ids)) count += filters.brand_ids.length;
     if (Array.isArray(filters.category_ids)) count += filters.category_ids.length;
     if (Array.isArray(filters.attribute_value_ids)) count += filters.attribute_value_ids.length;

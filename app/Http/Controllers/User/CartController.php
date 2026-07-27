@@ -10,6 +10,7 @@ use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\ProductDefect;
 use App\Services\Cart\OrderImportService;
+use App\Services\Promotion\CartPromotionProgress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -154,6 +155,27 @@ class CartController extends Controller
         $cart = $this->cartService->getOrCreateActiveCart($user);
 
         return response()->json($this->cartService->getCartItemsSummary($cart));
+    }
+
+    /**
+     * Прогресс акций по корзине: «доберите на X» и «условия выполнены».
+     * GET /api/cart/promotions
+     *
+     * Причины несрабатывания правил (нет остатка, исчерпан лимит) в ответ
+     * не попадают — см. CartPromotionProgress.
+     */
+    public function promotions(Request $request, CartPromotionProgress $progress): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($cartId = $request->integer('cart_id')) {
+            $cart = Cart::query()->findOrFail($cartId);
+            Gate::authorize('view', $cart);
+        } else {
+            $cart = $this->cartService->getOrCreateActiveCart($user);
+        }
+
+        return response()->json($progress->forCart($cart, $user));
     }
 
     /**

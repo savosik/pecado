@@ -67,6 +67,7 @@ class SimilarProductsService
 
         $array = ProductQueryService::enrichProductsWithDiscounts($array);
         $array = ProductQueryService::convertProductsPrices($array);
+        $array = ProductQueryService::enrichProductsWithPromotions($array);
 
         return $array;
     }

@@ -40,6 +40,7 @@ class ProductByIdsController extends Controller
 
         $products = ProductQueryService::enrichProductsWithDiscounts($products);
         $products = ProductQueryService::convertProductsPrices($products);
+        $products = ProductQueryService::enrichProductsWithPromotions($products);
 
         return response()->json($products);
     }

@@ -93,6 +93,7 @@ Route::prefix('api')->middleware('auth')->group(function () {
 
     // Корзина
     Route::get('/cart/summary', [CartController::class, 'summary']);
+    Route::get('/cart/promotions', [CartController::class, 'promotions']);
     Route::get('/cart/active-quantities', [CartController::class, 'activeQuantities']);
     Route::post('/cart/set-product-quantity', [CartController::class, 'setProductQuantity']);
     Route::post('/cart/set-products-quantity', [CartController::class, 'setProductsQuantity']);

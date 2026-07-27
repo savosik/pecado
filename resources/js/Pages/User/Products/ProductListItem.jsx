@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Box, Flex, Text, IconButton, Skeleton } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuHeart, LuCheck, LuCircleX, LuClock3, LuBadgePercent } from 'react-icons/lu';
+import { LuHeart, LuCheck, LuCircleX, LuClock3, LuBadgePercent, LuTag, LuGift } from 'react-icons/lu';
 import ProductMiniGallery from '@/components/product/ProductMiniGallery';
 import TagList from '@/components/product/TagList';
 import CartQuantityControl from '@/components/product/CartQuantityControl';
@@ -116,17 +116,43 @@ export default function ProductListItem({ product, loading = false }) {
                         />
                     </Link>
 
-                    {/* Значок уценки — тот же лиловый, что в сетке */}
-                    {product.has_defects && (
+                    {/* Маркер акции — тот же лиловый, что бейдж в сетке.
+                        В списке стопки бейджей нет, поэтому значком. */}
+                    {product.has_promotion && (
+                        <Box
+                            position="absolute"
+                            top="2"
+                            left="2"
+                            color="purple.500"
+                            pointerEvents="none"
+                            title={product.promotion_name || 'Товар участвует в акции'}
+                        >
+                            <LuTag size={16} />
+                        </Box>
+                    )}
+
+                    {/* Значки уценки и промо-позиции — колонкой, чтобы не перекрывались */}
+                    {(product.has_defects || product.is_promo_reward) && (
                         <Box
                             position="absolute"
                             top="2"
                             right="2"
-                            color="purple.500"
+                            display="flex"
+                            flexDirection="column"
+                            alignItems="flex-end"
+                            gap="1"
                             pointerEvents="none"
-                            title="Есть уценённые экземпляры с дефектами"
                         >
-                            <LuBadgePercent size={18} />
+                            {product.has_defects && (
+                                <Box color="purple.500" title="Есть уценённые экземпляры с дефектами">
+                                    <LuBadgePercent size={18} />
+                                </Box>
+                            )}
+                            {product.is_promo_reward && (
+                                <Box color="pink.500" title="Этот товар можно получить по акции">
+                                    <LuGift size={18} />
+                                </Box>
+                            )}
                         </Box>
                     )}
                 </Box>

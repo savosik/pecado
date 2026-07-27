@@ -3,8 +3,11 @@
 namespace App\Services\Product;
 
 use App\Models\Product;
+use App\Models\Promotion;
+use App\Models\PromotionRule;
 use App\Models\Region;
 use App\Services\CurrencyService;
+use App\Services\Promotion\ActivePromotionRuleCache;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -205,6 +208,165 @@ class ProductQueryService
 
             return $product;
         }, $products);
+    }
+
+    /**
+     * Проставить товарам маркеры участия в акции.
+     *
+     * Два разных признака, их нельзя смешивать:
+     *  - `has_promotion` — товар участвует в акции (контентная привязка
+     *    `product_promotion` **или** условие правила `promotion_rule_product`);
+     *  - `is_promo_reward` — товар сам выдаётся как промо-позиция
+     *    (`role = reward`). Это не «купи меня», а «это можно получить».
+     *
+     * Флаги булевы и не раскрывают цены — отдаются в том числе гостям, как и
+     * маркер уценки. Регион учитывается той же логикой, что и scope forRegion:
+     * контент без привязки к регионам виден всем, с привязкой — только своим.
+     *
+     * Один запрос на всю пачку (UNION по двум pivot-таблицам): список активных
+     * правил берётся из кэша, поэтому переключение правила не тянет
+     * переиндексацию Meilisearch и не добавляет запросов на страницу.
+     *
+     * @param  array<int, array<string, mixed>>  $products
+     * @param  int|null  $regionId  Регион; по умолчанию — регион текущего пользователя
+     * @return array<int, array<string, mixed>>
+     */
+    public static function enrichProductsWithPromotions(array $products, ?int $regionId = null): array
+    {
+        if (empty($products)) {
+            return $products;
+        }
+
+        $ids = collect($products)
+            ->pluck('id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        if (empty($ids)) {
+            return $products;
+        }
+
+        $regionId ??= Auth::user()?->region_id;
+
+        [$conditionMap, $rewardMap, $nameMap] = self::promotionMarkerMaps($ids, $regionId);
+
+        return array_map(function ($product) use ($conditionMap, $rewardMap, $nameMap) {
+            $id = (int) $product['id'];
+            $names = $nameMap[$id] ?? [];
+
+            $product['has_promotion'] = isset($conditionMap[$id]);
+            $product['is_promo_reward'] = isset($rewardMap[$id]);
+            // Тултип показываем только когда акция одна: перечислять три названия
+            // в подсказке на карточке некуда
+            $product['promotion_name'] = count($names) === 1 ? reset($names) : null;
+
+            return $product;
+        }, $products);
+    }
+
+    /**
+     * Карты «товар → участвует / выдаётся» и названия акций одним запросом.
+     *
+     * @param  int[]  $ids
+     * @return array{0: array<int, true>, 1: array<int, true>, 2: array<int, string[]>}
+     */
+    private static function promotionMarkerMaps(array $ids, ?int $regionId): array
+    {
+        $morphClass = (new Promotion)->getMorphClass();
+
+        // Контентная привязка: активная акция, видимая в регионе пользователя
+        $content = DB::table('product_promotion as pp')
+            ->join('promotions as p', 'p.id', '=', 'pp.promotion_id')
+            ->whereIn('pp.product_id', $ids)
+            ->where('p.is_active', true)
+            ->where(function ($query) use ($morphClass, $regionId) {
+                $query->whereNotExists(function ($sub) use ($morphClass) {
+                    $sub->select(DB::raw(1))
+                        ->from('regionables')
+                        ->whereColumn('regionables.regionable_id', 'p.id')
+                        ->where('regionables.regionable_type', $morphClass);
+                });
+
+                if ($regionId) {
+                    $query->orWhereExists(function ($sub) use ($morphClass, $regionId) {
+                        $sub->select(DB::raw(1))
+                            ->from('regionables')
+                            ->whereColumn('regionables.regionable_id', 'p.id')
+                            ->where('regionables.regionable_type', $morphClass)
+                            ->where('regionables.region_id', $regionId);
+                    });
+                }
+            })
+            ->select('pp.product_id', DB::raw("'condition' as role"), 'p.name as name');
+
+        $ruleIds = self::activePromotionRuleIds($regionId);
+
+        if ($ruleIds !== []) {
+            $content->union(
+                DB::table('promotion_rule_product as prp')
+                    ->join('promotion_rules as pr', 'pr.id', '=', 'prp.promotion_rule_id')
+                    ->whereIn('prp.product_id', $ids)
+                    ->whereIn('prp.promotion_rule_id', $ruleIds)
+                    ->select('prp.product_id', 'prp.role', 'pr.name as name')
+            );
+        }
+
+        $conditionMap = [];
+        $rewardMap = [];
+        $nameMap = [];
+
+        foreach ($content->get() as $row) {
+            $productId = (int) $row->product_id;
+
+            if ($row->role === PromotionRule::ROLE_REWARD) {
+                $rewardMap[$productId] = true;
+            } else {
+                $conditionMap[$productId] = true;
+                $nameMap[$productId][$row->name] = (string) $row->name;
+            }
+        }
+
+        return [$conditionMap, $rewardMap, $nameMap];
+    }
+
+    /**
+     * Активные правила, действующие в регионе.
+     *
+     * Список берётся из кэша движка (60 с), регион проверяется в PHP:
+     * `audience.region_ids` — JSON, и фильтровать его в SQL пришлось бы
+     * по-разному в MySQL и SQLite.
+     *
+     * @return int[]
+     */
+    private static function activePromotionRuleIds(?int $regionId): array
+    {
+        return app(ActivePromotionRuleCache::class)
+            ->activeAt()
+            ->filter(function (PromotionRule $rule) use ($regionId) {
+                $regions = array_values(array_filter(array_map(
+                    'intval',
+                    (array) ($rule->audience['region_ids'] ?? []),
+                )));
+
+                // Правило без привязки к регионам работает везде
+                return $regions === [] || ($regionId !== null && in_array($regionId, $regions, true));
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    /**
+     * Обогатить подборки маркерами акции.
+     */
+    public static function enrichSelectionsWithPromotions(array $selections): array
+    {
+        return array_map(function ($selection) {
+            $selection['products'] = self::enrichProductsWithPromotions($selection['products'] ?? []);
+
+            return $selection;
+        }, $selections);
     }
 
     /**

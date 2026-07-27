@@ -37,6 +37,7 @@ import {
     LuTags,
     LuImagePlay,
     LuSettings,
+    LuSettings2,
     LuDownload,
     LuRadio,
     LuAward,
@@ -108,6 +109,7 @@ export const menuConfig: MenuGroup[] = [
         icon: LuTicket,
         items: [
             { label: "Акции", icon: LuTicket, path: "/admin/promotions", permission: "promotions.view" },
+            { label: "Правила акций", icon: LuSettings2, path: "/admin/promotion-rules", permission: "promotion-rules.view" },
             { label: "Подборки", icon: LuLayoutGrid, path: "/admin/product-selections", permission: "product-selections.view" },
         ],
     },

@@ -517,6 +517,7 @@ class ProductController extends Controller
             $variantArrays = ProductQueryService::enrichProductsWithStock($variantArrays);
             $variantArrays = ProductQueryService::enrichProductsWithDiscounts($variantArrays);
             $variantArrays = ProductQueryService::convertProductsPrices($variantArrays);
+            $variantArrays = ProductQueryService::enrichProductsWithPromotions($variantArrays);
 
             // Собираем diff_attrs для каждого варианта (отладочно) и одновременно строим готовые подписи по атрибутам.
             $attrsLabels = [];
@@ -770,6 +771,7 @@ class ProductController extends Controller
         $enriched = ProductQueryService::enrichProductsWithStock([$productData]);
         $enriched = ProductQueryService::enrichProductsWithDiscounts($enriched);
         $enriched = ProductQueryService::convertProductsPrices($enriched);
+        $enriched = ProductQueryService::enrichProductsWithPromotions($enriched);
         $productData = $enriched[0];
 
         // Дополнительные поля для детальной страницы
