@@ -109,4 +109,13 @@ class Promotion extends Model implements HasMedia
     {
         return $this->belongsToMany(Product::class, 'product_promotion');
     }
+
+    /**
+     * Правила механики акции (конструктор промо).
+     * Лендинг может существовать и без правил — тогда это чистая контентная страница.
+     */
+    public function rules(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PromotionRule::class);
+    }
 }

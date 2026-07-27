@@ -39,6 +39,9 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // Маркетинг
         'promotions' => ['view', 'create', 'edit', 'delete'],
+        // Механика акций (конструктор промо) — отдельно от контентных лендингов:
+        // правка выдачи товаров это не то же самое, что правка текста акции.
+        'promotion-rules' => ['view', 'create', 'edit', 'delete'],
         'product-selections' => ['view', 'create', 'edit', 'delete'],
 
         // Пользователи
@@ -118,6 +121,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'favorites' => 'Избранное',
         'wishlist' => 'Список желаний',
         'promotions' => 'Акции',
+        'promotion-rules' => 'Правила акций',
         'product-selections' => 'Подборки',
         'users' => 'Пользователи',
         'user-questionnaires' => 'Анкеты',
@@ -168,6 +172,8 @@ class RolesAndPermissionsSeeder extends Seeder
                 'articles', 'brand-stories', 'news', 'faqs',
                 'banners', 'pages', 'stories', 'tags', 'media',
                 'menu-items', 'user-questions',
+                // Механику акций контент-менеджер только смотрит
+                'promotion-rules' => ['view'],
             ],
         ],
         'sales-manager' => [
@@ -257,16 +263,25 @@ class RolesAndPermissionsSeeder extends Seeder
                 $role->syncPermissions(array_values($allPermissions));
                 $this->command->info("Роль «{$config['label']}» — все права ({$role->permissions()->count()}).");
             } else {
-                // Собираем permissions для конкретных ресурсов
+                // Собираем permissions для конкретных ресурсов.
+                // Элемент списка — либо название ресурса (все его действия),
+                // либо пара «ресурс => [действия]» для частичного доступа.
                 $rolePermissions = [];
-                foreach ($config['resources'] as $resource) {
+                foreach ($config['resources'] as $key => $value) {
+                    $resource = is_int($key) ? $value : $key;
+
                     if (! isset($this->resources[$resource])) {
                         continue;
                     }
-                    foreach ($this->resources[$resource] as $action) {
-                        $key = "{$resource}.{$action}";
-                        if (isset($allPermissions[$key])) {
-                            $rolePermissions[] = $allPermissions[$key];
+
+                    $actions = is_int($key)
+                        ? $this->resources[$resource]
+                        : array_intersect((array) $value, $this->resources[$resource]);
+
+                    foreach ($actions as $action) {
+                        $permissionKey = "{$resource}.{$action}";
+                        if (isset($allPermissions[$permissionKey])) {
+                            $rolePermissions[] = $allPermissions[$permissionKey];
                         }
                     }
                 }

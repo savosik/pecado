@@ -59,6 +59,20 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\OrderRepository::class
         );
 
+        // Промо-акции: в волне 1 остатки и история выдачи ещё не нужны — движок
+        // работает с заглушками, реальные реализации приносят карточки promo-07 и promo-09.
+        $this->app->bind(
+            \App\Contracts\Promotion\PromoStockCheckerInterface::class,
+            \App\Services\Promotion\AlwaysAvailablePromoStock::class
+        );
+
+        $this->app->bind(
+            \App\Contracts\Promotion\PromoUsageCounterInterface::class,
+            \App\Services\Promotion\NoPromoUsageHistory::class
+        );
+
+        $this->app->singleton(\App\Services\Promotion\ActivePromotionRuleCache::class);
+
         // v15.4: исход обработки входящего ERP-сообщения. Singleton — handler
         // помечает исход, ErpIncomingJob читает его после handle() и сбрасывает
         // перед следующим сообщением.
@@ -122,6 +136,9 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\MenuItem::observe(\App\Observers\MenuItemObserver::class);
         \App\Models\Category::observe(\App\Observers\CategoryObserver::class);
         \App\Models\Product::observe(\App\Observers\ProductHomeCacheObserver::class);
+
+        // Материализация участников правил акций (promotion_rule_product)
+        \App\Models\PromotionRule::observe(\App\Observers\PromotionRuleObserver::class);
 
         // Инвалидация кеша версий выгрузок: после save/delete товара любая
         // выгрузка, сгенерированная ранее, считается устаревшей.

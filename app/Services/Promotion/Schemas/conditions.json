@@ -1,0 +1,140 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "promotion_rule.conditions",
+    "title": "Условия срабатывания правила акции",
+    "description": "Набор условий по корзине. Пороги сумм задаются и хранятся только в рублях: конвертацию валюты заказа выполняет движок акций.",
+    "type": "object",
+    "properties": {
+        "mode": {
+            "type": "string",
+            "enum": ["all", "any"],
+            "description": "all — должны выполниться все условия, any — достаточно любого",
+            "$error": {
+                "*": "Режим условий должен быть «all» (все условия) или «any» (любое из условий)."
+            }
+        },
+        "items": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Список условий",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "selector": {
+                        "$ref": "#/definitions/selector"
+                    },
+                    "aggregate": {
+                        "type": "string",
+                        "enum": ["quantity", "amount"],
+                        "description": "quantity — считаем штуки, amount — сумму в рублях",
+                        "$error": {
+                            "*": "Агрегат условия должен быть «quantity» (штуки) или «amount» (сумма в рублях)."
+                        }
+                    },
+                    "price_basis": {
+                        "type": "string",
+                        "const": "client_final",
+                        "description": "Единственное поддерживаемое значение: сумма считается по финальной цене клиента (индивидуальная цена со скидкой)",
+                        "$error": {
+                            "*": "База цены поддерживается только одна — «client_final» (финальная цена клиента)."
+                        }
+                    },
+                    "operator": {
+                        "type": "string",
+                        "enum": [">=", ">", "=", "<=", "<"],
+                        "$error": {
+                            "*": "Оператор условия должен быть одним из: >=, >, =, <=, <."
+                        }
+                    },
+                    "value": {
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "$error": {
+                            "*": "Порог условия должен быть числом больше нуля."
+                        }
+                    }
+                },
+                "required": ["selector", "aggregate", "operator", "value"],
+                "additionalProperties": false,
+                "$error": {
+                    "required": {
+                        "selector": "В условии не задан селектор товаров.",
+                        "aggregate": "В условии не задан агрегат (quantity или amount).",
+                        "operator": "В условии не задан оператор сравнения.",
+                        "value": "В условии не задан порог.",
+                        "*": "В условии заполнены не все обязательные поля."
+                    },
+                    "additionalProperties": "В условии есть неизвестное поле.",
+                    "type": "Условие должно быть объектом."
+                }
+            },
+            "$error": {
+                "minItems": "Нужно задать хотя бы одно условие срабатывания.",
+                "type": "Условия должны быть списком."
+            }
+        }
+    },
+    "required": ["mode", "items"],
+    "additionalProperties": false,
+    "$error": {
+        "required": {
+            "mode": "Не задан режим условий (all или any).",
+            "items": "Не задан список условий.",
+            "*": "Условия заполнены не полностью."
+        },
+        "additionalProperties": "В условиях есть неизвестное поле.",
+        "type": "Условия должны быть объектом с полями mode и items."
+    },
+    "definitions": {
+        "selector": {
+            "type": "object",
+            "description": "Поля селектора объединяются по ИЛИ: товар подходит, если попал хотя бы в один список",
+            "properties": {
+                "products": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1},
+                    "description": "Идентификаторы товаров (products.id)"
+                },
+                "categories": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1},
+                    "description": "Идентификаторы категорий (categories.id)"
+                },
+                "with_descendants": {
+                    "type": "boolean",
+                    "description": "Раскрывать категории вместе с потомками"
+                },
+                "brands": {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 1},
+                    "description": "Идентификаторы брендов (brands.id)"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {"type": "string", "minLength": 1},
+                    "description": "Названия тегов товара"
+                },
+                "erp_promotions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": ["new", "bestseller", "liquidation"]
+                    },
+                    "description": "Типы промо-групп из 1С: новинки, бестселлеры, ликвидация",
+                    "$error": {
+                        "*": "Типы ERP-промо: new, bestseller, liquidation."
+                    }
+                },
+                "whole_cart": {
+                    "type": "boolean",
+                    "description": "Условие считается по всей корзине целиком"
+                }
+            },
+            "additionalProperties": false,
+            "$error": {
+                "additionalProperties": "В селекторе товаров есть неизвестное поле.",
+                "type": "Селектор товаров должен быть объектом."
+            }
+        }
+    }
+}

@@ -82,8 +82,8 @@
 
 | Карточка | Зависит от |
 |---|---|
-| [promo-01-foundation](tasks/todo/2026-07-27_promo-01-foundation.md) — модели, миграции, схема правила | — |
-| [promo-02-engine](tasks/todo/2026-07-27_promo-02-engine.md) — `PromotionEngine` | 01 |
+| [promo-01-foundation](tasks/review/2026-07-27_promo-01-foundation.md) — модели, миграции, схема правила ✅ | — |
+| [promo-02-engine](tasks/review/2026-07-27_promo-02-engine.md) — `PromotionEngine` ✅ | 01 |
 | [promo-03-admin-constructor](tasks/todo/2026-07-27_promo-03-admin-constructor.md) — конструктор в админке | 01, 02 |
 | [promo-04-catalog-badges](tasks/todo/2026-07-27_promo-04-catalog-badges.md) — бейджи участников | 01 |
 | [promo-05-cart-progress](tasks/todo/2026-07-27_promo-05-cart-progress.md) — прогресс «доберите на X» | 02 |

@@ -1,0 +1,49 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "promotion_rule.audience",
+    "title": "Ограничения аудитории правила акции",
+    "description": "Пустой список или отсутствие поля — ограничения нет.",
+    "type": "object",
+    "properties": {
+        "region_ids": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1},
+            "description": "Регионы, в которых работает правило (regions.id)",
+            "$error": {
+                "*": "Список регионов указан неверно."
+            }
+        },
+        "user_ids": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1},
+            "description": "Конкретные клиенты (users.id)",
+            "$error": {
+                "*": "Список клиентов указан неверно."
+            }
+        },
+        "manager_ids": {
+            "type": "array",
+            "items": {"type": "integer", "minimum": 1},
+            "description": "Клиенты указанных персональных менеджеров (personal_managers.id)",
+            "$error": {
+                "*": "Список менеджеров указан неверно."
+            }
+        },
+        "channels": {
+            "type": "array",
+            "items": {
+                "type": "string",
+                "enum": ["site", "api"]
+            },
+            "description": "Каналы: site — корзина и чекаут, api — клиентское API",
+            "$error": {
+                "*": "Каналы могут быть только «site» (сайт) и «api» (клиентское API)."
+            }
+        }
+    },
+    "additionalProperties": false,
+    "$error": {
+        "additionalProperties": "В ограничениях аудитории есть неизвестное поле.",
+        "type": "Ограничения аудитории должны быть объектом."
+    }
+}

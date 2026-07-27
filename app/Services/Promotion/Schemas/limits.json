@@ -1,0 +1,30 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "promotion_rule.limits",
+    "title": "Лимиты выдачи правила акции",
+    "description": "NULL в значении — лимита нет.",
+    "type": "object",
+    "properties": {
+        "per_client_total": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Сколько раз правило может сработать у одного клиента за всё время",
+            "$error": {
+                "*": "Лимит на клиента должен быть целым числом не меньше единицы."
+            }
+        },
+        "total": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Сколько раз правило может сработать всего",
+            "$error": {
+                "*": "Общий лимит должен быть целым числом не меньше единицы."
+            }
+        }
+    },
+    "additionalProperties": false,
+    "$error": {
+        "additionalProperties": "В лимитах есть неизвестное поле.",
+        "type": "Лимиты должны быть объектом."
+    }
+}

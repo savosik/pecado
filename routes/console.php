@@ -19,3 +19,4 @@ Schedule::command('exports:cleanup')->dailyAt('04:30')->withoutOverlapping(); //
 Schedule::command('erp:cleanup-messages')->dailyAt('05:00'); // очистка лога шины ERP старше 30 дней
 Schedule::command('sitemap:generate')->dailyAt('03:30'); // после search:sync
 Schedule::command('feed:build-yandex')->hourly()->withoutOverlapping(); // публичный YML-фид Яндекс.Маркета
+Schedule::command('promo:rebuild-rule-products')->dailyAt('02:40')->withoutOverlapping(); // участники правил акций: состав категорий и теги меняются массово

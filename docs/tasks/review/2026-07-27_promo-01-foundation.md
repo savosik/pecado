@@ -233,14 +233,67 @@ timestamps. Уникальный ключ по `cart_id + promotion_rule_id + re
 
 ## Критерии готовности
 
-- [ ] Три миграции применяются и откатываются; все таблицы и столбцы прокомментированы
+- [x] Три миграции применяются и откатываются; все таблицы и столбцы прокомментированы
       по-русски, `db:comments:audit --strict` проходит.
-- [ ] `bi:sync-grants` выполнен, таблицы видны аналитическому агенту.
-- [ ] Модель `PromotionRule` со скоупами `active()`, `forMode()` и связями покрыта
+- [x] `bi:sync-grants` выполнен, таблицы видны аналитическому агенту.
+- [x] Модель `PromotionRule` со скоупами `active()`, `forMode()` и связями покрыта
       unit-тестами (включая границы периода: правило, стартующее сегодня в 23:59).
-- [ ] Валидатор отвергает все перечисленные некорректные конфигурации с русскими
+- [x] Валидатор отвергает все перечисленные некорректные конфигурации с русскими
       сообщениями; на каждый пункт списка — тест.
-- [ ] `RecalculatePromotionRuleProductsJob` раскрывает категории с потомками, бренды,
+- [x] `RecalculatePromotionRuleProductsJob` раскрывает категории с потомками, бренды,
       теги и `ErpPromotion`; повторный запуск не плодит дубли.
-- [ ] Права `promotion-rules.*` заведены в сидере ролей.
-- [ ] `composer lint` и `composer analyse` чистые на изменённых файлах.
+- [x] Права `promotion-rules.*` заведены в сидере ролей.
+- [x] `composer lint` и `composer analyse` чистые на изменённых файлах.
+
+## Что сделано (2026-07-27)
+
+**Миграции**
+
+- `2026_07_27_100000_create_promotion_rules_table` — правила с `mode` по умолчанию `info`,
+  soft delete, составной индекс `is_active + starts_at + ends_at`.
+- `2026_07_27_100100_create_promotion_rule_product_table` — composite PK из трёх полей.
+- `2026_07_27_100200_create_cart_promotion_selections_table` — уникальный ключ
+  `cart_id + promotion_rule_id + reward_index`.
+- `2026_07_27_100300_grant_promotion_rule_permissions` — `promotion-rules.*`,
+  контент-менеджеру только `view`.
+- `2026_07_27_100400_add_missing_column_comments` — попутно закрыты 7 столбцов без
+  комментариев в `analytics_tokens` и `crm_analytics_filter_presets`, иначе
+  `db:comments:audit --strict` не проходил из-за старого долга.
+
+**Код**
+
+- `App\Models\PromotionRule` (скоупы `active()`/`forMode()`, `appliesToChannel()`,
+  `isActiveAt()`, константы ролей/типов), `App\Models\CartPromotionSelection`,
+  связи `Promotion::rules()` и `Cart::promotionSelections()`.
+- Перечисления `App\Enums\PromotionRuleMode`, `App\Enums\PromoKind`.
+- `App\Services\Promotion\PromotionRuleSchemaValidator` + JSON Schema в
+  `app/Services/Promotion/Schemas/` (сообщения об ошибках — прямо в схемах через `$error`).
+- `App\Services\Promotion\PromotionRuleProductResolver` — общий раскрыватель селекторов
+  для джобы и валидатора.
+- `App\Jobs\RecalculatePromotionRuleProductsJob`, `App\Observers\PromotionRuleObserver`,
+  команда `promo:rebuild-rule-products` (в расписании — ежедневно в 02:40).
+- `PromotionRuleFactory` со стейтами `amountThreshold`, `quantityThreshold`, `freeGift`,
+  `paidPromoItem`, `sampleReward`, `perThreshold`, `active`, `issuing`.
+
+**Тесты** — 49 зелёных: `tests/Unit/Models/PromotionRuleTest.php`,
+`tests/Feature/Promotion/PromotionRuleSchemaValidatorTest.php`,
+`tests/Feature/Promotion/RecalculatePromotionRuleProductsJobTest.php`.
+
+### Решения, принятые по ходу
+
+- **Селектор «вся корзина» не считается пересечением с наградой.** Из `whole_cart` товар
+  награды не убрать, а промо-строки движок в агрегаты и так не берёт — запрет здесь
+  сделал бы конфигурацию невыполнимой.
+- **Материализация не разворачивает `whole_cart`** — весь каталог в
+  `promotion_rule_product` не пишем.
+- **Скрытые товары (`hidden`) в участники попадают**: правило настраивается заранее,
+  видимость проверяет движок.
+- **Сидер ролей научился частичным правам** (`'promotion-rules' => ['view']`): иначе
+  `syncPermissions` затирал бы `view`, выданный контент-менеджеру миграцией.
+- `RoleController` получил ресурс в группе «Маркетинг» — этого требует
+  `Tests\Feature\Crm\PermissionNamingTest`.
+
+### Не входило в эту карточку
+
+Обмена с 1С здесь нет (волна 1 не трогает шину), поэтому AsyncAPI и MkDocs не менялись.
+Админка правил, движок и выдача — карточки 02–05.

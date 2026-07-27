@@ -80,6 +80,15 @@ class Cart extends Model
     }
 
     /**
+     * Выбор клиента по наградам акций: какую позицию взял, от какой отказался.
+     * Сами промо-строки не хранятся — их вычисляет движок акций.
+     */
+    public function promotionSelections(): HasMany
+    {
+        return $this->hasMany(CartPromotionSelection::class);
+    }
+
+    /**
      * Get only instock items.
      */
     public function instockItems(): HasMany
