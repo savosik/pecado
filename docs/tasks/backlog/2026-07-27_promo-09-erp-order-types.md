@@ -1,0 +1,146 @@
+# Промо 09 — Типы заказов `promo` / `promo_sample` и обмен с 1С
+
+**Приоритет:** высокий
+**Создано:** 2026-07-27
+**Roadmap:** [docs/promo-constructor-roadmap.md → Волна 2](../../promo-constructor-roadmap.md)
+**Зависит от:** [promo-06-order-assembler](2026-07-27_promo-06-order-assembler.md), [promo-08-cart-checkout-lines](2026-07-27_promo-08-cart-checkout-lines.md)
+
+## Контекст
+
+Промо-позиции уезжают **отдельными заказами**. Тип заказа определяется видом промо-позиции,
+термин «организация» в контракте не вводим — 1С различает документы по типу:
+
+| Тип | `promo_kind` | Склад | В накладной клиенту |
+|---|---|---|---|
+| `promo` | `accountable` | обычный склад региона | выписывается |
+| `promo_sample` | `sample` | «Москва реклама» | не выписывается |
+
+Итого корзина расщепляется на **до пяти** заказов: `order`, `preorder`, `defect`, `promo`,
+`promo_sample`.
+
+## ⚠️ Порядок работ — строго spec-first
+
+Правило проекта (`.claude/rules/erp-exchange-protocol.md`): сначала схемы и документация,
+только потом код. Нарушать нельзя.
+
+1. **JSON Schema** — [app/Services/Erp/Schemas/](../../../app/Services/Erp/Schemas/):
+   - `order.created.to_erp.json` — в описании `type` добавить `promo` и `promo_sample` с
+     пояснением про склад и накладную; в `items` добавить необязательные `is_promo` и
+     `promo_kind`;
+   - `order.created.json` / `order.updated.json` (входящие) — то же самое, 1С может
+     прислать такой заказ обратно.
+2. **AsyncAPI** — [docs/asyncapi/pecado-erp-integration.yaml](../../../docs/asyncapi/pecado-erp-integration.yaml).
+3. **Бизнес-правила** — `docs-erp/content/rules/orders.md`: как формируется промо-заказ,
+   откуда берётся склад, что означает нулевая или копеечная сумма, что делать с заказом,
+   у которого все позиции по 0 ₽.
+4. **Changelog** — `docs-erp/content/changelog.md`.
+5. **Тест-план** — `docs-erp/content/tests/phase-2-outbound.md` и `phase-3-e2e.md`.
+6. **Сборка**: `docker exec pecado-node npm run asyncapi:build` + `mkdocs build`.
+7. Только после этого — код.
+
+## Изменения в коде
+
+### Enum и миграции
+
+- [`App\Enums\OrderType`](../../../app/Enums/OrderType.php) — два новых case с русскими
+  `label()`: «Промо-позиции» и «Рекламные образцы». Док-блок — по образцу того, что уже
+  написан для `DEFECT`.
+- `orders.type` — колонка `string` с дефолтом
+  ([миграция](../../../database/migrations/2026_01_29_202317_create_orders_table.php#L29)),
+  менять её структуру не нужно. Но по правилу `.claude/rules/db-comments.md` **комментарий
+  столбца перечисляет допустимые значения** — обновить его новой миграцией.
+- `order_items` — новые колонки `promotion_rule_id` (nullable, FK `nullOnDelete`) и
+  `promo_kind` (nullable string). Образец — миграция
+  `2026_07_20_100300_add_defect_to_order_items_table.php`.
+- После миграций — `php artisan bi:sync-grants`.
+
+### Позиции промо-заказа
+
+Отдельный метод сборки (в `OrderAssembler` из карточки 06), по образцу
+[`createDefectOrderItems()`](../../../app/Services/Order/CheckoutService.php#L212):
+
+- `price` / `final_price` = промо-цена из награды (0, 0.01, 40 — любая);
+- `base_price` = обычная цена клиента на момент оформления;
+- `discount_percent` = производная: `round((1 − final/base) × 100, 2)`;
+- `promotion_rule_id`, `promo_kind` — снапшот привязки;
+- индивидуальные цены и скидки к промо-цене **не применяются**.
+
+Заказчик подтвердил: **1С берёт `final_price` авторитетно** и не пересчитывает сумму через
+`discount_percent`. Поэтому копеечные расхождения при цене 0,01 ₽ исключены, а
+`discount_percent` передаётся только ради наглядности в документе. Зафиксировать это
+комментарием в коде — иначе при следующей правке кто-нибудь «оптимизирует» поле.
+
+### Публикация в 1С
+
+[`PublishOrderToErp::resolveWarehouseUuids()`](../../../app/Listeners/PublishOrderToErp.php#L124):
+
+- `promo` → склады региона пользователя (как `order`);
+- `promo_sample` → склад с флагом `is_promo_sample` (флаг заводится в карточке 11).
+
+**Гейт публикации.** Скопировать защиту, уже стоящую для уценки
+([строки 28–40](../../../app/Listeners/PublishOrderToErp.php#L28)): если у склада
+`promo_sample` нет `external_id`, заказ **не публикуем**, пишем `warning` с номером заказа.
+Иначе `warehouse_uuids` уйдёт пустым и 1С не поймёт, откуда отгружать. Без этого гейта
+волна 3 гарантированно уронит боевой обмен.
+
+### Защита входящих — обязательна
+
+Входящие `order.created` / `order.updated` пересоздают позиции заказа и затирают поля,
+которых нет в 1С. На этом уже сгорели с уценкой — потребовался трейт
+[`PreservesDefectItemLinks`](../../../app/Services/Erp/Support/PreservesDefectItemLinks.php)
+(коммит `e89536f4`, «не терять привязку позиций уценки к партии брака»).
+
+Здесь пишем аналог **сразу**: `PreservesPromoItemLinks` для `promotion_rule_id` и
+`promo_kind`, подключается в
+[`HandleOrderCreated`](../../../app/Services/Erp/Handlers/HandleOrderCreated.php) и
+[`HandleOrderUpdated`](../../../app/Services/Erp/Handlers/HandleOrderUpdated.php) рядом с
+существующим трейтом.
+
+Дополнительно: менеджер может выдать промо-позицию **вручную в 1С** (решение заказчика,
+интерфейса на сайте нет). Значит обработчик обязан спокойно принять позицию, которой у нас
+не было: сохранить её, не пытаться сопоставить с правилом, не удалять при следующем
+обновлении.
+
+## Нюансы
+
+- **Идемпотентность.** Повторный `order.created` с тем же `message_id` не должен
+  задваивать позиции — существующее поведение upsert сохранить.
+- **Нулевая сумма.** Заказчик подтвердил, что 1С принимает заказ с нулевой суммой. Убедиться,
+  что валидатор исходящих (`ErpMessageValidator::validateOutbound`) не режет такой payload:
+  в схеме `final_price` имеет `minimum: 0`, но `total_amount` в заказе отдельно не
+  валидируется — перепроверить на dev по `erp_bus_messages`.
+- **Письма.** [`SendOrderCreatedEmail`](../../../app/Listeners/SendOrderCreatedEmail.php)
+  сработает на каждый из пяти заказов. Клиент получит пять писем за одно оформление — это
+  недопустимо. Решить в рамках карточки: либо промо-заказы не порождают письмо, либо письма
+  группируются. Тот же вопрос — к
+  [`NotifyManagersAboutNewOrder`](../../../app/Listeners/NotifyManagersAboutNewOrder.php).
+  **Проверить, как это ведёт себя сейчас с уценкой** — возможно, проблема уже существует и
+  чинить надо заодно.
+- **Подписки на изменения.** `SendEntitySubscriptionNotifications` (за флагом
+  `MAIL_FEATURE_ENTITY_SUBSCRIPTIONS`) — та же история, проверить.
+
+## Интеграционные тесты — обязательны
+
+Правило проекта: всё, что идёт через RabbitMQ и отражено в AsyncAPI, покрывается
+интеграционными тестами (`.claude/rules/integration-tests.md`).
+
+- [ ] Чекаут с промо-позицией → создаются заказы `order` + `promo`; в `erp_out.orders`
+      уходят два сообщения с корректными `type` и `warehouse_uuids`.
+- [ ] Позиция промо-заказа: `base_price` = цена клиента, `final_price` = промо-цена,
+      `discount_percent` — производная; при цене 0 скидка 100.
+- [ ] Заказ `promo_sample` не публикуется, если у склада нет `external_id`; в лог пишется
+      warning.
+- [ ] Обратный `order.updated` из 1С не затирает `promotion_rule_id` и `promo_kind`.
+- [ ] Позиция, добавленная вручную в 1С, сохраняется и переживает следующее обновление.
+- [ ] Payload проходит `validateOutbound` при нулевой сумме заказа.
+- [ ] Повторная доставка сообщения не задваивает позиции.
+
+## Критерии готовности
+
+- [ ] Схемы, AsyncAPI, MkDocs и changelog обновлены **до** кода; `npm run asyncapi:build`
+      и `mkdocs build` проходят.
+- [ ] Миграции применяются, комментарии столбцов на русском, `db:comments:audit --strict`
+      чистый, `bi:sync-grants` выполнен.
+- [ ] Все интеграционные тесты выше зелёные.
+- [ ] Вопрос с письмами закрыт явным решением (и оно записано в карточке/коде).
+- [ ] `composer lint`, `composer analyse` чистые.
