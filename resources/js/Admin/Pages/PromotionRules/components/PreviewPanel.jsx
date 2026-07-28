@@ -149,6 +149,14 @@ export default function PreviewPanel({ ruleId }) {
                                             {!condition.satisfied && condition.remaining > 0 && (
                                                 <>, не хватает {formatAggregate(condition.remaining, condition.aggregate)}</>
                                             )}
+                                            {condition.per_value > 0 && (
+                                                <>
+                                                    {'. Кратность: каждые '}
+                                                    {formatAggregate(condition.per_value, condition.aggregate)}
+                                                    {' → вклад в награду '}
+                                                    {condition.multiplier ?? 0}
+                                                </>
+                                            )}
                                         </Text>
                                     </Box>
                                 ))}

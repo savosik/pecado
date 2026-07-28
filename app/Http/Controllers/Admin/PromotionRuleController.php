@@ -256,6 +256,93 @@ class PromotionRuleController extends AdminController
         ]);
     }
 
+    /**
+     * Разбор таблицы «артикул → кратность», вставленной из Excel.
+     *
+     * Пятнадцать позиций маркетолог наберёт руками, сотню — нет. Каждая строка
+     * становится отдельным условием со своим шагом кратности, поэтому здесь
+     * же возвращаем нераспознанное: молча терять строки из вставки нельзя.
+     */
+    public function parseSkuTable(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'text' => ['required', 'string', 'max:100000'],
+        ], [], ['text' => 'таблица']);
+
+        $rows = [];
+
+        foreach (preg_split('~\R~u', $validated['text']) ?: [] as $rawLine) {
+            $line = trim($rawLine);
+
+            if ($line === '') {
+                continue;
+            }
+
+            // Разделитель — табуляция (Excel), точка с запятой, запятая или пробелы
+            $parts = array_values(array_filter(
+                array_map('trim', (array) preg_split('~[\t;,]|\s{2,}|\s+~u', $line)),
+                fn (string $part) => $part !== '',
+            ));
+
+            $sku = $parts[0] ?? '';
+
+            if ($sku === '') {
+                continue;
+            }
+
+            // Кратность — последнее число в строке; её отсутствие означает «за каждую штуку»
+            $step = null;
+            for ($i = count($parts) - 1; $i >= 1; $i--) {
+                $candidate = str_replace(',', '.', $parts[$i]);
+
+                if (is_numeric($candidate) && (float) $candidate > 0) {
+                    $step = (float) $candidate;
+                    break;
+                }
+            }
+
+            if (isset($rows[mb_strtolower($sku)])) {
+                continue;
+            }
+
+            $rows[mb_strtolower($sku)] = ['sku' => $sku, 'per_value' => $step ?? 1.0];
+        }
+
+        if ($rows === []) {
+            return response()->json(['matched' => [], 'unknown' => []]);
+        }
+
+        $products = Product::withoutGlobalScope(HiddenScope::class)
+            ->whereIn('sku', array_column($rows, 'sku'))
+            ->get(['id', 'sku', 'name'])
+            ->keyBy(fn (Product $product) => mb_strtolower((string) $product->sku));
+
+        $matched = [];
+        $unknown = [];
+
+        foreach ($rows as $key => $row) {
+            $product = $products->get($key);
+
+            if (! $product) {
+                $unknown[] = $row['sku'];
+
+                continue;
+            }
+
+            $matched[] = [
+                'product_id' => $product->id,
+                'sku' => $product->sku,
+                'name' => $product->name,
+                'per_value' => $row['per_value'],
+            ];
+        }
+
+        return response()->json([
+            'matched' => $matched,
+            'unknown' => $unknown,
+        ]);
+    }
+
     // ────────────────────────────────────────────
     // Валидация и подготовка данных
     // ────────────────────────────────────────────
@@ -346,6 +433,11 @@ class PromotionRuleController extends AdminController
                 'price_basis' => PromotionRule::PRICE_BASIS_CLIENT_FINAL,
                 'operator' => (string) ($item['operator'] ?? '>='),
                 'value' => (float) ($item['value'] ?? 0),
+                // Своя кратность у позиции — необязательна; пустую храним как null,
+                // иначе движок посчитает её заданной и обнулит вклад награды
+                'per_value' => isset($item['per_value']) && is_numeric($item['per_value']) && (float) $item['per_value'] > 0
+                    ? (float) $item['per_value']
+                    : null,
             ];
         }
 

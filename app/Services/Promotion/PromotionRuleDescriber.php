@@ -22,6 +22,9 @@ use App\Models\Scopes\HiddenScope;
  */
 class PromotionRuleDescriber
 {
+    /** Со скольких условий перечисление в сводке сменяется свёрнутым видом. */
+    private const SUMMARY_MAX_LINES = 3;
+
     /** Сравнение → знак для подписи. */
     private const OPERATORS = [
         '>=' => '≥',
@@ -103,18 +106,110 @@ class PromotionRuleDescriber
 
     /**
      * Условия правила одной строкой — для колонки списка.
+     *
+     * Десяток позиций подряд в ячейку таблицы не влезает, поэтому длинный список
+     * сворачивается в сводку: сколько условий, какие пороги и какие кратности.
      */
     public function conditionSummary(PromotionRule $rule): string
     {
-        $lines = $this->conditionLines($rule);
+        $items = array_values((array) ($rule->conditions['items'] ?? []));
 
-        if ($lines === []) {
+        if ($items === []) {
             return 'Условия не заданы';
         }
 
-        $glue = ($rule->conditions['mode'] ?? 'all') === 'any' ? ' ИЛИ ' : ' И ';
+        $mode = ($rule->conditions['mode'] ?? 'all') === 'any' ? 'any' : 'all';
 
-        return implode($glue, $lines);
+        if (count($items) > self::SUMMARY_MAX_LINES) {
+            return $this->collapsedConditionSummary($items, $mode);
+        }
+
+        return implode($mode === 'any' ? ' ИЛИ ' : ' И ', $this->conditionLines($rule));
+    }
+
+    /**
+     * Сводка вместо перечисления: «15 условий (достаточно любого), количество 1–6 шт., кратность 1–6 шт.».
+     *
+     * Названия товаров сюда не попадают намеренно — пятнадцать наименований
+     * не читаются ни в какой ячейке, а диапазоны порогов и кратностей отвечают
+     * на главный вопрос «что здесь вообще настроено».
+     *
+     * @param  array<int, mixed>  $items
+     */
+    private function collapsedConditionSummary(array $items, string $mode): string
+    {
+        $count = count($items);
+        $targets = [];
+        $steps = [];
+        $aggregates = [];
+
+        foreach ($items as $item) {
+            $item = (array) $item;
+            $aggregate = ($item['aggregate'] ?? PromotionRule::AGGREGATE_QUANTITY) === PromotionRule::AGGREGATE_AMOUNT
+                ? PromotionRule::AGGREGATE_AMOUNT
+                : PromotionRule::AGGREGATE_QUANTITY;
+
+            $aggregates[$aggregate] = true;
+            $targets[] = (float) ($item['value'] ?? 0);
+
+            if (is_numeric($item['per_value'] ?? null) && (float) $item['per_value'] > 0) {
+                $steps[] = (float) $item['per_value'];
+            }
+        }
+
+        $modeLabel = $mode === 'any' ? 'достаточно любого' : 'нужны все';
+        $parts = [$count.' '.$this->plural($count, 'условие', 'условия', 'условий')." ({$modeLabel})"];
+
+        if (count($aggregates) > 1) {
+            $parts[] = 'пороги по количеству и по сумме';
+        } else {
+            $aggregate = (string) array_key_first($aggregates);
+            $parts[] = ($aggregate === PromotionRule::AGGREGATE_AMOUNT ? 'сумма ' : 'количество ')
+                .$this->range($targets, $aggregate);
+        }
+
+        if ($steps !== []) {
+            $aggregate = count($aggregates) === 1
+                ? (string) array_key_first($aggregates)
+                : PromotionRule::AGGREGATE_QUANTITY;
+
+            $parts[] = 'кратность '.$this->range($steps, $aggregate);
+        }
+
+        return implode(', ', $parts);
+    }
+
+    /**
+     * «4 шт.» либо «1–6 шт.».
+     *
+     * @param  float[]  $values
+     */
+    private function range(array $values, string $aggregate): string
+    {
+        $min = min($values);
+        $max = max($values);
+
+        return abs($max - $min) < 0.005
+            ? $this->formatAggregate($min, $aggregate)
+            : $this->number($min).'–'.$this->formatAggregate($max, $aggregate);
+    }
+
+    /**
+     * Русское склонение по числу: 1 условие, 2 условия, 5 условий.
+     */
+    private function plural(int $count, string $one, string $few, string $many): string
+    {
+        $mod100 = $count % 100;
+
+        if ($mod100 >= 11 && $mod100 <= 14) {
+            return $many;
+        }
+
+        return match ($count % 10) {
+            1 => $one,
+            2, 3, 4 => $few,
+            default => $many,
+        };
     }
 
     /**
@@ -243,7 +338,14 @@ class PromotionRuleDescriber
         $operator = self::OPERATORS[(string) ($item['operator'] ?? '>=')] ?? '≥';
         $target = $this->formatAggregate((float) ($item['value'] ?? 0), $aggregate);
 
-        return $prefix.' '.$this->selectorLabel((array) ($item['selector'] ?? [])).' '.$operator.' '.$target;
+        $line = $prefix.' '.$this->selectorLabel((array) ($item['selector'] ?? [])).' '.$operator.' '.$target;
+
+        // Своя кратность позиции — её вклад в число наград считается отдельно
+        if (is_numeric($item['per_value'] ?? null) && (float) $item['per_value'] > 0) {
+            $line .= ' (за каждые '.$this->formatAggregate((float) $item['per_value'], $aggregate).')';
+        }
+
+        return $line;
     }
 
     /**

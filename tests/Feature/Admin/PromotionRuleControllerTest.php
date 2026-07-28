@@ -446,6 +446,108 @@ class PromotionRuleControllerTest extends TestCase
             ->assertJsonPath('whole_cart', false);
     }
 
+    /**
+     * Вставка таблицы «артикул → кратность» из Excel: строки становятся
+     * позициями условия, нераспознанное возвращается явно.
+     */
+    #[Test]
+    public function sku_table_is_parsed_into_products_and_steps(): void
+    {
+        $first = Product::factory()->create(['sku' => 'LE-22']);
+        $second = Product::factory()->create(['sku' => 'LE-60']);
+
+        $response = $this->actingAs($this->admin())
+            ->postJson(route('admin.promotion-rules.parse-sku-table'), [
+                'text' => "LE-22\t1\nLE-60;2\nLE-999 6\n\nle-22 4",
+            ])
+            ->assertOk();
+
+        $response->assertJsonCount(2, 'matched');
+        $response->assertJsonPath('matched.0.product_id', $first->id);
+        $response->assertJsonPath('matched.0.per_value', 1);
+        $response->assertJsonPath('matched.1.product_id', $second->id);
+        $response->assertJsonPath('matched.1.per_value', 2);
+        // Дубль артикула не создаёт вторую позицию, неизвестный — виден
+        $response->assertJsonPath('unknown', ['LE-999']);
+    }
+
+    #[Test]
+    public function sku_table_without_step_defaults_to_every_piece(): void
+    {
+        Product::factory()->create(['sku' => 'LE-77']);
+
+        $this->actingAs($this->admin())
+            ->postJson(route('admin.promotion-rules.parse-sku-table'), ['text' => 'LE-77'])
+            ->assertOk()
+            ->assertJsonPath('matched.0.per_value', 1);
+    }
+
+    #[Test]
+    public function rule_with_per_item_steps_is_saved(): void
+    {
+        $first = Product::factory()->create();
+        $second = Product::factory()->create();
+        $gift = Product::factory()->create();
+
+        $payload = $this->payload([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => [
+                    $this->conditionItem([$first->id], 4, 4),
+                    $this->conditionItem([$second->id], 6, 6),
+                ],
+            ],
+            'rewards' => [[
+                'type' => 'fixed',
+                'product_id' => $gift->id,
+                'choices' => [],
+                'quantity' => 1,
+                'price' => 0,
+                'promo_kind' => 'accountable',
+                'warehouse_id' => null,
+                'multiply' => 'per_threshold',
+                // Общий шаг не задаём — его берут позиции условия
+                'per_value' => null,
+                'max_multiplier' => 20,
+                'optional' => false,
+            ]],
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.promotion-rules.store'), $payload)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $rule = PromotionRule::query()->latest('id')->firstOrFail();
+
+        // JSON-хранение приводит 4.0 к 4, поэтому сравниваем по значению
+        $this->assertEquals(4, $rule->conditions['items'][0]['per_value']);
+        $this->assertEquals(6, $rule->conditions['items'][1]['per_value']);
+    }
+
+    /**
+     * @param  int[]  $productIds
+     * @return array<string, mixed>
+     */
+    private function conditionItem(array $productIds, float $value, ?float $perValue = null): array
+    {
+        return [
+            'selector' => [
+                'products' => $productIds,
+                'categories' => [],
+                'with_descendants' => false,
+                'brands' => [],
+                'tags' => [],
+                'erp_promotions' => [],
+                'whole_cart' => false,
+            ],
+            'aggregate' => 'quantity',
+            'operator' => '>=',
+            'value' => $value,
+            'per_value' => $perValue,
+        ];
+    }
+
     #[Test]
     public function rebuild_recalculates_participants(): void
     {

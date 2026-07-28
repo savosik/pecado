@@ -17,8 +17,8 @@ use Opis\JsonSchema\Validator;
  *  1. структура — JSON Schema из app/Services/Promotion/Schemas/*.json
  *     (сообщения об ошибках заданы в самих схемах через `$error`);
  *  2. смысл — проверки, которые схемой не выражаются: непустой селектор,
- *     кратность с потолком, склад под вид промо-позиции, пересечение
- *     награды с условием.
+ *     кратность с потолком и с шагом не больше порога, склад под вид
+ *     промо-позиции.
  *
  * Все сообщения — на русском: их видит маркетолог в конструкторе акций.
  */
@@ -81,6 +81,7 @@ class PromotionRuleSchemaValidator
             $rewardErrors = $this->validateRewardsMeaning(
                 (array) ($rule['rewards'] ?? []),
                 (bool) ($rule['is_active'] ?? false),
+                $this->conditionsProvideStep((array) ($rule['conditions'] ?? [])),
             );
 
             if ($rewardErrors !== []) {
@@ -187,6 +188,7 @@ class PromotionRuleSchemaValidator
 
         foreach (array_values((array) ($conditions['items'] ?? [])) as $index => $item) {
             $number = $index + 1;
+            $item = (array) $item;
             $selector = (array) ($item['selector'] ?? []);
 
             $hasSelection = $this->resolver->selectorQuery($selector) !== null;
@@ -197,9 +199,71 @@ class PromotionRuleSchemaValidator
                     .'Укажите товары, категории, бренды, теги или ERP-промо, '
                     .'либо явно включите «вся корзина».';
             }
+
+            $errors = array_merge($errors, $this->validateConditionStep($item, $number));
         }
 
         return $errors;
+    }
+
+    /**
+     * Шаг кратности в позиции условия.
+     *
+     * Две ловушки, из-за которых правило срабатывало бы, а награда не выдавалась:
+     * шаг больше порога (порог взят, а кратность — ноль) и шаг при сравнении
+     * «не больше»/«меньше», где делить набранное на шаг попросту бессмысленно.
+     *
+     * @param  array<string, mixed>  $item
+     * @return string[]
+     */
+    private function validateConditionStep(array $item, int $number): array
+    {
+        $perValue = $item['per_value'] ?? null;
+
+        if ($perValue === null || ! is_numeric($perValue)) {
+            return [];
+        }
+
+        $step = (float) $perValue;
+        $target = (float) ($item['value'] ?? 0);
+        $operator = (string) ($item['operator'] ?? '>=');
+
+        if (! in_array($operator, ['>=', '>'], true)) {
+            return ["Условие {$number}: кратность работает только со сравнением «не меньше» или «больше»."];
+        }
+
+        if ($step > $target) {
+            return ["Условие {$number}: шаг кратности ({$this->plain($step)}) больше порога ({$this->plain($target)}). "
+                .'Порог был бы взят, а награда не выдалась бы ни разу — задайте шаг не больше порога.'];
+        }
+
+        return [];
+    }
+
+    /**
+     * Задаёт ли хоть одна позиция условия свой шаг кратности.
+     *
+     * @param  array<string, mixed>  $conditions
+     */
+    private function conditionsProvideStep(array $conditions): bool
+    {
+        foreach ((array) ($conditions['items'] ?? []) as $item) {
+            $perValue = ((array) $item)['per_value'] ?? null;
+
+            if (is_numeric($perValue) && (float) $perValue > 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Число без хвоста из нулей — для подстановки в текст ошибки.
+     */
+    private function plain(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 2, '.', ''), '0'), '.');
     }
 
     /**
@@ -212,9 +276,10 @@ class PromotionRuleSchemaValidator
      *
      * @param  array<int, mixed>  $rewards
      * @param  bool  $isActive  Правило включают — проверки, блокирующие только активацию
+     * @param  bool  $conditionsProvideStep  Шаг кратности задан в позициях условия
      * @return string[]
      */
-    private function validateRewardsMeaning(array $rewards, bool $isActive): array
+    private function validateRewardsMeaning(array $rewards, bool $isActive, bool $conditionsProvideStep = false): array
     {
         $errors = [];
 
@@ -226,7 +291,7 @@ class PromotionRuleSchemaValidator
                 $errors,
                 $this->validateRewardProducts($reward, $number),
                 $this->validateRewardPrice($reward, $number),
-                $this->validateRewardMultiply($reward, $number),
+                $this->validateRewardMultiply($reward, $number, $conditionsProvideStep),
                 $this->validateRewardWarehouse($reward, $number, $isActive),
             );
         }
@@ -290,7 +355,7 @@ class PromotionRuleSchemaValidator
      * @param  array<string, mixed>  $reward
      * @return string[]
      */
-    private function validateRewardMultiply(array $reward, int $number): array
+    private function validateRewardMultiply(array $reward, int $number, bool $conditionsProvideStep = false): array
     {
         if (($reward['multiply'] ?? null) !== PromotionRule::MULTIPLY_PER_THRESHOLD) {
             return [];
@@ -300,8 +365,10 @@ class PromotionRuleSchemaValidator
         $perValue = $reward['per_value'] ?? null;
         $maxMultiplier = $reward['max_multiplier'] ?? null;
 
-        if (! is_numeric($perValue) || (float) $perValue <= 0) {
-            $errors[] = "Награда {$number}: для кратности «на каждые N» нужен шаг больше нуля.";
+        // Шаг задан в позициях условия — у каждой свой, и общий шаг в награде не нужен
+        if (! $conditionsProvideStep && (! is_numeric($perValue) || (float) $perValue <= 0)) {
+            $errors[] = "Награда {$number}: для кратности «на каждые N» нужен шаг больше нуля — "
+                .'задайте его здесь либо в позициях условия, если у артикулов кратность разная.';
         }
 
         if (! is_numeric($maxMultiplier) || (int) $maxMultiplier < 1) {

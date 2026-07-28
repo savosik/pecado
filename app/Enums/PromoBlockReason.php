@@ -26,6 +26,15 @@ enum PromoBlockReason: string
     /** Правило не работает в этом канале (сайт/клиентское API). */
     case WRONG_CHANNEL = 'wrong_channel';
 
+    /**
+     * Условие выполнено, но кратность «на каждые N» не набрана ни разу.
+     *
+     * Бывает, когда порог взят одним условием, а шаг кратности задан по другому,
+     * или когда шаг больше порога. Без этой причины награда молча исчезала бы:
+     * правило числится сработавшим, а выдавать нечего.
+     */
+    case MULTIPLIER_NOT_REACHED = 'multiplier_not_reached';
+
     public function label(): string
     {
         return match ($this) {
@@ -34,6 +43,7 @@ enum PromoBlockReason: string
             self::TOTAL_LIMIT => 'Исчерпан общий лимит',
             self::NOT_ACTIVE_YET => 'Правило в режиме показа, выдача не включена',
             self::WRONG_CHANNEL => 'Правило не работает в этом канале',
+            self::MULTIPLIER_NOT_REACHED => 'Кратность не набрана — награда выдаётся ноль раз',
         };
     }
 }

@@ -13,7 +13,8 @@ import { toaster } from '@/components/ui/toaster';
 import ConditionCard from './ConditionCard';
 import RewardCard from './RewardCard';
 import PreviewPanel from './PreviewPanel';
-import { toFormState, toPayload, emptyCondition, emptyReward } from './ruleState';
+import SkuTablePanel from './SkuTablePanel';
+import { toFormState, toPayload, emptyCondition, emptyReward, conditionFromSkuRow } from './ruleState';
 
 /**
  * Конструктор правила акции. Один и тот же компонент обслуживает создание и
@@ -29,6 +30,9 @@ export default function RuleForm({
     isEdit = false,
 }) {
     const [tab, setTab] = useState('general');
+    // Какую карточку раскрыть сразу — только что добавленную; остальные свёрнуты
+    const [openCondition, setOpenCondition] = useState(null);
+    const [openReward, setOpenReward] = useState(null);
     const { data, setData, processing, errors, transform, post, put } = useForm(toFormState(rule));
 
     const submit = (e, shouldClose = false) => {
@@ -74,6 +78,36 @@ export default function RuleForm({
         const rewards = [...data.rewards];
         rewards[index] = reward;
         setData('rewards', rewards);
+    };
+
+    const addCondition = () => {
+        setOpenCondition(data.conditions.items.length);
+        patchConditions({ items: [...data.conditions.items, emptyCondition()] });
+    };
+
+    const addReward = () => {
+        setOpenReward(data.rewards.length);
+        setData('rewards', [...data.rewards, emptyReward()]);
+    };
+
+    /**
+     * Таблица «артикул → кратность» из Excel: строка = условие «за каждые N штук
+     * этого артикула». Такие условия — альтернативы друг другу, поэтому режим
+     * переводим в «достаточно любого»: иначе правило потребует все артикулы разом.
+     */
+    const addConditionsFromSkuTable = (rows) => {
+        const items = [...data.conditions.items, ...rows.map(conditionFromSkuRow)];
+
+        setOpenCondition(null);
+        patchConditions({ items, mode: items.length > 1 ? 'any' : data.conditions.mode });
+
+        toaster.create({
+            title: `Добавлено условий: ${rows.length}`,
+            description: items.length > 1
+                ? 'Режим проверки переключён на «Достаточно любого» — артикулы считаются независимо'
+                : undefined,
+            type: 'success',
+        });
     };
 
     const rebuildParticipants = () => {
@@ -235,7 +269,12 @@ export default function RuleForm({
                                     {errors.conditions && <Alert status="error" title={errors.conditions} />}
 
                                     {data.conditions.items.length > 1 && (
-                                        <FormField label="Как проверять условия">
+                                        <FormField
+                                            label="Как проверять условия"
+                                            helpText={data.conditions.mode === 'any'
+                                                ? 'Правило сработает, как только выполнено любое из условий. Кратность считается по сработавшим'
+                                                : 'Правило сработает, только когда выполнены все условия сразу'}
+                                        >
                                             <SegmentedControl
                                                 value={data.conditions.mode}
                                                 onValueChange={(e) => patchConditions({ mode: e.value })}
@@ -259,6 +298,7 @@ export default function RuleForm({
                                             index={index}
                                             condition={condition}
                                             erpPromotionTypes={erpPromotionTypes}
+                                            defaultOpen={index === openCondition}
                                             onChange={(updated) => updateCondition(index, updated)}
                                             onRemove={() => patchConditions({
                                                 items: data.conditions.items.filter((_, i) => i !== index),
@@ -267,14 +307,12 @@ export default function RuleForm({
                                     ))}
 
                                     <Box>
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => patchConditions({ items: [...data.conditions.items, emptyCondition()] })}
-                                            type="button"
-                                        >
+                                        <Button variant="outline" onClick={addCondition} type="button">
                                             <LuPlus /> Добавить условие
                                         </Button>
                                     </Box>
+
+                                    <SkuTablePanel onAdd={addConditionsFromSkuTable} />
                                 </Stack>
                             </Tabs.Content>
 
@@ -295,17 +333,14 @@ export default function RuleForm({
                                             index={index}
                                             reward={reward}
                                             warehouses={warehouses}
+                                            defaultOpen={index === openReward}
                                             onChange={(updated) => updateReward(index, updated)}
                                             onRemove={() => setData('rewards', data.rewards.filter((_, i) => i !== index))}
                                         />
                                     ))}
 
                                     <Box>
-                                        <Button
-                                            variant="outline"
-                                            type="button"
-                                            onClick={() => setData('rewards', [...data.rewards, emptyReward()])}
-                                        >
+                                        <Button variant="outline" type="button" onClick={addReward}>
                                             <LuPlus /> Добавить награду
                                         </Button>
                                     </Box>

@@ -1,9 +1,11 @@
+import { useMemo, useState } from 'react';
 import { router, Link } from '@inertiajs/react';
 import AdminLayout from '@/Admin/Layouts/AdminLayout';
-import { PageHeader, DataTable, SearchInput, ConfirmDialog, FilterPanel } from '@/Admin/Components';
-import { Box, Text, Button, Badge, HStack, VStack } from '@chakra-ui/react';
+import { PageHeader, DataTable, SearchInput, ConfirmDialog, FilterPanel, Pagination } from '@/Admin/Components';
+import { Box, Card, Text, Button, Badge, HStack, VStack } from '@chakra-ui/react';
 import { NativeSelectRoot, NativeSelectField } from '@/components/ui/native-select';
-import { LuPlus } from 'react-icons/lu';
+import { Checkbox } from '@/components/ui/checkbox';
+import { LuPlus, LuChevronDown, LuChevronRight } from 'react-icons/lu';
 import { useResourceIndex } from '@/Admin/hooks/useResourceIndex';
 import { createActionsColumn } from '@/Admin/helpers/createActionsColumn';
 import { usePermission } from '@/Admin/hooks/usePermission';
@@ -15,8 +17,38 @@ const STATUS_COLORS = {
     finished: 'orange',
 };
 
+/**
+ * Группировка строк текущей страницы по акции.
+ *
+ * Именно текущей страницы: пагинация серверная, и делать вид, что группа
+ * содержит все правила акции, было бы враньём — счётчик в заголовке говорит,
+ * сколько правил группы попало на эту страницу.
+ */
+const groupByPromotion = (rows) => {
+    const groups = new Map();
+
+    rows.forEach((row) => {
+        const key = row.promotion?.id ?? 'none';
+
+        if (!groups.has(key)) {
+            groups.set(key, {
+                key,
+                title: row.promotion?.name || 'Без привязки к акции',
+                promotionId: row.promotion?.id ?? null,
+                rows: [],
+            });
+        }
+
+        groups.get(key).rows.push(row);
+    });
+
+    return [...groups.values()];
+};
+
 export default function Index({ rules, promotions = [], filters }) {
     const { can } = usePermission();
+    const [grouped, setGrouped] = useState(false);
+    const [collapsed, setCollapsed] = useState({});
     const {
         searchQuery,
         handleSearch,
@@ -45,7 +77,8 @@ export default function Index({ rules, promotions = [], filters }) {
             render: (_, row) => (
                 <VStack align="start" gap={0}>
                     <Text fontWeight="medium">{row.name}</Text>
-                    {row.promotion && (
+                    {/* В сгруппированном виде название акции уже в заголовке группы */}
+                    {!grouped && row.promotion && (
                         <Link href={route('admin.promotions.edit', row.promotion.id)}>
                             <Text fontSize="xs" color="blue.500">
                                 Акция: {row.promotion.name}
@@ -116,6 +149,8 @@ export default function Index({ rules, promotions = [], filters }) {
         },
         createActionsColumn('admin.promotion-rules', openDeleteDialog, { permissionPrefix: 'promotion-rules' }),
     ];
+
+    const groups = useMemo(() => groupByPromotion(rules.data), [rules.data]);
 
     return (
         <>
@@ -189,19 +224,81 @@ export default function Index({ rules, promotions = [], filters }) {
                         </NativeSelectField>
                     </NativeSelectRoot>
                 </HStack>
+
+                <Checkbox checked={grouped} onCheckedChange={(e) => setGrouped(e.checked)}>
+                    Группировать по акции
+                </Checkbox>
             </FilterPanel>
 
-            <DataTable
-                data={rules.data}
-                columns={columns}
-                pagination={rules}
-                onSort={handleSort}
-                sortColumn={filters.sort_by}
-                sortDirection={filters.sort_order}
-                perPage={filters.per_page}
-                onPerPageChange={handlePerPageChange}
-                emptyMessage="Правила акций пока не созданы"
-            />
+            {grouped ? (
+                <VStack align="stretch" gap={4}>
+                    {groups.map((group) => {
+                        const isCollapsed = Boolean(collapsed[group.key]);
+
+                        return (
+                            <Card.Root key={group.key} borderWidth="1px">
+                                <Card.Header py={3}>
+                                    <HStack justify="space-between" gap={3} wrap="wrap">
+                                        <HStack
+                                            gap={2}
+                                            cursor="pointer"
+                                            onClick={() => setCollapsed((current) => ({
+                                                ...current,
+                                                [group.key]: !current[group.key],
+                                            }))}
+                                        >
+                                            {isCollapsed ? <LuChevronRight /> : <LuChevronDown />}
+                                            <Text fontWeight="semibold">{group.title}</Text>
+                                            <Badge colorPalette="gray" variant="subtle">
+                                                правил на странице: {group.rows.length}
+                                            </Badge>
+                                        </HStack>
+
+                                        {group.promotionId && (
+                                            <Link href={route('admin.promotions.edit', group.promotionId)}>
+                                                <Text fontSize="sm" color="blue.500">Открыть акцию</Text>
+                                            </Link>
+                                        )}
+                                    </HStack>
+                                </Card.Header>
+
+                                {!isCollapsed && (
+                                    <Card.Body pt={0}>
+                                        <DataTable
+                                            data={group.rows}
+                                            columns={columns}
+                                            emptyMessage="Правил нет"
+                                        />
+                                    </Card.Body>
+                                )}
+                            </Card.Root>
+                        );
+                    })}
+
+                    {groups.length === 0 && (
+                        <Text color="fg.muted">Правила акций пока не созданы</Text>
+                    )}
+
+                    {/* Пагинация серверная и общая для всех групп: страница режется по правилам */}
+                    <Pagination
+                        pagination={rules}
+                        perPage={filters.per_page}
+                        onPerPageChange={handlePerPageChange}
+                    />
+                </VStack>
+            ) : (
+                <DataTable
+                    data={rules.data}
+                    columns={columns}
+                    pagination={rules}
+                    onSort={handleSort}
+                    sortColumn={filters.sort_by}
+                    sortDirection={filters.sort_order}
+                    perPage={filters.per_page}
+                    onPerPageChange={handlePerPageChange}
+                    emptyMessage="Правила акций пока не созданы"
+                />
+            )}
 
             <ConfirmDialog
                 open={deleteDialogOpen}

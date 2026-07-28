@@ -14,9 +14,11 @@ use App\Models\Product;
 use App\Models\PromotionRule;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Promotion\ActivePromotionRuleCache;
 use App\Services\Promotion\DTO\AppliedReward;
 use App\Services\Promotion\DTO\PromoContext;
 use App\Services\Promotion\DTO\PromoContextLine;
+use App\Services\Promotion\DTO\PromotionEvaluation;
 use App\Services\Promotion\PromotionEngine;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -294,6 +296,297 @@ class PromotionEngineTest extends TestCase
         $this->assertSame(2, $this->engine()->evaluate($this->context([[$trigger, 2]]))->applied[0]->quantity);
         $this->assertSame(3, $this->engine()->evaluate($this->context([[$trigger, 5]]))->applied[0]->quantity,
             'Потолок кратности обязан ограничить выдачу');
+    }
+
+    /**
+     * Режим «достаточно любого»: сработало второе условие, по первому в корзине
+     * пусто. Множитель обязан считаться по сработавшему, иначе правило числится
+     * сработавшим и молча не выдаёт ничего.
+     */
+    public function test_multiplier_uses_first_satisfied_condition(): void
+    {
+        $untouched = Product::factory()->create(['base_price' => 100]);
+        $trigger = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        PromotionRule::factory()->active()->create([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => [
+                    ['selector' => ['products' => [$untouched->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 5],
+                    ['selector' => ['products' => [$trigger->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 3],
+                ],
+            ],
+            'rewards' => [$this->reward([
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => 3,
+                'max_multiplier' => 5,
+            ])],
+        ]);
+
+        $result = $this->engine()->evaluate($this->context([[$trigger, 6]]));
+
+        $this->assertCount(1, $result->applied, 'Правило сработало — награда обязана быть выдана');
+        $this->assertSame(2, $result->applied[0]->quantity);
+    }
+
+    /**
+     * Режим «нужны все» от исправления не меняется: сработали все условия,
+     * первое сработавшее и есть первое в списке.
+     */
+    public function test_multiplier_in_mode_all_still_uses_first_condition(): void
+    {
+        $first = Product::factory()->create(['base_price' => 100]);
+        $second = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        PromotionRule::factory()->active()->create([
+            'conditions' => [
+                'mode' => 'all',
+                'items' => [
+                    ['selector' => ['products' => [$first->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 2],
+                    ['selector' => ['products' => [$second->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 1],
+                ],
+            ],
+            'rewards' => [$this->reward([
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => 2,
+                'max_multiplier' => 10,
+            ])],
+        ]);
+
+        $result = $this->engine()->evaluate($this->context([[$first, 7], [$second, 1]]));
+
+        $this->assertSame(3, $result->applied[0]->quantity, 'Кратность считается по первому условию: floor(7 / 2)');
+    }
+
+    /**
+     * Ноль наград при сработавшем условии — диагностика, а не тишина.
+     */
+    public function test_zero_multiplier_is_reported_as_blocked(): void
+    {
+        $trigger = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        // Конфигурация из старых данных: шаг больше порога — валидатор такое уже не пропустит
+        $this->makeRule(['products' => [$trigger->id]], PromotionRule::AGGREGATE_QUANTITY, 5, [
+            'product_id' => $gift->id,
+            'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+            'per_value' => 100,
+            'max_multiplier' => 3,
+        ]);
+
+        $result = $this->engine()->evaluate($this->context([[$trigger, 6]]));
+
+        $this->assertSame([], $result->applied);
+        $this->assertCount(1, $result->blocked);
+        $this->assertSame(PromoBlockReason::MULTIPLIER_NOT_REACHED, $result->blocked[0]->reason);
+        $this->assertSame($gift->id, $result->blocked[0]->productId);
+    }
+
+    // ─── Кратность в позициях условия ───────────────────────────
+
+    /**
+     * Боевая механика Lovense: у каждого артикула своя кратность, вклады
+     * складываются. Раньше это разваливалось на правило под каждый SKU.
+     */
+    public function test_condition_steps_are_counted_separately_and_summed(): void
+    {
+        $everyFour = Product::factory()->create(['base_price' => 100]);
+        $everySix = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        PromotionRule::factory()->active()->create([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => [
+                    ['selector' => ['products' => [$everyFour->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 4, 'per_value' => 4],
+                    ['selector' => ['products' => [$everySix->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 6, 'per_value' => 6],
+                ],
+            ],
+            'rewards' => [$this->reward([
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                // Общий шаг не задан — его берут позиции условия
+                'per_value' => null,
+                'max_multiplier' => 20,
+            ])],
+        ]);
+
+        $result = $this->engine()->evaluate($this->context([[$everyFour, 8], [$everySix, 6]]));
+
+        $this->assertSame(3, $result->applied[0]->quantity, '8/4 = 2 плюс 6/6 = 1');
+    }
+
+    public function test_condition_steps_respect_the_ceiling(): void
+    {
+        $trigger = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        PromotionRule::factory()->active()->create([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => [
+                    ['selector' => ['products' => [$trigger->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 1, 'per_value' => 1],
+                ],
+            ],
+            'rewards' => [$this->reward([
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => null,
+                'max_multiplier' => 20,
+            ])],
+        ]);
+
+        $result = $this->engine()->evaluate($this->context([[$trigger, 25]]));
+
+        $this->assertSame(20, $result->applied[0]->quantity, 'Потолок обязан ограничить выдачу');
+    }
+
+    /**
+     * Невыполненное условие могло набрать половину порога — засчитывать её
+     * как кратность нельзя.
+     */
+    public function test_unsatisfied_condition_does_not_add_multiplicity(): void
+    {
+        $satisfied = Product::factory()->create(['base_price' => 100]);
+        $short = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        PromotionRule::factory()->active()->create([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => [
+                    ['selector' => ['products' => [$satisfied->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 4, 'per_value' => 4],
+                    ['selector' => ['products' => [$short->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 6, 'per_value' => 2],
+                ],
+            ],
+            'rewards' => [$this->reward([
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => null,
+                'max_multiplier' => 20,
+            ])],
+        ]);
+
+        $result = $this->engine()->evaluate($this->context([[$satisfied, 8], [$short, 5]]));
+
+        $this->assertSame(2, $result->applied[0]->quantity, 'Второе условие не выполнено: его 5 шт. в кратность не идут');
+    }
+
+    /**
+     * Главный критерий карточки promo-13: акция Lovense, собранная одним
+     * правилом с пятнадцатью позициями, выдаёт ровно то же, что пятнадцать
+     * отдельных правил — на одних и тех же корзинах.
+     */
+    public function test_single_rule_matches_fifteen_separate_rules(): void
+    {
+        $steps = [1, 2, 4, 4, 4, 4, 5, 5, 5, 6, 6, 6, 6, 6, 6];
+        $products = Product::factory()->count(15)->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        $carts = [
+            'один артикул кратно' => [[$products[9], 12]],
+            'разные кратности вместе' => [[$products[0], 3], [$products[2], 8], [$products[6], 5]],
+            'ниже всех порогов' => [[$products[2], 3], [$products[9], 5]],
+            'потолок' => [[$products[0], 40]],
+        ];
+
+        // Вариант «как было»: правило на каждый артикул
+        foreach ($products as $index => $product) {
+            $this->makeRule(['products' => [$product->id]], PromotionRule::AGGREGATE_QUANTITY, $steps[$index], [
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => $steps[$index],
+                'max_multiplier' => 20,
+            ]);
+        }
+
+        $before = [];
+        foreach ($carts as $label => $lines) {
+            $before[$label] = $this->totalRewardQuantity($this->engine()->evaluate($this->context($lines)));
+        }
+
+        PromotionRule::query()->forceDelete();
+        app(ActivePromotionRuleCache::class)->flush();
+
+        // Вариант «как стало»: одно правило, кратность в позициях условия
+        $items = [];
+        foreach ($products as $index => $product) {
+            $items[] = [
+                'selector' => ['products' => [$product->id]],
+                'aggregate' => 'quantity',
+                'operator' => '>=',
+                'value' => $steps[$index],
+                'per_value' => $steps[$index],
+            ];
+        }
+
+        PromotionRule::factory()->active()->create([
+            'conditions' => ['mode' => 'any', 'items' => $items],
+            'rewards' => [$this->reward([
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => null,
+                'max_multiplier' => 20,
+            ])],
+        ]);
+
+        foreach ($carts as $label => $lines) {
+            $this->assertSame(
+                $before[$label],
+                $this->totalRewardQuantity($this->engine()->evaluate($this->context($lines))),
+                "Расхождение на корзине «{$label}»",
+            );
+        }
+
+        $this->assertGreaterThan(0, $before['один артикул кратно'], 'Сценарий должен что-то выдавать');
+    }
+
+    private function totalRewardQuantity(PromotionEvaluation $result): int
+    {
+        return array_sum(array_map(fn (AppliedReward $reward) => $reward->quantity, $result->applied));
+    }
+
+    /**
+     * Пятнадцать позиций в одном правиле не должны стоить пятнадцати запросов:
+     * селектор из одних товаров раскрывать нечем, достаточно пересечь с корзиной.
+     */
+    public function test_many_product_conditions_do_not_cost_a_query_each(): void
+    {
+        $products = Product::factory()->count(15)->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+
+        PromotionRule::factory()->active()->create([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => $products->map(fn (Product $product) => [
+                    'selector' => ['products' => [$product->id]],
+                    'aggregate' => 'quantity',
+                    'operator' => '>=',
+                    'value' => 2,
+                    'per_value' => 2,
+                ])->all(),
+            ],
+            'rewards' => [$this->reward([
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => null,
+                'max_multiplier' => 50,
+            ])],
+        ]);
+
+        $context = $this->context($products->map(fn (Product $product) => [$product, 4])->all());
+
+        // Прогреваем кэш правил, чтобы мерить сам расчёт
+        $this->engine()->evaluate($context);
+
+        $queries = $this->countQueries(fn () => $this->engine()->evaluate($context));
+
+        $this->assertLessThanOrEqual(5, $queries, 'Позиции условия не должны раскрываться запросом каждая');
+        $this->assertSame(30, $this->engine()->evaluate($context)->applied[0]->quantity, '15 позиций по 4 шт. с шагом 2');
     }
 
     // ─── Выбор клиента ──────────────────────────────────────────

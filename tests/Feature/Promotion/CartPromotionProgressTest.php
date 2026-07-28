@@ -226,6 +226,72 @@ class CartPromotionProgressTest extends TestCase
         $this->assertStringNotContainsString('лимит', json_encode($payload, JSON_UNESCAPED_UNICODE));
     }
 
+    /**
+     * Правило сработало, но кратность не набрана. Админ видит причину в
+     * предпросмотре, клиент — ничего: для него акция просто не выполнена.
+     */
+    #[Test]
+    public function unreached_multiplier_is_not_shown_to_the_client(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['base_price' => 1000]);
+        $rewardProduct = Product::factory()->create();
+
+        PromotionRule::factory()
+            ->active()
+            ->quantityThreshold(5, [$product->id])
+            ->freeGift($rewardProduct->id)
+            ->perThreshold(100, 3)
+            ->create();
+
+        $cart = $this->cartWith($user, $product, 6);
+
+        $payload = $this->actingAs($user)
+            ->getJson('/api/cart/promotions?cart_id='.$cart->id)
+            ->assertOk()
+            ->json();
+
+        $this->assertSame([], $payload['achieved']);
+        $this->assertArrayNotHasKey('blocked', $payload);
+        $this->assertStringNotContainsString('кратност', json_encode($payload, JSON_UNESCAPED_UNICODE));
+    }
+
+    /**
+     * Кратности разных артикулов считаются отдельно и складываются —
+     * акция Lovense одним правилом вместо пятнадцати.
+     */
+    #[Test]
+    public function per_item_steps_are_summed_in_the_cart(): void
+    {
+        $user = User::factory()->create();
+        $everyFour = Product::factory()->create(['base_price' => 1000]);
+        $everySix = Product::factory()->create(['base_price' => 1000]);
+        $rewardProduct = Product::factory()->create(['name' => 'Lush 4']);
+
+        PromotionRule::factory()
+            ->active()
+            ->perItemSteps([$everyFour->id => 4, $everySix->id => 6])
+            ->freeGift($rewardProduct->id)
+            ->perThreshold(null, 20)
+            ->create();
+
+        $cart = Cart::factory()->create(['user_id' => $user->id, 'is_active' => true]);
+
+        foreach ([[$everyFour, 8], [$everySix, 6]] as [$product, $quantity]) {
+            CartItem::factory()->create([
+                'cart_id' => $cart->id,
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+                'item_type' => 'instock',
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->getJson('/api/cart/promotions?cart_id='.$cart->id)
+            ->assertOk()
+            ->assertJsonCount(1, 'achieved');
+    }
+
     #[Test]
     public function promo_lines_do_not_count_towards_the_threshold(): void
     {

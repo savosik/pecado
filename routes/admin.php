@@ -584,6 +584,7 @@ Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->name('admin.')->gr
     Route::middleware('permission:promotion-rules.view')->group(function () {
         Route::get('/promotion-rules', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'index'])->name('promotion-rules.index');
         Route::post('/promotion-rules/match-count', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'matchCount'])->name('promotion-rules.match-count');
+        Route::post('/promotion-rules/parse-sku-table', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'parseSkuTable'])->name('promotion-rules.parse-sku-table');
         Route::post('/promotion-rules/{promotion_rule}/preview', [\App\Http\Controllers\Admin\PromotionRuleController::class, 'preview'])->name('promotion-rules.preview')->whereNumber('promotion_rule');
     });
     Route::middleware('permission:promotion-rules.create')->group(function () {

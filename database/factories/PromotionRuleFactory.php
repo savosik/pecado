@@ -123,8 +123,10 @@ class PromotionRuleFactory extends Factory
 
     /**
      * Награда, выдаваемая на каждые N рублей / штук, с обязательным потолком.
+     *
+     * $perValue = null — шаг задают позиции условия (см. perItemSteps()).
      */
-    public function perThreshold(float $perValue = 150000, int $maxMultiplier = 3): static
+    public function perThreshold(?float $perValue = 150000, int $maxMultiplier = 3): static
     {
         return $this->state(function (array $attributes) use ($perValue, $maxMultiplier) {
             $rewards = $attributes['rewards'] ?? [$this->reward()];
@@ -137,6 +139,31 @@ class PromotionRuleFactory extends Factory
 
             return ['rewards' => $rewards];
         });
+    }
+
+    /**
+     * Таблица «артикул → кратность»: по позиции условия на товар, у каждой свой шаг.
+     *
+     * Так собирается акция, где у пятнадцати SKU пятнадцать разных кратностей,
+     * и вклады позиций складываются.
+     *
+     * @param  array<int, float>  $stepByProductId  product_id → шаг кратности
+     */
+    public function perItemSteps(array $stepByProductId, string $mode = 'any'): static
+    {
+        $items = [];
+
+        foreach ($stepByProductId as $productId => $step) {
+            $items[] = [
+                'selector' => ['products' => [(int) $productId]],
+                'aggregate' => PromotionRule::AGGREGATE_QUANTITY,
+                'operator' => '>=',
+                'value' => $step,
+                'per_value' => $step,
+            ];
+        }
+
+        return $this->state(fn () => ['conditions' => ['mode' => $mode, 'items' => $items]]);
     }
 
     /**

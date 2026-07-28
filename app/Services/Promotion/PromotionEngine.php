@@ -145,6 +145,11 @@ class PromotionEngine
                 'target' => $item['target'],
                 'satisfied' => $item['satisfied'],
                 'remaining' => round(max(0, $item['target'] - $item['value']), 2),
+                'per_value' => $item['per_value'],
+                // Вклад позиции в кратность — видно, откуда взялось число наград
+                'multiplier' => $item['satisfied'] && $item['per_value'] !== null
+                    ? (int) floor($item['value'] / $item['per_value'])
+                    : null,
             ];
         }
 
@@ -290,7 +295,7 @@ class PromotionEngine
     /**
      * @param  array<int, array{quantity: int, amount: float}>  $totals
      * @param  array<int, int[]>  $conditionSets
-     * @return array{fired: bool, items: array<int, array{value: float, target: float, aggregate: string, operator: string, satisfied: bool}>}
+     * @return array{fired: bool, items: array<int, array{value: float, target: float, aggregate: string, operator: string, satisfied: bool, per_value: float|null}>}
      */
     private function evaluateConditions(PromotionRule $rule, array $totals, array $conditionSets): array
     {
@@ -327,12 +332,18 @@ class PromotionEngine
 
             $value = round($value, 2);
 
+            // Шаг кратности прямо в позиции условия: у каждого SKU он свой
+            $perValue = isset($item['per_value']) && (float) $item['per_value'] > 0
+                ? (float) $item['per_value']
+                : null;
+
             $evaluated[$index] = [
                 'value' => $value,
                 'target' => $target,
                 'aggregate' => $aggregate,
                 'operator' => $operator,
                 'satisfied' => $this->compare($value, $operator, $target),
+                'per_value' => $perValue,
             ];
         }
 
@@ -354,6 +365,10 @@ class PromotionEngine
      * запросом, ограниченным товарами корзины (стоимость зависит от числа условий,
      * а не от размера корзины).
      *
+     * Исключение — селектор из одних товаров: раскрывать нечего, достаточно
+     * пересечь его с корзиной. Это основной случай правил с десятком позиций
+     * (таблица «артикул → кратность»), и без него они стоили бы запрос на позицию.
+     *
      * @param  array<string, mixed>  $selector
      * @param  array<int, int[]>  $conditionSets
      * @param  int[]  $cartProductIds
@@ -374,6 +389,10 @@ class PromotionEngine
             return $conditionSets[$rule->id] ?? [];
         }
 
+        if ($products = $this->productsOnlySelector($selector)) {
+            return array_values(array_intersect($products, $cartProductIds));
+        }
+
         $query = $this->resolver->selectorQuery($selector);
 
         if ($query === null) {
@@ -384,6 +403,26 @@ class PromotionEngine
             ->pluck('products.id')
             ->map(fn ($id) => (int) $id)
             ->all();
+    }
+
+    /**
+     * Список товаров, если селектор состоит только из них. Иначе — пустой массив.
+     *
+     * @param  array<string, mixed>  $selector
+     * @return int[]
+     */
+    private function productsOnlySelector(array $selector): array
+    {
+        foreach (['categories', 'brands', 'tags', 'erp_promotions'] as $key) {
+            if (! empty($selector[$key])) {
+                return [];
+            }
+        }
+
+        return array_values(array_unique(array_filter(
+            array_map('intval', (array) ($selector['products'] ?? [])),
+            fn (int $id) => $id > 0,
+        )));
     }
 
     private function compare(float $value, string $operator, float $target): bool
@@ -504,9 +543,6 @@ class PromotionEngine
         $applied = [];
         $blocked = [];
 
-        // Кратность считается по первому условию правила — оно и задаёт «на каждые N»
-        $primaryValue = (float) ($outcome['items'][0]['value'] ?? 0);
-
         foreach (array_values($rule->rewards ?? []) as $index => $reward) {
             $reward = (array) $reward;
             $selection = $context->selectionFor($rule->id, $index);
@@ -516,9 +552,19 @@ class PromotionEngine
                 continue;
             }
 
-            $multiplier = $this->multiplier($reward, $primaryValue);
+            $multiplier = $this->multiplier($reward, $outcome['items']);
 
+            // Условие выполнено, а выдать нечего — молчать нельзя, иначе правило
+            // выглядит сломанным: сработало, награды нет, причины нет
             if ($multiplier < 1) {
+                $blocked[] = new BlockedReward(
+                    $rule->id,
+                    $rule->name,
+                    $index,
+                    $productId,
+                    PromoBlockReason::MULTIPLIER_NOT_REACHED,
+                );
+
                 continue;
             }
 
@@ -578,22 +624,59 @@ class PromotionEngine
     /**
      * Сколько раз выдаётся награда.
      *
+     * Шаг кратности берётся из позиций условия, если он там задан: у каждой позиции
+     * он свой, и вклады складываются — «кратности разных артикулов считаются
+     * отдельно». Так акция вида «за каждые 4 шт. одного SKU и каждые 6 шт. другого»
+     * укладывается в одно правило.
+     *
+     * Если позиции условия шага не задают, работает старая схема: шаг из награды
+     * применяется к **первому сработавшему** условию. Именно первому сработавшему,
+     * а не первому в списке: при режиме «достаточно любого» правило может сработать
+     * от второго условия, и по первому в корзине будет ноль.
+     *
+     * Считаем только по выполненным условиям: невыполненное могло набрать
+     * половину порога, и засчитывать её как кратность нельзя.
+     *
      * @param  array<string, mixed>  $reward
+     * @param  array<int, array{value: float, satisfied: bool, per_value: float|null}>  $items
      */
-    private function multiplier(array $reward, float $aggregateValue): int
+    private function multiplier(array $reward, array $items): int
     {
         if (($reward['multiply'] ?? PromotionRule::MULTIPLY_ONCE) !== PromotionRule::MULTIPLY_PER_THRESHOLD) {
             return 1;
         }
 
-        $perValue = (float) ($reward['per_value'] ?? 0);
         $max = (int) ($reward['max_multiplier'] ?? 1);
 
-        if ($perValue <= 0 || $max < 1) {
+        if ($max < 1) {
             return 0;
         }
 
-        return min((int) floor($aggregateValue / $perValue), $max);
+        $satisfied = array_values(array_filter($items, fn (array $item) => $item['satisfied']));
+
+        if ($satisfied === []) {
+            return 0;
+        }
+
+        $withStep = array_values(array_filter($satisfied, fn (array $item) => ($item['per_value'] ?? null) !== null));
+
+        if ($withStep !== []) {
+            $total = 0;
+
+            foreach ($withStep as $item) {
+                $total += (int) floor($item['value'] / $item['per_value']);
+            }
+
+            return min($total, $max);
+        }
+
+        $perValue = (float) ($reward['per_value'] ?? 0);
+
+        if ($perValue <= 0) {
+            return 0;
+        }
+
+        return min((int) floor($satisfied[0]['value'] / $perValue), $max);
     }
 
     // ────────────────────────────────────────────

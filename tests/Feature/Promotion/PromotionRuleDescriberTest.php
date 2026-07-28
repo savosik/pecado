@@ -159,6 +159,57 @@ class PromotionRuleDescriberTest extends TestCase
     }
 
     #[Test]
+    public function condition_step_is_mentioned_in_the_line(): void
+    {
+        $product = Product::factory()->create(['name' => 'Lovense Ferri']);
+
+        $rule = PromotionRule::factory()->make([
+            'conditions' => [
+                'mode' => 'all',
+                'items' => [[
+                    'selector' => ['products' => [$product->id]],
+                    'aggregate' => 'quantity',
+                    'operator' => '>=',
+                    'value' => 4,
+                    'per_value' => 4,
+                ]],
+            ],
+        ]);
+
+        $this->assertSame(
+            'Количество товаров «Lovense Ferri» ≥ 4 шт. (за каждые 4 шт.)',
+            $this->describer->conditionSummary($rule),
+        );
+    }
+
+    /**
+     * Пятнадцать позиций в ячейку таблицы не влезают — вместо перечисления сводка.
+     */
+    #[Test]
+    public function long_condition_list_is_collapsed_into_a_summary(): void
+    {
+        $products = Product::factory()->count(15)->create();
+
+        $rule = PromotionRule::factory()->make([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => $products->values()->map(fn (Product $product, int $index) => [
+                    'selector' => ['products' => [$product->id]],
+                    'aggregate' => 'quantity',
+                    'operator' => '>=',
+                    'value' => $index + 1,
+                    'per_value' => $index + 1,
+                ])->all(),
+            ],
+        ]);
+
+        $this->assertSame(
+            '15 условий (достаточно любого), количество 1–15 шт., кратность 1–15 шт.',
+            $this->describer->conditionSummary($rule),
+        );
+    }
+
+    #[Test]
     public function status_accounts_for_period(): void
     {
         $disabled = PromotionRule::factory()->make(['is_active' => false]);

@@ -24,6 +24,19 @@ export const emptyCondition = () => ({
     aggregate: 'amount',
     operator: '>=',
     value: 0,
+    per_value: null,
+});
+
+/**
+ * Условие «за каждые N штук артикула» — строка из вставленной таблицы.
+ */
+export const conditionFromSkuRow = (row) => ({
+    ...emptyCondition(),
+    selector: { ...emptySelector(), products: [{ id: row.product_id, name: row.name }] },
+    aggregate: 'quantity',
+    operator: '>=',
+    value: row.per_value,
+    per_value: row.per_value,
 });
 
 export const emptyReward = () => ({
@@ -73,6 +86,7 @@ export function toFormState(rule) {
                 aggregate: item.aggregate || 'quantity',
                 operator: item.operator || '>=',
                 value: item.value ?? 0,
+                per_value: item.per_value ?? null,
             })),
         },
         rewards: (rule.rewards || []).map((reward) => ({
@@ -125,6 +139,7 @@ export function toPayload(data) {
                 aggregate: item.aggregate,
                 operator: item.operator,
                 value: Number(item.value) || 0,
+                per_value: Number(item.per_value) > 0 ? Number(item.per_value) : null,
             })),
         },
         rewards: data.rewards.map((reward) => ({
@@ -155,6 +170,77 @@ export function toPayload(data) {
 
 /** Единица измерения порога. */
 export const aggregateSuffix = (aggregate) => (aggregate === 'amount' ? '₽' : 'шт.');
+
+const OPERATOR_SIGNS = { '>=': '≥', '>': '>', '=': '=', '<=': '≤', '<': '<' };
+
+const ERP_PROMOTION_LABELS = { new: 'Новинки', bestseller: 'Хиты', liquidation: 'Ликвидация' };
+
+const namedList = (items = [], limit = 2) => {
+    const shown = items.slice(0, limit).map((item) => `«${item.name || item}»`);
+    const rest = items.length - shown.length;
+
+    return shown.join(', ') + (rest > 0 ? ` и ещё ${rest}` : '');
+};
+
+/**
+ * Что попадает под условие — словами. Та же формулировка, что у
+ * PromotionRuleDescriber на бэкенде, чтобы свёрнутая карточка и список правил
+ * говорили об одном и том же одинаково.
+ */
+export const selectorLabel = (selector) => {
+    if (selector.whole_cart) {
+        return 'всей корзины';
+    }
+
+    const parts = [];
+
+    if (selector.products?.length) parts.push(`товаров ${namedList(selector.products)}`);
+    if (selector.categories?.length) {
+        parts.push(`категорий ${namedList(selector.categories)}${selector.with_descendants ? ' (с подкатегориями)' : ''}`);
+    }
+    if (selector.brands?.length) parts.push(`брендов ${namedList(selector.brands)}`);
+    if (selector.tags?.length) parts.push(`товаров с тегами ${namedList(selector.tags, 3)}`);
+    if (selector.erp_promotions?.length) {
+        parts.push(`групп 1С ${namedList(selector.erp_promotions.map((t) => ERP_PROMOTION_LABELS[t] || t), 3)}`);
+    }
+
+    return parts.length ? parts.join(' или ') : 'акционных позиций';
+};
+
+/** Подпись свёрнутой карточки условия. */
+export const conditionSummary = (condition) => {
+    const prefix = condition.aggregate === 'amount' ? 'Сумма' : 'Количество';
+    const sign = OPERATOR_SIGNS[condition.operator] || '≥';
+    const target = formatAggregate(condition.value, condition.aggregate);
+    const step = Number(condition.per_value) > 0
+        ? ` (за каждые ${formatAggregate(condition.per_value, condition.aggregate)})`
+        : '';
+
+    return `${prefix} ${selectorLabel(condition.selector)} ${sign} ${target}${step}`;
+};
+
+/** Подпись свёрнутой карточки награды. */
+export const rewardSummary = (reward) => {
+    const what = reward.type === 'choice'
+        ? (reward.choices?.length ? `на выбор: ${namedList(reward.choices, 3)}` : 'товары на выбор не указаны')
+        : (reward.product ? `«${reward.product.name}»` : 'товар не выбран');
+
+    const price = Number(reward.price) || 0;
+    const quantity = Number(reward.quantity) || 1;
+    let line = `${what} × ${quantity} за ${formatAggregate(price, 'amount')}`;
+
+    if (reward.multiply === 'per_threshold') {
+        line += Number(reward.per_value) > 0
+            ? `, на каждые ${reward.per_value}`
+            : ', кратность из условий';
+
+        if (Number(reward.max_multiplier) > 0) {
+            line += ` (не более ${reward.max_multiplier} раз)`;
+        }
+    }
+
+    return reward.promo_kind === 'sample' ? `${line} — пробник` : line;
+};
 
 export const formatAggregate = (value, aggregate) => {
     const number = new Intl.NumberFormat('ru-RU', {

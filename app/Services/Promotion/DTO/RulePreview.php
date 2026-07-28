@@ -15,7 +15,7 @@ use App\Enums\PromoBlockReason;
 final readonly class RulePreview
 {
     /**
-     * @param  array<int, array{index: int, aggregate: string, operator: string, value: float, target: float, satisfied: bool, remaining: float}>  $conditions
+     * @param  array<int, array{index: int, aggregate: string, operator: string, value: float, target: float, satisfied: bool, remaining: float, per_value: float|null, multiplier: int|null}>  $conditions
      * @param  AppliedReward[]  $applied  Что было бы выдано
      * @param  BlockedReward[]  $blocked  Почему награда не выдаётся
      * @param  PromoBlockReason|null  $ruleBlock  Гейт уровня правила (канал, лимиты, режим)

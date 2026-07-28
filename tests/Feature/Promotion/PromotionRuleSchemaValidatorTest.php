@@ -193,6 +193,87 @@ class PromotionRuleSchemaValidatorTest extends TestCase
         $this->assertTrue($result['valid'], $this->flatten($result['errors']));
     }
 
+    /**
+     * Кратность у каждого артикула своя — она живёт в позиции условия,
+     * и тогда общий шаг в награде не нужен.
+     */
+    public function test_condition_step_replaces_reward_step(): void
+    {
+        $second = Product::factory()->create();
+
+        $rule = $this->rule([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => [
+                    [
+                        'selector' => ['products' => [$this->conditionProduct->id]],
+                        'aggregate' => 'quantity',
+                        'price_basis' => 'client_final',
+                        'operator' => '>=',
+                        'value' => 4,
+                        'per_value' => 4,
+                    ],
+                    [
+                        'selector' => ['products' => [$second->id]],
+                        'aggregate' => 'quantity',
+                        'price_basis' => 'client_final',
+                        'operator' => '>=',
+                        'value' => 6,
+                        'per_value' => 6,
+                    ],
+                ],
+            ],
+            'rewards' => [$this->reward([
+                'multiply' => 'per_threshold',
+                'per_value' => null,
+                'max_multiplier' => 20,
+            ])],
+        ]);
+
+        $result = $this->validator->validate($rule);
+
+        $this->assertTrue($result['valid'], $this->flatten($result['errors']));
+    }
+
+    /**
+     * Шаг больше порога — та самая ловушка «сработало, но ничего не выдало».
+     */
+    public function test_condition_step_greater_than_threshold_is_rejected(): void
+    {
+        $rule = $this->rule();
+        $rule['conditions']['items'][0]['aggregate'] = 'quantity';
+        $rule['conditions']['items'][0]['value'] = 5;
+        $rule['conditions']['items'][0]['per_value'] = 10;
+
+        $result = $this->validator->validate($rule);
+
+        $this->assertFalse($result['valid']);
+        $this->assertStringContainsString('шаг кратности', $this->flatten($result['errors']));
+    }
+
+    public function test_condition_step_requires_greater_or_equal_operator(): void
+    {
+        $rule = $this->rule();
+        $rule['conditions']['items'][0]['operator'] = '<=';
+        $rule['conditions']['items'][0]['per_value'] = 1000;
+
+        $result = $this->validator->validate($rule);
+
+        $this->assertFalse($result['valid']);
+        $this->assertStringContainsString('кратность работает только со сравнением', $this->flatten($result['errors']));
+    }
+
+    public function test_condition_step_must_be_positive_number(): void
+    {
+        $rule = $this->rule();
+        $rule['conditions']['items'][0]['per_value'] = 0;
+
+        $result = $this->validator->validate($rule);
+
+        $this->assertFalse($result['valid']);
+        $this->assertStringContainsString('Кратность позиции условия', $this->flatten($result['errors']));
+    }
+
     public function test_choice_reward_requires_at_least_two_products(): void
     {
         $rule = $this->rule(['rewards' => [$this->reward([
