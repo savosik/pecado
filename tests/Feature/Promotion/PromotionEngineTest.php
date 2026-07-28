@@ -99,6 +99,60 @@ class PromotionEngineTest extends TestCase
 
     // ─── Условия ────────────────────────────────────────────────
 
+    /**
+     * «За каждые 5 штук LE-39 — шестой LE-39 в подарок»: товар награды совпадает
+     * с товаром условия. Реальная механика отдела продаж, конфигурация законная.
+     */
+    public function test_same_product_as_condition_and_reward(): void
+    {
+        $product = Product::factory()->create(['base_price' => 500]);
+
+        $this->makeRule(
+            ['products' => [$product->id]],
+            PromotionRule::AGGREGATE_QUANTITY,
+            5,
+            [
+                'product_id' => $product->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'per_value' => 5,
+                'max_multiplier' => 10,
+            ],
+        );
+
+        // 5 штук — один подарок
+        $result = $this->engine()->evaluate($this->context([[$product, 5]]));
+        $this->assertCount(1, $result->applied);
+        $this->assertSame($product->id, $result->applied[0]->productId);
+        $this->assertSame(1, $result->applied[0]->quantity);
+
+        // 12 штук — два подарка (floor(12 / 5)), не три
+        $result = $this->engine()->evaluate($this->context([[$product, 12]]));
+        $this->assertSame(2, $result->applied[0]->quantity);
+    }
+
+    /**
+     * Подарок не подкручивает собственное условие: промо-строка в агрегат не идёт.
+     * Иначе 4 купленных + 1 подаренный дали бы 5 и правило сработало бы на пустом месте.
+     */
+    public function test_gift_line_does_not_feed_its_own_condition(): void
+    {
+        $product = Product::factory()->create(['base_price' => 500]);
+
+        $this->makeRule(
+            ['products' => [$product->id]],
+            PromotionRule::AGGREGATE_QUANTITY,
+            5,
+            ['product_id' => $product->id],
+        );
+
+        $context = PromoContext::fromLines([
+            new PromoContextLine(productId: $product->id, quantity: 4),
+            new PromoContextLine(productId: $product->id, quantity: 1, unitPrice: 0.0, isPromo: true),
+        ]);
+
+        $this->assertSame([], $this->engine()->evaluate($context)->applied);
+    }
+
     public function test_quantity_threshold_fires(): void
     {
         $trigger = Product::factory()->create(['base_price' => 100]);

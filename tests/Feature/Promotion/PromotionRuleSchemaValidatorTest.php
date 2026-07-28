@@ -271,17 +271,38 @@ class PromotionRuleSchemaValidatorTest extends TestCase
         $this->assertStringContainsString('Москва реклама', $this->flatten($activated['errors']));
     }
 
-    public function test_reward_product_must_not_be_part_of_condition(): void
+    /**
+     * «Каждый шестой такой же товар в подарок» — обычная механика, и запрещать её
+     * нельзя. Промо-строки движок в агрегаты не берёт, так что подарок собственное
+     * условие не подкручивает.
+     */
+    public function test_reward_product_may_be_part_of_condition(): void
     {
-        $rule = $this->rule(['rewards' => [$this->reward(['product_id' => $this->conditionProduct->id])]]);
+        $rule = $this->rule([
+            'conditions' => [
+                'mode' => 'all',
+                'items' => [[
+                    'selector' => ['products' => [$this->conditionProduct->id]],
+                    'aggregate' => 'quantity',
+                    'price_basis' => 'client_final',
+                    'operator' => '>=',
+                    'value' => 5,
+                ]],
+            ],
+            'rewards' => [$this->reward([
+                'product_id' => $this->conditionProduct->id,
+                'multiply' => 'per_threshold',
+                'per_value' => 5,
+                'max_multiplier' => 10,
+            ])],
+        ]);
 
         $result = $this->validator->validate($rule);
 
-        $this->assertFalse($result['valid']);
-        $this->assertStringContainsString('входит в условие того же правила', $this->flatten($result['errors']));
+        $this->assertTrue($result['valid'], $this->flatten($result['errors']));
     }
 
-    public function test_reward_product_inside_condition_category_is_rejected(): void
+    public function test_reward_product_inside_condition_category_is_allowed(): void
     {
         $category = \App\Models\Category::factory()->create();
         $this->rewardProduct->update(['category_id' => $category->id]);
@@ -291,8 +312,7 @@ class PromotionRuleSchemaValidatorTest extends TestCase
 
         $result = $this->validator->validate($rule);
 
-        $this->assertFalse($result['valid']);
-        $this->assertStringContainsString('входит в условие того же правила', $this->flatten($result['errors']));
+        $this->assertTrue($result['valid'], $this->flatten($result['errors']));
     }
 
     public function test_unknown_channel_is_rejected(): void

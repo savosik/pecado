@@ -51,7 +51,10 @@ export default function RewardCard({ index, reward, onChange, onRemove, warehous
                     </FormField>
 
                     {reward.type === 'fixed' ? (
-                        <FormField label="Товар награды">
+                        <FormField
+                            label="Товар награды"
+                            helpText="Можно указать тот же товар, что и в условии — так настраивается «каждый шестой в подарок»: условие «от 5 шт.» плюс кратность «на каждые 5»"
+                        >
                             <ProductSelector
                                 mode="single"
                                 value={reward.product}

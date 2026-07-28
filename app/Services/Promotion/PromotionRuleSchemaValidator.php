@@ -80,9 +80,7 @@ class PromotionRuleSchemaValidator
         if (! isset($errors['rewards'])) {
             $rewardErrors = $this->validateRewardsMeaning(
                 (array) ($rule['rewards'] ?? []),
-                (array) ($rule['conditions'] ?? []),
                 (bool) ($rule['is_active'] ?? false),
-                ! isset($errors['conditions']),
             );
 
             if ($rewardErrors !== []) {
@@ -207,13 +205,16 @@ class PromotionRuleSchemaValidator
     /**
      * Смысловые проверки наград.
      *
+     * Товар награды **разрешено** держать и в условии: «каждый шестой такой же
+     * товар в подарок» — обычная механика. Промо-строки движок в агрегаты не
+     * берёт (PromoContext::countableLines), поэтому подарок собственное условие
+     * не подкручивает.
+     *
      * @param  array<int, mixed>  $rewards
-     * @param  array<string, mixed>  $conditions
      * @param  bool  $isActive  Правило включают — проверки, блокирующие только активацию
-     * @param  bool  $conditionsUsable  Условия структурно корректны, можно сверять пересечение
      * @return string[]
      */
-    private function validateRewardsMeaning(array $rewards, array $conditions, bool $isActive, bool $conditionsUsable): array
+    private function validateRewardsMeaning(array $rewards, bool $isActive): array
     {
         $errors = [];
 
@@ -228,10 +229,6 @@ class PromotionRuleSchemaValidator
                 $this->validateRewardMultiply($reward, $number),
                 $this->validateRewardWarehouse($reward, $number, $isActive),
             );
-
-            if ($conditionsUsable) {
-                $errors = array_merge($errors, $this->validateRewardNotInConditions($reward, $conditions, $number));
-            }
         }
 
         return $errors;
@@ -367,40 +364,6 @@ class PromotionRuleSchemaValidator
 
         if (! $warehouse->getAttribute('is_promo_sample')) {
             return ["Награда {$number}: пробник можно выдавать только со склада пробников."];
-        }
-
-        return [];
-    }
-
-    /**
-     * Товар награды не должен входить в селектор условия того же правила:
-     * иначе промо-позиция начнёт влиять на собственное условие.
-     *
-     * @param  array<string, mixed>  $reward
-     * @param  array<string, mixed>  $conditions
-     * @return string[]
-     */
-    private function validateRewardNotInConditions(array $reward, array $conditions, int $number): array
-    {
-        $productIds = [];
-
-        if (! empty($reward['product_id'])) {
-            $productIds[] = (int) $reward['product_id'];
-        }
-
-        foreach ((array) ($reward['choices'] ?? []) as $choice) {
-            if (! empty($choice)) {
-                $productIds[] = (int) $choice;
-            }
-        }
-
-        foreach (array_unique($productIds) as $productId) {
-            // Селектор «вся корзина» исключением не считается: из него товар не убрать,
-            // а промо-строки движок в агрегаты и так не берёт
-            if ($this->resolver->matchesConditions($productId, $conditions, wholeCartMatches: false)) {
-                return ["Награда {$number}: товар награды входит в условие того же правила. "
-                    .'Промо-позиция будет влиять на собственное условие — уберите товар из селектора условия.'];
-            }
         }
 
         return [];
