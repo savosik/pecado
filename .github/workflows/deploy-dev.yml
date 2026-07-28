@@ -440,6 +440,14 @@ jobs:
           sg docker -c 'docker compose up -d --remove-orphans'
           sg docker -c 'docker compose exec -T app php artisan queue:restart'
 
+          echo "==> [6.1/7] Остановка Vite dev-сервера..."
+          # На стенде отдаём собранные ассеты. Контейнер node из compose поднимается
+          # вместе с остальными и запускает `npm run dev`, а Vite пишет public/hot —
+          # после этого Laravel отдаёт ссылки на http://localhost:5174, которого у
+          # тестировщика нет, и страница открывается белым экраном.
+          sg docker -c 'docker compose stop node' || true
+          rm -f public/hot
+
           echo "==> [7/7] Перезагрузка PHP-FPM, workers и nginx..."
           # restart нужен даже после up -d: app/worker монтируют код через bind mount,
           # PHP-FPM/queue процессы должны быть перезапущены для подхвата свежего vendor/.
