@@ -3,6 +3,7 @@
 namespace App\Services\Promotion;
 
 use App\Enums\PromoKind;
+use App\Enums\PromotionRuleMode;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\ErpPromotion;
@@ -280,20 +281,16 @@ class PromotionRuleDescriber
     /**
      * Подсказка клиенту в корзине: сколько добрать до награды.
      *
-     * Текст берётся отсюда, а не собирается в шаблоне, чтобы формулировка
-     * в админке, корзине и на лендинге была одна и та же.
+     * Только «сколько добрать» — что именно он получит, показывается рядом
+     * карточкой товара. Перечислять награды текстом нельзя: строка вида
+     * «× 1 за 0 ₽ (не более 20 раз)» — это конфигурация правила, клиенту
+     * она читается ребусом.
      */
-    public function nearMissMessage(PromotionRule $rule, float $remaining, string $aggregate): string
+    public function nearMissMessage(float $remaining, string $aggregate): string
     {
-        $what = $aggregate === PromotionRule::AGGREGATE_AMOUNT
+        return $aggregate === PromotionRule::AGGREGATE_AMOUNT
             ? 'Наберите акционных позиций ещё на '.$this->money($remaining)
             : 'Добавьте ещё '.$this->number($remaining).' шт. акционных позиций';
-
-        $rewards = $this->rewardLines($rule);
-
-        return $rewards === []
-            ? $what.' — и сработает акция'
-            : $what.' — и получите: '.implode('; ', $rewards);
     }
 
     /**
@@ -302,13 +299,17 @@ class PromotionRuleDescriber
      */
     public function achievedMessage(PromotionRule $rule): string
     {
-        $rewards = $this->rewardLines($rule);
+        return $rule->mode === PromotionRuleMode::ISSUE
+            ? 'Условия акции выполнены.'
+            : 'Условия акции выполнены — промо-позицию добавит менеджер.';
+    }
 
-        $suffix = $rewards === []
-            ? ''
-            : ' Промо-позицию добавит менеджер: '.implode('; ', $rewards).'.';
-
-        return 'Условия акции выполнены.'.$suffix;
+    /**
+     * Цена промо-позиции словами: клиенту важно «бесплатно», а не «0 ₽».
+     */
+    public function promoPriceLabel(float $price): string
+    {
+        return $price <= 0 ? 'бесплатно' : $this->money($price).' за шт.';
     }
 
     /**

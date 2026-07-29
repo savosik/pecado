@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Flex, Text, HStack } from '@chakra-ui/react';
+import { Box, Flex, Text, HStack, Image } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuGift, LuCheck } from 'react-icons/lu';
 import { ProgressRoot, ProgressBar } from '@/components/ui/progress';
@@ -10,6 +10,9 @@ import { ProgressRoot, ProgressBar } from '@/components/ui/progress';
  * Волна 1 работает в режиме показа: промо-позиции не выдаются, поэтому здесь
  * только прогресс «доберите на X» и честное «позицию добавит менеджер».
  * Причины несрабатывания правил сюда не приходят вовсе — сервер их не отдаёт.
+ *
+ * Награда показывается карточкой товара, а не строкой: «× 1 за 0 ₽ (не более
+ * 20 раз)» — это конфигурация правила из админки, клиент читает её ребусом.
  */
 export default function CartPromotions({ promotions, loading = false }) {
     const [expanded, setExpanded] = useState(false);
@@ -82,6 +85,8 @@ function NearMissCard({ card }) {
                         {card.message}
                     </Text>
 
+                    <RewardList rewards={card.rewards} tone="purple" caption="Тогда вы получите" />
+
                     <ProgressRoot
                         value={Math.round((card.progress ?? 0) * 100)}
                         size="sm"
@@ -141,6 +146,8 @@ function AchievedCard({ card }) {
                         {card.message}
                     </Text>
 
+                    <RewardList rewards={card.rewards} tone="green" caption="Вам полагается" />
+
                     {card.promotion_url && (
                         <Link href={card.promotion_url}>
                             <Text fontSize="xs" color="green.700" _dark={{ color: 'green.300' }} mt="1">
@@ -152,6 +159,96 @@ function AchievedCard({ card }) {
             </Flex>
         </Box>
     );
+}
+
+/**
+ * Награды карточкой: миниатюра, название, сколько штук и «бесплатно».
+ *
+ * Количество приходит посчитанным для текущей корзины — в подсказке
+ * «доберите на X» его ещё нет, там показываем только «что».
+ */
+function RewardList({ rewards, tone, caption }) {
+    if (!rewards?.length) {
+        return null;
+    }
+
+    return (
+        <Box mt="2">
+            <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }} mb="1">
+                {caption}
+            </Text>
+
+            <Flex direction="column" gap="1.5">
+                {rewards.map((reward) => (
+                    <RewardRow key={`${reward.product_id}-${reward.price}`} reward={reward} tone={tone} />
+                ))}
+            </Flex>
+        </Box>
+    );
+}
+
+function RewardRow({ reward, tone }) {
+    const body = (
+        <HStack
+            gap="2.5"
+            align="center"
+            bg="white"
+            _dark={{ bg: 'gray.900', borderColor: 'gray.700' }}
+            border="1px solid"
+            borderColor="gray.200"
+            borderRadius="md"
+            p="1.5"
+        >
+            <Box
+                w="40px"
+                h="40px"
+                flexShrink="0"
+                borderRadius="sm"
+                overflow="hidden"
+                bg="gray.100"
+                _dark={{ bg: 'gray.800' }}
+            >
+                {reward.thumbnail_url ? (
+                    <Image
+                        src={reward.thumbnail_url}
+                        alt={reward.name}
+                        w="100%"
+                        h="100%"
+                        objectFit="cover"
+                        loading="lazy"
+                    />
+                ) : (
+                    <Flex w="100%" h="100%" align="center" justify="center" color="gray.400">
+                        <LuGift size={18} />
+                    </Flex>
+                )}
+            </Box>
+
+            <Box flex="1" minW="0">
+                <Text fontSize="xs" lineClamp="2" lineHeight="1.3">
+                    {reward.name}
+                </Text>
+
+                <HStack gap="1.5" mt="0.5" flexWrap="wrap">
+                    {reward.quantity > 0 && (
+                        <Text fontSize="xs" fontWeight="700">
+                            {reward.quantity} шт.
+                        </Text>
+                    )}
+                    <Text
+                        fontSize="xs"
+                        fontWeight="700"
+                        color={reward.is_gift ? `${tone}.700` : 'gray.700'}
+                        _dark={{ color: reward.is_gift ? `${tone}.300` : 'gray.300' }}
+                    >
+                        {reward.price_label}
+                    </Text>
+                </HStack>
+            </Box>
+        </HStack>
+    );
+
+    return reward.url ? <Link href={reward.url}>{body}</Link> : body;
 }
 
 function pluralPromotions(count) {

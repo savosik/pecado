@@ -3,7 +3,9 @@
 namespace App\Services\Promotion;
 
 use App\Models\Cart;
+use App\Models\Product;
 use App\Models\PromotionRule;
+use App\Models\Scopes\HiddenScope;
 use App\Models\User;
 use App\Services\Promotion\DTO\AppliedReward;
 use App\Services\Promotion\DTO\NearMiss;
@@ -14,6 +16,11 @@ use App\Services\Promotion\DTO\PromoContext;
  *
  * Волна 1 работает в режиме показа: промо-позиции не выдаются, поэтому здесь
  * только «доберите на X» и «условия выполнены, позицию добавит менеджер».
+ *
+ * Награды уходят наружу **структурой, а не строкой**: название, картинка,
+ * посчитанное количество и «бесплатно». Описание правила из админки клиенту
+ * не годится — «× 1 за 0 ₽ (не более 20 раз)» он читает как ребус и, главное,
+ * не видит там числа, которое ему причитается.
  *
  * **Причины несрабатывания (`blocked`) наружу не отдаются никогда** — это
  * решение п. 5 дорожной карты: клиенту не сообщаем ни про остаток на складе,
@@ -51,9 +58,11 @@ class CartPromotionProgress
 
         $this->describer->warmUp($rules);
 
+        $products = $this->rewardProducts($evaluation, $rules);
+
         return [
-            'near_miss' => $this->nearMissCards($evaluation->nearMiss, $rules),
-            'achieved' => $this->achievedCards($evaluation->applied, $rules),
+            'near_miss' => $this->nearMissCards($evaluation->nearMiss, $rules, $products),
+            'achieved' => $this->achievedCards($evaluation->applied, $rules, $products),
             'max_visible' => self::MAX_VISIBLE,
         ];
     }
@@ -61,9 +70,10 @@ class CartPromotionProgress
     /**
      * @param  NearMiss[]  $nearMiss
      * @param  \Illuminate\Support\Collection<int, PromotionRule>  $rules
+     * @param  \Illuminate\Support\Collection<int, Product>  $products
      * @return array<int, array<string, mixed>>
      */
-    private function nearMissCards(array $nearMiss, $rules): array
+    private function nearMissCards(array $nearMiss, $rules, $products): array
     {
         $cards = [];
 
@@ -77,8 +87,9 @@ class CartPromotionProgress
             $cards[] = [
                 'rule_id' => $miss->ruleId,
                 'title' => $this->title($rule),
-                'message' => $this->describer->nearMissMessage($rule, $miss->remaining(), $miss->aggregate),
-                'reward_summary' => $this->describer->rewardSummary($rule),
+                'message' => $this->describer->nearMissMessage($miss->remaining(), $miss->aggregate),
+                // Количество ещё неизвестно — порог не взят, показываем только «что»
+                'rewards' => $this->plannedRewards($rule, $products),
                 'aggregate' => $miss->aggregate,
                 'current' => $miss->current,
                 'target' => $miss->target,
@@ -100,36 +111,125 @@ class CartPromotionProgress
     /**
      * @param  AppliedReward[]  $applied
      * @param  \Illuminate\Support\Collection<int, PromotionRule>  $rules
+     * @param  \Illuminate\Support\Collection<int, Product>  $products
      * @return array<int, array<string, mixed>>
      */
-    private function achievedCards(array $applied, $rules): array
+    private function achievedCards(array $applied, $rules, $products): array
     {
         $cards = [];
 
         foreach ($applied as $reward) {
-            // Одна карточка на правило, даже если наград в нём несколько
-            if (isset($cards[$reward->ruleId])) {
-                continue;
-            }
-
             $rule = $rules->get($reward->ruleId);
 
             if (! $rule) {
                 continue;
             }
 
-            $cards[$reward->ruleId] = [
+            // Одна карточка на правило: несколько наград складываются в её список
+            $cards[$reward->ruleId] ??= [
                 'rule_id' => $reward->ruleId,
                 'title' => $this->title($rule),
                 'message' => $this->describer->achievedMessage($rule),
-                'reward_summary' => $this->describer->rewardSummary($rule),
+                'rewards' => [],
                 // Волна 1 ничего не выдаёт: показываем честно, что позицию добавит менеджер
                 'issued' => $reward->isIssuable(),
                 'promotion_url' => $rule->promotion?->slug ? route('promotions.show', $rule->promotion->slug) : null,
             ];
+
+            if ($reward->declined) {
+                continue;
+            }
+
+            $cards[$reward->ruleId]['rewards'][] = $this->rewardCard(
+                $products->get($reward->productId),
+                $reward->productId,
+                $reward->price,
+                $reward->quantity,
+            );
         }
 
         return array_values($cards);
+    }
+
+    /**
+     * Что клиент получит, когда доберёт порог. Количество не считаем — оно
+     * зависит от того, чем именно он доберёт.
+     *
+     * @param  \Illuminate\Support\Collection<int, Product>  $products
+     * @return array<int, array<string, mixed>>
+     */
+    private function plannedRewards(PromotionRule $rule, $products): array
+    {
+        $cards = [];
+
+        foreach ((array) ($rule->rewards ?? []) as $reward) {
+            $reward = (array) $reward;
+            $price = (float) ($reward['price'] ?? 0);
+
+            $ids = ! empty($reward['product_id'])
+                ? [(int) $reward['product_id']]
+                : array_map('intval', (array) ($reward['choices'] ?? []));
+
+            foreach (array_filter($ids) as $productId) {
+                $cards[] = $this->rewardCard($products->get($productId), $productId, $price, null);
+            }
+        }
+
+        return $cards;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function rewardCard(?Product $product, int $productId, float $price, ?int $quantity): array
+    {
+        return [
+            'product_id' => $productId,
+            'name' => $product->name ?? 'Промо-позиция',
+            'url' => $product?->slug ? route('products.show', $product->slug) : null,
+            'thumbnail_url' => $product?->getFirstMediaUrl('main', 'thumb') ?: null,
+            'quantity' => $quantity,
+            'price' => $price,
+            'price_label' => $this->describer->promoPriceLabel($price),
+            'is_gift' => $price <= 0,
+        ];
+    }
+
+    /**
+     * Товары всех наград — одним запросом с медиа.
+     *
+     * @param  \Illuminate\Support\Collection<int, PromotionRule>  $rules
+     * @return \Illuminate\Support\Collection<int, Product>
+     */
+    private function rewardProducts(\App\Services\Promotion\DTO\PromotionEvaluation $evaluation, $rules)
+    {
+        $ids = array_map(fn (AppliedReward $reward) => $reward->productId, $evaluation->applied);
+
+        foreach ($rules as $rule) {
+            foreach ((array) ($rule->rewards ?? []) as $reward) {
+                $reward = (array) $reward;
+
+                if (! empty($reward['product_id'])) {
+                    $ids[] = (int) $reward['product_id'];
+                }
+
+                foreach ((array) ($reward['choices'] ?? []) as $choice) {
+                    $ids[] = (int) $choice;
+                }
+            }
+        }
+
+        $ids = array_values(array_unique(array_filter($ids)));
+
+        if ($ids === []) {
+            return collect();
+        }
+
+        return Product::withoutGlobalScope(HiddenScope::class)
+            ->with('media')
+            ->whereIn('id', $ids)
+            ->get()
+            ->keyBy('id');
     }
 
     /**

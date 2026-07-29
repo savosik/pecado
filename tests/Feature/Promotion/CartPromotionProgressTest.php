@@ -106,7 +106,8 @@ class CartPromotionProgressTest extends TestCase
         // Заголовок — название акции-лендинга, а не служебное имя правила
         $response->assertJsonPath('near_miss.0.title', 'Lovense: Lush 4 в подарок');
         $this->assertStringContainsString('2 000 ₽', $response->json('near_miss.0.message'));
-        $this->assertStringContainsString('Lush 4', $response->json('near_miss.0.message'));
+        // Название награды переехало из текста в карточку товара
+        $this->assertSame('Lush 4', $response->json('near_miss.0.rewards.0.name'));
     }
 
     #[Test]
@@ -154,6 +155,74 @@ class CartPromotionProgressTest extends TestCase
         // Волна 1 ничего не выдаёт — обещать автоматическую выдачу нельзя
         $response->assertJsonPath('achieved.0.issued', false);
         $this->assertStringContainsString('добавит менеджер', $response->json('achieved.0.message'));
+
+        // Награда — карточкой товара с посчитанным количеством, а не строкой из админки
+        $response->assertJsonCount(1, 'achieved.0.rewards');
+        $response->assertJsonPath('achieved.0.rewards.0.name', 'Lush 4');
+        $response->assertJsonPath('achieved.0.rewards.0.quantity', 1);
+        $response->assertJsonPath('achieved.0.rewards.0.is_gift', true);
+        $response->assertJsonPath('achieved.0.rewards.0.price_label', 'бесплатно');
+    }
+
+    /**
+     * Клиенту показываем посчитанное число подарков, а не конфигурацию правила.
+     */
+    #[Test]
+    public function achieved_card_shows_calculated_quantity(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['base_price' => 1000]);
+        $rewardProduct = Product::factory()->create(['name' => 'Lush 4']);
+
+        PromotionRule::factory()
+            ->active()
+            ->quantityThreshold(5, [$product->id])
+            ->freeGift($rewardProduct->id)
+            ->perThreshold(5, 10)
+            ->create();
+
+        $cart = $this->cartWith($user, $product, 17);
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/cart/promotions?cart_id='.$cart->id)
+            ->assertOk();
+
+        $response->assertJsonPath('achieved.0.rewards.0.quantity', 3);
+
+        // Конфигурация правила наружу не уходит ни в каком виде
+        $payload = json_encode($response->json(), JSON_UNESCAPED_UNICODE);
+        $this->assertStringNotContainsString('не более', $payload);
+        $this->assertStringNotContainsString('на каждые', $payload);
+    }
+
+    /**
+     * До порога количество неизвестно — показываем только «что получите».
+     */
+    #[Test]
+    public function near_miss_card_lists_reward_without_quantity(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['base_price' => 1000]);
+        $rewardProduct = Product::factory()->create(['name' => 'Lush 4']);
+
+        PromotionRule::factory()
+            ->active()
+            ->amountThreshold(10000, [$product->id])
+            ->freeGift($rewardProduct->id)
+            ->create();
+
+        $cart = $this->cartWith($user, $product, 8);
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/cart/promotions?cart_id='.$cart->id)
+            ->assertOk();
+
+        $response->assertJsonPath('near_miss.0.rewards.0.name', 'Lush 4');
+        $response->assertJsonPath('near_miss.0.rewards.0.quantity', null);
+        $response->assertJsonPath('near_miss.0.rewards.0.is_gift', true);
+        // Сама подсказка — только про то, сколько добрать
+        $this->assertStringContainsString('2 000 ₽', $response->json('near_miss.0.message'));
+        $this->assertStringNotContainsString('×', $response->json('near_miss.0.message'));
     }
 
     #[Test]
