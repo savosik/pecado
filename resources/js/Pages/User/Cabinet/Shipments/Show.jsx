@@ -3,6 +3,7 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { LuArrowLeft, LuPackage, LuShoppingBag, LuTriangleAlert, LuMapPin, LuMessageSquare, LuInfo, LuTruck, LuClock, LuFileSpreadsheet } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
+import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
 const ORDER_STATUS_COLORS = {
     pending: 'yellow',
@@ -189,10 +190,10 @@ export default function ShipmentShow({ shipment, related_orders, overdue_detail 
                                                         {order.number}
                                                     </Text>
                                                     <Badge
-                                                        colorPalette={order.type === 'preorder' ? 'orange' : 'teal'}
+                                                        colorPalette={getOrderTypeColor(order.type)}
                                                         variant="subtle" fontSize="2xs" px="2" borderRadius="full"
                                                     >
-                                                        {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                        {getOrderTypeShortLabel(order.type)}
                                                     </Badge>
                                                     <Badge
                                                         colorPalette={ORDER_STATUS_COLORS[order.status] || 'gray'}

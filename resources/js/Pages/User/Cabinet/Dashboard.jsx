@@ -7,6 +7,7 @@ import CabinetLayout from './CabinetLayout';
 import { LuShoppingBag, LuHeart, LuShoppingCart, LuWallet, LuClipboardList, LuPhone, LuMail, LuUserRound } from 'react-icons/lu';
 import { Tooltip } from '@/components/ui/tooltip';
 import PwaInstallBanner from '@/components/PwaInstallBanner';
+import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
 export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCount = 0, balance = null, recentOrders = [], questionnaireCompleted = true, clientStatus = null, personalManager = null }) {
     const { auth } = usePage().props;
@@ -424,13 +425,13 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                                 </Text>
                                                 <HStack gap="1" flexShrink="0">
                                                     <Badge
-                                                        colorPalette={order.type === 'preorder' ? 'orange' : 'teal'}
+                                                        colorPalette={getOrderTypeColor(order.type)}
                                                         variant="subtle"
                                                         borderRadius="full"
                                                         px="2"
                                                         fontSize="2xs"
                                                     >
-                                                        {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                        {getOrderTypeShortLabel(order.type)}
                                                     </Badge>
                                                     <Badge
                                                         colorPalette={statusColors[order.status] || 'gray'}
@@ -473,13 +474,13 @@ export default function Dashboard({ ordersCount = 0, favoritesCount = 0, cartsCo
                                                         №{order.order_number || order.id}
                                                     </Text>
                                                     <Badge
-                                                        colorPalette={order.type === 'preorder' ? 'orange' : 'teal'}
+                                                        colorPalette={getOrderTypeColor(order.type)}
                                                         variant="subtle"
                                                         borderRadius="full"
                                                         px="2"
                                                         fontSize="2xs"
                                                     >
-                                                        {order.type === 'preorder' ? 'Предзаказ' : 'Заказ'}
+                                                        {getOrderTypeShortLabel(order.type)}
                                                     </Badge>
                                                 </HStack>
                                                 <Text fontSize="xs" color="gray.400">

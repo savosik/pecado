@@ -25,9 +25,7 @@ import OrderItemsEditor from "@/Admin/Components/OrderItemsEditor";
 import { EntitySelector } from "@/Admin/Components/EntitySelector";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
 import { ORDER_STATUS_DEFAULT } from "@/constants/orderStatus";
-
-const getTypeLabel = (type) => type === "preorder" ? "Предзаказ" : "Заказ со склада";
-const getTypeColor = (type) => type === "preorder" ? "purple" : "teal";
+import { getOrderTypeLabel as getTypeLabel, getOrderTypeColor as getTypeColor } from "@/constants/orderType";
 
 function MetaRow({ label, children }) {
     return (

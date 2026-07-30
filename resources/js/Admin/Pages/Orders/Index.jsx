@@ -14,11 +14,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { usePermission } from '@/Admin/hooks/usePermission';
 import { DeleteAllButton, TrashedFilter } from '@/Admin/Components';
 import { getOrderStatusColor } from '@/constants/orderStatus';
+import { getOrderTypeShortLabel as getTypeLabel, getOrderTypeColor as getTypeColor } from '@/constants/orderType';
 
 const getStatusColor = getOrderStatusColor;
-
-const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Со склада';
-const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';
 
 const OrdersIndex = ({ filters, statuses, types, companies, trashedCount }) => {
     const { orders } = usePage().props;

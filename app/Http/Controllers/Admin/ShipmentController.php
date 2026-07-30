@@ -190,7 +190,7 @@ class ShipmentController extends Controller
                     'number' => $order->number,
                     'erp_number' => $order->erp_number,
                     'type' => $order->type?->value,
-                    'type_label' => $order->type?->value === 'preorder' ? 'Предзаказ' : 'Заказ со склада',
+                    'type_label' => $order->type?->label() ?? 'Заказ со склада',
                     'status' => $order->status?->value,
                     'status_label' => $order->status?->label() ?? 'Неизвестно',
                     'total_amount' => $order->total_amount,

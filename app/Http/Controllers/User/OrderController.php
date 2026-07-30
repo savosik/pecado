@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Contracts\Cart\CartServiceInterface;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Http\Controllers\Controller;
 use App\Models\Currency;
 use App\Models\Order;
@@ -142,11 +143,7 @@ class OrderController extends Controller
                 'count' => $statusCounts[$case->value] ?? 0,
             ]),
             'statusTotal' => array_sum($statusCounts),
-            'types' => [
-                ['value' => 'order',    'label' => 'Заказ со склада'],
-                ['value' => 'preorder', 'label' => 'Предзаказ'],
-                ['value' => 'defect',   'label' => 'Уценка'],
-            ],
+            'types' => OrderType::options(),
             'companies' => $companies,
             'presetsEnabled' => (bool) config('search-cabinet.presets'),
             'exportEnabled' => (bool) config('search-cabinet.export'),

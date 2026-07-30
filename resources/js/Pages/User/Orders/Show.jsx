@@ -12,12 +12,6 @@ import {
     ORDER_STATUS_COLORS as STATUS_COLORS,
 } from '@/constants/orderStatus';
 
-const TYPE_LABELS = {
-    standard: 'Стандартный',
-    in_stock: 'Со склада',
-    preorder: 'Предзаказ',
-};
-
 /**
  * Страница просмотра заказа.
  *

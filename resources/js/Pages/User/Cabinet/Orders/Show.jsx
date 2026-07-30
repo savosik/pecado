@@ -29,12 +29,6 @@ const SHIPMENT_STATUS_COLORS = {
     cancelled: 'red',
 };
 
-const TYPE_LABELS = {
-    standard: 'Стандартный',
-    in_stock: 'Со склада',
-    preorder: 'Предзаказ',
-};
-
 export default function OrderShow({ order }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';

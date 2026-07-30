@@ -20,9 +20,7 @@ import { toaster } from "@/components/ui/toaster";
 import { OrderHistoryTimeline } from "./Components/OrderHistoryTimeline";
 import { RelatedShipmentsSection } from "./Components/RelatedShipmentsSection";
 import { getOrderStatusColor as getStatusColor } from "@/constants/orderStatus";
-
-const getTypeLabel = (type) => type === 'preorder' ? 'Предзаказ' : 'Заказ со склада';
-const getTypeColor = (type) => type === 'preorder' ? 'purple' : 'teal';
+import { getOrderTypeLabel as getTypeLabel, getOrderTypeColor as getTypeColor } from "@/constants/orderType";
 
 const fmt = (v) =>
     parseFloat(v || 0).toLocaleString('ru-RU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
+use App\Enums\OrderType;
 use App\Events\OrderCreated;
 use App\Http\Controllers\Admin\Traits\RedirectsAfterSave;
 use App\Models\Company;
@@ -163,10 +164,7 @@ class OrderController extends AdminController
                 'value' => $case->value,
                 'label' => $this->getStatusLabel($case),
             ]),
-            'types' => [
-                ['value' => 'order',    'label' => 'Заказ со склада'],
-                ['value' => 'preorder', 'label' => 'Предзаказ'],
-            ],
+            'types' => OrderType::options(),
             'companies' => Company::select('id', 'name')->orderBy('name')->get(),
         ]);
     }
