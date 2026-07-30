@@ -146,7 +146,11 @@ function AchievedCard({ card }) {
                         {card.message}
                     </Text>
 
-                    <RewardList rewards={card.rewards} tone="green" caption="Вам полагается" />
+                    <RewardList
+                        rewards={card.rewards}
+                        tone="green"
+                        caption={rewardsCaption(card.rewards)}
+                    />
 
                     {card.promotion_url && (
                         <Link href={card.promotion_url}>
@@ -229,26 +233,42 @@ function RewardRow({ reward, tone }) {
                     {reward.name}
                 </Text>
 
-                <HStack gap="1.5" mt="0.5" flexWrap="wrap">
-                    {reward.quantity > 0 && (
-                        <Text fontSize="xs" fontWeight="700">
-                            {reward.quantity} шт.
-                        </Text>
-                    )}
-                    <Text
-                        fontSize="xs"
-                        fontWeight="700"
-                        color={reward.is_gift ? `${tone}.700` : 'gray.700'}
-                        _dark={{ color: reward.is_gift ? `${tone}.300` : 'gray.300' }}
-                    >
-                        {reward.price_label}
+                <Text
+                    fontSize="xs"
+                    fontWeight="700"
+                    mt="0.5"
+                    color={reward.is_gift ? `${tone}.700` : 'gray.700'}
+                    _dark={{ color: reward.is_gift ? `${tone}.300` : 'gray.300' }}
+                >
+                    {reward.amount_label}
+                </Text>
+
+                {/* Кнопки отказа в волне 1 нет: позицию заводит менеджер вручную,
+                    поэтому и канал отказа — он же */}
+                {reward.optional && (
+                    <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }} mt="0.5">
+                        Необязательная позиция — скажите менеджеру, если не нужна
                     </Text>
-                </HStack>
+                )}
             </Box>
         </HStack>
     );
 
     return reward.url ? <Link href={reward.url}>{body}</Link> : body;
+}
+
+/**
+ * «Вам полагается» уместно для подарка. Для платной позиции это вводит
+ * в заблуждение: 4 шт. по 100 ₽ — не подарок, а 400 ₽ к оплате.
+ */
+function rewardsCaption(rewards = []) {
+    const hasPaid = rewards.some((reward) => !reward.is_gift);
+    const hasGift = rewards.some((reward) => reward.is_gift);
+
+    if (hasPaid && hasGift) return 'Вам полагается';
+    if (hasPaid) return 'Доступно по промо-цене';
+
+    return 'Вам полагается';
 }
 
 function pluralPromotions(count) {

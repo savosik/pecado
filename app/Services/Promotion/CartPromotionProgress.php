@@ -145,6 +145,7 @@ class CartPromotionProgress
                 $reward->productId,
                 $reward->price,
                 $reward->quantity,
+                $reward->optional,
             );
         }
 
@@ -170,8 +171,11 @@ class CartPromotionProgress
                 ? [(int) $reward['product_id']]
                 : array_map('intval', (array) ($reward['choices'] ?? []));
 
+            // Бесплатную позицию отклонять нечего — движок считает так же
+            $optional = $price > 0 && (bool) ($reward['optional'] ?? false);
+
             foreach (array_filter($ids) as $productId) {
-                $cards[] = $this->rewardCard($products->get($productId), $productId, $price, null);
+                $cards[] = $this->rewardCard($products->get($productId), $productId, $price, null, $optional);
             }
         }
 
@@ -181,8 +185,13 @@ class CartPromotionProgress
     /**
      * @return array<string, mixed>
      */
-    private function rewardCard(?Product $product, int $productId, float $price, ?int $quantity): array
-    {
+    private function rewardCard(
+        ?Product $product,
+        int $productId,
+        float $price,
+        ?int $quantity,
+        bool $optional = false,
+    ): array {
         return [
             'product_id' => $productId,
             'name' => $product->name ?? 'Промо-позиция',
@@ -190,8 +199,11 @@ class CartPromotionProgress
             'thumbnail_url' => $product?->getFirstMediaUrl('main', 'thumb') ?: null,
             'quantity' => $quantity,
             'price' => $price,
-            'price_label' => $this->describer->promoPriceLabel($price),
+            'total' => $quantity !== null ? round($quantity * $price, 2) : null,
+            'amount_label' => $this->describer->promoAmountLabel($quantity, $price),
             'is_gift' => $price <= 0,
+            // Волна 1 ничего не выдаёт, поэтому кнопки отказа нет: канал — менеджер
+            'optional' => $optional,
         ];
     }
 

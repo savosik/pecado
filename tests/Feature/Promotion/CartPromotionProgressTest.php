@@ -161,7 +161,39 @@ class CartPromotionProgressTest extends TestCase
         $response->assertJsonPath('achieved.0.rewards.0.name', 'Lush 4');
         $response->assertJsonPath('achieved.0.rewards.0.quantity', 1);
         $response->assertJsonPath('achieved.0.rewards.0.is_gift', true);
-        $response->assertJsonPath('achieved.0.rewards.0.price_label', 'бесплатно');
+        $response->assertJsonPath('achieved.0.rewards.0.amount_label', '1 шт. · бесплатно');
+    }
+
+    /**
+     * Платная промо-позиция: клиент обязан видеть итог, а не цену за штуку.
+     * «4 шт.» и «100 ₽ за шт.» рядом читаются как подарок, хотя это 400 ₽.
+     */
+    #[Test]
+    public function paid_reward_shows_total_and_optional_note(): void
+    {
+        $user = User::factory()->create();
+        $product = Product::factory()->create(['base_price' => 1000]);
+        $rewardProduct = Product::factory()->create(['name' => 'Lush 4']);
+
+        PromotionRule::factory()
+            ->active()
+            ->quantityThreshold(5, [$product->id])
+            ->paidPromoItem(100, $rewardProduct->id)
+            ->perThreshold(5, 20)
+            ->create();
+
+        $cart = $this->cartWith($user, $product, 20);
+
+        $response = $this->actingAs($user)
+            ->getJson('/api/cart/promotions?cart_id='.$cart->id)
+            ->assertOk();
+
+        $response->assertJsonPath('achieved.0.rewards.0.quantity', 4);
+        $response->assertJsonPath('achieved.0.rewards.0.total', 400);
+        $response->assertJsonPath('achieved.0.rewards.0.amount_label', '4 шт. × 100 ₽ = 400 ₽');
+        $response->assertJsonPath('achieved.0.rewards.0.is_gift', false);
+        // Отказ в волне 1 — через менеджера, но клиент должен знать, что позиция необязательная
+        $response->assertJsonPath('achieved.0.rewards.0.optional', true);
     }
 
     /**

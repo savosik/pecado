@@ -305,11 +305,22 @@ class PromotionRuleDescriber
     }
 
     /**
-     * Цена промо-позиции словами: клиенту важно «бесплатно», а не «0 ₽».
+     * Что именно получит клиент, одной строкой.
+     *
+     * Итог обязателен: «4 шт.» и «100 ₽ за шт.» рядом читаются как подарок,
+     * хотя это 400 ₽. Пока количество неизвестно (порог не взят) — только цена.
      */
-    public function promoPriceLabel(float $price): string
+    public function promoAmountLabel(?int $quantity, float $price): string
     {
-        return $price <= 0 ? 'бесплатно' : $this->money($price).' за шт.';
+        if ($price <= 0) {
+            return $quantity !== null ? $quantity.' шт. · бесплатно' : 'бесплатно';
+        }
+
+        if ($quantity === null) {
+            return $this->money($price).' за шт.';
+        }
+
+        return $quantity.' шт. × '.$this->money($price).' = '.$this->money($quantity * $price);
     }
 
     /**
