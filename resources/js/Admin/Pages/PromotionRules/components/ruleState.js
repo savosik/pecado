@@ -48,7 +48,6 @@ export const emptyReward = () => ({
     promo_kind: 'accountable',
     warehouse_id: null,
     multiply: 'once',
-    per_value: null,
     max_multiplier: 1,
     optional: false,
 });
@@ -94,7 +93,6 @@ export function toFormState(rule) {
             ...reward,
             product: reward.product_id ? entity(reward.product_id, productNames) : null,
             choices: entityList(reward.choices, productNames),
-            per_value: reward.per_value ?? null,
             max_multiplier: reward.max_multiplier ?? 1,
             optional: Boolean(reward.optional),
         })),
@@ -150,11 +148,8 @@ export function toPayload(data) {
             price: Number(reward.price) || 0,
             promo_kind: reward.promo_kind,
             warehouse_id: reward.warehouse_id || null,
+            // Шаг кратности задают позиции условия — в награде остаётся только потолок
             multiply: reward.multiply,
-            // Пустой шаг — не ноль, а «шаг задан в позициях условия»: ноль схема отклонит
-            per_value: reward.multiply === 'per_threshold' && Number(reward.per_value) > 0
-                ? Number(reward.per_value)
-                : null,
             max_multiplier: reward.multiply === 'per_threshold' ? Number(reward.max_multiplier) || 0 : 1,
             optional: reward.optional,
         })),
@@ -232,14 +227,8 @@ export const rewardSummary = (reward) => {
     const quantity = Number(reward.quantity) || 1;
     let line = `${what} × ${quantity} за ${formatAggregate(price, 'amount')}`;
 
-    if (reward.multiply === 'per_threshold') {
-        line += Number(reward.per_value) > 0
-            ? `, на каждые ${reward.per_value}`
-            : ', кратность из условий';
-
-        if (Number(reward.max_multiplier) > 0) {
-            line += ` (не более ${reward.max_multiplier} раз)`;
-        }
+    if (reward.multiply === 'per_threshold' && Number(reward.max_multiplier) > 0) {
+        line += ` (не более ${reward.max_multiplier} раз)`;
     }
 
     return reward.promo_kind === 'sample' ? `${line} — пробник` : line;

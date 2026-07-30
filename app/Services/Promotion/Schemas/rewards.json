@@ -67,17 +67,9 @@
             "multiply": {
                 "type": "string",
                 "enum": ["once", "per_threshold"],
-                "description": "once — один раз при достижении порога, per_threshold — на каждые N штук / X рублей",
+                "description": "once — один раз при достижении порога, per_threshold — на каждые N штук / X рублей; сам шаг задаётся в позициях условия (conditions.items[].per_value)",
                 "$error": {
                     "*": "Кратность награды должна быть «once» (один раз) или «per_threshold» (на каждые N)."
-                }
-            },
-            "per_value": {
-                "type": ["number", "null"],
-                "exclusiveMinimum": 0,
-                "description": "Шаг кратности для multiply = per_threshold: каждые N штук или X рублей",
-                "$error": {
-                    "*": "Шаг кратности должен быть числом больше нуля."
                 }
             },
             "max_multiplier": {

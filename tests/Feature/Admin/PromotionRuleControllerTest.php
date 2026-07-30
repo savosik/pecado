@@ -92,7 +92,6 @@ class PromotionRuleControllerTest extends TestCase
                 'promo_kind' => 'accountable',
                 'warehouse_id' => $warehouse->id,
                 'multiply' => 'once',
-                'per_value' => null,
                 'max_multiplier' => 1,
                 'optional' => false,
             ]],
@@ -272,7 +271,7 @@ class PromotionRuleControllerTest extends TestCase
     {
         $payload = $this->payload();
         $payload['rewards'][0]['multiply'] = 'per_threshold';
-        $payload['rewards'][0]['per_value'] = 50000;
+        $payload['conditions']['items'][0]['per_value'] = 50000;
         $payload['rewards'][0]['max_multiplier'] = 0;
 
         $this->actingAs($this->admin())
@@ -507,7 +506,6 @@ class PromotionRuleControllerTest extends TestCase
                 'warehouse_id' => null,
                 'multiply' => 'per_threshold',
                 // Общий шаг не задаём — его берут позиции условия
-                'per_value' => null,
                 'max_multiplier' => 20,
                 'optional' => false,
             ]],
@@ -526,19 +524,19 @@ class PromotionRuleControllerTest extends TestCase
     }
 
     /**
-     * Пустое поле «на каждые» приходит из формы нулём. Это не «шаг ноль»,
-     * а «шаг задан в позициях условия» — сохранение обязано пройти.
+     * Шага в награде больше нет. Кратность «на каждые N» без шага хоть
+     * в одном условии не выдала бы ничего — не сохраняем.
      */
     #[Test]
-    public function empty_reward_step_is_saved_as_null(): void
+    public function per_threshold_without_condition_step_is_rejected(): void
     {
         $first = Product::factory()->create();
         $gift = Product::factory()->create();
 
         $payload = $this->payload([
             'conditions' => [
-                'mode' => 'any',
-                'items' => [$this->conditionItem([$first->id], 4, 4)],
+                'mode' => 'all',
+                'items' => [$this->conditionItem([$first->id], 4)],
             ],
             'rewards' => [[
                 'type' => 'fixed',
@@ -549,7 +547,6 @@ class PromotionRuleControllerTest extends TestCase
                 'promo_kind' => 'accountable',
                 'warehouse_id' => null,
                 'multiply' => 'per_threshold',
-                'per_value' => 0,
                 'max_multiplier' => 20,
                 'optional' => false,
             ]],
@@ -557,10 +554,9 @@ class PromotionRuleControllerTest extends TestCase
 
         $this->actingAs($this->admin())
             ->post(route('admin.promotion-rules.store'), $payload)
-            ->assertRedirect()
-            ->assertSessionHasNoErrors();
+            ->assertSessionHasErrors('rewards');
 
-        $this->assertNull(PromotionRule::query()->latest('id')->firstOrFail()->rewards[0]['per_value']);
+        $this->assertSame(0, PromotionRule::query()->count());
     }
 
     /**

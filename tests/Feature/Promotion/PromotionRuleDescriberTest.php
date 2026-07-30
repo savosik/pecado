@@ -124,41 +124,13 @@ class PromotionRuleDescriberTest extends TestCase
                 'price' => 40,
                 'promo_kind' => 'accountable',
                 'multiply' => 'per_threshold',
-                'per_value' => 50000,
                 'max_multiplier' => 3,
             ]],
         ]);
 
+        // Шаг в подписи не упоминается: он у каждого условия свой
         $this->assertSame(
-            'Lush 4 × 1 за 40 ₽, на каждые 50 000 (не более 3 раз)',
-            $this->describer->rewardSummary($rule),
-        );
-    }
-
-    /**
-     * Шаг задан в позициях условия — общего шага у награды нет. «На каждые 0»
-     * писать нельзя: строку видит клиент в корзине.
-     */
-    #[Test]
-    public function reward_without_own_step_does_not_say_every_zero(): void
-    {
-        $product = Product::factory()->create(['name' => 'Lush 4']);
-
-        $rule = PromotionRule::factory()->make([
-            'rewards' => [[
-                'type' => 'fixed',
-                'product_id' => $product->id,
-                'quantity' => 1,
-                'price' => 0,
-                'promo_kind' => 'accountable',
-                'multiply' => 'per_threshold',
-                'per_value' => null,
-                'max_multiplier' => 20,
-            ]],
-        ]);
-
-        $this->assertSame(
-            'Lush 4 × 1 за 0 ₽ (не более 20 раз)',
+            'Lush 4 × 1 за 40 ₽ (не более 3 раз)',
             $this->describer->rewardSummary($rule),
         );
     }

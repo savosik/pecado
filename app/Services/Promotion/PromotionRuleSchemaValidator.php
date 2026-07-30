@@ -276,7 +276,7 @@ class PromotionRuleSchemaValidator
      *
      * @param  array<int, mixed>  $rewards
      * @param  bool  $isActive  Правило включают — проверки, блокирующие только активацию
-     * @param  bool  $conditionsProvideStep  Шаг кратности задан в позициях условия
+     * @param  bool  $conditionsProvideStep  Хоть одна позиция условия задаёт шаг кратности
      * @return string[]
      */
     private function validateRewardsMeaning(array $rewards, bool $isActive, bool $conditionsProvideStep = false): array
@@ -362,13 +362,13 @@ class PromotionRuleSchemaValidator
         }
 
         $errors = [];
-        $perValue = $reward['per_value'] ?? null;
         $maxMultiplier = $reward['max_multiplier'] ?? null;
 
-        // Шаг задан в позициях условия — у каждой свой, и общий шаг в награде не нужен
-        if (! $conditionsProvideStep && (! is_numeric($perValue) || (float) $perValue <= 0)) {
-            $errors[] = "Награда {$number}: для кратности «на каждые N» нужен шаг больше нуля — "
-                .'задайте его здесь либо в позициях условия, если у артикулов кратность разная.';
+        // Шаг живёт только в позициях условия. Без него награда «на каждые N»
+        // не выдалась бы ни разу — правило сработало бы вхолостую
+        if (! $conditionsProvideStep) {
+            $errors[] = "Награда {$number}: кратность «на каждые N» требует шага хотя бы в одном условии. "
+                .'Задайте поле «Кратность» в условии — там же, где порог.';
         }
 
         if (! is_numeric($maxMultiplier) || (int) $maxMultiplier < 1) {

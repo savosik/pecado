@@ -71,7 +71,6 @@ class PromotionRuleSchemaValidatorTest extends TestCase
             'promo_kind' => 'accountable',
             'warehouse_id' => null,
             'multiply' => 'once',
-            'per_value' => null,
             'max_multiplier' => 1,
             'optional' => false,
         ], $overrides);
@@ -164,11 +163,14 @@ class PromotionRuleSchemaValidatorTest extends TestCase
         $this->assertTrue($result['valid'], $this->flatten($result['errors']));
     }
 
-    public function test_per_threshold_requires_step_and_cap(): void
+    /**
+     * Шага в награде больше нет: он живёт в условии. Награда «на каждые N»
+     * без шага хоть в одном условии не выдалась бы ни разу — отклоняем.
+     */
+    public function test_per_threshold_requires_step_in_a_condition(): void
     {
         $rule = $this->rule(['rewards' => [$this->reward([
             'multiply' => 'per_threshold',
-            'per_value' => null,
             'max_multiplier' => null,
         ])]]);
 
@@ -176,17 +178,17 @@ class PromotionRuleSchemaValidatorTest extends TestCase
         $messages = $this->flatten($result['errors']);
 
         $this->assertFalse($result['valid']);
-        $this->assertStringContainsString('нужен шаг больше нуля', $messages);
+        $this->assertStringContainsString('требует шага хотя бы в одном условии', $messages);
         $this->assertStringContainsString('обязателен потолок', $messages);
     }
 
-    public function test_per_threshold_with_step_and_cap_passes(): void
+    public function test_per_threshold_with_condition_step_and_cap_passes(): void
     {
         $rule = $this->rule(['rewards' => [$this->reward([
             'multiply' => 'per_threshold',
-            'per_value' => 150000,
             'max_multiplier' => 3,
         ])]]);
+        $rule['conditions']['items'][0]['per_value'] = 50000;
 
         $result = $this->validator->validate($rule);
 
@@ -194,10 +196,9 @@ class PromotionRuleSchemaValidatorTest extends TestCase
     }
 
     /**
-     * Кратность у каждого артикула своя — она живёт в позиции условия,
-     * и тогда общий шаг в награде не нужен.
+     * Шаг у каждого артикула свой — по позиции условия на товар.
      */
-    public function test_condition_step_replaces_reward_step(): void
+    public function test_each_condition_carries_its_own_step(): void
     {
         $second = Product::factory()->create();
 
@@ -225,7 +226,6 @@ class PromotionRuleSchemaValidatorTest extends TestCase
             ],
             'rewards' => [$this->reward([
                 'multiply' => 'per_threshold',
-                'per_value' => null,
                 'max_multiplier' => 20,
             ])],
         ]);
@@ -368,12 +368,12 @@ class PromotionRuleSchemaValidatorTest extends TestCase
                     'price_basis' => 'client_final',
                     'operator' => '>=',
                     'value' => 5,
+                    'per_value' => 5,
                 ]],
             ],
             'rewards' => [$this->reward([
                 'product_id' => $this->conditionProduct->id,
                 'multiply' => 'per_threshold',
-                'per_value' => 5,
                 'max_multiplier' => 10,
             ])],
         ]);

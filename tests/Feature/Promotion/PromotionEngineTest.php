@@ -47,17 +47,22 @@ class PromotionEngineTest extends TestCase
         array $reward,
         array $overrides = [],
         string $operator = '>=',
+        ?float $step = null,
     ): PromotionRule {
+        $item = [
+            'selector' => $selector,
+            'aggregate' => $aggregate,
+            'operator' => $operator,
+            'value' => $value,
+        ];
+
+        // Шаг кратности живёт в позиции условия, а не в награде
+        if ($step !== null) {
+            $item['per_value'] = $step;
+        }
+
         return PromotionRule::factory()->active()->create(array_merge([
-            'conditions' => [
-                'mode' => 'all',
-                'items' => [[
-                    'selector' => $selector,
-                    'aggregate' => $aggregate,
-                    'operator' => $operator,
-                    'value' => $value,
-                ]],
-            ],
+            'conditions' => ['mode' => 'all', 'items' => [$item]],
             'rewards' => [$this->reward($reward)],
         ], $overrides));
     }
@@ -77,7 +82,6 @@ class PromotionEngineTest extends TestCase
             'promo_kind' => PromoKind::ACCOUNTABLE->value,
             'warehouse_id' => null,
             'multiply' => PromotionRule::MULTIPLY_ONCE,
-            'per_value' => null,
             'max_multiplier' => 1,
             'optional' => false,
         ], $overrides);
@@ -116,9 +120,9 @@ class PromotionEngineTest extends TestCase
             [
                 'product_id' => $product->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => 5,
                 'max_multiplier' => 10,
             ],
+            step: 5,
         );
 
         // 5 штук — один подарок
@@ -289,9 +293,8 @@ class PromotionEngineTest extends TestCase
         $this->makeRule(['products' => [$trigger->id]], PromotionRule::AGGREGATE_AMOUNT, 1000, [
             'product_id' => $gift->id,
             'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-            'per_value' => 1000,
             'max_multiplier' => 3,
-        ]);
+        ], step: 1000);
 
         $this->assertSame(2, $this->engine()->evaluate($this->context([[$trigger, 2]]))->applied[0]->quantity);
         $this->assertSame(3, $this->engine()->evaluate($this->context([[$trigger, 5]]))->applied[0]->quantity,
@@ -314,13 +317,12 @@ class PromotionEngineTest extends TestCase
                 'mode' => 'any',
                 'items' => [
                     ['selector' => ['products' => [$untouched->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 5],
-                    ['selector' => ['products' => [$trigger->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 3],
+                    ['selector' => ['products' => [$trigger->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 3, 'per_value' => 3],
                 ],
             ],
             'rewards' => [$this->reward([
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => 3,
                 'max_multiplier' => 5,
             ])],
         ]);
@@ -332,10 +334,10 @@ class PromotionEngineTest extends TestCase
     }
 
     /**
-     * Режим «нужны все» от исправления не меняется: сработали все условия,
-     * первое сработавшее и есть первое в списке.
+     * В кратность идут только те условия, где шаг задан. Второе условие здесь
+     * работает порогом-привратником и на число наград не влияет.
      */
-    public function test_multiplier_in_mode_all_still_uses_first_condition(): void
+    public function test_only_conditions_with_a_step_feed_the_multiplier(): void
     {
         $first = Product::factory()->create(['base_price' => 100]);
         $second = Product::factory()->create(['base_price' => 100]);
@@ -345,21 +347,20 @@ class PromotionEngineTest extends TestCase
             'conditions' => [
                 'mode' => 'all',
                 'items' => [
-                    ['selector' => ['products' => [$first->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 2],
+                    ['selector' => ['products' => [$first->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 2, 'per_value' => 2],
                     ['selector' => ['products' => [$second->id]], 'aggregate' => 'quantity', 'operator' => '>=', 'value' => 1],
                 ],
             ],
             'rewards' => [$this->reward([
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => 2,
                 'max_multiplier' => 10,
             ])],
         ]);
 
         $result = $this->engine()->evaluate($this->context([[$first, 7], [$second, 1]]));
 
-        $this->assertSame(3, $result->applied[0]->quantity, 'Кратность считается по первому условию: floor(7 / 2)');
+        $this->assertSame(3, $result->applied[0]->quantity, 'Шаг только у первого условия: floor(7 / 2)');
     }
 
     /**
@@ -374,9 +375,8 @@ class PromotionEngineTest extends TestCase
         $this->makeRule(['products' => [$trigger->id]], PromotionRule::AGGREGATE_QUANTITY, 5, [
             'product_id' => $gift->id,
             'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-            'per_value' => 100,
             'max_multiplier' => 3,
-        ]);
+        ], step: 100);
 
         $result = $this->engine()->evaluate($this->context([[$trigger, 6]]));
 
@@ -410,7 +410,6 @@ class PromotionEngineTest extends TestCase
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
                 // Общий шаг не задан — его берут позиции условия
-                'per_value' => null,
                 'max_multiplier' => 20,
             ])],
         ]);
@@ -435,7 +434,6 @@ class PromotionEngineTest extends TestCase
             'rewards' => [$this->reward([
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => null,
                 'max_multiplier' => 20,
             ])],
         ]);
@@ -466,7 +464,6 @@ class PromotionEngineTest extends TestCase
             'rewards' => [$this->reward([
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => null,
                 'max_multiplier' => 20,
             ])],
         ]);
@@ -499,9 +496,8 @@ class PromotionEngineTest extends TestCase
             $this->makeRule(['products' => [$product->id]], PromotionRule::AGGREGATE_QUANTITY, $steps[$index], [
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => $steps[$index],
                 'max_multiplier' => 20,
-            ]);
+            ], step: $steps[$index]);
         }
 
         $before = [];
@@ -529,7 +525,6 @@ class PromotionEngineTest extends TestCase
             'rewards' => [$this->reward([
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => null,
                 'max_multiplier' => 20,
             ])],
         ]);
@@ -573,7 +568,6 @@ class PromotionEngineTest extends TestCase
             'rewards' => [$this->reward([
                 'product_id' => $gift->id,
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => null,
                 'max_multiplier' => 50,
             ])],
         ]);

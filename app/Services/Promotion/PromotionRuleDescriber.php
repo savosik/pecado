@@ -415,15 +415,9 @@ class PromotionRuleDescriber
 
         $line = $what.' × '.$quantity.' за '.$this->money($price);
 
+        // Шаг кратности живёт в условиях, здесь остаётся только потолок
         if (($reward['multiply'] ?? PromotionRule::MULTIPLY_ONCE) === PromotionRule::MULTIPLY_PER_THRESHOLD) {
-            $perValue = (float) ($reward['per_value'] ?? 0);
             $max = (int) ($reward['max_multiplier'] ?? 0);
-
-            // Шаг может жить в позициях условия — тогда общего шага нет и писать
-            // «на каждые 0» нельзя: строку видит и клиент в корзине
-            if ($perValue > 0) {
-                $line .= ', на каждые '.$this->number($perValue);
-            }
 
             if ($max > 0) {
                 $line .= ' (не более '.$max.' раз)';

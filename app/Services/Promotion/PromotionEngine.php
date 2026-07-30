@@ -624,18 +624,16 @@ class PromotionEngine
     /**
      * Сколько раз выдаётся награда.
      *
-     * Шаг кратности берётся из позиций условия, если он там задан: у каждой позиции
-     * он свой, и вклады складываются — «кратности разных артикулов считаются
-     * отдельно». Так акция вида «за каждые 4 шт. одного SKU и каждые 6 шт. другого»
-     * укладывается в одно правило.
-     *
-     * Если позиции условия шага не задают, работает старая схема: шаг из награды
-     * применяется к **первому сработавшему** условию. Именно первому сработавшему,
-     * а не первому в списке: при режиме «достаточно любого» правило может сработать
-     * от второго условия, и по первому в корзине будет ноль.
+     * Шаг кратности живёт в позиции условия: у каждой он свой, и вклады
+     * складываются — «кратности разных артикулов считаются отдельно». Так акция
+     * вида «за каждые 4 шт. одного SKU и каждые 6 шт. другого» укладывается
+     * в одно правило.
      *
      * Считаем только по выполненным условиям: невыполненное могло набрать
      * половину порога, и засчитывать её как кратность нельзя.
+     *
+     * Ноль здесь — не ошибка расчёта, а сигнал: награда уходит в blocked
+     * с причиной MULTIPLIER_NOT_REACHED, чтобы правило не молчало.
      *
      * @param  array<string, mixed>  $reward
      * @param  array<int, array{value: float, satisfied: bool, per_value: float|null}>  $items
@@ -652,31 +650,17 @@ class PromotionEngine
             return 0;
         }
 
-        $satisfied = array_values(array_filter($items, fn (array $item) => $item['satisfied']));
+        $total = 0;
 
-        if ($satisfied === []) {
-            return 0;
-        }
-
-        $withStep = array_values(array_filter($satisfied, fn (array $item) => ($item['per_value'] ?? null) !== null));
-
-        if ($withStep !== []) {
-            $total = 0;
-
-            foreach ($withStep as $item) {
-                $total += (int) floor($item['value'] / $item['per_value']);
+        foreach ($items as $item) {
+            if (! $item['satisfied'] || ($item['per_value'] ?? null) === null) {
+                continue;
             }
 
-            return min($total, $max);
+            $total += (int) floor($item['value'] / $item['per_value']);
         }
 
-        $perValue = (float) ($reward['per_value'] ?? 0);
-
-        if ($perValue <= 0) {
-            return 0;
-        }
-
-        return min((int) floor($satisfied[0]['value'] / $perValue), $max);
+        return min($total, $max);
     }
 
     // ────────────────────────────────────────────

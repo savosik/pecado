@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, HStack, VStack, Text, Input, IconButton, SimpleGrid, Box, Button } from '@chakra-ui/react';
 import { LuTrash2, LuChevronDown, LuChevronRight } from 'react-icons/lu';
 import { FormField, ProductSelector } from '@/Admin/Components';
+import { Alert } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Radio, RadioGroup } from '@/components/ui/radio';
 import { NativeSelectRoot, NativeSelectField } from '@/components/ui/native-select';
@@ -198,41 +199,33 @@ export default function RewardCard({
                                         </NativeSelectRoot>
                                     </FormField>
 
-                                    <FormField label="Кратность">
+                                    <FormField
+                                        label="Кратность"
+                                        helpText="Сам шаг («на каждые N») задаётся в условии — у каждого артикула он свой"
+                                    >
                                         <RadioGroup
                                             value={reward.multiply}
                                             onValueChange={(e) => patch({ multiply: e.value })}
                                         >
                                             <VStack align="start" gap={2}>
                                                 <Radio value="once">Один раз при достижении порога</Radio>
-                                                <Radio value="per_threshold">На каждые …</Radio>
+                                                <Radio value="per_threshold">За каждый шаг, заданный в условии</Radio>
                                             </VStack>
                                         </RadioGroup>
                                     </FormField>
 
                                     {perThreshold && (
-                                        <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                            {/* Шаг задан в позициях условия — здесь спрашивать его нечего:
-                                                два места для одного числа только путают */}
-                                            {stepFromConditions ? (
-                                                <FormField label="На каждые">
-                                                    <Text fontSize="sm" color="fg.muted" pt={2}>
-                                                        Шаг берётся из условий — у каждой позиции свой.
-                                                    </Text>
-                                                </FormField>
-                                            ) : (
-                                                <FormField
-                                                    label="На каждые"
-                                                    helpText="Шаг в единицах первого сработавшего условия. Если у артикулов кратность разная, задайте её в самих условиях"
+                                        <VStack align="stretch" gap={2}>
+                                            {/* Шага здесь нет: он живёт в позиции условия, рядом с порогом,
+                                                и у каждого артикула свой */}
+                                            {!stepFromConditions && (
+                                                <Alert
+                                                    status="warning"
+                                                    title="Шаг кратности не задан ни в одном условии"
                                                 >
-                                                    <Input
-                                                        type="number"
-                                                        min={0}
-                                                        step="0.01"
-                                                        value={reward.per_value ?? ''}
-                                                        onChange={(e) => patch({ per_value: e.target.value === '' ? null : e.target.value })}
-                                                    />
-                                                </FormField>
+                                                    Откройте вкладку «Условия» и заполните поле «Кратность» —
+                                                    там же, где порог. Без него награда не выдастся ни разу.
+                                                </Alert>
                                             )}
 
                                             <FormField
@@ -243,11 +236,12 @@ export default function RewardCard({
                                                     type="number"
                                                     min={1}
                                                     step="1"
+                                                    maxW="220px"
                                                     value={reward.max_multiplier ?? ''}
                                                     onChange={(e) => patch({ max_multiplier: e.target.value })}
                                                 />
                                             </FormField>
-                                        </SimpleGrid>
+                                        </VStack>
                                     )}
                                 </VStack>
                             )}

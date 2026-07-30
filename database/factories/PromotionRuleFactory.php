@@ -122,22 +122,37 @@ class PromotionRuleFactory extends Factory
     }
 
     /**
-     * Награда, выдаваемая на каждые N рублей / штук, с обязательным потолком.
+     * Награда, выдаваемая за каждый шаг кратности, с обязательным потолком.
      *
-     * $perValue = null — шаг задают позиции условия (см. perItemSteps()).
+     * Шаг живёт в позициях условия, поэтому $step проставляется именно туда —
+     * во все позиции сразу. Вызывать после условия (amountThreshold /
+     * quantityThreshold), иначе оно перезапишет проставленный шаг.
+     *
+     * $step = null — шаг уже задан условиями (см. perItemSteps()).
      */
-    public function perThreshold(?float $perValue = 150000, int $maxMultiplier = 3): static
+    public function perThreshold(?float $step = 150000, int $maxMultiplier = 3): static
     {
-        return $this->state(function (array $attributes) use ($perValue, $maxMultiplier) {
+        return $this->state(function (array $attributes) use ($step, $maxMultiplier) {
             $rewards = $attributes['rewards'] ?? [$this->reward()];
 
             $rewards[0] = array_merge($rewards[0], [
                 'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
-                'per_value' => $perValue,
                 'max_multiplier' => $maxMultiplier,
             ]);
 
-            return ['rewards' => $rewards];
+            $state = ['rewards' => $rewards];
+
+            if ($step !== null) {
+                $conditions = $attributes['conditions'] ?? $this->amountConditions(150000);
+
+                foreach ($conditions['items'] as $index => $item) {
+                    $conditions['items'][$index]['per_value'] = $step;
+                }
+
+                $state['conditions'] = $conditions;
+            }
+
+            return $state;
         });
     }
 
@@ -210,7 +225,6 @@ class PromotionRuleFactory extends Factory
             'promo_kind' => PromoKind::ACCOUNTABLE->value,
             'warehouse_id' => null,
             'multiply' => PromotionRule::MULTIPLY_ONCE,
-            'per_value' => null,
             'max_multiplier' => 1,
             'optional' => false,
         ];
