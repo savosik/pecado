@@ -95,7 +95,7 @@
 
 | Карточка | Зависит от |
 |---|---|
-| [promo-06-order-assembler](tasks/backlog/2026-07-27_promo-06-order-assembler.md) — общая сборка заказов | — |
+| [promo-06-order-assembler](tasks/review/2026-07-27_promo-06-order-assembler.md) — общая сборка заказов ✅ | — |
 | [promo-07-stock-service](tasks/backlog/2026-07-27_promo-07-stock-service.md) — `PromoStockService` | 01 |
 | [promo-08-cart-checkout-lines](tasks/backlog/2026-07-27_promo-08-cart-checkout-lines.md) — промо-строки в UI | 02, 07 |
 | [promo-09-erp-order-types](tasks/backlog/2026-07-27_promo-09-erp-order-types.md) — типы заказов + 1С | 06, 08 |

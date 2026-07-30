@@ -9,11 +9,10 @@ use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderType;
-use App\Events\OrderCreated;
 use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Company;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Services\Defect\DefectPickListFormatter;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +24,8 @@ class CheckoutService implements CheckoutServiceInterface
         protected UserCurrencyResolverInterface $currencyResolver,
         protected StockServiceInterface $stockService,
         protected DefectStockServiceInterface $defectStockService,
-        protected DefectPickListFormatter $defectPickListFormatter
+        protected DefectPickListFormatter $defectPickListFormatter,
+        protected OrderAssembler $assembler,
     ) {}
 
     /**
@@ -47,24 +47,8 @@ class CheckoutService implements CheckoutServiceInterface
             $user = $cart->user;
             $currency = $this->currencyResolver->resolve($user);
 
-            $baseOrderData = [
-                'user_id' => $user->id,
-                'company_id' => $company->id,
-                // При самовывозе адрес доставки не хранится
-                'delivery_address' => $deliveryMethod === DeliveryMethod::PICKUP ? null : $deliveryAddress,
-                'delivery_method' => $deliveryMethod,
-                'cart_id' => $cart->id,
-                'status' => \App\Enums\OrderStatus::PENDING_APPROVAL,
-                'comment' => $comment,
-                'manager_comment' => $managerComment ?: null,
-                'warehouse_comment' => $warehouseComment ?: null,
-                'total_amount' => 0,
-                'exchange_rate' => $currency?->exchange_rate ?? 1.0,
-                'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
-                'currency_code' => $currency?->code ?? 'RUB',
-            ];
-
-            // Validate stock availability before proceeding
+            // Остатки проверяем до сборки: чекаут отказывает целиком, а не урезает
+            // количества, как это делает клиентское API
             $insufficientStockItems = [];
             foreach ($cart->items as $item) {
                 if ($item->item_type === 'defect') {
@@ -114,124 +98,81 @@ class CheckoutService implements CheckoutServiceInterface
                 );
             }
 
-            // Separate cart items by item_type (already split by CartService at add-to-cart time)
+            // Строки уже разложены по item_type ещё при добавлении в корзину
             $inStockCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'instock')->values();
             $preorderCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'preorder')->values();
             $defectCartItems = $cart->items->filter(fn ($item) => $item->item_type === 'defect')->values();
 
-            $orders = collect();
+            $warehouseComments = [];
 
-            // Create instock order
-            if ($inStockCartItems->isNotEmpty()) {
-                $instockOrder = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::ORDER,
-                ]));
-                $total = $this->createOrderItems($instockOrder, $inStockCartItems, $user);
-                $instockOrder->total_amount = $total;
-                $instockOrder->saveQuietly();
-                OrderCreated::dispatch($instockOrder);
-                $orders->push($instockOrder);
-            }
-
-            // Create preorder order
-            if ($preorderCartItems->isNotEmpty()) {
-                $preorderOrder = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::PREORDER,
-                ]));
-                $total = $this->createOrderItems($preorderOrder, $preorderCartItems, $user);
-                $preorderOrder->total_amount = $total;
-                $preorderOrder->saveQuietly();
-                OrderCreated::dispatch($preorderOrder);
-                $orders->push($preorderOrder);
-            }
-
-            // Create defect (уценка) order — отдельный заказ со складом некондиции.
-            // Остаток партии проверен выше в этой же транзакции. Параллельный
-            // checkout той же партии может дать небольшой овербукинг — как и для
-            // обычных товаров, окончательный остаток подтверждает 1С реализацией.
+            // Кладовщик собирает по печатному документу 1С и в WMS заходит редко —
+            // дописываем в комментарий склада конкретику по каждой партии брака
+            // (артикул, id партии, дефекты, количество).
             if ($defectCartItems->isNotEmpty()) {
-                // Кладовщик собирает по печатному документу 1С и в WMS заходит
-                // редко — дописываем в комментарий склада конкретику по каждой
-                // партии брака (артикул, id партии, дефекты, количество).
                 $defectCartItems->load('product', 'productDefect');
-                $pickList = $this->defectPickListFormatter->format($defectCartItems);
-                $defectWarehouseComment = trim(
-                    ($warehouseComment ? $warehouseComment."\n\n" : '').$pickList
-                );
 
-                $defectOrder = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::DEFECT,
-                    'warehouse_comment' => $defectWarehouseComment ?: null,
-                ]));
-                $total = $this->createDefectOrderItems($defectOrder, $defectCartItems);
-                $defectOrder->total_amount = $total;
-                $defectOrder->saveQuietly();
-                OrderCreated::dispatch($defectOrder);
-                $orders->push($defectOrder);
+                $warehouseComments[OrderType::DEFECT->value] = trim(
+                    ($warehouseComment ? $warehouseComment."\n\n" : '')
+                    .$this->defectPickListFormatter->format($defectCartItems)
+                );
             }
 
-            return $orders;
+            $draft = new OrderDraft(
+                user: $user,
+                company: $company,
+                deliveryMethod: $deliveryMethod,
+                groups: [
+                    OrderType::ORDER->value => $this->linesFromCart($inStockCartItems),
+                    OrderType::PREORDER->value => $this->linesFromCart($preorderCartItems),
+                    OrderType::DEFECT->value => $this->defectLinesFromCart($defectCartItems),
+                ],
+                deliveryAddress: $deliveryAddress,
+                comment: $comment,
+                managerComment: $managerComment,
+                warehouseComment: $warehouseComment,
+                cartId: $cart->id,
+                currency: $currency,
+                warehouseComments: $warehouseComments,
+            );
+
+            // Заказ уценки отгружается со склада некондиции. Остаток партии проверен
+            // выше в этой же транзакции. Параллельный checkout той же партии может
+            // дать небольшой овербукинг — как и для обычных товаров, окончательный
+            // остаток подтверждает 1С реализацией.
+            return $this->assembler->assemble($draft);
         });
     }
 
     /**
-     * Create order items for a given order from cart items.
+     * Обычные строки корзины: цену считает сборщик по прайсу клиента.
+     *
+     * @param  Collection<int, CartItem>  $cartItems
+     * @return list<OrderLine>
      */
-    protected function createOrderItems(Order $order, Collection $cartItems, $user): float
+    private function linesFromCart(Collection $cartItems): array
     {
-        $total = 0;
-        foreach ($cartItems as $item) {
-            $priceResult = $this->priceService->getPriceResult($item->product, $user);
-            $displayPrice = $priceResult->getDisplayPrice();
-            $subtotal = $displayPrice * $item->quantity;
-            $total += $subtotal;
-
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item->product_id,
-                'name' => $item->product->name,
-                'price' => $displayPrice,
-                'base_price' => $priceResult->basePrice,
-                'discount_percent' => $priceResult->discountPercent,
-                'final_price' => $displayPrice,
-                'quantity' => $item->quantity,
-                'subtotal' => $subtotal,
-            ]);
-        }
-
-        return $total;
+        return $cartItems
+            ->map(fn (CartItem $item) => new OrderLine($item->product, $item->quantity))
+            ->all();
     }
 
     /**
-     * Позиции заказа уценки.
+     * Строки уценки: цена зафиксирована в корзине (= цена партии), скидки
+     * и индивидуальные цены к ней не применяются.
      *
-     * Цена фиксирована в строке корзины (= цена партии), скидки и индивидуальные
-     * цены к ней не применяются. Дублируем описание дефекта снапшотом: партию
-     * могут отредактировать позже, а в заказе должно остаться то, что видел клиент.
+     * @param  Collection<int, CartItem>  $cartItems
+     * @return list<OrderLine>
      */
-    protected function createDefectOrderItems(Order $order, Collection $cartItems): float
+    private function defectLinesFromCart(Collection $cartItems): array
     {
-        $total = 0;
-        foreach ($cartItems as $item) {
-            $price = (float) ($item->price ?? 0);
-            $subtotal = $price * $item->quantity;
-            $total += $subtotal;
-
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $item->product_id,
-                'product_defect_id' => $item->product_defect_id,
-                'defect_description' => $item->productDefect?->defect_description,
-                'name' => $item->product->name,
-                'price' => $price,
-                'base_price' => $price,
-                'discount_percent' => 0,
-                'final_price' => $price,
-                'quantity' => $item->quantity,
-                'subtotal' => $subtotal,
-            ]);
-        }
-
-        return $total;
+        return $cartItems
+            ->map(fn (CartItem $item) => OrderLine::defect(
+                product: $item->product,
+                quantity: $item->quantity,
+                price: (float) ($item->price ?? 0),
+                productDefectId: $item->product_defect_id,
+                defectDescription: $item->productDefect?->defect_description,
+            ))
+            ->all();
     }
 }

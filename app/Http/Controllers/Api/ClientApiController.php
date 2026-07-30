@@ -8,14 +8,15 @@ use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
-use App\Events\OrderCreated;
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
+use App\Services\Order\OrderAssembler;
 use App\Services\Order\OrderChangeAggregator;
 use App\Services\Order\OrderChangeLogger;
+use App\Services\Order\OrderDraft;
+use App\Services\Order\OrderLine;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ class ClientApiController extends Controller
         protected UserCurrencyResolverInterface $currencyResolver,
         protected OrderChangeAggregator $changeAggregator,
         protected OrderChangeLogger $changeLogger,
+        protected OrderAssembler $assembler,
     ) {}
 
     /**
@@ -242,6 +244,7 @@ class ClientApiController extends Controller
         ]);
 
         // Найти компанию по ИНН
+        /** @var \App\Models\Company|null $company */
         $company = $user->companies()->where('tax_id', $validated['inn'])->first();
         if (! $company) {
             return response()->json([
@@ -348,77 +351,50 @@ class ClientApiController extends Controller
         // Способ доставки (v15.3): delivery по умолчанию; при самовывозе адрес не хранится
         $deliveryMethod = $validated['delivery_method'] ?? DeliveryMethod::DELIVERY->value;
 
-        $baseOrderData = [
-            'user_id' => $user->id,
-            'company_id' => $company->id,
-            'delivery_address' => $deliveryMethod === DeliveryMethod::PICKUP->value
-                ? null
-                : ($validated['address'] ?? null),
-            'delivery_method' => $deliveryMethod,
-            'status' => OrderStatus::PENDING_APPROVAL,
-            'comment' => $comment,
-            'total_amount' => 0,
-            'exchange_rate' => $currency?->exchange_rate ?? 1.0,
-            'rate_coefficient' => $currency?->rate_coefficient ?? 1.0,
-            'currency_code' => $currency?->code ?? 'RUB',
-        ];
+        $draft = new OrderDraft(
+            user: $user,
+            company: $company,
+            deliveryMethod: DeliveryMethod::from($deliveryMethod),
+            groups: [
+                OrderType::ORDER->value => $this->linesFromApiItems($instockItems),
+                OrderType::PREORDER->value => $this->linesFromApiItems($preorderItems),
+            ],
+            deliveryAddress: $validated['address'] ?? null,
+            comment: $comment,
+            currency: $currency,
+        );
 
-        // Создать заказ(ы) в транзакции
-        $createdOrders = DB::transaction(function () use ($baseOrderData, $instockItems, $preorderItems, $user) {
-            $orders = [];
+        // Заказы и запись о недостаче — одной транзакцией. OrderCreated сборщик
+        // выпустит после коммита, одинаково с чекаутом
+        $createdOrders = DB::transaction(function () use ($draft, $notAccepted, $partial) {
+            $orders = $this->assembler->assemble($draft);
 
-            // Заказ (instock)
-            if (! empty($instockItems)) {
-                $order = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::ORDER,
-                ]));
-                $total = $this->createOrderItems($order, $instockItems, $user);
-                $order->update(['total_amount' => $total]);
-                $orders[] = $order;
+            // Логируем недостачу при приёме как структурную запись в общий workflow
+            // изменений (недостача видна в «Изменениях заказов», значке и API).
+            // Текстовая пометка в комментарии сохраняется отдельно — её видит 1С.
+            if (! empty($notAccepted) || ! empty($partial)) {
+                $this->changeLogger->logApiShortfall(
+                    $orders->first(),
+                    array_map(fn (array $u) => [
+                        'product_id' => $u['product_id'] ?? null,
+                        'slug' => $u['slug'] ?? null,
+                        'product_name' => $u['name'] ?? $u['identifier'],
+                        'requested' => $u['requested'],
+                        'reason' => $u['reason'] ?? null,
+                        'message' => $u['message'] ?? null,
+                    ], $notAccepted),
+                    array_map(fn (array $p) => [
+                        'product_id' => $p['product_id'] ?? null,
+                        'slug' => $p['slug'] ?? null,
+                        'product_name' => $p['name'] ?? $p['identifier'],
+                        'requested' => $p['requested'],
+                        'fulfilled' => $p['fulfilled'],
+                    ], $partial),
+                );
             }
 
-            // Предзаказ (preorder)
-            if (! empty($preorderItems)) {
-                $order = Order::create(array_merge($baseOrderData, [
-                    'type' => OrderType::PREORDER,
-                ]));
-                $total = $this->createOrderItems($order, $preorderItems, $user);
-                $order->update(['total_amount' => $total]);
-                $orders[] = $order;
-            }
-
-            return $orders;
+            return $orders->all();
         });
-
-        // Логируем недостачу при приёме как структурную запись в общий workflow
-        // изменений (недостача видна в «Изменениях заказов», значке и API).
-        // Текстовая пометка в комментарии сохраняется отдельно — её видит 1С.
-        if (! empty($notAccepted) || ! empty($partial)) {
-            $primaryOrder = $createdOrders[0];
-            $this->changeLogger->logApiShortfall(
-                $primaryOrder,
-                array_map(fn (array $u) => [
-                    'product_id' => $u['product_id'] ?? null,
-                    'slug' => $u['slug'] ?? null,
-                    'product_name' => $u['name'] ?? $u['identifier'],
-                    'requested' => $u['requested'],
-                    'reason' => $u['reason'] ?? null,
-                    'message' => $u['message'] ?? null,
-                ], $notAccepted),
-                array_map(fn (array $p) => [
-                    'product_id' => $p['product_id'] ?? null,
-                    'slug' => $p['slug'] ?? null,
-                    'product_name' => $p['name'] ?? $p['identifier'],
-                    'requested' => $p['requested'],
-                    'fulfilled' => $p['fulfilled'],
-                ], $partial),
-            );
-        }
-
-        // Dispatch events после коммита
-        foreach ($createdOrders as $order) {
-            OrderCreated::dispatch($order->fresh());
-        }
 
         // Формируем ответ
         $responseOrders = array_map(fn (Order $order) => [
@@ -476,35 +452,19 @@ class ClientApiController extends Controller
     }
 
     /**
-     * Создание позиций заказа.
+     * Разрешённые к заказу позиции → строки для сборщика.
+     *
+     * Цену считает сборщик по прайсу клиента — так же, как в чекауте.
+     *
+     * @param  array<int, array{product: \App\Models\Product, quantity: int}>  $items
+     * @return list<OrderLine>
      */
-    protected function createOrderItems(Order $order, array $items, $user): float
+    private function linesFromApiItems(array $items): array
     {
-        $total = 0;
-
-        foreach ($items as $item) {
-            $product = $item['product'];
-            $quantity = $item['quantity'];
-
-            $priceResult = $this->priceService->getPriceResult($product, $user);
-            $displayPrice = $priceResult->getDisplayPrice();
-            $subtotal = $displayPrice * $quantity;
-            $total += $subtotal;
-
-            OrderItem::create([
-                'order_id' => $order->id,
-                'product_id' => $product->id,
-                'name' => $product->name,
-                'price' => $displayPrice,
-                'base_price' => $priceResult->basePrice,
-                'discount_percent' => $priceResult->discountPercent,
-                'final_price' => $displayPrice,
-                'quantity' => $quantity,
-                'subtotal' => $subtotal,
-            ]);
-        }
-
-        return $total;
+        return array_map(
+            static fn (array $item) => new OrderLine($item['product'], $item['quantity']),
+            array_values($items),
+        );
     }
 
     /**
