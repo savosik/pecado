@@ -151,7 +151,10 @@ export function toPayload(data) {
             promo_kind: reward.promo_kind,
             warehouse_id: reward.warehouse_id || null,
             multiply: reward.multiply,
-            per_value: reward.multiply === 'per_threshold' ? Number(reward.per_value) || 0 : null,
+            // Пустой шаг — не ноль, а «шаг задан в позициях условия»: ноль схема отклонит
+            per_value: reward.multiply === 'per_threshold' && Number(reward.per_value) > 0
+                ? Number(reward.per_value)
+                : null,
             max_multiplier: reward.multiply === 'per_threshold' ? Number(reward.max_multiplier) || 0 : 1,
             optional: reward.optional,
         })),

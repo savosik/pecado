@@ -526,6 +526,44 @@ class PromotionRuleControllerTest extends TestCase
     }
 
     /**
+     * Пустое поле «на каждые» приходит из формы нулём. Это не «шаг ноль»,
+     * а «шаг задан в позициях условия» — сохранение обязано пройти.
+     */
+    #[Test]
+    public function empty_reward_step_is_saved_as_null(): void
+    {
+        $first = Product::factory()->create();
+        $gift = Product::factory()->create();
+
+        $payload = $this->payload([
+            'conditions' => [
+                'mode' => 'any',
+                'items' => [$this->conditionItem([$first->id], 4, 4)],
+            ],
+            'rewards' => [[
+                'type' => 'fixed',
+                'product_id' => $gift->id,
+                'choices' => [],
+                'quantity' => 1,
+                'price' => 0,
+                'promo_kind' => 'accountable',
+                'warehouse_id' => null,
+                'multiply' => 'per_threshold',
+                'per_value' => 0,
+                'max_multiplier' => 20,
+                'optional' => false,
+            ]],
+        ]);
+
+        $this->actingAs($this->admin())
+            ->post(route('admin.promotion-rules.store'), $payload)
+            ->assertRedirect()
+            ->assertSessionHasNoErrors();
+
+        $this->assertNull(PromotionRule::query()->latest('id')->firstOrFail()->rewards[0]['per_value']);
+    }
+
+    /**
      * @param  int[]  $productIds
      * @return array<string, mixed>
      */

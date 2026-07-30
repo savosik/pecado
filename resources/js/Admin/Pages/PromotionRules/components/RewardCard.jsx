@@ -15,7 +15,15 @@ import { rewardSummary } from './ruleState';
  * промо-позиции, склад и кратность живут под «Дополнительно»: наверху остаётся
  * только «что выдаём, сколько и почём».
  */
-export default function RewardCard({ index, reward, onChange, onRemove, warehouses = [], defaultOpen = false }) {
+export default function RewardCard({
+    index,
+    reward,
+    onChange,
+    onRemove,
+    warehouses = [],
+    defaultOpen = false,
+    stepFromConditions = false,
+}) {
     const [open, setOpen] = useState(defaultOpen);
     const patch = (values) => onChange({ ...reward, ...values });
 
@@ -204,19 +212,28 @@ export default function RewardCard({ index, reward, onChange, onRemove, warehous
 
                                     {perThreshold && (
                                         <SimpleGrid columns={{ base: 1, md: 2 }} gap={4}>
-                                            <FormField
-                                                label="На каждые"
-                                                helpText="Шаг в единицах первого сработавшего условия. Оставьте пустым, если кратность задана в самих условиях — у каждого артикула своя"
-                                            >
-                                                <Input
-                                                    type="number"
-                                                    min={0}
-                                                    step="0.01"
-                                                    placeholder="из условий"
-                                                    value={reward.per_value ?? ''}
-                                                    onChange={(e) => patch({ per_value: e.target.value === '' ? null : e.target.value })}
-                                                />
-                                            </FormField>
+                                            {/* Шаг задан в позициях условия — здесь спрашивать его нечего:
+                                                два места для одного числа только путают */}
+                                            {stepFromConditions ? (
+                                                <FormField label="На каждые">
+                                                    <Text fontSize="sm" color="fg.muted" pt={2}>
+                                                        Шаг берётся из условий — у каждой позиции свой.
+                                                    </Text>
+                                                </FormField>
+                                            ) : (
+                                                <FormField
+                                                    label="На каждые"
+                                                    helpText="Шаг в единицах первого сработавшего условия. Если у артикулов кратность разная, задайте её в самих условиях"
+                                                >
+                                                    <Input
+                                                        type="number"
+                                                        min={0}
+                                                        step="0.01"
+                                                        value={reward.per_value ?? ''}
+                                                        onChange={(e) => patch({ per_value: e.target.value === '' ? null : e.target.value })}
+                                                    />
+                                                </FormField>
+                                            )}
 
                                             <FormField
                                                 label="Но не более … раз"

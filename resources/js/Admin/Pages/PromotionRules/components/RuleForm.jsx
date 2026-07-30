@@ -68,6 +68,9 @@ export default function RuleForm({
 
     const patchConditions = (patch) => setData('conditions', { ...data.conditions, ...patch });
 
+    // Хоть одна позиция условия задаёт свой шаг — общий шаг в награде не нужен
+    const stepFromConditions = data.conditions.items.some((item) => Number(item.per_value) > 0);
+
     const updateCondition = (index, condition) => {
         const items = [...data.conditions.items];
         items[index] = condition;
@@ -334,6 +337,7 @@ export default function RuleForm({
                                             reward={reward}
                                             warehouses={warehouses}
                                             defaultOpen={index === openReward}
+                                            stepFromConditions={stepFromConditions}
                                             onChange={(updated) => updateReward(index, updated)}
                                             onRemove={() => setData('rewards', data.rewards.filter((_, i) => i !== index))}
                                         />

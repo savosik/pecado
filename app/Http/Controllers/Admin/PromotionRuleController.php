@@ -478,7 +478,11 @@ class PromotionRuleController extends AdminController
                     : PromoKind::ACCOUNTABLE->value,
                 'warehouse_id' => ! empty($reward['warehouse_id']) ? (int) $reward['warehouse_id'] : null,
                 'multiply' => $perThreshold ? PromotionRule::MULTIPLY_PER_THRESHOLD : PromotionRule::MULTIPLY_ONCE,
-                'per_value' => $perThreshold && isset($reward['per_value']) ? (float) $reward['per_value'] : null,
+                // Ноль и пустая строка — это «шага нет», его задают позиции условия.
+                // Схема допускает только null либо число больше нуля
+                'per_value' => $perThreshold && is_numeric($reward['per_value'] ?? null) && (float) $reward['per_value'] > 0
+                    ? (float) $reward['per_value']
+                    : null,
                 'max_multiplier' => $perThreshold ? (int) ($reward['max_multiplier'] ?? 0) : 1,
                 // Бесплатную промо-позицию не отклоняют — флаг для неё смысла не имеет
                 'optional' => $price > 0 && (bool) ($reward['optional'] ?? true),
