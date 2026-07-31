@@ -575,10 +575,19 @@ class PromotionEngine
             $quantity = max(1, (int) ($reward['quantity'] ?? 1)) * $multiplier;
             $warehouseId = ! empty($reward['warehouse_id']) ? (int) $reward['warehouse_id'] : null;
 
-            if (! $declined && ! $this->stock->isAvailable($productId, $warehouseId, $quantity, $context->user?->id)) {
-                $blocked[] = new BlockedReward($rule->id, $rule->name, $index, $productId, PromoBlockReason::OUT_OF_STOCK);
+            if (! $declined) {
+                $available = $this->stock->availableFor($productId, $warehouseId, $context->user?->id);
 
-                continue;
+                if ($available < 1) {
+                    $blocked[] = new BlockedReward($rule->id, $rule->name, $index, $productId, PromoBlockReason::OUT_OF_STOCK);
+
+                    continue;
+                }
+
+                // Остатка не хватает на всю кратность — выдаём сколько есть.
+                // «Положено 5, на складе 2» превращается в 2, а не в ноль:
+                // урезанная награда клиенту полезнее отсутствующей
+                $quantity = min($quantity, $available);
             }
 
             $applied[] = new AppliedReward(

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Contracts\Promotion\PromoStockCheckerInterface;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
@@ -9,6 +10,7 @@ use App\Models\Promotion;
 use App\Models\PromotionRule;
 use App\Models\User;
 use App\Models\Warehouse;
+use App\Services\Promotion\AlwaysAvailablePromoStock;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia;
@@ -28,6 +30,11 @@ class PromotionRuleControllerTest extends TestCase
     {
         parent::setUp();
         $this->seed(RolesAndPermissionsSeeder::class);
+
+        // Эти тесты про правила и тексты, а не про склад: до promo-07 движок
+        // работал с заглушкой «всегда доступно», оставляем её здесь явно.
+        // Проверки самого фонда живут в PromoStockServiceTest.
+        $this->app->bind(PromoStockCheckerInterface::class, AlwaysAvailablePromoStock::class);
     }
 
     private function admin(): User

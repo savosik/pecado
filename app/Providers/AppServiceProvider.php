@@ -45,6 +45,11 @@ class AppServiceProvider extends ServiceProvider
         );
 
         $this->app->bind(
+            \App\Contracts\Promotion\PromoStockServiceInterface::class,
+            \App\Services\Promotion\PromoStockService::class
+        );
+
+        $this->app->bind(
             \App\Contracts\Cart\CartServiceInterface::class,
             \App\Services\Cart\CartService::class
         );
@@ -59,11 +64,18 @@ class AppServiceProvider extends ServiceProvider
             \App\Repositories\OrderRepository::class
         );
 
-        // Промо-акции: в волне 1 остатки и история выдачи ещё не нужны — движок
-        // работает с заглушками, реальные реализации приносят карточки promo-07 и promo-09.
+        // Проверка остатка и фонд промо — одна реализация: движок спрашивает
+        // «сколько можно выдать», корзина и чекаут — «сколько свободно».
+        // Scoped, потому что внутри живёт снимок доступности на одно вычисление
+        // (см. PromoStockService::availableFor).
+        $this->app->scoped(
+            \App\Services\Promotion\PromoStockService::class,
+            \App\Services\Promotion\PromoStockService::class
+        );
+
         $this->app->bind(
             \App\Contracts\Promotion\PromoStockCheckerInterface::class,
-            \App\Services\Promotion\AlwaysAvailablePromoStock::class
+            \App\Services\Promotion\PromoStockService::class
         );
 
         $this->app->bind(

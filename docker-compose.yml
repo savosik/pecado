@@ -186,6 +186,10 @@ services:
   node:
     image: node:20-alpine
     container_name: pecado-node
+    # Единственный сервис, у которого не было политики перезапуска: контейнер
+    # тихо оставался лежать, public/hot пропадал, и все тесты, рендерящие
+    # страницу, падали с ViewException «Vite manifest not found».
+    restart: unless-stopped
     working_dir: /var/www
     entrypoint: ["/var/www/docker/node-entrypoint.sh"]
     volumes:

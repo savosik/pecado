@@ -17,4 +17,9 @@ class AlwaysAvailablePromoStock implements PromoStockCheckerInterface
     {
         return true;
     }
+
+    public function availableFor(int $productId, ?int $warehouseId, ?int $userId = null): int
+    {
+        return PHP_INT_MAX;
+    }
 }

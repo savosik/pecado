@@ -15,6 +15,7 @@ use App\Models\PromotionRule;
 use App\Models\User;
 use App\Models\Warehouse;
 use App\Services\Promotion\ActivePromotionRuleCache;
+use App\Services\Promotion\AlwaysAvailablePromoStock;
 use App\Services\Promotion\DTO\AppliedReward;
 use App\Services\Promotion\DTO\PromoContext;
 use App\Services\Promotion\DTO\PromoContextLine;
@@ -30,6 +31,16 @@ use Tests\TestCase;
 class PromotionEngineTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Тесты движка про правила, а не про склад: до promo-07 биндинг вёл на
+        // заглушку «всегда доступно», оставляем её здесь явно. Тесты, которым
+        // важен остаток, подменяют проверку через bindStock().
+        $this->app->bind(PromoStockCheckerInterface::class, AlwaysAvailablePromoStock::class);
+    }
 
     private function engine(): PromotionEngine
     {
@@ -783,19 +794,65 @@ class PromotionEngineTest extends TestCase
 
         $this->makeRule(['products' => [$trigger->id]], PromotionRule::AGGREGATE_QUANTITY, 1, ['product_id' => $gift->id]);
 
-        $this->app->bind(PromoStockCheckerInterface::class, fn () => new class implements PromoStockCheckerInterface
-        {
-            public function isAvailable(int $productId, ?int $warehouseId, int $quantity, ?int $userId = null): bool
-            {
-                return false;
-            }
-        });
+        $this->bindStock(0);
 
         $result = $this->engine()->evaluate($this->context([[$trigger, 1]]));
 
         $this->assertSame([], $result->applied);
         $this->assertSame(PromoBlockReason::OUT_OF_STOCK, $result->blocked[0]->reason);
         $this->assertSame($gift->id, $result->blocked[0]->productId);
+    }
+
+    /**
+     * Остатка не хватает на всю кратность — награда урезается, а не пропадает.
+     * «Положено 5, на складе 2» должно дать 2: урезанный подарок клиенту
+     * полезнее отсутствующего.
+     */
+    public function test_short_stock_trims_the_multiplier(): void
+    {
+        $trigger = Product::factory()->create(['base_price' => 1000]);
+        $gift = Product::factory()->create();
+
+        $this->makeRule(
+            ['products' => [$trigger->id]],
+            PromotionRule::AGGREGATE_QUANTITY,
+            1,
+            [
+                'product_id' => $gift->id,
+                'multiply' => PromotionRule::MULTIPLY_PER_THRESHOLD,
+                'max_multiplier' => 10,
+            ],
+            step: 1,
+        );
+
+        $this->bindStock(2);
+
+        $result = $this->engine()->evaluate($this->context([[$trigger, 5]]));
+
+        $this->assertCount(1, $result->applied, 'Награда обязана остаться, пусть и урезанной');
+        $this->assertSame(2, $result->applied[0]->quantity);
+        $this->assertSame([], $result->blocked);
+    }
+
+    /**
+     * Подменяет проверку остатка фиксированным числом доступных единиц.
+     */
+    private function bindStock(int $available): void
+    {
+        $this->app->bind(PromoStockCheckerInterface::class, fn () => new class($available) implements PromoStockCheckerInterface
+        {
+            public function __construct(private readonly int $available) {}
+
+            public function isAvailable(int $productId, ?int $warehouseId, int $quantity, ?int $userId = null): bool
+            {
+                return $this->available >= $quantity;
+            }
+
+            public function availableFor(int $productId, ?int $warehouseId, ?int $userId = null): int
+            {
+                return $this->available;
+            }
+        });
     }
 
     public function test_audience_by_user_excludes_guests_and_others(): void

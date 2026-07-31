@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Promotion;
 
+use App\Contracts\Promotion\PromoStockCheckerInterface;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Product;
@@ -9,6 +10,7 @@ use App\Models\Promotion;
 use App\Models\PromotionRule;
 use App\Models\User;
 use App\Services\Promotion\ActivePromotionRuleCache;
+use App\Services\Promotion\AlwaysAvailablePromoStock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -24,6 +26,11 @@ class CartPromotionProgressTest extends TestCase
     {
         parent::setUp();
         app(ActivePromotionRuleCache::class)->flush();
+
+        // Эти тесты про правила и тексты, а не про склад: до promo-07 движок
+        // работал с заглушкой «всегда доступно», оставляем её здесь явно.
+        // Проверки самого фонда живут в PromoStockServiceTest.
+        $this->app->bind(PromoStockCheckerInterface::class, AlwaysAvailablePromoStock::class);
     }
 
     private function cartWith(User $user, Product $product, int $quantity): Cart

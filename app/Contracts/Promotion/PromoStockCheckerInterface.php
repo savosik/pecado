@@ -21,4 +21,12 @@ interface PromoStockCheckerInterface
      * @param  int|null  $userId  Клиент — для выбора склада по региону
      */
     public function isAvailable(int $productId, ?int $warehouseId, int $quantity, ?int $userId = null): bool;
+
+    /**
+     * Сколько единиц можно выдать.
+     *
+     * Нужно движку, чтобы урезать кратность: если по условию положено 5 штук,
+     * а свободно 2 — выдаём 2, а не «ничего» и не «5».
+     */
+    public function availableFor(int $productId, ?int $warehouseId, ?int $userId = null): int;
 }
