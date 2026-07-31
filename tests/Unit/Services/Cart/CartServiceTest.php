@@ -29,7 +29,13 @@ class CartServiceTest extends TestCase
         $this->priceService = $this->createMock(PriceServiceInterface::class);
         $this->stockService = $this->createMock(StockServiceInterface::class);
         $this->defectStockService = $this->createMock(\App\Contracts\Defect\DefectStockServiceInterface::class);
-        $this->service = new CartService($this->priceService, $this->stockService, $this->defectStockService);
+        $this->service = new CartService(
+            $this->priceService,
+            $this->stockService,
+            $this->defectStockService,
+            // Промо-строки в этих тестах не участвуют — они про агрегаты корзины
+            $this->createMock(\App\Services\Promotion\CartPromoLines::class),
+        );
     }
 
     #[Test]

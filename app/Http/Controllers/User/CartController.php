@@ -6,9 +6,11 @@ use App\Contracts\Cart\CartServiceInterface;
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\CartPromotionSelection;
 use App\Models\Product;
 use App\Models\ProductBarcode;
 use App\Models\ProductDefect;
+use App\Models\PromotionRule;
 use App\Services\Cart\OrderImportService;
 use App\Services\Promotion\CartPromotionProgress;
 use Illuminate\Http\JsonResponse;
@@ -176,6 +178,117 @@ class CartController extends Controller
         }
 
         return response()->json($progress->forCart($cart, $user));
+    }
+
+    /**
+     * Выбрать товар из вариантов награды.
+     * POST /api/cart/promo/select
+     */
+    public function selectPromo(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'rule_id' => 'required|integer|exists:promotion_rules,id',
+            'reward_index' => 'required|integer|min:0',
+            'product_id' => 'required|integer|exists:products,id',
+        ], [
+            'rule_id.required' => 'Не указана акция',
+            'rule_id.exists' => 'Акция не найдена',
+            'reward_index.required' => 'Не указана награда',
+            'product_id.required' => 'Не выбран товар',
+            'product_id.exists' => 'Товар не найден',
+        ]);
+
+        $cart = $this->promoCart($request);
+
+        CartPromotionSelection::updateOrCreate(
+            [
+                'cart_id' => $cart->id,
+                'promotion_rule_id' => $validated['rule_id'],
+                'reward_index' => $validated['reward_index'],
+            ],
+            ['product_id' => $validated['product_id']],
+        );
+
+        return $this->promoResponse($cart);
+    }
+
+    /**
+     * Отказаться от платной промо-позиции или вернуть её.
+     * POST /api/cart/promo/decline
+     */
+    public function declinePromo(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'rule_id' => 'required|integer|exists:promotion_rules,id',
+            'reward_index' => 'required|integer|min:0',
+            'declined' => 'required|boolean',
+        ], [
+            'rule_id.required' => 'Не указана акция',
+            'rule_id.exists' => 'Акция не найдена',
+            'reward_index.required' => 'Не указана награда',
+            'declined.required' => 'Не указано действие',
+        ]);
+
+        $cart = $this->promoCart($request);
+
+        // От бесплатного не отказываются: подарок ничего не стоит, а кнопка
+        // «отказаться» рядом с ним выглядит как ошибка интерфейса
+        if ($validated['declined'] && ! $this->promoRewardIsOptional($cart, $validated['rule_id'], $validated['reward_index'])) {
+            return response()->json([
+                'message' => 'От этой промо-позиции нельзя отказаться',
+            ], 422);
+        }
+
+        CartPromotionSelection::updateOrCreate(
+            [
+                'cart_id' => $cart->id,
+                'promotion_rule_id' => $validated['rule_id'],
+                'reward_index' => $validated['reward_index'],
+            ],
+            ['is_declined' => $validated['declined']],
+        );
+
+        return $this->promoResponse($cart);
+    }
+
+    /**
+     * Корзина, к которой относится выбор по акции.
+     */
+    private function promoCart(Request $request): Cart
+    {
+        if ($cartId = $request->integer('cart_id')) {
+            $cart = Cart::query()->findOrFail($cartId);
+            Gate::authorize('view', $cart);
+
+            return $cart;
+        }
+
+        return $this->cartService->getOrCreateActiveCart($request->user());
+    }
+
+    /**
+     * Отклоняемая ли награда: платная и помеченная `optional` в правиле.
+     */
+    private function promoRewardIsOptional(Cart $cart, int $ruleId, int $rewardIndex): bool
+    {
+        $rule = PromotionRule::find($ruleId);
+        $reward = (array) (array_values((array) ($rule?->rewards ?? []))[$rewardIndex] ?? []);
+
+        return (float) ($reward['price'] ?? 0) > 0 && (bool) ($reward['optional'] ?? true);
+    }
+
+    /**
+     * Пересчитанный блок промо целиком — фронт не склеивает состояние сам.
+     */
+    private function promoResponse(Cart $cart): JsonResponse
+    {
+        $details = $this->cartService->getCartDetails($cart->fresh(), $cart->user);
+
+        return response()->json([
+            'promo_items' => $details['promo_items'],
+            'promo_quantity' => $details['promo_quantity'],
+            'promo_amount' => $details['promo_amount'],
+        ]);
     }
 
     /**

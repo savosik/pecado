@@ -9,6 +9,7 @@ use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\Country;
 use App\Enums\DeliveryMethod;
+use App\Enums\PromoKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\StoreCheckoutRequest;
 use App\Models\DeliveryAddress;
@@ -67,6 +68,21 @@ class CheckoutController extends Controller
             'amount_discounted' => array_sum(array_column($defectItems, 'total_amount_discounted')),
         ];
 
+        // Промо-позиции: подотчётные и рекламные образцы показываются разными
+        // таблицами — у образцов другой режим учёта, и клиент должен видеть это
+        // до оформления, а не узнавать из накладной
+        $promoItems = array_values(array_filter(
+            $cartDetails['promo_items'] ?? [],
+            fn ($it) => ($it['promo_kind'] ?? '') !== PromoKind::SAMPLE->value && ! ($it['is_declined'] ?? false),
+        ));
+        $sampleItems = array_values(array_filter(
+            $cartDetails['promo_items'] ?? [],
+            fn ($it) => ($it['promo_kind'] ?? '') === PromoKind::SAMPLE->value && ! ($it['is_declined'] ?? false),
+        ));
+
+        $promoTotals = $this->groupTotals($promoItems);
+        $sampleTotals = $this->groupTotals($sampleItems);
+
         // Компании и адреса пользователя
         $companies = $user->companies()->select('id', 'name', 'legal_name', 'tax_id', 'is_default')->get();
         $addresses = $user->deliveryAddresses()
@@ -83,9 +99,13 @@ class CheckoutController extends Controller
             'instockItems' => $instockItems,
             'preorderItems' => $preorderItems,
             'defectItems' => $defectItems,
+            'promoItems' => $promoItems,
+            'sampleItems' => $sampleItems,
             'instockTotals' => $instockTotals,
             'preorderTotals' => $preorderTotals,
             'defectTotals' => $defectTotals,
+            'promoTotals' => $promoTotals,
+            'sampleTotals' => $sampleTotals,
             'grandTotal' => [
                 'quantity' => $cartDetails['total_quantity'] ?? 0,
                 'amount_regular' => $cartDetails['total_amount_regular'] ?? 0,
@@ -100,6 +120,21 @@ class CheckoutController extends Controller
                 'label' => $c->label(),
             ]),
         ]);
+    }
+
+    /**
+     * Подытоги группы строк.
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     * @return array{quantity: int, amount_regular: float, amount_discounted: float}
+     */
+    private function groupTotals(array $items): array
+    {
+        return [
+            'quantity' => array_sum(array_column($items, 'quantity')),
+            'amount_regular' => array_sum(array_column($items, 'total_amount_regular')),
+            'amount_discounted' => array_sum(array_column($items, 'total_amount_discounted')),
+        ];
     }
 
     /**

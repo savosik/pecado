@@ -19,7 +19,8 @@ class CartService implements CartServiceInterface
     public function __construct(
         protected PriceServiceInterface $priceService,
         protected StockServiceInterface $stockService,
-        protected DefectStockServiceInterface $defectStockService
+        protected DefectStockServiceInterface $defectStockService,
+        protected \App\Services\Promotion\CartPromoLines $promoLines,
     ) {}
 
     /**
@@ -719,13 +720,21 @@ class CartService implements CartServiceInterface
             ];
         })->filter()->values()->toArray();
 
+        // Промо-строки виртуальные: считаются движком, в cart_items не лежат
+        // и в общий итог не подмешиваются — они уедут отдельным заказом,
+        // и смешанная сумма ввела бы клиента в заблуждение
+        $promoItems = $this->promoLines->forCart($cart);
+
         return [
             'items' => $items,
+            'promo_items' => $promoItems,
             'total_quantity' => $cart->total_quantity,
             'instock_quantity' => $cart->instock_quantity,
             'preorder_quantity' => $cart->preorder_quantity,
             'total_amount_regular' => array_sum(array_column($items, 'total_amount_regular')),
             'total_amount_discounted' => array_sum(array_column($items, 'total_amount_discounted')),
+            'promo_quantity' => array_sum(array_column($promoItems, 'quantity')),
+            'promo_amount' => round(array_sum(array_column($promoItems, 'total_amount')), 2),
         ];
     }
 
