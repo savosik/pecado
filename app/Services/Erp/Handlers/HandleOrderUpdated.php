@@ -8,6 +8,7 @@ use App\Services\Erp\ErpHandlerOutcome;
 use App\Services\Erp\Exceptions\ErpUnprocessableMessageException;
 use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Erp\Support\PreservesDefectItemLinks;
+use App\Services\Erp\Support\PreservesPromoItemLinks;
 use App\Services\Order\OrderChangeLogger;
 use Illuminate\Support\Facades\Log;
 
@@ -23,6 +24,7 @@ use Illuminate\Support\Facades\Log;
 class HandleOrderUpdated
 {
     use PreservesDefectItemLinks;
+    use PreservesPromoItemLinks;
 
     public function __construct(
         private readonly OrderChangeLogger $changeLogger,
@@ -242,11 +244,13 @@ class HandleOrderUpdated
         // держит сайт — 1С их не присылает. Снимаем до удаления, чтобы
         // перенести на пересозданные позиции и не потерять партию брака.
         $defectLinks = $this->captureDefectLinks($order);
+        $promoLinks = $this->capturePromoLinks($order);
 
         $order->items()->delete();
 
         foreach ($parsedItems as $item) {
             $link = $this->pullDefectLink($defectLinks, $item['product_id']);
+            $promo = $this->pullPromoLink($promoLinks, $item['product_id'], $item);
 
             $order->items()->create([
                 'product_id' => $item['product_id'],
@@ -259,6 +263,8 @@ class HandleOrderUpdated
                 'subtotal' => $item['quantity'] * $item['final_price'],
                 'product_defect_id' => $link['product_defect_id'],
                 'defect_description' => $link['defect_description'],
+                'promotion_rule_id' => $promo['promotion_rule_id'],
+                'promo_kind' => $promo['promo_kind'],
             ]);
         }
 
@@ -310,6 +316,10 @@ class HandleOrderUpdated
                 'base_price' => (float) $basePrice,
                 'discount_percent' => (float) $discountPercent,
                 'final_price' => (float) $finalPrice,
+                // Признак промо 1С прислать может — например, у позиции,
+                // которую менеджер добавил в заказ вручную
+                'is_promo' => (bool) ($item['is_promo'] ?? false),
+                'promo_kind' => $item['promo_kind'] ?? null,
             ];
         }
 

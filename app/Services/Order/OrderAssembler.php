@@ -6,6 +6,7 @@ use App\Contracts\Pricing\PriceServiceInterface;
 use App\Enums\OrderStatus;
 use App\Enums\OrderType;
 use App\Events\OrderCreated;
+use App\Events\OrdersPlaced;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
@@ -60,6 +61,13 @@ class OrderAssembler
             DB::afterCommit(static fn () => OrderCreated::dispatch($order));
         }
 
+        // Событие про покупку, а не про документ: одно оформление даёт до пяти
+        // заказов, а письмо клиенту должно быть одно. OrderCreated выше остаётся
+        // для обмена с 1С, где каждый документ уезжает отдельным сообщением.
+        if ($orders->isNotEmpty()) {
+            DB::afterCommit(static fn () => OrdersPlaced::dispatch($orders));
+        }
+
         return $orders;
     }
 
@@ -108,6 +116,8 @@ class OrderAssembler
                 'product_id' => $line->product->id,
                 'product_defect_id' => $line->productDefectId,
                 'defect_description' => $line->defectDescription,
+                'promotion_rule_id' => $line->promotionRuleId,
+                'promo_kind' => $line->promoKind,
                 'name' => $line->product->name,
                 'price' => $price,
                 'base_price' => $basePrice,
@@ -126,6 +136,21 @@ class OrderAssembler
      */
     private function resolvePrice(OrderLine $line, User $user): array
     {
+        // Промо-позиция: цена из награды, но base_price — обычная цена клиента,
+        // чтобы в документе было видно размер выгоды. discount_percent —
+        // производная и передаётся только для наглядности: 1С берёт final_price
+        // авторитетно и сумму через процент не пересчитывает (подтверждено
+        // заказчиком). Не «оптимизировать» это поле.
+        if ($line->price !== null && $line->promoKind !== null) {
+            $base = (float) $this->priceService->getPriceResult($line->product, $user)->getDisplayPrice();
+
+            $discount = $base > 0
+                ? round((1 - $line->price / $base) * 100, 2)
+                : 0.0;
+
+            return [$line->price, $base, $discount];
+        }
+
         // Фиксированная цена строки (уценка): индивидуальные цены и скидки к ней
         // не применяются — клиент видел именно её
         if ($line->price !== null) {

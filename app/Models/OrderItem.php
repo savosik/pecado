@@ -56,6 +56,8 @@ class OrderItem extends Model
         'product_id',
         'product_defect_id',
         'defect_description',
+        'promotion_rule_id',
+        'promo_kind',
         'name',
         'brand_name_snapshot',
         'price',

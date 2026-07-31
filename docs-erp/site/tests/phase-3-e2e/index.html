@@ -1107,6 +1107,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#-v156" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Промо-позиции: полный круг (v15.6)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1637,6 +1648,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#-v156" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Промо-позиции: полный круг (v15.6)
+      
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1930,6 +1952,19 @@
 <ul>
 <li>[ ] Возврат в 1С привязан к конкретной реализации, а не к заказу</li>
 <li>[ ] Сумма возврата = сумма по <code>price × quantity</code> из payload и совпадает с реализацией</li>
+</ul>
+<hr />
+<h2 id="-v156">Промо-позиции: полный круг (v15.6)<a class="headerlink" href="#-v156" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 2.6</p>
+<ul>
+<li>[ ] Оформление с акцией даёт на сайте и в 1С одинаковый набор документов</li>
+<li>[ ] <code>order.updated</code> из 1С по промо-заказу <strong>не затирает</strong> привязку позиции к правилу
+      акции (<code>promotion_rule_id</code>) и вид позиции (<code>promo_kind</code>)</li>
+<li>[ ] Позиция, добавленная менеджером <strong>вручную в 1С</strong>, приезжает на сайт, сохраняется
+      и переживает следующий <code>order.updated</code></li>
+<li>[ ] Повторная доставка того же <code>order.created</code> (тот же <code>message_id</code>) не задваивает
+      позиции промо-заказа</li>
+<li>[ ] <code>shipment.created</code> по промо-заказу закрывает его так же, как обычный</li>
 </ul>
 
 

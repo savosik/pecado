@@ -3,7 +3,7 @@
 namespace Tests\Feature\Mail;
 
 use App\Enums\OrderStatus;
-use App\Events\OrderCreated;
+use App\Events\OrdersPlaced;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\User;
@@ -40,7 +40,7 @@ class OrderCreatedEmailTest extends TestCase
             'subtotal' => 300.00,
         ]);
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertSentTo($user, OrderCreatedNotification::class, function ($n) use ($order) {
             return $n->order->is($order);
@@ -55,7 +55,7 @@ class OrderCreatedEmailTest extends TestCase
         $user = User::factory()->create();
         $order = Order::factory()->create(['user_id' => $user->id]);
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertNothingSent();
     }
@@ -70,7 +70,7 @@ class OrderCreatedEmailTest extends TestCase
         $order->setRelation('user', null);
         $order->user_id = null;
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertNothingSent();
     }

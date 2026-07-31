@@ -1058,6 +1058,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#26-ordercreated-type-promo-v156" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 — Промо-позиции (order.created, type: "promo", v15.6)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#27-ordercreated-type-promo_sample-v156" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 — Рекламные образцы (order.created, type: "promo_sample", v15.6)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#24-returncreated-v1213-breaking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1616,6 +1638,28 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#26-ordercreated-type-promo-v156" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 — Промо-позиции (order.created, type: "promo", v15.6)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#27-ordercreated-type-promo_sample-v156" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 — Рекламные образцы (order.created, type: "promo_sample", v15.6)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#24-returncreated-v1213-breaking" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1710,6 +1754,33 @@
 <ul>
 <li>[ ] <code>type: "preorder"</code></li>
 <li>[ ] <code>warehouse_uuids</code> содержит UUID склада предзаказа</li>
+</ul>
+<hr />
+<h2 id="26-ordercreated-type-promo-v156">2.6 — Промо-позиции (<code>order.created</code>, <code>type: "promo"</code>, v15.6)<a class="headerlink" href="#26-ordercreated-type-promo-v156" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 2.2, настроенная акция в режиме выдачи</p>
+<p>🟢 Набрать корзину так, чтобы сработала акция с подотчётной наградой → оформить заказ.</p>
+<blockquote>
+<p>Структура payload → <a href="/docs/erp/schemas/order.created.to_erp.json">JSON Schema</a></p>
+</blockquote>
+<ul>
+<li>[ ] В <code>erp_out.orders</code> пришло <strong>два</strong> сообщения: <code>type: "order"</code> и <code>type: "promo"</code></li>
+<li>[ ] У промо-заказа <code>warehouse_uuids</code> содержит склады наличия региона клиента</li>
+<li>[ ] Позиции промо-заказа несут <code>is_promo: true</code> и <code>promo_kind: "accountable"</code></li>
+<li>[ ] <code>final_price</code> позиции равен цене из награды; <code>base_price</code> — обычная цена клиента</li>
+<li>[ ] Подарок: <code>final_price = 0</code>, <code>discount_percent = 100</code>, заказ с нулевой суммой принят</li>
+<li>[ ] Промо-позиция не подняла сумму корзины: акция со следующим порогом не сработала</li>
+</ul>
+<hr />
+<h2 id="27-ordercreated-type-promo_sample-v156">2.7 — Рекламные образцы (<code>order.created</code>, <code>type: "promo_sample"</code>, v15.6)<a class="headerlink" href="#27-ordercreated-type-promo_sample-v156" title="Permanent link">&para;</a></h2>
+<p><strong>Зависимости:</strong> 2.6, склад «Москва реклама» с заполненным <code>external_id</code></p>
+<p>🟢 Акция с наградой вида «рекламный образец» → оформить заказ.</p>
+<ul>
+<li>[ ] <code>type: "promo_sample"</code>, <code>warehouse_uuids</code> содержит склад «Москва реклама»</li>
+<li>[ ] Позиции несут <code>promo_kind: "sample"</code></li>
+<li>[ ] Позиции <strong>не выписываются</strong> в накладную клиенту</li>
+<li>[ ] Если у склада «Москва реклама» <strong>не заполнен</strong> <code>external_id</code> — заказ <strong>не публикуется</strong>,
+      в лог сайта пишется warning с номером заказа (пустой <code>warehouse_uuids</code> для 1С хуже,
+      чем отсутствие сообщения)</li>
 </ul>
 <hr />
 <h2 id="24-returncreated-v1213-breaking">2.4 — Создание возврата (<code>return.created</code>, v12.13 BREAKING)<a class="headerlink" href="#24-returncreated-v1213-breaking" title="Permanent link">&para;</a></h2>

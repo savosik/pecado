@@ -199,13 +199,14 @@ class AppServiceProvider extends ServiceProvider
             \App\Listeners\SendPasswordChangedEmail::class,
         );
 
+        // Письмо клиенту — на покупку, а не на документ (см. SendOrdersPlacedEmail)
         \Illuminate\Support\Facades\Event::listen(
-            \App\Events\OrderCreated::class,
-            \App\Listeners\SendOrderCreatedEmail::class,
+            \App\Events\OrdersPlaced::class,
+            \App\Listeners\SendOrdersPlacedEmail::class,
         );
 
         \Illuminate\Support\Facades\Event::listen(
-            \App\Events\OrderCreated::class,
+            \App\Events\OrdersPlaced::class,
             \App\Listeners\NotifyManagersAboutNewOrder::class,
         );
 

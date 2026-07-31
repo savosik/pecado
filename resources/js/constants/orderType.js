@@ -8,6 +8,8 @@ export const ORDER_TYPE_LABELS = {
     order: 'Заказ со склада',
     preorder: 'Предзаказ',
     defect: 'Уценка',
+    promo: 'Промо-позиции',
+    promo_sample: 'Рекламные образцы',
 };
 
 // Короткие подписи для бейджей в таблицах и карточках списка
@@ -15,6 +17,8 @@ export const ORDER_TYPE_SHORT_LABELS = {
     order: 'Со склада',
     preorder: 'Предзаказ',
     defect: 'Уценка',
+    promo: 'Промо',
+    promo_sample: 'Образцы',
 };
 
 // Оранжевый для предзаказа — та же палитра, что и в каталоге
@@ -22,6 +26,8 @@ export const ORDER_TYPE_COLORS = {
     order: 'teal',
     preorder: 'orange',
     defect: 'red',
+    promo: 'blue',
+    promo_sample: 'gray',
 };
 
 // Неизвестный тип не роняет страницу и не выдаёт себя за «Заказ со склада»:

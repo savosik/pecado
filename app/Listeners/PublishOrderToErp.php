@@ -29,10 +29,23 @@ class PublishOrderToErp
         // external_id от 1С — иначе warehouse_uuids уйдёт пустым и 1С не поймёт, откуда
         // отгружать. Не отправляем и пишем warning; заказ на сайте остаётся, менеджер
         // увидит его в кабинете склада. Снять гейт — как только UUID прописан.
-        $isDefectOrder = ($order->type?->value ?? $order->type) === 'defect';
-        if ($isDefectOrder && $this->defectWarehouseUuids() === []) {
+        $orderType = $order->type?->value ?? $order->type;
+
+        if ($orderType === 'defect' && $this->defectWarehouseUuids() === []) {
             \Illuminate\Support\Facades\Log::warning(
                 'Заказ уценки не опубликован в 1С: у склада некондиции нет external_id',
+                ['order_uuid' => $order->uuid, 'order_number' => $order->number]
+            );
+
+            return;
+        }
+
+        // Тот же гейт для рекламных образцов: склад «Москва реклама» появится
+        // только в волне 3 (карточка promo-11), и до тех пор промо-образцы
+        // публиковать нельзя — пустой warehouse_uuids хуже отсутствия сообщения
+        if ($orderType === 'promo_sample' && $this->promoSampleWarehouseUuids() === []) {
+            \Illuminate\Support\Facades\Log::warning(
+                'Заказ рекламных образцов не опубликован в 1С: у склада «Москва реклама» нет external_id',
                 ['order_uuid' => $order->uuid, 'order_number' => $order->number]
             );
 
@@ -100,13 +113,25 @@ class PublishOrderToErp
 
         // Позиции заказа (v7: base_price, discount_percent, final_price)
         $payload['items'] = $order->items->map(function ($item) {
-            return [
+            $line = [
                 'product_uuid' => $item->product?->external_id,
                 'quantity' => $item->quantity,
                 'base_price' => (float) ($item->base_price ?? $item->price),
                 'discount_percent' => (float) ($item->discount_percent ?? 0),
+                // 1С берёт final_price авторитетно и не пересчитывает сумму через
+                // discount_percent (подтверждено заказчиком). Для промо-позиции
+                // это принципиально: при цене 0,01 ₽ пересчёт дал бы расхождение
                 'final_price' => (float) ($item->final_price ?? $item->price),
             ];
+
+            // Признак промо ставим только там, где он есть, — обычные позиции
+            // payload не раздувают
+            if ($item->promo_kind !== null) {
+                $line['is_promo'] = true;
+                $line['promo_kind'] = $item->promo_kind;
+            }
+
+            return $line;
         })->toArray();
 
         PublishOrderToErpJob::dispatch($payload);
@@ -130,6 +155,14 @@ class PublishOrderToErp
         if ($type === 'defect') {
             return $this->defectWarehouseUuids();
         }
+
+        // Рекламные образцы отгружаются со своего склада, регион здесь не участвует
+        if ($type === 'promo_sample') {
+            return $this->promoSampleWarehouseUuids();
+        }
+
+        // Подотчётные промо-позиции лежат на обычных складах наличия региона,
+        // поэтому ниже они идут по той же ветке, что и `order`
 
         $region = $order->user?->region;
 
@@ -167,6 +200,29 @@ class PublishOrderToErp
     {
         return \App\Models\Warehouse::query()
             ->where('is_defect', true)
+            ->pluck('external_id')
+            ->filter()
+            ->values()
+            ->toArray();
+    }
+
+    /**
+     * UUID склада рекламных образцов («Москва реклама»).
+     *
+     * Флаг `is_promo_sample` заводится в карточке promo-11 (волна 3). Пока колонки
+     * нет — метод возвращает пустой массив, и гейт выше не даёт опубликовать заказ.
+     * Это корректное поведение, а не ошибка.
+     *
+     * @return string[]
+     */
+    private function promoSampleWarehouseUuids(): array
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('warehouses', 'is_promo_sample')) {
+            return [];
+        }
+
+        return \App\Models\Warehouse::query()
+            ->where('is_promo_sample', true)
             ->pluck('external_id')
             ->filter()
             ->values()

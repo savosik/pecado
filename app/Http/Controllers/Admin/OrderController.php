@@ -244,6 +244,9 @@ class OrderController extends AdminController
 
             // Диспатчим событие после создания items, чтобы payload содержал позиции
             OrderCreated::dispatch($order);
+            // Письмо клиенту слушает OrdersPlaced — заказ, созданный менеджером
+            // вручную, тоже должен его порождать
+            \App\Events\OrdersPlaced::dispatch(collect([$order]));
 
             DB::commit();
 

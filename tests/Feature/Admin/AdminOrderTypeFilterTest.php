@@ -47,10 +47,12 @@ class AdminOrderTypeFilterTest extends TestCase
                 $types = collect($page->toArray()['props']['types']);
 
                 $this->assertSame(
-                    ['order', 'preorder', 'defect'],
+                    ['order', 'preorder', 'defect', 'promo', 'promo_sample'],
                     $types->pluck('value')->all(),
                 );
                 $this->assertSame('Уценка', $types->firstWhere('value', 'defect')['label']);
+                $this->assertSame('Промо-позиции', $types->firstWhere('value', 'promo')['label']);
+                $this->assertSame('Рекламные образцы', $types->firstWhere('value', 'promo_sample')['label']);
             });
     }
 

@@ -9,6 +9,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\Erp\Support\OrderStatusMapper;
 use App\Services\Erp\Support\PreservesDefectItemLinks;
+use App\Services\Erp\Support\PreservesPromoItemLinks;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +26,7 @@ use Illuminate\Support\Facades\Log;
 class HandleOrderCreated
 {
     use PreservesDefectItemLinks;
+    use PreservesPromoItemLinks;
 
     public function handle(array $payload): void
     {
@@ -208,6 +210,7 @@ class HandleOrderCreated
             // держит сайт — 1С их не присылает. Снимаем до удаления, чтобы
             // перенести на пересозданные позиции и не потерять партию брака.
             $defectLinks = $existingOrder ? $this->captureDefectLinks($order) : [];
+            $promoLinks = $existingOrder ? $this->capturePromoLinks($order) : [];
 
             if ($existingOrder) {
                 $order->items()->delete();
@@ -233,6 +236,7 @@ class HandleOrderCreated
                     : ($item['name'] ?? $productUuid ?? 'Неизвестный товар');
 
                 $link = $this->pullDefectLink($defectLinks, $product?->id);
+                $promo = $this->pullPromoLink($promoLinks, $product?->id, $item);
 
                 $order->items()->create([
                     'product_id' => $product?->id,
@@ -245,6 +249,8 @@ class HandleOrderCreated
                     'subtotal' => $subtotal,
                     'product_defect_id' => $link['product_defect_id'],
                     'defect_description' => $link['defect_description'],
+                    'promotion_rule_id' => $promo['promotion_rule_id'],
+                    'promo_kind' => $promo['promo_kind'],
                 ]);
 
                 $totalAmount += $subtotal;

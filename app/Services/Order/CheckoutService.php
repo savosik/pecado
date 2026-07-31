@@ -9,11 +9,17 @@ use App\Contracts\Pricing\PriceServiceInterface;
 use App\Contracts\Stock\StockServiceInterface;
 use App\Enums\DeliveryMethod;
 use App\Enums\OrderType;
+use App\Enums\PromoKind;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Company;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\Scopes\HiddenScope;
 use App\Services\Defect\DefectPickListFormatter;
+use App\Services\Promotion\DTO\AppliedReward;
+use App\Services\Promotion\DTO\PromoContext;
+use App\Services\Promotion\PromotionEngine;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +32,7 @@ class CheckoutService implements CheckoutServiceInterface
         protected DefectStockServiceInterface $defectStockService,
         protected DefectPickListFormatter $defectPickListFormatter,
         protected OrderAssembler $assembler,
+        protected PromotionEngine $promotionEngine,
     ) {}
 
     /**
@@ -117,6 +124,11 @@ class CheckoutService implements CheckoutServiceInterface
                 );
             }
 
+            // Промо пересчитываем здесь, внутри транзакции, и результат клиента
+            // на веру не принимаем: между открытием чекаута и нажатием кнопки
+            // корзина могла измениться, а остаток — уехать
+            $promoGroups = $this->promoLines($cart);
+
             $draft = new OrderDraft(
                 user: $user,
                 company: $company,
@@ -125,6 +137,8 @@ class CheckoutService implements CheckoutServiceInterface
                     OrderType::ORDER->value => $this->linesFromCart($inStockCartItems),
                     OrderType::PREORDER->value => $this->linesFromCart($preorderCartItems),
                     OrderType::DEFECT->value => $this->defectLinesFromCart($defectCartItems),
+                    OrderType::PROMO->value => $promoGroups[PromoKind::ACCOUNTABLE->value],
+                    OrderType::PROMO_SAMPLE->value => $promoGroups[PromoKind::SAMPLE->value],
                 ],
                 deliveryAddress: $deliveryAddress,
                 comment: $comment,
@@ -141,6 +155,58 @@ class CheckoutService implements CheckoutServiceInterface
             // остаток подтверждает 1С реализацией.
             return $this->assembler->assemble($draft);
         });
+    }
+
+    /**
+     * Промо-строки, разложенные по виду позиции.
+     *
+     * Авторитетный пересчёт: движок вызывается заново внутри транзакции чекаута,
+     * а не берётся то, что видел клиент. Позиция, которая к этому моменту стала
+     * недоступна, просто не попадёт в заказ — ронять оформление из-за исчезнувшего
+     * подарка нельзя.
+     *
+     * @return array<string, list<OrderLine>>
+     */
+    private function promoLines(Cart $cart): array
+    {
+        $groups = [
+            PromoKind::ACCOUNTABLE->value => [],
+            PromoKind::SAMPLE->value => [],
+        ];
+
+        $evaluation = $this->promotionEngine->evaluate(PromoContext::fromCart($cart, $cart->user));
+
+        $rewards = array_filter(
+            $evaluation->applied,
+            static fn (AppliedReward $reward) => $reward->isIssuable(),
+        );
+
+        if ($rewards === []) {
+            return $groups;
+        }
+
+        $products = Product::withoutGlobalScope(HiddenScope::class)
+            ->whereIn('id', array_map(static fn (AppliedReward $r) => $r->productId, $rewards))
+            ->get()
+            ->keyBy('id');
+
+        foreach ($rewards as $reward) {
+            $product = $products->get($reward->productId);
+
+            if ($product === null) {
+                continue;
+            }
+
+            $groups[$reward->promoKind->value][] = OrderLine::promo(
+                product: $product,
+                quantity: $reward->quantity,
+                price: $reward->price,
+                promotionRuleId: $reward->ruleId,
+                promoKind: $reward->promoKind->value,
+            );
+        }
+
+        return $groups;
     }
 
     /**

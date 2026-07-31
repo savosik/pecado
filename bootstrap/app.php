@@ -20,6 +20,20 @@ return Application::configure(basePath: dirname(__DIR__))
             Route::group([], base_path('routes/wms.php'));
         },
     )
+    // 🐛 Автообнаружение листенеров отключено намеренно.
+    //
+    // Laravel 11+ сам находит листенеры в app/Listeners по типу аргумента handle(),
+    // а проект вдобавок регистрирует их явно в AppServiceProvider::boot(). Получались
+    // две регистрации одного листенера — и клиент получал каждое письмо о заказе
+    // дважды (`php artisan event:list` показывал пары `X` и `X@handle`).
+    //
+    // Выбрана явная регистрация: связь событие→листенер читается в одном месте,
+    // а листенеры с union-типом в handle() (PublishOrderToErp) автообнаружением
+    // не подхватываются вовсе — то есть полагаться на него всё равно нельзя.
+    //
+    // ⚠️ Новый листенер теперь ОБЯЗАН быть зарегистрирован в AppServiceProvider::boot(),
+    // иначе он просто не сработает.
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
         // Доверяем reverse-proxy (nginx на хосте) — нужно для корректного определения HTTPS
         $middleware->trustProxies(at: '*');

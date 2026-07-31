@@ -740,6 +740,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v154" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Самовосстановление заказа (v15.4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1824,6 +1835,17 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#v154" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Самовосстановление заказа (v15.4)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2053,8 +2075,25 @@
 <h2 id="ordercreated-1">order.created (Сайт → 1С)<a class="headerlink" href="#ordercreated-1" title="Permanent link">&para;</a></h2>
 <h3 id="-">Бизнес-правила<a class="headerlink" href="#-" title="Permanent link">&para;</a></h3>
 <ul>
-<li>Корзина разделяется на заказ (<code>type: "order"</code>) + предзаказ (<code>type: "preorder"</code>)</li>
-<li>Поле <code>type</code> — внутреннее понятие сайта. 1С <strong>не знает</strong> о типах заказов и <strong>не передаёт</strong> это поле обратно</li>
+<li>Корзина разделяется на заказ (<code>type: "order"</code>) + предзаказ (<code>type: "preorder"</code>) + уценку (<code>type: "defect"</code>) + промо (<code>type: "promo"</code>) + рекламные образцы (<code>type: "promo_sample"</code>). Одно оформление даёт <strong>до пяти документов</strong></li>
+<li>Поле <code>type</code> — внутреннее понятие сайта. 1С <strong>не знает</strong> о типах заказов и <strong>не обязана передавать</strong> это поле обратно; если поле пришло, сайт принимает его, если нет — сохраняет свой</li>
+<li><strong>(v15.5)</strong> Заказ уценки (<code>type: "defect"</code>) — некондиция с сайта:<ul>
+<li><code>warehouse_uuids</code> содержит UUID <strong>склада некондиции</strong> (на сайте помечен флагом <code>is_defect</code>)</li>
+<li><code>final_price</code> каждой позиции — цена уценки (её задаёт закупщик), а не прайсовая; <code>discount_percent</code> = 0, <code>base_price</code> = <code>final_price</code></li>
+<li>1С обрабатывает такой заказ как обычный, отгружая со склада некондиции. Какой именно дефектный экземпляр отгрузить, комплектовщик уточняет на стороне сайта (в кабинете склада) — в заказе эта информация не передаётся</li>
+<li>Ожидается, что на заказ уценки приходит <code>shipment.created</code> (реализация), которая списывает партию некондиции на сайте</li>
+</ul>
+</li>
+<li><strong>(v15.6)</strong> Заказы промо-позиций — то, что выдала акция:<ul>
+<li><code>type: "promo"</code> — <strong>подотчётные</strong> промо-позиции: подарки и товары по промо-цене. <code>warehouse_uuids</code> содержит склады наличия региона клиента (как у обычного заказа). Позиции <strong>выписываются в накладную клиенту</strong></li>
+<li><code>type: "promo_sample"</code> — <strong>рекламные образцы</strong> (пробники). <code>warehouse_uuids</code> содержит склад «Москва реклама». Позиции <strong>в накладную клиенту не выписываются</strong></li>
+<li><code>final_price</code> позиции — цена из награды акции. Она может быть нулевой (подарок) или копеечной (0,01 ₽ для учёта) и <strong>берётся авторитетно</strong>: сумму по <code>base_price × (1 − discount_percent / 100)</code> пересчитывать не нужно. <code>base_price</code> — обычная цена клиента на момент оформления, <code>discount_percent</code> — производная, только для наглядности в печатной форме</li>
+<li><strong>Заказ с нулевой суммой — норма.</strong> Заказ, все позиции которого по 0 ₽, обрабатывается как обычный: он подтверждает, что именно и в каком количестве отгружено по акции</li>
+<li>Позиции промо-заказа несут <code>is_promo: true</code> и <code>promo_kind</code> (<code>accountable</code> / <code>sample</code>)</li>
+<li>Менеджер может добавить промо-позицию <strong>вручную в 1С</strong>. Сайт такую позицию принимает и сохраняет, не пытаясь сопоставить её с правилом акции, и не удаляет при следующем обновлении</li>
+<li>Промо-позиции <strong>не участвуют в условиях самих акций</strong>: подарок за 40 ₽ не поднимает сумму корзины до следующего порога</li>
+</ul>
+</li>
 <li>Заказ фиксируется в валюте пользователя с курсом и коэффициентом</li>
 <li>После отправки пользователь изменять заказ <strong>не может</strong></li>
 <li>Если ни один склад из <code>warehouse_uuids</code> не найден — используется <code>ОсновнойСклад</code></li>
@@ -2116,6 +2155,38 @@
 <li><strong>(v13.7)</strong> Опциональные аудит-метки <code>erp_created_at</code> / <code>erp_updated_at</code>. При обновлении достаточно передавать только <code>erp_updated_at</code> — <code>erp_created_at</code> уже зафиксирован в момент <code>order.created</code>. Поля <strong>не required</strong>, отсутствие в payload не перезаписывает существующие значения. Подробнее: <a href="../../guides/erp-timestamps-for-1c/">«Аудит-метки 1С: erp_created_at / erp_updated_at»</a></li>
 <li><strong>(v13.8)</strong> Поле <code>comment</code> сайт <strong>никогда не обновляет</strong> из шины 1С. Это пользовательское поле, оставленное клиентом при оформлении заказа на сайте — оно неприкосновенно. Даже если 1С передаст <code>comment</code> в payload <code>order.updated</code>, сайт его проигнорирует</li>
 <li><strong>(v15.3)</strong> Если передан <code>delivery_method</code> (<code>delivery</code> | <code>pickup</code>) — сайт обновляет <code>orders.delivery_method</code>. Отсутствие ключа или <code>null</code> — способ доставки <strong>не меняется</strong></li>
+<li><strong>(v15.4)</strong> Если заказа с таким <code>uuid</code> на сайте нет — сайт пытается <strong>создать</strong> его из этого payload (самовосстановление, см. раздел ниже)</li>
+</ul>
+<h3 id="v154">Самовосстановление заказа (v15.4)<a class="headerlink" href="#v154" title="Permanent link">&para;</a></h3>
+<p>До v15.4 <code>order.updated</code> по заказу, которого нет на сайте, молча игнорировался:
+сообщение помечалось как успешно обработанное, в логе не оставалось ничего.
+За 1–15 июля 2026 так потерялось 40 заказов (≈3.5% от всех обновляемых) —
+1С прислала по ним только <code>order.updated</code>, без предшествующего <code>order.created</code>.</p>
+<p>Начиная с v15.4 сайт при отсутствии заказа ведёт себя так:</p>
+<table>
+<thead>
+<tr>
+<th>Условие</th>
+<th>Поведение сайта</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Есть <code>partner_uuid</code> <strong>и</strong> непустой <code>items</code></td>
+<td>Заказ <strong>создаётся</strong> из payload по правилам <code>order.created</code> (1С → Сайт). В лог пишется <code>warning</code>, сообщение в шине помечается <code>recovered</code></td>
+</tr>
+<tr>
+<td>Данных недостаточно (нет <code>partner_uuid</code> либо <code>items</code> пуст/отсутствует)</td>
+<td>Заказ <strong>не создаётся</strong>. Сообщение помечается <code>failed</code> с текстом причины и попадает в блок «Ошибки обработки» админки</td>
+</tr>
+</tbody>
+</table>
+<p>Детали:</p>
+<ul>
+<li>Восстановление идемпотентно: повторный <code>order.updated</code> по уже восстановленному заказу обрабатывается как обычное обновление</li>
+<li>Поля, которых нет в <code>order.updated</code>, берут значения по умолчанию: <code>currency_code</code> = <code>RUB</code>, <code>exchange_rate</code> = <code>1.0</code>, <code>type</code> = <code>order</code>, <code>comment</code> = <code>null</code></li>
+<li>Восстановленный заказ <strong>не публикуется обратно</strong> в 1С — событий в <code>erp_out.orders</code> не возникает</li>
+<li>Самовосстановление — это страховка, а не штатный путь. <strong>1С обязана присылать <code>order.created</code></strong> на каждый новый заказ. Записи <code>recovered</code> в админке означают, что на стороне 1С событие потерялось, и это повод разбираться</li>
 </ul>
 <h3 id="_3">Маппинг статусов<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <table>

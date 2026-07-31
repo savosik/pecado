@@ -11,8 +11,8 @@ use App\Models\Product;
  *  - `$price === null` — посчитать по прайсу клиента (индивидуальная цена со скидкой);
  *  - `$price` задана — фиксированная цена строки, скидки не применяются.
  *
- * Второй случай — уценка: цена партии зафиксирована в корзине, и пересчитывать её
- * по прайсу нельзя. Позже так же пойдут промо-позиции с ценой из правила акции.
+ * Второй случай — уценка и промо: цена зафиксирована (партией или наградой акции),
+ * и пересчитывать её по прайсу нельзя.
  */
 final readonly class OrderLine
 {
@@ -22,6 +22,8 @@ final readonly class OrderLine
         public ?float $price = null,
         public ?int $productDefectId = null,
         public ?string $defectDescription = null,
+        public ?int $promotionRuleId = null,
+        public ?string $promoKind = null,
     ) {}
 
     /**
@@ -38,5 +40,27 @@ final readonly class OrderLine
         ?string $defectDescription,
     ): self {
         return new self($product, $quantity, $price, $productDefectId, $defectDescription);
+    }
+
+    /**
+     * Строка промо-позиции: цена из награды акции плюс снапшот привязки.
+     *
+     * Снапшот, а не вычисление на лету: правило могут отредактировать или удалить,
+     * а заказ обязан остаться таким, каким его оформил клиент.
+     */
+    public static function promo(
+        Product $product,
+        int $quantity,
+        float $price,
+        ?int $promotionRuleId,
+        ?string $promoKind,
+    ): self {
+        return new self(
+            product: $product,
+            quantity: $quantity,
+            price: $price,
+            promotionRuleId: $promotionRuleId,
+            promoKind: $promoKind,
+        );
     }
 }

@@ -38,6 +38,21 @@
                 "closed"
             ]
         },
+        "type": {
+            "type": [
+                "string",
+                "null"
+            ],
+            "enum": [
+                "order",
+                "preorder",
+                "defect",
+                "promo",
+                "promo_sample",
+                null
+            ],
+            "description": "Тип заказа. Если поле не передано, сайт сохраняет свой текущий тип — 1С не обязана его присылать. Значения: 'order' — обычный, 'preorder' — предзаказ, 'defect' — уценка, 'promo' — подотчётные промо-позиции, 'promo_sample' — рекламные образцы."
+        },
         "partner_uuid": {
             "type": "string",
             "format": "uuid",
@@ -55,18 +70,27 @@
             "format": "date-time"
         },
         "erp_created_at": {
-            "type": ["string", "null"],
+            "type": [
+                "string",
+                "null"
+            ],
             "format": "date-time",
             "description": "Аудит-метка: дата-время создания документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
         },
         "erp_updated_at": {
-            "type": ["string", "null"],
+            "type": [
+                "string",
+                "null"
+            ],
             "format": "date-time",
             "description": "Аудит-метка: дата-время последнего изменения документа в 1С (ISO-8601 с TZ). Опционально, добавлено в v13.7."
         },
         "contractor": {
             "type": "object",
-            "required": ["uuid", "tax_id"],
+            "required": [
+                "uuid",
+                "tax_id"
+            ],
             "properties": {
                 "uuid": {
                     "type": "string",
@@ -221,6 +245,22 @@
                     "final_price": {
                         "type": "number",
                         "minimum": 0
+                    },
+                    "is_promo": {
+                        "type": "boolean",
+                        "description": "Позиция выдана акцией. 1С может проставить его и для позиции, добавленной менеджером вручную — сайт такую позицию принимает и не пытается сопоставить с правилом акции."
+                    },
+                    "promo_kind": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "enum": [
+                            "accountable",
+                            "sample",
+                            null
+                        ],
+                        "description": "Вид промо-позиции: 'accountable' — подотчётная, 'sample' — рекламный образец."
                     }
                 },
                 "additionalProperties": true

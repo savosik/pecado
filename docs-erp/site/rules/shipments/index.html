@@ -1653,6 +1653,7 @@
 <li><strong>(v12.10)</strong> У <code>shipment.updated</code> <strong>собственная JSON Schema</strong> (<code>shipment.updated.json</code>), отделённая от <code>shipment.created.json</code>. Пока структуры payload-ов идентичны; разделение выполнено на вырост — для независимой эволюции <code>updated</code> при появлении у него собственных полей</li>
 <li><strong>(v12.11) <code>number</code> обязательно для <code>shipment.created</code> и <code>shipment.updated</code>.</strong> 1С обязана передавать номер реализации непустой строкой. Сообщения без <code>number</code> отклоняются валидатором и отправляются в DLQ. Причина: без ERP-номера покупатель в ЛК видит только технический <code>id</code> сайта, а менеджер в 1С — ERP-номер; это ломает коммуникацию клиент-менеджер при обсуждении отгрузки</li>
 <li><strong>(v13.7)</strong> Опциональные аудит-метки <code>erp_created_at</code> / <code>erp_updated_at</code> (ISO-8601 datetime с TZ) — момент создания/изменения документа на стороне 1С. Сохраняются в <code>shipments.erp_created_at</code> / <code>shipments.erp_updated_at</code> и отображаются в админке. <strong>Не путать</strong> с бизнес-полем <code>date</code> — это дата проведения реализации (день отгрузки), а аудит-метки фиксируют момент действия в учётной системе. При <code>shipment.updated</code> достаточно передавать только <code>erp_updated_at</code>. Подробнее: <a href="../../guides/erp-timestamps-for-1c/">«Аудит-метки 1С: erp_created_at / erp_updated_at»</a></li>
+<li><strong>(v15.5) Списание уценки.</strong> Если реализация относится к заказу уценки (<code>type: "defect"</code>), сайт списывает соответствующую партию некондиции: количество партии уменьшается на отгруженное, при достижении нуля партия закрывается (перестаёт продаваться). Списание <strong>идемпотентно по <code>uuid</code> реализации</strong> — повторная доставка того же документа не списывает партию дважды. Структура payload не меняется: связь заказ↔партия сайт держит у себя, 1С передаёт обычную реализацию с <code>order_uuid</code> заказа уценки</li>
 </ul>
 <h2 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h2>
 <ul>
@@ -1662,6 +1663,7 @@
 <li>[ ] Реализация отображается в ЛК</li>
 <li>[ ] <strong>(v12.10)</strong> Валидация <code>shipment.updated</code> использует схему <code>shipment.updated.json</code> (поле <code>event</code> = <code>shipment.updated</code>)</li>
 <li>[ ] <strong>(v12.11)</strong> <code>shipment.created</code> / <code>shipment.updated</code> без поля <code>number</code> или с пустой строкой отклоняются на стадии валидации и не создают/не обновляют реализацию</li>
+<li>[ ] <strong>(v15.5)</strong> Реализация по заказу уценки списывает партию некондиции; повторная доставка того же <code>uuid</code> не списывает повторно; при нулевом остатке партия закрывается</li>
 </ul>
 
 

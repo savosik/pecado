@@ -2,122 +2,122 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/changelog/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/infrastructure/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/initial-load/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/open-questions/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/settings/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/guides/erp-timestamps-for-1c/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/migrations/v13.2-contractor-uuid/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/migrations/v13.6-uniq-companies/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/balances/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/catalog/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/client-segments/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/contractors/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/data-normalization/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/external-remains/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/individual-prices/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/orders/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/partners/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/prices/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/pricing-model/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/product-attributes/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/promotions/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/returns/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/shipments/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/rules/stocks/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/tests/phase-0-setup/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/tests/phase-1-inbound/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/tests/phase-2-outbound/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/tests/phase-3-e2e/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
     <url>
          <loc>https://dev.pecado.ru/docs/erp-guide/tests/phase-4-edge/</loc>
-         <lastmod>2026-07-11</lastmod>
+         <lastmod>2026-07-31</lastmod>
     </url>
 </urlset>

@@ -2,7 +2,7 @@
 
 namespace Tests\Feature\Mail;
 
-use App\Events\OrderCreated;
+use App\Events\OrdersPlaced;
 use App\Models\Order;
 use App\Models\PersonalManager;
 use App\Models\User;
@@ -36,7 +36,7 @@ class NewOrderForManagerEmailTest extends TestCase
         $client = User::factory()->create();
         $order = Order::factory()->create(['user_id' => $client->id]);
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertSentTo(
             new AnonymousNotifiable,
@@ -62,7 +62,7 @@ class NewOrderForManagerEmailTest extends TestCase
         $client = User::factory()->create(['personal_manager_id' => $pm->id]);
         $order = Order::factory()->create(['user_id' => $client->id]);
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertSentTo(
             new AnonymousNotifiable,
@@ -84,7 +84,7 @@ class NewOrderForManagerEmailTest extends TestCase
         $client = User::factory()->create();
         $order = Order::factory()->create(['user_id' => $client->id]);
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertNothingSent();
     }
@@ -99,7 +99,7 @@ class NewOrderForManagerEmailTest extends TestCase
         $client = User::factory()->create();
         $order = Order::factory()->create(['user_id' => $client->id]);
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertNothingSent();
     }
@@ -115,7 +115,7 @@ class NewOrderForManagerEmailTest extends TestCase
         $client = User::factory()->create();
         $order = Order::factory()->create(['user_id' => $client->id]);
 
-        OrderCreated::dispatch($order);
+        OrdersPlaced::dispatch(collect([$order]));
 
         Notification::assertSentTo(
             new AnonymousNotifiable,

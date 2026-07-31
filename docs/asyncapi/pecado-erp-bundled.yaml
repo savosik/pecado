@@ -1048,10 +1048,35 @@ channels:
                   - `preorder` — предзаказ, комплектуется со складов предзаказа;
                   - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
                     а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+                  - `promo` — подотчётные промо-позиции, выданные акцией: `warehouse_uuids`
+                    содержит склады наличия региона клиента (как у `order`), позиции
+                    выписываются в накладную клиенту. Введено в v15.6.
+                  - `promo_sample` — рекламные образцы (пробники): `warehouse_uuids` содержит
+                    склад «Москва реклама», позиции в накладную клиенту НЕ выписываются.
+                    Введено в v15.6.
+
+                Для `promo` и `promo_sample` `final_price` — цена из награды
+                акции; она может
+
+                быть нулевой или копеечной и **берётся авторитетно**:
+                пересчитывать сумму через
+
+                `discount_percent` не нужно. `discount_percent` передаётся
+                только для наглядности
+
+                в печатной форме.
+
+
+                Одно оформление на сайте может дать до пяти документов: `order`,
+                `preorder`,
+
+                `defect`, `promo`, `promo_sample`.
               examples:
                 - order
                 - preorder
                 - defect
+                - promo
+                - promo_sample
             partner_uuid:
               type: string
               format: uuid
@@ -1063,6 +1088,8 @@ channels:
               description: |
                 UUID складов (1С выбирает первый найденный).
                 Для `type=defect` — UUID склада некондиции.
+                Для `type=promo` — склады наличия региона клиента.
+                Для `type=promo_sample` — склад «Москва реклама».
               items:
                 type: string
                 format: uuid
@@ -1283,7 +1310,36 @@ channels:
                       Конечная цена за единицу после корректировки (v12.7.1).
                       final_price = base_price × (1 - discount_percent / 100);
                       при отрицательном discount_percent итоговая цена может
-                      быть выше base_price
+                      быть выше base_price. В заказах type=promo и
+                      type=promo_sample равенство не выполняется: там
+                      final_price — цена из награды акции, и она авторитетна
+                      (v15.6)
+                  is_promo:
+                    type: boolean
+                    description: >
+                      Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                      Присутствует только в заказах `type=promo` и
+                      `type=promo_sample`.
+
+                      1С может проставить флаг и для позиции, добавленной
+                      менеджером вручную, —
+
+                      сайт такую позицию принимает и не пытается сопоставить её
+                      с правилом акции.
+                  promo_kind:
+                    type:
+                      - string
+                      - 'null'
+                    enum:
+                      - accountable
+                      - sample
+                      - null
+                    description: |
+                      Вид промо-позиции (v15.6):
+                        - `accountable` — подотчётная, выписывается в накладную клиенту;
+                        - `sample` — рекламный образец, в накладную не выписывается.
+                      Присутствует только у позиций с `is_promo = true`.
       orderUpdated:
         name: order.updated
         title: Заказ обновлён
@@ -1512,7 +1568,36 @@ channels:
                       Конечная цена за единицу после корректировки (v12.7.1).
                       final_price = base_price × (1 - discount_percent / 100);
                       при отрицательном discount_percent итоговая цена может
-                      быть выше base_price
+                      быть выше base_price. В заказах type=promo и
+                      type=promo_sample равенство не выполняется: там
+                      final_price — цена из награды акции, и она авторитетна
+                      (v15.6)
+                  is_promo:
+                    type: boolean
+                    description: >
+                      Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                      Присутствует только в заказах `type=promo` и
+                      `type=promo_sample`.
+
+                      1С может проставить флаг и для позиции, добавленной
+                      менеджером вручную, —
+
+                      сайт такую позицию принимает и не пытается сопоставить её
+                      с правилом акции.
+                  promo_kind:
+                    type:
+                      - string
+                      - 'null'
+                    enum:
+                      - accountable
+                      - sample
+                      - null
+                    description: |
+                      Вид промо-позиции (v15.6):
+                        - `accountable` — подотчётная, выписывается в накладную клиенту;
+                        - `sample` — рекламный образец, в накладную не выписывается.
+                      Присутствует только у позиций с `is_promo = true`.
       orderDeleted:
         name: order.deleted
         title: Заказ удалён
@@ -3153,10 +3238,35 @@ channels:
                   - `preorder` — предзаказ, комплектуется со складов предзаказа;
                   - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
                     а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+                  - `promo` — подотчётные промо-позиции, выданные акцией: `warehouse_uuids`
+                    содержит склады наличия региона клиента (как у `order`), позиции
+                    выписываются в накладную клиенту. Введено в v15.6.
+                  - `promo_sample` — рекламные образцы (пробники): `warehouse_uuids` содержит
+                    склад «Москва реклама», позиции в накладную клиенту НЕ выписываются.
+                    Введено в v15.6.
+
+                Для `promo` и `promo_sample` `final_price` — цена из награды
+                акции; она может
+
+                быть нулевой или копеечной и **берётся авторитетно**:
+                пересчитывать сумму через
+
+                `discount_percent` не нужно. `discount_percent` передаётся
+                только для наглядности
+
+                в печатной форме.
+
+
+                Одно оформление на сайте может дать до пяти документов: `order`,
+                `preorder`,
+
+                `defect`, `promo`, `promo_sample`.
               examples:
                 - order
                 - preorder
                 - defect
+                - promo
+                - promo_sample
             partner_uuid:
               type: string
               format: uuid
@@ -3168,6 +3278,8 @@ channels:
               description: |
                 UUID складов (1С выбирает первый найденный).
                 Для `type=defect` — UUID склада некондиции.
+                Для `type=promo` — склады наличия региона клиента.
+                Для `type=promo_sample` — склад «Москва реклама».
               items:
                 type: string
                 format: uuid
@@ -3388,7 +3500,36 @@ channels:
                       Конечная цена за единицу после корректировки (v12.7.1).
                       final_price = base_price × (1 - discount_percent / 100);
                       при отрицательном discount_percent итоговая цена может
-                      быть выше base_price
+                      быть выше base_price. В заказах type=promo и
+                      type=promo_sample равенство не выполняется: там
+                      final_price — цена из награды акции, и она авторитетна
+                      (v15.6)
+                  is_promo:
+                    type: boolean
+                    description: >
+                      Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                      Присутствует только в заказах `type=promo` и
+                      `type=promo_sample`.
+
+                      1С может проставить флаг и для позиции, добавленной
+                      менеджером вручную, —
+
+                      сайт такую позицию принимает и не пытается сопоставить её
+                      с правилом акции.
+                  promo_kind:
+                    type:
+                      - string
+                      - 'null'
+                    enum:
+                      - accountable
+                      - sample
+                      - null
+                    description: |
+                      Вид промо-позиции (v15.6):
+                        - `accountable` — подотчётная, выписывается в накладную клиенту;
+                        - `sample` — рекламный образец, в накладную не выписывается.
+                      Присутствует только у позиций с `is_promo = true`.
     servers:
       - $ref: '#/servers/rabbitmq'
     bindings:
@@ -5928,10 +6069,35 @@ components:
                 - `preorder` — предзаказ, комплектуется со складов предзаказа;
                 - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
                   а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+                - `promo` — подотчётные промо-позиции, выданные акцией: `warehouse_uuids`
+                  содержит склады наличия региона клиента (как у `order`), позиции
+                  выписываются в накладную клиенту. Введено в v15.6.
+                - `promo_sample` — рекламные образцы (пробники): `warehouse_uuids` содержит
+                  склад «Москва реклама», позиции в накладную клиенту НЕ выписываются.
+                  Введено в v15.6.
+
+              Для `promo` и `promo_sample` `final_price` — цена из награды
+              акции; она может
+
+              быть нулевой или копеечной и **берётся авторитетно**:
+              пересчитывать сумму через
+
+              `discount_percent` не нужно. `discount_percent` передаётся только
+              для наглядности
+
+              в печатной форме.
+
+
+              Одно оформление на сайте может дать до пяти документов: `order`,
+              `preorder`,
+
+              `defect`, `promo`, `promo_sample`.
             examples:
               - order
               - preorder
               - defect
+              - promo
+              - promo_sample
           partner_uuid:
             type: string
             format: uuid
@@ -5943,6 +6109,8 @@ components:
             description: |
               UUID складов (1С выбирает первый найденный).
               Для `type=defect` — UUID склада некондиции.
+              Для `type=promo` — склады наличия региона клиента.
+              Для `type=promo_sample` — склад «Москва реклама».
             items:
               type: string
               format: uuid
@@ -6162,7 +6330,35 @@ components:
                     Конечная цена за единицу после корректировки (v12.7.1).
                     final_price = base_price × (1 - discount_percent / 100); при
                     отрицательном discount_percent итоговая цена может быть выше
-                    base_price
+                    base_price. В заказах type=promo и type=promo_sample
+                    равенство не выполняется: там final_price — цена из награды
+                    акции, и она авторитетна (v15.6)
+                is_promo:
+                  type: boolean
+                  description: >
+                    Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                    Присутствует только в заказах `type=promo` и
+                    `type=promo_sample`.
+
+                    1С может проставить флаг и для позиции, добавленной
+                    менеджером вручную, —
+
+                    сайт такую позицию принимает и не пытается сопоставить её с
+                    правилом акции.
+                promo_kind:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - accountable
+                    - sample
+                    - null
+                  description: |
+                    Вид промо-позиции (v15.6):
+                      - `accountable` — подотчётная, выписывается в накладную клиенту;
+                      - `sample` — рекламный образец, в накладную не выписывается.
+                    Присутствует только у позиций с `is_promo = true`.
     OrderCreatedFromSite:
       name: order.created
       title: Заказ создан (Сайт → 1С)
@@ -6244,10 +6440,35 @@ components:
                 - `preorder` — предзаказ, комплектуется со складов предзаказа;
                 - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
                   а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+                - `promo` — подотчётные промо-позиции, выданные акцией: `warehouse_uuids`
+                  содержит склады наличия региона клиента (как у `order`), позиции
+                  выписываются в накладную клиенту. Введено в v15.6.
+                - `promo_sample` — рекламные образцы (пробники): `warehouse_uuids` содержит
+                  склад «Москва реклама», позиции в накладную клиенту НЕ выписываются.
+                  Введено в v15.6.
+
+              Для `promo` и `promo_sample` `final_price` — цена из награды
+              акции; она может
+
+              быть нулевой или копеечной и **берётся авторитетно**:
+              пересчитывать сумму через
+
+              `discount_percent` не нужно. `discount_percent` передаётся только
+              для наглядности
+
+              в печатной форме.
+
+
+              Одно оформление на сайте может дать до пяти документов: `order`,
+              `preorder`,
+
+              `defect`, `promo`, `promo_sample`.
             examples:
               - order
               - preorder
               - defect
+              - promo
+              - promo_sample
           partner_uuid:
             type: string
             format: uuid
@@ -6259,6 +6480,8 @@ components:
             description: |
               UUID складов (1С выбирает первый найденный).
               Для `type=defect` — UUID склада некондиции.
+              Для `type=promo` — склады наличия региона клиента.
+              Для `type=promo_sample` — склад «Москва реклама».
             items:
               type: string
               format: uuid
@@ -6478,7 +6701,35 @@ components:
                     Конечная цена за единицу после корректировки (v12.7.1).
                     final_price = base_price × (1 - discount_percent / 100); при
                     отрицательном discount_percent итоговая цена может быть выше
-                    base_price
+                    base_price. В заказах type=promo и type=promo_sample
+                    равенство не выполняется: там final_price — цена из награды
+                    акции, и она авторитетна (v15.6)
+                is_promo:
+                  type: boolean
+                  description: >
+                    Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                    Присутствует только в заказах `type=promo` и
+                    `type=promo_sample`.
+
+                    1С может проставить флаг и для позиции, добавленной
+                    менеджером вручную, —
+
+                    сайт такую позицию принимает и не пытается сопоставить её с
+                    правилом акции.
+                promo_kind:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - accountable
+                    - sample
+                    - null
+                  description: |
+                    Вид промо-позиции (v15.6):
+                      - `accountable` — подотчётная, выписывается в накладную клиенту;
+                      - `sample` — рекламный образец, в накладную не выписывается.
+                    Присутствует только у позиций с `is_promo = true`.
     OrderUpdated:
       name: order.updated
       title: Заказ обновлён
@@ -6703,7 +6954,35 @@ components:
                     Конечная цена за единицу после корректировки (v12.7.1).
                     final_price = base_price × (1 - discount_percent / 100); при
                     отрицательном discount_percent итоговая цена может быть выше
-                    base_price
+                    base_price. В заказах type=promo и type=promo_sample
+                    равенство не выполняется: там final_price — цена из награды
+                    акции, и она авторитетна (v15.6)
+                is_promo:
+                  type: boolean
+                  description: >
+                    Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                    Присутствует только в заказах `type=promo` и
+                    `type=promo_sample`.
+
+                    1С может проставить флаг и для позиции, добавленной
+                    менеджером вручную, —
+
+                    сайт такую позицию принимает и не пытается сопоставить её с
+                    правилом акции.
+                promo_kind:
+                  type:
+                    - string
+                    - 'null'
+                  enum:
+                    - accountable
+                    - sample
+                    - null
+                  description: |
+                    Вид промо-позиции (v15.6):
+                      - `accountable` — подотчётная, выписывается в накладную клиенту;
+                      - `sample` — рекламный образец, в накладную не выписывается.
+                    Присутствует только у позиций с `is_promo = true`.
     OrderDeleted:
       name: order.deleted
       title: Заказ удалён
@@ -9431,7 +9710,34 @@ components:
           description: >-
             Конечная цена за единицу после корректировки (v12.7.1). final_price
             = base_price × (1 - discount_percent / 100); при отрицательном
-            discount_percent итоговая цена может быть выше base_price
+            discount_percent итоговая цена может быть выше base_price. В заказах
+            type=promo и type=promo_sample равенство не выполняется: там
+            final_price — цена из награды акции, и она авторитетна (v15.6)
+        is_promo:
+          type: boolean
+          description: >
+            Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+            Присутствует только в заказах `type=promo` и `type=promo_sample`.
+
+            1С может проставить флаг и для позиции, добавленной менеджером
+            вручную, —
+
+            сайт такую позицию принимает и не пытается сопоставить её с правилом
+            акции.
+        promo_kind:
+          type:
+            - string
+            - 'null'
+          enum:
+            - accountable
+            - sample
+            - null
+          description: |
+            Вид промо-позиции (v15.6):
+              - `accountable` — подотчётная, выписывается в накладную клиенту;
+              - `sample` — рекламный образец, в накладную не выписывается.
+            Присутствует только у позиций с `is_promo = true`.
     OrderContractor:
       type: object
       required:
@@ -9588,10 +9894,35 @@ components:
               - `preorder` — предзаказ, комплектуется со складов предзаказа;
               - `defect` — уценка (некондиция): `warehouse_uuids` содержит склад некондиции,
                 а `final_price` каждой позиции — цену уценки (не прайсовую). Введено в v15.5.
+              - `promo` — подотчётные промо-позиции, выданные акцией: `warehouse_uuids`
+                содержит склады наличия региона клиента (как у `order`), позиции
+                выписываются в накладную клиенту. Введено в v15.6.
+              - `promo_sample` — рекламные образцы (пробники): `warehouse_uuids` содержит
+                склад «Москва реклама», позиции в накладную клиенту НЕ выписываются.
+                Введено в v15.6.
+
+            Для `promo` и `promo_sample` `final_price` — цена из награды акции;
+            она может
+
+            быть нулевой или копеечной и **берётся авторитетно**: пересчитывать
+            сумму через
+
+            `discount_percent` не нужно. `discount_percent` передаётся только
+            для наглядности
+
+            в печатной форме.
+
+
+            Одно оформление на сайте может дать до пяти документов: `order`,
+            `preorder`,
+
+            `defect`, `promo`, `promo_sample`.
           examples:
             - order
             - preorder
             - defect
+            - promo
+            - promo_sample
         partner_uuid:
           type: string
           format: uuid
@@ -9603,6 +9934,8 @@ components:
           description: |
             UUID складов (1С выбирает первый найденный).
             Для `type=defect` — UUID склада некондиции.
+            Для `type=promo` — склады наличия региона клиента.
+            Для `type=promo_sample` — склад «Москва реклама».
           items:
             type: string
             format: uuid
@@ -9819,7 +10152,35 @@ components:
                   Конечная цена за единицу после корректировки (v12.7.1).
                   final_price = base_price × (1 - discount_percent / 100); при
                   отрицательном discount_percent итоговая цена может быть выше
-                  base_price
+                  base_price. В заказах type=promo и type=promo_sample равенство
+                  не выполняется: там final_price — цена из награды акции, и она
+                  авторитетна (v15.6)
+              is_promo:
+                type: boolean
+                description: >
+                  Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                  Присутствует только в заказах `type=promo` и
+                  `type=promo_sample`.
+
+                  1С может проставить флаг и для позиции, добавленной менеджером
+                  вручную, —
+
+                  сайт такую позицию принимает и не пытается сопоставить её с
+                  правилом акции.
+              promo_kind:
+                type:
+                  - string
+                  - 'null'
+                enum:
+                  - accountable
+                  - sample
+                  - null
+                description: |
+                  Вид промо-позиции (v15.6):
+                    - `accountable` — подотчётная, выписывается в накладную клиенту;
+                    - `sample` — рекламный образец, в накладную не выписывается.
+                  Присутствует только у позиций с `is_promo = true`.
     OrderUpdatedPayload:
       type: object
       required:
@@ -10025,7 +10386,35 @@ components:
                   Конечная цена за единицу после корректировки (v12.7.1).
                   final_price = base_price × (1 - discount_percent / 100); при
                   отрицательном discount_percent итоговая цена может быть выше
-                  base_price
+                  base_price. В заказах type=promo и type=promo_sample равенство
+                  не выполняется: там final_price — цена из награды акции, и она
+                  авторитетна (v15.6)
+              is_promo:
+                type: boolean
+                description: >
+                  Позиция выдана акцией, а не куплена клиентом (v15.6).
+
+                  Присутствует только в заказах `type=promo` и
+                  `type=promo_sample`.
+
+                  1С может проставить флаг и для позиции, добавленной менеджером
+                  вручную, —
+
+                  сайт такую позицию принимает и не пытается сопоставить её с
+                  правилом акции.
+              promo_kind:
+                type:
+                  - string
+                  - 'null'
+                enum:
+                  - accountable
+                  - sample
+                  - null
+                description: |
+                  Вид промо-позиции (v15.6):
+                    - `accountable` — подотчётная, выписывается в накладную клиенту;
+                    - `sample` — рекламный образец, в накладную не выписывается.
+                  Присутствует только у позиций с `is_promo = true`.
     ReturnUpdatedPayload:
       type: object
       required:

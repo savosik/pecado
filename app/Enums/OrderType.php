@@ -25,18 +25,6 @@ enum OrderType: string
      */
     case PROMO_SAMPLE = 'promo_sample';
 
-    /**
-     * Типы, которых ещё нет в интерфейсе и в контракте 1С.
-     *
-     * Кейсы объявлены, потому что без них не живёт ни один Eloquent-путь
-     * (каст `Order::$casts['type']` падает на неизвестном значении), но заказы
-     * этих типов пока не создаются: выдача — карточка promo-08, контракт с 1С
-     * и подписи в интерфейсах — promo-09 и promo-10. До тех пор они не должны
-     * появляться в фильтрах, иначе пользователь увидит выбор, который ничего
-     * не находит.
-     */
-    private const UNRELEASED = [self::PROMO, self::PROMO_SAMPLE];
-
     public function label(): string
     {
         return match ($this) {
@@ -49,28 +37,15 @@ enum OrderType: string
     }
 
     /**
-     * Выпущен ли тип в интерфейс.
-     */
-    public function isReleased(): bool
-    {
-        return ! in_array($this, self::UNRELEASED, true);
-    }
-
-    /**
      * Справочник для фильтров и селектов: значение → подпись.
-     *
-     * Невыпущенные типы по умолчанию не отдаются — см. `UNRELEASED`.
      *
      * @return list<array{value: string, label: string}>
      */
-    public static function options(bool $includeUnreleased = false): array
+    public static function options(): array
     {
-        return array_values(array_map(
+        return array_map(
             static fn (self $case) => ['value' => $case->value, 'label' => $case->label()],
-            array_filter(
-                self::cases(),
-                static fn (self $case) => $includeUnreleased || $case->isReleased(),
-            ),
-        ));
+            self::cases(),
+        );
     }
 }
