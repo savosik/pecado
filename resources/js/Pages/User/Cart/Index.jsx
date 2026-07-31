@@ -12,6 +12,7 @@ import CartTable from './CartTable';
 import CartSummary from './CartSummary';
 import CartFlash from './CartFlash';
 import CartPromotions from './CartPromotions';
+import CartPromoSection from './CartPromoSection';
 import useCartPromotions from './hooks/useCartPromotions';
 import BarcodeScannerDialog from './BarcodeScannerDialog';
 import ImportOrderDialog from './ImportOrderDialog';
@@ -37,6 +38,19 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
     // через store, уценка — отдельными controlled-строками той же таблицы.
     const items = allItems.filter((it) => it.item_type !== 'defect');
     const defectItems = allItems.filter((it) => it.item_type === 'defect');
+    // Промо приходит отдельным ключом, а не в items: поэтому оно само собой
+    // не попадает ни в поиск, ни в выделение, ни в «Переместить», ни в очистку.
+    // Локальное состояние — чтобы выбор подарка обновлял секцию без reload.
+    const [promoItems, setPromoItems] = useState(cartDetails?.promo_items ?? []);
+    useEffect(() => {
+        setPromoItems(cartDetails?.promo_items ?? []);
+    }, [cartDetails?.promo_items]);
+    const promoAmount = useMemo(
+        () => promoItems
+            .filter((it) => !it.is_declined)
+            .reduce((sum, it) => sum + Number(it.total_amount || 0), 0),
+        [promoItems],
+    );
     const hasPreorderItems = (cartDetails?.preorder_quantity ?? 0) > 0;
 
     // ── Search (client-side filtering) ──
@@ -468,10 +482,17 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
                         />
                     </Box>
 
+                    <CartPromoSection
+                        cartId={cart?.id}
+                        promoItems={promoItems}
+                        onChanged={(data) => setPromoItems(data.promo_items ?? [])}
+                    />
+
                     <CartSummary
                         cartDetails={cartDetails}
                         hasItems={allItems.length > 0}
                         defectTotals={defectTotals}
+                        promoAmount={promoAmount}
                     />
                 </Box>
             ) : (

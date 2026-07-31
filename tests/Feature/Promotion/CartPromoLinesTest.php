@@ -265,6 +265,57 @@ class CartPromoLinesTest extends TestCase
     }
 
     #[Test]
+    public function чекаут_показывает_промо_и_образцы_разными_группами(): void
+    {
+        $trigger = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+        $sample = Product::factory()->create();
+
+        $this->issuingRule($trigger, $gift, ['price' => 40]);
+        $this->issuingRule($trigger, $sample, ['promo_kind' => PromoKind::SAMPLE->value]);
+
+        \App\Models\Company::factory()->create(['user_id' => $this->user->id]);
+        $this->cartWith($trigger, 3);
+
+        $this->actingAs($this->user)
+            ->get('/checkout')
+            ->assertInertia(function ($page) use ($gift, $sample) {
+                $props = $page->toArray()['props'];
+
+                $this->assertCount(1, $props['promoItems']);
+                $this->assertSame($gift->id, $props['promoItems'][0]['product']['id']);
+                $this->assertEquals(40.0, $props['promoTotals']['amount_discounted']);
+
+                $this->assertCount(1, $props['sampleItems']);
+                $this->assertSame($sample->id, $props['sampleItems'][0]['product']['id']);
+            });
+    }
+
+    #[Test]
+    public function отклонённая_позиция_в_чекаут_не_попадает(): void
+    {
+        $trigger = Product::factory()->create(['base_price' => 100]);
+        $gift = Product::factory()->create();
+        $rule = $this->issuingRule($trigger, $gift, ['price' => 40, 'optional' => true]);
+
+        \App\Models\Company::factory()->create(['user_id' => $this->user->id]);
+        $cart = $this->cartWith($trigger, 3);
+
+        CartPromotionSelection::create([
+            'cart_id' => $cart->id,
+            'promotion_rule_id' => $rule->id,
+            'reward_index' => 0,
+            'is_declined' => true,
+        ]);
+
+        $this->actingAs($this->user)
+            ->get('/checkout')
+            ->assertInertia(function ($page) {
+                $this->assertSame([], $page->toArray()['props']['promoItems']);
+            });
+    }
+
+    #[Test]
     public function платная_промо_позиция_не_поднимает_корзину_до_следующего_порога(): void
     {
         $trigger = Product::factory()->create(['base_price' => 100]);

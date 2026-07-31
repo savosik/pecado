@@ -4,7 +4,7 @@ import {
     Box, Flex, Text, Heading, Button, Table, Badge, Separator,
     Textarea, NativeSelect, RadioCard, Stack, Dialog, Portal, Input, SimpleGrid, HStack,
 } from '@chakra-ui/react';
-import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent } from 'react-icons/lu';
+import { LuArrowLeft, LuPackage, LuWarehouse, LuSend, LuBuilding2, LuMapPin, LuMessageSquare, LuPlus, LuSearch, LuStore, LuTriangleAlert, LuTruck, LuWand, LuBadgePercent, LuGift, LuSprout } from 'react-icons/lu';
 import axios from 'axios';
 import UserLayout from '../UserLayout';
 import Breadcrumbs from '@/components/common/Breadcrumbs';
@@ -32,9 +32,13 @@ export default function CheckoutIndex({
     instockItems = [],
     preorderItems = [],
     defectItems = [],
+    promoItems = [],
+    sampleItems = [],
     instockTotals = {},
     preorderTotals = {},
     defectTotals = {},
+    promoTotals = {},
+    sampleTotals = {},
     grandTotal = {},
     companies: initialCompanies = [],
     addresses = [],
@@ -199,8 +203,36 @@ export default function CheckoutIndex({
                             />
                         )}
 
+                        {/* ═══ Таблица: Промо-позиции ═══ */}
+                        {promoItems.length > 0 && (
+                            <ItemTable
+                                title="Промо-позиции"
+                                icon={<LuGift size={20} />}
+                                items={promoItems}
+                                totals={promoTotals}
+                                currencySymbol={currencySymbol}
+                                colorPalette="teal"
+                                fmt={fmt}
+                                note="Будет оформлено отдельным заказом"
+                            />
+                        )}
+
+                        {/* ═══ Таблица: Рекламные образцы ═══ */}
+                        {sampleItems.length > 0 && (
+                            <ItemTable
+                                title="Рекламные образцы"
+                                icon={<LuSprout size={20} />}
+                                items={sampleItems}
+                                totals={sampleTotals}
+                                currencySymbol={currencySymbol}
+                                colorPalette="gray"
+                                fmt={fmt}
+                                note="Будет оформлено отдельным заказом. Не входит в накладную"
+                            />
+                        )}
+
                         {/* ═══ Общий итог — только если непустых групп больше одной ═══ */}
-                        {[instockItems, preorderItems, defectItems].filter((g) => g.length > 0).length > 1 && (
+                        {[instockItems, preorderItems, defectItems, promoItems, sampleItems].filter((g) => g.length > 0).length > 1 && (
                         <Box
                             bg="bg"
                             borderWidth="1px"
@@ -920,7 +952,7 @@ function AddCompanyDialog({ open, countries, onClose, onCreated }) {
 /**
  * Компонент таблицы товаров (instock / preorder).
  */
-function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, fmt }) {
+function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, fmt, note = null }) {
     const totalQty = totals?.quantity ?? items.reduce((s, it) => s + Number(it.quantity || 0), 0);
     const totalRegular = Number(totals?.amount_regular ?? 0);
     const totalDiscounted = Number(totals?.amount_discounted ?? 0);
@@ -1106,6 +1138,13 @@ function ItemTable({ title, icon, items, totals, currencySymbol, colorPalette, f
                     )}
                 </Stack>
             </Flex>
+
+            {/* Клиент должен узнать про отдельный заказ до оформления, а не из накладной */}
+            {note && (
+                <Text fontSize="xs" color="fg.muted" mt="3" textAlign={{ base: 'left', md: 'right' }}>
+                    {note}
+                </Text>
+            )}
         </Box>
     );
 }

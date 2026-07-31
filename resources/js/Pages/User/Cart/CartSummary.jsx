@@ -10,7 +10,7 @@ import { useCartStore } from '@/stores/useCartStore';
  * Считает суммы оптимистично от стора + цен из cartDetails.items
  * (цены не меняются между reload, qty актуальный — мгновенный апдейт).
  */
-export default function CartSummary({ cartDetails, hasItems, defectTotals = { qty: 0, amount: 0 } }) {
+export default function CartSummary({ cartDetails, hasItems, defectTotals = { qty: 0, amount: 0 }, promoAmount = 0 }) {
     const { currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
 
@@ -96,6 +96,13 @@ export default function CartSummary({ cartDetails, hasItems, defectTotals = { qt
                     {hasDiscount && (
                         <Text fontSize="2xs" color="green.600" lineHeight="1.2" mt="0.5">
                             Экономия {savings.toLocaleString('ru-RU')} {currencySymbol}
+                        </Text>
+                    )}
+                    {/* Промо уезжает отдельным заказом, поэтому и в итоге стоит
+                        отдельной строкой: смешанная сумма ввела бы в заблуждение */}
+                    {promoAmount > 0 && (
+                        <Text fontSize="2xs" color="fg.muted" lineHeight="1.2" mt="0.5">
+                            Промо-позиции (отдельный заказ): {promoAmount.toLocaleString('ru-RU')} {currencySymbol}
                         </Text>
                     )}
                 </Box>
