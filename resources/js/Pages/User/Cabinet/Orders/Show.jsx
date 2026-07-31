@@ -11,7 +11,7 @@ import {
     LuClock, LuUser, LuMessageSquare, LuBuilding2, LuMapPin, LuTruck, LuShoppingBag,
     LuPencilLine, LuArrowRightLeft, LuChevronDown, LuChevronUp,
     LuPlus, LuMinus, LuTrendingDown, LuTrendingUp, LuCalendar, LuFileSpreadsheet,
-    LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan,
+    LuSearch, LuStore, LuRepeat, LuShoppingCart, LuTrash2, LuTriangleAlert, LuBan, LuGift, LuSprout,
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -21,6 +21,7 @@ import {
     ORDER_STATUS_LABELS as STATUS_LABELS,
     ORDER_STATUS_COLORS as STATUS_COLORS,
 } from '@/constants/orderStatus';
+import { getOrderTypeLabel, getOrderTypeColor } from '@/constants/orderType';
 
 const SHIPMENT_STATUS_COLORS = {
     new: 'blue',
@@ -36,10 +37,15 @@ export default function OrderShow({ order }) {
 
     const isPreorder = order.type === 'preorder';
     const isDefect   = order.type === 'defect';
-    const typeLabel  = isDefect ? 'Уценка' : isPreorder ? 'Предзаказ' : 'Заказ со склада';
-    const typeIcon   = isDefect ? <LuBadgePercent size={20} /> : isPreorder ? <LuPackage size={20} /> : <LuWarehouse size={20} />;
-    const typeColor  = isDefect ? 'red' : isPreorder ? 'orange' : 'green';
-    const typeBadgeScheme = isDefect ? 'red' : isPreorder ? 'purple' : 'teal';
+    const typeLabel  = getOrderTypeLabel(order.type);
+    const typeIcon   = {
+        defect: <LuBadgePercent size={20} />,
+        preorder: <LuPackage size={20} />,
+        promo: <LuGift size={20} />,
+        promo_sample: <LuSprout size={20} />,
+    }[order.type] ?? <LuWarehouse size={20} />;
+    const typeColor  = { defect: 'red', preorder: 'orange', promo: 'blue', promo_sample: 'gray' }[order.type] ?? 'green';
+    const typeBadgeScheme = getOrderTypeColor(order.type);
 
     const createdAt = order.created_at_formatted || '—';
 

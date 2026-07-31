@@ -23,6 +23,7 @@ import ExportMenu from '@/components/cabinet/ExportMenu';
 import SubscriptionPanel from '@/components/cabinet/SubscriptionPanel';
 import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { ORDER_STATUS_COLORS as STATUS_COLORS } from '@/constants/orderStatus';
+import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
 export default function OrdersIndex({ filters, statuses, statusTotal = 0, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
     const { orders, currency } = usePage().props;
@@ -507,8 +508,11 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                             const isForeignCurrency = order.currency_code && order.currency_code !== currency?.code;
                             const isPreorder = order.type === 'preorder';
                             const isDefect = order.type === 'defect';
-                            const typeText = isDefect ? 'Уценка' : isPreorder ? 'Предзаказ' : 'Заказ';
-                            const typeTone = isDefect ? 'red' : isPreorder ? 'orange' : null;
+                            // Промо-заказ может быть целиком бесплатным — это норма
+                            const isFree = Number(order.total_converted || 0) <= 0;
+                            const typeText = getOrderTypeShortLabel(order.type);
+                            // Обычный заказ подписан нейтрально-серым, остальные — цветом типа
+                            const typeTone = order.type && order.type !== 'order' ? getOrderTypeColor(order.type) : null;
                             const isPickup = order.delivery_method === 'pickup';
 
                             return (
@@ -666,12 +670,13 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                                                 <Text
                                                     fontWeight="700"
                                                     fontSize="lg"
-                                                    fontFamily="mono"
+                                                    fontFamily={isFree ? undefined : 'mono'}
                                                     whiteSpace="nowrap"
                                                     color={hasDiscount ? 'pecado.600' : 'gray.800'}
                                                     _dark={{ color: hasDiscount ? 'pecado.300' : 'gray.100' }}
                                                 >
-                                                    {fmt(order.total_converted)}&nbsp;{currencySymbol}
+                                                    {/* «0 ₽» у промо-заказа читается как ошибка загрузки */}
+                                                    {isFree ? 'Бесплатно' : `${fmt(order.total_converted)}\u00A0${currencySymbol}`}
                                                 </Text>
                                                 {isForeignCurrency && (
                                                     <Text fontSize="xs" color="gray.400" whiteSpace="nowrap">
