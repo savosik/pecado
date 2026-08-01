@@ -16,6 +16,49 @@ import PreviewPanel from './PreviewPanel';
 import SkuTablePanel from './SkuTablePanel';
 import { toFormState, toPayload, emptyCondition, emptyReward, conditionFromSkuRow } from './ruleState';
 
+/** Вкладки в порядке показа — он же порядок обхода при поиске ошибок. */
+const TAB_ORDER = ['general', 'conditions', 'rewards', 'audience'];
+
+const TAB_LABELS = {
+    general: 'Основное',
+    conditions: 'Условия',
+    rewards: 'Награды',
+    audience: 'Аудитория и лимиты',
+};
+
+/**
+ * Поле → вкладка, на которой оно живёт.
+ *
+ * Ключ ошибки от Laravel может быть вложенным (`rewards.0.product_id`), поэтому
+ * сопоставляем по корню: правила валидации меняются чаще, чем разбивка по вкладкам,
+ * и новое вложенное поле не должно молча выпасть из подсветки.
+ */
+const FIELD_TABS = {
+    name: 'general',
+    promotion_id: 'general',
+    mode: 'general',
+    starts_at: 'general',
+    ends_at: 'general',
+    priority: 'general',
+    is_active: 'general',
+    stackable: 'general',
+    conditions: 'conditions',
+    rewards: 'rewards',
+    audience: 'audience',
+    limits: 'audience',
+};
+
+const tabForError = (key) => FIELD_TABS[String(key).split('.')[0]] ?? 'general';
+
+/** Вкладки с ошибками — в порядке показа, без повторов. */
+const tabsWithErrors = (errors) => {
+    const affected = new Set(Object.keys(errors ?? {}).map(tabForError));
+
+    return TAB_ORDER.filter((tab) => affected.has(tab));
+};
+
+const firstTabWithError = (errors) => tabsWithErrors(errors)[0] ?? null;
+
 /**
  * Конструктор правила акции. Один и тот же компонент обслуживает создание и
  * редактирование — разница только в маршруте отправки.
@@ -45,11 +88,23 @@ export default function RuleForm({
                 description: 'Конфигурация проверена и записана',
                 type: 'success',
             }),
-            onError: () => toaster.create({
-                title: 'Правило не сохранено',
-                description: 'Проверьте вкладки с ошибками — они подсвечены красным',
-                type: 'error',
-            }),
+            // Ошибка почти всегда на другой вкладке, чем та, где стоит редактор:
+            // без перехода кнопка выглядит нерабочей — форма молча не сохраняется
+            onError: (failed) => {
+                const first = firstTabWithError(failed);
+
+                if (first) {
+                    setTab(first);
+                }
+
+                toaster.create({
+                    title: 'Правило не сохранено',
+                    description: first
+                        ? `Проверьте вкладку «${TAB_LABELS[first]}» — там есть незаполненные или неверные поля`
+                        : 'Проверьте заполнение формы',
+                    type: 'error',
+                });
+            },
         };
 
         // Состояние формы держит объекты {id, name} для селекторов — на бэкенд уходят
@@ -121,17 +176,13 @@ export default function RuleForm({
         });
     };
 
-    const tabError = {
-        general: errors.name || errors.mode || errors.promotion_id || errors.starts_at || errors.ends_at || errors.priority,
-        conditions: errors.conditions,
-        rewards: errors.rewards,
-        audience: errors.audience || errors.limits,
-    };
+    const errorTabs = tabsWithErrors(errors);
+    const errorEntries = Object.entries(errors ?? {});
 
     const tabLabel = (key, label) => (
         <HStack gap={2}>
-            <Text>{label}</Text>
-            {tabError[key] && <Badge colorPalette="red" variant="solid" size="xs">!</Badge>}
+            <Text color={errorTabs.includes(key) ? 'red.500' : undefined}>{label}</Text>
+            {errorTabs.includes(key) && <Badge colorPalette="red" variant="solid" size="xs">!</Badge>}
         </HStack>
     );
 
@@ -150,6 +201,35 @@ export default function RuleForm({
             <form onSubmit={submit}>
                 <Card.Root>
                     <Card.Body>
+                        {/*
+                          * Сводка ошибок видна с любой вкладки. Без неё сохранение
+                          * выглядит как сломанная кнопка: сообщение лежит на вкладке,
+                          * которую редактор в этот момент не смотрит.
+                          */}
+                        {errorEntries.length > 0 && (
+                            <Alert status="error" title="Правило не сохранено" mb={4}>
+                                <VStack align="stretch" gap={1} mt={1}>
+                                    {errorEntries.map(([key, message]) => (
+                                        <HStack key={key} gap={2} align="baseline" flexWrap="wrap">
+                                            <Button
+                                                type="button"
+                                                variant="plain"
+                                                size="xs"
+                                                height="auto"
+                                                minW="auto"
+                                                px={0}
+                                                textDecoration="underline"
+                                                onClick={() => setTab(tabForError(key))}
+                                            >
+                                                {TAB_LABELS[tabForError(key)]}
+                                            </Button>
+                                            <Text fontSize="sm">{message}</Text>
+                                        </HStack>
+                                    ))}
+                                </VStack>
+                            </Alert>
+                        )}
+
                         <Tabs.Root value={tab} onValueChange={(e) => setTab(e.value)} colorPalette="blue">
                             <Tabs.List>
                                 <Tabs.Trigger value="general">{tabLabel('general', 'Основное')}</Tabs.Trigger>

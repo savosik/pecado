@@ -335,6 +335,45 @@ class PromotionRuleControllerTest extends TestCase
             ->assertSessionHasErrors('ends_at');
     }
 
+    /**
+     * Форма раскладывает ошибки по вкладкам по корню ключа: `rewards.0.product_id`
+     * ведёт на «Награды», `limits.total` — на «Аудиторию и лимиты». Ключ с чужим
+     * корнем подсветит не ту вкладку, и редактор снова будет искать причину
+     * вручную — поэтому набор корней зафиксирован тестом.
+     *
+     * @see resources/js/Admin/Pages/PromotionRules/components/RuleForm.jsx (FIELD_TABS)
+     */
+    #[Test]
+    public function ошибки_валидации_ложатся_на_известные_форме_поля(): void
+    {
+        $known = [
+            'name', 'promotion_id', 'mode', 'starts_at', 'ends_at', 'priority',
+            'is_active', 'stackable', 'conditions', 'rewards', 'audience', 'limits',
+        ];
+
+        $this->actingAs($this->admin())
+            ->post('/admin/promotion-rules', [
+                'name' => '',
+                'mode' => 'нет-такого-режима',
+                'conditions' => [],
+                'rewards' => [],
+                'starts_at' => '2026-08-10 00:00',
+                'ends_at' => '2026-08-01 00:00',
+            ])
+            ->assertSessionHasErrors();
+
+        $keys = array_keys(session('errors')->getBag('default')->messages());
+        $this->assertNotEmpty($keys);
+
+        foreach ($keys as $key) {
+            $this->assertContains(
+                explode('.', $key)[0],
+                $known,
+                "Ключ ошибки «{$key}» не сопоставлен ни с одной вкладкой формы",
+            );
+        }
+    }
+
     // ────────────────────────────────────────────
     // Предпросмотр
     // ────────────────────────────────────────────
