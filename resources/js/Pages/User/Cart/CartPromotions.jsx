@@ -1,21 +1,51 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Box, Flex, Text, HStack, Image } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
-import { LuGift, LuCheck } from 'react-icons/lu';
+import { LuGift, LuCheck, LuChevronDown, LuChevronUp } from 'react-icons/lu';
 import { ProgressRoot, ProgressBar } from '@/components/ui/progress';
 
 /**
  * Блок «Акции» над таблицей корзины.
  *
- * Волна 1 работает в режиме показа: промо-позиции не выдаются, поэтому здесь
- * только прогресс «доберите на X» и честное «позицию добавит менеджер».
- * Причины несрабатывания правил сюда не приходят вовсе — сервер их не отдаёт.
+ * Карточки крупные и занимают экран целиком, когда акций несколько, — поэтому
+ * блок сворачивается в ряд компактных виджетов. В свёрнутом виде остаётся то,
+ * ради чего клиент на них смотрит: какая акция и сколько до неё осталось.
+ * Выбор запоминается — корзину открывают часто, и заново сворачивать блок
+ * при каждом визите утомительно.
  *
  * Награда показывается карточкой товара, а не строкой: «× 1 за 0 ₽ (не более
  * 20 раз)» — это конфигурация правила из админки, клиент читает её ребусом.
  */
+
+const COLLAPSE_STORAGE_KEY = 'cart:promotions:collapsed';
+
 export default function CartPromotions({ promotions, loading = false }) {
     const [expanded, setExpanded] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
+
+    // localStorage читаем после монтирования: на сервере его нет, а на клиенте
+    // синхронное чтение в useState давало бы расхождение с разметкой
+    useEffect(() => {
+        try {
+            setCollapsed(window.localStorage.getItem(COLLAPSE_STORAGE_KEY) === '1');
+        } catch {
+            // Приватный режим — просто оставляем блок развёрнутым
+        }
+    }, []);
+
+    const toggleCollapsed = () => {
+        setCollapsed((value) => {
+            const next = !value;
+
+            try {
+                window.localStorage.setItem(COLLAPSE_STORAGE_KEY, next ? '1' : '0');
+            } catch {
+                // Не сохранилось — не беда, в этой сессии всё работает
+            }
+
+            return next;
+        });
+    };
 
     const nearMiss = promotions?.near_miss ?? [];
     const achieved = promotions?.achieved ?? [];
@@ -34,29 +64,209 @@ export default function CartPromotions({ promotions, loading = false }) {
             opacity={loading ? 0.6 : 1}
             transition="opacity 0.2s"
         >
-            <Flex direction="column" gap="2">
-                {achieved.map((card) => (
-                    <AchievedCard key={`achieved-${card.rule_id}`} card={card} />
-                ))}
-
-                {visibleNearMiss.map((card) => (
-                    <NearMissCard key={`near-${card.rule_id}`} card={card} />
-                ))}
+            <Flex
+                as="button"
+                type="button"
+                w="100%"
+                align="center"
+                gap="2"
+                mb={collapsed ? '2' : '2'}
+                px={{ base: '1', md: '0' }}
+                onClick={toggleCollapsed}
+                aria-expanded={!collapsed}
+                textAlign="left"
+            >
+                <Box color="purple.500" _dark={{ color: 'purple.300' }} flexShrink="0">
+                    <LuGift size={16} />
+                </Box>
+                <Text fontSize="sm" fontWeight="700">
+                    Акции
+                </Text>
+                <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }}>
+                    {summaryLabel(achieved.length, nearMiss.length)}
+                </Text>
+                <Box flex="1" />
+                <Box color="gray.500" _dark={{ color: 'gray.400' }} flexShrink="0">
+                    {collapsed ? <LuChevronDown size={16} /> : <LuChevronUp size={16} />}
+                </Box>
             </Flex>
 
-            {hiddenCount > 0 && (
-                <Box
-                    as="button"
-                    type="button"
-                    mt="2"
-                    fontSize="sm"
-                    color="purple.600"
-                    _dark={{ color: 'purple.300' }}
-                    onClick={() => setExpanded(true)}
-                >
-                    Ещё {hiddenCount} {pluralPromotions(hiddenCount)} →
-                </Box>
+            {collapsed ? (
+                <Flex gap="1.5" wrap="wrap" px={{ base: '1', md: '0' }}>
+                    {achieved.map((card) => (
+                        <AchievedChip
+                            key={`chip-achieved-${card.rule_id}`}
+                            card={card}
+                            onClick={toggleCollapsed}
+                        />
+                    ))}
+                    {nearMiss.map((card) => (
+                        <NearMissChip
+                            key={`chip-near-${card.rule_id}`}
+                            card={card}
+                            onClick={toggleCollapsed}
+                        />
+                    ))}
+                </Flex>
+            ) : (
+                <>
+                    <Flex direction="column" gap="2">
+                        {achieved.map((card) => (
+                            <AchievedCard key={`achieved-${card.rule_id}`} card={card} />
+                        ))}
+
+                        {visibleNearMiss.map((card) => (
+                            <NearMissCard key={`near-${card.rule_id}`} card={card} />
+                        ))}
+                    </Flex>
+
+                    {hiddenCount > 0 && (
+                        <Box
+                            as="button"
+                            type="button"
+                            mt="2"
+                            fontSize="sm"
+                            color="purple.600"
+                            _dark={{ color: 'purple.300' }}
+                            onClick={() => setExpanded(true)}
+                        >
+                            Ещё {hiddenCount} {pluralPromotions(hiddenCount)} →
+                        </Box>
+                    )}
+                </>
             )}
+        </Box>
+    );
+}
+
+/**
+ * Сводка для свёрнутой шапки: сколько акций выполнено и сколько в процессе.
+ */
+function summaryLabel(achievedCount, nearMissCount) {
+    const parts = [];
+
+    if (achievedCount > 0) parts.push(`${achievedCount} выполнено`);
+    if (nearMissCount > 0) parts.push(`${nearMissCount} в процессе`);
+
+    return parts.join(' · ');
+}
+
+/**
+ * Свёрнутый виджет невыполненной акции.
+ *
+ * Кольцо прогресса вместо полоски: в строку чипов оно вписывается по высоте,
+ * а «сколько осталось» читается цифрой рядом — процент сам по себе клиенту
+ * ничего не говорит.
+ */
+function NearMissChip({ card, onClick }) {
+    return (
+        <Flex
+            as="button"
+            type="button"
+            onClick={onClick}
+            align="center"
+            gap="2"
+            maxW="100%"
+            border="1px solid"
+            borderColor="purple.200"
+            bg="purple.50"
+            _dark={{ borderColor: 'purple.800', bg: 'purple.950/40' }}
+            borderRadius="full"
+            pl="1.5"
+            pr="3"
+            py="1"
+        >
+            <ProgressRing value={card.progress ?? 0} />
+
+            <Box minW="0" textAlign="left">
+                <Text fontSize="xs" fontWeight="600" lineClamp="1">
+                    {card.title}
+                </Text>
+                <Text fontSize="2xs" color="purple.700" _dark={{ color: 'purple.300' }} lineClamp="1">
+                    ещё {card.remaining_label}
+                </Text>
+            </Box>
+        </Flex>
+    );
+}
+
+/**
+ * Свёрнутый виджет выполненной акции: галочка и что именно получено.
+ */
+function AchievedChip({ card, onClick }) {
+    const rewardLabel = card.rewards?.length
+        ? card.rewards.map((reward) => reward.name).join(', ')
+        : 'условия выполнены';
+
+    return (
+        <Flex
+            as="button"
+            type="button"
+            onClick={onClick}
+            align="center"
+            gap="2"
+            maxW="100%"
+            border="1px solid"
+            borderColor="green.200"
+            bg="green.50"
+            _dark={{ borderColor: 'green.800', bg: 'green.950/40' }}
+            borderRadius="full"
+            pl="2"
+            pr="3"
+            py="1"
+        >
+            <Box color="green.600" _dark={{ color: 'green.300' }} flexShrink="0">
+                <LuCheck size={14} />
+            </Box>
+
+            <Box minW="0" textAlign="left">
+                <Text fontSize="xs" fontWeight="600" lineClamp="1">
+                    {card.title}
+                </Text>
+                <Text fontSize="2xs" color="green.700" _dark={{ color: 'green.300' }} lineClamp="1">
+                    {rewardLabel}
+                </Text>
+            </Box>
+        </Flex>
+    );
+}
+
+/**
+ * Кольцо прогресса на чистом SVG — тянуть ради него зависимость не за что.
+ */
+function ProgressRing({ value }) {
+    const size = 26;
+    const stroke = 3;
+    const radius = (size - stroke) / 2;
+    const circumference = 2 * Math.PI * radius;
+    const filled = Math.max(0, Math.min(1, Number(value) || 0));
+
+    return (
+        <Box flexShrink="0" lineHeight="0" aria-hidden="true">
+            <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={stroke}
+                    opacity="0.2"
+                    color="var(--chakra-colors-purple-500)"
+                />
+                <circle
+                    cx={size / 2}
+                    cy={size / 2}
+                    r={radius}
+                    fill="none"
+                    stroke="var(--chakra-colors-purple-500)"
+                    strokeWidth={stroke}
+                    strokeDasharray={circumference}
+                    strokeDashoffset={circumference * (1 - filled)}
+                    strokeLinecap="round"
+                    transform={`rotate(-90 ${size / 2} ${size / 2})`}
+                />
+            </svg>
         </Box>
     );
 }
@@ -243,11 +453,11 @@ function RewardRow({ reward, tone }) {
                     {reward.amount_label}
                 </Text>
 
-                {/* Кнопки отказа в волне 1 нет: позицию заводит менеджер вручную,
-                    поэтому и канал отказа — он же */}
+                {/* Сама кнопка отказа живёт в блоке «Промо-позиции» ниже: здесь
+                    строка ещё не позиция корзины, а обещание */}
                 {reward.optional && (
                     <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }} mt="0.5">
-                        Необязательная позиция — скажите менеджеру, если не нужна
+                        Необязательная позиция — от неё можно отказаться
                     </Text>
                 )}
             </Box>

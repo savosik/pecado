@@ -181,6 +181,19 @@ class CartController extends Controller
     }
 
     /**
+     * Промо-строки корзины.
+     * GET /api/cart/promo-items
+     *
+     * Строки виртуальные и пересчитываются движком на каждый вызов, поэтому
+     * после изменения количеств их нужно перезапрашивать: Inertia-пропсы
+     * страницы при работе через store не обновляются.
+     */
+    public function promoItems(Request $request): JsonResponse
+    {
+        return $this->promoResponse($this->promoCart($request));
+    }
+
+    /**
      * Выбрать товар из вариантов награды.
      * POST /api/cart/promo/select
      */

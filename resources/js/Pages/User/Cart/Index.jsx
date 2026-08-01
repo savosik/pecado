@@ -31,7 +31,14 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
     const { auth } = usePage().props;
     // Прогресс акций — движок считает по серверной корзине, поэтому блок
     // обновляется дебаунсом после серии изменений количества, а не мгновенно.
-    const { promotions, loading: promotionsLoading } = useCartPromotions(cart?.id ?? null);
+    // Прогресс акций и промо-строки считает движок по серверной корзине,
+    // поэтому оба блока обновляются дебаунсом после серии изменений количества.
+    const {
+        promotions,
+        promoItems,
+        setPromoItems,
+        loading: promotionsLoading,
+    } = useCartPromotions(cart?.id ?? null, cartDetails?.promo_items ?? []);
     const allItems = cartDetails?.items ?? [];
     // Уценка привязана к партии (cart_item.id), а основная таблица построена на
     // product_id-агрегации со spillover instock/preorder. Товарные строки идут
@@ -40,11 +47,10 @@ export default function CartIndex({ cart, cartDetails, userCarts }) {
     const defectItems = allItems.filter((it) => it.item_type === 'defect');
     // Промо приходит отдельным ключом, а не в items: поэтому оно само собой
     // не попадает ни в поиск, ни в выделение, ни в «Переместить», ни в очистку.
-    // Локальное состояние — чтобы выбор подарка обновлял секцию без reload.
-    const [promoItems, setPromoItems] = useState(cartDetails?.promo_items ?? []);
+    // Состоянием владеет useCartPromotions — он же обновляет его по cart:changed.
     useEffect(() => {
         setPromoItems(cartDetails?.promo_items ?? []);
-    }, [cartDetails?.promo_items]);
+    }, [cartDetails?.promo_items, setPromoItems]);
     const promoAmount = useMemo(
         () => promoItems
             .filter((it) => !it.is_declined)

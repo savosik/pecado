@@ -103,6 +103,7 @@ Route::prefix('api')->middleware('auth')->group(function () {
     Route::post('/cart/add-defect', [CartController::class, 'addDefect']);
     Route::post('/cart/set-defect-quantity', [CartController::class, 'setDefectQuantity']);
     // Промо-строки не хранятся — в базу пишется только выбор клиента
+    Route::get('/cart/promo-items', [CartController::class, 'promoItems']);
     Route::post('/cart/promo/select', [CartController::class, 'selectPromo']);
     Route::post('/cart/promo/decline', [CartController::class, 'declinePromo']);
     Route::post('/cart/add-by-barcode', [CartController::class, 'addByBarcode']);

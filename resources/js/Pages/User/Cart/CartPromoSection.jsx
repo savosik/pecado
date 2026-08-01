@@ -115,6 +115,9 @@ export default function CartPromoSection({ cartId, promoItems = [], onChanged })
                 </Box>
                 <Text fontSize="xs" color="fg.muted">
                     Добавлены автоматически по акции. Они оформляются <b>отдельным заказом</b>.
+                    {promoItems.some((item) => Number(item.price || 0) > 0) && (
+                        <> Позиции с ценой войдут в этот заказ <b>к оплате</b>.</>
+                    )}
                 </Text>
             </HStack>
 
@@ -221,6 +224,13 @@ function ProductCell({ item }) {
                     <Badge colorPalette={badge.palette} variant="subtle" fontSize="2xs">
                         {badge.label}
                     </Badge>
+                    {/* Платную позицию клиент не заказывал — она должна быть
+                        заметна, а не теряться среди подарков */}
+                    {Number(item.price || 0) > 0 && (
+                        <Badge colorPalette="orange" variant="subtle" fontSize="2xs">
+                            Платная позиция
+                        </Badge>
+                    )}
                     {item.promotion?.name && (
                         <Text fontSize="2xs" color="fg.muted" lineClamp="1">
                             {item.promotion.name}

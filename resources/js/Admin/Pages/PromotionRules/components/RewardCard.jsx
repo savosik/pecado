@@ -139,7 +139,11 @@ export default function RewardCard({
                             {price > 0 && (
                                 <FormField
                                     label="Клиент может отказаться"
-                                    helpText="Платную промо-позицию можно убрать из корзины"
+                                    helpText={
+                                        reward.optional
+                                            ? 'В корзине у позиции будет кнопка «Отказаться»'
+                                            : 'Выключено: клиент не сможет убрать платную позицию из корзины — она попадёт в заказ к оплате'
+                                    }
                                 >
                                     <Switch
                                         checked={reward.optional}

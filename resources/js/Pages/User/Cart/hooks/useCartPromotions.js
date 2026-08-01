@@ -7,10 +7,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  */
 const REFRESH_DELAY_MS = 900;
 
-const EMPTY = { near_miss: [], achieved: [], max_visible: 3 };
+const EMPTY_PROGRESS = { near_miss: [], achieved: [], max_visible: 3 };
 
 /**
- * Прогресс акций по корзине.
+ * Промо по корзине: прогресс («доберите на X») и сами промо-строки.
+ *
+ * Обе части считает движок по серверной корзине, поэтому обновляются они
+ * вместе, одним дебаунсом на серию изменений. Раньше строки приходили только
+ * в Inertia-пропсах страницы — при работе через store пропсы не обновляются,
+ * и блок «Промо-позиции» устаревал до перезагрузки.
  *
  * Держит предыдущие данные, пока летит новый запрос: мигающий блок над
  * корзиной раздражает сильнее, чем слегка устаревшее число, — поэтому
@@ -18,9 +23,12 @@ const EMPTY = { near_miss: [], achieved: [], max_visible: 3 };
  *
  * @param {number|null} cartId — корзина, по которой считаем (страница корзины
  *   может показывать не активную корзину)
+ * @param {Array} initialItems — промо-строки из пропсов страницы: показываем их
+ *   сразу, не дожидаясь первого запроса
  */
-export default function useCartPromotions(cartId) {
-    const [data, setData] = useState(EMPTY);
+export default function useCartPromotions(cartId, initialItems = []) {
+    const [promotions, setPromotions] = useState(EMPTY_PROGRESS);
+    const [promoItems, setPromoItems] = useState(initialItems);
     const [loading, setLoading] = useState(false);
 
     const timerRef = useRef(null);
@@ -33,21 +41,25 @@ export default function useCartPromotions(cartId) {
         const requestId = ++requestIdRef.current;
         setLoading(true);
 
-        try {
-            const { data: payload } = await window.axios.get('/api/cart/promotions', {
-                params: { cart_id: cartId },
-            });
+        // Оба запроса параллельно: это один логический пересчёт, и разъезд
+        // между «доберите на X» и списком позиций читался бы как ошибка
+        const [progress, items] = await Promise.allSettled([
+            window.axios.get('/api/cart/promotions', { params: { cart_id: cartId } }),
+            window.axios.get('/api/cart/promo-items', { params: { cart_id: cartId } }),
+        ]);
 
-            if (requestId === requestIdRef.current) {
-                setData(payload || EMPTY);
-            }
-        } catch {
-            // Промо — вспомогательный блок: молча оставляем прежние данные
-        } finally {
-            if (requestId === requestIdRef.current) {
-                setLoading(false);
-            }
+        if (requestId !== requestIdRef.current) return;
+
+        // Промо — вспомогательный блок: на ошибке молча оставляем прежние данные
+        if (progress.status === 'fulfilled') {
+            setPromotions(progress.value?.data || EMPTY_PROGRESS);
         }
+
+        if (items.status === 'fulfilled') {
+            setPromoItems(items.value?.data?.promo_items ?? []);
+        }
+
+        setLoading(false);
     }, [cartId]);
 
     const schedule = useCallback(() => {
@@ -61,7 +73,7 @@ export default function useCartPromotions(cartId) {
     // Первая загрузка и смена корзины (переключение активной корзины
     // перезагружает страницу с другим cart.id)
     useEffect(() => {
-        setData(EMPTY);
+        setPromotions(EMPTY_PROGRESS);
         fetchNow();
     }, [fetchNow]);
 
@@ -76,5 +88,5 @@ export default function useCartPromotions(cartId) {
         };
     }, [schedule]);
 
-    return { promotions: data, loading, refresh: fetchNow };
+    return { promotions, promoItems, setPromoItems, loading, refresh: fetchNow };
 }
