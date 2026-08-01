@@ -101,6 +101,10 @@ class OrderController extends Controller
                 ] : null,
                 'items_count' => $order->items_count,
                 'shipments_count' => $order->shipments_count,
+                // Документы одного оформления связаны общей корзиной: чекаут
+                // расщепляет её по типам и создаёт до пяти заказов
+                'cart_id' => $order->cart_id,
+                'placed_at' => $order->created_at?->format('d.m.Y H:i'),
                 'match_source' => $match['source'],
                 'match_snippet' => $match['snippet'],
                 'composition_changes' => $compositionByOrder[$order->id] ?? null,
@@ -247,7 +251,7 @@ class OrderController extends Controller
                 $totalConverted = $this->convertAmount((float) $order->total_amount, $order->currency_code, $currency);
                 yield [
                     $order->erp_number ?? $order->number ?? ('#'.$order->id),
-                    $order->type?->value === 'defect' ? 'Уценка' : ($order->type?->value === 'preorder' ? 'Предзаказ' : 'Заказ'),
+                    $order->type?->label() ?? 'Заказ',
                     $this->getStatusLabel($order->status),
                     ($order->erp_created_at ?? $order->created_at)?->format('d.m.Y H:i'),
                     $order->company?->name ?? '',
@@ -429,6 +433,11 @@ class OrderController extends Controller
             if ($sortBy === 'erp_created_at') {
                 $direction = $sortOrder === 'asc' ? 'asc' : 'desc';
                 $query->orderByRaw("COALESCE(erp_created_at, created_at) {$direction}");
+                // Документы одного оформления создаются в одну секунду, поэтому
+                // без вторичной сортировки они перемешивались бы. cart_id держит
+                // их вместе, id — в порядке сборки (заказ → предзаказ → уценка →
+                // промо → образцы), как их и создаёт OrderAssembler
+                $query->orderByRaw("cart_id {$direction}")->orderBy('id');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     Box, Flex, HStack, VStack, Text, Badge, Button, Input, InputGroup,
     Card, Stack, IconButton, createListCollection,
@@ -11,6 +11,7 @@ import {
 } from 'react-icons/lu';
 import CabinetLayout from '../CabinetLayout';
 import { Field } from '@/components/ui/field';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select } from '@/components/ui/select';
 import { MenuRoot, MenuTrigger, MenuContent, MenuItem } from '@/components/ui/menu';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -26,6 +27,7 @@ import { ORDER_STATUS_COLORS as STATUS_COLORS } from '@/constants/orderStatus';
 import { getOrderTypeShortLabel, getOrderTypeColor } from '@/constants/orderType';
 
 export default function OrdersIndex({ filters, statuses, statusTotal = 0, types, companies = [], presetsEnabled = false, exportEnabled = false, suggestion = null }) {
+    const [groupByCart, setGroupByCart] = useState(true);
     const { orders, currency } = usePage().props;
     const currencySymbol = currency?.symbol ?? '₽';
     const [showFilters, setShowFilters] = useState(false);
@@ -495,9 +497,32 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                 </Card.Root>
             ) : (
                 <>
-                    {/* Карточки-строки */}
+                    {/* Группировка по оформлению: чекаут расщепляет корзину по типам
+                        и создаёт до пяти заказов. Без разделителя клиент видит пять
+                        строк и не понимает, что это одна покупка. */}
+                    <Flex justify="flex-end" mb="2">
+                        <Checkbox
+                            checked={groupByCart}
+                            onCheckedChange={(e) => setGroupByCart(!!e.checked)}
+                            size="sm"
+                        >
+                            <Text fontSize="sm" color="fg.muted">Группировать по оформлениям</Text>
+                        </Checkbox>
+                    </Flex>
+
                     <VStack gap="2" align="stretch">
-                        {orders.data.map((order) => {
+                        {orders.data.map((order, index) => {
+                            // Заголовок группы рисуем у первого заказа каждой корзины.
+                            // Заказы без cart_id (созданы менеджером, приехали из 1С)
+                            // в группы не собираются — им заголовок не нужен.
+                            const prev = index > 0 ? orders.data[index - 1] : null;
+                            const groupSize = order.cart_id
+                                ? orders.data.filter((o) => o.cart_id === order.cart_id).length
+                                : 1;
+                            const startsGroup = groupByCart
+                                && order.cart_id
+                                && groupSize > 1
+                                && prev?.cart_id !== order.cart_id;
                             const itemsLabel = order.items_count === 1
                                 ? 'позиция'
                                 : order.items_count < 5 ? 'позиции' : 'позиций';
@@ -516,7 +541,18 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                             const isPickup = order.delivery_method === 'pickup';
 
                             return (
-                                <Link key={order.id} href={`/cabinet/orders/${order.id}`}>
+                                <React.Fragment key={order.id}>
+                                {startsGroup && (
+                                    <Flex align="center" gap="2" mt={index > 0 ? '3' : '0'} mb="0.5">
+                                        <Box h="1px" flex="1" bg="border.muted" />
+                                        <Text fontSize="xs" color="fg.muted" whiteSpace="nowrap">
+                                            Одно оформление · корзина №{order.cart_id}
+                                            {order.placed_at ? ` · ${order.placed_at}` : ''} · документов: {groupSize}
+                                        </Text>
+                                        <Box h="1px" flex="1" bg="border.muted" />
+                                    </Flex>
+                                )}
+                                <Link href={`/cabinet/orders/${order.id}`}>
                                     <Box
                                         bg="bg"
                                         borderRadius="xl"
@@ -687,6 +723,7 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
                                         </Flex>
                                     </Box>
                                 </Link>
+                                </React.Fragment>
                             );
                         })}
                     </VStack>
