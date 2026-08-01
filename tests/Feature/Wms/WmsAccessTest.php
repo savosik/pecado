@@ -100,7 +100,7 @@ class WmsAccessTest extends TestCase
     public function dashboard_returns_stock_figures_per_warehouse(): void
     {
         // Сводка считает все склады БД, включая справочные из миграций
-        // («Москва реклама»), — изолируем тест от них
+        // («Москва подарки»), — изолируем тест от них
         Warehouse::query()->delete();
 
         $moscow = Warehouse::create(['name' => 'Москва Основной']);

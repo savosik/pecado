@@ -107,7 +107,7 @@ class PromotionRuleFactory extends Factory
         ]);
     }
 
-    /** Награда — пробник со склада «Москва реклама» (волна 3). */
+    /** Награда — пробник со склада «Москва подарки» (волна 3). */
     public function sampleReward(?int $productId = null, ?int $warehouseId = null): static
     {
         return $this->state(fn () => [

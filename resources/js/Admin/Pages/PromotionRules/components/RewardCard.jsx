@@ -37,7 +37,7 @@ export default function RewardCard({
         isSample || perThreshold || Boolean(reward.warehouse_id),
     );
 
-    // Пробники выдаются со склада «Москва реклама» — он появится в волне 3
+    // Пробники выдаются со склада «Москва подарки» — он появится в волне 3
     const availableWarehouses = isSample
         ? warehouses.filter((warehouse) => warehouse.is_promo_sample)
         : warehouses.filter((warehouse) => !warehouse.is_defect);
@@ -176,7 +176,7 @@ export default function RewardCard({
                                                     Подотчётная — выписывается в накладной клиенту
                                                 </Radio>
                                                 <Radio value="sample">
-                                                    Пробник — не выписывается, уходит со склада «Москва реклама»
+                                                    Пробник — не выписывается, уходит со склада «Москва подарки»
                                                 </Radio>
                                             </VStack>
                                         </RadioGroup>
@@ -185,7 +185,7 @@ export default function RewardCard({
                                     <FormField
                                         label="Склад-источник"
                                         helpText={isSample && availableWarehouses.length === 0
-                                            ? 'Складов пробников пока нет: склад «Москва реклама» заводится в 1С и приедет по шине вместе с волной 3. До этого правило с наградой-пробником сохраняется, но не включается.'
+                                            ? 'Складов пробников пока нет: склад «Москва подарки» заводится в 1С и приедет по шине вместе с волной 3. До этого правило с наградой-пробником сохраняется, но не включается.'
                                             : 'Откуда списывается промо-позиция'}
                                     >
                                         <NativeSelectRoot disabled={availableWarehouses.length === 0}>

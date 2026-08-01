@@ -77,7 +77,7 @@ class PromoPickListTest extends TestCase
         );
 
         $this->assertSame(
-            "Рекламные образцы — отобрать со склада «Москва реклама»:\n"
+            "Рекламные образцы — отобрать со склада «Москва подарки»:\n"
             .'арт. LV-LUSH4 — Lovense Lush 4 — 2 шт. — по акции «Lovense: Lush 4 в подарок»',
             $text,
         );
@@ -95,7 +95,7 @@ class PromoPickListTest extends TestCase
         );
 
         $this->assertStringStartsWith(PromoPickListFormatter::HEADING_ACCOUNTABLE, $text);
-        $this->assertStringNotContainsString('Москва реклама', $text);
+        $this->assertStringNotContainsString('Москва подарки', $text);
     }
 
     #[Test]

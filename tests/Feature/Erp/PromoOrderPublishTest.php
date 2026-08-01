@@ -267,12 +267,12 @@ class PromoOrderPublishTest extends TestCase
         Queue::assertPushed(PublishOrderToErpJob::class, 1);
 
         Log::shouldHaveReceived('warning')
-            ->withArgs(fn (string $message) => str_contains($message, 'Москва реклама'))
+            ->withArgs(fn (string $message) => str_contains($message, 'Москва подарки'))
             ->once();
     }
 
     /**
-     * Обратная сторона гейта: склад «Москва реклама» заведён миграцией с боевым
+     * Обратная сторона гейта: склад «Москва подарки» заведён миграцией с боевым
      * UUID из 1С, и заказ образцов уходит в шину с ним — регион клиента здесь
      * не участвует.
      */
@@ -301,7 +301,7 @@ class PromoOrderPublishTest extends TestCase
         $this->assertSame(
             ['9da1768a-40d4-11e1-a692-001e6711ed1d'],
             $payloads['promo_sample']['warehouse_uuids'],
-            'UUID склада «Москва реклама» из 1С',
+            'UUID склада «Москва подарки» из 1С',
         );
         $this->assertTrue($payloads['promo_sample']['items'][0]['is_promo']);
         $this->assertSame('sample', $payloads['promo_sample']['items'][0]['promo_kind']);
@@ -341,7 +341,7 @@ class PromoOrderPublishTest extends TestCase
 
         $this->assertNotNull($samplePayload);
         $this->assertStringContainsString(
-            'Рекламные образцы — отобрать со склада «Москва реклама»',
+            'Рекламные образцы — отобрать со склада «Москва подарки»',
             $samplePayload['warehouse_comment'],
         );
     }

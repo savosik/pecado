@@ -15,7 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 /**
- * Склад рекламных образцов «Москва реклама» (карточка promo-11).
+ * Склад рекламных образцов «Москва подарки» (карточка promo-11).
  *
  * Главная проверка карточки: пробники не должны появиться на витрине.
  * Гарантия — невключение склада в регионы, но цена ошибки высока (пробник
@@ -108,7 +108,7 @@ class PromoSampleWarehouseTest extends TestCase
         $warehouses = Warehouse::query()->promoSample()->get();
 
         $this->assertCount(1, $warehouses);
-        $this->assertSame('Москва реклама', $warehouses->first()->name);
+        $this->assertSame('Москва подарки', $warehouses->first()->name);
         $this->assertSame('9da1768a-40d4-11e1-a692-001e6711ed1d', $warehouses->first()->external_id);
     }
 

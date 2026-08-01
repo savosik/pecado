@@ -21,7 +21,7 @@ enum OrderType: string
 
     /**
      * Рекламные образцы (пробники): в накладную клиенту не входят,
-     * отгружаются со склада «Москва реклама» (флаг warehouses.is_promo_sample).
+     * отгружаются со склада «Москва подарки» (флаг warehouses.is_promo_sample).
      */
     case PROMO_SAMPLE = 'promo_sample';
 

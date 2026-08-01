@@ -353,13 +353,13 @@ class PromotionRuleSchemaValidatorTest extends TestCase
         ]));
 
         $this->assertFalse($activated['valid']);
-        $this->assertStringContainsString('Москва реклама', $this->flatten($activated['errors']));
+        $this->assertStringContainsString('Москва подарки', $this->flatten($activated['errors']));
     }
 
     public function test_sample_reward_with_promo_warehouse_is_valid(): void
     {
         $warehouse = Warehouse::factory()->create([
-            'name' => 'Москва реклама',
+            'name' => 'Москва подарки',
             'is_promo_sample' => true,
         ]);
 

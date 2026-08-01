@@ -1772,13 +1772,13 @@
 </ul>
 <hr />
 <h2 id="27-ordercreated-type-promo_sample-v156">2.7 — Рекламные образцы (<code>order.created</code>, <code>type: "promo_sample"</code>, v15.6)<a class="headerlink" href="#27-ordercreated-type-promo_sample-v156" title="Permanent link">&para;</a></h2>
-<p><strong>Зависимости:</strong> 2.6, склад «Москва реклама» с заполненным <code>external_id</code></p>
+<p><strong>Зависимости:</strong> 2.6, склад «Москва подарки» с заполненным <code>external_id</code></p>
 <p>🟢 Акция с наградой вида «рекламный образец» → оформить заказ.</p>
 <ul>
-<li>[ ] <code>type: "promo_sample"</code>, <code>warehouse_uuids</code> содержит склад «Москва реклама»</li>
+<li>[ ] <code>type: "promo_sample"</code>, <code>warehouse_uuids</code> содержит склад «Москва подарки»</li>
 <li>[ ] Позиции несут <code>promo_kind: "sample"</code></li>
 <li>[ ] Позиции <strong>не выписываются</strong> в накладную клиенту</li>
-<li>[ ] Если у склада «Москва реклама» <strong>не заполнен</strong> <code>external_id</code> — заказ <strong>не публикуется</strong>,
+<li>[ ] Если у склада «Москва подарки» <strong>не заполнен</strong> <code>external_id</code> — заказ <strong>не публикуется</strong>,
       в лог сайта пишется warning с номером заказа (пустой <code>warehouse_uuids</code> для 1С хуже,
       чем отсутствие сообщения)</li>
 </ul>

@@ -51,7 +51,7 @@
             "promo_kind": {
                 "type": "string",
                 "enum": ["accountable", "sample"],
-                "description": "accountable — подотчётная позиция с обычного склада, sample — пробник со склада «Москва реклама»",
+                "description": "accountable — подотчётная позиция с обычного склада, sample — пробник со склада «Москва подарки»",
                 "$error": {
                     "*": "Вид промо-позиции должен быть «accountable» (подотчётная) или «sample» (пробник)."
                 }

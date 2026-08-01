@@ -3,6 +3,7 @@ import { Box, Flex, Text, HStack, Image } from '@chakra-ui/react';
 import { Link } from '@inertiajs/react';
 import { LuGift, LuCheck, LuChevronDown, LuChevronUp } from 'react-icons/lu';
 import { ProgressRoot, ProgressBar } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 
 /**
  * Блок «Акции» над таблицей корзины.
@@ -64,17 +65,23 @@ export default function CartPromotions({ promotions, loading = false }) {
             opacity={loading ? 0.6 : 1}
             transition="opacity 0.2s"
         >
+            {/* Шапка-панель: кликается целиком, но управление продублировано
+                явной кнопкой с текстом — один шеврон в углу не читается как
+                элемент управления и остаётся незамеченным */}
             <Flex
-                as="button"
-                type="button"
                 w="100%"
                 align="center"
                 gap="2"
-                mb={collapsed ? '2' : '2'}
-                px={{ base: '1', md: '0' }}
+                mb="2"
+                px={{ base: '2', md: '3' }}
+                py="1.5"
+                borderWidth="1px"
+                borderColor="border.muted"
+                rounded="md"
+                bg="bg.subtle"
+                cursor="pointer"
+                _hover={{ bg: 'bg.emphasized' }}
                 onClick={toggleCollapsed}
-                aria-expanded={!collapsed}
-                textAlign="left"
             >
                 <Box color="purple.500" _dark={{ color: 'purple.300' }} flexShrink="0">
                     <LuGift size={16} />
@@ -82,13 +89,26 @@ export default function CartPromotions({ promotions, loading = false }) {
                 <Text fontSize="sm" fontWeight="700">
                     Акции
                 </Text>
-                <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }}>
+                <Text fontSize="xs" color="gray.600" _dark={{ color: 'gray.400' }} lineClamp="1">
                     {summaryLabel(achieved.length, nearMiss.length)}
                 </Text>
                 <Box flex="1" />
-                <Box color="gray.500" _dark={{ color: 'gray.400' }} flexShrink="0">
-                    {collapsed ? <LuChevronDown size={16} /> : <LuChevronUp size={16} />}
-                </Box>
+                <Button
+                    size="xs"
+                    variant="outline"
+                    aria-expanded={!collapsed}
+                    flexShrink="0"
+                    onClick={(event) => {
+                        // Клик всплыл бы на панель и переключил блок второй раз
+                        event.stopPropagation();
+                        toggleCollapsed();
+                    }}
+                >
+                    {collapsed ? <LuChevronDown /> : <LuChevronUp />}
+                    <Box as="span" display={{ base: 'none', sm: 'inline' }}>
+                        {collapsed ? 'Развернуть' : 'Свернуть'}
+                    </Box>
+                </Button>
             </Flex>
 
             {collapsed ? (
