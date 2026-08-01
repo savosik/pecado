@@ -42,8 +42,13 @@ class OrderAssembler
     {
         $orders = collect();
 
+        // Одно оформление — один идентификатор на все документы сборки.
+        // По cart_id их связывать нельзя: корзина переиспользуется, и в группу
+        // слипалась бы вся её история
+        $checkoutUuid = (string) \Illuminate\Support\Str::uuid();
+
         foreach ($draft->filledGroups() as $type => $lines) {
-            $order = Order::create($this->baseData($draft, $type));
+            $order = Order::create($this->baseData($draft, $type) + ['checkout_uuid' => $checkoutUuid]);
 
             $order->total_amount = $this->createItems($order, $lines, $draft->user);
 

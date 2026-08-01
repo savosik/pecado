@@ -512,17 +512,20 @@ export default function OrdersIndex({ filters, statuses, statusTotal = 0, types,
 
                     <VStack gap="2" align="stretch">
                         {orders.data.map((order, index) => {
-                            // Заголовок группы рисуем у первого заказа каждой корзины.
-                            // Заказы без cart_id (созданы менеджером, приехали из 1С)
-                            // в группы не собираются — им заголовок не нужен.
+                            // Заголовок группы рисуем у первого заказа каждого
+                            // оформления. Группируем по checkout_uuid, а не по
+                            // корзине: корзина переиспользуется, и по ней в одну
+                            // группу слипалась вся её история за месяцы.
+                            // Заказы без checkout_uuid (созданы менеджером, приехали
+                            // из 1С) в группы не собираются — им заголовок не нужен.
                             const prev = index > 0 ? orders.data[index - 1] : null;
-                            const groupSize = order.cart_id
-                                ? orders.data.filter((o) => o.cart_id === order.cart_id).length
+                            const groupSize = order.checkout_uuid
+                                ? orders.data.filter((o) => o.checkout_uuid === order.checkout_uuid).length
                                 : 1;
                             const startsGroup = groupByCart
-                                && order.cart_id
+                                && order.checkout_uuid
                                 && groupSize > 1
-                                && prev?.cart_id !== order.cart_id;
+                                && prev?.checkout_uuid !== order.checkout_uuid;
                             const itemsLabel = order.items_count === 1
                                 ? 'позиция'
                                 : order.items_count < 5 ? 'позиции' : 'позиций';

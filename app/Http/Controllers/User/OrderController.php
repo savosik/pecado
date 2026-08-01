@@ -101,9 +101,11 @@ class OrderController extends Controller
                 ] : null,
                 'items_count' => $order->items_count,
                 'shipments_count' => $order->shipments_count,
-                // Документы одного оформления связаны общей корзиной: чекаут
-                // расщепляет её по типам и создаёт до пяти заказов
+                // Документы одного оформления связаны общим checkout_uuid: чекаут
+                // расщепляет корзину по типам и создаёт до пяти заказов.
+                // Именно uuid, а не cart_id: корзина живёт долго и переиспользуется
                 'cart_id' => $order->cart_id,
+                'checkout_uuid' => $order->checkout_uuid,
                 'placed_at' => $order->created_at?->format('d.m.Y H:i'),
                 'match_source' => $match['source'],
                 'match_snippet' => $match['snippet'],
@@ -434,10 +436,10 @@ class OrderController extends Controller
                 $direction = $sortOrder === 'asc' ? 'asc' : 'desc';
                 $query->orderByRaw("COALESCE(erp_created_at, created_at) {$direction}");
                 // Документы одного оформления создаются в одну секунду, поэтому
-                // без вторичной сортировки они перемешивались бы. cart_id держит
-                // их вместе, id — в порядке сборки (заказ → предзаказ → уценка →
-                // промо → образцы), как их и создаёт OrderAssembler
-                $query->orderByRaw("cart_id {$direction}")->orderBy('id');
+                // без вторичной сортировки они перемешивались бы. checkout_uuid
+                // держит их вместе, id — в порядке сборки (заказ → предзаказ →
+                // уценка → промо → образцы), как их и создаёт OrderAssembler
+                $query->orderByRaw("checkout_uuid {$direction}")->orderBy('id');
             } else {
                 $query->orderBy($sortBy, $sortOrder);
             }

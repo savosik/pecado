@@ -109,6 +109,7 @@ class Order extends Model
         'user_id',
         'company_id',
         'cart_id',
+        'checkout_uuid',
         'status',
         'comment',
         'manager_comment',
