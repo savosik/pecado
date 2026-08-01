@@ -89,7 +89,7 @@ class CartPromotionProgress
                 'title' => $this->title($rule),
                 'message' => $this->describer->nearMissMessage($miss->remaining(), $miss->aggregate),
                 // Количество ещё неизвестно — порог не взят, показываем только «что»
-                'rewards' => $this->plannedRewards($rule, $products),
+                'rewards' => $this->plannedRewards($rule, $products, $miss->rewardProductIds),
                 'aggregate' => $miss->aggregate,
                 'current' => $miss->current,
                 'target' => $miss->target,
@@ -156,10 +156,16 @@ class CartPromotionProgress
      * Что клиент получит, когда доберёт порог. Количество не считаем — оно
      * зависит от того, чем именно он доберёт.
      *
+     * Показываем только то, что фонд позволяет выдать: список приходит из
+     * движка уже отфильтрованным по остатку (`NearMiss::$rewardProductIds`).
+     * Подарок, которого нет на складе, в подсказке — обещание, которое
+     * не будет выполнено.
+     *
      * @param  \Illuminate\Support\Collection<int, Product>  $products
+     * @param  int[]  $availableProductIds
      * @return array<int, array<string, mixed>>
      */
-    private function plannedRewards(PromotionRule $rule, $products): array
+    private function plannedRewards(PromotionRule $rule, $products, array $availableProductIds): array
     {
         $cards = [];
 
@@ -175,6 +181,10 @@ class CartPromotionProgress
             $optional = $price > 0 && (bool) ($reward['optional'] ?? false);
 
             foreach (array_filter($ids) as $productId) {
+                if (! in_array($productId, $availableProductIds, true)) {
+                    continue;
+                }
+
                 $cards[] = $this->rewardCard($products->get($productId), $productId, $price, null, $optional);
             }
         }

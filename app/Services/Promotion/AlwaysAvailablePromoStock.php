@@ -22,4 +22,7 @@ class AlwaysAvailablePromoStock implements PromoStockCheckerInterface
     {
         return PHP_INT_MAX;
     }
+
+    /** Кэшировать нечего — заглушка всегда отвечает одинаково. */
+    public function forgetSnapshot(): void {}
 }

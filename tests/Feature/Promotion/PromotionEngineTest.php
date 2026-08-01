@@ -852,6 +852,8 @@ class PromotionEngineTest extends TestCase
             {
                 return $this->available;
             }
+
+            public function forgetSnapshot(): void {}
         });
     }
 

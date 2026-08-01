@@ -58,6 +58,11 @@ class PromotionEngine
 
     public function evaluate(PromoContext $context): PromotionEvaluation
     {
+        // Новый расчёт — новое состояние склада. Снимок доступности живёт
+        // внутри одного вычисления: он нужен, чтобы все награды судились по
+        // одним числам, но переживать вычисление не должен.
+        $this->stock->forgetSnapshot();
+
         $lines = $context->countableLines();
 
         // Пустая корзина — быстрый выход, правила даже не грузим
@@ -129,6 +134,8 @@ class PromotionEngine
      */
     public function explain(PromotionRule $rule, PromoContext $context): RulePreview
     {
+        $this->stock->forgetSnapshot();
+
         $lines = $context->countableLines();
         $totals = $lines === [] ? [] : $this->lineTotals($lines, $context);
         $conditionSets = $this->conditionProductSets(collect([$rule]), array_keys($totals));
@@ -699,13 +706,22 @@ class PromotionEngine
                 continue;
             }
 
+            // Обещать нечего — фонда нет. Крючок «доберите на X» без остатка
+            // подарка обманывает клиента дважды: он добирает корзину, а награда
+            // не выдаётся, и правило молча исчезает (blocked наружу не уходит).
+            $availableRewards = $this->availableRewardProductIds($rule, $context);
+
+            if ($availableRewards === []) {
+                continue;
+            }
+
             $miss = new NearMiss(
                 ruleId: $rule->id,
                 ruleName: $rule->name,
                 aggregate: $item['aggregate'],
                 current: $item['value'],
                 target: $item['target'],
-                rewardProductIds: $this->rewardProductIdsFromConfig($rule->rewards ?? []),
+                rewardProductIds: $availableRewards,
             );
 
             return $miss->progress() >= self::NEAR_MISS_MIN_PROGRESS ? $miss : null;
@@ -715,26 +731,36 @@ class PromotionEngine
     }
 
     /**
-     * Товары наград прямо из конфигурации — без запроса в БД:
-     * подсказка «доберите на …» строится на каждый рендер корзины.
+     * Товары наград, которые правило реально может выдать прямо сейчас.
      *
-     * @param  array<int, mixed>  $rewards
+     * Проверяется тот же фонд, по которому выдаёт `buildRewards()`: остаток
+     * склада минус резерв незакрытых промо-заказов. Хватает одной единицы —
+     * кратность в подсказке ещё неизвестна, она зависит от того, чем клиент
+     * доберёт порог.
+     *
+     * Награда с выбором (`choices`) считается доступной, пока доступен хотя бы
+     * один вариант; недоступные варианты в подсказку не попадают.
+     *
+     * Запросов немного: `PromoStockService` держит снимок на всё вычисление,
+     * поэтому товар, встретившийся и здесь, и в `buildRewards()`, считается один раз.
+     *
      * @return int[]
      */
-    private function rewardProductIdsFromConfig(array $rewards): array
+    private function availableRewardProductIds(PromotionRule $rule, PromoContext $context): array
     {
         $ids = [];
 
-        foreach ($rewards as $reward) {
+        foreach ((array) ($rule->rewards ?? []) as $reward) {
             $reward = (array) $reward;
+            $warehouseId = ! empty($reward['warehouse_id']) ? (int) $reward['warehouse_id'] : null;
 
-            if (! empty($reward['product_id'])) {
-                $ids[] = (int) $reward['product_id'];
-            }
+            $candidates = ! empty($reward['product_id'])
+                ? [(int) $reward['product_id']]
+                : array_map('intval', (array) ($reward['choices'] ?? []));
 
-            foreach ((array) ($reward['choices'] ?? []) as $choice) {
-                if (! empty($choice)) {
-                    $ids[] = (int) $choice;
+            foreach (array_filter($candidates) as $productId) {
+                if ($this->stock->availableFor($productId, $warehouseId, $context->user?->id) >= 1) {
+                    $ids[] = $productId;
                 }
             }
         }
