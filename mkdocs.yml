@@ -61,6 +61,7 @@ nav:
     - Возвраты: rules/returns.md
     - Реализации: rules/shipments.md
     - Баланс: rules/balances.md
+    - Организации (наши юрлица): rules/organizations.md
     - Индивидуальные цены: rules/individual-prices.md
     - Ценообразование: rules/pricing-model.md
     - Атрибуты товаров: rules/product-attributes.md

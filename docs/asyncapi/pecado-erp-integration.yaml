@@ -2,7 +2,7 @@ asyncapi: 3.0.0
 
 info:
   title: Pecado ERP Integration API
-  version: 15.7.1
+  version: 15.8.0
   description: |
     Спецификация асинхронного обмена данными между **1С:Предприятие 8.3 (КА2)** и **сайтом Pecado**.
 
@@ -2376,6 +2376,64 @@ components:
           items:
             $ref: '#/components/schemas/BankAccount'
 
+    # ── Организации (наши юрлица), v15.8.0 ───
+    DocumentOrganization:
+      type: object
+      description: |
+        Наша организация (юрлицо), от имени которой документ проведён в 1С.
+
+        **Направление: только 1С → Сайт.** Сайт организацию не определяет и не отправляет —
+        её выбирает 1С по своим правилам (для `type=promo` и `type=promo_sample` —
+        по хардкоду из v15.7.1).
+
+        Справочник организаций **по шине не передаётся**: юрлица заводятся в админке сайта
+        вручную, как склады. Поэтому достаточно `uuid` — остальные поля необязательны
+        и используются только если организации с таким UUID на сайте ещё нет.
+
+        Объект без `uuid` сайт игнорирует. Неизвестный `uuid` создаёт организацию-заглушку,
+        которую дозаполняет администратор; связь документа с юрлицом при этом сохраняется.
+      required:
+        - uuid
+      properties:
+        uuid:
+          $ref: '#/components/schemas/UUID'
+        name:
+          type:
+            - string
+            - 'null'
+          description: Краткое название организации. Необязательно.
+          examples:
+            - 'ООО Пекадо'
+        legal_name:
+          type:
+            - string
+            - 'null'
+          description: Полное юридическое наименование. Необязательно.
+        tax_id:
+          type:
+            - string
+            - 'null'
+          description: ИНН организации. Необязательно.
+        tax_code:
+          type:
+            - string
+            - 'null'
+          description: КПП организации. Необязательно.
+
+    PostedWarehouseUuid:
+      type:
+        - string
+        - 'null'
+      format: uuid
+      description: |
+        Склад, на который документ **фактически проведён** в 1С (v15.8.0). Опционально.
+
+        **Направление: только 1С → Сайт.** Не путать с `warehouse_uuids` исходящего заказа:
+        там сайт перечисляет склады региона, а конкретный выбирает 1С.
+
+        Неизвестный сайту склад автоматически не заводится: поле останется пустым,
+        факт попадёт в лог.
+
     OrderCreatedPayload:
       type: object
       required:
@@ -2462,8 +2520,16 @@ components:
             Для `type=defect` — UUID склада некондиции.
             Для `type=promo` — склады наличия региона клиента.
             Для `type=promo_sample` — склад «Москва подарки».
+
+            **Направление: Сайт → 1С.** Склады региона взаимозаменяемы, заказ по ним
+            не разбивается. В обратную сторону 1С возвращает конкретный склад проведения
+            в `warehouse_uuid` (v15.8.0).
           items:
             $ref: '#/components/schemas/UUID'
+        organization:
+          $ref: '#/components/schemas/DocumentOrganization'
+        warehouse_uuid:
+          $ref: '#/components/schemas/PostedWarehouseUuid'
         timestamp:
           $ref: '#/components/schemas/ISO8601DateTime'
         erp_created_at:
@@ -2626,6 +2692,10 @@ components:
               type:
                 - string
                 - 'null'
+        organization:
+          $ref: '#/components/schemas/DocumentOrganization'
+        warehouse_uuid:
+          $ref: '#/components/schemas/PostedWarehouseUuid'
         delivery_address:
           type:
             - string
@@ -2683,6 +2753,12 @@ components:
             - string
             - 'null'
           description: "Номер возврата в 1С. Сохраняется как erp_number на сайте."
+        organization:
+          allOf:
+            - $ref: '#/components/schemas/DocumentOrganization'
+          description: |
+            Организация возврата (v15.8.0). Опционально, **справочно**: сайт выводит её
+            из реализаций-оснований сам. Если 1С прислала значение — оно приоритетнее.
         status:
           type: string
           enum:
@@ -2870,6 +2946,10 @@ components:
           description: "Номер реализации в 1С. Сохраняется как erp_number на сайте. Обязательное поле, используется клиентом и менеджером для коммуникации."
           examples:
             - '29УТ-003413'
+        organization:
+          $ref: '#/components/schemas/DocumentOrganization'
+        warehouse_uuid:
+          $ref: '#/components/schemas/PostedWarehouseUuid'
         date:
           $ref: '#/components/schemas/ISO8601Date'
         erp_created_at:
@@ -2944,6 +3024,10 @@ components:
           description: "Номер реализации в 1С. Сохраняется как erp_number на сайте. Обязательное поле, используется клиентом и менеджером для коммуникации."
           examples:
             - '29УТ-003413'
+        organization:
+          $ref: '#/components/schemas/DocumentOrganization'
+        warehouse_uuid:
+          $ref: '#/components/schemas/PostedWarehouseUuid'
         date:
           $ref: '#/components/schemas/ISO8601Date'
         erp_created_at:
@@ -3006,6 +3090,55 @@ components:
           description: Просроченная задолженность
         overdue_details:
           type: array
+          items:
+            $ref: '#/components/schemas/OverdueDetail'
+        organizations:
+          type: array
+          description: |
+            Разрез задолженности по **нашим организациям** (v15.8.0). Опционально.
+
+            Клиент должен видеть, сколько он должен каждому нашему юрлицу и по каким
+            реквизитам платить. Уровень контрагента при этом сохраняется как агрегат.
+
+            Правила согласования:
+
+            - `SUM(organizations[].current_balance)` должна совпадать с `current_balance`
+              контрагента. При расхождении сайт берёт значение контрагента и пишет
+              предупреждение в лог — расхождение это сигнал об ошибке выгрузки, а не
+              повод показать клиенту две разные цифры;
+            - организация, исчезнувшая из массива, на сайте **обнуляется, а не удаляется**:
+              иначе погашенный долг просто пропал бы из истории;
+            - переплата одной организации **не гасит** долг перед другой. Взаимозачёт —
+              компетенция 1С, сайт его не считает.
+          items:
+            $ref: '#/components/schemas/OrganizationBalance'
+
+    OrganizationBalance:
+      type: object
+      description: Задолженность контрагента перед одной нашей организацией (v15.8.0).
+      required:
+        - uuid
+        - current_balance
+      properties:
+        uuid:
+          allOf:
+            - $ref: '#/components/schemas/UUID'
+          description: UUID нашей организации, перед которой у контрагента долг.
+        name:
+          type:
+            - string
+            - 'null'
+          description: Название организации. Необязательно — справочник ведётся на сайте.
+        current_balance:
+          type: number
+          description: Баланс перед этой организацией (отрицательное = задолженность).
+        overdue_debt:
+          type: number
+          minimum: 0
+          description: Просроченная задолженность перед этой организацией.
+        overdue_details:
+          type: array
+          description: Расшифровка просрочки по реализациям этой организации.
           items:
             $ref: '#/components/schemas/OverdueDetail'
 

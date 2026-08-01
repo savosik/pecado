@@ -16,7 +16,7 @@
         <link rel="prev" href="../shipments/">
       
       
-        <link rel="next" href="../individual-prices/">
+        <link rel="next" href="../organizations/">
       
       
         
@@ -737,6 +737,34 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Организации (наши юрлица)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1603,6 +1631,14 @@
 <li>Приоритет — по <code>contractors[].uuid</code> (опциональное, <code>Company.erp_id</code> на сайте). Если передан — Company матчится по UUID, <code>ContractorBalance.contractor_uuid</code> заполняется ленивым backfill</li>
 <li>Fallback — по <code>tax_id</code> (ИНН) + <code>partner_uuid</code> для резолва <code>user_id</code></li>
 <li>Ключ <code>ContractorBalance</code> в БД остаётся <code>[user_id, tax_id]</code> (unique); <code>contractor_uuid</code> хранится как вспомогательный идентификатор для ускорения матчинга в других сообщениях</li>
+</ul>
+</li>
+<li><strong>(v15.8.0)</strong> Разрез по <strong>нашим организациям</strong> — <code>contractors[].organizations[]</code>, опционально:<ul>
+<li>клиент видит долг перед каждым нашим юрлицом и реквизиты, по которым платить (реквизиты 1С не присылает — их вводит администратор сайта);</li>
+<li>уровень контрагента сохраняется как <strong>агрегат</strong>: <code>SUM(organizations[].current_balance)</code> обязана совпадать с <code>current_balance</code> контрагента. При расхождении сайт берёт значение контрагента и пишет предупреждение в лог;</li>
+<li>организация, исчезнувшая из массива, <strong>обнуляется, а не удаляется</strong>;</li>
+<li>переплата одной организации <strong>не гасит</strong> долг перед другой — взаимозачёт делает 1С;</li>
+<li>подробности — <a href="../organizations/">Организации</a></li>
 </ul>
 </li>
 </ul>

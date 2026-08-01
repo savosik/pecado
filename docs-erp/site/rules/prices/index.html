@@ -536,10 +536,27 @@
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="Бизнес-правила">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Цена присылается агрегатом, без разреза по организациям
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -578,7 +595,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -785,6 +802,34 @@
     
   
     Баланс
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Организации (наши юрлица)
   
 
     
@@ -1626,10 +1671,27 @@
     </span>
   </a>
   
-</li>
+    <nav class="md-nav" aria-label="Бизнес-правила">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠️ Цена присылается агрегатом, без разреза по организациям
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1668,7 +1730,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#_3" class="md-nav__link">
+  <a href="#_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Критерии приёмки
@@ -1713,7 +1775,15 @@
 <li>Если товар с UUID не найден — событие игнорируется</li>
 <li>Сайт <strong>не</strong> отправляет обновления цен в 1С</li>
 </ul>
-<h3 id="_2">Критерии приёмки<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h3>
+<h4 id="_2">⚠️ Цена присылается агрегатом, без разреза по организациям<a class="headerlink" href="#_2" title="Permanent link">&para;</a></h4>
+<p><strong>Требование контракта</strong> (зафиксировано в v15.8.0, подтверждено стороной 1С).</p>
+<p>Сообщение <code>price.updated</code> содержит одну — лучшую — цену товара. Раздельные цены
+по нашим организациям на один товар <strong>не передаются</strong>: сайт хранит одну цену на товар
+и перезаписывает её каждым сообщением, поэтому второе значение молча затёрло бы первое.</p>
+<p>Разрез по организациям существует только в документах и взаиморасчётах, см.
+<a href="../organizations/">Организации</a>. То же требование для остатков — см.
+<a href="../stocks/">Остатки</a>.</p>
+<h3 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Сайт принимает <code>price.updated</code> и обновляет цену товара по UUID</li>
 <li>[ ] Если товар не найден — событие игнорируется без ошибок</li>
@@ -1727,7 +1797,7 @@
 <li>Сайт <strong>не</strong> обновляет курсы из сторонних источников — только из 1С</li>
 <li><code>ВыгрузитьВсеКурсыВалют</code> выгружает <strong>все валюты</strong> из справочника</li>
 </ul>
-<h3 id="_3">Критерии приёмки<a class="headerlink" href="#_3" title="Permanent link">&para;</a></h3>
+<h3 id="_4">Критерии приёмки<a class="headerlink" href="#_4" title="Permanent link">&para;</a></h3>
 <ul>
 <li>[ ] Сайт сохраняет все три значения: <code>official_rate</code>, <code>rate_coefficient</code>, <code>rate</code></li>
 <li>[ ] Курсы обновляются только через 1С</li>

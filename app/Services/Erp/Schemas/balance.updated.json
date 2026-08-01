@@ -63,6 +63,58 @@
                                 }
                             }
                         }
+                    },
+                    "organizations": {
+                        "type": "array",
+                        "description": "Разрез задолженности по нашим организациям. Опционально, добавлено в v15.8.0. Сумма current_balance по массиву должна совпадать с current_balance контрагента; при расхождении сайт берёт значение контрагента и пишет предупреждение в лог. Организация, исчезнувшая из массива, на сайте обнуляется, а не удаляется.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "uuid": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "description": "UUID нашей организации, перед которой у контрагента долг."
+                                },
+                                "name": {
+                                    "type": [
+                                        "string",
+                                        "null"
+                                    ],
+                                    "description": "Название организации. Необязательно."
+                                },
+                                "current_balance": {
+                                    "type": "number",
+                                    "description": "Баланс контрагента перед этой организацией. Может быть отрицательным."
+                                },
+                                "overdue_debt": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "description": "Просроченная задолженность перед этой организацией."
+                                },
+                                "overdue_details": {
+                                    "type": "array",
+                                    "description": "Расшифровка просрочки по реализациям этой организации.",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "shipment_uuid": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "amount": {
+                                                "type": "number"
+                                            },
+                                            "due_date": {
+                                                "type": "string",
+                                                "format": "date"
+                                            }
+                                        },
+                                        "additionalProperties": true
+                                    }
+                                }
+                            },
+                            "additionalProperties": true
+                        }
                     }
                 },
                 "required": [

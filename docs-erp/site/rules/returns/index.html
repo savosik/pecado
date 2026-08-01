@@ -883,6 +883,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../organizations/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Организации (наши юрлица)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../individual-prices/" class="md-nav__link">
         
   
@@ -2060,6 +2088,7 @@
 </ul>
 </li>
 <li>Неизвестные значения игнорируются с записью <code>Log::warning</code>, статус возврата при этом не меняется.</li>
+<li><strong>(v15.8.0)</strong> Опциональное поле <code>organization</code> — <strong>справочное</strong>. Клиент оформляет возврат по реализациям, а организация реализации сайту известна, поэтому сайт выводит её сам; значение от 1С приоритетнее, если пришло. Если возврат опирается на реализации <strong>разных</strong> организаций, сайт оставляет поле пустым и документ не дробит: раскладывать возврат по основаниям — задача 1С. В <code>return.created</code> (Сайт → 1С) организация <strong>не передаётся</strong>. Подробности — <a href="../organizations/">Организации</a>.</li>
 </ul>
 <hr />
 <h2 id="returndeleted-1">return.deleted (1С → Сайт)<a class="headerlink" href="#returndeleted-1" title="Permanent link">&para;</a></h2>
