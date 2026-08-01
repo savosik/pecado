@@ -291,8 +291,11 @@ jobs:
           fi
 
           echo "==> [0.1/9] Флаг выдачи промо-позиций по акциям..."
-          if ! grep -q "PROMOTIONS_ISSUE_ENABLED" /srv/pecado/.env; then
-            echo "PROMOTIONS_ISSUE_ENABLED=true" >> /srv/pecado/.env
+          # config/promotions.php читает именно PROMO_ISSUE_ENABLED;
+          # PROMOTIONS_ISSUE_ENABLED — опечатка предыдущего релиза, вычищаем
+          sed -i '/^PROMOTIONS_ISSUE_ENABLED=/d' /srv/pecado/.env
+          if ! grep -q "^PROMO_ISSUE_ENABLED" /srv/pecado/.env; then
+            echo "PROMO_ISSUE_ENABLED=true" >> /srv/pecado/.env
           fi
 
           echo "==> [0/9] Maintenance mode ON..."
